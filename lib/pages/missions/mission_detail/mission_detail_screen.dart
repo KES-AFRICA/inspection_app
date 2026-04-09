@@ -4,17 +4,9 @@ import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/pages/missions/home_screen.dart';
-import 'package:inspec_app/pages/missions/mission_detail/widgets/mission_dates_section.dart';
-import 'package:inspec_app/pages/missions/mission_detail/widgets/mission_documents_section.dart';
-import 'package:inspec_app/pages/missions/mission_detail/widgets/mission_header.dart';
-import 'package:inspec_app/pages/missions/mission_detail/widgets/mission_info_section.dart';
-import 'package:inspec_app/pages/missions/mission_detail/widgets/mission_status_badge.dart';
-import 'package:inspec_app/pages/missions/mission_detail/widgets/mission_team_section.dart';
-import 'package:inspec_app/pages/missions/mission_detail/widgets/status_action_button.dart';
-import 'package:inspec_app/pages/missions/mission_detail/widgets/status_selector_modal.dart';
+import 'package:inspec_app/pages/missions/sequence/sequence_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:inspec_app/services/word_report_service.dart';
-import 'package:inspec_app/services/pdf_report_service.dart'; // Importez le service PDF
+import 'package:inspec_app/services/pdf_report_service.dart';
 import 'package:share_plus/share_plus.dart';
 
 class MissionDetailScreen extends StatefulWidget {
@@ -33,13 +25,19 @@ class MissionDetailScreen extends StatefulWidget {
 
 class _MissionDetailScreenState extends State<MissionDetailScreen> {
   late Mission _currentMission;
-  late Verificateur? _currentUser;
+  late Map<String, dynamic> _sequenceProgress;
+  bool _isLoadingProgress = true;
 
   @override
   void initState() {
     super.initState();
     _currentMission = widget.mission;
-    _currentUser = HiveService.getCurrentUser();
+    _loadProgress();
+  }
+
+  Future<void> _loadProgress() async {
+    // TODO: Charger la progression depuis SequenceProgressService
+    setState(() => _isLoadingProgress = false);
   }
 
   void _handleStatusChanged(String newStatus) {
@@ -54,57 +52,50 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
     );
   }
 
-  void _handleDocumentChanged(String documentField, bool value) {
-    setState(() {
-      switch (documentField) {
-        case 'doc_cahier_prescriptions':
-          _currentMission.docCahierPrescriptions = value;
-          break;
-        case 'doc_notes_calculs':
-          _currentMission.docNotesCalculs = value;
-          break;
-        case 'doc_schemas_unifilaires':
-          _currentMission.docSchemasUnifilaires = value;
-          break;
-        case 'doc_plan_masse':
-          _currentMission.docPlanMasse = value;
-          break;
-        case 'doc_plans_architecturaux':
-          _currentMission.docPlansArchitecturaux = value;
-          break;
-        case 'doc_declarations_ce':
-          _currentMission.docDeclarationsCe = value;
-          break;
-        case 'doc_liste_installations':
-          _currentMission.docListeInstallations = value;
-          break;
-        case 'doc_plan_locaux_risques':
-          _currentMission.docPlanLocauxRisques = value;
-          break;
-        case 'doc_rapport_analyse_foudre':
-          _currentMission.docRapportAnalyseFoudre = value;
-          break;
-        case 'doc_rapport_etude_foudre':
-          _currentMission.docRapportEtudeFoudre = value;
-          break;
-        case 'doc_registre_securite':
-          _currentMission.docRegistreSecurite = value;
-          break;
-        case 'doc_rapport_derniere_verif':
-          _currentMission.docRapportDerniereVerif = value;
-          break;
-      }
-      _currentMission.updatedAt = DateTime.now();
-    });
-    
-    HiveService.updateDocumentStatus(
-      missionId: _currentMission.id,
-      documentField: documentField,
-      value: value,
-    );
+  String _getButtonText() {
+    switch (_currentMission.status.toLowerCase()) {
+      case 'en_cours':
+      case 'en cours':
+        return 'CONTINUER';
+      case 'termine':
+      case 'terminé':
+        return 'VOIR LE RAPPORT';
+      default:
+        return 'DÉMARRER';
+    }
   }
 
-  Future<void> _showReportGenerationDialog(BuildContext context, String reportType) async {
+  IconData _getButtonIcon() {
+    switch (_currentMission.status.toLowerCase()) {
+      case 'en_cours':
+      case 'en cours':
+        return Icons.play_circle_filled;
+      case 'termine':
+      case 'terminé':
+        return Icons.assessment;
+      default:
+        return Icons.play_arrow;
+    }
+  }
+
+  void _handleMainAction() {
+    if (_currentMission.status.toLowerCase() == 'terminé' || 
+        _currentMission.status.toLowerCase() == 'termine') {
+      _generateReport();
+    } else {
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SequenceScreen(
+            mission: _currentMission,
+            user: widget.user,
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _generateReport() async {
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -114,225 +105,529 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
           children: [
             const CircularProgressIndicator(),
             const SizedBox(height: 16),
-            Text('Génération du rapport $reportType en cours...'),
+            const Text('Génération du rapport PDF en cours...'),
           ],
         ),
       ),
     );
 
     try {
-      File? file;
-      if (reportType == 'Word') {
-        file = await WordReportService.generateMissionReport(widget.mission.id);
-      } else if (reportType == 'PDF') {
-        file = await PdfReportService.generateMissionReport(widget.mission.id);
+      final file = await PdfReportService.generateMissionReport(widget.mission.id);
+
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
       }
 
-      // Fermer le dialogue de chargement
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
-      
       if (file != null && file.existsSync()) {
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          subject: 'Rapport d\'audit électrique - ${widget.mission.nomClient}',
-          text: 'Voici le rapport d\'audit électrique pour ${widget.mission.nomClient}',
-        );
+        _showSuccessDialog(file);
       } else {
-        _showError(context, 'Erreur lors de la génération du rapport $reportType');
+        _showError('Erreur lors de la génération du rapport');
       }
     } catch (e) {
-      // Fermer le dialogue de chargement en cas d'erreur
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
       }
-      _showError(context, 'Erreur lors de la génération: $e');
+      _showError('Erreur: $e');
     }
   }
 
-  void _showError(BuildContext context, String message) {
+  void _showSuccessDialog(File file) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Erreur'),
-        content: Text(message),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Rapport généré !'),
+        content: const Text('Le rapport a été généré avec succès.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.pop(context);
+              await Share.shareXFiles(
+                [XFile(file.path)],
+                subject: 'Rapport - ${widget.mission.nomClient}',
+              );
+            },
+            icon: const Icon(Icons.share),
+            label: const Text('Partager'),
           ),
         ],
       ),
     );
   }
 
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+  }
+
+  Color _getStatusColor() {
+    switch (_currentMission.status.toLowerCase()) {
+      case 'en_cours':
+      case 'en cours':
+        return Colors.orange;
+      case 'termine':
+      case 'terminé':
+        return Colors.green;
+      default:
+        return Colors.blue;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: Text(
-          'Détails Mission',
-          style: TextStyle(
-            fontWeight: FontWeight.w600,
-            color: Colors.white,
+      body: CustomScrollView(
+        slivers: [
+          // AppBar moderne
+          SliverAppBar(
+            expandedHeight: 280,
+            pinned: true,
+            backgroundColor: _getStatusColor(),
+            elevation: 0,
+            leading: Container(
+              margin: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: IconButton(
+                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                onPressed: () {
+                  Navigator.of(context).pushReplacement(
+                    MaterialPageRoute(
+                      builder: (context) => HomeScreen(user: widget.user),
+                    ),
+                  );
+                },
+              ),
+            ),
+            flexibleSpace: FlexibleSpaceBar(
+              title: Column(
+                mainAxisAlignment: MainAxisAlignment.end,
+                crossAxisAlignment: CrossAxisAlignment.start,
+              ),
+              titlePadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      _getStatusColor(),
+                      _getStatusColor().withOpacity(0.7),
+                    ],
+                  ),
+                ),
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Icon(
+                          Icons.assignment_turned_in,
+                          size: 40,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        _currentMission.nomClient,
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          _currentMission.status.toUpperCase(),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-        backgroundColor: Colors.blue,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () { 
-            Navigator.of(context).pushReplacement(
-              MaterialPageRoute(
-                builder: (context) => HomeScreen(user: widget.user),
-              ),
-            );
-          },
-        ),
-        actions: [
-          // Dropdown dans l'AppBar pour générer les rapports
-          PopupMenuButton<String>(
-            icon: const Icon(Icons.more_vert, color: Colors.white),
-            onSelected: (value) {
-              if (value == 'word') {
-                _showReportGenerationDialog(context, 'Word');
-              } else if (value == 'pdf') {
-                _showReportGenerationDialog(context, 'PDF');
-              }
-            },
-            itemBuilder: (BuildContext context) => [
-              const PopupMenuItem<String>(
-                value: 'word',
-                child: Row(
-                  children: [
-                    Icon(Icons.description_outlined, color: Colors.blue),
-                    SizedBox(width: 8),
-                    Text('Générer Word'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem<String>(
-                value: 'pdf',
-                child: Row(
-                  children: [
-                    Icon(Icons.picture_as_pdf_outlined, color: Colors.red),
-                    SizedBox(width: 8),
-                    Text('Générer PDF'),
-                  ],
-                ),
-              ),
-            ],
+
+          // Contenu principal
+          SliverPadding(
+            padding: const EdgeInsets.all(16),
+            sliver: SliverList(
+              delegate: SliverChildListDelegate([
+                // Carte d'informations modernes
+                _buildInfoCard(),
+                const SizedBox(height: 16),
+                
+                // Carte de l'équipe
+                _buildTeamCard(),
+                const SizedBox(height: 24),
+                
+                // Bouton principal (Démarrer/Continuer/Voir rapport)
+                _buildMainButton(),
+                
+                // Bouton Générer rapport PDF
+                const SizedBox(height: 12),
+                _buildPdfButton(),
+                
+                const SizedBox(height: 32),
+              ]),
+            ),
           ),
         ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(4),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  Widget _buildInfoCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          // En-tête
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryBlue.withOpacity(0.05),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(Icons.info_outline, color: AppTheme.primaryBlue),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Informations générales',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          
+          // Contenu
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                _buildInfoRow(
+                  icon: Icons.business,
+                  label: 'Client',
+                  value: _currentMission.nomClient,
+                ),
+                const Divider(height: 24),
+                if (_currentMission.activiteClient != null)
+                  _buildInfoRow(
+                    icon: Icons.work,
+                    label: 'Activité',
+                    value: _currentMission.activiteClient!,
+                  ),
+                if (_currentMission.activiteClient != null) const Divider(height: 24),
+                if (_currentMission.adresseClient != null)
+                  _buildInfoRow(
+                    icon: Icons.location_on,
+                    label: 'Adresse',
+                    value: _currentMission.adresseClient!,
+                    multiline: true,
+                  ),
+                if (_currentMission.adresseClient != null) const Divider(height: 24),
+                _buildInfoRow(
+                  icon: Icons.description,
+                  label: 'Nature',
+                  value: _currentMission.natureMission ?? 'Non spécifiée',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTeamCard() {
+    final hasVerificateurs = _currentMission.verificateurs != null && _currentMission.verificateurs!.isNotEmpty;
+    final hasAccompagnateurs = _currentMission.accompagnateurs != null && _currentMission.accompagnateurs!.isNotEmpty;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.withOpacity(0.05),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(20),
+                topRight: Radius.circular(20),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.people, color: Colors.orange),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Équipe',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                if (hasVerificateurs)
+                  _buildTeamRow(
+                    icon: Icons.verified_user,
+                    label: 'Vérificateurs',
+                    values: _currentMission.verificateurs!
+                        .map((v) => '${v['prenom']} ${v['nom']} (${v['matricule']})')
+                        .toList(),
+                  ),
+                if (hasVerificateurs && hasAccompagnateurs) const SizedBox(height: 16),
+                if (hasAccompagnateurs)
+                  _buildTeamRow(
+                    icon: Icons.person_add,
+                    label: 'Accompagnateurs',
+                    values: _currentMission.accompagnateurs!,
+                  ),
+                if (!hasVerificateurs && !hasAccompagnateurs)
+                  const Text(
+                    'Aucune information d\'équipe',
+                    style: TextStyle(color: Colors.grey),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainButton() {
+    final buttonText = _getButtonText();
+    final buttonIcon = _getButtonIcon();
+    final statusColor = _getStatusColor();
+
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [statusColor, statusColor.withOpacity(0.8)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: statusColor.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: _handleMainAction,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            // Header avec logo et nom client
-            MissionHeader(mission: _currentMission),
-            
-            const SizedBox(height: 16),
-            
-            // Row avec badge de statut et bouton d'action
-            Container(
-              padding: const EdgeInsets.all(8),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: InkWell(
-                      onTap: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => StatusSelectorModal(
-                            mission: _currentMission,
-                            onStatusChanged: _handleStatusChanged,
-                          ),
-                        );
-                      },
-                      child: MissionStatusBadge(status: _currentMission.status),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  StatusActionButton(
-                    mission: _currentMission,
-                    onStatusChanged: _handleStatusChanged,
-                  ),
-                ],
-              ),
+            Icon(buttonIcon, size: 24),
+            const SizedBox(width: 12),
+            Text(
+              buttonText,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            
-            const SizedBox(height: 16),
-
-            // Documents
-            MissionDocumentsSection(
-              mission: _currentMission,
-              onDocumentChanged: _handleDocumentChanged,
-            ),
-            
-            const SizedBox(height: 16),
-            
-            // Informations générales
-            MissionInfoSection(mission: _currentMission),
-
-            const SizedBox(height: 16),
-            
-            // Équipe (vérificateurs et accompagnateurs)
-            MissionTeamSection(mission: _currentMission, editable: true),
-
-            const SizedBox(height: 16),
-            
-            // Dates importantes
-            MissionDatesSection(mission: _currentMission),
-            
-            const SizedBox(height: 16),
-            
-            // BOUTON GÉNÉRER RAPPORT WORD
-            Container(
-              padding: const EdgeInsets.only(left: 4, right: 4),
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _showReportGenerationDialog(context, 'Word'),
-                icon: const Icon(Icons.description_outlined, size: 20),
-                label: const Text('Générer rapport Word'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.primaryBlue,
-                  side: BorderSide(color: AppTheme.primaryBlue),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 12),
-            
-            // NOUVEAU BOUTON POUR GÉNÉRER RAPPORT PDF
-            Container(
-              padding: const EdgeInsets.only(left: 4, right: 4),
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: () => _showReportGenerationDialog(context, 'PDF'),
-                icon: const Icon(Icons.picture_as_pdf_outlined, size: 20, color: Colors.red),
-                label: const Text('Générer rapport PDF', style: TextStyle(color: Colors.red)),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                ),
-              ),
-            ),
-            
-            const SizedBox(height: 32),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPdfButton() {
+    return Container(
+      width: double.infinity,
+      height: 52,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: _generateReport,
+        icon: const Icon(Icons.picture_as_pdf, size: 22),
+        label: const Text(
+          'GÉNÉRER RAPPORT PDF',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 0.5),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.red,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    bool multiline = false,
+  }) {
+    return Row(
+      crossAxisAlignment: multiline ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: AppTheme.primaryBlue.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: AppTheme.primaryBlue),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                maxLines: multiline ? 3 : 1,
+                overflow: multiline ? TextOverflow.ellipsis : TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTeamRow({
+    required IconData icon,
+    required String label,
+    required List<String> values,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          width: 36,
+          height: 36,
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 18, color: Colors.grey.shade600),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 4),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: values.map((v) => Padding(
+                  padding: const EdgeInsets.only(bottom: 4),
+                  child: Text(
+                    '• $v',
+                    style: const TextStyle(fontSize: 13),
+                  ),
+                )).toList(),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 }

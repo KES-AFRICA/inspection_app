@@ -1,4 +1,3 @@
-// mission.dart
 import 'package:hive/hive.dart';
 
 part 'mission.g.dart';

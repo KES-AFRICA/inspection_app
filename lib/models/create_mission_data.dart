@@ -1,44 +1,91 @@
-// lib/models/create_mission_data.dart (simplifié)
+// lib/models/create_mission_data.dart
 import 'package:inspec_app/models/mission.dart';
 
 class CreateMissionData {
   String nomClient;
   String? activiteClient;
   String? adresseClient;
+  String? dgResponsable;
+  DateTime? dateIntervention;
+  DateTime? dateRapport;
+  String? natureMission;
+  String? periodicite;
+  int? dureeMissionJours;
+  List<String> accompagnateurs;
+  List<Map<String, dynamic>> verificateurs;
+
+  // Documents (optionnels)
+  bool docCahierPrescriptions;
+  bool docNotesCalculs;
+  bool docSchemasUnifilaires;
+  bool docPlanMasse;
+  bool docPlansArchitecturaux;
+  bool docDeclarationsCe;
+  bool docListeInstallations;
+  bool docPlanLocauxRisques;
+  bool docRapportAnalyseFoudre;
+  bool docRapportEtudeFoudre;
+  bool docRegistreSecurite;
+  bool docRapportDerniereVerif;
+  bool docAutre;
 
   CreateMissionData({
     required this.nomClient,
     this.activiteClient,
     this.adresseClient,
+    this.dgResponsable,
+    this.dateIntervention,
+    this.dateRapport,
+    this.natureMission,
+    this.periodicite,
+    this.dureeMissionJours,
+    this.accompagnateurs = const [],
+    this.verificateurs = const [],
+    this.docCahierPrescriptions = false,
+    this.docNotesCalculs = false,
+    this.docSchemasUnifilaires = false,
+    this.docPlanMasse = false,
+    this.docPlansArchitecturaux = false,
+    this.docDeclarationsCe = false,
+    this.docListeInstallations = false,
+    this.docPlanLocauxRisques = false,
+    this.docRapportAnalyseFoudre = false,
+    this.docRapportEtudeFoudre = false,
+    this.docRegistreSecurite = false,
+    this.docRapportDerniereVerif = false,
+    this.docAutre = false,
   });
 
-  Mission toMission(String id, String currentUserEmail) {
+  Mission toMission(String id, String currentUserMatricule) {
     return Mission(
       id: id,
       nomClient: nomClient,
       activiteClient: activiteClient,
       adresseClient: adresseClient,
+      dgResponsable: dgResponsable,
+      dateIntervention: dateIntervention,
+      dateRapport: dateRapport,
+      natureMission: natureMission,
+      periodicite: periodicite,
+      dureeMissionJours: dureeMissionJours,
+      accompagnateurs: accompagnateurs,
+      verificateurs: verificateurs,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
-      status: 'brouillon',  // Statut initial "brouillon"
-      // Tous les autres champs sont initialisés par défaut
-      accompagnateurs: [],
-      verificateurs: [],
-      docCahierPrescriptions: false,
-      docNotesCalculs: false,
-      docSchemasUnifilaires: false,
-      docPlanMasse: false,
-      docPlansArchitecturaux: false,
-      docDeclarationsCe: false,
-      docListeInstallations: false,
-      docPlanLocauxRisques: false,
-      docRapportAnalyseFoudre: false,
-      docRapportEtudeFoudre: false,
-      docRegistreSecurite: false,
-      docRapportDerniereVerif: false,
-      docAutre: false,
+      status: 'en_cours',
+      docCahierPrescriptions: docCahierPrescriptions,
+      docNotesCalculs: docNotesCalculs,
+      docSchemasUnifilaires: docSchemasUnifilaires,
+      docPlanMasse: docPlanMasse,
+      docPlansArchitecturaux: docPlansArchitecturaux,
+      docDeclarationsCe: docDeclarationsCe,
+      docListeInstallations: docListeInstallations,
+      docPlanLocauxRisques: docPlanLocauxRisques,
+      docRapportAnalyseFoudre: docRapportAnalyseFoudre,
+      docRapportEtudeFoudre: docRapportEtudeFoudre,
+      docRegistreSecurite: docRegistreSecurite,
+      docRapportDerniereVerif: docRapportDerniereVerif,
+      docAutre: docAutre,
     );
   }
-
-  
 }

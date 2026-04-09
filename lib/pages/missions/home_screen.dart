@@ -11,7 +11,6 @@ import 'package:inspec_app/pages/missions/components/search_dialog.dart';
 import 'package:inspec_app/pages/missions/components/sidebar_menu.dart';
 import 'package:inspec_app/pages/missions/components/sort_dialog.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:inspec_app/services/supabase_service.dart';
 
 class HomeScreen extends StatefulWidget {
   final Verificateur user;
@@ -25,8 +24,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<Mission> _missions = [];
   List<Mission> _filteredMissions = [];
-  bool _isSyncing = false;
-  String? _syncMessage;
   bool _showSidebar = false;
   int _currentPageIndex = 0;
   
@@ -49,59 +46,6 @@ class _HomeScreenState extends State<HomeScreen> {
       _missions = HiveService.getMissionsByMatricule(widget.user.matricule);
       _filteredMissions = _missions;
     });
-  }
-
-  Future<void> _syncMissions() async {
-    setState(() {
-      _isSyncing = true;
-      _syncMessage = null;
-    });
-
-    try {
-      final hasConnection = await SupabaseService.testConnection();
-
-      if (!hasConnection) {
-        setState(() {
-          _syncMessage = 'Aucune connexion Internet';
-          _isSyncing = false;
-        });
-        return;
-      }
-
-      final onlineMissions = await SupabaseService.getMissionsByMatricule(widget.user.matricule);
-
-      int newMissionsCount = 0;
-      for (var mission in onlineMissions) {
-        if (!HiveService.missionExists(mission.id)) {
-          await HiveService.saveMission(mission);
-          newMissionsCount++;
-        }
-      }
-
-      _loadLocalMissions();
-
-      setState(() {
-        if (newMissionsCount > 0) {
-          _syncMessage = '✓ $newMissionsCount nouvelle(s) mission(s) synchronisée(s)';
-        } else {
-          _syncMessage = '✓ Synchronisation terminée - ${onlineMissions.length} mission(s) disponibles';
-        }
-        _isSyncing = false;
-      });
-
-      Future.delayed(const Duration(seconds: 3), () {
-        if (mounted) {
-          setState(() {
-            _syncMessage = null;
-          });
-        }
-      });
-    } catch (e) {
-      setState(() {
-        _syncMessage = 'Erreur de synchronisation: $e';
-        _isSyncing = false;
-      });
-    }
   }
 
   void _onNavigationItemSelected(int index) {
@@ -218,24 +162,6 @@ void _saveStatsPeriodPreference(String period) {
 
           // Floating Action Button (seulement sur la page d'accueil)
           if (_currentPageIndex == 0)
-            // Positioned(
-            //   right: 16,
-            //   bottom: 16,
-            //   child: FloatingActionButton.extended(
-            //     onPressed: _isSyncing ? null : _syncMissions,
-            //     icon: _isSyncing
-            //         ? const SizedBox(
-            //             width: 20,
-            //             height: 20,
-            //             child: CircularProgressIndicator(
-            //               strokeWidth: 2,
-            //               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-            //             ),
-            //           )
-            //         : const Icon(Icons.sync),
-            //     label: Text(_isSyncing ? 'Synchronisation...' : 'Synchroniser'),
-            //   ),
-            // ),
             Positioned(
               left: 16,
               bottom: 16,
@@ -293,32 +219,6 @@ void _saveStatsPeriodPreference(String period) {
   Widget _buildHomeContent() {
     return Column(
       children: [
-        // Message de synchronisation
-        if (_syncMessage != null)
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: _syncMessage!.startsWith('✓') ? Colors.green.shade50 : Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: _syncMessage!.startsWith('✓') ? Colors.green.shade200 : Colors.orange.shade200,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  _syncMessage!.startsWith('✓') ? Icons.check_circle_outline : Icons.info_outline,
-                  color: _syncMessage!.startsWith('✓') ? Colors.green.shade700 : Colors.orange.shade700,
-                ),
-                const SizedBox(width: 8),
-                Expanded(child: Text(_syncMessage!, style: TextStyle(
-                  color: _syncMessage!.startsWith('✓') ? Colors.green.shade700 : Colors.orange.shade700,
-                ))),
-              ],
-            ),
-          ),
-
         // Indicateurs de filtre/recherche actifs
         if (_selectedFilter != 'Tous' || _searchQuery.isNotEmpty)
           Container(
