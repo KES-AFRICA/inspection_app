@@ -20,9 +20,9 @@ class VerificateurAdapter extends TypeAdapter<Verificateur> {
       id: fields[0] as String,
       nom: fields[1] as String,
       prenom: fields[2] as String,
-      matricule: fields[3] as String,
-      email: fields[4] as String,
-      password: fields[5] as String,
+      email: fields[3] as String,
+      password: fields[4] as String,
+      matricule: fields[5] as String,
       createdAt: fields[6] as DateTime,
     );
   }
@@ -38,11 +38,11 @@ class VerificateurAdapter extends TypeAdapter<Verificateur> {
       ..writeByte(2)
       ..write(obj.prenom)
       ..writeByte(3)
-      ..write(obj.matricule)
-      ..writeByte(4)
       ..write(obj.email)
-      ..writeByte(5)
+      ..writeByte(4)
       ..write(obj.password)
+      ..writeByte(5)
+      ..write(obj.matricule)
       ..writeByte(6)
       ..write(obj.createdAt);
   }

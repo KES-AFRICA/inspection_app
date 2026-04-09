@@ -62,6 +62,7 @@ class _SchemaStepState extends State<SchemaStep> {
         children: [
           // En-tête
           Container(
+             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppTheme.primaryBlue,
@@ -123,45 +124,8 @@ class _SchemaStepState extends State<SchemaStep> {
             ),
           ),
           
-          const SizedBox(height: 24),
           
-          // Commentaire (optionnel)
-          TextFormField(
-            controller: _commentController,
-            decoration: const InputDecoration(
-              labelText: 'Commentaire (optionnel)',
-              border: OutlineInputBorder(),
-              hintText: 'Précisez si le schéma est disponible ou non...',
-            ),
-            maxLines: 3,
-            onChanged: (_) => _notifyDataChanged(),
-          ),
-          
-          const SizedBox(height: 32),
-          
-          // Indication sur le bouton "Terminer"
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.orange.shade200),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.orange),
-                SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    'Après avoir sélectionné votre réponse, cliquez sur "Terminer" pour finaliser la mission.',
-                    style: TextStyle(fontSize: 12),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 16),
+          const SizedBox(height: 50),
           
           // Bouton Terminer
           SizedBox(

@@ -53,13 +53,13 @@ class MissionAdapter extends TypeAdapter<Mission> {
       classementLocauxId: fields[31] as String?,
       foudreIds: (fields[32] as List?)?.cast<String>(),
       mesuresEssaisId: fields[33] as String?,
-    );
+    )..renseignementsGenerauxId = fields[34] as String?;
   }
 
   @override
   void write(BinaryWriter writer, Mission obj) {
     writer
-      ..writeByte(34)
+      ..writeByte(35)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -127,7 +127,9 @@ class MissionAdapter extends TypeAdapter<Mission> {
       ..writeByte(32)
       ..write(obj.foudreIds)
       ..writeByte(33)
-      ..write(obj.mesuresEssaisId);
+      ..write(obj.mesuresEssaisId)
+      ..writeByte(34)
+      ..write(obj.renseignementsGenerauxId);
   }
 
   @override

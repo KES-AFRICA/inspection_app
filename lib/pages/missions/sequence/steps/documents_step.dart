@@ -128,6 +128,7 @@ class _DocumentsStepState extends State<DocumentsStep> {
         children: [
           // En-tête
           Container(
+            width: double.infinity, // Ajoutez cette ligne
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppTheme.primaryBlue,
@@ -160,49 +161,55 @@ class _DocumentsStepState extends State<DocumentsStep> {
           
           // Liste des documents
           _buildDocumentTile(
-            title: 'Cahier des prescriptions techniques',
+            title: 'Cahier des prescriptions techniques ayant permis la réalisation des installations',
             value: _mission.docCahierPrescriptions,
             onChanged: (bool? val) => _handleDocumentChanged('doc_cahier_prescriptions', val ?? false),
           ),
           
           _buildDocumentTile(
-            title: 'Notes de calculs',
+            title: 'Notes de calculs justifiant le dimensionnement des canalisations électriques et des dispositifs de protection',
             value: _mission.docNotesCalculs,
             onChanged: (bool? val) => _handleDocumentChanged('doc_notes_calculs', val ?? false),
           ),
           
           _buildDocumentTile(
-            title: 'Schémas unifilaires',
+            title: 'Schémas unifilaires des installations electriques',
             value: _mission.docSchemasUnifilaires,
             onChanged: (bool? val) => _handleDocumentChanged('doc_schemas_unifilaires', val ?? false),
           ),
           
           _buildDocumentTile(
-            title: 'Plan de masse',
+            title: 'Plan de masse à l\'échelle des  installations avec implantations des prises de terre et électriques enterrés',
             value: _mission.docPlanMasse,
             onChanged: (bool? val) => _handleDocumentChanged('doc_plan_masse', val ?? false),
           ),
           
           _buildDocumentTile(
-            title: 'Plans architecturaux',
+            title: 'Plans architecturaux d\’implantation des différents circuits',
             value: _mission.docPlansArchitecturaux,
             onChanged: (bool? val) => _handleDocumentChanged('doc_plans_architecturaux', val ?? false),
           ),
           
           _buildDocumentTile(
-            title: 'Déclarations CE de conformité',
+            title: 'Déclaration CE de conformité et notices des appareillages et câbles installés',
             value: _mission.docDeclarationsCe,
             onChanged: (bool? val) => _handleDocumentChanged('doc_declarations_ce', val ?? false),
           ),
           
           _buildDocumentTile(
-            title: 'Liste des installations de sécurité',
+            title: 'Liste des installations de sécurité et effectif maximal des différents locaux ou bâtiments ',
+            value: _mission.docListeInstallations,
+            onChanged: (bool? val) => _handleDocumentChanged('doc_liste_installations', val ?? false),
+          ),
+
+          _buildDocumentTile(
+            title: 'Rapport de dernière vérification ',
             value: _mission.docListeInstallations,
             onChanged: (bool? val) => _handleDocumentChanged('doc_liste_installations', val ?? false),
           ),
           
           _buildDocumentTile(
-            title: 'Plan des locaux à risques',
+            title: 'Plan des locaux, avec indications des locaux à risques particuliers d\'influences externes (risque d\'incendie et risque d\'explosion) ',
             value: _mission.docPlanLocauxRisques,
             onChanged: (bool? val) => _handleDocumentChanged('doc_plan_locaux_risques', val ?? false),
           ),
@@ -218,24 +225,7 @@ class _DocumentsStepState extends State<DocumentsStep> {
             value: _mission.docRapportEtudeFoudre,
             onChanged: (bool? val) => _handleDocumentChanged('doc_rapport_etude_foudre', val ?? false),
           ),
-          
-          _buildDocumentTile(
-            title: 'Registre de sécurité',
-            value: _mission.docRegistreSecurite,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_registre_securite', val ?? false),
-          ),
-          
-          _buildDocumentTile(
-            title: 'Rapport de dernière vérification',
-            value: _mission.docRapportDerniereVerif,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_rapport_derniere_verif', val ?? false),
-          ),
-          
-          _buildDocumentTile(
-            title: 'Autre document',
-            value: _mission.docAutre,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_autre', val ?? false),
-          ),
+        
         ],
       ),
     );

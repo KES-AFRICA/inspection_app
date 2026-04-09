@@ -60,11 +60,6 @@ class AuditInstallationsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Audit des Installations Électriques'),
-        backgroundColor: AppTheme.primaryBlue,
-        foregroundColor: Colors.white,
-      ),
       body: ListView(
          padding: EdgeInsets.zero,
         children: [

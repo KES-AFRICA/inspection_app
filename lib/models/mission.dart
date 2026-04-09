@@ -106,6 +106,9 @@ class Mission extends HiveObject {
   @HiveField(33)
   String? mesuresEssaisId; 
 
+  @HiveField(34)
+  String? renseignementsGenerauxId;
+
   Mission({
     required this.id,
     required this.nomClient,

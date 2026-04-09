@@ -53,11 +53,6 @@ class DescriptionInstallationsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text('Description des Installations'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
       body: ListView(
         children: [
           _buildListTile(

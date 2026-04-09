@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:inspec_app/pages/missions/sequence/sequence_progress_service.dart';
 import 'package:intl/intl.dart';
 import 'package:inspec_app/models/mission.dart';
+import 'package:inspec_app/models/renseignements_generaux.dart';
 import 'package:inspec_app/constants/app_theme.dart';
+import 'package:inspec_app/services/hive_service.dart';
 
 class GeneralInfoStep extends StatefulWidget {
   final Mission mission;
@@ -23,7 +24,6 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
   late TextEditingController _etablissementController;
   late TextEditingController _installationController;
   late TextEditingController _activiteController;
-  late TextEditingController _registreControleController;
   late TextEditingController _compteRenduController;
   
   // Données
@@ -33,81 +33,124 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
   
   // Sélections
   String? _verificationType;
+  String? _registreControle;
   
-  // Accompagnateurs
+  // Listes
   List<Map<String, String>> _accompagnateurs = [];
-  
-  // Vérificateurs
   List<Map<String, String>> _verificateurs = [];
   
   // Focus
   final FocusNode _etablissementFocus = FocusNode();
   final FocusNode _installationFocus = FocusNode();
   final FocusNode _activiteFocus = FocusNode();
-  final FocusNode _registreFocus = FocusNode();
   final FocusNode _compteRenduFocus = FocusNode();
 
-  // Types de vérification disponibles
-  final List<String> _verificationOptions = [
-    'Périodique réglementaire',
-    'Initiale réglementaire',
-    'Audit réglementaire',
+  // Options pour les dropdowns stylisés
+  final List<Map<String, dynamic>> _verificationOptions = [
+    {
+      'value': 'Périodique réglementaire',
+      'title': 'Périodique réglementaire',
+      'description': 'Vérification périodique selon la réglementation en vigueur',
+      'icon': Icons.calendar_today,
+      'color': Colors.blue,
+    },
+    {
+      'value': 'Initiale réglementaire',
+      'title': 'Initiale réglementaire',
+      'description': 'Vérification initiale avant mise en service',
+      'icon': Icons.note_add,
+      'color': Colors.green,
+    },
+    {
+      'value': 'Audit réglementaire',
+      'title': 'Audit réglementaire',
+      'description': 'Audit complet de conformité réglementaire',
+      'icon': Icons.assignment,
+      'color': Colors.purple,
+    },
   ];
+
+  final List<Map<String, dynamic>> _registreOptions = [
+    {
+      'value': 'Présenté',
+      'title': 'Présenté',
+      'description': 'Le registre de contrôle a été fourni et est à jour',
+      'icon': Icons.check_circle,
+      'color': Colors.green,
+    },
+    {
+      'value': 'Non présenté',
+      'title': 'Non Présenté',
+      'description': 'Le registre de contrôle n\'a pas été fourni',
+      'icon': Icons.cancel,
+      'color': Colors.red,
+    },
+  ];
+
+  bool _isLoading = true;
+  RenseignementsGeneraux? _data;
 
   @override
   void initState() {
     super.initState();
-    _etablissementController = TextEditingController(text: widget.mission.nomClient);
-    _installationController = TextEditingController();
-    _activiteController = TextEditingController(text: widget.mission.activiteClient ?? '');
-    _registreControleController = TextEditingController();
-    _compteRenduController = TextEditingController();
-    
-    _loadExistingData();
+    _initControllers();
+    _loadData();
   }
 
-  Future<void> _loadExistingData() async {
+  void _initControllers() {
+    _etablissementController = TextEditingController();
+    _installationController = TextEditingController();
+    _activiteController = TextEditingController();
+    _compteRenduController = TextEditingController();
+  }
+
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    
     try {
-      final savedData = await SequenceProgressService.getStepData(
-        widget.mission.id, 
-        'general_info'
-      );
+      _data = await HiveService.getOrCreateRenseignementsGeneraux(widget.mission.id);
       
-      if (savedData != null && savedData is Map<String, dynamic>) {
-        setState(() {
-          // Restaurer les champs texte
-          _etablissementController.text = savedData['etablissement'] ?? widget.mission.nomClient;
-          _installationController.text = savedData['installation'] ?? '';
-          _activiteController.text = savedData['activite'] ?? widget.mission.activiteClient ?? '';
-          _registreControleController.text = savedData['registreControle'] ?? '';
-          _compteRenduController.text = savedData['compteRendu'] ?? '';
-          
-          // Restaurer les dates
-          if (savedData['dateDebut'] != null) {
-            _dateDebut = DateTime.parse(savedData['dateDebut']);
-          }
-          if (savedData['dateFin'] != null) {
-            _dateFin = DateTime.parse(savedData['dateFin']);
-          }
-          _calculateDuree();
-          
-          // Restaurer le type de vérification
-          _verificationType = savedData['verificationType'];
-          
-          // Restaurer les accompagnateurs
-          if (savedData['accompagnateurs'] != null) {
-            _accompagnateurs = List<Map<String, String>>.from(savedData['accompagnateurs']);
-          }
-          
-          // Restaurer les vérificateurs
-          if (savedData['verificateurs'] != null) {
-            _verificateurs = List<Map<String, String>>.from(savedData['verificateurs']);
-          }
-        });
-      }
+      setState(() {
+        _etablissementController.text = _data!.etablissement;
+        _installationController.text = _data!.installation;
+        _activiteController.text = _data!.activite;
+        _compteRenduController.text = _data!.compteRendu;
+        
+        _dateDebut = _data!.dateDebut;
+        _dateFin = _data!.dateFin;
+        _dureeJours = _data!.dureeJours;
+        _verificationType = _data!.verificationType;
+        _registreControle = _data!.registreControle;
+        _accompagnateurs = List.from(_data!.accompagnateurs);
+        _verificateurs = List.from(_data!.verificateurs);
+      });
     } catch (e) {
-      print('❌ Erreur chargement données: $e');
+      print('❌ Erreur chargement: $e');
+    } finally {
+      setState(() => _isLoading = false);
     }
+  }
+
+  Future<void> _saveData() async {
+    if (_data == null) return;
+    
+    _data!.etablissement = _etablissementController.text;
+    _data!.installation = _installationController.text;
+    _data!.activite = _activiteController.text;
+    _data!.dateDebut = _dateDebut;
+    _data!.dateFin = _dateFin;
+    _data!.dureeJours = _dureeJours;
+    _data!.verificationType = _verificationType;
+    _data!.registreControle = _registreControle ?? '';
+    _data!.compteRendu = _compteRenduController.text;
+    _data!.accompagnateurs = List.from(_accompagnateurs);
+    _data!.verificateurs = List.from(_verificateurs);
+    _data!.updatedAt = DateTime.now();
+    
+    await HiveService.saveRenseignementsGeneraux(_data!);
+    
+    widget.onDataChanged(_data!.toMap());
+    print('✅ Renseignements généraux sauvegardés');
   }
 
   void _calculateDuree() {
@@ -117,27 +160,6 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
       _dureeJours = 0;
     }
     setState(() {});
-    _notifyDataChanged();
-  }
-
-  void _notifyDataChanged() async {
-    final data = {
-      'etablissement': _etablissementController.text,
-      'installation': _installationController.text,
-      'activite': _activiteController.text,
-      'dateDebut': _dateDebut?.toIso8601String(),
-      'dateFin': _dateFin?.toIso8601String(),
-      'dureeJours': _dureeJours,
-      'verificationType': _verificationType,
-      'registreControle': _registreControleController.text,
-      'accompagnateurs': _accompagnateurs,
-      'verificateurs': _verificateurs,
-      'compteRendu': _compteRenduController.text,
-    };
-    
-    // Sauvegarde automatique à chaque changement
-    await SequenceProgressService.saveStepData(widget.mission.id, 'general_info', data);
-    widget.onDataChanged(data);
   }
 
   Future<void> _selectDate(BuildContext context, bool isDebut) async {
@@ -168,8 +190,239 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
         }
         _calculateDuree();
       });
-      _notifyDataChanged();
+      await _saveData();
     }
+  }
+
+  void _showVerificationPicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildStyledPicker(
+        title: 'Type de vérification',
+        options: _verificationOptions,
+        selectedValue: _verificationType,
+        onSelected: (value) async {
+          setState(() => _verificationType = value);
+          await _saveData();
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
+  void _showRegistrePicker() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildStyledPicker(
+        title: 'Registre de contrôle',
+        options: _registreOptions,
+        selectedValue: _registreControle,
+        onSelected: (value) async {
+          setState(() => _registreControle = value);
+          await _saveData();
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
+  Widget _buildStyledPicker({
+    required String title,
+    required List<Map<String, dynamic>> options,
+    required String? selectedValue,
+    required Function(String) onSelected,
+  }) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Handle
+          Container(
+            margin: const EdgeInsets.only(top: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          // Title
+          Padding(
+            padding: const EdgeInsets.all(20),
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          const Divider(height: 0),
+          // Options
+          ...options.map((option) {
+            final isSelected = selectedValue == option['value'];
+            return InkWell(
+              onTap: () => onSelected(option['value']),
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isSelected ? (option['color'] as Color).withOpacity(0.05) : Colors.transparent,
+                  border: isSelected
+                      ? Border(
+                          left: BorderSide(color: option['color'], width: 4),
+                        )
+                      : null,
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        color: (option['color'] as Color).withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Icon(
+                        option['icon'],
+                        color: option['color'],
+                        size: 24,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            option['title'],
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: isSelected ? option['color'] : Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            option['description'],
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (isSelected)
+                      Icon(
+                        Icons.check_circle,
+                        color: option['color'],
+                        size: 24,
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }).toList(),
+          const SizedBox(height: 16),
+          // Bouton fermer
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text('Fermer'),
+              ),
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDisplayField({
+    required String label,
+    required String? value,
+    required String hint,
+    required IconData icon,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
+    final displayColor = color ?? (value != null ? AppTheme.primaryBlue : Colors.grey);
+    
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: value != null ? displayColor.withOpacity(0.3) : Colors.grey.shade200,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: displayColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, size: 20, color: displayColor),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: const TextStyle(fontSize: 12, color: Colors.grey),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    value ?? hint,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: value != null ? Colors.black87 : Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_drop_down, color: displayColor, size: 24),
+          ],
+        ),
+      ),
+    );
   }
 
   void _showAjouterAccompagnateurDialog() {
@@ -181,10 +434,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Ajouter un accompagnateur',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Ajouter un accompagnateur'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -224,7 +474,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
             child: const Text('Annuler'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final nom = nomController.text.trim();
               if (nom.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -239,8 +489,8 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                   'poste': posteController.text.trim(),
                 });
               });
-              _notifyDataChanged();
-              Navigator.pop(context);
+              await _saveData();
+              if (mounted) Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryBlue,
@@ -261,10 +511,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text(
-          'Ajouter un vérificateur',
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-        ),
+        title: const Text('Ajouter un vérificateur'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -295,7 +542,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
             child: const Text('Annuler'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               final nom = nomController.text.trim();
               if (nom.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -309,8 +556,8 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                   'email': emailController.text.trim(),
                 });
               });
-              _notifyDataChanged();
-              Navigator.pop(context);
+              await _saveData();
+              if (mounted) Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppTheme.primaryBlue,
@@ -323,18 +570,18 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
     );
   }
 
-  void _supprimerAccompagnateur(int index) {
+  void _supprimerAccompagnateur(int index) async {
     setState(() {
       _accompagnateurs.removeAt(index);
     });
-    _notifyDataChanged();
+    await _saveData();
   }
 
-  void _supprimerVerificateur(int index) {
+  void _supprimerVerificateur(int index) async {
     setState(() {
       _verificateurs.removeAt(index);
     });
-    _notifyDataChanged();
+    await _saveData();
   }
 
   @override
@@ -342,22 +589,31 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
     _etablissementController.dispose();
     _installationController.dispose();
     _activiteController.dispose();
-    _registreControleController.dispose();
     _compteRenduController.dispose();
     _etablissementFocus.dispose();
     _installationFocus.dispose();
     _activiteFocus.dispose();
-    _registreFocus.dispose();
     _compteRenduFocus.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            CircularProgressIndicator(),
+            SizedBox(height: 16),
+            Text('Chargement des données...'),
+          ],
+        ),
+      );
+    }
+
     return GestureDetector(
-      onTap: () {
-        FocusScope.of(context).unfocus();
-      },
+      onTap: () => FocusScope.of(context).unfocus(),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -369,7 +625,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
               style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 24),
-      
+
             // Établissement
             _buildTextField(
               controller: _etablissementController,
@@ -378,7 +634,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
               focusNode: _etablissementFocus,
             ),
             const SizedBox(height: 16),
-      
+
             // Installation vérifiée
             _buildTextField(
               controller: _installationController,
@@ -388,7 +644,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
               focusNode: _installationFocus,
             ),
             const SizedBox(height: 16),
-      
+
             // Activité principale
             _buildTextField(
               controller: _activiteController,
@@ -398,46 +654,18 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
               focusNode: _activiteFocus,
             ),
             const SizedBox(height: 24),
-      
-            // Type de vérification (Dropdown)
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: DropdownButtonFormField<String>(
-                value: _verificationType,
-                decoration: InputDecoration(
-                  labelText: 'Vérification',
-                  prefixIcon: Icon(Icons.verified_outlined, color: AppTheme.primaryBlue),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
-                  filled: true,
-                  fillColor: Colors.white,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                ),
-                items: _verificationOptions.map((option) {
-                  return DropdownMenuItem(value: option, child: Text(option));
-                }).toList(),
-                onChanged: (value) {
-                  setState(() {
-                    _verificationType = value;
-                  });
-                  _notifyDataChanged();
-                },
-              ),
+
+            // Type de vérification - STYLISÉ
+            _buildDisplayField(
+              label: 'Type de vérification',
+              value: _verificationType,
+              hint: 'Sélectionnez le type de vérification',
+              icon: Icons.verified_outlined,
+              onTap: _showVerificationPicker,
+              color: _verificationType != null ? Colors.blue : null,
             ),
             const SizedBox(height: 24),
-      
+
             // Dates
             Container(
               decoration: BoxDecoration(
@@ -535,237 +763,61 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
               ),
             ),
             const SizedBox(height: 24),
-      
+
             // Accompagnateurs
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
+            _buildDynamicListSection(
+              title: 'Accompagnateurs',
+              icon: Icons.people,
+              color: Colors.blue,
+              items: _accompagnateurs,
+              itemBuilder: (accomp) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.people, color: Colors.blue, size: 20),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Accompagnateurs',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 0),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        // Liste des accompagnateurs
-                        if (_accompagnateurs.isNotEmpty)
-                          ..._accompagnateurs.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final accomp = entry.value;
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey.shade200),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.person, size: 20, color: Colors.blue),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          accomp['nom']!,
-                                          style: const TextStyle(fontWeight: FontWeight.w600),
-                                        ),
-                                        if (accomp['email']!.isNotEmpty)
-                                          Text(
-                                            accomp['email']!,
-                                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                                          ),
-                                        if (accomp['poste']!.isNotEmpty)
-                                          Text(
-                                            accomp['poste']!,
-                                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                                    onPressed: () => _supprimerAccompagnateur(index),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                        
-                        // Bouton ajouter
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: _showAjouterAccompagnateurDialog,
-                            icon: const Icon(Icons.add, size: 18),
-                            label: const Text('AJOUTER UN ACCOMPAGNATEUR'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppTheme.primaryBlue,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  Text(accomp['nom']!, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  if (accomp['email']!.isNotEmpty)
+                    Text(accomp['email']!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                  if (accomp['poste']!.isNotEmpty)
+                    Text(accomp['poste']!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 ],
               ),
+              onAdd: _showAjouterAccompagnateurDialog,
+              onDelete: _supprimerAccompagnateur,
             ),
             const SizedBox(height: 24),
-      
+
             // Vérificateurs
-            Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
-                    blurRadius: 10,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
-              child: Column(
+            _buildDynamicListSection(
+              title: 'Vérificateurs',
+              icon: Icons.verified_user,
+              color: Colors.green,
+              items: _verificateurs,
+              itemBuilder: (verif) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.green.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.verified_user, color: Colors.green, size: 20),
-                        ),
-                        const SizedBox(width: 12),
-                        const Text(
-                          'Vérificateurs',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 0),
-                  Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        // Liste des vérificateurs
-                        if (_verificateurs.isNotEmpty)
-                          ..._verificateurs.asMap().entries.map((entry) {
-                            final index = entry.key;
-                            final verif = entry.value;
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: Colors.grey.shade50,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.grey.shade200),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(Icons.person, size: 20, color: Colors.green),
-                                  const SizedBox(width: 12),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          verif['nom']!,
-                                          style: const TextStyle(fontWeight: FontWeight.w600),
-                                        ),
-                                        if (verif['email']!.isNotEmpty)
-                                          Text(
-                                            verif['email']!,
-                                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.delete, size: 18, color: Colors.red),
-                                    onPressed: () => _supprimerVerificateur(index),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                        
-                        // Bouton ajouter
-                        SizedBox(
-                          width: double.infinity,
-                          child: OutlinedButton.icon(
-                            onPressed: _showAjouterVerificateurDialog,
-                            icon: const Icon(Icons.add, size: 18),
-                            label: const Text('AJOUTER UN VÉRIFICATEUR'),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: AppTheme.primaryBlue,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                  Text(verif['nom']!, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  if (verif['email']!.isNotEmpty)
+                    Text(verif['email']!, style: const TextStyle(fontSize: 12, color: Colors.grey)),
                 ],
               ),
+              onAdd: _showAjouterVerificateurDialog,
+              onDelete: _supprimerVerificateur,
             ),
             const SizedBox(height: 24),
-      
-            // Registre de contrôle
-            _buildTextField(
-              controller: _registreControleController,
+
+            // Registre de contrôle - STYLISÉ
+            _buildDisplayField(
               label: 'Registre de contrôle',
+              value: _registreControle,
+              hint: 'Sélectionnez l\'état du registre',
               icon: Icons.book_outlined,
-              hint: 'Numéro ou référence du registre',
-              focusNode: _registreFocus,
+              onTap: _showRegistrePicker,
+              color: _registreControle != null 
+                  ? (_registreControle == 'Présent' ? Colors.green : (_registreControle == 'Partiellement présent' ? Colors.orange : Colors.red))
+                  : null,
             ),
             const SizedBox(height: 24),
-      
-            // Compte rendu de fin de visite fait à (champ texte)
+
+            // Compte rendu
             _buildTextField(
               controller: _compteRenduController,
               label: 'Compte rendu de fin de visite fait à',
@@ -825,7 +877,8 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
               fillColor: Colors.white,
               contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
             ),
-            onChanged: (_) => _notifyDataChanged(),
+            onChanged: (_) => _saveData(),
+            onEditingComplete: () => focusNode.unfocus(),
           ),
         );
       },
@@ -883,6 +936,101 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
             Icon(Icons.calendar_today, size: 18, color: Colors.grey.shade400),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildDynamicListSection({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<Map<String, String>> items,
+    required Widget Function(Map<String, String>) itemBuilder,
+    required VoidCallback onAdd,
+    required Function(int) onDelete,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: color, size: 20),
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  title,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                ),
+              ],
+            ),
+          ),
+          const Divider(height: 0),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                if (items.isNotEmpty)
+                  ...items.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final item = entry.value;
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(child: itemBuilder(item)),
+                          IconButton(
+                            icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                            onPressed: () => onDelete(index),
+                          ),
+                        ],
+                      ),
+                    );
+                  }),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: onAdd,
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text('AJOUTER UN $title'.toUpperCase()),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primaryBlue,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

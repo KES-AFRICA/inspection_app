@@ -111,7 +111,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Image.asset("assets/icon/app_icon.jpg", height: 80),
+                  Image.asset("assets/images/logo.png", height: 80),
                   const SizedBox(height: 16),
                   Text(
                     'Créer un compte',
@@ -120,11 +120,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       fontWeight: FontWeight.bold,
                       color: AppTheme.darkBlue,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Remplissez les informations ci-dessous',
-                    style: TextStyle(color: AppTheme.textLight),
                   ),
                   const SizedBox(height: 32),
 

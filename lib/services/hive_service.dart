@@ -8,6 +8,7 @@ import 'package:inspec_app/models/foudre.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import '../models/verificateur.dart';
 import '../models/mission.dart';
+import '../models/renseignements_generaux.dart';
 
 class HiveService {
   static const String _verificateurBox = 'verificateurs';
@@ -49,6 +50,7 @@ class HiveService {
   Hive.registerAdapter(ContinuiteResistanceAdapter());
   Hive.registerAdapter(ObservationLibreAdapter());
   Hive.registerAdapter(InstallationItemAdapter()); 
+  Hive.registerAdapter(RenseignementsGenerauxAdapter());
   
 
     // Ouvrir les boxes
@@ -60,6 +62,7 @@ class HiveService {
     await Hive.openBox<Foudre>(_foudreBox); 
     await Hive.openBox<MesuresEssais>(_mesuresEssaisBox);
     await Hive.openBox(_currentUserKey);
+    await Hive.openBox<RenseignementsGeneraux>(_renseignementsGenerauxBox);
   
   }
 
@@ -539,7 +542,7 @@ static Future<bool> updateDocumentStatus({
     return false;
   }
 }
-
+static const String _renseignementsGenerauxBox = 'renseignements_generaux';
 /// Mettre à jour plusieurs documents en une seule opération
 static Future<bool> updateMultipleDocuments({
   required String missionId,
@@ -1045,51 +1048,6 @@ static Future<bool> removeCarteFromSection({
   );
 }
 
-  /// Ajouter une carte à une section spécifique
-  // static Future<bool> addCarteToSection({
-  //   required String missionId,
-  //   required String section,
-  //   required Map<String, String> carte,
-  // }) async {
-  //   try {
-  //     final desc = await getOrCreateDescriptionInstallations(missionId);
-      
-  //     switch (section) {
-  //       case 'alimentation_moyenne_tension':
-  //         desc.alimentationMoyenneTension.add(carte);
-  //         break;
-  //       case 'alimentation_basse_tension':
-  //         desc.alimentationBasseTension.add(carte);
-  //         break;
-  //       case 'groupe_electrogene':
-  //         desc.groupeElectrogene.add(carte);
-  //         break;
-  //       case 'alimentation_carburant':
-  //         desc.alimentationCarburant.add(carte);
-  //         break;
-  //       case 'inverseur':
-  //         desc.inverseur.add(carte);
-  //         break;
-  //       case 'stabilisateur':
-  //         desc.stabilisateur.add(carte);
-  //         break;
-  //       case 'onduleurs':
-  //         desc.onduleurs.add(carte);
-  //         break;
-  //       default:
-  //         print('❌ Section inconnue: $section');
-  //         return false;
-  //     }
-
-  //     await saveDescriptionInstallations(desc);
-  //     print('✅ Carte ajoutée à la section: $section');
-  //     return true;
-  //   } catch (e) {
-  //     print('❌ Erreur addCarteToSection: $e');
-  //     return false;
-  //   }
-  // }
-
   /// Mettre à jour une sélection radio
   static Future<bool> updateSelection({
     required String missionId,
@@ -1138,144 +1096,10 @@ static Future<bool> removeCarteFromSection({
     }
   }
 
-  /// Récupérer toutes les cartes d'une section
-// static Future<List<Map<String, String>>> getCartesFromSection({
-//   required String missionId,
-//   required String section,
-// }) async {
-//   try {
-//     final desc = await getOrCreateDescriptionInstallations(missionId);
-    
-//     switch (section) {
-//       case 'alimentation_moyenne_tension':
-//         return desc.alimentationMoyenneTension;
-//       case 'alimentation_basse_tension':
-//         return desc.alimentationBasseTension;
-//       case 'groupe_electrogene':
-//         return desc.groupeElectrogene;
-//       case 'alimentation_carburant':
-//         return desc.alimentationCarburant;
-//       case 'inverseur':
-//         return desc.inverseur;
-//       case 'stabilisateur':
-//         return desc.stabilisateur;
-//       case 'onduleurs':
-//         return desc.onduleurs;
-//       default:
-//         print('❌ Section inconnue: $section');
-//         return [];
-//     }
-//   } catch (e) {
-//     print('❌ Erreur getCartesFromSection: $e');
-//     return [];
-//   }
-// }
-
-  /// Supprimer une carte d'une section
-  // static Future<bool> removeCarteFromSection({
-  //   required String missionId,
-  //   required String section,
-  //   required int index,
-  // }) async {
-  //   try {
-  //     final desc = await getOrCreateDescriptionInstallations(missionId);
-      
-  //     switch (section) {
-  //       case 'alimentation_moyenne_tension':
-  //         if (index < desc.alimentationMoyenneTension.length) {
-  //           desc.alimentationMoyenneTension.removeAt(index);
-  //         }
-  //         break;
-  //       case 'alimentation_basse_tension':
-  //         if (index < desc.alimentationBasseTension.length) {
-  //           desc.alimentationBasseTension.removeAt(index);
-  //         }
-  //         break;
-  //       // ... autres sections
-  //       default:
-  //         print('❌ Section inconnue: $section');
-  //         return false;
-  //     }
-
-  //     await saveDescriptionInstallations(desc);
-  //     await getCartesFromSection(missionId: missionId, section: section);
-  //     print('✅ Carte supprimée de la section: $section');
-  //     return true;
-  //   } catch (e) {
-  //     print('❌ Erreur removeCarteFromSection: $e');
-  //     return false;
-  //   }
-  // }
-
   /// Vérifier si une mission a des données de description
   static bool hasDescriptionInstallations(String missionId) {
     return getDescriptionInstallationsByMissionId(missionId) != null;
   }
-
-/// Mettre à jour une carte existante dans une section
-// static Future<bool> updateCarteInSection({
-//   required String missionId,
-//   required String section,
-//   required int index,
-//   required Map<String, String> carte,
-// }) async {
-//   try {
-//     final desc = await getOrCreateDescriptionInstallations(missionId);
-    
-//     switch (section) {
-//       case 'alimentation_moyenne_tension':
-//         if (index < desc.alimentationMoyenneTension.length) {
-//           desc.alimentationMoyenneTension[index] = carte;
-//         }
-//         break;
-//       case 'alimentation_basse_tension':
-//         if (index < desc.alimentationBasseTension.length) {
-//           desc.alimentationBasseTension[index] = carte;
-//         }
-//         break;
-//       case 'groupe_electrogene':
-//         if (index < desc.groupeElectrogene.length) {
-//           desc.groupeElectrogene[index] = carte;
-//         }
-//         break;
-//       case 'alimentation_carburant':
-//         if (index < desc.alimentationCarburant.length) {
-//           desc.alimentationCarburant[index] = carte;
-//         }
-//         break;
-//       case 'inverseur':
-//         if (index < desc.inverseur.length) {
-//           desc.inverseur[index] = carte;
-//         }
-//         break;
-//       case 'stabilisateur':
-//         if (index < desc.stabilisateur.length) {
-//           desc.stabilisateur[index] = carte;
-//         }
-//         break;
-//       case 'onduleurs':
-//         if (index < desc.onduleurs.length) {
-//           desc.onduleurs[index] = carte;
-//         }
-//         break;
-//       default:
-//         print('❌ Section inconnue: $section');
-//         return false;
-//     }
-
-//     await saveDescriptionInstallations(desc);
-//     print('✅ Carte mise à jour dans la section: $section');
-//     return true;
-//   } catch (e) {
-//     print('❌ Erreur updateCarteInSection: $e');
-//     return false;
-//   }
-// }
-
-// ============================================================
-//          GESTION AUDIT DES INSTALLATIONS ÉLECTRIQUES
-// ============================================================
-
 
 /// Créer ou récupérer les données d'audit pour une mission
 static Future<AuditInstallationsElectriques> getOrCreateAuditInstallations(String missionId) async {
@@ -5017,6 +4841,51 @@ static ClassementEmplacement? getClassementExisting({
     return box.values.firstWhere(
       (c) => c.missionId == missionId && c.localisation == localisation,
     );
+  } catch (e) {
+    return null;
+  }
+}
+
+// ============================================================
+//          GESTION RENSEIGNEMENTS GENERAUX
+// ============================================================
+
+/// Créer ou récupérer les renseignements généraux pour une mission
+static Future<RenseignementsGeneraux> getOrCreateRenseignementsGeneraux(String missionId) async {
+  final box = Hive.box<RenseignementsGeneraux>(_renseignementsGenerauxBox);
+  
+  try {
+    final existing = box.values.firstWhere((r) => r.missionId == missionId);
+    return existing;
+  } catch (e) {
+    final newData = RenseignementsGeneraux.create(missionId);
+    await box.add(newData);
+    
+    // Mettre à jour la référence dans la mission
+    final missionBox = Hive.box<Mission>(_missionBox);
+    final mission = missionBox.get(missionId);
+    if (mission != null) {
+      mission.renseignementsGenerauxId = newData.key.toString();
+      await mission.save();
+    }
+    
+    return newData;
+  }
+}
+
+/// Sauvegarder les renseignements généraux
+static Future<void> saveRenseignementsGeneraux(RenseignementsGeneraux data) async {
+  final box = Hive.box<RenseignementsGeneraux>(_renseignementsGenerauxBox);
+  data.updatedAt = DateTime.now();
+  await data.save();
+  print('✅ Renseignements généraux sauvegardés pour mission ${data.missionId}');
+}
+
+/// Récupérer les renseignements généraux par missionId
+static RenseignementsGeneraux? getRenseignementsGenerauxByMissionId(String missionId) {
+  final box = Hive.box<RenseignementsGeneraux>(_renseignementsGenerauxBox);
+  try {
+    return box.values.firstWhere((r) => r.missionId == missionId);
   } catch (e) {
     return null;
   }
