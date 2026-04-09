@@ -1,7 +1,8 @@
+
 import 'package:flutter/material.dart';
 import 'package:inspec_app/pages/missions/home_screen.dart';
+import 'package:inspec_app/pages/register_screen.dart';
 import '../services/hive_service.dart';
-import '../services/supabase_service.dart';
 import '../models/verificateur.dart';
 import '../constants/app_theme.dart';
 
@@ -14,101 +15,49 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nomController = TextEditingController();
-  final _matriculeController = TextEditingController();
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
 
   bool _isLoading = false;
-  bool _obscureMatricule = true; // Pour gérer la visibilité du matricule
+  bool _obscurePassword = true;
   String? _errorMessage;
 
   @override
   void dispose() {
-    _nomController.dispose();
-    _matriculeController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 
   Future<void> _login() async {
-    // Réinitialiser le message d'erreur
     setState(() {
       _errorMessage = null;
     });
 
-    // Valider le formulaire
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
-    final nom = _nomController.text.trim();
-    final matricule = _matriculeController.text.trim();
+    final email = _emailController.text.trim().toLowerCase();
+    final password = _passwordController.text;
 
-    try {
-      // 1️⃣ Vérifier si l'utilisateur existe localement (par matricule)
-      final allUsers = HiveService.getAllUsers();
-      Verificateur? localUser;
-      try {
-        localUser = allUsers.firstWhere(
-          (user) => user.matricule.toUpperCase() == matricule.toUpperCase(),
+    // Authentification par email + password
+    final user = HiveService.authenticateUser(email, password);
+
+    if (user != null) {
+      await HiveService.saveCurrentUser(user);
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => HomeScreen(user: user)),
         );
-      } catch (e) {
-        localUser = null;
       }
-
-      if (localUser != null) {
-        if (localUser.nom.toLowerCase() == nom.toLowerCase()) {
-          // Connexion locale réussie
-          await HiveService.saveCurrentUser(localUser);
-          _navigateToHome(localUser);
-          return;
-        } else {
-          setState(() {
-            _errorMessage = 'Nom ou matricule incorrect';
-            _isLoading = false;
-          });
-          return;
-        }
-      }
-
-      // 2️⃣ Première connexion → Vérifier la connexion internet
-      final hasConnection = await SupabaseService.testConnection();
-      if (!hasConnection) {
-        setState(() {
-          _errorMessage =
-              'Aucune connexion Internet.\nVeuillez vous connecter pour la première fois.';
-          _isLoading = false;
-        });
-        return;
-      }
-
-      // 3️⃣ Vérifier l'utilisateur sur Supabase
-      final user = await SupabaseService.verifyUser(nom, matricule);
-      if (user != null) {
-        // Utilisateur trouvé → Sauvegarder localement
-        await HiveService.saveCurrentUser(user);
-        _navigateToHome(user);
-      } else {
-        setState(() {
-          _errorMessage =
-              'Utilisateur non trouvé.\nVérifiez votre nom et matricule.';
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
+    } else {
       setState(() {
-        _errorMessage = 'Erreur de connexion : ${e.toString()}';
+        _errorMessage = 'Email ou mot de passe incorrect';
         _isLoading = false;
       });
     }
-  }
-
-  void _navigateToHome(Verificateur user) {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (context) => HomeScreen(user: user)),
-    );
   }
 
   @override
@@ -118,84 +67,65 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.all(24),
             child: Form(
               key: _formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // Logo/
-                  Image.asset("assets/icon/app_icon.jpg", height: 100),
-                  const SizedBox(height: 16),
-
-                  // Sous-titre
+                  Image.asset("assets/images/logo.png", height: 100),
+                  const SizedBox(height: 20),
+                  
                   Text(
-                    'Connectez-vous pour continuer',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodyMedium,
+                    'INSPECTION APP',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.darkBlue,
+                    ),
                   ),
+
                   const SizedBox(height: 48),
 
-                  // Champ Nom
+                  // Email
                   TextFormField(
-                    controller: _nomController,
+                    controller: _emailController,
                     decoration: const InputDecoration(
-                      labelText: 'Nom complet',
-                      hintText: 'Ex: Jean Dupont',
-                      prefixIcon: Icon(Icons.person_outline),
+                      labelText: 'Email',
+                      prefixIcon: Icon(Icons.email_outlined),
+                      border: OutlineInputBorder(),
+                      hintText: 'exemple@domaine.com',
                     ),
-                    textCapitalization: TextCapitalization.words,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Veuillez entrer votre nom';
-                      }
-                      if (value.trim().length < 3) {
-                        return 'Le nom doit contenir au moins 3 caractères';
-                      }
+                    keyboardType: TextInputType.emailAddress,
+                    textCapitalization: TextCapitalization.none,
+                    validator: (v) {
+                      if (v?.isEmpty ?? true) return 'Veuillez entrer votre email';
+                      if (!v!.contains('@') || !v.contains('.')) return 'Email invalide';
                       return null;
                     },
                   ),
                   const SizedBox(height: 16),
 
-                  // Champ Matricule (avec visibilité)
+                  // Mot de passe
                   TextFormField(
-                    controller: _matriculeController,
-                    obscureText: _obscureMatricule,
+                    controller: _passwordController,
+                    obscureText: _obscurePassword,
                     decoration: InputDecoration(
-                      labelText: 'Matricule',
-                      hintText: 'Ex: VER001',
-                      prefixIcon: const Icon(Icons.badge_outlined),
+                      labelText: 'Mot de passe',
+                      prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
-                        icon: Icon(
-                          _obscureMatricule
-                              ? Icons.visibility_off_outlined
-                              : Icons.visibility_outlined,
-                        ),
-                        onPressed: () {
-                          setState(() {
-                            _obscureMatricule = !_obscureMatricule;
-                          });
-                        },
-                        tooltip: _obscureMatricule
-                            ? 'Afficher le matricule'
-                            : 'Masquer le matricule',
+                        icon: Icon(_obscurePassword ? Icons.visibility_off : Icons.visibility),
+                        onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                       ),
+                      border: const OutlineInputBorder(),
                     ),
-                    textCapitalization: TextCapitalization.characters,
-                    validator: (value) {
-                      if (value == null || value.trim().isEmpty) {
-                        return 'Veuillez entrer votre matricule';
-                      }
-                      if (value.trim().length < 3) {
-                        return 'Le matricule doit contenir au moins 3 caractères';
-                      }
+                    validator: (v) {
+                      if (v?.isEmpty ?? true) return 'Veuillez entrer votre mot de passe';
                       return null;
                     },
                   ),
                   const SizedBox(height: 32),
 
-                  // Message d'erreur
                   if (_errorMessage != null)
                     Container(
                       padding: const EdgeInsets.all(12),
@@ -203,68 +133,52 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: BoxDecoration(
                         color: Colors.red.shade50,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.shade200),
                       ),
                       child: Row(
                         children: [
                           Icon(Icons.error_outline, color: Colors.red.shade700),
                           const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              _errorMessage!,
-                              style: TextStyle(
-                                color: Colors.red.shade700,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
+                          Expanded(child: Text(_errorMessage!, style: TextStyle(color: Colors.red.shade700))),
                         ],
                       ),
                     ),
 
-                  // Bouton de connexion
-                  ElevatedButton(
-                    onPressed: _isLoading ? null : _login,
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor: AlwaysStoppedAnimation<Color>(
-                                Colors.white,
-                              ),
-                            ),
-                          )
-                        : const Text('Se connecter'),
-                  ),
-                  const SizedBox(height: 24),
-
-                  // Info
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: AppTheme.lightBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _login,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text('Se connecter', style: TextStyle(fontSize: 16)),
                     ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          color: AppTheme.primaryBlue,
-                          size: 20,
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            'Première connexion ?\nUne connexion Internet est requise.',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: AppTheme.textDark,
-                            ),
-                          ),
-                        ),
-                      ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const RegisterScreen()),
+                      );
+                    },
+                    child: Text(
+                      'Créer un compte',
+                      style: TextStyle(color: AppTheme.primaryBlue),
+                    ),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                    },
+                    child: Text(
+                      'Mot de passe oublié',
+                      style: TextStyle(color: AppTheme.primaryBlue),
                     ),
                   ),
                 ],

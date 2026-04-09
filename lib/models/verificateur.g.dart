@@ -19,22 +19,31 @@ class VerificateurAdapter extends TypeAdapter<Verificateur> {
     return Verificateur(
       id: fields[0] as String,
       nom: fields[1] as String,
-      matricule: fields[2] as String,
-      createdAt: fields[3] as DateTime,
+      prenom: fields[2] as String,
+      matricule: fields[3] as String,
+      email: fields[4] as String,
+      password: fields[5] as String,
+      createdAt: fields[6] as DateTime,
     );
   }
 
   @override
   void write(BinaryWriter writer, Verificateur obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
       ..write(obj.nom)
       ..writeByte(2)
-      ..write(obj.matricule)
+      ..write(obj.prenom)
       ..writeByte(3)
+      ..write(obj.matricule)
+      ..writeByte(4)
+      ..write(obj.email)
+      ..writeByte(5)
+      ..write(obj.password)
+      ..writeByte(6)
       ..write(obj.createdAt);
   }
 

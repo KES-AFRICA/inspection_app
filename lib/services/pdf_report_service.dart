@@ -241,9 +241,6 @@ class PdfReportService {
   // ============================================================
   static pw.Widget _buildCoverPage(
       Mission mission, pw.MemoryImage? logoKes, pw.MemoryImage? logoClient) {
-        // final fileL = File(mission.logoClient??'');
-        // final bytesL = await fileL.readAsBytes();
-        // final imgL = pw.MemoryImage(bytesL);
     return pw.Column(
       children: [
         // Bande haute avec logos
@@ -264,7 +261,6 @@ class PdfReportService {
         ),
 
         pw.SizedBox(height: 40),
-
 
         pw.Row(
               mainAxisAlignment: pw.MainAxisAlignment.end,
@@ -342,8 +338,6 @@ class PdfReportService {
                 textAlign: pw.TextAlign.center,
           ),
         ),
-
-        
 
         pw.SizedBox(height: 50),
 
@@ -435,7 +429,6 @@ class PdfReportService {
     );
   }
 
-
   // ============================================================
   //  RAPPEL DES RESPONSABILITÉS
   // ============================================================
@@ -499,7 +492,7 @@ class PdfReportService {
       _bodyText('Le personnel doit avoir subi avec succès une formation en habilitation électrique en fonction du domaine de tension.'),
       pw.SizedBox(height: 3),
       // Tableau habilitations
-      _buildHabilitationsTable(illus1),
+      _buildHabilitationsTable(),
       pw.SizedBox(height: sectionGap),
       _bodyText(
         'Il est rappelé que des dispositions de sécurité particulières et parfaitement définies doivent être prises par le chef de l\'établissement '
@@ -526,24 +519,30 @@ class PdfReportService {
     ];
   }
 
-  static Future<pw.Widget> _buildHabilitationsTable() async {
-      pw.MemoryImage? illus1;
-      try {
-        final bytes1il = (await rootBundle.load('assets/images/image.png')).buffer.asUint8List();
-        illus1 = pw.MemoryImage(bytes1il);
-      } catch (_) {}
+  static pw.Widget _buildHabilitationsTable() {
     return pw.Container(
-          width: double.infinity,
-          child: pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              illus1 != null
-                  ? pw.Image(illus1,width: double.infinity, height: 80, fit: pw.BoxFit.contain)
-                  : pw.Text('KES INSPECTIONS AND PROJECTS',
-                      style: pw.TextStyle(color: PdfColors.white, fontSize: 8, fontWeight: pw.FontWeight.bold)),
-            ],
+      width: double.infinity,
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: borderColor, width: borderWidth),
+      ),
+      padding: pw.EdgeInsets.all(8),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            'SYMBOLES D\'HABILITATION ÉLECTRIQUE',
+            style: pw.TextStyle(fontSize: fsH3, fontWeight: pw.FontWeight.bold, color: headerColor),
           ),
-        );
+          pw.SizedBox(height: 4),
+          _bodyText('B0 : Habilitation de base - Travaux hors tension'),
+          _bodyText('BR : Habilitation de remplacement - Consignation'),
+          _bodyText('BC : Habilitation de consignation'),
+          _bodyText('BE : Habilitation d\'essai - Mesures'),
+          _bodyText('BS : Habilitation de surveillance'),
+          _bodyText('H0 : Habilitation hors tension pour non-électriciens'),
+        ],
+      ),
+    );
   }
 
   // ============================================================

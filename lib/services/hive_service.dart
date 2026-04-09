@@ -67,32 +67,40 @@ class HiveService {
   //                      GESTION UTILISATEUR
   // ============================================================
 
-  /// Sauvegarder l’utilisateur connecté et marquer comme connecté
+  /// Sauvegarder l'utilisateur (clé = email)
   static Future<void> saveCurrentUser(Verificateur user) async {
     final box = Hive.box<Verificateur>(_verificateurBox);
-    await box.put(user.matricule, user);
+    await box.put(user.email.toLowerCase(), user);  // Clé = email en minuscule
 
     final currentBox = Hive.box(_currentUserKey);
-    await currentBox.put('matricule', user.matricule);
+    await currentBox.put('email', user.email.toLowerCase());
     await currentBox.put('isLoggedIn', true);
+  }
 
-    print("🔵 Utilisateur sauvegardé et connecté : ${user.matricule}");
+  /// Vérifier si un matricule existe déjà
+  static bool matriculeExists(String matricule) {
+    final box = Hive.box<Verificateur>(_verificateurBox);
+    try {
+      return box.values.any((user) => user.matricule.toUpperCase() == matricule.toUpperCase());
+    } catch (e) {
+      return false;
+    }
   }
 
   /// Récupérer l’utilisateur ACTUELLEMENT connecté
   static Verificateur? getCurrentUser() {
     try {
       final currentBox = Hive.box(_currentUserKey);
-      final matricule = currentBox.get('matricule');
+      final email = currentBox.get('email');
       final isLoggedIn = currentBox.get('isLoggedIn', defaultValue: false);
 
-      if (matricule == null || !isLoggedIn) return null;
+      if (email == null || !isLoggedIn) return null;
 
       final box = Hive.box<Verificateur>(_verificateurBox);
-      final user = box.get(matricule);
+      final user = box.get(email);
 
       if (user == null) {
-        currentBox.delete('matricule');
+        currentBox.delete('email');
         currentBox.delete('isLoggedIn');
       }
 
@@ -103,22 +111,50 @@ class HiveService {
     }
   }
 
+  /// Vérifier si un email existe déjà
+  static bool emailExists(String email) {
+    final box = Hive.box<Verificateur>(_verificateurBox);
+    return box.containsKey(email.toLowerCase());
+  }
+
+  static Verificateur? getUserByEmail(String email) {
+    final box = Hive.box<Verificateur>(_verificateurBox);
+    return box.get(email);
+  }
+
+  /// Vérifier si un utilisateur existe (par email)
+  static bool userExists(String email) {
+    final box = Hive.box<Verificateur>(_verificateurBox);
+    return box.containsKey(email);
+  }
+
+  /// Vérifier les identifiants (email + password)
+  static Verificateur? authenticateUser(String email, String password) {
+    final box = Hive.box<Verificateur>(_verificateurBox);
+    final user = box.get(email.toLowerCase());
+    
+    if (user != null && user.password == password) {
+      return user;
+    }
+    return null;
+  }
+
   //liste de tous les verificateurs
   static List<Verificateur> getAllVerificateurs() {
     final box = Hive.box<Verificateur>(_verificateurBox);
     return box.values.toList();
   }
 
-  /// Récupérer UN utilisateur à partir du matricule (connexion locale)
+  /// Récupérer un utilisateur par son matricule
   static Verificateur? getUserByMatricule(String matricule) {
     final box = Hive.box<Verificateur>(_verificateurBox);
-    return box.get(matricule);
-  }
-
-  /// Vérifie si un utilisateur existe localement
-  static bool userExists(String matricule) {
-    final box = Hive.box<Verificateur>(_verificateurBox);
-    return box.containsKey(matricule);
+    try {
+      return box.values.firstWhere(
+        (user) => user.matricule.toUpperCase() == matricule.toUpperCase(),
+      );
+    } catch (e) {
+      return null;
+    }
   }
 
   /// Vérifie si un utilisateur est connecté
@@ -169,6 +205,17 @@ class HiveService {
     }
     print('==============================');
   }
+
+  static Verificateur? getUserByMatriculeAndPassword(String matricule, String password) {
+    final box = Hive.box<Verificateur>(_verificateurBox);
+    final user = box.get(matricule);
+    if (user != null && user.password == password) {
+      return user;
+    }
+    return null;
+  }
+
+  
 
   // ============================================================
   //                      GESTION MISSIONS
@@ -221,6 +268,16 @@ class HiveService {
     } catch (e) {
       print('❌ Erreur getAllUsers: $e');
       return [];
+    }
+  }
+
+  // Récupérer un vérificateur par matricule
+  static Verificateur? getVerificateurByMatricule(String matricule) {
+    final box = Hive.box<Verificateur>(_verificateurBox);
+    try {
+      return box.values.firstWhere((v) => v.matricule == matricule);
+    } catch (e) {
+      return null;
     }
   }
 

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
+import 'package:inspec_app/pages/missions/create_mission_screen.dart';
 import 'package:inspec_app/pages/stats/stats_screen.dart';
 import 'package:inspec_app/pages/missions/components/filter_dialog.dart';
 import 'package:inspec_app/pages/missions/components/home_app_bar.dart';
@@ -217,22 +218,42 @@ void _saveStatsPeriodPreference(String period) {
 
           // Floating Action Button (seulement sur la page d'accueil)
           if (_currentPageIndex == 0)
+            // Positioned(
+            //   right: 16,
+            //   bottom: 16,
+            //   child: FloatingActionButton.extended(
+            //     onPressed: _isSyncing ? null : _syncMissions,
+            //     icon: _isSyncing
+            //         ? const SizedBox(
+            //             width: 20,
+            //             height: 20,
+            //             child: CircularProgressIndicator(
+            //               strokeWidth: 2,
+            //               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+            //             ),
+            //           )
+            //         : const Icon(Icons.sync),
+            //     label: Text(_isSyncing ? 'Synchronisation...' : 'Synchroniser'),
+            //   ),
+            // ),
             Positioned(
-              right: 16,
+              left: 16,
               bottom: 16,
               child: FloatingActionButton.extended(
-                onPressed: _isSyncing ? null : _syncMissions,
-                icon: _isSyncing
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                        ),
-                      )
-                    : const Icon(Icons.sync),
-                label: Text(_isSyncing ? 'Synchronisation...' : 'Synchroniser'),
+                onPressed: () async {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CreateMissionScreen(currentUser: widget.user),
+                    ),
+                  );
+                  if (result == true) {
+                    _loadLocalMissions();
+                  }
+                },
+                icon: const Icon(Icons.add),
+                label: const Text('Nouvelle mission'),
+                backgroundColor: Colors.green,
               ),
             ),
 

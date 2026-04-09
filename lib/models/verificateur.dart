@@ -1,3 +1,4 @@
+// lib/models/verificateur.dart
 import 'package:hive/hive.dart';
 
 part 'verificateur.g.dart';
@@ -11,14 +12,26 @@ class Verificateur extends HiveObject {
   String nom;
 
   @HiveField(2)
-  String matricule;
+  String prenom;
 
   @HiveField(3)
+  String email;        // ← Email comme identifiant principal
+
+  @HiveField(4)
+  String password;
+
+  @HiveField(5)
+  String matricule;
+
+  @HiveField(6)
   DateTime createdAt;
 
   Verificateur({
     required this.id,
     required this.nom,
+    required this.prenom,
+    required this.email,
+    required this.password,
     required this.matricule,
     required this.createdAt,
   });
@@ -27,7 +40,10 @@ class Verificateur extends HiveObject {
     return Verificateur(
       id: json['id'] ?? '',
       nom: json['nom'] ?? '',
-      matricule: json['matricule'] ?? '',
+      prenom: json['prenom'] ?? '',
+      email: json['email'] ?? '',
+      password: json['password'] ?? '',
+      matricule: json['matricule'],
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at']) 
           : DateTime.now(),
@@ -38,8 +54,13 @@ class Verificateur extends HiveObject {
     return {
       'id': id,
       'nom': nom,
+      'prenom': prenom,
+      'email': email,
+      'password': password,
       'matricule': matricule,
       'created_at': createdAt.toIso8601String(),
     };
   }
+
+  String get fullName => '$prenom $nom';
 }
