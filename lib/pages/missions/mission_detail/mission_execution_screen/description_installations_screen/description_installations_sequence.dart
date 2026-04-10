@@ -115,7 +115,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
     },
     {
       'key': 'paratonnerre',
-      'title': 'Paratonnerre',
+      'title': 'Protection des installations contre la foudre',
       'icon': Icons.flash_on_outlined,
       'fields': ['presence_paratonnerre', 'analyse_risque_foudre', 'etude_technique_foudre'],
       'isParatonnerre': true,
@@ -383,7 +383,6 @@ Widget _buildBottomNavigation() {
           ),
         
         if (!isFirstStep) SizedBox(width: 16),
-        
         // Bouton Suivant/Compléter
         Expanded(
           child: ElevatedButton(
