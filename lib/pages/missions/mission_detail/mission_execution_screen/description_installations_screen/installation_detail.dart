@@ -48,7 +48,8 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
       MaterialPageRoute(
         builder: (context) => AjouterCarteScreen(
           champs: widget.champs,
-          carte: null, // Nouvelle carte
+          carte: null,
+          sectionKey: widget.sectionKey, // Passer la sectionKey
         ),
       ),
     );
@@ -61,13 +62,13 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
       );
 
       if (success) {
-        _loadCartes(); // Recharger les cartes
+        _loadCartes();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Carte ajoutée avec succès')),
+          const SnackBar(content: Text('Carte ajoutée avec succès')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de l\'ajout')),
+          const SnackBar(content: Text('Erreur lors de l\'ajout')),
         );
       }
     }
@@ -80,7 +81,8 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
       MaterialPageRoute(
         builder: (context) => AjouterCarteScreen(
           champs: widget.champs,
-          carte: carte, // Carte existante pour édition
+          carte: carte,
+          sectionKey: widget.sectionKey, // Passer la sectionKey
         ),
       ),
     );
@@ -94,13 +96,13 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
       );
 
       if (success) {
-        _loadCartes(); // Recharger les cartes
+        _loadCartes();
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Carte modifiée avec succès')),
+          const SnackBar(content: Text('Carte modifiée avec succès')),
         );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur lors de la modification')),
+          const SnackBar(content: Text('Erreur lors de la modification')),
         );
       }
     }
@@ -110,12 +112,12 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer cette carte ?'),
+        title: const Text('Confirmer la suppression'),
+        content: const Text('Voulez-vous vraiment supprimer cette carte ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Annuler'),
+            child: const Text('Annuler'),
           ),
           TextButton(
             onPressed: () async {
@@ -127,17 +129,17 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
               );
 
               if (success) {
-               _loadCartes(); // Recharger les cartes
+               _loadCartes();
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Carte supprimée')),
+                  const SnackBar(content: Text('Carte supprimée')),
                 );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('Erreur lors de la suppression')),
+                  const SnackBar(content: Text('Erreur lors de la suppression')),
                 );
               }
             },
-            child: Text('Supprimer', style: TextStyle(color: Colors.red)),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -158,12 +160,12 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.list_alt_outlined, size: 64, color: Colors.grey.shade400),
-                  SizedBox(height: 16),
+                  const SizedBox(height: 16),
                   Text(
                     'Aucune carte ajoutée',
                     style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
                   ),
-                  SizedBox(height: 8),
+                  const SizedBox(height: 8),
                   Text(
                     'Appuyez sur le + pour ajouter une carte',
                     style: TextStyle(color: Colors.grey.shade500),
@@ -172,7 +174,7 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
               ),
             )
           : ListView.builder(
-              padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 80),
+              padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 80),
               itemCount: _cartes.length,
               itemBuilder: (context, index) {
                 final carte = _cartes[index];
@@ -182,110 +184,116 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
       floatingActionButton: FloatingActionButton(
         onPressed: _ajouterCarte,
         backgroundColor: AppTheme.primaryBlue,
-        child: Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-Widget _buildCarteItem(Map<String, String> carte, int index) {
-  return Card(
-    margin: EdgeInsets.only(bottom: 16),
-    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-    elevation: 2,
-    child: InkWell(
-      onTap: () => _editerCarte(index),
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Contenu de la carte - Affiche tous les champs même vides
-            ...widget.champs.map((champ) {
-              final valeur = carte[champ] ?? '';
-              final estObservations = _estChampObservations(champ);
+  Widget _buildCarteItem(Map<String, String> carte, int index) {
+    // Vérifier si c'est la section MT pour afficher l'IACM
+    final isMoyenneTension = widget.sectionKey == 'alimentation_moyenne_tension';
+    
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      elevation: 2,
+      child: InkWell(
+        onTap: () => _editerCarte(index),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ...widget.champs.map((champ) {
+                String valeur = carte[champ] ?? '';
+                
+                // Pour la section MT, afficher aussi l'IACM si présent
+                if (isMoyenneTension && champ == 'NATURE DU RESEAU' && carte.containsKey('PRESENCE IACM')) {
+                  valeur = '$valeur (IACM: ${carte['PRESENCE IACM']})';
+                }
+                
+                final estObservations = _estChampObservations(champ);
+                
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        champ,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.darkBlue,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade200),
+                        ),
+                        child: valeur.isEmpty
+                            ? Text(
+                                'Non renseigné',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey.shade500,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              )
+                            : Text(
+                                valeur,
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
               
-              return Padding(
-                padding: EdgeInsets.only(bottom: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      champ,
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: AppTheme.darkBlue,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Container(
-                      width: double.infinity,
-                      padding: EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade200),
-                      ),
-                      child: valeur.isEmpty
-                          ? Text(
-                              'Non renseigné',
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.grey.shade500,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            )
-                          : Text(
-                              valeur,
-                              style: TextStyle(
-                                fontSize: 14,
-                                color: Colors.black87,
-                              ),
-                            ),
-                    ),
-                  ],
-                ),
-              );
-            }).toList(),
-
               // Séparateur
               Container(
                 height: 1,
                 color: Colors.grey.shade200,
-                margin: EdgeInsets.symmetric(vertical: 8),
+                margin: const EdgeInsets.symmetric(vertical: 8),
               ),
-
-              // Boutons d'action en bas de la carte
+              
+              // Boutons d'action
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  // Bouton Éditer
                   ElevatedButton.icon(
                     onPressed: () => _editerCarte(index),
-                    icon: Icon(Icons.edit, size: 18),
-                    label: Text('Modifier'),
+                    icon: const Icon(Icons.edit, size: 18),
+                    label: const Text('Modifier'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryBlue,
                       foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
                   
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   
-                  // Bouton Supprimer
                   ElevatedButton.icon(
                     onPressed: () => _supprimerCarte(index),
-                    icon: Icon(Icons.delete_outline, size: 18),
-                    label: Text('Supprimer'),
+                    icon: const Icon(Icons.delete_outline, size: 18),
+                    label: const Text('Supprimer'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red.shade50,
                       foregroundColor: Colors.red,
-                      padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                         side: BorderSide(color: Colors.red.shade200),
@@ -301,10 +309,9 @@ Widget _buildCarteItem(Map<String, String> carte, int index) {
     );
   }
 
-//méthode pour détecter les champs d'observations
-bool _estChampObservations(String champ) {
-  return champ.toLowerCase().contains('observation') || 
-         champ.toLowerCase().contains('remarque') ||
-         champ.toLowerCase().contains('note');
-}
+  bool _estChampObservations(String champ) {
+    return champ.toLowerCase().contains('observation') || 
+           champ.toLowerCase().contains('remarque') ||
+           champ.toLowerCase().contains('note');
+  }
 }

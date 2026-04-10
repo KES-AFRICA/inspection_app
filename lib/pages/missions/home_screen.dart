@@ -100,118 +100,121 @@ void _saveStatsPeriodPreference(String period) {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        children: [
-          // Contenu principal
-          Column(
-            children: [
-              // AppBar personnalisé
-              HomeAppBar(
-                currentPageIndex: _currentPageIndex,
-                onMenuPressed: () {
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        body: Stack(
+          children: [
+            // Contenu principal
+            Column(
+              children: [
+                // AppBar personnalisé
+                HomeAppBar(
+                  currentPageIndex: _currentPageIndex,
+                  onMenuPressed: () {
+                    setState(() {
+                      _showSidebar = !_showSidebar;
+                    });
+                  },
+                  onFilterPressed: () => showDialog(
+                    context: context,
+                    builder: (context) => FilterDialog(
+                      selectedFilter: _selectedFilter,
+                      missions: _missions,
+                      onFilterApplied: _updateFilteredMissions,
+                      onFilterSelected: _updateSelectedFilter,
+                    ),
+                  ),
+                  onSearchPressed: () => showDialog(
+                    context: context,
+                    builder: (context) => SearchDialog(
+                      searchQuery: _searchQuery,
+                      missions: _missions,
+                      onSearchApplied: _updateFilteredMissions,
+                      onSearchQueryChanged: _updateSearchQuery,
+                    ),
+                  ),
+                  onSortPressed: () => showDialog(
+                    context: context,
+                    builder: (context) => SortDialog(
+                      selectedFilter: _selectedFilter,
+                      missions: _missions,
+                      onFilterApplied: _updateFilteredMissions,
+                      onFilterSelected: _updateSelectedFilter,
+                    ),
+                  ),
+                  onStatsPeriodSelected: _handleStatsPeriodChange,
+                ),
+      
+                // Corps de l'application
+                Expanded(
+                  child: Container(
+                    color: Colors.grey.shade50,
+                    child: _currentPageIndex == 0
+                        ? _buildHomeContent()
+                        : StatsScreen(
+                            user: widget.user,
+                            initialPeriod: _statsSelectedPeriod,
+                            onPeriodChanged: _handleStatsPeriodChange, 
+                          ),
+                  ),
+                ),
+              ],
+            ),
+      
+            // Floating Action Button (seulement sur la page d'accueil)
+            if (_currentPageIndex == 0)
+              Positioned(
+                left: 16,
+                bottom: 16,
+                child: FloatingActionButton.extended(
+                  onPressed: () async {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => CreateMissionScreen(currentUser: widget.user),
+                      ),
+                    );
+                    if (result == true) {
+                      _loadLocalMissions();
+                    }
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Nouvelle mission'),
+                  backgroundColor: Colors.green,
+                ),
+              ),
+      
+            // Overlay flou quand le sidebar est ouvert
+            if (_showSidebar)
+              GestureDetector(
+                onTap: () {
                   setState(() {
-                    _showSidebar = !_showSidebar;
+                    _showSidebar = false;
                   });
                 },
-                onFilterPressed: () => showDialog(
-                  context: context,
-                  builder: (context) => FilterDialog(
-                    selectedFilter: _selectedFilter,
-                    missions: _missions,
-                    onFilterApplied: _updateFilteredMissions,
-                    onFilterSelected: _updateSelectedFilter,
-                  ),
-                ),
-                onSearchPressed: () => showDialog(
-                  context: context,
-                  builder: (context) => SearchDialog(
-                    searchQuery: _searchQuery,
-                    missions: _missions,
-                    onSearchApplied: _updateFilteredMissions,
-                    onSearchQueryChanged: _updateSearchQuery,
-                  ),
-                ),
-                onSortPressed: () => showDialog(
-                  context: context,
-                  builder: (context) => SortDialog(
-                    selectedFilter: _selectedFilter,
-                    missions: _missions,
-                    onFilterApplied: _updateFilteredMissions,
-                    onFilterSelected: _updateSelectedFilter,
-                  ),
-                ),
-                onStatsPeriodSelected: _handleStatsPeriodChange,
-              ),
-
-              // Corps de l'application
-              Expanded(
                 child: Container(
-                  color: Colors.grey.shade50,
-                  child: _currentPageIndex == 0
-                      ? _buildHomeContent()
-                      : StatsScreen(
-                          user: widget.user,
-                          initialPeriod: _statsSelectedPeriod,
-                          onPeriodChanged: _handleStatsPeriodChange, 
-                        ),
+                  color: Colors.black.withOpacity(0.5),
                 ),
               ),
-            ],
-          ),
-
-          // Floating Action Button (seulement sur la page d'accueil)
-          if (_currentPageIndex == 0)
-            Positioned(
-              left: 16,
-              bottom: 16,
-              child: FloatingActionButton.extended(
-                onPressed: () async {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CreateMissionScreen(currentUser: widget.user),
-                    ),
-                  );
-                  if (result == true) {
-                    _loadLocalMissions();
-                  }
-                },
-                icon: const Icon(Icons.add),
-                label: const Text('Nouvelle mission'),
-                backgroundColor: Colors.green,
-              ),
-            ),
-
-          // Overlay flou quand le sidebar est ouvert
-          if (_showSidebar)
-            GestureDetector(
-              onTap: () {
+      
+            // Sidebar menu
+            SidebarMenu(
+              showSidebar: _showSidebar,
+              user: widget.user,
+              filteredMissions: _filteredMissions,
+              selectedFilter: _selectedFilter,
+              searchQuery: _searchQuery,
+              currentPageIndex: _currentPageIndex,
+              onNavigationItemSelected: _onNavigationItemSelected,
+              onClose: () {
                 setState(() {
                   _showSidebar = false;
                 });
               },
-              child: Container(
-                color: Colors.black.withOpacity(0.5),
-              ),
             ),
-
-          // Sidebar menu
-          SidebarMenu(
-            showSidebar: _showSidebar,
-            user: widget.user,
-            filteredMissions: _filteredMissions,
-            selectedFilter: _selectedFilter,
-            searchQuery: _searchQuery,
-            currentPageIndex: _currentPageIndex,
-            onNavigationItemSelected: _onNavigationItemSelected,
-            onClose: () {
-              setState(() {
-                _showSidebar = false;
-              });
-            },
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

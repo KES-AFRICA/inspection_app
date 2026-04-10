@@ -1,13 +1,10 @@
+// lib/pages/missions/sequence/sequence_progress_service.dart
 import 'package:hive/hive.dart';
 
 class SequenceProgressService {
   static const String _progressBox = 'mission_progress';
   
-  // ============================================================
-  // GESTION DE LA PROGRESSION GLOBALE
-  // ============================================================
-  
-  /// Récupérer la progression complète d'une mission
+  // Structure de progression pour une mission
   static Future<Map<String, dynamic>> getProgress(String missionId) async {
     final box = await Hive.openBox(_progressBox);
     final progress = box.get(missionId, defaultValue: {
@@ -19,69 +16,57 @@ class SequenceProgressService {
     return Map<String, dynamic>.from(progress);
   }
   
-  /// Sauvegarder la progression complète
-  static Future<void> saveProgress(String missionId, Map<String, dynamic> progress) async {
-    final box = await Hive.openBox(_progressBox);
-    progress['lastUpdated'] = DateTime.now().toIso8601String();
-    await box.put(missionId, progress);
-    print('✅ Progression sauvegardée pour mission $missionId');
-  }
-  
-  /// Sauvegarder l'étape courante uniquement
+  // Sauvegarder l'étape courante
   static Future<void> saveCurrentStep(String missionId, int stepIndex) async {
+    final box = await Hive.openBox(_progressBox);
     final progress = await getProgress(missionId);
     progress['currentStep'] = stepIndex;
-    await saveProgress(missionId, progress);
+    progress['lastUpdated'] = DateTime.now().toIso8601String();
+    await box.put(missionId, progress);
   }
   
-  /// Marquer une étape comme complétée
+  // Marquer une étape comme complétée
   static Future<void> markStepCompleted(String missionId, int stepIndex) async {
+    final box = await Hive.openBox(_progressBox);
     final progress = await getProgress(missionId);
     if (!progress['completedSteps'].contains(stepIndex)) {
       progress['completedSteps'].add(stepIndex);
     }
-    await saveProgress(missionId, progress);
+    progress['lastUpdated'] = DateTime.now().toIso8601String();
+    await box.put(missionId, progress);
   }
   
-  // ============================================================
-  // GESTION DES DONNÉES PAR ÉTAPE
-  // ============================================================
-  
-  /// Sauvegarder les données d'une étape spécifique
+  // Sauvegarder les données d'une étape
   static Future<void> saveStepData(String missionId, String stepKey, dynamic data) async {
+    final box = await Hive.openBox(_progressBox);
     final progress = await getProgress(missionId);
     progress['stepData'][stepKey] = data;
-    await saveProgress(missionId, progress);
-    print('✅ Données étape "$stepKey" sauvegardées');
+    progress['lastUpdated'] = DateTime.now().toIso8601String();
+    await box.put(missionId, progress);
   }
   
-  /// Récupérer les données d'une étape spécifique
+  // Récupérer les données d'une étape
   static Future<dynamic> getStepData(String missionId, String stepKey) async {
     final progress = await getProgress(missionId);
     return progress['stepData'][stepKey];
   }
   
-  /// Vérifier si une étape a des données
-  static Future<bool> hasStepData(String missionId, String stepKey) async {
-    final data = await getStepData(missionId, stepKey);
-    return data != null;
+  // Vérifier si une étape est complétée
+  static Future<bool> isStepCompleted(String missionId, int stepIndex) async {
+    final progress = await getProgress(missionId);
+    return progress['completedSteps'].contains(stepIndex);
   }
   
-  // ============================================================
-  // UTILITAIRES
-  // ============================================================
-  
-  /// Réinitialiser la progression d'une mission
+  // Réinitialiser la progression d'une mission
   static Future<void> resetProgress(String missionId) async {
     final box = await Hive.openBox(_progressBox);
     await box.delete(missionId);
-    print('✅ Progression réinitialisée pour mission $missionId');
   }
   
-  /// Supprimer toutes les progressions (debug)
-  static Future<void> clearAllProgress() async {
-    final box = await Hive.openBox(_progressBox);
-    await box.clear();
-    print('✅ Toutes les progressions supprimées');
+  // Obtenir le pourcentage de complétion
+  static Future<int> getCompletionPercentage(String missionId, int totalSteps) async {
+    final progress = await getProgress(missionId);
+    final completedCount = progress['completedSteps'].length;
+    return totalSteps > 0 ? (completedCount / totalSteps * 100).round() : 0;
   }
 }

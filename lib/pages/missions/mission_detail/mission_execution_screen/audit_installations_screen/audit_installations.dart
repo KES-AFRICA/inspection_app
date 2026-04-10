@@ -59,68 +59,71 @@ class AuditInstallationsScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: ListView(
-         padding: EdgeInsets.zero,
-        children: [
-          // Section MOYENNE TENSION
-          _buildSectionTile(
-            context,
-            'MOYENNE TENSION',
-            Icons.bolt_outlined,
-            'Audit des installations moyenne tension',
-            _navigateToMoyenneTension,
-            color: AppTheme.primaryBlue,
-          ),
-          
-          Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
-          
-          // Section BASSE TENSION
-          _buildSectionTile(
-            context,
-            'BASSE TENSION',
-            Icons.power_outlined,
-            'Audit des installations basse tension',
-            _navigateToBasseTension,
-            color: AppTheme.primaryBlue,
-          ),
-          
-          Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
-    
-          // Section CLASSEMENT DES LOCAUX
-          _buildSectionTile(
-            context,
-            'CLASSEMENT DES LOCAUX',
-            Icons.location_on_outlined,
-            'Influences externes et indices de protection',
-            _navigateToClassementLocaux,
-            color: AppTheme.primaryBlue,
-          ),
-          
-          Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
-          
-          // Section OBSERVATIONS FOUDRES
-          _buildSectionTile(
-            context,
-            'OBSERVATIONS FOUDRES',
-            Icons.warning_amber_outlined,
-            'Observations et niveau de priorité',
-            _navigateToFoudre,
-            color: AppTheme.primaryBlue,
-          ),
-          
-          Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
-          
-          // NOUVELLE SECTION: MESURES ET ESSAIS
-          _buildSectionTile(
-            context,
-            'MESURES ET ESSAIS',
-            Icons.science_outlined,
-            'Mesures électriques et essais fonctionnels',
-            _navigateToMesuresEssais,
-            color: AppTheme.primaryBlue,
-          ),
-        ],
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        body: ListView(
+           padding: EdgeInsets.zero,
+          children: [
+            // Section MOYENNE TENSION
+            _buildSectionTile(
+              context,
+              'MOYENNE TENSION',
+              Icons.bolt_outlined,
+              'Audit des installations moyenne tension',
+              _navigateToMoyenneTension,
+              color: AppTheme.primaryBlue,
+            ),
+            
+            Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
+            
+            // Section BASSE TENSION
+            _buildSectionTile(
+              context,
+              'BASSE TENSION',
+              Icons.power_outlined,
+              'Audit des installations basse tension',
+              _navigateToBasseTension,
+              color: AppTheme.primaryBlue,
+            ),
+            
+            Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
+      
+            // Section CLASSEMENT DES LOCAUX
+            _buildSectionTile(
+              context,
+              'CLASSEMENT DES LOCAUX',
+              Icons.location_on_outlined,
+              'Influences externes et indices de protection',
+              _navigateToClassementLocaux,
+              color: AppTheme.primaryBlue,
+            ),
+            
+            Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
+            
+            // Section OBSERVATIONS FOUDRES
+            _buildSectionTile(
+              context,
+              'OBSERVATIONS FOUDRES',
+              Icons.warning_amber_outlined,
+              'Observations et niveau de priorité',
+              _navigateToFoudre,
+              color: AppTheme.primaryBlue,
+            ),
+            
+            Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
+            
+            // NOUVELLE SECTION: MESURES ET ESSAIS
+            _buildSectionTile(
+              context,
+              'MESURES ET ESSAIS',
+              Icons.science_outlined,
+              'Mesures électriques et essais fonctionnels',
+              _navigateToMesuresEssais,
+              color: AppTheme.primaryBlue,
+            ),
+          ],
+        ),
       ),
     );
   }

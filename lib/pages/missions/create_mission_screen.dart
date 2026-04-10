@@ -417,30 +417,33 @@ class _AddAccompagnateurDialogState extends State<AddAccompagnateurDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Ajouter un accompagnateur'),
-      content: TextField(
-        controller: _controller,
-        decoration: const InputDecoration(
-          labelText: 'Nom complet',
-          hintText: 'Ex: Jean Martin',
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: AlertDialog(
+        title: const Text('Ajouter un accompagnateur'),
+        content: TextField(
+          controller: _controller,
+          decoration: const InputDecoration(
+            labelText: 'Nom complet',
+            hintText: 'Ex: Jean Martin',
+          ),
+          autofocus: true,
         ),
-        autofocus: true,
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_controller.text.trim().isNotEmpty) {
+                Navigator.pop(context, _controller.text.trim());
+              }
+            },
+            child: const Text('Ajouter'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Annuler'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            if (_controller.text.trim().isNotEmpty) {
-              Navigator.pop(context, _controller.text.trim());
-            }
-          },
-          child: const Text('Ajouter'),
-        ),
-      ],
     );
   }
 }

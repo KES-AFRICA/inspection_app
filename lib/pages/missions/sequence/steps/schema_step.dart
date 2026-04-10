@@ -53,100 +53,139 @@ class _SchemaStepState extends State<SchemaStep> {
     widget.onComplete();
   }
 
+  // Méthode pour déterminer si le formulaire est valide
+  bool get _isFormValid => _selectedOption != null;
+
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // En-tête
-          Container(
-             width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryBlue,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Column(
-              children: [
-                Icon(Icons.timeline, size: 40, color: Colors.white),
-                SizedBox(height: 8),
-                Text(
-                  'Schéma des installations électriques existantes',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // En-tête
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryBlue,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Column(
+                children: [
+                  Icon(Icons.timeline, size: 40, color: Colors.white),
+                  SizedBox(height: 8),
+                  Text(
+                    'Schéma des installations électriques existantes',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 32),
-          
-          // Question
-          const Text(
-            'Un schéma des installations électriques existantes a-t-il été fourni ?',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Options Oui/Non
-          Card(
-            child: Column(
-              children: [
-                RadioListTile<String>(
-                  title: const Text('Oui'),
-                  value: 'oui',
-                  groupValue: _selectedOption,
-                  onChanged: (value) {
-                    setState(() => _selectedOption = value);
-                    _notifyDataChanged();
-                  },
-                  activeColor: Colors.green,
-                ),
-                const Divider(height: 0),
-                RadioListTile<String>(
-                  title: const Text('Non'),
-                  value: 'non',
-                  groupValue: _selectedOption,
-                  onChanged: (value) {
-                    setState(() => _selectedOption = value);
-                    _notifyDataChanged();
-                  },
-                  activeColor: Colors.red,
-                ),
-              ],
-            ),
-          ),
-          
-          
-          const SizedBox(height: 50),
-          
-          // Bouton Terminer
-          SizedBox(
-            width: double.infinity,
-            height: 56,
-            child: ElevatedButton(
-              onPressed: _handleComplete,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: const Text(
-                'TERMINER LA MISSION',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ],
               ),
             ),
-          ),
-        ],
+            
+            const SizedBox(height: 32),
+            
+            // Question
+            const Text(
+              'Un schéma des installations électriques existantes a-t-il été fourni ?',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            
+            const SizedBox(height: 16),
+            
+            // Options Oui/Non
+            Card(
+              child: Column(
+                children: [
+                  RadioListTile<String>(
+                    title: const Text(
+                      'Oui',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    value: 'oui',
+                    groupValue: _selectedOption,
+                    onChanged: (value) {
+                      setState(() => _selectedOption = value);
+                      _notifyDataChanged();
+                    },
+                    activeColor: Colors.green,
+                    tileColor: _selectedOption == 'oui' 
+                        ? Colors.green.withOpacity(0.1) 
+                        : null,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  const Divider(height: 0),
+                  RadioListTile<String>(
+                    title: const Text(
+                      'Non',
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                    value: 'non',
+                    groupValue: _selectedOption,
+                    onChanged: (value) {
+                      setState(() => _selectedOption = value);
+                      _notifyDataChanged();
+                    },
+                    activeColor: Colors.red,
+                    tileColor: _selectedOption == 'non' 
+                        ? Colors.red.withOpacity(0.1) 
+                        : null,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            const SizedBox(height: 50),
+            
+            // Bouton Terminer
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: _isFormValid ? _handleComplete : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.grey.shade400,
+                  disabledForegroundColor: Colors.grey.shade200,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: _isFormValid ? 2 : 0,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_isFormValid) ...[
+                      const Icon(Icons.check_circle, size: 20),
+                      const SizedBox(width: 8),
+                    ],
+                    const Text(
+                      'TERMINER LA MISSION',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            
+          ],
+        ),
       ),
     );
   }

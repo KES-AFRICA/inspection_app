@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
-import 'package:inspec_app/pages/missions/sequence/sequence_progress_service.dart';
+import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/pages/missions/sequence/steps/general_info_step.dart';
 import 'package:inspec_app/pages/missions/sequence/steps/jsa_step.dart';
 import 'package:inspec_app/pages/missions/sequence/steps/documents_step.dart';
@@ -42,17 +42,17 @@ class _SequenceScreenState extends State<SequenceScreen> {
   void _initializeSteps() {
     _steps = [
       {
-        'title': 'Renseignements généraux de l\'életablissement',
-        'widget': GeneralInfoStep(
-          mission: widget.mission,
-          onDataChanged: (data) => _saveStepData('general_info', data),
-        ),
-      },
-      {
         'title': 'JSA',
         'widget': JsaStep(
           mission: widget.mission,
           onDataChanged: (data) => _saveStepData('jsa', data),
+        ),
+      },
+      {
+        'title': 'Renseignements généraux de l\'életablissement',
+        'widget': GeneralInfoStep(
+          mission: widget.mission,
+          onDataChanged: (data) => _saveStepData('general_info', data),
         ),
       },
       {
@@ -155,8 +155,11 @@ class _SequenceScreenState extends State<SequenceScreen> {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: const Scaffold(
+          body: Center(child: CircularProgressIndicator()),
+        ),
       );
     }
 
@@ -232,29 +235,28 @@ class _SequenceScreenState extends State<SequenceScreen> {
                     ),
                   ),
                 if (_currentStep > 0) const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _goToNextStep,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppTheme.primaryBlue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  if(_currentStep != _steps.length - 1)
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _goToNextStep,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text('Suivant'),
+                          const Icon(Icons.arrow_forward, size: 18),
+
+                        ],
                       ),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(_currentStep == _steps.length - 1 ? 'Terminer' : 'Suivant'),
-                        if (_currentStep < _steps.length - 1) ...[
-                          const SizedBox(width: 8),
-                          const Icon(Icons.arrow_forward, size: 18),
-                        ],
-                      ],
-                    ),
                   ),
-                ),
               ],
             ),
           ),

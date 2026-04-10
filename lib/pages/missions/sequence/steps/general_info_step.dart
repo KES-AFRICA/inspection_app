@@ -24,7 +24,6 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
   late TextEditingController _etablissementController;
   late TextEditingController _installationController;
   late TextEditingController _activiteController;
-  late TextEditingController _compteRenduController;
   
   // Données
   DateTime? _dateDebut;
@@ -34,6 +33,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
   // Sélections
   String? _verificationType;
   String? _registreControle;
+  String? _compteRenduDestinataire;
   
   // Listes
   List<Map<String, String>> _accompagnateurs = [];
@@ -43,7 +43,6 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
   final FocusNode _etablissementFocus = FocusNode();
   final FocusNode _installationFocus = FocusNode();
   final FocusNode _activiteFocus = FocusNode();
-  final FocusNode _compteRenduFocus = FocusNode();
 
   // Options pour les dropdowns stylisés
   final List<Map<String, dynamic>> _verificationOptions = [
@@ -80,7 +79,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
     },
     {
       'value': 'Non présenté',
-      'title': 'Non Présenté',
+      'title': 'Non présenté',
       'description': 'Le registre de contrôle n\'a pas été fourni',
       'icon': Icons.cancel,
       'color': Colors.red,
@@ -101,7 +100,6 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
     _etablissementController = TextEditingController();
     _installationController = TextEditingController();
     _activiteController = TextEditingController();
-    _compteRenduController = TextEditingController();
   }
 
   Future<void> _loadData() async {
@@ -114,13 +112,13 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
         _etablissementController.text = _data!.etablissement;
         _installationController.text = _data!.installation;
         _activiteController.text = _data!.activite;
-        _compteRenduController.text = _data!.compteRendu;
         
         _dateDebut = _data!.dateDebut;
         _dateFin = _data!.dateFin;
         _dureeJours = _data!.dureeJours;
         _verificationType = _data!.verificationType;
         _registreControle = _data!.registreControle;
+        _compteRenduDestinataire = _data!.compteRendu;
         _accompagnateurs = List.from(_data!.accompagnateurs);
         _verificateurs = List.from(_data!.verificateurs);
       });
@@ -142,7 +140,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
     _data!.dureeJours = _dureeJours;
     _data!.verificationType = _verificationType;
     _data!.registreControle = _registreControle ?? '';
-    _data!.compteRendu = _compteRenduController.text;
+    _data!.compteRendu = _compteRenduDestinataire ?? '';
     _data!.accompagnateurs = List.from(_accompagnateurs);
     _data!.verificateurs = List.from(_verificateurs);
     _data!.updatedAt = DateTime.now();
@@ -227,6 +225,48 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
         selectedValue: _registreControle,
         onSelected: (value) async {
           setState(() => _registreControle = value);
+          await _saveData();
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
+  void _showCompteRenduPicker() {
+    if (_accompagnateurs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez d\'abord ajouter des accompagnateurs'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final List<Map<String, dynamic>> accompagnateurOptions = _accompagnateurs.map((accomp) {
+      return {
+        'value': accomp['nom'],
+        'title': accomp['nom']!,
+        'description': accomp['poste']?.isNotEmpty == true 
+            ? '${accomp['poste']}${accomp['email']?.isNotEmpty == true ? ' • ${accomp['email']}' : ''}'
+            : (accomp['email']?.isNotEmpty == true ? accomp['email'] : 'Aucun poste spécifié'),
+        'icon': Icons.person,
+        'color': Colors.purple,
+      };
+    }).toList();
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) => _buildStyledPicker(
+        title: 'Compte rendu de fin de visite fait à',
+        options: accompagnateurOptions,
+        selectedValue: _compteRenduDestinataire,
+        onSelected: (value) async {
+          setState(() => _compteRenduDestinataire = value);
           await _saveData();
           Navigator.pop(context);
         },
@@ -573,6 +613,10 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
   void _supprimerAccompagnateur(int index) async {
     setState(() {
       _accompagnateurs.removeAt(index);
+      // Si le destinataire du compte rendu était cet accompagnateur, réinitialiser
+      if (_compteRenduDestinataire == _accompagnateurs[index]?['nom']) {
+        _compteRenduDestinataire = null;
+      }
     });
     await _saveData();
   }
@@ -589,11 +633,9 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
     _etablissementController.dispose();
     _installationController.dispose();
     _activiteController.dispose();
-    _compteRenduController.dispose();
     _etablissementFocus.dispose();
     _installationFocus.dispose();
     _activiteFocus.dispose();
-    _compteRenduFocus.dispose();
     super.dispose();
   }
 
@@ -812,18 +854,21 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
               icon: Icons.book_outlined,
               onTap: _showRegistrePicker,
               color: _registreControle != null 
-                  ? (_registreControle == 'Présent' ? Colors.green : (_registreControle == 'Partiellement présent' ? Colors.orange : Colors.red))
+                  ? (_registreControle == 'Présenté' ? Colors.green : Colors.red)
                   : null,
             ),
             const SizedBox(height: 24),
 
-            // Compte rendu
-            _buildTextField(
-              controller: _compteRenduController,
+            // Compte rendu de fin de visite fait à - LISTE DYNAMIQUE DES ACCOMPAGNATEURS
+            _buildDisplayField(
               label: 'Compte rendu de fin de visite fait à',
+              value: _compteRenduDestinataire,
+              hint: _accompagnateurs.isEmpty 
+                  ? 'Ajoutez d\'abord des accompagnateurs' 
+                  : 'Sélectionnez le destinataire',
               icon: Icons.description_outlined,
-              hint: 'Nom et prénom du destinataire',
-              focusNode: _compteRenduFocus,
+              onTap: _showCompteRenduPicker,
+              color: _compteRenduDestinataire != null ? Colors.purple : null,
             ),
             const SizedBox(height: 32),
           ],
