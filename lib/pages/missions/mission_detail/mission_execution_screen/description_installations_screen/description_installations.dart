@@ -4,8 +4,9 @@ import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/radio_selection_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/installation_detail.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/paratonnerre_screen.dart';
+import 'package:inspec_app/services/hive_service.dart';
 
-class DescriptionInstallationsScreen extends StatelessWidget {
+class DescriptionInstallationsScreen extends StatefulWidget {
   final Mission mission;
 
   const DescriptionInstallationsScreen({
@@ -13,18 +14,89 @@ class DescriptionInstallationsScreen extends StatelessWidget {
     required this.mission,
   });
 
+  @override
+  State<DescriptionInstallationsScreen> createState() => _DescriptionInstallationsScreenState();
+}
+
+class _DescriptionInstallationsScreenState extends State<DescriptionInstallationsScreen> {
+  // Map pour stocker l'état de remplissage de chaque section
+  Map<String, bool> _sectionStatus = {};
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAllSectionsStatus();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Re-vérifier l'état quand on revient sur cette page
+    _checkAllSectionsStatus();
+  }
+
+  Future<void> _checkAllSectionsStatus() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      // 1. Vérifier les sections de cartes (listes)
+      final sectionsWithCards = [
+        'alimentation_moyenne_tension',
+        'alimentation_basse_tension',
+        'groupe_electrogene',
+        'alimentation_carburant',
+        'inverseur',
+        'stabilisateur',
+        'onduleurs',
+      ];
+      
+      final tempStatus = <String, bool>{};
+      
+      for (var section in sectionsWithCards) {
+        final items = await HiveService.getInstallationItemsFromSection(
+          missionId: widget.mission.id,
+          section: section,
+        );
+        tempStatus[section] = items.isNotEmpty;
+      }
+      
+      // 2. Vérifier les sélections radio
+      final desc = await HiveService.getOrCreateDescriptionInstallations(widget.mission.id);
+      
+      tempStatus['regime_neutre'] = desc.regimeNeutre != null && desc.regimeNeutre!.isNotEmpty;
+      tempStatus['eclairage_securite'] = desc.eclairageSecurite != null && desc.eclairageSecurite!.isNotEmpty;
+      tempStatus['modifications_installations'] = desc.modificationsInstallations != null && desc.modificationsInstallations!.isNotEmpty;
+      tempStatus['note_calcul'] = desc.noteCalcul != null && desc.noteCalcul!.isNotEmpty;
+      tempStatus['registre_securite'] = desc.registreSecurite != null && desc.registreSecurite!.isNotEmpty;
+      
+      // 3. Vérifier la section paratonnerre
+      tempStatus['paratonnerre'] = (desc.presenceParatonnerre != null && desc.presenceParatonnerre!.isNotEmpty) ||
+                                   (desc.analyseRisqueFoudre != null && desc.analyseRisqueFoudre!.isNotEmpty) ||
+                                   (desc.etudeTechniqueFoudre != null && desc.etudeTechniqueFoudre!.isNotEmpty);
+      
+      setState(() {
+        _sectionStatus = tempStatus;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('❌ Erreur vérification sections: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
   void _navigateToDetail(BuildContext context, String title, String sectionKey, List<String> champs) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => InstallationDetailScreen(
-          mission: mission,
+          mission: widget.mission,
           title: title,
           sectionKey: sectionKey,
           champs: champs,
         ),
       ),
-    );
+    ).then((_) => _checkAllSectionsStatus()); // Re-vérifier au retour
   }
 
   void _navigateToRadioSelection(BuildContext context, String title, String field, List<String> options) {
@@ -32,26 +104,36 @@ class DescriptionInstallationsScreen extends StatelessWidget {
       context,
       MaterialPageRoute(
         builder: (context) => RadioSelectionScreen(
-          mission: mission,
+          mission: widget.mission,
           title: title,
           field: field,
           options: options,
         ),
       ),
-    );
+    ).then((_) => _checkAllSectionsStatus()); // Re-vérifier au retour
   }
 
   void _navigateToParatonnerre(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ParatonnerreScreen(mission: mission),
+        builder: (context) => ParatonnerreScreen(mission: widget.mission),
       ),
-    );
+    ).then((_) => _checkAllSectionsStatus()); // Re-vérifier au retour
+  }
+
+  bool _isSectionNotEmpty(String sectionKey) {
+    return _sectionStatus[sectionKey] ?? false;
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -126,7 +208,7 @@ class DescriptionInstallationsScreen extends StatelessWidget {
               'Eclairage de sécurité',
               Icons.emergency_outlined,
               'eclairage_securite',
-              ['Présent', 'Non présent', 'Incomplet'],
+              ['Présent', 'Non présent', 'Incomplèt'],
             ),
             
             _buildRadioTile(
@@ -166,76 +248,151 @@ class DescriptionInstallationsScreen extends StatelessWidget {
   }
 
   Widget _buildListTile(BuildContext context, String title, IconData icon, String sectionKey, List<String> champs) {
+    final isNotEmpty = _isSectionNotEmpty(sectionKey);
+    
     return Column(
       children: [
-        ListTile(
-          leading: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+        Container(
+          decoration: BoxDecoration(
+            color: isNotEmpty ? Colors.green.shade50 : null,
+            border: isNotEmpty
+                ? Border(
+                    left: BorderSide(color: Colors.green, width: 4),
+                  )
+                : null,
+          ),
+          child: ListTile(
+            leading: Icon(
+              icon,
+              color: isNotEmpty ? Colors.green : AppTheme.primaryBlue,
             ),
-            child: Icon(icon, size: 22, color: AppTheme.primaryBlue),
+            title: Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: isNotEmpty ? Colors.green.shade800 : null,
+              ),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isNotEmpty)
+                  const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                    size: 20,
+                  ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right,
+                  color: isNotEmpty ? Colors.green.shade400 : Colors.grey.shade500,
+                ),
+              ],
+            ),
+            onTap: () => _navigateToDetail(context, title, sectionKey, champs),
           ),
-          title: Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
-          ),
-          trailing: Icon(Icons.chevron_right, color: Colors.grey.shade400),
-          onTap: () => _navigateToDetail(context, title, sectionKey, champs),
         ),
-        Container(height: 1, color: Colors.grey.shade100),
+        Container(height: 1, color: Colors.grey.shade300),
       ],
     );
   }
 
   Widget _buildRadioTile(BuildContext context, String title, IconData icon, String field, List<String> options) {
+    final isNotEmpty = _isSectionNotEmpty(field);
+    
     return Column(
       children: [
-        ListTile(
-          leading: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+        Container(
+          decoration: BoxDecoration(
+            color: isNotEmpty ? Colors.green.shade50 : null,
+            border: isNotEmpty
+                ? Border(
+                    left: BorderSide(color: Colors.green, width: 4),
+                  )
+                : null,
+          ),
+          child: ListTile(
+            leading: Icon(
+              icon,
+              color: isNotEmpty ? Colors.green : AppTheme.primaryBlue,
             ),
-            child: Icon(icon, size: 22, color: AppTheme.primaryBlue),
+            title: Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: isNotEmpty ? Colors.green.shade800 : null,
+              ),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isNotEmpty)
+                  const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                    size: 20,
+                  ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right,
+                  color: isNotEmpty ? Colors.green.shade400 : Colors.grey.shade500,
+                ),
+              ],
+            ),
+            onTap: () => _navigateToRadioSelection(context, title, field, options),
           ),
-          title: Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
-          ),
-          trailing: Icon(Icons.chevron_right, color: Colors.grey.shade400),
-          onTap: () => _navigateToRadioSelection(context, title, field, options),
         ),
-        Container(height: 1, color: Colors.grey.shade100),
+        Container(height: 1, color: Colors.grey.shade300),
       ],
     );
   }
 
   Widget _buildSimpleTile(BuildContext context, String title, IconData icon, Function onTap) {
+    final isNotEmpty = _isSectionNotEmpty('paratonnerre');
+    
     return Column(
       children: [
-        ListTile(
-          leading: Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(10),
+        Container(
+          decoration: BoxDecoration(
+            color: isNotEmpty ? Colors.green.shade50 : null,
+            border: isNotEmpty
+                ? Border(
+                    left: BorderSide(color: Colors.green, width: 4),
+                  )
+                : null,
+          ),
+          child: ListTile(
+            leading: Icon(
+              icon,
+              color: isNotEmpty ? Colors.green : AppTheme.primaryBlue,
             ),
-            child: Icon(icon, size: 22, color: AppTheme.primaryBlue),
+            title: Text(
+              title,
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: isNotEmpty ? Colors.green.shade800 : null,
+              ),
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isNotEmpty)
+                  const Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                    size: 20,
+                  ),
+                const SizedBox(width: 4),
+                Icon(
+                  Icons.chevron_right,
+                  color: isNotEmpty ? Colors.green.shade400 : Colors.grey.shade500,
+                ),
+              ],
+            ),
+            onTap: () => onTap(context),
           ),
-          title: Text(
-            title,
-            style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 15),
-          ),
-          trailing: Icon(Icons.chevron_right, color: Colors.grey.shade400),
-          onTap: () => onTap(context),
         ),
-        Container(height: 1, color: Colors.grey.shade100),
+        Container(height: 1, color: Colors.grey.shade300),
       ],
     );
   }

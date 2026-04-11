@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/basse_tension_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_local_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_zone_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_local_screen.dart';
@@ -21,26 +22,172 @@ class MoyenneTensionScreen extends StatefulWidget {
 class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
   AuditInstallationsElectriques? _audit;
   bool _isLoading = true;
+  bool _isDialogShowing = false;
+  bool _hasPreference = false;
+  bool _isApplicable = true;
 
   @override
   void initState() {
     super.initState();
-    _loadAudit();
+    _loadData();
   }
 
-  void _loadAudit() async {
+  Future<void> _loadData() async {
+    setState(() => _isLoading = true);
+    
     try {
+      _hasPreference = await HiveService.hasMoyenneTensionPreference(widget.mission.id);
+      _isApplicable = await HiveService.isMoyenneTensionApplicable(widget.mission.id);
+      
       final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+      
       setState(() {
         _audit = audit;
         _isLoading = false;
       });
+      
+      if (!_hasPreference && !_isDialogShowing) {
+        _showMoyenneTensionDialog();
+      }
     } catch (e) {
-      print('❌ Erreur chargement audit: $e');
-      setState(() {
-        _isLoading = false;
-      });
+      print('❌ Erreur chargement: $e');
+      setState(() => _isLoading = false);
     }
+  }
+
+  void _showMoyenneTensionDialog() {
+    _isDialogShowing = true;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: const Icon(Icons.bolt, size: 30, color: Colors.blue),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Moyenne Tension',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.blue),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'La moyenne tension est-elle applicable dans cette zone ?',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildDialogButton(
+                      label: 'NON APPLICABLE',
+                      icon: Icons.close,
+                      color: Colors.red,
+                      onTap: () async {
+                        await HiveService.saveMoyenneTensionPreference(widget.mission.id, false);
+                        if (mounted) Navigator.pop(context);
+                        _redirectToBasseTension();
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _buildDialogButton(
+                      label: 'APPLICABLE',
+                      icon: Icons.check,
+                      color: Colors.green,
+                      onTap: () async {
+                        await HiveService.saveMoyenneTensionPreference(widget.mission.id, true);
+                        if (mounted) Navigator.pop(context);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDialogButton({
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: color,
+                ),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _redirectToBasseTension() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            Icon(Icons.arrow_forward, color: Colors.white, size: 18),
+            SizedBox(width: 8),
+            Flexible(child: Text('Redirection vers Basse Tension...')),
+          ],
+        ),
+        backgroundColor: Colors.blue,
+        duration: Duration(seconds: 1),
+      ),
+    );
+    
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => BasseTensionScreen(mission: widget.mission),
+          ),
+        );
+      }
+    });
   }
 
   void _ajouterLocal() async {
@@ -55,9 +202,9 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
     );
 
     if (result == true) {
-      _loadAudit();
+      _loadData();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Local ajouté avec succès')),
+        const SnackBar(content: Text('Local ajouté avec succès')),
       );
     }
   }
@@ -76,7 +223,7 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
     );
 
     if (result == true) {
-      _loadAudit();
+      _loadData();
     }
   }
 
@@ -92,9 +239,9 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
     );
 
     if (result == true) {
-      _loadAudit();
+      _loadData();
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Zone ajoutée avec succès')),
+        const SnackBar(content: Text('Zone ajoutée avec succès')),
       );
     }
   }
@@ -113,7 +260,7 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
     );
 
     if (result == true) {
-      _loadAudit();
+      _loadData();
     }
   }
 
@@ -130,7 +277,7 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
           local: _audit!.moyenneTensionLocaux[index],
         ),
       ),
-    ).then((_) => _loadAudit());
+    ).then((_) => _loadData());
   }
 
   void _voirZone(int index) {
@@ -146,115 +293,84 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
           zone: _audit!.moyenneTensionZones[index],
         ),
       ),
-    ).then((_) => _loadAudit());
+    ).then((_) => _loadData());
   }
 
-void _showAddModal() {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(20.0),
+  void _showAddModal() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-    ),
-    builder: (context) => Container(
-      padding: EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Bouton pour ajouter un local
-          Container(
-            margin: EdgeInsets.only(bottom: 12),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                      Navigator.pop(context);
-                      _ajouterZone();
-                    },
-              icon: Icon(Icons.domain, size: 24),
-              label: Text(
-                'Ajouter une zone',
-                style: TextStyle(fontSize: 16),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlue,
-                foregroundColor: Colors.white,
-                minimumSize: Size(double.infinity, 56),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _ajouterZone();
+                },
+                icon: const Icon(Icons.map_outlined, size: 22),
+                label: const Text('Ajouter une zone', style: TextStyle(fontSize: 15)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               ),
             ),
-          ),
-          
-          // Bouton pour ajouter un coffret
-          Container(
-            margin: EdgeInsets.only(bottom: 20),
-            child: ElevatedButton.icon(
-               onPressed: () {
-                      Navigator.pop(context);
-                      _ajouterLocal();
-                    },
-              icon: Icon(Icons.domain, size: 24),
-              label: Text(
-                'Ajouter un local',
-                style: TextStyle(fontSize: 16),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-                minimumSize: Size(double.infinity, 56),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _ajouterLocal();
+                },
+                icon: const Icon(Icons.domain, size: 22),
+                label: const Text('Ajouter un local', style: TextStyle(fontSize: 15)),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               ),
             ),
-          ),
-          
-          // Bouton pour annuler
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Annuler',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
-              ),
+            const SizedBox(height: 12),
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler', style: TextStyle(fontSize: 15)),
             ),
-          ),
-          SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   void _supprimerLocal(int index) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer ce local ?'),
+        title: const Text('Confirmer la suppression'),
+        content: const Text('Voulez-vous vraiment supprimer ce local ?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Annuler'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              setState(() {
-                _audit!.moyenneTensionLocaux.removeAt(index);
-              });
+              setState(() => _audit!.moyenneTensionLocaux.removeAt(index));
               await HiveService.saveAuditInstallations(_audit!);
-              _loadAudit();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Local supprimé')),
-              );
+              _loadData();
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Local supprimé')));
             },
-            child: Text('Supprimer', style: TextStyle(color: Colors.red)),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -265,26 +381,19 @@ void _showAddModal() {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer cette zone ?'),
+        title: const Text('Confirmer la suppression'),
+        content: const Text('Voulez-vous vraiment supprimer cette zone ?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Annuler'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              setState(() {
-                _audit!.moyenneTensionZones.removeAt(index);
-              });
+              setState(() => _audit!.moyenneTensionZones.removeAt(index));
               await HiveService.saveAuditInstallations(_audit!);
-              _loadAudit();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Zone supprimée')),
-              );
+              _loadData();
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Zone supprimée')));
             },
-            child: Text('Supprimer', style: TextStyle(color: Colors.red)),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -293,7 +402,6 @@ void _showAddModal() {
 
   int _getTotalLocaux() {
     if (_audit == null) return 0;
-    
     int total = _audit!.moyenneTensionLocaux.length;
     for (var zone in _audit!.moyenneTensionZones) {
       total += zone.locaux.length;
@@ -303,7 +411,6 @@ void _showAddModal() {
 
   int _getTotalCoffrets() {
     if (_audit == null) return 0;
-    
     int total = 0;
     for (var local in _audit!.moyenneTensionLocaux) {
       total += local.coffrets.length;
@@ -320,16 +427,20 @@ void _showAddModal() {
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator());
     }
     
     if (_audit == null) {
-      return Center(child: Text('Erreur de chargement'));
+      return const Center(child: Text('Erreur de chargement'));
+    }
+
+    if (_hasPreference && !_isApplicable) {
+      return const Center(child: CircularProgressIndicator());
     }
 
     return Scaffold(
       appBar: AppBar(
-        title: Text('Moyenne Tension'),
+        title: const Text('Moyenne Tension'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
         actions: [
@@ -338,7 +449,7 @@ void _showAddModal() {
               if (value == 'local') _ajouterLocal();
               if (value == 'zone') _ajouterZone();
             },
-            itemBuilder: (context) => [
+            itemBuilder: (context) => const [
               PopupMenuItem(value: 'local', child: Text('Ajouter un local')),
               PopupMenuItem(value: 'zone', child: Text('Ajouter une zone')),
             ],
@@ -347,9 +458,8 @@ void _showAddModal() {
       ),
       body: Column(
         children: [
-          // En-tête avec statistiques
           Container(
-            padding: EdgeInsets.all(16),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.blue.shade50,
               border: Border(bottom: BorderSide(color: Colors.blue.shade100)),
@@ -363,51 +473,43 @@ void _showAddModal() {
               ],
             ),
           ),
-
-          // Contenu principal
           Expanded(
             child: DefaultTabController(
               length: 2,
               child: Column(
                 children: [
-                  TabBar(
-                    labelColor: AppTheme.primaryBlue,
+                  const TabBar(
+                    labelColor: Colors.blue,
                     unselectedLabelColor: Colors.grey,
-                    indicatorColor: AppTheme.primaryBlue,
+                    indicatorColor: Colors.blue,
                     tabs: [
-                      Tab(text: 'ZONES (${_audit!.moyenneTensionZones.length})'),
-                      Tab(text: 'LOCAUX (${_audit!.moyenneTensionLocaux.length})'),
+                      Tab(text: 'ZONES'),
+                      Tab(text: 'LOCAUX'),
                     ],
                   ),
                   Expanded(
                     child: TabBarView(
                       children: [
-
-                        // Onglet ZONES
                         _audit!.moyenneTensionZones.isEmpty
                             ? _buildEmptyState('zones', _ajouterZone)
                             : ListView.builder(
-                                padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),
+                                padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
                                 itemCount: _audit!.moyenneTensionZones.length,
                                 itemBuilder: (context, index) {
                                   final zone = _audit!.moyenneTensionZones[index];
                                   return _buildZoneCard(zone, index);
                                 },
                               ),
-                        // Onglet LOCAUX
                         _audit!.moyenneTensionLocaux.isEmpty
                             ? _buildEmptyState('locaux', _ajouterLocal)
                             : ListView.builder(
-                                padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),
+                                padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
                                 itemCount: _audit!.moyenneTensionLocaux.length,
                                 itemBuilder: (context, index) {
                                   final local = _audit!.moyenneTensionLocaux[index];
                                   return _buildLocalCard(local, index);
                                 },
                               ),
-
-                              
-
                       ],
                     ),
                   ),
@@ -420,7 +522,7 @@ void _showAddModal() {
       floatingActionButton: FloatingActionButton(
         onPressed: _showAddModal,
         backgroundColor: AppTheme.primaryBlue,
-        child: Icon(Icons.add, color: Colors.white),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
@@ -429,69 +531,37 @@ void _showAddModal() {
     return Column(
       children: [
         Container(
-          padding: EdgeInsets.all(12),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(12),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black12,
-                blurRadius: 4,
-                offset: Offset(0, 2),
-              ),
-            ],
+            boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 4, offset: Offset(0, 2))],
           ),
           child: Icon(icon, size: 24, color: AppTheme.primaryBlue),
         ),
-        SizedBox(height: 8),
-        Text(
-          count.toString(),
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.primaryBlue,
-          ),
-        ),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
-        ),
+        const SizedBox(height: 8),
+        Text(count.toString(), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
+        Text(title, style: const TextStyle(fontSize: 12, color: Colors.grey)),
       ],
     );
   }
 
-  Widget _buildEmptyState(String type, Function onTap) {
+  Widget _buildEmptyState(String type, VoidCallback onTap) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            type == 'locaux' ? Icons.domain : Icons.map_outlined,
-            size: 64,
-            color: Colors.grey.shade400,
-          ),
-          SizedBox(height: 16),
-          Text(
-            'Aucun $type ajouté',
-            style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Commencez par ajouter un $type',
-            style: TextStyle(color: Colors.grey.shade500),
-          ),
-          SizedBox(height: 20),
+          Icon(type == 'locaux' ? Icons.domain : Icons.map_outlined, size: 64, color: Colors.grey.shade400),
+          const SizedBox(height: 16),
+          Text('Aucun $type ajouté', style: TextStyle(fontSize: 18, color: Colors.grey.shade600)),
+          const SizedBox(height: 8),
+          Text('Commencez par ajouter un $type', style: TextStyle(color: Colors.grey.shade500)),
+          const SizedBox(height: 20),
           ElevatedButton.icon(
-            onPressed: () => onTap(),
-            icon: Icon(Icons.add),
+            onPressed: onTap,
+            icon: const Icon(Icons.add),
             label: Text('AJOUTER UN $type'.toUpperCase()),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryBlue,
-              foregroundColor: Colors.white,
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue, foregroundColor: Colors.white),
           ),
         ],
       ),
@@ -503,47 +573,36 @@ void _showAddModal() {
     final totalCount = local.dispositionsConstructives.length;
     final pourcentage = totalCount > 0 ? (conformiteCount / totalCount * 100).round() : 0;
 
-    return  Container(
-      margin: EdgeInsets.only(bottom: 8),
-      padding: EdgeInsets.all(4),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Colors.grey
-        ),
+        border: Border.all(color: Colors.grey),
       ),
       child: ListTile(
         leading: Container(
           width: 40,
           height: 40,
-          decoration: BoxDecoration(
-            color: AppTheme.primaryBlue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
+          decoration: BoxDecoration(color: AppTheme.primaryBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
           child: Icon(Icons.domain, color: AppTheme.primaryBlue),
         ),
-        title: Text(
-          local.nom,
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
+        title: Text(local.nom, style: const TextStyle(fontWeight: FontWeight.w600)),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             Text('${local.coffrets.length} coffret(s)'),
-            SizedBox(height: 4),
+            const SizedBox(height: 4),
             if (totalCount > 0) ...[
               LinearProgressIndicator(
                 value: conformiteCount / totalCount,
                 backgroundColor: Colors.grey.shade200,
                 color: _getProgressColor(pourcentage),
               ),
-              SizedBox(height: 4),
+              const SizedBox(height: 4),
               Text('$pourcentage% conforme'),
-            ] else ...[
-              Text('Aucune vérification', style: TextStyle(color: Colors.grey)),
-            ],
+            ] else const Text('Aucune vérification', style: TextStyle(color: Colors.grey)),
           ],
         ),
         trailing: PopupMenuButton<String>(
@@ -552,7 +611,7 @@ void _showAddModal() {
             if (value == 'edit') _editerLocal(index);
             if (value == 'delete') _supprimerLocal(index);
           },
-          itemBuilder: (context) => [
+          itemBuilder: (context) => const [
             PopupMenuItem(value: 'view', child: Text('Voir détails')),
             PopupMenuItem(value: 'edit', child: Text('Éditer')),
             PopupMenuItem(value: 'delete', child: Text('Supprimer', style: TextStyle(color: Colors.red))),
@@ -565,24 +624,20 @@ void _showAddModal() {
 
   Widget _buildZoneCard(MoyenneTensionZone zone, int index) {
     final totalLocaux = zone.locaux.length;
-    final totalCoffrets = zone.coffrets.length + 
-                         zone.locaux.fold(0, (sum, local) => sum + local.coffrets.length);
+    final totalCoffrets = zone.coffrets.length + zone.locaux.fold(0, (sum, local) => sum + local.coffrets.length);
 
-    return  Container(
-      margin: EdgeInsets.only(bottom: 8),
-      padding: EdgeInsets.all(4),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Colors.grey.shade400,
-        ),
+        border: Border.all(color: Colors.grey.shade400),
       ),
       child: InkWell(
         onTap: () => _voirZone(index),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -591,35 +646,16 @@ void _showAddModal() {
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
+                    decoration: BoxDecoration(color: AppTheme.primaryBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
                     child: Icon(Icons.map_outlined, color: AppTheme.primaryBlue),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          zone.nom,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        if (zone.description != null) ...[
-                          SizedBox(height: 4),
-                          Text(
-                            zone.description!,
-                            style: TextStyle(
-                              color: Colors.grey.shade600,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ],
+                        Text(zone.nom, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87)),
+                        if (zone.description != null) Text(zone.description!, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
                       ],
                     ),
                   ),
@@ -629,7 +665,7 @@ void _showAddModal() {
                       if (value == 'edit') _editerZone(index);
                       if (value == 'delete') _supprimerZone(index);
                     },
-                    itemBuilder: (context) => [
+                    itemBuilder: (context) => const [
                       PopupMenuItem(value: 'view', child: Text('Voir détails')),
                       PopupMenuItem(value: 'edit', child: Text('Éditer')),
                       PopupMenuItem(value: 'delete', child: Text('Supprimer', style: TextStyle(color: Colors.red))),
@@ -637,13 +673,10 @@ void _showAddModal() {
                   ),
                 ],
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Container(
-                padding: EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
@@ -654,15 +687,8 @@ void _showAddModal() {
                 ),
               ),
               if (zone.observationsLibres.isNotEmpty) ...[
-                SizedBox(height: 8),
-                Text(
-                  'Observations: ${zone.observationsLibres.length}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey.shade600,
-                    fontStyle: FontStyle.italic,
-                  ),
-                ),
+                const SizedBox(height: 8),
+                Text('Observations: ${zone.observationsLibres.length}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic)),
               ],
             ],
           ),
@@ -675,23 +701,9 @@ void _showAddModal() {
     return Column(
       children: [
         Icon(icon, size: 20, color: AppTheme.primaryBlue),
-        SizedBox(height: 4),
-        Text(
-          count.toString(),
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.primaryBlue,
-          ),
-        ),
-        Text(
-          title,
-          style: TextStyle(
-            fontSize: 10,
-            color: Colors.grey.shade600,
-          ),
-          textAlign: TextAlign.center,
-        ),
+        const SizedBox(height: 4),
+        Text(count.toString(), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: AppTheme.primaryBlue)),
+        Text(title, style: const TextStyle(fontSize: 10, color: Colors.grey), textAlign: TextAlign.center),
       ],
     );
   }

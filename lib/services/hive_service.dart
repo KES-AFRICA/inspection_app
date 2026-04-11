@@ -4890,4 +4890,38 @@ static RenseignementsGeneraux? getRenseignementsGenerauxByMissionId(String missi
     return null;
   }
 }
+
+// ============================================================
+//          GESTION PREFERENCE MOYENNE TENSION
+// ============================================================
+
+static const String _mtPreferenceBox = 'mt_preference';
+
+/// Sauvegarder la préférence MT pour une mission
+static Future<void> saveMoyenneTensionPreference(String missionId, bool isApplicable) async {
+  final box = await Hive.openBox(_mtPreferenceBox);
+  await box.put(missionId, {
+    'isApplicable': isApplicable,
+    'timestamp': DateTime.now().toIso8601String(),
+  });
+  print('✅ Préférence MT sauvegardée pour mission $missionId: $isApplicable');
 }
+
+/// Vérifier si la préférence MT a déjà été définie
+static Future<bool> hasMoyenneTensionPreference(String missionId) async {
+  final box = await Hive.openBox(_mtPreferenceBox);
+  return box.containsKey(missionId);
+}
+
+/// Récupérer la préférence MT
+static Future<bool> isMoyenneTensionApplicable(String missionId) async {
+  final box = await Hive.openBox(_mtPreferenceBox);
+  final data = box.get(missionId);
+  if (data != null && data is Map) {
+    return data['isApplicable'] ?? true;
+  }
+  return true; // Par défaut applicable
+}
+
+}
+

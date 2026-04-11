@@ -190,7 +190,7 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
         slivers: [
           // AppBar moderne
           SliverAppBar(
-            expandedHeight: 280,
+            expandedHeight: 240,
             pinned: true,
             backgroundColor: _getStatusColor(),
             elevation: 0,
@@ -232,6 +232,7 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
+                      SizedBox(height: 80,),
                       Container(
                         width: 80,
                         height: 80,
@@ -283,6 +284,8 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
             padding: const EdgeInsets.all(16),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
+                // Bouton principal (Démarrer/Continuer/Voir rapport)
+                _buildMainButton(),
                 // Carte d'informations modernes
                 _buildInfoCard(),
                 const SizedBox(height: 16),
@@ -290,9 +293,6 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
                 // Carte de l'équipe
                 _buildTeamCard(),
                 const SizedBox(height: 24),
-                
-                // Bouton principal (Démarrer/Continuer/Voir rapport)
-                _buildMainButton(),
                 
                 // Bouton Générer rapport PDF
                 const SizedBox(height: 12),

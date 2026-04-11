@@ -104,7 +104,7 @@ class AuditInstallationsScreen extends StatelessWidget {
             // Section OBSERVATIONS FOUDRES
             _buildSectionTile(
               context,
-              'OBSERVATIONS FOUDRES',
+              'OBSERVATIONS FOUDRE',
               Icons.warning_amber_outlined,
               'Observations et niveau de priorité',
               _navigateToFoudre,

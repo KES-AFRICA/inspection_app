@@ -11,14 +11,2860 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+
+// Extension pour obtenir la taille de l'écran facilement
+extension ScreenSize on BuildContext {
+  double get screenWidth => MediaQuery.of(this).size.width;
+  double get screenHeight => MediaQuery.of(this).size.height;
+  bool get isSmallScreen => screenWidth < 360;
+  bool get isMediumScreen => screenWidth >= 360 && screenWidth < 600;
+  bool get isLargeScreen => screenWidth >= 600;
+  
+  // Tailles de police responsives
+  double get fontSizeXXXL => isSmallScreen ? 20 : (isMediumScreen ? 22 : 26);
+  double get fontSizeXXL => isSmallScreen ? 18 : (isMediumScreen ? 20 : 22);
+  double get fontSizeXL => isSmallScreen ? 16 : (isMediumScreen ? 17 : 18);
+  double get fontSizeL => isSmallScreen ? 14 : (isMediumScreen ? 15 : 16);
+  double get fontSizeM => isSmallScreen ? 12 : (isMediumScreen ? 13 : 14);
+  double get fontSizeS => isSmallScreen ? 11 : (isMediumScreen ? 12 : 13);
+  double get fontSizeXS => isSmallScreen ? 10 : (isMediumScreen ? 11 : 12);
+  
+  // Espacements responsifs
+  double get spacingXXL => isSmallScreen ? 20 : (isMediumScreen ? 24 : 28);
+  double get spacingXL => isSmallScreen ? 16 : (isMediumScreen ? 18 : 20);
+  double get spacingL => isSmallScreen ? 12 : (isMediumScreen ? 14 : 16);
+  double get spacingM => isSmallScreen ? 10 : (isMediumScreen ? 11 : 12);
+  double get spacingS => isSmallScreen ? 8 : (isMediumScreen ? 9 : 10);
+  double get spacingXS => isSmallScreen ? 4 : (isMediumScreen ? 5 : 6);
+  
+  // Tailles d'icônes responsives
+  double get iconSizeXL => isSmallScreen ? 20 : (isMediumScreen ? 22 : 24);
+  double get iconSizeL => isSmallScreen ? 18 : (isMediumScreen ? 20 : 22);
+  double get iconSizeM => isSmallScreen ? 16 : (isMediumScreen ? 18 : 20);
+  double get iconSizeS => isSmallScreen ? 14 : (isMediumScreen ? 15 : 16);
+  double get iconSizeXS => isSmallScreen ? 12 : (isMediumScreen ? 13 : 14);
+}
+
+// ================================================================
+// ÉTAPE 1 : INFORMATIONS GÉNÉRALES (Nom, Type, Photos, Observations)
+// ================================================================
+class _EtapeInformationsGenerales extends StatefulWidget {
+  final TextEditingController nomController;
+  final String? selectedType;
+  final Function(String?) onTypeChanged;
+  final List<String> localPhotos;
+  final Function() onPrendrePhoto;
+  final Function() onChoisirPhoto;
+  final VoidCallback onSupprimerPhoto;
+  final bool isLoadingPhotos;
+  final bool addObservation;
+  final Function(bool) onAddObservationChanged;
+  final TextEditingController observationController;
+  final List<ObservationLibre> observationsExistantes;
+  final List<String> observationPhotos;
+  final Function() onPrendrePhotoObservation;
+  final Function() onChoisirPhotoObservation;
+  final Function() onAjouterObservation;
+  final Function(int) onSupprimerObservationExistante;
+  final bool nomValid;
+  final bool typeValid;
+  final VoidCallback onValidate;
+
+  const _EtapeInformationsGenerales({
+    required this.nomController,
+    required this.selectedType,
+    required this.onTypeChanged,
+    required this.localPhotos,
+    required this.onPrendrePhoto,
+    required this.onChoisirPhoto,
+    required this.onSupprimerPhoto,
+    required this.isLoadingPhotos,
+    required this.addObservation,
+    required this.onAddObservationChanged,
+    required this.observationController,
+    required this.observationsExistantes,
+    required this.observationPhotos,
+    required this.onPrendrePhotoObservation,
+    required this.onChoisirPhotoObservation,
+    required this.onAjouterObservation,
+    required this.onSupprimerObservationExistante,
+    required this.nomValid,
+    required this.typeValid,
+    required this.onValidate,
+  });
+
+  @override
+  State<_EtapeInformationsGenerales> createState() => _EtapeInformationsGeneralesState();
+}
+
+class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales> {
+  final PageController _photosController = PageController();
+  int _currentPhotoIndex = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: EdgeInsets.all(context.spacingL),
+      children: [
+        _buildModernHeader(context, 'Informations générales', 1, 4),
+        SizedBox(height: context.spacingXL),
+        _buildModernTextField(context),
+        SizedBox(height: context.spacingXL),
+        _buildModernTypeSelector(context),
+        SizedBox(height: context.spacingXL),
+        _buildModernPhotoCarousel(context),
+        SizedBox(height: context.spacingXL),
+        _buildModernObservationsCard(context),
+        SizedBox(height: context.spacingXXL),
+      ],
+    );
+  }
+
+  Widget _buildModernHeader(BuildContext context, String title, int currentStep, int totalSteps) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: context.iconSizeXL * 1.2,
+              height: context.iconSizeXL * 1.2,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [AppTheme.primaryBlue, AppTheme.primaryBlue.withOpacity(0.7)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(context.spacingS),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryBlue.withOpacity(0.3),
+                    blurRadius: context.spacingS,
+                    offset: Offset(0, context.spacingXS),
+                  ),
+                ],
+              ),
+              child: Icon(Icons.edit_note, color: Colors.white, size: context.iconSizeM),
+            ),
+            SizedBox(width: context.spacingM),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: context.fontSizeXXL,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.darkBlue,
+                    ),
+                  ),
+                  SizedBox(height: context.spacingXS),
+                  Text(
+                    'Étape $currentStep sur $totalSteps',
+                    style: TextStyle(
+                      fontSize: context.fontSizeS,
+                      color: Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: context.spacingM),
+        LinearProgressIndicator(
+          value: currentStep / totalSteps,
+          backgroundColor: Colors.grey.shade200,
+          valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+          minHeight: 4,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModernTextField(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingM),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: context.spacingS,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: TextFormField(
+        controller: widget.nomController,
+        onChanged: (_) => widget.onValidate(),
+        style: TextStyle(fontSize: context.fontSizeM),
+        decoration: InputDecoration(
+          labelText: 'Nom du local',
+          labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: context.fontSizeM),
+          prefixIcon: Icon(Icons.location_on_outlined, color: AppTheme.primaryBlue, size: context.iconSizeM),
+          suffixIcon: widget.nomValid 
+              ? Icon(Icons.check_circle, color: Colors.green, size: context.iconSizeS)
+              : null,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(context.spacingM),
+            borderSide: BorderSide.none,
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(context.spacingM),
+            borderSide: BorderSide(color: Colors.grey.shade200, width: 1.5),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(context.spacingM),
+            borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingM),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernTypeSelector(BuildContext context) {
+    final localTypes = HiveService.getLocalTypes();
+    final modifiedTypes = localTypes.map((key, value) {
+      if (key == 'LOCAL_TRANSFORMATEUR') {
+        return MapEntry(key, 'Local Poste/Transformateur');
+      }
+      return MapEntry(key, value);
+    });
+    
+    final filteredTypes = modifiedTypes.entries.toList();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingM),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: context.spacingS,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(context.spacingL, context.spacingM, context.spacingL, context.spacingS),
+            child: Row(
+              children: [
+                Icon(Icons.category_outlined, color: AppTheme.primaryBlue, size: context.iconSizeM),
+                SizedBox(width: context.spacingS),
+                Flexible(
+                  child: Text(
+                    'Type de local',
+                    style: TextStyle(
+                      fontSize: context.fontSizeL,
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.darkBlue,
+                    ),
+                  ),
+                ),
+                Text(
+                  ' *',
+                  style: TextStyle(color: Colors.red, fontSize: context.fontSizeL),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.all(context.spacingL),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(context.spacingS),
+                border: Border.all(
+                  color: !widget.typeValid ? Colors.red.shade300 : Colors.grey.shade300,
+                  width: !widget.typeValid ? 1.5 : 1,
+                ),
+              ),
+              child: DropdownButtonFormField<String>(
+                value: widget.selectedType,
+                isExpanded: true,
+                icon: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryBlue, size: context.iconSizeM),
+                dropdownColor: Colors.white,
+                borderRadius: BorderRadius.circular(context.spacingM),
+                hint: Row(
+                  children: [
+                    Icon(Icons.search, size: context.iconSizeS, color: Colors.grey.shade500),
+                    SizedBox(width: context.spacingS),
+                    Flexible(
+                      child: Text(
+                        'Sélectionnez un type de local',
+                        style: TextStyle(fontSize: context.fontSizeM, color: Colors.grey.shade500),
+                      ),
+                    ),
+                  ],
+                ),
+                decoration: InputDecoration(
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingM),
+                ),
+                style: TextStyle(fontSize: context.fontSizeM, color: AppTheme.darkBlue, fontWeight: FontWeight.w500),
+                items: filteredTypes.map((entry) {
+                  return DropdownMenuItem<String>(
+                    value: entry.key,
+                    child: Row(
+                      children: [
+                        Container(
+                          width: context.spacingS,
+                          height: context.spacingS,
+                          decoration: BoxDecoration(
+                            color: widget.selectedType == entry.key ? AppTheme.primaryBlue : Colors.transparent,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: widget.selectedType == entry.key ? AppTheme.primaryBlue : Colors.grey.shade400,
+                              width: 1.5,
+                            ),
+                          ),
+                          child: widget.selectedType == entry.key
+                              ? Icon(Icons.check, size: context.spacingXS, color: Colors.white)
+                              : null,
+                        ),
+                        SizedBox(width: context.spacingS),
+                        Expanded(
+                          child: Text(
+                            entry.value,
+                            style: TextStyle(
+                              fontSize: context.fontSizeM,
+                              fontWeight: widget.selectedType == entry.key ? FontWeight.w600 : FontWeight.w400,
+                              color: widget.selectedType == entry.key ? AppTheme.primaryBlue : Colors.grey.shade800,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+                onChanged: widget.onTypeChanged,
+                selectedItemBuilder: (BuildContext context) {
+                  return filteredTypes.map<Widget>((entry) {
+                    return Row(
+                      children: [
+                        Icon(Icons.check_circle, color: AppTheme.primaryBlue, size: context.iconSizeS),
+                        SizedBox(width: context.spacingS),
+                        Expanded(
+                          child: Text(
+                            entry.value,
+                            style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w500, color: AppTheme.darkBlue),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    );
+                  }).toList();
+                },
+              ),
+            ),
+          ),
+          if (!widget.typeValid)
+            Padding(
+              padding: EdgeInsets.only(left: context.spacingL, bottom: context.spacingM),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red, size: context.iconSizeXS),
+                  SizedBox(width: context.spacingXS),
+                  Flexible(
+                    child: Text(
+                      'Sélectionnez un type de local',
+                      style: TextStyle(color: Colors.red, fontSize: context.fontSizeXS),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernPhotoCarousel(BuildContext context) {
+    final photoHeight = context.screenHeight * 0.25;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingM),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: context.spacingS,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.all(context.spacingL),
+            child: Row(
+              children: [
+                Icon(Icons.photo_camera_outlined, color: AppTheme.primaryBlue, size: context.iconSizeM),
+                SizedBox(width: context.spacingS),
+                Flexible(
+                  child: Text(
+                    'Photos du local',
+                    style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.w600, color: AppTheme.darkBlue),
+                  ),
+                ),
+                const Spacer(),
+                if (widget.localPhotos.isNotEmpty)
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: context.spacingS, vertical: context.spacingXS),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(context.spacingL),
+                    ),
+                    child: Text(
+                      '${widget.localPhotos.length} photo${widget.localPhotos.length > 1 ? 's' : ''}',
+                      style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: AppTheme.primaryBlue),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          
+          if (widget.isLoadingPhotos)
+            Container(
+              height: photoHeight,
+              width: double.infinity,
+              child: Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue)),
+            )
+          else if (widget.localPhotos.isEmpty)
+            Container(
+              height: photoHeight,
+              width: double.infinity,
+              margin: EdgeInsets.symmetric(horizontal: context.spacingL),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(context.spacingS),
+                border: Border.all(color: Colors.grey.shade200, width: 1.5),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_photo_alternate_outlined, size: context.iconSizeXL * 1.5, color: Colors.grey.shade400),
+                  SizedBox(height: context.spacingM),
+                  Flexible(
+                    child: Text(
+                      'Aucune photo',
+                      style: TextStyle(color: Colors.grey.shade600, fontSize: context.fontSizeM),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            Column(
+              children: [
+                Container(
+                  height: photoHeight,
+                  width: double.infinity,
+                  margin: EdgeInsets.symmetric(horizontal: context.spacingL),
+                  child: PageView.builder(
+                    controller: _photosController,
+                    onPageChanged: (index) => setState(() => _currentPhotoIndex = index),
+                    itemCount: widget.localPhotos.length,
+                    itemBuilder: (context, index) {
+                      return GestureDetector(
+                        onTap: () => _showFullScreenPhoto(widget.localPhotos, index),
+                        child: Container(
+                          margin: EdgeInsets.symmetric(horizontal: context.spacingXS),
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(context.spacingS),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.1),
+                                blurRadius: 6,
+                                offset: Offset(0, 2),
+                              ),
+                            ],
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(context.spacingS),
+                            child: Stack(
+                              fit: StackFit.expand,
+                              children: [
+                                Image.file(File(widget.localPhotos[index]), fit: BoxFit.cover),
+                                Positioned(
+                                  top: context.spacingS,
+                                  right: context.spacingS,
+                                  child: GestureDetector(
+                                    onTap: () => _confirmDeletePhoto(index),
+                                    child: Container(
+                                      padding: EdgeInsets.all(context.spacingXS),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.6),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: Icon(Icons.delete_outline, color: Colors.white, size: context.iconSizeS),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                if (widget.localPhotos.length > 1)
+                  Padding(
+                    padding: EdgeInsets.only(top: context.spacingS, bottom: context.spacingS),
+                    child: SmoothPageIndicator(
+                      controller: _photosController,
+                      count: widget.localPhotos.length,
+                      effect: WormEffect(
+                        dotWidth: context.spacingS,
+                        dotHeight: context.spacingS,
+                        activeDotColor: AppTheme.primaryBlue,
+                        dotColor: Colors.grey.shade300,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          
+          Padding(
+            padding: EdgeInsets.all(context.spacingL),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildModernPhotoButton(
+                    context,
+                    icon: Icons.camera_alt,
+                    label: 'Prendre',
+                    onTap: widget.onPrendrePhoto,
+                  ),
+                ),
+                SizedBox(width: context.spacingS),
+                Expanded(
+                  child: _buildModernPhotoButton(
+                    context,
+                    icon: Icons.photo_library,
+                    label: 'Galerie',
+                    onTap: widget.onChoisirPhoto,
+                    isSecondary: true,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernPhotoButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    bool isSecondary = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(context.spacingS),
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: context.spacingS),
+          decoration: BoxDecoration(
+            gradient: isSecondary ? null : LinearGradient(
+              colors: [AppTheme.primaryBlue, AppTheme.primaryBlue.withOpacity(0.8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            color: isSecondary ? Colors.grey.shade100 : null,
+            borderRadius: BorderRadius.circular(context.spacingS),
+            border: isSecondary ? Border.all(color: Colors.grey.shade300) : null,
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: context.iconSizeS, color: isSecondary ? Colors.grey.shade700 : Colors.white),
+              SizedBox(width: context.spacingS),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(
+                    fontSize: context.fontSizeS,
+                    fontWeight: FontWeight.w600,
+                    color: isSecondary ? Colors.grey.shade700 : Colors.white,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernObservationsCard(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingM),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: context.spacingS,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.all(context.spacingL),
+            child: Row(
+              children: [
+                Icon(Icons.notes_outlined, color: AppTheme.primaryBlue, size: context.iconSizeM),
+                SizedBox(width: context.spacingS),
+                Flexible(
+                  child: Text(
+                    'Observations',
+                    style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.w600, color: AppTheme.darkBlue),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: context.spacingL),
+            child: Container(
+              padding: EdgeInsets.all(context.spacingM),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(context.spacingS),
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Ajouter une observation ?',
+                      style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w500, color: Colors.grey.shade800),
+                    ),
+                  ),
+                  _buildModernToggleButton(
+                    context,
+                    label: 'Oui',
+                    isSelected: widget.addObservation,
+                    onTap: () => widget.onAddObservationChanged(true),
+                    color: Colors.green,
+                  ),
+                  SizedBox(width: context.spacingS),
+                  _buildModernToggleButton(
+                    context,
+                    label: 'Non',
+                    isSelected: !widget.addObservation,
+                    onTap: () => widget.onAddObservationChanged(false),
+                    color: Colors.red,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          if (widget.observationsExistantes.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.all(context.spacingL),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Observations existantes',
+                    style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+                  ),
+                  SizedBox(height: context.spacingS),
+                  ...widget.observationsExistantes.asMap().entries.map((entry) {
+                    return _buildModernExistingObservation(context, entry.value, entry.key);
+                  }),
+                ],
+              ),
+            ),
+          
+          if (widget.addObservation)
+            Padding(
+              padding: EdgeInsets.all(context.spacingL),
+              child: Column(
+                children: [
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(context.spacingS),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: TextFormField(
+                      controller: widget.observationController,
+                      style: TextStyle(fontSize: context.fontSizeS),
+                      decoration: InputDecoration(
+                        hintText: 'Saisissez votre observation...',
+                        hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: context.fontSizeS),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.all(context.spacingM),
+                      ),
+                      maxLines: 3,
+                    ),
+                  ),
+                  SizedBox(height: context.spacingM),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildModernPhotoButton(
+                          context,
+                          icon: Icons.camera_alt,
+                          label: 'Photo',
+                          onTap: widget.onPrendrePhotoObservation,
+                        ),
+                      ),
+                      SizedBox(width: context.spacingS),
+                      Expanded(
+                        child: _buildModernPhotoButton(
+                          context,
+                          icon: Icons.photo_library,
+                          label: 'Galerie',
+                          onTap: widget.onChoisirPhotoObservation,
+                          isSecondary: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (widget.observationPhotos.isNotEmpty)
+                    Container(
+                      height: context.screenHeight * 0.1,
+                      margin: EdgeInsets.only(top: context.spacingM),
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: widget.observationPhotos.length,
+                        itemBuilder: (context, index) {
+                          return Container(
+                            width: context.screenWidth * 0.2,
+                            margin: EdgeInsets.only(right: context.spacingS),
+                            decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(context.spacingS),
+                              child: Image.file(File(widget.observationPhotos[index]), fit: BoxFit.cover),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  SizedBox(height: context.spacingL),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: widget.onAjouterObservation,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: context.spacingM),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.spacingS)),
+                      ),
+                      child: Text('Ajouter cette observation', style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w600)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          
+          SizedBox(height: context.spacingL),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernToggleButton(
+    BuildContext context, {
+    required String label,
+    required bool isSelected,
+    required VoidCallback onTap,
+    required Color color,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.15) : Colors.transparent,
+          borderRadius: BorderRadius.circular(context.spacingXL),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w600, color: isSelected ? color : Colors.grey.shade600),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildModernExistingObservation(BuildContext context, ObservationLibre observation, int index) {
+    return Container(
+      margin: EdgeInsets.only(bottom: context.spacingS),
+      padding: EdgeInsets.all(context.spacingM),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(context.spacingS),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  observation.texte,
+                  style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade800),
+                ),
+              ),
+              GestureDetector(
+                onTap: () => widget.onSupprimerObservationExistante(index),
+                child: Container(
+                  padding: EdgeInsets.all(context.spacingXS),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.delete_outline, size: context.iconSizeS, color: Colors.red),
+                ),
+              ),
+            ],
+          ),
+          if (observation.photos.isNotEmpty) ...[
+            SizedBox(height: context.spacingS),
+            Container(
+              height: context.screenHeight * 0.08,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: observation.photos.length,
+                itemBuilder: (context, photoIndex) {
+                  return Container(
+                    width: context.screenWidth * 0.18,
+                    margin: EdgeInsets.only(right: context.spacingS),
+                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(context.spacingS),
+                      child: Image.file(File(observation.photos[photoIndex]), fit: BoxFit.cover),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  void _showFullScreenPhoto(List<String> photos, int index) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Image.file(File(photos[index])),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _confirmDeletePhoto(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Supprimer la photo ?'),
+        content: const Text('Cette action est irréversible.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              widget.onSupprimerPhoto();
+              setState(() {
+                if (_currentPhotoIndex >= widget.localPhotos.length) {
+                  _currentPhotoIndex = widget.localPhotos.length - 1;
+                }
+                _photosController.jumpToPage(_currentPhotoIndex.clamp(0, widget.localPhotos.length - 1));
+              });
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ================================================================
+// ÉTAPE 2 : ÉLÉMENTS DE CONTRÔLE (Dispositions + Conditions)
+// ================================================================
+class _EtapeElementsControle extends StatefulWidget {
+  final List<ElementControle> dispositionsConstructives;
+  final List<ElementControle> conditionsExploitation;
+  final Map<int, bool> hasObservation;
+  final Map<int, List<String>> elementSuggestions;
+  final Map<ElementControle, bool> conformeSelected;
+  final Function(ElementControle, int, String) onElementChanged;
+  final Function(ElementControle) onConformeChanged;
+  final Function(int, bool, String) onObservationToggleChanged;
+  final Function(ElementControle, int, String) onPrendrePhotoElement;
+  final Function(ElementControle, int, String) onChoisirPhotoElement;
+  final Function(ElementControle, int, int, String) onSupprimerPhotoElement;
+  final Function(int, String, String) onObservationChanged;
+  final Function(int, String, ElementControle, String) onUseSuggestion;
+
+  const _EtapeElementsControle({
+    super.key,
+    required this.dispositionsConstructives,
+    required this.conditionsExploitation,
+    required this.hasObservation,
+    required this.elementSuggestions,
+    required this.conformeSelected,
+    required this.onElementChanged,
+    required this.onConformeChanged,
+    required this.onObservationToggleChanged,
+    required this.onPrendrePhotoElement,
+    required this.onChoisirPhotoElement,
+    required this.onSupprimerPhotoElement,
+    required this.onObservationChanged,
+    required this.onUseSuggestion,
+  });
+
+  @override
+  State<_EtapeElementsControle> createState() => _EtapeElementsControleState();
+}
+
+class _EtapeElementsControleState extends State<_EtapeElementsControle> {
+  final PageController _slideController = PageController();
+  
+  int _currentSection = 0;
+  int _currentSlide = 0;
+  
+  late List<List<ElementControle>> _dispositionsSlides;
+  late List<List<ElementControle>> _conditionsSlides;
+
+  @override
+  void initState() {
+    super.initState();
+    _buildSlides();
+  }
+
+  void _buildSlides() {
+    _dispositionsSlides = [];
+    for (int i = 0; i < widget.dispositionsConstructives.length; i += 3) {
+      _dispositionsSlides.add(widget.dispositionsConstructives.sublist(
+        i, 
+        (i + 3).clamp(0, widget.dispositionsConstructives.length)
+      ));
+    }
+    
+    _conditionsSlides = [];
+    for (int i = 0; i < widget.conditionsExploitation.length; i += 3) {
+      _conditionsSlides.add(widget.conditionsExploitation.sublist(
+        i, 
+        (i + 3).clamp(0, widget.conditionsExploitation.length)
+      ));
+    }
+  }
+
+  List<List<ElementControle>> get _currentSlides => 
+      _currentSection == 0 ? _dispositionsSlides : _conditionsSlides;
+  
+  String get _currentSectionTitle => 
+      _currentSection == 0 ? 'DISPOSITIONS CONSTRUCTIVES' : 'CONDITIONS D\'EXPLOITATION';
+  
+  Color get _currentSectionColor => 
+      _currentSection == 0 ? const Color(0xFF2C3E50) : const Color(0xFF34495E);
+  
+  int get _totalSlides => _currentSlides.length;
+  
+  bool get _isLastSlide => _currentSlide == _totalSlides - 1;
+  
+  bool get _isFirstSlide => _currentSlide == 0;
+  
+  bool get _isLastSection => _currentSection == 1;
+  
+  bool get _canGoToNextSection => _currentSection == 0 && _isLastSlide;
+
+  bool _isCurrentSlideValid() {
+    if (_currentSlides.isEmpty) return true;
+    
+    final currentElements = _currentSlides[_currentSlide];
+    for (var element in currentElements) {
+      if (!(widget.conformeSelected[element] ?? false)) return false;
+      if (element.priorite == null) return false;
+      
+      final elementIndex = _getElementIndex(element);
+      if (widget.hasObservation[elementIndex] == true) {
+        if (element.observation == null || element.observation!.trim().isEmpty) return false;
+      }
+    }
+    return true;
+  }
+
+  int _getElementIndex(ElementControle element) {
+    if (_currentSection == 0) {
+      return widget.dispositionsConstructives.indexOf(element);
+    } else {
+      return widget.dispositionsConstructives.length + widget.conditionsExploitation.indexOf(element);
+    }
+  }
+
+  void nextSlide() {
+    if (!_isCurrentSlideValid()) {
+      _showError('Veuillez remplir tous les champs obligatoires de ce slide');
+      return;
+    }
+    
+    if (_isLastSlide) {
+      if (_canGoToNextSection) {
+        setState(() {
+          _currentSection = 1;
+          _currentSlide = 0;
+        });
+        _slideController.jumpToPage(0);
+      }
+    } else {
+      _slideController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    }
+  }
+
+  void previousSlide() {
+    if (_isFirstSlide) {
+      if (_currentSection == 1) {
+        setState(() {
+          _currentSection = 0;
+          _currentSlide = _dispositionsSlides.length - 1;
+        });
+        _slideController.jumpToPage(_dispositionsSlides.length - 1);
+      }
+    } else {
+      _slideController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red, duration: const Duration(seconds: 2)),
+    );
+  }
+
+  bool canGoNext() {
+    if (!_isCurrentSlideValid()) return false;
+    if (_isLastSection && _isLastSlide) return true;
+    return false;
+  }
+
+  bool canGoPrevious() {
+    return _isFirstSlide && _currentSection == 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_totalSlides == 0) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.check_circle_outline, size: context.iconSizeXL * 1.5, color: Colors.green),
+            SizedBox(height: context.spacingM),
+            Text('Aucun élément à contrôler', style: TextStyle(fontSize: context.fontSizeL, color: Colors.grey.shade600)),
+          ],
+        ),
+      );
+    }
+
+    return Column(
+      children: [
+        // En-tête compact
+        Container(
+          padding: EdgeInsets.all(context.spacingL),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: context.spacingS, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: context.iconSizeXL * 1.2,
+                    height: context.iconSizeXL * 1.2,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(colors: [AppTheme.primaryBlue, AppTheme.primaryBlue.withOpacity(0.7)]),
+                      borderRadius: BorderRadius.circular(context.spacingS),
+                    ),
+                    child: Icon(Icons.checklist, color: Colors.white, size: context.iconSizeM),
+                  ),
+                  SizedBox(width: context.spacingM),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Éléments de contrôle',
+                          style: TextStyle(fontSize: context.fontSizeXXL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: context.spacingM),
+              
+              // Indicateurs de section (non cliquables)
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
+                      decoration: BoxDecoration(
+                        color: _currentSection == 0 
+                            ? const Color(0xFF2C3E50) 
+                            : (_currentSection > 0 ? const Color(0xFF2C3E50).withOpacity(0.3) : Colors.grey.shade100),
+                        borderRadius: BorderRadius.circular(context.spacingXL),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            _currentSection > 0 ? Icons.check_circle : Icons.construction,
+                            size: context.iconSizeXS,
+                            color: _currentSection == 0 || _currentSection > 0 ? Colors.white : Colors.grey.shade700,
+                          ),
+                          SizedBox(width: context.spacingXS),
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'DISPOSITIONS',
+                                style: TextStyle(
+                                  fontSize: context.fontSizeXS,
+                                  fontWeight: FontWeight.w600,
+                                  color: _currentSection == 0 || _currentSection > 0 ? Colors.white : Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SizedBox(width: context.spacingS),
+                  Expanded(
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
+                      decoration: BoxDecoration(
+                        color: _currentSection == 1 ? const Color(0xFF34495E) : Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(context.spacingXL),
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.engineering,
+                            size: context.iconSizeXS,
+                            color: _currentSection == 1 ? Colors.white : Colors.grey.shade700,
+                          ),
+                          SizedBox(width: context.spacingXS),
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                'CONDITIONS',
+                                style: TextStyle(
+                                  fontSize: context.fontSizeXS,
+                                  fontWeight: FontWeight.w600,
+                                  color: _currentSection == 1 ? Colors.white : Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        
+        // Titre de section
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
+          child: Row(
+            children: [
+              Flexible(
+                child: Text(
+                  _currentSectionTitle,
+                  style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.bold, color: _currentSectionColor),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${_currentSlide + 1}/${_totalSlides}',
+                style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+        
+        // Zone des éléments (hauteur augmentée)
+        Expanded(
+          child: PageView.builder(
+            controller: _slideController,
+            physics: const NeverScrollableScrollPhysics(),
+            onPageChanged: (index) => setState(() => _currentSlide = index),
+            itemCount: _totalSlides,
+            itemBuilder: (context, slideIndex) {
+              final slideElements = _currentSlides[slideIndex];
+              
+              return ListView(
+                padding: EdgeInsets.all(context.spacingL),
+                children: slideElements.map((element) {
+                  final originalIndex = _currentSection == 0 
+                      ? widget.dispositionsConstructives.indexOf(element)
+                      : widget.conditionsExploitation.indexOf(element);
+                  final globalIndex = _currentSection == 0 
+                      ? originalIndex 
+                      : widget.dispositionsConstructives.length + originalIndex;
+                  
+                  return _buildModernElementCard(
+                    context,
+                    element: element,
+                    index: originalIndex,
+                    globalIndex: globalIndex,
+                    sectionType: _currentSection == 0 ? 'dispositions' : 'conditions',
+                    color: _currentSectionColor,
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ),
+        
+        // Barre de progression
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
+          child: LinearProgressIndicator(
+            value: (_currentSlide + 1) / _totalSlides,
+            backgroundColor: Colors.grey.shade200,
+            valueColor: AlwaysStoppedAnimation<Color>(_currentSectionColor),
+            minHeight: 4,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModernElementCard(
+    BuildContext context, {
+    required ElementControle element,
+    required int index,
+    required int globalIndex,
+    required String sectionType,
+    required Color color,
+  }) {
+    final hasObservation = widget.hasObservation[globalIndex] ?? false;
+    final suggestions = widget.elementSuggestions[index] ?? [];
+    final isConformeSelected = widget.conformeSelected[element] ?? false;
+    
+    return Container(
+      margin: EdgeInsets.only(bottom: context.spacingL),
+      padding: EdgeInsets.all(context.spacingL),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingL),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: context.iconSizeL,
+                height: context.iconSizeL,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(context.spacingS),
+                ),
+                child: Center(
+                  child: Text(
+                    '${index + 1}',
+                    style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.bold, color: color),
+                  ),
+                ),
+              ),
+              SizedBox(width: context.spacingS),
+              Expanded(
+                child: Text(
+                  element.elementControle,
+                  style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w600, color: AppTheme.darkBlue, height: 1.3),
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+            ],
+          ),
+          
+          SizedBox(height: context.spacingL),
+          
+          // Conformité et Priorité
+          Row(
+            children: [
+              Expanded(
+                child: _buildModernConformiteSelector(
+                  context, element, color, index, sectionType, isConformeSelected, globalIndex,
+                ),
+              ),
+              SizedBox(width: context.spacingS),
+              Expanded(
+                child: _buildModernPrioriteSelector(context, element, color, index, sectionType),
+              ),
+            ],
+          ),
+          
+          SizedBox(height: context.spacingM),
+          
+          // Toggle Observation
+          _buildModernObservationToggle(context, globalIndex, hasObservation, color, sectionType),
+          
+          if (hasObservation) ...[
+            SizedBox(height: context.spacingS),
+            _buildModernObservationField(
+              context: context,
+              element: element,
+              index: index,
+              globalIndex: globalIndex,
+              sectionType: sectionType,
+              suggestions: suggestions,
+              color: color,
+            ),
+          ],
+          
+          SizedBox(height: context.spacingM),
+          
+          // Photos
+          _buildModernElementPhotos(
+            context: context,
+            element: element,
+            index: index,
+            sectionType: sectionType,
+            color: color,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernConformiteSelector(
+    BuildContext context, 
+    ElementControle element, 
+    Color color, 
+    int index, 
+    String sectionType, 
+    bool isConformeSelected,
+    int globalIndex,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(context.spacingS),
+        border: Border.all(
+          color: !isConformeSelected ? Colors.red.shade300 : Colors.transparent,
+          width: !isConformeSelected ? 1.5 : 0,
+        ),
+      ),
+      child: DropdownButtonFormField<bool?>(
+        value: isConformeSelected ? element.conforme : null,
+        hint: Text('Sélectionnez *', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500)),
+        onChanged: (bool? newValue) {
+          if (newValue != null) {
+            setState(() {
+              element.conforme = newValue;
+              widget.onConformeChanged(element);
+              widget.onElementChanged(element, index, 'conformite');
+              
+              // Si conformité = Non -> Observation = Oui
+              // Si conformité = Oui -> Observation = Non (mais l'utilisateur peut changer)
+              if (newValue == false) {
+                widget.onObservationToggleChanged(globalIndex, true, sectionType);
+              } else {
+                widget.onObservationToggleChanged(globalIndex, false, sectionType);
+              }
+            });
+          }
+        },
+        decoration: InputDecoration(
+          labelText: 'Conformité *',
+          labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
+        ),
+        items: [
+          DropdownMenuItem(
+            value: true,
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green, size: context.iconSizeXS),
+                SizedBox(width: context.spacingS),
+                Flexible(child: Text('Oui', style: TextStyle(fontSize: context.fontSizeS))),
+              ],
+            ),
+          ),
+          DropdownMenuItem(
+            value: false,
+            child: Row(
+              children: [
+                Icon(Icons.cancel, color: Colors.red, size: context.iconSizeXS),
+                SizedBox(width: context.spacingS),
+                Flexible(child: Text('Non', style: TextStyle(fontSize: context.fontSizeS))),
+              ],
+            ),
+          ),
+        ],
+        isExpanded: true,
+      ),
+    );
+  }
+
+  Widget _buildModernPrioriteSelector(BuildContext context, ElementControle element, Color color, int index, String sectionType) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(context.spacingS),
+      ),
+      child: DropdownButtonFormField<int?>(
+        value: element.priorite,
+        hint: Text('Sélectionnez *', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500)),
+        onChanged: (int? newValue) {
+          setState(() {
+            element.priorite = newValue;
+            widget.onElementChanged(element, index, 'priorite');
+          });
+        },
+        decoration: InputDecoration(
+          labelText: 'Priorité *',
+          labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
+        ),
+        items: [
+          DropdownMenuItem(
+            value: 1,
+            child: Row(
+              children: [
+                Container(width: context.spacingS, height: context.spacingS, decoration: BoxDecoration(color: Colors.blue, shape: BoxShape.circle)),
+                SizedBox(width: context.spacingS),
+                Flexible(child: Text('N1 - Basse', style: TextStyle(fontSize: context.fontSizeXS))),
+              ],
+            ),
+          ),
+          DropdownMenuItem(
+            value: 2,
+            child: Row(
+              children: [
+                Container(width: context.spacingS, height: context.spacingS, decoration: BoxDecoration(color: Colors.orange, shape: BoxShape.circle)),
+                SizedBox(width: context.spacingS),
+                Flexible(child: Text('N2 - Moyenne', style: TextStyle(fontSize: context.fontSizeXS))),
+              ],
+            ),
+          ),
+          DropdownMenuItem(
+            value: 3,
+            child: Row(
+              children: [
+                Container(width: context.spacingS, height: context.spacingS, decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
+                SizedBox(width: context.spacingS),
+                Flexible(child: Text('N3 - Haute', style: TextStyle(fontSize: context.fontSizeXS))),
+              ],
+            ),
+          ),
+        ],
+        isExpanded: true,
+      ),
+    );
+  }
+
+  Widget _buildModernObservationToggle(BuildContext context, int globalIndex, bool hasObservation, Color color, String sectionType) {
+    return Row(
+      children: [
+        Flexible(
+          child: Text(
+            'Ajouter une observation ?',
+            style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        SizedBox(width: context.spacingS),
+        GestureDetector(
+          onTap: () => widget.onObservationToggleChanged(globalIndex, true, sectionType),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
+            decoration: BoxDecoration(
+              color: hasObservation ? Colors.green.withOpacity(0.15) : Colors.transparent,
+              borderRadius: BorderRadius.circular(context.spacingL),
+              border: Border.all(
+                color: hasObservation ? Colors.green : Colors.grey.shade300,
+                width: hasObservation ? 2 : 1,
+              ),
+            ),
+            child: Text('Oui', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: hasObservation ? Colors.green : Colors.grey.shade600)),
+          ),
+        ),
+        SizedBox(width: context.spacingS),
+        GestureDetector(
+          onTap: () => widget.onObservationToggleChanged(globalIndex, false, sectionType),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
+            decoration: BoxDecoration(
+              color: !hasObservation ? Colors.red.withOpacity(0.15) : Colors.transparent,
+              borderRadius: BorderRadius.circular(context.spacingL),
+              border: Border.all(
+                color: !hasObservation ? Colors.red : Colors.grey.shade300,
+                width: !hasObservation ? 2 : 1,
+              ),
+            ),
+            child: Text('Non', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: !hasObservation ? Colors.red : Colors.grey.shade600)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildModernObservationField({
+    required BuildContext context,
+    required ElementControle element,
+    required int index,
+    required int globalIndex,
+    required String sectionType,
+    required List<String> suggestions,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(context.spacingS),
+            border: Border.all(
+              color: element.observation == null || element.observation!.trim().isEmpty ? Colors.red.shade300 : Colors.transparent,
+              width: element.observation == null || element.observation!.trim().isEmpty ? 1.5 : 0,
+            ),
+          ),
+          child: TextFormField(
+            initialValue: element.observation,
+            style: TextStyle(fontSize: context.fontSizeS),
+            onChanged: (value) {
+              element.observation = value;
+              widget.onObservationChanged(index, value, sectionType);
+              setState(() {});
+            },
+            decoration: InputDecoration(
+              hintText: 'Saisissez votre observation... *',
+              hintStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade400),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.all(context.spacingM),
+            ),
+            maxLines: 2,
+          ),
+        ),
+        
+        if (suggestions.isNotEmpty)
+          Container(
+            margin: EdgeInsets.only(top: context.spacingS),
+            padding: EdgeInsets.all(context.spacingS),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(context.spacingS),
+              border: Border.all(color: color.withOpacity(0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Suggestions', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.bold, color: color)),
+                SizedBox(height: context.spacingXS),
+                ...suggestions.map((s) => GestureDetector(
+                  onTap: () => widget.onUseSuggestion(index, s, element, sectionType),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: context.spacingXS),
+                    child: Row(
+                      children: [
+                        Icon(Icons.lightbulb_outline, size: context.iconSizeXS, color: Colors.amber),
+                        SizedBox(width: context.spacingS),
+                        Expanded(
+                          child: Text(s, style: TextStyle(fontSize: context.fontSizeXS, color: Colors.grey.shade700)),
+                        ),
+                      ],
+                    ),
+                  ),
+                )).toList(),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildModernElementPhotos({
+    required BuildContext context,
+    required ElementControle element,
+    required int index,
+    required String sectionType,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.photo_camera_outlined, size: context.iconSizeXS, color: color),
+            SizedBox(width: context.spacingS),
+            Flexible(
+              child: Text(
+                'Photos (${element.photos.length})',
+                style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: context.spacingS),
+        
+        if (element.photos.isNotEmpty)
+          Container(
+            height: context.screenHeight * 0.1,
+            margin: EdgeInsets.only(bottom: context.spacingS),
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: element.photos.length,
+              itemBuilder: (context, photoIndex) {
+                return Stack(
+                  children: [
+                    Container(
+                      width: context.screenWidth * 0.2,
+                      margin: EdgeInsets.only(right: context.spacingS),
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(context.spacingS),
+                        child: Image.file(File(element.photos[photoIndex]), fit: BoxFit.cover),
+                      ),
+                    ),
+                    Positioned(
+                      top: context.spacingXS,
+                      right: context.spacingS + context.spacingXS,
+                      child: GestureDetector(
+                        onTap: () => widget.onSupprimerPhotoElement(element, index, photoIndex, sectionType),
+                        child: Container(
+                          padding: EdgeInsets.all(context.spacingXS),
+                          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                          child: Icon(Icons.close, size: context.iconSizeXS - 2, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        
+        Row(
+          children: [
+            Expanded(
+              child: _buildSmallIconButton(
+                context,
+                icon: Icons.camera_alt,
+                label: 'Prendre',
+                onTap: () => widget.onPrendrePhotoElement(element, index, sectionType),
+                color: color,
+              ),
+            ),
+            SizedBox(width: context.spacingS),
+            Expanded(
+              child: _buildSmallIconButton(
+                context,
+                icon: Icons.photo_library,
+                label: 'Galerie',
+                onTap: () => widget.onChoisirPhotoElement(element, index, sectionType),
+                color: color,
+                isSecondary: true,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSmallIconButton(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required Color color,
+    bool isSecondary = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(context.spacingS),
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: context.spacingS),
+          decoration: BoxDecoration(
+            color: isSecondary ? Colors.grey.shade100 : color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(context.spacingS),
+            border: Border.all(color: isSecondary ? Colors.grey.shade300 : color.withOpacity(0.3)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: context.iconSizeXS, color: isSecondary ? Colors.grey.shade700 : color),
+              SizedBox(width: context.spacingXS),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(fontSize: context.fontSizeXS - 1, fontWeight: FontWeight.w600, color: isSecondary ? Colors.grey.shade700 : color),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ================================================================
+// ÉTAPE 3 : CELLULE ET TRANSFORMATEUR
+// ================================================================
+
+class _EtapeCelluleTransformateur extends StatefulWidget {
+  final TextEditingController celluleFonctionController;
+  final TextEditingController celluleTypeController;
+  final TextEditingController celluleMarqueController;
+  final TextEditingController celluleTensionController;
+  final TextEditingController cellulePouvoirController;
+  final TextEditingController celluleNumerotationController;
+  final TextEditingController celluleParafoudresController;
+  final List<ElementControle> celluleElements;
+  final TextEditingController transfoTypeController;
+  final TextEditingController transfoMarqueController;
+  final TextEditingController transfoPuissanceController;
+  final TextEditingController transfoTensionController;
+  final TextEditingController transfoBuchholzController;
+  final TextEditingController transfoRefroidissementController;
+  final TextEditingController transfoRegimeController;
+  final List<ElementControle> transfoElements;
+  final Map<int, bool> hasObservation;
+  final Map<int, List<String>> elementSuggestions;
+  final Map<ElementControle, bool> conformeSelected;
+  final Function(ElementControle, int, String) onElementChanged;
+  final Function(ElementControle) onConformeChanged;
+  final Function(int, bool, String) onObservationToggleChanged;
+  final Function(ElementControle, int, String) onPrendrePhotoElement;
+  final Function(ElementControle, int, String) onChoisirPhotoElement;
+  final Function(ElementControle, int, int, String) onSupprimerPhotoElement;
+  final Function(int, String, String) onObservationChanged;
+  final Function(int, String, ElementControle, String) onUseSuggestion;
+
+  const _EtapeCelluleTransformateur({
+    super.key,
+    required this.celluleFonctionController,
+    required this.celluleTypeController,
+    required this.celluleMarqueController,
+    required this.celluleTensionController,
+    required this.cellulePouvoirController,
+    required this.celluleNumerotationController,
+    required this.celluleParafoudresController,
+    required this.celluleElements,
+    required this.transfoTypeController,
+    required this.transfoMarqueController,
+    required this.transfoPuissanceController,
+    required this.transfoTensionController,
+    required this.transfoBuchholzController,
+    required this.transfoRefroidissementController,
+    required this.transfoRegimeController,
+    required this.transfoElements,
+    required this.hasObservation,
+    required this.elementSuggestions,
+    required this.conformeSelected,
+    required this.onElementChanged,
+    required this.onConformeChanged,
+    required this.onObservationToggleChanged,
+    required this.onPrendrePhotoElement,
+    required this.onChoisirPhotoElement,
+    required this.onSupprimerPhotoElement,
+    required this.onObservationChanged,
+    required this.onUseSuggestion,
+  });
+
+  @override
+  State<_EtapeCelluleTransformateur> createState() => _EtapeCelluleTransformateurState();
+}
+
+class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur> {
+  final PageController _slideController = PageController();
+  
+  int _currentSection = 0;
+  int _currentSlide = 0;
+  
+  late List<List<ElementControle>> _celluleElementsSlides;
+  late List<List<ElementControle>> _transfoElementsSlides;
+  late List<Map<String, dynamic>> _sections;
+
+  @override
+  void initState() {
+    super.initState();
+    _buildSlides();
+    _buildSections();
+  }
+
+  void _buildSlides() {
+    _celluleElementsSlides = [];
+    for (int i = 0; i < widget.celluleElements.length; i += 3) {
+      _celluleElementsSlides.add(widget.celluleElements.sublist(i, (i + 3).clamp(0, widget.celluleElements.length)));
+    }
+    
+    _transfoElementsSlides = [];
+    for (int i = 0; i < widget.transfoElements.length; i += 3) {
+      _transfoElementsSlides.add(widget.transfoElements.sublist(i, (i + 3).clamp(0, widget.transfoElements.length)));
+    }
+  }
+
+  void _buildSections() {
+    _sections = [
+      {'title': 'CELLULE - Données techniques', 'type': 'cellule_donnees', 'color': const Color(0xFFE67E22), 'icon': Icons.info_outline},
+    ];
+    
+    if (_celluleElementsSlides.isNotEmpty) {
+      _sections.add({'title': 'CELLULE - Éléments vérifiés', 'type': 'cellule_elements', 'color': const Color(0xFFE67E22), 'icon': Icons.checklist});
+    }
+    
+    _sections.add({'title': 'TRANSFORMATEUR - Données techniques', 'type': 'transfo_donnees', 'color': const Color(0xFF2980B9), 'icon': Icons.info_outline});
+    
+    if (_transfoElementsSlides.isNotEmpty) {
+      _sections.add({'title': 'TRANSFORMATEUR - Éléments vérifiés', 'type': 'transfo_elements', 'color': const Color(0xFF2980B9), 'icon': Icons.checklist});
+    }
+  }
+
+  Map<String, dynamic> get _currentSectionData => _sections[_currentSection];
+  String get _currentSectionType => _currentSectionData['type'];
+  Color get _currentColor => _currentSectionData['color'];
+  bool get _isLastSection => _currentSection == _sections.length - 1;
+
+  int _getTotalSlides() {
+    switch (_currentSectionType) {
+      case 'cellule_donnees':
+      case 'transfo_donnees':
+        return 1;
+      case 'cellule_elements':
+        return _celluleElementsSlides.length;
+      case 'transfo_elements':
+        return _transfoElementsSlides.length;
+      default:
+        return 1;
+    }
+  }
+
+  bool get _isLastSlide => _currentSlide == _getTotalSlides() - 1;
+  bool get _isFirstSlide => _currentSlide == 0;
+
+  bool _isCurrentSlideValid() {
+    switch (_currentSectionType) {
+      case 'cellule_donnees':
+        return _validateCelluleDonnees();
+      case 'transfo_donnees':
+        return _validateTransfoDonnees();
+      case 'cellule_elements':
+        if (_celluleElementsSlides.isEmpty) return true;
+        return _validateElementsSlide(_celluleElementsSlides[_currentSlide], 1000);
+      case 'transfo_elements':
+        if (_transfoElementsSlides.isEmpty) return true;
+        return _validateElementsSlide(_transfoElementsSlides[_currentSlide], 2000);
+      default:
+        return true;
+    }
+  }
+
+  bool _validateCelluleDonnees() {
+    return widget.celluleFonctionController.text.trim().isNotEmpty &&
+           widget.celluleTypeController.text.trim().isNotEmpty &&
+           widget.celluleMarqueController.text.trim().isNotEmpty &&
+           widget.celluleTensionController.text.trim().isNotEmpty &&
+           widget.cellulePouvoirController.text.trim().isNotEmpty &&
+           widget.celluleNumerotationController.text.trim().isNotEmpty &&
+           widget.celluleParafoudresController.text.trim().isNotEmpty;
+  }
+
+  bool _validateTransfoDonnees() {
+    return widget.transfoTypeController.text.trim().isNotEmpty &&
+           widget.transfoMarqueController.text.trim().isNotEmpty &&
+           widget.transfoPuissanceController.text.trim().isNotEmpty &&
+           widget.transfoTensionController.text.trim().isNotEmpty &&
+           widget.transfoBuchholzController.text.trim().isNotEmpty &&
+           widget.transfoRefroidissementController.text.trim().isNotEmpty &&
+           widget.transfoRegimeController.text.trim().isNotEmpty;
+  }
+
+  bool _validateElementsSlide(List<ElementControle> elements, int baseIndex) {
+    for (var element in elements) {
+      if (!(widget.conformeSelected[element] ?? false)) return false;
+      if (element.priorite == null) return false;
+      
+      final elementIndex = _currentSectionType == 'cellule_elements'
+          ? baseIndex + widget.celluleElements.indexOf(element)
+          : baseIndex + widget.transfoElements.indexOf(element);
+      
+      if (widget.hasObservation[elementIndex] == true) {
+        if (element.observation == null || element.observation!.trim().isEmpty) return false;
+      }
+    }
+    return true;
+  }
+
+  void nextSlide() {
+    if (!_isCurrentSlideValid()) {
+      _showError('Veuillez remplir tous les champs obligatoires');
+      return;
+    }
+    
+    if (_isLastSlide) {
+      if (!_isLastSection) {
+        setState(() {
+          _currentSection++;
+          _currentSlide = 0;
+        });
+        _slideController.jumpToPage(0);
+      }
+    } else {
+      _slideController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    }
+  }
+
+  void previousSlide() {
+    if (_isFirstSlide) {
+      if (_currentSection > 0) {
+        setState(() {
+          _currentSection--;
+          _currentSlide = _getTotalSlidesForSection(_currentSection) - 1;
+        });
+        _slideController.jumpToPage(_currentSlide);
+      }
+    } else {
+      _slideController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    }
+  }
+
+  int _getTotalSlidesForSection(int sectionIndex) {
+    final sectionType = _sections[sectionIndex]['type'];
+    switch (sectionType) {
+      case 'cellule_donnees':
+      case 'transfo_donnees':
+        return 1;
+      case 'cellule_elements':
+        return _celluleElementsSlides.length;
+      case 'transfo_elements':
+        return _transfoElementsSlides.length;
+      default:
+        return 1;
+    }
+  }
+
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.red, duration: const Duration(seconds: 2)),
+    );
+  }
+
+  bool canGoNext() {
+    if (!_isCurrentSlideValid()) return false;
+    return _isLastSection && _isLastSlide;
+  }
+
+  bool canGoPrevious() {
+    return _isFirstSlide && _currentSection == 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: EdgeInsets.all(context.spacingL),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: context.spacingS, offset: const Offset(0, 2)),
+            ],
+          ),
+          child: Column(
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: context.iconSizeXL * 1.2,
+                    height: context.iconSizeXL * 1.2,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(colors: [Color(0xFFE67E22), Color(0xFF2980B9)]),
+                      borderRadius: BorderRadius.circular(context.spacingS),
+                    ),
+                    child: Icon(Icons.electric_bolt, color: Colors.white, size: context.iconSizeM),
+                  ),
+                  SizedBox(width: context.spacingM),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Cellule & Transformateur',
+                          style: TextStyle(fontSize: context.fontSizeXXL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                        ),
+                        Text(
+                          'Données techniques et vérifications',
+                          style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: context.spacingM),
+              
+              // Indicateurs de section (non cliquables)
+              SizedBox(
+                height: context.screenHeight * 0.05,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _sections.length,
+                  itemBuilder: (context, index) {
+                    final section = _sections[index];
+                    final isActive = index <= _currentSection;
+                    final isCompleted = index < _currentSection;
+                    final color = section['color'] as Color;
+                    
+                    return Container(
+                      margin: EdgeInsets.only(right: context.spacingS),
+                      padding: EdgeInsets.symmetric(horizontal: context.spacingM),
+                      decoration: BoxDecoration(
+                        color: index == _currentSection 
+                            ? color 
+                            : (isCompleted ? color.withOpacity(0.3) : Colors.grey.shade100),
+                        borderRadius: BorderRadius.circular(context.spacingXL),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            isCompleted ? Icons.check_circle : section['icon'],
+                            size: context.iconSizeXS,
+                            color: (index == _currentSection || isCompleted) ? Colors.white : Colors.grey.shade700,
+                          ),
+                          SizedBox(width: context.spacingXS),
+                          Flexible(
+                            child: FittedBox(
+                              fit: BoxFit.scaleDown,
+                              child: Text(
+                                section['title'].toString().split(' - ')[0],
+                                style: TextStyle(
+                                  fontSize: context.fontSizeXS,
+                                  fontWeight: FontWeight.w600,
+                                  color: (index == _currentSection || isCompleted) ? Colors.white : Colors.grey.shade700,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        Container(
+          padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
+          child: Row(
+            children: [
+              Container(
+                width: context.spacingXS,
+                height: context.spacingXL,
+                decoration: BoxDecoration(color: _currentColor, borderRadius: BorderRadius.circular(2)),
+              ),
+              SizedBox(width: context.spacingS),
+              Flexible(
+                child: Text(
+                  _currentSectionData['title'],
+                  style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.bold, color: _currentColor),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (_getTotalSlides() > 1)
+                Padding(
+                  padding: EdgeInsets.only(left: context.spacingM),
+                  child: Text(
+                    '${_currentSlide + 1}/${_getTotalSlides()}',
+                    style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                  ),
+                ),
+            ],
+          ),
+        ),
+        
+        Expanded(
+          child: PageView.builder(
+            controller: _slideController,
+            physics: const NeverScrollableScrollPhysics(),
+            onPageChanged: (index) => setState(() => _currentSlide = index),
+            itemCount: _getTotalSlides(),
+            itemBuilder: (context, slideIndex) => _buildSectionContent(context),
+          ),
+        ),
+        
+        if (_getTotalSlides() > 1)
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
+            child: LinearProgressIndicator(
+              value: (_currentSlide + 1) / _getTotalSlides(),
+              backgroundColor: Colors.grey.shade200,
+              valueColor: AlwaysStoppedAnimation<Color>(_currentColor),
+              minHeight: 4,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildSectionContent(BuildContext context) {
+    switch (_currentSectionType) {
+      case 'cellule_donnees':
+        return _buildCelluleDonnees(context);
+      case 'transfo_donnees':
+        return _buildTransfoDonnees(context);
+      case 'cellule_elements':
+        return _buildElementsSlide(context, elements: _celluleElementsSlides[_currentSlide], sectionType: 'cellule', color: _currentColor, baseIndex: 1000);
+      case 'transfo_elements':
+        return _buildElementsSlide(context, elements: _transfoElementsSlides[_currentSlide], sectionType: 'transformateur', color: _currentColor, baseIndex: 2000);
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildCelluleDonnees(BuildContext context) {
+    final fields = [
+      {'controller': widget.celluleFonctionController, 'label': 'Fonction de la cellule *', 'icon': Icons.power},
+      {'controller': widget.celluleTypeController, 'label': 'Type de cellule *', 'icon': Icons.category},
+      {'controller': widget.celluleMarqueController, 'label': 'Marque / modèle / année *', 'icon': Icons.branding_watermark},
+      {'controller': widget.celluleTensionController, 'label': 'Tension assignée *', 'icon': Icons.electrical_services},
+      {'controller': widget.cellulePouvoirController, 'label': 'Pouvoir de coupure (kA) *', 'icon': Icons.offline_bolt},
+      {'controller': widget.celluleNumerotationController, 'label': 'Numérotation / repérage *', 'icon': Icons.numbers},
+      {'controller': widget.celluleParafoudresController, 'label': 'Parafoudres installés *', 'icon': Icons.shield},
+    ];
+    
+    return ListView(
+      padding: EdgeInsets.all(context.spacingL),
+      children: [
+        Container(
+          padding: EdgeInsets.all(context.spacingL),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [_currentColor, _currentColor.withOpacity(0.8)]),
+            borderRadius: BorderRadius.circular(context.spacingL),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.white, size: context.iconSizeM),
+                  SizedBox(width: context.spacingS),
+                  Flexible(
+                    child: Text(
+                      'Caractéristiques de la cellule',
+                      style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: context.spacingS),
+              Text(
+                'Renseignez toutes les informations techniques',
+                style: TextStyle(fontSize: context.fontSizeS, color: Colors.white.withOpacity(0.9)),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: context.spacingL),
+        ...fields.map((field) => _buildModernInputField(
+          context,
+          controller: field['controller'] as TextEditingController,
+          label: field['label'] as String,
+          icon: field['icon'] as IconData,
+          color: _currentColor,
+          onChanged: () => setState(() {}),
+        )).toList(),
+      ],
+    );
+  }
+
+  Widget _buildTransfoDonnees(BuildContext context) {
+    final fields = [
+      {'controller': widget.transfoTypeController, 'label': 'Type de transformateur *', 'icon': Icons.transform},
+      {'controller': widget.transfoMarqueController, 'label': 'Marque / Année *', 'icon': Icons.branding_watermark},
+      {'controller': widget.transfoPuissanceController, 'label': 'Puissance assignée (kVA) *', 'icon': Icons.speed},
+      {'controller': widget.transfoTensionController, 'label': 'Tension primaire / secondaire *', 'icon': Icons.electrical_services},
+      {'controller': widget.transfoBuchholzController, 'label': 'Relais Buchholz *', 'icon': Icons.sensors},
+      {'controller': widget.transfoRefroidissementController, 'label': 'Type de refroidissement *', 'icon': Icons.ac_unit},
+      {'controller': widget.transfoRegimeController, 'label': 'Régime du neutre *', 'icon': Icons.settings_input_antenna},
+    ];
+    
+    return ListView(
+      padding: EdgeInsets.all(context.spacingL),
+      children: [
+        Container(
+          padding: EdgeInsets.all(context.spacingL),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(colors: [_currentColor, _currentColor.withOpacity(0.8)]),
+            borderRadius: BorderRadius.circular(context.spacingL),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.white, size: context.iconSizeM),
+                  SizedBox(width: context.spacingS),
+                  Flexible(
+                    child: Text(
+                      'Caractéristiques du transformateur',
+                      style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.bold, color: Colors.white),
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: context.spacingS),
+              Text(
+                'Renseignez toutes les informations techniques',
+                style: TextStyle(fontSize: context.fontSizeS, color: Colors.white.withOpacity(0.9)),
+              ),
+            ],
+          ),
+        ),
+        SizedBox(height: context.spacingL),
+        ...fields.map((field) => _buildModernInputField(
+          context,
+          controller: field['controller'] as TextEditingController,
+          label: field['label'] as String,
+          icon: field['icon'] as IconData,
+          color: _currentColor,
+          onChanged: () => setState(() {}),
+        )).toList(),
+      ],
+    );
+  }
+
+  Widget _buildModernInputField(
+    BuildContext context, {
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    required Color color,
+    required VoidCallback onChanged,
+  }) {
+    final isValid = controller.text.trim().isNotEmpty;
+    
+    return Container(
+      margin: EdgeInsets.only(bottom: context.spacingM),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingM),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
+        ],
+        border: Border.all(color: isValid ? Colors.transparent : Colors.red.shade300, width: isValid ? 0 : 1.5),
+      ),
+      child: TextFormField(
+        controller: controller,
+        style: TextStyle(fontSize: context.fontSizeS),
+        onChanged: (_) => onChanged(),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: context.fontSizeS),
+          prefixIcon: Icon(icon, color: color, size: context.iconSizeS),
+          suffixIcon: isValid 
+              ? Icon(Icons.check_circle, color: Colors.green, size: context.iconSizeS)
+              : Icon(Icons.error_outline, color: Colors.red, size: context.iconSizeS),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingM), borderSide: BorderSide.none),
+          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingM), borderSide: BorderSide(color: Colors.grey.shade200)),
+          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingM), borderSide: BorderSide(color: color, width: 2)),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingM),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildElementsSlide(
+    BuildContext context, {
+    required List<ElementControle> elements,
+    required String sectionType,
+    required Color color,
+    required int baseIndex,
+  }) {
+    return ListView(
+      padding: EdgeInsets.all(context.spacingL),
+      children: elements.map((element) {
+        final originalIndex = sectionType == 'cellule'
+            ? widget.celluleElements.indexOf(element)
+            : widget.transfoElements.indexOf(element);
+        final globalIndex = baseIndex + originalIndex;
+        
+        return _buildElementCardSimple(
+          context,
+          element: element,
+          index: originalIndex,
+          globalIndex: globalIndex,
+          sectionType: sectionType,
+          color: color,
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildElementCardSimple(
+    BuildContext context, {
+    required ElementControle element,
+    required int index,
+    required int globalIndex,
+    required String sectionType,
+    required Color color,
+  }) {
+    final hasObservation = widget.hasObservation[globalIndex] ?? false;
+    final suggestions = widget.elementSuggestions[index] ?? [];
+    final isConformeSelected = widget.conformeSelected[element] ?? false;
+    
+    return Container(
+      margin: EdgeInsets.only(bottom: context.spacingL),
+      padding: EdgeInsets.all(context.spacingL),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingL),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: context.iconSizeL,
+                height: context.iconSizeL,
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(context.spacingS),
+                ),
+                child: Center(
+                  child: Text(
+                    '${index + 1}',
+                    style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.bold, color: color),
+                  ),
+                ),
+              ),
+              SizedBox(width: context.spacingS),
+              Expanded(
+                child: Text(
+                  element.elementControle,
+                  style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w600, color: AppTheme.darkBlue),
+                  overflow: TextOverflow.visible,
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: context.spacingL),
+          
+          Row(
+            children: [
+              Expanded(
+                child: _buildConformiteSelectorSimple(
+                  context, element, color, isConformeSelected, globalIndex, sectionType,
+                ),
+              ),
+              SizedBox(width: context.spacingS),
+              Expanded(
+                child: _buildPrioriteSelectorSimple(context, element, color),
+              ),
+            ],
+          ),
+          
+          SizedBox(height: context.spacingM),
+          
+          _buildObservationToggleSimple(context, globalIndex, hasObservation, color, sectionType),
+          
+          if (hasObservation) ...[
+            SizedBox(height: context.spacingS),
+            _buildObservationFieldSimple(
+              context: context,
+              element: element,
+              index: index,
+              sectionType: sectionType,
+              suggestions: suggestions,
+              color: color,
+            ),
+          ],
+          
+          SizedBox(height: context.spacingM),
+          
+          _buildElementPhotosSimple(
+            context: context,
+            element: element,
+            index: index,
+            sectionType: sectionType,
+            color: color,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConformiteSelectorSimple(
+    BuildContext context, 
+    ElementControle element, 
+    Color color, 
+    bool isConformeSelected,
+    int globalIndex,
+    String sectionType,
+  ) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(context.spacingS),
+        border: Border.all(
+          color: !isConformeSelected ? Colors.red.shade300 : Colors.transparent,
+          width: !isConformeSelected ? 1.5 : 0,
+        ),
+      ),
+      child: DropdownButtonFormField<bool?>(
+        value: isConformeSelected ? element.conforme : null,
+        hint: Text('Sélectionnez *', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500)),
+        onChanged: (bool? newValue) {
+          if (newValue != null) {
+            setState(() {
+              element.conforme = newValue;
+              widget.onConformeChanged(element);
+              
+              if (newValue == false) {
+                widget.onObservationToggleChanged(globalIndex, true, sectionType);
+              } else {
+                widget.onObservationToggleChanged(globalIndex, false, sectionType);
+              }
+            });
+          }
+        },
+        decoration: InputDecoration(
+          labelText: 'Conformité *',
+          labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
+        ),
+        items: [
+          DropdownMenuItem(
+            value: true,
+            child: Row(
+              children: [
+                Icon(Icons.check_circle, color: Colors.green, size: context.iconSizeXS),
+                SizedBox(width: context.spacingS),
+                Flexible(child: Text('Oui', style: TextStyle(fontSize: context.fontSizeS))),
+              ],
+            ),
+          ),
+          DropdownMenuItem(
+            value: false,
+            child: Row(
+              children: [
+                Icon(Icons.cancel, color: Colors.red, size: context.iconSizeXS),
+                SizedBox(width: context.spacingS),
+                Flexible(child: Text('Non', style: TextStyle(fontSize: context.fontSizeS))),
+              ],
+            ),
+          ),
+        ],
+        isExpanded: true,
+      ),
+    );
+  }
+
+  Widget _buildPrioriteSelectorSimple(BuildContext context, ElementControle element, Color color) {
+    return Container(
+      decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(context.spacingS)),
+      child: DropdownButtonFormField<int?>(
+        value: element.priorite,
+        hint: Text('Sélectionnez *', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500)),
+        onChanged: (int? newValue) {
+          setState(() => element.priorite = newValue);
+        },
+        decoration: InputDecoration(
+          labelText: 'Priorité *',
+          labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
+        ),
+        items: [
+          DropdownMenuItem(
+            value: 1,
+            child: Row(
+              children: [
+                Container(width: context.spacingS, height: context.spacingS, decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle)),
+                SizedBox(width: context.spacingS),
+                Flexible(child: Text('N1 - Basse', style: TextStyle(fontSize: context.fontSizeXS))),
+              ],
+            ),
+          ),
+          DropdownMenuItem(
+            value: 2,
+            child: Row(
+              children: [
+                Container(width: context.spacingS, height: context.spacingS, decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle)),
+                SizedBox(width: context.spacingS),
+                Flexible(child: Text('N2 - Moyenne', style: TextStyle(fontSize: context.fontSizeXS))),
+              ],
+            ),
+          ),
+          DropdownMenuItem(
+            value: 3,
+            child: Row(
+              children: [
+                Container(width: context.spacingS, height: context.spacingS, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
+                SizedBox(width: context.spacingS),
+                Flexible(child: Text('N3 - Haute', style: TextStyle(fontSize: context.fontSizeXS))),
+              ],
+            ),
+          ),
+        ],
+        isExpanded: true,
+      ),
+    );
+  }
+
+  Widget _buildObservationToggleSimple(BuildContext context, int globalIndex, bool hasObservation, Color color, String sectionType) {
+    return Row(
+      children: [
+        Flexible(
+          child: Text(
+            'Ajouter une observation ?',
+            style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        SizedBox(width: context.spacingS),
+        GestureDetector(
+          onTap: () => widget.onObservationToggleChanged(globalIndex, true, sectionType),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
+            decoration: BoxDecoration(
+              color: hasObservation ? Colors.green.withOpacity(0.15) : Colors.transparent,
+              borderRadius: BorderRadius.circular(context.spacingL),
+              border: Border.all(color: hasObservation ? Colors.green : Colors.grey.shade300, width: hasObservation ? 2 : 1),
+            ),
+            child: Text('Oui', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: hasObservation ? Colors.green : Colors.grey.shade600)),
+          ),
+        ),
+        SizedBox(width: context.spacingS),
+        GestureDetector(
+          onTap: () => widget.onObservationToggleChanged(globalIndex, false, sectionType),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
+            decoration: BoxDecoration(
+              color: !hasObservation ? Colors.red.withOpacity(0.15) : Colors.transparent,
+              borderRadius: BorderRadius.circular(context.spacingL),
+              border: Border.all(color: !hasObservation ? Colors.red : Colors.grey.shade300, width: !hasObservation ? 2 : 1),
+            ),
+            child: Text('Non', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: !hasObservation ? Colors.red : Colors.grey.shade600)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildObservationFieldSimple({
+    required BuildContext context,
+    required ElementControle element,
+    required int index,
+    required String sectionType,
+    required List<String> suggestions,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(context.spacingS),
+            border: Border.all(
+              color: element.observation == null || element.observation!.trim().isEmpty ? Colors.red.shade300 : Colors.transparent,
+              width: element.observation == null || element.observation!.trim().isEmpty ? 1.5 : 0,
+            ),
+          ),
+          child: TextFormField(
+            initialValue: element.observation,
+            style: TextStyle(fontSize: context.fontSizeS),
+            onChanged: (value) {
+              element.observation = value;
+              widget.onObservationChanged(index, value, sectionType);
+              setState(() {});
+            },
+            decoration: InputDecoration(
+              hintText: 'Saisissez votre observation... *',
+              hintStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade400),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.all(context.spacingM),
+            ),
+            maxLines: 2,
+          ),
+        ),
+        
+        if (suggestions.isNotEmpty)
+          Container(
+            margin: EdgeInsets.only(top: context.spacingS),
+            padding: EdgeInsets.all(context.spacingS),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(context.spacingS),
+              border: Border.all(color: color.withOpacity(0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Suggestions', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.bold, color: color)),
+                SizedBox(height: context.spacingXS),
+                ...suggestions.map((s) => GestureDetector(
+                  onTap: () => widget.onUseSuggestion(index, s, element, sectionType),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(vertical: context.spacingXS),
+                    child: Row(
+                      children: [
+                        Icon(Icons.lightbulb_outline, size: context.iconSizeXS, color: Colors.amber),
+                        SizedBox(width: context.spacingS),
+                        Expanded(child: Text(s, style: TextStyle(fontSize: context.fontSizeXS, color: Colors.grey.shade700))),
+                      ],
+                    ),
+                  ),
+                )).toList(),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildElementPhotosSimple({
+    required BuildContext context,
+    required ElementControle element,
+    required int index,
+    required String sectionType,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.photo_camera_outlined, size: context.iconSizeXS, color: color),
+            SizedBox(width: context.spacingS),
+            Flexible(
+              child: Text(
+                'Photos (${element.photos.length})',
+                style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: context.spacingS),
+        
+        if (element.photos.isNotEmpty)
+          Container(
+            height: context.screenHeight * 0.1,
+            margin: EdgeInsets.only(bottom: context.spacingS),
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              itemCount: element.photos.length,
+              itemBuilder: (context, photoIndex) {
+                return Stack(
+                  children: [
+                    Container(
+                      width: context.screenWidth * 0.2,
+                      margin: EdgeInsets.only(right: context.spacingS),
+                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(context.spacingS),
+                        child: Image.file(File(element.photos[photoIndex]), fit: BoxFit.cover),
+                      ),
+                    ),
+                    Positioned(
+                      top: context.spacingXS,
+                      right: context.spacingS + context.spacingXS,
+                      child: GestureDetector(
+                        onTap: () => widget.onSupprimerPhotoElement(element, index, photoIndex, sectionType),
+                        child: Container(
+                          padding: EdgeInsets.all(context.spacingXS),
+                          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                          child: Icon(Icons.close, size: context.iconSizeXS - 2, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                );
+              },
+            ),
+          ),
+        
+        Row(
+          children: [
+            Expanded(
+              child: _buildSmallIconButtonSimple(
+                context,
+                icon: Icons.camera_alt,
+                label: 'Prendre',
+                onTap: () => widget.onPrendrePhotoElement(element, index, sectionType),
+                color: color,
+              ),
+            ),
+            SizedBox(width: context.spacingS),
+            Expanded(
+              child: _buildSmallIconButtonSimple(
+                context,
+                icon: Icons.photo_library,
+                label: 'Galerie',
+                onTap: () => widget.onChoisirPhotoElement(element, index, sectionType),
+                color: color,
+                isSecondary: true,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSmallIconButtonSimple(
+    BuildContext context, {
+    required IconData icon,
+    required String label,
+    required VoidCallback onTap,
+    required Color color,
+    bool isSecondary = false,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(context.spacingS),
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: context.spacingS),
+          decoration: BoxDecoration(
+            color: isSecondary ? Colors.grey.shade100 : color.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(context.spacingS),
+            border: Border.all(color: isSecondary ? Colors.grey.shade300 : color.withOpacity(0.3)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: context.iconSizeXS, color: isSecondary ? Colors.grey.shade700 : color),
+              SizedBox(width: context.spacingXS),
+              Flexible(
+                child: Text(
+                  label,
+                  style: TextStyle(fontSize: context.fontSizeXS - 1, fontWeight: FontWeight.w600, color: isSecondary ? Colors.grey.shade700 : color),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ================================================================
+// WIDGET PRINCIPAL : AjouterLocalScreen
+// ================================================================
 
 class AjouterLocalScreen extends StatefulWidget {
   final Mission mission;
   final bool isMoyenneTension;
-  final dynamic local; // Pour l'édition
-  final int? localIndex; // Pour l'édition
-  final int? zoneIndex; // Pour basse tension ou moyenne tension dans zone
-  final bool isInZone; // Nouveau paramètre
+  final dynamic local;
+  final int? localIndex;
+  final int? zoneIndex;
+  final bool isInZone;
   
   const AjouterLocalScreen({
     super.key,
@@ -27,7 +2873,7 @@ class AjouterLocalScreen extends StatefulWidget {
     this.local,
     this.localIndex,
     this.zoneIndex,
-    this.isInZone = false, // Par défaut false
+    this.isInZone = false,
   });
 
   bool get isEdition => local != null;
@@ -45,16 +2891,13 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   
   final ImagePicker _picker = ImagePicker();
   
-  // Photos du local
   List<String> _localPhotos = [];
   bool _isLoadingPhotos = false;
   
-  // Observations libres
   final _observationController = TextEditingController();
   List<String> _observationPhotos = [];
   final List<ObservationLibre> _observationsExistantes = [];
 
-  // Données pour la cellule (uniquement pour LOCAL_TRANSFORMATEUR)
   final _celluleFonctionController = TextEditingController();
   final _celluleTypeController = TextEditingController();
   final _celluleMarqueController = TextEditingController();
@@ -64,7 +2907,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   final _celluleParafoudresController = TextEditingController();
   List<ElementControle> _celluleElements = [];
 
-  // Données pour le transformateur (uniquement pour LOCAL_TRANSFORMATEUR)
   final _transfoTypeController = TextEditingController();
   final _transfoMarqueController = TextEditingController();
   final _transfoPuissanceController = TextEditingController();
@@ -74,37 +2916,46 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   final _transfoRegimeController = TextEditingController();
   List<ElementControle> _transfoElements = [];
 
-  // API RAG NFC 15-100
   static const String _baseUrl = "http://192.168.0.217:8000";
-  Map<int, List<String>> _elementSuggestions = {}; // Suggestions par élément
-  Map<int, bool> _elementLoading = {}; // État de chargement par élément
-  Map<int, Timer?> _elementDebounceTimers = {}; // Timers par élément
+  Map<int, List<String>> _elementSuggestions = {};
+  Map<int, bool> _elementLoading = {};
+  Map<int, Timer?> _elementDebounceTimers = {};
   
-  // Contrôleurs pour les champs observation
   Map<String, TextEditingController> _observationControllers = {};
-  Map<String, TextEditingController> _normeControllers = {};
 
-  // Variables de validation
   bool _nomValid = false;
   bool _typeValid = false;
-  bool _localPhotosValid = false;
-  bool _observationsValid = true; // Par défaut vrai pour édition
+  bool _localPhotosValid = true;
+  bool _observationsValid = true;
   bool _dispositionsValid = false;
   bool _conditionsValid = false;
-  bool _celluleDonneesValid = true; // Par défaut vrai si pas de cellule
-  bool _transfoDonneesValid = true; // Par défaut vrai si pas de transformateur
-  bool _celluleElementsValid = true; // Par défaut vrai si pas de cellule
-  bool _transfoElementsValid = true; // Par défaut vrai si pas de transformateur
+  bool _celluleDonneesValid = true;
+  bool _transfoDonneesValid = true;
+  bool _celluleElementsValid = true;
+  bool _transfoElementsValid = true;
+  
+  bool _addObservation = false;
+  Map<int, bool> _hasObservation = {};
+  
+  Map<ElementControle, bool> _conformeSelected = {};
+
+  final PageController _mainPageController = PageController();
+  int _currentStep = 0;
+  
+  GlobalKey<_EtapeElementsControleState>? _etapeElementsKey;
+  GlobalKey<_EtapeCelluleTransformateurState>? _etapeCelluleTransfoKey;
 
   @override
   void initState() {
     super.initState();
+    _etapeElementsKey = GlobalKey<_EtapeElementsControleState>();
+    _etapeCelluleTransfoKey = GlobalKey<_EtapeCelluleTransformateurState>();
+    
     if (widget.isEdition) {
       _chargerDonneesExistantes();
-      // Pour l'édition, on suppose que les champs sont déjà valides
       _nomValid = true;
       _typeValid = true;
-      _localPhotosValid = _localPhotos.isNotEmpty;
+      _localPhotosValid = true;
       _dispositionsValid = _validateElements(_dispositionsConstructives);
       _conditionsValid = _validateElements(_conditionsExploitation);
       if (_selectedType == 'LOCAL_TRANSFORMATEUR') {
@@ -124,16 +2975,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     _selectedType = local.type;
     _dispositionsConstructives = List.from(local.dispositionsConstructives);
     _conditionsExploitation = List.from(local.conditionsExploitation);
-
-    // Charger les observations existantes
     _observationsExistantes.addAll(local.observationsLibres);
-
-    // Charger les photos du local
-    if (local.photos.isNotEmpty) {
-      _localPhotos = List.from(local.photos);
-    }
-
-    // Charger les données spécifiques au transformateur
+    if (local.photos.isNotEmpty) _localPhotos = List.from(local.photos);
     if (local is MoyenneTensionLocal && local.type == 'LOCAL_TRANSFORMATEUR') {
       if (local.cellule != null) {
         _celluleFonctionController.text = local.cellule!.fonction;
@@ -156,6 +2999,18 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         _transfoElements = List.from(local.transformateur!.elementsVerifies);
       }
     }
+    
+    for (var element in _dispositionsConstructives) _conformeSelected[element] = true;
+    for (var element in _conditionsExploitation) _conformeSelected[element] = true;
+    for (var element in _celluleElements) _conformeSelected[element] = true;
+    for (var element in _transfoElements) _conformeSelected[element] = true;
+    
+    for (int i = 0; i < _dispositionsConstructives.length; i++) {
+      _hasObservation[i] = _dispositionsConstructives[i].observation?.isNotEmpty == true;
+    }
+    for (int i = 0; i < _conditionsExploitation.length; i++) {
+      _hasObservation[_dispositionsConstructives.length + i] = _conditionsExploitation[i].observation?.isNotEmpty == true;
+    }
   }
 
   void _initializeElementsControle() {
@@ -163,50 +3018,27 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     _conditionsExploitation = [];
     _celluleElements = [];
     _transfoElements = [];
+    _hasObservation.clear();
+    _conformeSelected.clear();
   }
 
-  // ===== VALIDATION DES CHAMPS =====
-  
-  void _validateNom(String value) {
-    setState(() {
-      _nomValid = value.trim().isNotEmpty;
-    });
-  }
-
-  void _validateType(String? value) {
-    setState(() {
-      _typeValid = value != null && value.isNotEmpty;
-    });
-  }
-
-  void _validateLocalPhotos() {
-    setState(() {
-      _localPhotosValid = _localPhotos.isNotEmpty;
-    });
-  }
+  void _validateNom(String value) => setState(() => _nomValid = value.trim().isNotEmpty);
+  void _validateType(String? value) => setState(() => _typeValid = value != null && value.isNotEmpty);
+  void _validateLocalPhotos() => setState(() => _localPhotosValid = true);
 
   void _validateObservations() {
     bool isValid = true;
-    if (!widget.isEdition) {
-      // Pour les nouvelles observations
-      if (_observationController.text.trim().isEmpty && _observationsExistantes.isEmpty) {
-        isValid = false;
-      }
+    if (!widget.isEdition && _addObservation) {
+      if (_observationController.text.trim().isEmpty && _observationsExistantes.isEmpty) isValid = false;
     }
-    setState(() {
-      _observationsValid = isValid;
-    });
+    setState(() => _observationsValid = isValid);
   }
 
   bool _validateElements(List<ElementControle> elements) {
     if (elements.isEmpty) return false;
-    
     for (var element in elements) {
-      if (element.priorite == null || 
-          element.observation?.trim().isEmpty == true ||
-          element.referenceNormative?.trim().isEmpty == true) {
-        return false;
-      }
+      if (!(_conformeSelected[element] ?? false)) return false;
+      if (element.priorite == null) return false;
     }
     return true;
   }
@@ -231,117 +3063,90 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
            _transfoRegimeController.text.trim().isNotEmpty;
   }
 
-  void _validateDispositions() {
-    setState(() {
-      _dispositionsValid = _validateElements(_dispositionsConstructives);
-    });
+  bool _canProceedToNextStep() {
+    if (_currentStep == 0) return _nomValid && _typeValid && (!_addObservation || _observationsValid);
+    return true;
   }
 
-  void _validateConditions() {
-    setState(() {
-      _conditionsValid = _validateElements(_conditionsExploitation);
-    });
+  void _onConformeChanged(ElementControle element) => setState(() => _conformeSelected[element] = true);
+
+  void _handleNext() {
+    if (_currentStep == 0) {
+      if (_canProceedToNextStep()) {
+        _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      } else {
+        _showError('Veuillez remplir tous les champs obligatoires');
+      }
+    } else if (_currentStep == 1) {
+      final elementsState = _etapeElementsKey?.currentState;
+      if (elementsState != null) {
+        if (elementsState.canGoNext()) {
+          if (_selectedType == 'LOCAL_TRANSFORMATEUR') {
+            _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+          } else {
+            _sauvegarder();
+          }
+        } else {
+          elementsState.nextSlide();
+        }
+      }
+    } else if (_currentStep == 2) {
+      final celluleTransfoState = _etapeCelluleTransfoKey?.currentState;
+      if (celluleTransfoState != null) {
+        if (celluleTransfoState.canGoNext()) {
+          _sauvegarder();
+        } else {
+          celluleTransfoState.nextSlide();
+        }
+      }
+    }
   }
 
-  void _validateCelluleElements() {
-    setState(() {
-      _celluleElementsValid = _validateElements(_celluleElements);
-    });
+  void _handlePrevious() {
+    if (_currentStep == 1) {
+      final elementsState = _etapeElementsKey?.currentState;
+      if (elementsState != null) {
+        if (elementsState.canGoPrevious()) {
+          _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+        } else {
+          elementsState.previousSlide();
+        }
+      }
+    } else if (_currentStep == 2) {
+      final celluleTransfoState = _etapeCelluleTransfoKey?.currentState;
+      if (celluleTransfoState != null) {
+        if (celluleTransfoState.canGoPrevious()) {
+          _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+        } else {
+          celluleTransfoState.previousSlide();
+        }
+      }
+    } else if (_currentStep > 0) {
+      _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    }
   }
 
-  void _validateTransfoElements() {
-    setState(() {
-      _transfoElementsValid = _validateElements(_transfoElements);
-    });
+  String _getNextButtonText() {
+    if (_currentStep == 0) return 'Suivant';
+    if (_currentStep == 1) {
+      final elementsState = _etapeElementsKey?.currentState;
+      if (elementsState != null && elementsState.canGoNext()) {
+        return _selectedType == 'LOCAL_TRANSFORMATEUR' ? 'Suivant' : 'Terminer';
+      }
+      return 'Suivant';
+    }
+    if (_currentStep == 2) {
+      final celluleTransfoState = _etapeCelluleTransfoKey?.currentState;
+      if (celluleTransfoState != null && celluleTransfoState.canGoNext()) return 'Terminer';
+      return 'Suivant';
+    }
+    return 'Suivant';
   }
-
-  bool _validateAllFields() {
-    bool allValid = true;
-    
-    // Valider nom
-    if (_nomController.text.trim().isEmpty) {
-      _nomValid = false;
-      allValid = false;
-    }
-    
-    // Valider type
-    if (_selectedType == null || _selectedType!.isEmpty) {
-      _typeValid = false;
-      allValid = false;
-    }
-    
-    // Valider photos du local
-    if (_localPhotos.isEmpty) {
-      _localPhotosValid = false;
-      allValid = false;
-    }
-    
-    // Valider observations (uniquement pour création)
-    if (!widget.isEdition) {
-      _validateObservations();
-      if (!_observationsValid) {
-        allValid = false;
-      }
-    }
-    
-    // Valider dispositions constructives
-    _validateDispositions();
-    if (!_dispositionsValid) {
-      allValid = false;
-    }
-    
-    // Valider conditions d'exploitation
-    _validateConditions();
-    if (!_conditionsValid) {
-      allValid = false;
-    }
-    
-    // Valider les sections spécifiques au transformateur
-    if (_selectedType == 'LOCAL_TRANSFORMATEUR') {
-      if (!_validateCelluleDonnees()) {
-        _celluleDonneesValid = false;
-        allValid = false;
-      }
-      
-      if (!_validateTransfoDonnees()) {
-        _transfoDonneesValid = false;
-        allValid = false;
-      }
-      
-      _validateCelluleElements();
-      if (!_celluleElementsValid) {
-        allValid = false;
-      }
-      
-      _validateTransfoElements();
-      if (!_transfoElementsValid) {
-        allValid = false;
-      }
-    }
-    
-    setState(() {});
-    return allValid;
-  }
-
-  // ===== API RAG NFC 15-100 =====
 
   @override
   void dispose() {
-    // Annuler tous les timers
-    _elementDebounceTimers.forEach((key, timer) {
-      timer?.cancel();
-    });
-    
-    // Disposer tous les contrôleurs d'observation
-    _observationControllers.forEach((key, controller) {
-      controller.dispose();
-    });
-    
-    // Disposer tous les contrôleurs de norme
-    _normeControllers.forEach((key, controller) {
-      controller.dispose();
-    });
-    
+    _elementDebounceTimers.forEach((key, timer) => timer?.cancel());
+    _observationControllers.forEach((key, controller) => controller.dispose());
     _nomController.dispose();
     _observationController.dispose();
     _celluleFonctionController.dispose();
@@ -358,146 +3163,57 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     _transfoBuchholzController.dispose();
     _transfoRefroidissementController.dispose();
     _transfoRegimeController.dispose();
+    _mainPageController.dispose();
     super.dispose();
   }
 
-  // Autocompletion en temps réel pour un élément spécifique
   void _onElementObservationChanged(int elementIndex, String text, String sectionType) {
     _elementDebounceTimers[elementIndex]?.cancel();
-    
     if (text.length >= 3) {
-      _elementDebounceTimers[elementIndex] = Timer(Duration(milliseconds: 500), () async {
+      _elementDebounceTimers[elementIndex] = Timer(const Duration(milliseconds: 500), () async {
         await _getElementSuggestions(elementIndex, text, sectionType);
       });
     } else {
-      setState(() {
-        _elementSuggestions[elementIndex]?.clear();
-      });
+      setState(() => _elementSuggestions[elementIndex]?.clear());
     }
   }
 
-  // Récupérer suggestions pour un élément
   Future<void> _getElementSuggestions(int elementIndex, String query, String sectionType) async {
     if (query.length < 3) return;
-
-    final body = <String, dynamic>{
-      'query': query,
-      'max_results': 5,
-    };
-
+    final body = <String, dynamic>{'query': query, 'max_results': 5};
     try {
       final res = await http.post(
         Uri.parse('$_baseUrl/api/v1/autocomplete'),
         headers: {'Content-Type': 'application/json'},
         body: json.encode(body),
-      ).timeout(Duration(seconds: 5));
-
+      ).timeout(const Duration(seconds: 5));
       if (res.statusCode == 200) {
         final data = json.decode(res.body) as Map<String, dynamic>;
-        setState(() {
-          _elementSuggestions[elementIndex] = List<String>.from(data['suggestions'] ?? []);
-        });
+        setState(() => _elementSuggestions[elementIndex] = List<String>.from(data['suggestions'] ?? []));
       }
     } catch (e) {
       print('Erreur suggestions pour élément $elementIndex: $e');
     }
   }
 
-  // Extraire norme pour un élément spécifique et la mettre dans le champ référence normative
-  Future<void> _extractNormeForElement(int elementIndex, String observation, ElementControle element, String sectionType) async {
-    if (observation.isEmpty) {
-      _showSnackBar('Entrez une observation', Colors.orange);
-      return;
-    }
-
-    setState(() {
-      _elementLoading[elementIndex] = true;
-      _elementSuggestions[elementIndex]?.clear();
-    });
-
-    final body = <String, dynamic>{
-      'observation': observation,
-    };
-
-    try {
-      final res = await http.post(
-        Uri.parse('$_baseUrl/api/v1/extract_norme'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode(body),
-      ).timeout(Duration(seconds: 8));
-
-      if (res.statusCode == 200) {
-        final data = json.decode(res.body) as Map<String, dynamic>;
-        final norme = data['norme'] ?? 'N/A';
-        final confidence = (data['confidence'] ?? 0.0) * 100;
-        
-        // Mettre la norme dans le champ référence normative
-        setState(() {
-          element.referenceNormative = norme;
-          _elementLoading[elementIndex] = false;
-          
-          // Mettre à jour le contrôleur de norme
-          final normeKey = '$sectionType-$elementIndex';
-          if (_normeControllers.containsKey(normeKey)) {
-            _normeControllers[normeKey]!.text = norme;
-          }
-        });
-        
-        _showSnackBar('Norme extraite avec ${confidence.toStringAsFixed(0)}% de confiance', Colors.green);
-      } else {
-        setState(() {
-          _elementLoading[elementIndex] = false;
-        });
-        _showSnackBar('Erreur HTTP: ${res.statusCode}', Colors.red);
-      }
-    } catch (e) {
-      setState(() {
-        _elementLoading[elementIndex] = false;
-      });
-      _showSnackBar('Erreur de connexion à l\'API', Colors.red);
-    }
-  }
-
   void _useElementSuggestion(int elementIndex, String suggestion, ElementControle element, String sectionType) {
-    // Clé unique pour cet élément
     final observationKey = '$sectionType-$elementIndex';
-    
-    // Mettre à jour l'élément
     element.observation = suggestion;
-    
-    // Mettre à jour le contrôleur s'il existe
     if (_observationControllers.containsKey(observationKey)) {
       _observationControllers[observationKey]!.text = suggestion;
     }
-    
-    setState(() {
-      _elementSuggestions[elementIndex]?.clear();
-    });
+    setState(() => _elementSuggestions[elementIndex]?.clear());
   }
 
   void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: color,
-        duration: Duration(seconds: 2),
-      ),
+      SnackBar(content: Text(message), backgroundColor: color, duration: const Duration(seconds: 2)),
     );
   }
 
-  // ===== FIN API RAG =====
-
-  // ===== MÉTHODES POUR GESTION DES PHOTOS DU LOCAL =====
-
   Future<void> _prendrePhotoLocal() async {
     try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
+      final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
       if (photo != null) {
         setState(() => _isLoadingPhotos = true);
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'locaux');
@@ -515,13 +3231,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
 
   Future<void> _choisirPhotoLocalDepuisGalerie() async {
     try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
+      final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
       if (photo != null) {
         setState(() => _isLoadingPhotos = true);
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'locaux');
@@ -537,22 +3247,12 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     }
   }
 
-  // ===== MÉTHODES POUR GESTION DES PHOTOS D'OBSERVATION =====
-
   Future<void> _prendrePhotoObservation() async {
     try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
+      final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
       if (photo != null) {
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations');
-        setState(() {
-          _observationPhotos.add(savedPath);
-        });
+        setState(() => _observationPhotos.add(savedPath));
       }
     } catch (e) {
       _showError('Erreur lors de la prise de photo: $e');
@@ -561,18 +3261,10 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
 
   Future<void> _choisirPhotoObservationDepuisGalerie() async {
     try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
+      final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
       if (photo != null) {
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations');
-        setState(() {
-          _observationPhotos.add(savedPath);
-        });
+        setState(() => _observationPhotos.add(savedPath));
       }
     } catch (e) {
       _showError('Erreur lors de la sélection: $e');
@@ -582,14 +3274,9 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   Future<String> _savePhotoToAppDirectory(File photoFile, String subDir) async {
     final appDir = await getApplicationDocumentsDirectory();
     final photosDir = Directory('${appDir.path}/audit_photos/$subDir');
-    
-    if (!await photosDir.exists()) {
-      await photosDir.create(recursive: true);
-    }
-    
+    if (!await photosDir.exists()) await photosDir.create(recursive: true);
     final fileName = '${subDir}_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final newPath = '${photosDir.path}/$fileName';
-    
     await photoFile.copy(newPath);
     return newPath;
   }
@@ -599,27 +3286,12 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: EdgeInsets.all(20),
+        insetPadding: const EdgeInsets.all(20),
         child: Stack(
           children: [
             Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
-                    blurRadius: 10,
-                    spreadRadius: 2,
-                  ),
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  File(photos[index]),
-                  fit: BoxFit.contain,
-                ),
-              ),
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, spreadRadius: 2)]),
+              child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(photos[index]), fit: BoxFit.contain)),
             ),
             Positioned(
               top: 10,
@@ -627,28 +3299,19 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
               child: Row(
                 children: [
                   Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      shape: BoxShape.circle,
-                    ),
+                    decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
                     child: IconButton(
-                      icon: Icon(Icons.delete, color: Colors.white),
+                      icon: const Icon(Icons.delete, color: Colors.white),
                       onPressed: () {
                         Navigator.pop(context);
                         _supprimerPhoto(photos, index);
                       },
                     ),
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Container(
-                    decoration: BoxDecoration(
-                      color: Colors.black54,
-                      shape: BoxShape.circle,
-                    ),
-                    child: IconButton(
-                      icon: Icon(Icons.close, color: Colors.white),
-                      onPressed: () => Navigator.pop(context),
-                    ),
+                    decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                    child: IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Navigator.pop(context)),
                   ),
                 ],
               ),
@@ -663,13 +3326,10 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Supprimer la photo'),
-        content: Text('Êtes-vous sûr de vouloir supprimer cette photo ?'),
+        title: const Text('Supprimer la photo'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer cette photo ?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Annuler'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
@@ -679,310 +3339,10 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
               });
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text('Supprimer'),
+            child: const Text('Supprimer'),
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPhotosSection(String title, List<String> photos, Function prendrePhoto, Function choisirPhoto, {bool isRequired = false}) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.darkBlue,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 8),
-        
-        if (_isLoadingPhotos && title.contains('Local'))
-          Center(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: CircularProgressIndicator(),
-            ),
-          )
-        else if (photos.isEmpty)
-          Container(
-            padding: EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: isRequired ? Colors.red.shade300 : Colors.grey.shade200),
-            ),
-            child: Center(
-              child: Column(
-                children: [
-                  Icon(
-                    Icons.photo_camera_outlined,
-                    size: 48,
-                    color: isRequired ? Colors.red.shade400 : Colors.grey.shade400,
-                  ),
-                  SizedBox(height: 8),
-                  Text(
-                    isRequired ? 'Aucune photo (obligatoire)*' : 'Aucune photo',
-                    style: TextStyle(
-                      color: isRequired ? Colors.red : Colors.grey.shade600,
-                      fontWeight: isRequired ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          )
-        else
-          GridView.builder(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 8,
-              mainAxisSpacing: 8,
-              childAspectRatio: 0.8,
-            ),
-            itemCount: photos.length,
-            itemBuilder: (context, index) {
-              return GestureDetector(
-                onTap: () => _previsualiserPhoto(photos, index),
-                child: Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          File(photos[index]),
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey.shade200,
-                              child: Center(
-                                child: Icon(
-                                  Icons.broken_image_outlined,
-                                  color: Colors.grey.shade400,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: GestureDetector(
-                        onTap: () => _supprimerPhoto(photos, index),
-                        child: Container(
-                          padding: EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.8),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.close,
-                            size: 14,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        
-        SizedBox(height: 16),
-        
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => prendrePhoto(),
-                icon: Icon(Icons.camera_alt, size: 20),
-                label: Text('Prendre'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-            SizedBox(width: 4,),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => choisirPhoto(),
-                icon: Icon(Icons.photo_library, size: 20),
-                label: Text('Galerie'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey.shade800,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // ===== GESTION DES OBSERVATIONS =====
-
-  Widget _buildObservationsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          'OBSERVATIONS SUR LE LOCAL*',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            color: AppTheme.primaryBlue,
-          ),
-        ),
-        SizedBox(height: 16),
-
-        // Observations existantes
-        if (_observationsExistantes.isNotEmpty)
-          ..._observationsExistantes.asMap().entries.map((entry) {
-            final index = entry.key;
-            final observation = entry.value;
-            return Card(
-              margin: EdgeInsets.only(bottom: 12),
-              child: Padding(
-                padding: EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            observation.texte,
-                            style: TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                        ),
-                        IconButton(
-                          icon: Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _supprimerObservationExistante(index),
-                        ),
-                      ],
-                    ),
-                    if (observation.photos.isNotEmpty)
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(height: 8),
-                          Text(
-                            'Photos associées (${observation.photos.length})',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                          SizedBox(height: 4),
-                          GridView.builder(
-                            shrinkWrap: true,
-                            physics: NeverScrollableScrollPhysics(),
-                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 3,
-                              crossAxisSpacing: 4,
-                              mainAxisSpacing: 4,
-                              childAspectRatio: 0.8,
-                            ),
-                            itemCount: observation.photos.length,
-                            itemBuilder: (context, photoIndex) {
-                              return GestureDetector(
-                                onTap: () => _previsualiserPhoto(observation.photos, photoIndex),
-                                child: Image.file(
-                                  File(observation.photos[photoIndex]),
-                                  fit: BoxFit.cover,
-                                ),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                  ],
-                ),
-              ),
-            );
-          }),
-
-        // Nouvelle observation
-        Card(
-          elevation: 1,
-          child: Padding(
-            padding: EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Nouvelle observation',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
-                SizedBox(height: 12),
-
-                TextFormField(
-                  controller: _observationController,
-                  decoration: InputDecoration(
-                    labelText: 'Observation*',
-                    border: OutlineInputBorder(),
-                    hintText: 'Saisissez votre observation...',
-                    errorText: !_observationsValid && _observationController.text.isEmpty ? 
-                      'Une observation est obligatoire' : null,
-                    errorBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.red),
-                    ),
-                    focusedErrorBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.red),
-                    ),
-                  ),
-                  maxLines: 3,
-                  onChanged: (value) => _validateObservations(),
-                ),
-
-                SizedBox(height: 16),
-
-                // Photos pour la nouvelle observation
-                _buildPhotosSection(
-                  'Photos pour cette observation',
-                  _observationPhotos,
-                  _prendrePhotoObservation,
-                  _choisirPhotoObservationDepuisGalerie,
-                ),
-
-                SizedBox(height: 16),
-
-                ElevatedButton(
-                  onPressed: _ajouterObservation,
-                  child: Text('Ajouter cette observation'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    foregroundColor: Colors.white,
-                    minimumSize: Size(double.infinity, 48),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ],
     );
   }
 
@@ -992,14 +3352,11 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       _showError('Veuillez saisir une observation');
       return;
     }
-
     setState(() {
-      _observationsExistantes.add(ObservationLibre(
-        texte: texte,
-        photos: List.from(_observationPhotos),
-      ));
+      _observationsExistantes.add(ObservationLibre(texte: texte, photos: List.from(_observationPhotos)));
       _observationController.clear();
       _observationPhotos.clear();
+      _addObservation = false;
       _validateObservations();
     });
   }
@@ -1008,13 +3365,10 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Supprimer l\'observation'),
-        content: Text('Êtes-vous sûr de vouloir supprimer cette observation ?'),
+        title: const Text('Supprimer l\'observation'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer cette observation ?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Annuler'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
@@ -1024,198 +3378,160 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
               });
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text('Supprimer'),
+            child: const Text('Supprimer'),
           ),
         ],
       ),
     );
   }
 
-  // ===== FIN GESTION OBSERVATIONS =====
-
   void _onTypeChanged(String? newType) {
     setState(() {
       _selectedType = newType;
       _validateType(newType);
-      if (!widget.isEdition) {
-        _initializeElementsForType(newType);
-      }
+      if (!widget.isEdition) _initializeElementsForType(newType);
     });
   }
 
   void _initializeElementsForType(String? type) {
     if (type == null) return;
-
-    // Dispositions constructives
     final dispositions = HiveService.getDispositionsConstructivesForLocal(type);
-    _dispositionsConstructives = dispositions.map((element) => ElementControle(
-      elementControle: element,
-      conforme: false,
-    )).toList();
-
-    // Conditions d'exploitation
+    _dispositionsConstructives = dispositions.map((element) {
+      final ec = ElementControle(elementControle: element, conforme: false, priorite: 3);
+      _conformeSelected[ec] = false;
+      return ec;
+    }).toList();
     final conditions = HiveService.getConditionsExploitationForLocal(type);
-    _conditionsExploitation = conditions.map((element) => ElementControle(
-      elementControle: element,
-      conforme: false,
-    )).toList();
-
-    // Éléments spécifiques pour le local transformateur
+    _conditionsExploitation = conditions.map((element) {
+      final ec = ElementControle(elementControle: element, conforme: false, priorite: 3);
+      _conformeSelected[ec] = false;
+      return ec;
+    }).toList();
+    for (int i = 0; i < _dispositionsConstructives.length; i++) _hasObservation[i] = false;
+    for (int i = 0; i < _conditionsExploitation.length; i++) _hasObservation[_dispositionsConstructives.length + i] = false;
     if (type == 'LOCAL_TRANSFORMATEUR') {
-      final celluleElements = [
-        'Schéma unifilaire affiché dans le local',
-        'Cellule correctement posée et fixée',
-        'Jonctions inter-cellules',
-        'Canalisations et câbles d\'arrivée / départ',
-        'Respect des distances de sécurité',
-        'Commande manuelle / motorisée',
-        'Voyants de position (O / F / T)',
-        'Verrouillage mécanique',
-        'Terre de protection (PE) reliée à chaque cellule',
-      ];
-      _celluleElements = celluleElements.map((element) => ElementControle(
-        elementControle: element,
-        conforme: false,
-      )).toList();
-
-      final transfoElements = [
-        'Adapté au local et à la ventilation',
-        'Plaque signalétique (puissance, tension, couplage)',
-        'Mise à la terre du neutre et de la carcasse',
-        'Raccordement des câbles MT et BT',
-        'Protection contre les contacts directs',
-        'Bac de rétention (pour transfo à huile)',
-        'Protection contre les surintensités',
-        'Essais diélectriques',
-        'Distance entre transformateur',
-        'Protection MT',
-        'Protection BT (disjoncteur général, fusibles, relais thermique)',
-        'Écran de câble MT relié à la terre',
-      ];
-      _transfoElements = transfoElements.map((element) => ElementControle(
-        elementControle: element,
-        conforme: false,
-      )).toList();
+      final celluleElements = ['Schéma unifilaire affiché dans le local', 'Cellule correctement posée et fixée', 'Jonctions inter-cellules', 'Canalisations et câbles d\'arrivée / départ', 'Respect des distances de sécurité', 'Commande manuelle / motorisée', 'Voyants de position (O / F / T)', 'Verrouillage mécanique', 'Terre de protection (PE) reliée à chaque cellule'];
+      _celluleElements = celluleElements.map((element) {
+        final ec = ElementControle(elementControle: element, conforme: false, priorite: 3);
+        _conformeSelected[ec] = false;
+        return ec;
+      }).toList();
+      final transfoElements = ['Adapté au local et à la ventilation', 'Plaque signalétique (puissance, tension, couplage)', 'Mise à la terre du neutre et de la carcasse', 'Raccordement des câbles MT et BT', 'Protection contre les contacts directs', 'Bac de rétention (pour transfo à huile)', 'Protection contre les surintensités', 'Essais diélectriques', 'Distance entre transformateur', 'Protection MT', 'Protection BT (disjoncteur général, fusibles, relais thermique)', 'Écran de câble MT relié à la terre'];
+      _transfoElements = transfoElements.map((element) {
+        final ec = ElementControle(elementControle: element, conforme: false, priorite: 3);
+        _conformeSelected[ec] = false;
+        return ec;
+      }).toList();
     }
   }
 
+  Future<void> _prendrePhotoPourElement(ElementControle element, int elementIndex, String sectionType) async {
+    try {
+      final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
+      if (photo != null) {
+        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'element_photos');
+        setState(() => element.photos.add(savedPath));
+        await HiveService.addPhotoToElementControle(missionId: widget.mission.id, localisation: _nomController.text.trim(), elementIndex: elementIndex, cheminPhoto: savedPath, sectionType: sectionType);
+      }
+    } catch (e) {
+      _showError('Erreur lors de la prise de photo: $e');
+    }
+  }
+
+  Future<void> _choisirPhotoPourElement(ElementControle element, int elementIndex, String sectionType) async {
+    try {
+      final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
+      if (photo != null) {
+        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'element_photos');
+        setState(() => element.photos.add(savedPath));
+        await HiveService.addPhotoToElementControle(missionId: widget.mission.id, localisation: _nomController.text.trim(), elementIndex: elementIndex, cheminPhoto: savedPath, sectionType: sectionType);
+      }
+    } catch (e) {
+      _showError('Erreur lors de la sélection: $e');
+    }
+  }
+
+  void _supprimerPhotoElement(ElementControle element, int elementIndex, int photoIndex, String sectionType) async {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer la photo'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer cette photo ?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              setState(() => element.photos.removeAt(photoIndex));
+              await HiveService.removePhotoFromElementControle(missionId: widget.mission.id, localisation: _nomController.text.trim(), elementIndex: elementIndex, photoIndex: photoIndex, sectionType: sectionType);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _sauvegarder() async {
-    // Valider tous les champs
-    if (!_validateAllFields()) {
+    if (!_nomValid || !_typeValid) {
       _showError('Veuillez remplir tous les champs obligatoires');
+      _mainPageController.animateToPage(0, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       return;
     }
-
     try {
       dynamic nouveauLocal;
-
-      // ===== TRANSFERT DU CLASSEMENT SI LE NOM A CHANGÉ =====
       if (widget.isEdition && widget.local != null) {
         final ancienNom = widget.local!.nom;
         final nouveauNom = _nomController.text.trim();
-        
         if (ancienNom != nouveauNom) {
-          // 1. Chercher le classement existant avec l'ancien nom
-          final ancienClassement = HiveService.getClassementForLocal(
-            missionId: widget.mission.id,
-            localisation: ancienNom,
-          );
-          
+          final ancienClassement = HiveService.getClassementForLocal(missionId: widget.mission.id, localisation: ancienNom);
           if (ancienClassement != null) {
-            print('🔄 Transfert classement: $ancienNom → $nouveauNom');
-            
-            // 2. Mettre à jour la localisation du classement existant
             ancienClassement.localisation = nouveauNom;
-            
-            // 3. Mettre à jour zone et type si nécessaire
-            if (widget.isInZone && widget.zoneIndex != null) {
-              ancienClassement.zone = 'Zone ${widget.zoneIndex! + 1}';
-            }
+            if (widget.isInZone && widget.zoneIndex != null) ancienClassement.zone = 'Zone ${widget.zoneIndex! + 1}';
             ancienClassement.typeLocal = _selectedType;
-            
-            // 4. Sauvegarder les modifications
             ancienClassement.updatedAt = DateTime.now();
             await ancienClassement.save();
-            
-            print('✅ Classement transféré vers nouveau nom');
           }
         }
       }
-      // ===== FIN TRANSFERT =====
-      
       if (widget.isMoyenneTension) {
         if (widget.isInZone && widget.zoneIndex != null) {
-          // CAS 1: LOCAL DANS UNE ZONE MT (ajout ou édition)
           if (widget.isEdition && widget.localIndex != null) {
-            // Éditer un local existant DANS une zone MT
-            await HiveService.updateLocalInMoyenneTensionZone(
-              missionId: widget.mission.id,
-              zoneIndex: widget.zoneIndex!,
-              localIndex: widget.localIndex!,
-              local: _creerMoyenneTensionLocal(),
-            );
+            await HiveService.updateLocalInMoyenneTensionZone(missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, localIndex: widget.localIndex!, local: _creerMoyenneTensionLocal());
             nouveauLocal = _creerMoyenneTensionLocal();
           } else {
-            // Ajouter un nouveau local DANS une zone MT
-            await HiveService.addLocalToMoyenneTensionZone(
-              missionId: widget.mission.id,
-              zoneIndex: widget.zoneIndex!,
-              local: _creerMoyenneTensionLocal(),
-            );
+            await HiveService.addLocalToMoyenneTensionZone(missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, local: _creerMoyenneTensionLocal());
             nouveauLocal = _creerMoyenneTensionLocal();
           }
         } else {
-          // CAS 2: LOCAL MT INDÉPENDANT (hors zone)
           if (widget.isEdition && widget.localIndex != null) {
-            await HiveService.updateMoyenneTensionLocal(
-              missionId: widget.mission.id,
-              localIndex: widget.localIndex!,
-              local: _creerMoyenneTensionLocal(),
-            );
+            await HiveService.updateMoyenneTensionLocal(missionId: widget.mission.id, localIndex: widget.localIndex!, local: _creerMoyenneTensionLocal());
             nouveauLocal = _creerMoyenneTensionLocal();
           } else {
-            await HiveService.addMoyenneTensionLocal(
-              missionId: widget.mission.id,
-              local: _creerMoyenneTensionLocal(),
-            );
+            await HiveService.addMoyenneTensionLocal(missionId: widget.mission.id, local: _creerMoyenneTensionLocal());
             nouveauLocal = _creerMoyenneTensionLocal();
           }
         }
       } else {
-        // CAS 3: BASSE TENSION (toujours dans une zone)
         if (widget.zoneIndex != null) {
           if (widget.isEdition && widget.localIndex != null) {
-            await HiveService.updateBasseTensionLocal(
-              missionId: widget.mission.id,
-              zoneIndex: widget.zoneIndex!,
-              localIndex: widget.localIndex!,
-              local: _creerBasseTensionLocal(),
-            );
+            await HiveService.updateBasseTensionLocal(missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, localIndex: widget.localIndex!, local: _creerBasseTensionLocal());
             nouveauLocal = _creerBasseTensionLocal();
           } else {
-            await HiveService.addLocalToBasseTensionZone(
-              missionId: widget.mission.id,
-              zoneIndex: widget.zoneIndex!,
-              local: _creerBasseTensionLocal(),
-            );
+            await HiveService.addLocalToBasseTensionZone(missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, local: _creerBasseTensionLocal());
             nouveauLocal = _creerBasseTensionLocal();
           }
         } else {
-          // Ce cas ne devrait pas arriver pour BT
           _showError('Erreur: pour basse tension, un local doit être dans une zone');
           return;
         }
       }
-      
-      // Si c'est une édition, retour direct à DetailLocalScreen
-      // Si c'est un ajout, aller au classement
       if (widget.isEdition) {
-        Navigator.pop(context, true); // Retour direct à DetailLocalScreen
+        Navigator.pop(context, true);
       } else {
-        // Pour un nouvel ajout, aller au classement
         await _allerAuClassement(nouveauLocal);
       }
-      
     } catch (e) {
       print('❌ Erreur sauvegarde: $e');
       _showError('Erreur lors de la sauvegarde: $e');
@@ -1228,42 +3544,19 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       Navigator.pop(context, true);
       return;
     }
-    
     try {
       ClassementEmplacement? classement;
-      
-      // IMPORTANT : pour l'édition, chercher d'abord l'existant
       if (widget.isEdition) {
-        classement = HiveService.getClassementExisting(
-          missionId: widget.mission.id,
-          localisation: local.nom,
-        );
+        classement = HiveService.getClassementExisting(missionId: widget.mission.id, localisation: local.nom);
       }
-      
-      // Si pas trouvé ou nouveau local, créer ou récupérer
       classement ??= await HiveService.getOrCreateClassementForLocal(
-          missionId: widget.mission.id,
-          localisation: local.nom,
-          zone: widget.isInZone && widget.zoneIndex != null 
-              ? 'Zone ${widget.zoneIndex! + 1}' 
-              : null,
-          typeLocal: local.type,
-        );
-      
-      final result = await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ClassementEmplacementScreen(
-            mission: widget.mission,
-            emplacement: classement!,
-          ),
-        ),
+        missionId: widget.mission.id,
+        localisation: local.nom,
+        zone: widget.isInZone && widget.zoneIndex != null ? 'Zone ${widget.zoneIndex! + 1}' : null,
+        typeLocal: local.type,
       );
-      
-      if (result == true) {
-        Navigator.pop(context, true);
-      }
-      
+      final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => ClassementEmplacementScreen(mission: widget.mission, emplacement: classement!)));
+      if (result == true) Navigator.pop(context, true);
     } catch (e) {
       print('❌ Erreur allerAuClassement: $e');
       _showError('Erreur lors de l\'accès au classement: $e');
@@ -1297,7 +3590,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         regimeNeutre: _transfoRegimeController.text.trim(),
         elementsVerifies: _transfoElements,
       ) : null,
-      observationsLibres: _observationsExistantes, // Liste d'ObservationLibre
+      observationsLibres: _observationsExistantes,
       photos: _localPhotos,
     );
   }
@@ -1308,784 +3601,199 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       type: _selectedType!,
       dispositionsConstructives: _dispositionsConstructives,
       conditionsExploitation: _conditionsExploitation,
-      observationsLibres: _observationsExistantes, // Liste d'ObservationLibre
+      observationsLibres: _observationsExistantes,
       photos: _localPhotos,
     );
   }
 
   void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 3),
-      ),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red, duration: const Duration(seconds: 3)));
   }
 
-  Widget _buildElementWithPriorityAndObservation(ElementControle element, int index, String sectionType) {
-    final elementIndex = index;
-    final suggestions = _elementSuggestions[elementIndex] ?? [];
-    final isLoading = _elementLoading[elementIndex] ?? false;
-    
-    // Clés uniques pour les contrôleurs
-    final observationKey = '$sectionType-$elementIndex';
-    final normeKey = '$sectionType-$elementIndex-norme';
-
-    // Créer ou récupérer le contrôleur d'observation
-    if (!_observationControllers.containsKey(observationKey)) {
-      _observationControllers[observationKey] = TextEditingController(text: element.observation ?? '');
-    } else {
-      // Synchroniser la valeur si nécessaire
-      if (_observationControllers[observationKey]!.text != (element.observation ?? '')) {
-        _observationControllers[observationKey]!.text = element.observation ?? '';
-      }
-    }
-    
-    // Créer ou récupérer le contrôleur de norme
-    if (!_normeControllers.containsKey(normeKey)) {
-      _normeControllers[normeKey] = TextEditingController(text: element.referenceNormative ?? '');
-    } else {
-      // Synchroniser la valeur si nécessaire
-      if (_normeControllers[normeKey]!.text != (element.referenceNormative ?? '')) {
-        _normeControllers[normeKey]!.text = element.referenceNormative ?? '';
-      }
-    }
-
-    bool prioriteValid = element.priorite != null;
-    bool observationValid = (element.observation ?? '').trim().isNotEmpty;
-    bool normeValid = (element.referenceNormative ?? '').trim().isNotEmpty;
-    bool photosValid = element.photos.isNotEmpty;
-
-    return Card(
-      margin: EdgeInsets.only(bottom: 12),
-      child: Padding(
-        padding: EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Question
-            Text(
-              element.elementControle,
-              style: TextStyle(
-                fontSize: 14, 
-                fontWeight: FontWeight.w500,
-                color: AppTheme.darkBlue,
-              ),
-            ),
-            SizedBox(height: 12),
-            
-            // Ligne 1: Conformité
-            Container(
-              width: double.infinity,
-              child: DropdownButtonFormField<bool>(
-                value: element.conforme,
-                onChanged: (bool? newValue) {
-                  setState(() {
-                    element.conforme = newValue ?? false;
-                  });
-                },
-                decoration: InputDecoration(
-                  labelText: 'Conformité*',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                ),
-                items: [
-                  DropdownMenuItem(
-                    value: true, 
-                    child: Text('Oui', style: TextStyle(color: Colors.green))
-                  ),
-                  DropdownMenuItem(
-                    value: false, 
-                    child: Text('Non', style: TextStyle(color: Colors.red))
-                  ),
-                ],
-                isExpanded: true,
-              ),
-            ),
-            
-            SizedBox(height: 12),
-            
-            // Ligne 2: Priorité
-            Container(
-              width: double.infinity,
-              child: DropdownButtonFormField<int?>(
-                value: element.priorite,
-                onChanged: (int? newValue) {
-                  setState(() {
-                    element.priorite = newValue;
-                    if (sectionType == 'dispositions') _validateDispositions();
-                    if (sectionType == 'conditions') _validateConditions();
-                    if (sectionType == 'cellule') _validateCelluleElements();
-                    if (sectionType == 'transformateur') _validateTransfoElements();
-                  });
-                },
-                decoration: InputDecoration(
-                  labelText: 'Priorité*',
-                  border: OutlineInputBorder(),
-                  contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  errorText: !prioriteValid ? 'Sélectionnez une priorité' : null,
-                  errorBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.red),
-                  ),
-                  focusedErrorBorder: OutlineInputBorder(
-                    borderSide: BorderSide(color: Colors.red),
-                  ),
-                ),
-                items: [
-                  DropdownMenuItem(value: null, child: Text('Sélectionnez...')),
-                  DropdownMenuItem(
-                    value: 1, 
-                    child: Row(
-                      children: [
-                        Icon(Icons.circle, color: Colors.blue, size: 12),
-                        SizedBox(width: 8),
-                        Text('N1 - Basse', style: TextStyle(color: Colors.blue)),
-                      ],
-                    )
-                  ),
-                  DropdownMenuItem(
-                    value: 2, 
-                    child: Row(
-                      children: [
-                        Icon(Icons.circle, color: Colors.orange, size: 12),
-                        SizedBox(width: 8),
-                        Text('N2 - Moyenne', style: TextStyle(color: Colors.orange)),
-                      ],
-                    )
-                  ),
-                  DropdownMenuItem(
-                    value: 3, 
-                    child: Row(
-                      children: [
-                        Icon(Icons.circle, color: Colors.red, size: 12),
-                        SizedBox(width: 8),
-                        Text('N3 - Haute', style: TextStyle(color: Colors.red)),
-                      ],
-                    )
-                  ),
-                ],
-                isExpanded: true,
-              ),
-            ),
-            
-            SizedBox(height: 12),
-            
-            // Ligne 3: Observation avec API RAG
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                TextFormField(
-                  controller: _observationControllers[observationKey],
-                  onChanged: (value) {
-                    element.observation = value;
-                    _onElementObservationChanged(elementIndex, value, sectionType);
-                    if (sectionType == 'dispositions') _validateDispositions();
-                    if (sectionType == 'conditions') _validateConditions();
-                    if (sectionType == 'cellule') _validateCelluleElements();
-                    if (sectionType == 'transformateur') _validateTransfoElements();
-                  },
-                  decoration: InputDecoration(
-                    labelText: 'Observation*',
-                    border: OutlineInputBorder(),
-                    hintText: 'Saisissez vos observations...',
-                    errorText: !observationValid ? 'Ce champ est obligatoire' : null,
-                    errorBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.red),
-                    ),
-                    focusedErrorBorder: OutlineInputBorder(
-                      borderSide: BorderSide(color: Colors.red),
-                    ),
-                    suffixIcon: isLoading
-                        ? Padding(
-                            padding: EdgeInsets.all(8.0),
-                            child: SizedBox(
-                              width: 16,
-                              height: 16,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            ),
-                          )
-                        : null,
-                  ),
-                  maxLines: 2,
-                ),
-                
-                // Suggestions automatiques
-                if (suggestions.isNotEmpty)
-                  Container(
-                    margin: EdgeInsets.only(top: 8),
-                    padding: EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Suggestions:',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.darkBlue,
-                          ),
-                        ),
-                        SizedBox(height: 4),
-                        ...suggestions.map((s) => InkWell(
-                          onTap: () => _useElementSuggestion(elementIndex, s, element, sectionType),
-                          child: Padding(
-                            padding: EdgeInsets.symmetric(vertical: 3),
-                            child: Row(
-                              children: [
-                                Icon(Icons.arrow_right, size: 14, color: AppTheme.primaryBlue),
-                                SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    s,
-                                    style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )).toList(),
-                      ],
-                    ),
-                  ),
-                
-                // Bouton pour extraire la norme
-                if (element.observation?.isNotEmpty == true && !isLoading)
-                  Container(
-                    margin: EdgeInsets.only(top: 8),
-                    child: ElevatedButton.icon(
-                      onPressed: () => _extractNormeForElement(elementIndex, element.observation!, element, sectionType),
-                      icon: Icon(Icons.description, size: 16),
-                      label: Text('Trouver la norme NFC 15-100'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-                        minimumSize: Size(double.infinity, 36),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-            
-            SizedBox(height: 12),
-
-            // Ligne 4: Référence normative (rempli automatiquement par l'API)
-            TextFormField(
-              controller: _normeControllers[normeKey],
-              onChanged: (value) {
-                element.referenceNormative = value;
-                if (sectionType == 'dispositions') _validateDispositions();
-                if (sectionType == 'conditions') _validateConditions();
-                if (sectionType == 'cellule') _validateCelluleElements();
-                if (sectionType == 'transformateur') _validateTransfoElements();
-              },
-              decoration: InputDecoration(
-                labelText: 'Référence normative*',
-                border: OutlineInputBorder(),
-                hintText: 'Ex: NF C 15-100, IEC 60364...',
-                errorText: !normeValid ? 'Ce champ est obligatoire' : null,
-                errorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.red),
-                ),
-                focusedErrorBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Colors.red),
-                ),
-                prefixIcon: Icon(Icons.description, color: AppTheme.primaryBlue),
-              ),
-              maxLines: 1,
-            ),
-            
-            SizedBox(height: 16),
-            
-            // Ligne 5: Photos pour cette question
-            _buildPhotosForElement(element, index, sectionType),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Nouvelle méthode pour gérer les photos par élément
-  Widget _buildPhotosForElement(ElementControle element, int elementIndex, String sectionType) {
-    
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Photos pour cette question',
-              style: TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade700,
-              ),
-            ),
-            Text(
-              '${element.photos.length} photo(s)',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: 8),
-        
-        // Affichage des photos existantes
-        if (element.photos.isNotEmpty)
-          GridView.builder(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 3,
-              crossAxisSpacing: 4,
-              mainAxisSpacing: 4,
-              childAspectRatio: 0.8,
-            ),
-            itemCount: element.photos.length,
-            itemBuilder: (context, photoIndex) {
-              return GestureDetector(
-                onTap: () => _previsualiserPhoto(element.photos, photoIndex),
-                child: Stack(
-                  children: [
-                    Container(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(6),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(6),
-                        child: Image.file(
-                          File(element.photos[photoIndex]),
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey.shade200,
-                              child: Center(
-                                child: Icon(
-                                  Icons.broken_image_outlined,
-                                  color: Colors.grey.shade400,
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: GestureDetector(
-                        onTap: () => _supprimerPhotoElement(element, photoIndex, elementIndex, sectionType),
-                        child: Container(
-                          padding: EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            color: Colors.red.withOpacity(0.8),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.close,
-                            size: 12,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-          )
-        else
-          Container(
-            padding: EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(6),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: Center(
-              child: Text(
-                'Aucune photo (obligatoire)*',
-                style: TextStyle(
-                  color: Colors.grey.shade700,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-        
-        SizedBox(height: 12),
-        
-        // Boutons pour ajouter des photos
-        Row(
-          children: [
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => _prendrePhotoPourElement(element, elementIndex, sectionType),
-                icon: Icon(Icons.camera_alt, size: 16),
-                label: Text('Prendre'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 10),
-                ),
-              ),
-            ),
-            SizedBox(width: 8),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: () => _choisirPhotoPourElement(element, elementIndex, sectionType),
-                icon: Icon(Icons.photo_library, size: 16),
-                label: Text('Galerie'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.grey.shade800,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 10),
-                ),
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  // Méthodes pour gérer les photos par élément
-  Future<void> _prendrePhotoPourElement(ElementControle element, int elementIndex, String sectionType) async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'element_photos');
-        setState(() {
-          element.photos.add(savedPath);
-          if (sectionType == 'dispositions') _validateDispositions();
-          if (sectionType == 'conditions') _validateConditions();
-          if (sectionType == 'cellule') _validateCelluleElements();
-          if (sectionType == 'transformateur') _validateTransfoElements();
-        });
-        
-        // Sauvegarder dans HiveService
-        await HiveService.addPhotoToElementControle(
-          missionId: widget.mission.id,
-          localisation: _nomController.text.trim(),
-          elementIndex: elementIndex,
-          cheminPhoto: savedPath,
-          sectionType: sectionType,
-        );
-      }
-    } catch (e) {
-      _showError('Erreur lors de la prise de photo: $e');
-    }
-  }
-
-  Future<void> _choisirPhotoPourElement(ElementControle element, int elementIndex, String sectionType) async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'element_photos');
-        setState(() {
-          element.photos.add(savedPath);
-          if (sectionType == 'dispositions') _validateDispositions();
-          if (sectionType == 'conditions') _validateConditions();
-          if (sectionType == 'cellule') _validateCelluleElements();
-          if (sectionType == 'transformateur') _validateTransfoElements();
-        });
-        
-        // Sauvegarder dans HiveService
-        await HiveService.addPhotoToElementControle(
-          missionId: widget.mission.id,
-          localisation: _nomController.text.trim(),
-          elementIndex: elementIndex,
-          cheminPhoto: savedPath,
-          sectionType: sectionType,
-        );
-      }
-    } catch (e) {
-      _showError('Erreur lors de la sélection: $e');
-    }
-  }
-
-  void _supprimerPhotoElement(ElementControle element, int photoIndex, int elementIndex, String sectionType) async {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Supprimer la photo'),
-        content: Text('Êtes-vous sûr de vouloir supprimer cette photo ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              setState(() {
-                element.photos.removeAt(photoIndex);
-                if (sectionType == 'dispositions') _validateDispositions();
-                if (sectionType == 'conditions') _validateConditions();
-                if (sectionType == 'cellule') _validateCelluleElements();
-                if (sectionType == 'transformateur') _validateTransfoElements();
-              });
-              
-              // Mettre à jour dans HiveService
-              await HiveService.removePhotoFromElementControle(
-                missionId: widget.mission.id,
-                localisation: _nomController.text.trim(),
-                elementIndex: elementIndex,
-                photoIndex: photoIndex,
-                sectionType: sectionType,
-              );
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text('Supprimer'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Modifier la méthode _buildElementControleList pour passer l'index et le type
-  Widget _buildElementControleList(String title, List<ElementControle> elements, String sectionType) {
-    return Card(
-      margin: EdgeInsets.only(bottom: 16),
-      child: Padding(
-        padding: EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: AppTheme.primaryBlue,
-              ),
-            ),
-            SizedBox(height: 12),
-            ...elements.asMap().entries.map((entry) {
-              final index = entry.key;
-              final element = entry.value;
-              return _buildElementWithPriorityAndObservation(element, index, sectionType);
-            }).toList(),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(TextEditingController controller, String label, {bool isMultiline = false, bool isRequired = false, String? sectionType}) {
-    bool isValid = controller.text.trim().isNotEmpty;
-    return Padding(
-      padding: EdgeInsets.only(bottom: 16),
-      child: TextFormField(
-        controller: controller,
-        onChanged: (value) {
-          if (sectionType == 'cellule') {
-            _celluleDonneesValid = _validateCelluleDonnees();
-          } else if (sectionType == 'transfo') {
-            _transfoDonneesValid = _validateTransfoDonnees();
-          }
-        },
-        decoration: InputDecoration(
-          labelText: label,
-          border: OutlineInputBorder(),
-          errorText: isRequired && !isValid ? 'Ce champ est obligatoire' : null,
-          errorBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.red),
-          ),
-          focusedErrorBorder: OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.red),
-          ),
-        ),
-        maxLines: isMultiline ? 3 : 1,
-      ),
-    );
-  }
-
-  Widget _buildTypeDropdown() {
-    final localTypes = HiveService.getLocalTypes();
-    final filteredTypes = widget.isMoyenneTension
-        ? localTypes.entries.toList()
-        : localTypes.entries.toList();
-
-    return DropdownButtonFormField<String>(
-      value: _selectedType,
-      onChanged: _onTypeChanged,
-      decoration: InputDecoration(
-        labelText: 'Type de local*',
-        border: OutlineInputBorder(),
-        isDense: true,
-        contentPadding: EdgeInsets.symmetric(vertical: 12, horizontal: 12),
-        errorText: !_typeValid ? 'Sélectionnez un type' : null,
-        errorBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.red),
-        ),
-        focusedErrorBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.red),
-        ),
-      ),
-      items: filteredTypes.map((entry) {
-        return DropdownMenuItem(
-          value: entry.key,
-          child: Text(
-            entry.value,
-            style: TextStyle(fontSize: 14),
-            overflow: TextOverflow.ellipsis,
-          ),
-        );
-      }).toList(),
-      isExpanded: true,
-    );
-  }
+  int _getTotalSteps() => _selectedType == 'LOCAL_TRANSFORMATEUR' ? 3 : 2;
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.isEdition ? 'Modifier le Local' : 'Ajouter un Local'),
-        backgroundColor: AppTheme.primaryBlue,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.check),
-            onPressed: _sauvegarder,
-          ),
-        ],
-      ),
-      body: Form(
-        key: _formKey,
-        child: Padding(
-          padding: EdgeInsets.all(8),
-          child: ListView(
-            children: [
-              // Indication si dans une zone
-              if (widget.isInZone && widget.zoneIndex != null)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 16.0),
-                  child: Row(
-                    children: [
-                      Icon(Icons.info_outline, color: AppTheme.primaryBlue, size: 20),
-                      SizedBox(width: 8),
-                      Text(
-                        'Ce local sera ajouté dans la zone',
-                        style: TextStyle(
-                          color: AppTheme.primaryBlue,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              SizedBox(height: 16),
-
-              // Nom du local
-              _buildTextField(_nomController, 'Nom du local*', isRequired: true),
-              SizedBox(height: 16),
-
-              // Type de local
-              _buildTypeDropdown(),
-              SizedBox(height: 24),
-
-              // Section Photos du local
-              Card(
-                elevation: 1,
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: _buildPhotosSection(
-                    'Photos du local* (obligatoire)',
-                    _localPhotos,
-                    _prendrePhotoLocal,
-                    _choisirPhotoLocalDepuisGalerie,
-                    isRequired: true,
-                  ),
-                ),
+    final totalSteps = _getTotalSteps();
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: Colors.grey.shade50,
+        appBar: AppBar(
+          title: Text(widget.isEdition ? 'Modifier le Local' : 'Ajouter un Local', style: TextStyle(fontSize: context.fontSizeL)),
+          backgroundColor: AppTheme.primaryBlue,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          actions: [
+            if (!widget.isEdition && _currentStep == totalSteps - 1)
+              IconButton(icon: Icon(Icons.check, size: context.iconSizeM), onPressed: _sauvegarder),
+          ],
+        ),
+        body: Column(
+          children: [
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingM),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: context.spacingS, offset: const Offset(0, 2))],
               ),
-              SizedBox(height: 16),
-
-              // Observations libres (uniquement pour création)
-              if(!widget.isEdition)
-                _buildObservationsSection(),
-              if(!widget.isEdition)
-                SizedBox(height: 24),
-
-              // Afficher les sections selon le type sélectionné
-              if (_selectedType != null) ...[
-                // Dispositions constructives
-                _buildElementControleList('DISPOSITIONS CONSTRUCTIVES* (tous les champs obligatoires)', _dispositionsConstructives, 'dispositions'),
-                
-                // Conditions d'exploitation
-                _buildElementControleList('CONDITIONS D\'EXPLOITATION* (tous les champs obligatoires)', _conditionsExploitation, 'conditions'),
-
-                // Sections spécifiques pour le local transformateur
-                if (_selectedType == 'LOCAL_TRANSFORMATEUR') ...[
-                  SizedBox(height: 16),
-                  Text(
-                    'CELLULE* (tous les champs obligatoires)',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryBlue,
+              child: Row(
+                children: List.generate(totalSteps, (index) {
+                  final isActive = index <= _currentStep;
+                  final isCompleted = index < _currentStep;
+                  return Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          width: context.iconSizeL,
+                          height: context.iconSizeL,
+                          decoration: BoxDecoration(
+                            color: isActive ? AppTheme.primaryBlue : Colors.grey.shade300,
+                            shape: BoxShape.circle,
+                            boxShadow: isActive ? [BoxShadow(color: AppTheme.primaryBlue.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 2))] : null,
+                          ),
+                          child: Center(
+                            child: isCompleted
+                                ? Icon(Icons.check, color: Colors.white, size: context.iconSizeS)
+                                : Text('${index + 1}', style: TextStyle(color: isActive ? Colors.white : Colors.grey.shade600, fontWeight: FontWeight.bold, fontSize: context.fontSizeS)),
+                          ),
+                        ),
+                        if (index < totalSteps - 1)
+                          Expanded(
+                            child: Container(
+                              height: 2,
+                              margin: EdgeInsets.symmetric(horizontal: context.spacingXS),
+                              color: index < _currentStep ? AppTheme.primaryBlue : Colors.grey.shade300,
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                }),
+              ),
+            ),
+            Expanded(
+              child: PageView(
+                controller: _mainPageController,
+                physics: const NeverScrollableScrollPhysics(),
+                onPageChanged: (index) => setState(() => _currentStep = index),
+                children: [
+                  _EtapeInformationsGenerales(
+                    nomController: _nomController,
+                    selectedType: _selectedType,
+                    onTypeChanged: _onTypeChanged,
+                    localPhotos: _localPhotos,
+                    onPrendrePhoto: _prendrePhotoLocal,
+                    onChoisirPhoto: _choisirPhotoLocalDepuisGalerie,
+                    onSupprimerPhoto: () {},
+                    isLoadingPhotos: _isLoadingPhotos,
+                    addObservation: _addObservation,
+                    onAddObservationChanged: (value) {
+                      setState(() {
+                        _addObservation = value;
+                        _validateObservations();
+                      });
+                    },
+                    observationController: _observationController,
+                    observationsExistantes: _observationsExistantes,
+                    observationPhotos: _observationPhotos,
+                    onPrendrePhotoObservation: _prendrePhotoObservation,
+                    onChoisirPhotoObservation: _choisirPhotoObservationDepuisGalerie,
+                    onAjouterObservation: _ajouterObservation,
+                    onSupprimerObservationExistante: _supprimerObservationExistante,
+                    nomValid: _nomValid,
+                    typeValid: _typeValid,
+                    onValidate: () => _validateNom(_nomController.text),
+                  ),
+                  if (_selectedType != null)
+                    _EtapeElementsControle(
+                      key: _etapeElementsKey,
+                      dispositionsConstructives: _dispositionsConstructives,
+                      conditionsExploitation: _conditionsExploitation,
+                      hasObservation: _hasObservation,
+                      elementSuggestions: _elementSuggestions,
+                      conformeSelected: _conformeSelected,
+                      onElementChanged: (element, index, action) => setState(() {}),
+                      onConformeChanged: _onConformeChanged,
+                      onObservationToggleChanged: (index, value, section) => setState(() => _hasObservation[index] = value),
+                      onPrendrePhotoElement: _prendrePhotoPourElement,
+                      onChoisirPhotoElement: _choisirPhotoPourElement,
+                      onSupprimerPhotoElement: _supprimerPhotoElement,
+                      onObservationChanged: _onElementObservationChanged,
+                      onUseSuggestion: _useElementSuggestion,
+                    ),
+                  if (_selectedType == 'LOCAL_TRANSFORMATEUR')
+                    _EtapeCelluleTransformateur(
+                      key: _etapeCelluleTransfoKey,
+                      celluleFonctionController: _celluleFonctionController,
+                      celluleTypeController: _celluleTypeController,
+                      celluleMarqueController: _celluleMarqueController,
+                      celluleTensionController: _celluleTensionController,
+                      cellulePouvoirController: _cellulePouvoirController,
+                      celluleNumerotationController: _celluleNumerotationController,
+                      celluleParafoudresController: _celluleParafoudresController,
+                      celluleElements: _celluleElements,
+                      transfoTypeController: _transfoTypeController,
+                      transfoMarqueController: _transfoMarqueController,
+                      transfoPuissanceController: _transfoPuissanceController,
+                      transfoTensionController: _transfoTensionController,
+                      transfoBuchholzController: _transfoBuchholzController,
+                      transfoRefroidissementController: _transfoRefroidissementController,
+                      transfoRegimeController: _transfoRegimeController,
+                      transfoElements: _transfoElements,
+                      hasObservation: _hasObservation,
+                      elementSuggestions: _elementSuggestions,
+                      conformeSelected: _conformeSelected,
+                      onElementChanged: (element, index, action) => setState(() {}),
+                      onConformeChanged: _onConformeChanged,
+                      onObservationToggleChanged: (index, value, section) => setState(() => _hasObservation[index] = value),
+                      onPrendrePhotoElement: _prendrePhotoPourElement,
+                      onChoisirPhotoElement: _choisirPhotoPourElement,
+                      onSupprimerPhotoElement: _supprimerPhotoElement,
+                      onObservationChanged: _onElementObservationChanged,
+                      onUseSuggestion: _useElementSuggestion,
+                    ),
+                ].whereType<Widget>().toList(),
+              ),
+            ),
+            Container(
+              padding: EdgeInsets.all(context.spacingL),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: context.spacingS, offset: const Offset(0, -2))],
+              ),
+              child: Row(
+                children: [
+                  if (_currentStep > 0)
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _handlePrevious,
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(vertical: context.spacingM),
+                          side: BorderSide(color: Colors.grey.shade400),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.spacingS)),
+                        ),
+                        child: Text('Précédent', style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
+                      ),
+                    ),
+                  if (_currentStep > 0) SizedBox(width: context.spacingM),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _handleNext,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                        foregroundColor: Colors.white,
+                        padding: EdgeInsets.symmetric(vertical: context.spacingM),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.spacingS)),
+                        elevation: 2,
+                      ),
+                      child: Text(_getNextButtonText(), style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.bold)),
                     ),
                   ),
-                  SizedBox(height: 16),
-                  _buildTextField(_celluleFonctionController, 'Fonction de la cellule*', isRequired: true, sectionType: 'cellule'),
-                  _buildTextField(_celluleTypeController, 'Type de cellule*', isRequired: true, sectionType: 'cellule'),
-                  _buildTextField(_celluleMarqueController, 'Marque / modèle / année*', isRequired: true, sectionType: 'cellule'),
-                  _buildTextField(_celluleTensionController, 'Tension assignée*', isRequired: true, sectionType: 'cellule'),
-                  _buildTextField(_cellulePouvoirController, 'Pouvoir de coupure assigné (kA)*', isRequired: true, sectionType: 'cellule'),
-                  _buildTextField(_celluleNumerotationController, 'Numérotation / repérage cellule*', isRequired: true, sectionType: 'cellule'),
-                  _buildTextField(_celluleParafoudresController, 'Parafoudres installés sur l\'arrivée*', isRequired: true, sectionType: 'cellule'),
-                  _buildElementControleList('ÉLÉMENTS VÉRIFIÉS - CELLULE* (tous les champs obligatoires)', _celluleElements, 'cellule'),
-
-                  SizedBox(height: 16),
-                  Text(
-                    'TRANSFORMATEUR MT/BT* (tous les champs obligatoires)',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryBlue,
-                    ),
-                  ),
-                  SizedBox(height: 16),
-                  _buildTextField(_transfoTypeController, 'Type de transformateur*', isRequired: true, sectionType: 'transfo'),
-                  _buildTextField(_transfoMarqueController, 'Marque/ Année de fabrication*', isRequired: true, sectionType: 'transfo'),
-                  _buildTextField(_transfoPuissanceController, 'Puissance assignée (kVA)*', isRequired: true, sectionType: 'transfo'),
-                  _buildTextField(_transfoTensionController, 'Tension primaire / secondaire*', isRequired: true, sectionType: 'transfo'),
-                  _buildTextField(_transfoBuchholzController, 'Présence du relais Buchholz*', isRequired: true, sectionType: 'transfo'),
-                  _buildTextField(_transfoRefroidissementController, 'Type de refroidissement*', isRequired: true, sectionType: 'transfo'),
-                  _buildTextField(_transfoRegimeController, 'Régime du neutre*', isRequired: true, sectionType: 'transfo'),
-                  _buildElementControleList('ÉLÉMENTS VÉRIFIÉS - TRANSFORMATEUR* (tous les champs obligatoires)', _transfoElements, 'transformateur'),
                 ],
-              ],
-            ],
-          ),
+              ),
+            ),
+          ],
         ),
       ),
     );

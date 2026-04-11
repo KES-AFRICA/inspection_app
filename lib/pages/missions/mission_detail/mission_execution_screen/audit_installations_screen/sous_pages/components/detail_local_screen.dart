@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/models/classement_locaux.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
-import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_locaux_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/observation_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/qr_scan_coffret_screen.dart';
 import 'package:path_provider/path_provider.dart';
@@ -50,15 +49,23 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   void initState() {
     super.initState();
     _local = widget.local;
-    _chargerPhotosLocal();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _chargerPhotosLocal();
+      }
+    });
   }
 
   void _chargerPhotosLocal() {
-    if (_local.photos.isNotEmpty) {
-      setState(() {
-        _localPhotos = List.from(_local.photos);
-      });
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      
+      if (_local.photos.isNotEmpty) {
+        setState(() {
+          _localPhotos = List.from(_local.photos);
+        });
+      }
+    });
   }
 
   // ===== MÉTHODES POUR GESTION DES PHOTOS DU LOCAL =====
@@ -463,50 +470,59 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
     }
   }
 
-void _ajouterObservation() async {
-  await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => ObservationScreen(
-        title: 'Nouvelle observation',
-        onSave: (ObservationLibre observation) async {
-          setState(() {
-            _local.observationsLibres.add(observation);
-          });
-          await _sauvegarderLocal();
-          _showSuccess('Observation ajoutée');
-        },
+  void _ajouterObservation() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ObservationScreen(
+          title: 'Nouvelle observation',
+          onSave: (ObservationLibre observation) async {
+            setState(() {
+              _local.observationsLibres.add(observation);
+            });
+            await _sauvegarderLocal();
+            _showSuccess('Observation ajoutée');
+          },
+        ),
       ),
-    ),
-  );
-  
-  // Rafraîchir après retour
-  _rechargerLocal();
-}
+    );
+    
+    // Rafraîchir après retour avec un délai pour éviter le conflit
+    Future.delayed(Duration(milliseconds: 100), () {
+      if (mounted) {
+        _rechargerLocal();
+      }
+    });
+  }
 
-void _editerObservation(int index) async {
-  final observation = _local.observationsLibres[index];
-  
-  await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => ObservationScreen(
-        observation: observation,
-        title: 'Modifier l\'observation',
-        onSave: (ObservationLibre updatedObservation) async {
-          setState(() {
-            _local.observationsLibres[index] = updatedObservation;
-          });
-          await _sauvegarderLocal();
-          _showSuccess('Observation modifiée');
-        },
+  void _editerObservation(int index) async {
+    final observation = _local.observationsLibres[index];
+    
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ObservationScreen(
+          observation: observation,
+          title: 'Modifier l\'observation',
+          onSave: (ObservationLibre updatedObservation) async {
+            setState(() {
+              _local.observationsLibres[index] = updatedObservation;
+            });
+            await _sauvegarderLocal();
+            _showSuccess('Observation modifiée');
+          },
+        ),
       ),
-    ),
-  );
-  
-  // Rafraîchir après retour
-  _rechargerLocal();
-}
+    );
+    
+    // Rafraîchir après retour avec un délai
+    Future.delayed(Duration(milliseconds: 100), () {
+      if (mounted) {
+        _rechargerLocal();
+      }
+    });
+  }
+
   void _supprimerObservation(int index) {
     showDialog(
       context: context,
@@ -752,40 +768,47 @@ void _editerObservation(int index) async {
     );
 
     if (result == true) {
-      _rechargerLocal();
+      // Utiliser addPostFrameCallback
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _rechargerLocal();
+        }
+      });
     }
   }
 
   void _rechargerLocal() async {
+    if (!mounted) return;
     try {
       final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
       
-      setState(() {
-        if (widget.isMoyenneTension) {
-          if (widget.isInZone && widget.zoneIndex != null) {
-            // Local dans une zone MT
-            if (widget.zoneIndex! < audit.moyenneTensionZones.length) {
-              final zone = audit.moyenneTensionZones[widget.zoneIndex!];
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        
+        setState(() {
+          if (widget.isMoyenneTension) {
+            if (widget.isInZone && widget.zoneIndex != null) {
+              if (widget.zoneIndex! < audit.moyenneTensionZones.length) {
+                final zone = audit.moyenneTensionZones[widget.zoneIndex!];
+                if (widget.localIndex < zone.locaux.length) {
+                  _local = zone.locaux[widget.localIndex];
+                }
+              }
+            } else {
+              if (widget.localIndex < audit.moyenneTensionLocaux.length) {
+                _local = audit.moyenneTensionLocaux[widget.localIndex];
+              }
+            }
+          } else {
+            if (widget.zoneIndex != null && widget.zoneIndex! < audit.basseTensionZones.length) {
+              final zone = audit.basseTensionZones[widget.zoneIndex!];
               if (widget.localIndex < zone.locaux.length) {
                 _local = zone.locaux[widget.localIndex];
               }
             }
-          } else {
-            // Local MT indépendant
-            if (widget.localIndex < audit.moyenneTensionLocaux.length) {
-              _local = audit.moyenneTensionLocaux[widget.localIndex];
-            }
           }
-        } else {
-          // Pour basse tension (toujours dans une zone)
-          if (widget.zoneIndex != null && widget.zoneIndex! < audit.basseTensionZones.length) {
-            final zone = audit.basseTensionZones[widget.zoneIndex!];
-            if (widget.localIndex < zone.locaux.length) {
-              _local = zone.locaux[widget.localIndex];
-            }
-          }
-        }
-        _chargerPhotosLocal();
+          _chargerPhotosLocal();
+        });
       });
     } catch (e) {
       print('❌ Erreur rechargerLocal: $e');
@@ -807,7 +830,14 @@ void _editerObservation(int index) async {
           isInZone: widget.isInZone,
         ),
       ),
-    ).then((_) => _rechargerLocal());
+    ).then((_) {
+      // Utiliser addPostFrameCallback pour éviter les appels pendant le build
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _rechargerLocal();
+        }
+      });
+    });
   }
 
   void _editerCoffret(int index) async {
@@ -1239,31 +1269,35 @@ Widget _buildClassementTab() {
   );
 }
 
-void _allerAuClassement() async {
-  final classement = await HiveService.getOrCreateClassementForLocal(
-    missionId: widget.mission.id,
-    localisation: _local.nom,
-    zone: widget.isInZone && widget.zoneIndex != null 
-        ? 'Zone ${widget.zoneIndex! + 1}' 
-        : null,
-    typeLocal: _local.type,
-  );
-  
-  final result = await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => ClassementEmplacementScreen(
-        mission: widget.mission,
-        emplacement: classement,
+  void _allerAuClassement() async {
+    final classement = await HiveService.getOrCreateClassementForLocal(
+      missionId: widget.mission.id,
+      localisation: _local.nom,
+      zone: widget.isInZone && widget.zoneIndex != null 
+          ? 'Zone ${widget.zoneIndex! + 1}' 
+          : null,
+      typeLocal: _local.type,
+    );
+    
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ClassementEmplacementScreen(
+          mission: widget.mission,
+          emplacement: classement,
+        ),
       ),
-    ),
-  );
-  
-  // Rafraîchir après retour
-  if (result == true) {
-    setState(() {});
+    );
+    
+    // Rafraîchir après retour
+    if (result == true) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          setState(() {});
+        }
+      });
+    }
   }
-}
 
 Widget _buildInfluenceChip(String type, String code) {
   final Map<String, Color> colorMap = {
