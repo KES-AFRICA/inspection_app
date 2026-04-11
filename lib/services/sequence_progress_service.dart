@@ -69,4 +69,17 @@ class SequenceProgressService {
     final completedCount = progress['completedSteps'].length;
     return totalSteps > 0 ? (completedCount / totalSteps * 100).round() : 0;
   }
+
+  /// Obtenir le pourcentage global de complétion (basé sur les étapes complétées)
+  static Future<int> getGlobalCompletionPercentage(String missionId, int totalSteps) async {
+    final progress = await getProgress(missionId);
+    final completedSteps = progress['completedSteps'] as List<dynamic>? ?? [];
+    return totalSteps > 0 ? (completedSteps.length / totalSteps * 100).round() : 0;
+  }
+
+  /// Vérifier si toutes les étapes sont complétées
+  static Future<bool> areAllStepsCompleted(String missionId, int totalSteps) async {
+    final percentage = await getGlobalCompletionPercentage(missionId, totalSteps);
+    return percentage >= 100;
+  }
 }

@@ -49,7 +49,7 @@ class _SequenceScreenState extends State<SequenceScreen> {
         ),
       },
       {
-        'title': 'Renseignements généraux de l\'életablissement',
+        'title': 'Renseignements généraux',
         'widget': GeneralInfoStep(
           mission: widget.mission,
           onDataChanged: (data) => _saveStepData('general_info', data),
@@ -91,7 +91,17 @@ class _SequenceScreenState extends State<SequenceScreen> {
     setState(() => _isLoading = true);
     
     final progress = await SequenceProgressService.getProgress(widget.mission.id);
-    _currentStep = progress['currentStep'] ?? 0;
+    var savedStep = progress['currentStep'] ?? 0;
+    
+    // CORRECTION : S'assurer que le step chargé est dans les limites valides (0 à 5)
+    // Si savedStep = 6 (Summary), on revient à l'étape Schéma (5)
+    if (savedStep >= _steps.length) {
+      savedStep = _steps.length - 1;
+      // Mettre à jour la progression pour éviter de rester bloqué sur une valeur invalide
+      await SequenceProgressService.saveCurrentStep(widget.mission.id, savedStep);
+    }
+    
+    _currentStep = savedStep;
     _pageController = PageController(initialPage: _currentStep);
     
     setState(() => _isLoading = false);
@@ -136,21 +146,21 @@ class _SequenceScreenState extends State<SequenceScreen> {
   }
 
   void _onSequenceComplete() async {
-  // Marquer la dernière étape comme complétée
-  await SequenceProgressService.markStepCompleted(widget.mission.id, _steps.length - 1);
-  
-  if (mounted) {
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SummaryScreen(
-          mission: widget.mission,
-          user: widget.user,
+    // Marquer la dernière étape comme complétée
+    await SequenceProgressService.markStepCompleted(widget.mission.id, _steps.length - 1);
+    
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => SummaryScreen(
+            mission: widget.mission,
+            user: widget.user,
+          ),
         ),
-      ),
-    );
+      );
+    }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -163,104 +173,112 @@ class _SequenceScreenState extends State<SequenceScreen> {
       );
     }
 
+    // CORRECTION : Vérification supplémentaire de sécurité
+    if (_currentStep >= _steps.length) {
+      _currentStep = _steps.length - 1;
+    }
+
     final currentStepTitle = _steps[_currentStep]['title'] as String;
     final totalSteps = _steps.length;
     final currentWidget = _steps[_currentStep]['widget'] as Widget;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          currentStepTitle,
-          style: const TextStyle(color: Colors.white),
-        ),
-        backgroundColor: AppTheme.primaryBlue,
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            _showExitDialog();
-          },
-        ),
-      ),
-      body: Column(
-        children: [
-          // Barre de progression
-          LinearProgressIndicator(
-            value: (_currentStep + 1) / totalSteps,
-            backgroundColor: Colors.white.withOpacity(0.3),
-            color: Colors.white,
-            minHeight: 4,
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(
+            currentStepTitle,
+            style: const TextStyle(color: Colors.white),
           ),
-          Expanded(
-            child: PageView(
-              controller: _pageController,
-              physics: const NeverScrollableScrollPhysics(), // Désactive le swipe
-              children: _steps.map((step) => step['widget'] as Widget).toList(),
-            ),
+          backgroundColor: AppTheme.primaryBlue,
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              _showExitDialog();
+            },
           ),
-          // Navigation buttons
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
+        ),
+        body: Column(
+          children: [
+            // Barre de progression
+            LinearProgressIndicator(
+              value: (_currentStep + 1) / totalSteps,
+              backgroundColor: AppTheme.primaryBlue.withOpacity(0.3),
               color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, -2),
-                ),
-              ],
+              minHeight: 4,
             ),
-            child: Row(
-              children: [
-                if (_currentStep > 0)
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: _goToPreviousStep,
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+            Expanded(
+              child: PageView(
+                controller: _pageController,
+                physics: const NeverScrollableScrollPhysics(), // Désactive le swipe
+                children: _steps.map((step) => step['widget'] as Widget).toList(),
+              ),
+            ),
+            // Navigation buttons
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 8,
+                    offset: const Offset(0, -2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  if (_currentStep > 0)
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: _goToPreviousStep,
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.arrow_back, size: 18),
+                            SizedBox(width: 8),
+                            Text('Précédent'),
+                          ],
                         ),
                       ),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.arrow_back, size: 18),
-                          SizedBox(width: 8),
-                          Text('Précédent'),
-                        ],
-                      ),
                     ),
-                  ),
-                if (_currentStep > 0) const SizedBox(width: 12),
-                  if(_currentStep != _steps.length - 1)
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _goToNextStep,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
+                  if (_currentStep > 0) const SizedBox(width: 12),
+                  if (_currentStep != _steps.length - 1)
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _goToNextStep,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text('Suivant'),
+                            SizedBox(width: 8),
+                            Icon(Icons.arrow_forward, size: 18),
+                          ],
                         ),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Text('Suivant'),
-                          const Icon(Icons.arrow_forward, size: 18),
-
-                        ],
-                      ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

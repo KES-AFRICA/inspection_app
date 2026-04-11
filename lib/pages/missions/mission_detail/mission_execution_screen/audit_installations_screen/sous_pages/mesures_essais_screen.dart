@@ -21,8 +21,8 @@ class MesuresEssaisScreen extends StatefulWidget {
 
 class _MesuresEssaisScreenState extends State<MesuresEssaisScreen> {
   bool _isLoading = true;
-  bool _hasData = false;
   Map<String, dynamic> _stats = {};
+  Map<String, bool> _sectionStatus = {};
 
   @override
   void initState() {
@@ -35,8 +35,18 @@ class _MesuresEssaisScreenState extends State<MesuresEssaisScreen> {
     
     try {
       final mesures = await HiveService.getOrCreateMesuresEssais(widget.mission.id);
-      _hasData = true;
       _stats = mesures.calculerStatistiques();
+      
+      // Vérifier l'état de chaque section
+      _sectionStatus = {
+        'conditions_mesure': _stats['condition_mesure_renseignee'] ?? false,
+        'demarrage_auto': _stats['demarrage_auto_renseigne'] ?? false,
+        'arret_urgence': _stats['arret_urgence_renseigne'] ?? false,
+        'prises_terre': (mesures.prisesTerre.isNotEmpty),
+        'avis_mesures': _stats['avis_mesures_renseigne'] ?? false,
+        'essais_declenchement': (mesures.essaisDeclenchement.isNotEmpty),
+        'continuite_resistance': (mesures.continuiteResistances.isNotEmpty),
+      };
     } catch (e) {
       print('❌ Erreur chargement mesures et essais: $e');
     } finally {
@@ -44,37 +54,63 @@ class _MesuresEssaisScreenState extends State<MesuresEssaisScreen> {
     }
   }
 
-  Widget _buildSectionTile(String title, IconData icon, String subtitle, Function onTap, {required Color color}) {
-    return ListTile(
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Icon(icon, size: 24, color: color),
-      ),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontSize: 16,
-          fontWeight: FontWeight.w600,
-          color: Colors.black87,
+  bool _isSectionComplete(String sectionKey) {
+    return _sectionStatus[sectionKey] ?? false;
+  }
+
+  Widget _buildSectionTile(String title, IconData icon, String subtitle, Function onTap, String sectionKey) {
+    final isComplete = _isSectionComplete(sectionKey);
+    
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: isComplete ? Colors.green.shade50 : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isComplete ? Colors.green.shade200 : Colors.grey.shade200,
+          width: 1,
         ),
       ),
-      subtitle: Text(
-        subtitle,
-        style: TextStyle(
-          fontSize: 14,
-          color: Colors.grey.shade600,
+      child: ListTile(
+        leading: Container(
+          width: 45,
+          height: 45,
+          decoration: BoxDecoration(
+            color: (isComplete ? Colors.green : AppTheme.primaryBlue).withOpacity(0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(
+            icon,
+            size: 24,
+            color: isComplete ? Colors.green : AppTheme.primaryBlue,
+          ),
         ),
+        title: Text(
+          title,
+          style: TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: isComplete ? Colors.green.shade800 : Colors.black87,
+          ),
+        ),
+        subtitle: Text(
+          subtitle,
+          style: TextStyle(
+            fontSize: 14,
+            color: isComplete ? Colors.green.shade600 : Colors.grey.shade600,
+          ),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isComplete)
+              Icon(Icons.check_circle, color: Colors.green, size: 20),
+            const SizedBox(width: 4),
+            Icon(Icons.chevron_right, color: isComplete ? Colors.green.shade400 : Colors.grey.shade500),
+          ],
+        ),
+        onTap: () => onTap(),
       ),
-      trailing: Icon(Icons.chevron_right, color: Colors.grey.shade500),
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      minVerticalPadding: 0,
-      dense: true,
-      onTap: () => onTap(),
     );
   }
 
@@ -145,91 +181,84 @@ class _MesuresEssaisScreenState extends State<MesuresEssaisScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Mesures et Essais'),
+        title: const Text('Mesures et Essais'),
         backgroundColor: AppTheme.primaryBlue,
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: Icon(Icons.refresh),
+            icon: const Icon(Icons.refresh),
             onPressed: _loadData,
             tooltip: 'Actualiser',
           ),
         ],
       ),
       body: _isLoading
-          ? Center(child: CircularProgressIndicator())
+          ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _loadData,
               child: ListView(
-                padding: EdgeInsets.zero,
+                padding: const EdgeInsets.symmetric(vertical: 8),
                 children: [
-                  // Section 1: Conditions de mesure
                   _buildSectionTile(
                     'Conditions de mesure',
                     Icons.thermostat_outlined,
                     'Paramètres environnementaux de mesure',
                     _navigateToConditionsMesure,
-                    color: AppTheme.primaryBlue,
+                    'conditions_mesure',
                   ),
-                  Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
+                  const Divider(height: 0, thickness: 0.5),
                   
-                  // Section 2: Essais de démarrage automatique
                   _buildSectionTile(
                     'Essais démarrage auto',
                     Icons.power_settings_new_outlined,
                     'Groupe électrogène - démarrage automatique',
                     _navigateToDemarrageAuto,
-                    color: AppTheme.primaryBlue,
+                    'demarrage_auto',
                   ),
-                  Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
+                  const Divider(height: 0, thickness: 0.5),
                   
-                  // Section 3: Test d'arrêt d'urgence
                   _buildSectionTile(
                     'Test arrêt urgence',
                     Icons.emergency_outlined,
                     'Fonctionnement arrêt d\'urgence',
                     _navigateToArretUrgence,
-                    color: AppTheme.primaryBlue,
+                    'arret_urgence',
                   ),
-                  Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
+                  const Divider(height: 0, thickness: 0.5),
                   
-                  // Section 4: Prises de terre
                   _buildSectionTile(
                     'Prises de terre',
                     Icons.bolt_outlined,
                     'Mesures des prises de terre',
                     _navigateToPrisesTerre,
-                    color: AppTheme.primaryBlue,
+                    'prises_terre',
                   ),
-                  Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
+                  const Divider(height: 0, thickness: 0.5),
                   
-                  // Section 5: Avis sur les mesures
                   _buildSectionTile(
                     'Avis sur les mesures',
                     Icons.assessment_outlined,
                     'Analyse et recommandations',
                     _navigateToAvisMesures,
-                    color: AppTheme.primaryBlue,
+                    'avis_mesures',
                   ),
-                  Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
+                  const Divider(height: 0, thickness: 0.5),
                   
-                  // Section 6: Essais déclenchement
                   _buildSectionTile(
                     'Essais déclenchement',
                     Icons.flash_on_outlined,
                     'Dispositifs différentiels',
                     _navigateToEssaisDeclenchement,
-                    color: AppTheme.primaryBlue,
+                    'essais_declenchement',
                   ),
-                  Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
+                  const Divider(height: 0, thickness: 0.5),
                   
-                  // Section 7: Continuité et résistance
                   _buildSectionTile(
                     'Continuité et résistance',
                     Icons.cable_outlined,
                     'Conducteurs de protection',
                     _navigateToContinuiteResistance,
-                    color: AppTheme.primaryBlue,
+                    'continuite_resistance',
                   ),
                 ],
               ),

@@ -1,6 +1,8 @@
+// lib/pages/missions/sequence/steps/schema_step.dart
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
+import 'package:inspec_app/services/sequence_progress_service.dart';
 
 class SchemaStep extends StatefulWidget {
   final Mission mission;
@@ -20,7 +22,7 @@ class SchemaStep extends StatefulWidget {
 
 class _SchemaStepState extends State<SchemaStep> {
   String? _selectedOption;
-  final TextEditingController _commentController = TextEditingController();
+  bool _isLoading = true;
 
   @override
   void initState() {
@@ -28,16 +30,41 @@ class _SchemaStepState extends State<SchemaStep> {
     _loadSavedData();
   }
 
-  void _loadSavedData() async {
-    // TODO: Charger depuis la progression sauvegardée
-    setState(() {});
+  Future<void> _loadSavedData() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final savedData = await SequenceProgressService.getStepData(
+        widget.mission.id, 
+        'schema'
+      );
+      
+      if (savedData != null && savedData is Map<String, dynamic>) {
+        setState(() {
+          _selectedOption = savedData['schema_option'];
+        });
+      }
+    } catch (e) {
+      print('❌ Erreur chargement schema: $e');
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
-  void _notifyDataChanged() {
-    widget.onDataChanged({
+  Future<void> _saveData() async {
+    final data = {
       'schema_option': _selectedOption,
-      'schema_comment': _commentController.text,
+    };
+    await SequenceProgressService.saveStepData(widget.mission.id, 'schema', data);
+    widget.onDataChanged(data);
+    print('✅ Schéma sauvegardé: $_selectedOption');
+  }
+
+  void _handleOptionSelected(String? value) {
+    setState(() {
+      _selectedOption = value;
     });
+    _saveData(); // Sauvegarde immédiate
   }
 
   void _handleComplete() {
@@ -50,14 +77,19 @@ class _SchemaStepState extends State<SchemaStep> {
       );
       return;
     }
+    // Sauvegarder une dernière fois avant de passer à l'étape suivante
+    _saveData();
     widget.onComplete();
   }
 
-  // Méthode pour déterminer si le formulaire est valide
   bool get _isFormValid => _selectedOption != null;
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: SingleChildScrollView(
@@ -111,10 +143,7 @@ class _SchemaStepState extends State<SchemaStep> {
                     ),
                     value: 'oui',
                     groupValue: _selectedOption,
-                    onChanged: (value) {
-                      setState(() => _selectedOption = value);
-                      _notifyDataChanged();
-                    },
+                    onChanged: _handleOptionSelected,
                     activeColor: Colors.green,
                     tileColor: _selectedOption == 'oui' 
                         ? Colors.green.withOpacity(0.1) 
@@ -131,10 +160,7 @@ class _SchemaStepState extends State<SchemaStep> {
                     ),
                     value: 'non',
                     groupValue: _selectedOption,
-                    onChanged: (value) {
-                      setState(() => _selectedOption = value);
-                      _notifyDataChanged();
-                    },
+                    onChanged: _handleOptionSelected,
                     activeColor: Colors.red,
                     tileColor: _selectedOption == 'non' 
                         ? Colors.red.withOpacity(0.1) 
@@ -173,7 +199,7 @@ class _SchemaStepState extends State<SchemaStep> {
                       const SizedBox(width: 8),
                     ],
                     const Text(
-                      'TERMINER LA MISSION',
+                      'TERMINER ET VOIR LE RÉSUMÉ',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -188,11 +214,5 @@ class _SchemaStepState extends State<SchemaStep> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _commentController.dispose();
-    super.dispose();
   }
 }
