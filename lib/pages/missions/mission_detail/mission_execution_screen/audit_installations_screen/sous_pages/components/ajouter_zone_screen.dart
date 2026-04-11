@@ -713,81 +713,84 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.isEdition ? 'Modifier la Zone' : 'Ajouter une Zone'),
-        backgroundColor: widget.isMoyenneTension ? Colors.blue : Colors.blue,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: Icon(Icons.check),
-            onPressed: _sauvegarder,
-            tooltip: 'Enregistrer',
-          ),
-        ],
-      ),
-      body: Form(
-        key: _formKey,
-        child: Padding(
-          padding: EdgeInsets.all(16),
-          child: ListView(
-            children: [
-               SizedBox(height: 12),
-              // Nom de la zone
-              _buildTextField(_nomController, 'Nom de la zone*', isRequired: true),
-              SizedBox(height: 12),
-
-              // Photos de la zone
-              Card(
-                elevation: 1,
-                child: Padding(
-                  padding: EdgeInsets.all(16),
-                  child: _buildPhotosSection(
-                    'Photos de la zone',
-                    _zonePhotos,
-                    _prendrePhotoZone,
-                    _choisirPhotoZoneDepuisGalerie,
-                  ),
-                ),
-              ),
-              SizedBox(height: 12),
-
-              // Observations libres
-              if(!widget.isEdition)
-              _buildObservationsSection(),
-              if(!widget.isEdition)
-              SizedBox(height: 32),
-              
-              // Bouton d'enregistrement
-              ElevatedButton(
-                onPressed: _sauvegarder,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: widget.isMoyenneTension 
-                      ? Colors.blue 
-                      : Colors.blue,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.save),
-                    SizedBox(width: 8),
-                    Text(
-                      widget.isEdition ? 'MODIFIER LA ZONE' : 'AJOUTER LA ZONE',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
+    return GestureDetector(
+      onTap: () {FocusScope.of(context).unfocus();},
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.isEdition ? 'Modifier la Zone' : 'Ajouter une Zone'),
+          backgroundColor: widget.isMoyenneTension ? Colors.blue : Colors.blue,
+          foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              icon: Icon(Icons.check),
+              onPressed: _sauvegarder,
+              tooltip: 'Enregistrer',
+            ),
+          ],
+        ),
+        body: Form(
+          key: _formKey,
+          child: Padding(
+            padding: EdgeInsets.all(16),
+            child: ListView(
+              children: [
+                 SizedBox(height: 12),
+                // Nom de la zone
+                _buildTextField(_nomController, 'Nom de la zone*', isRequired: true),
+                SizedBox(height: 12),
+      
+                // Photos de la zone
+                Card(
+                  elevation: 1,
+                  child: Padding(
+                    padding: EdgeInsets.all(16),
+                    child: _buildPhotosSection(
+                      'Photos de la zone',
+                      _zonePhotos,
+                      _prendrePhotoZone,
+                      _choisirPhotoZoneDepuisGalerie,
                     ),
-                  ],
+                  ),
                 ),
-              ),
-              SizedBox(height: 16),
-            ],
+                SizedBox(height: 12),
+      
+                // Observations libres
+                if(!widget.isEdition)
+                _buildObservationsSection(),
+                if(!widget.isEdition)
+                SizedBox(height: 32),
+                
+                // Bouton d'enregistrement
+                ElevatedButton(
+                  onPressed: _sauvegarder,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: widget.isMoyenneTension 
+                        ? Colors.blue 
+                        : Colors.blue,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.save),
+                      SizedBox(width: 8),
+                      Text(
+                        widget.isEdition ? 'MODIFIER LA ZONE' : 'AJOUTER LA ZONE',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 16),
+              ],
+            ),
           ),
         ),
       ),

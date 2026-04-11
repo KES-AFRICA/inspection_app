@@ -1071,10 +1071,17 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
           _currentSection = 1;
           _currentSlide = 0;
         });
-        _slideController.jumpToPage(0);
+        // Vérifier que le controller est attaché avant de l'utiliser
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_slideController.hasClients) {
+            _slideController.jumpToPage(0);
+          }
+        });
       }
     } else {
-      _slideController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      if (_slideController.hasClients) {
+        _slideController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      }
     }
   }
 
@@ -1085,10 +1092,16 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
           _currentSection = 0;
           _currentSlide = _dispositionsSlides.length - 1;
         });
-        _slideController.jumpToPage(_dispositionsSlides.length - 1);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_slideController.hasClients) {
+            _slideController.jumpToPage(_dispositionsSlides.length - 1);
+          }
+        });
       }
     } else {
-      _slideController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      if (_slideController.hasClients) {
+        _slideController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      }
     }
   }
 
@@ -1125,7 +1138,7 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
 
     return Column(
       children: [
-        // En-tête compact
+        // En-tête simplifié
         Container(
           padding: EdgeInsets.all(context.spacingL),
           decoration: BoxDecoration(
@@ -1134,126 +1147,49 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
               BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: context.spacingS, offset: const Offset(0, 2)),
             ],
           ),
-          child: Column(
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: context.iconSizeXL * 1.2,
-                    height: context.iconSizeXL * 1.2,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(colors: [AppTheme.primaryBlue, AppTheme.primaryBlue.withOpacity(0.7)]),
-                      borderRadius: BorderRadius.circular(context.spacingS),
-                    ),
-                    child: Icon(Icons.checklist, color: Colors.white, size: context.iconSizeM),
-                  ),
-                  SizedBox(width: context.spacingM),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Éléments de contrôle',
-                          style: TextStyle(fontSize: context.fontSizeXXL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              Container(
+                width: context.iconSizeXL * 1.2,
+                height: context.iconSizeXL * 1.2,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(colors: [AppTheme.primaryBlue, AppTheme.primaryBlue.withOpacity(0.7)]),
+                  borderRadius: BorderRadius.circular(context.spacingS),
+                ),
+                child: Icon(Icons.checklist, color: Colors.white, size: context.iconSizeM),
               ),
-              SizedBox(height: context.spacingM),
-              
-              // Indicateurs de section (non cliquables)
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
-                      decoration: BoxDecoration(
-                        color: _currentSection == 0 
-                            ? const Color(0xFF2C3E50) 
-                            : (_currentSection > 0 ? const Color(0xFF2C3E50).withOpacity(0.3) : Colors.grey.shade100),
-                        borderRadius: BorderRadius.circular(context.spacingXL),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            _currentSection > 0 ? Icons.check_circle : Icons.construction,
-                            size: context.iconSizeXS,
-                            color: _currentSection == 0 || _currentSection > 0 ? Colors.white : Colors.grey.shade700,
-                          ),
-                          SizedBox(width: context.spacingXS),
-                          Flexible(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                'DISPOSITIONS',
-                                style: TextStyle(
-                                  fontSize: context.fontSizeXS,
-                                  fontWeight: FontWeight.w600,
-                                  color: _currentSection == 0 || _currentSection > 0 ? Colors.white : Colors.grey.shade700,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: context.spacingS),
-                  Expanded(
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
-                      decoration: BoxDecoration(
-                        color: _currentSection == 1 ? const Color(0xFF34495E) : Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(context.spacingXL),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.engineering,
-                            size: context.iconSizeXS,
-                            color: _currentSection == 1 ? Colors.white : Colors.grey.shade700,
-                          ),
-                          SizedBox(width: context.spacingXS),
-                          Flexible(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                'CONDITIONS',
-                                style: TextStyle(
-                                  fontSize: context.fontSizeXS,
-                                  fontWeight: FontWeight.w600,
-                                  color: _currentSection == 1 ? Colors.white : Colors.grey.shade700,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
+              SizedBox(width: context.spacingM),
+              Expanded(
+                child: Text(
+                  'Éléments de contrôle',
+                  style: TextStyle(fontSize: context.fontSizeXXL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                ),
               ),
             ],
           ),
         ),
         
-        // Titre de section
+        // Titre de section avec compteur sur la même ligne
         Container(
           padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
           child: Row(
             children: [
-              Flexible(
+              Container(
+                width: 4,
+                height: context.iconSizeL,
+                decoration: BoxDecoration(
+                  color: _currentSectionColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              SizedBox(width: context.spacingS),
+              Expanded(
                 child: Text(
                   _currentSectionTitle,
-                  style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.bold, color: _currentSectionColor),
+                  style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.bold, color: _currentSectionColor),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              const Spacer(),
               Text(
                 '${_currentSlide + 1}/${_totalSlides}',
                 style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
@@ -1262,7 +1198,19 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
           ),
         ),
         
-        // Zone des éléments (hauteur augmentée)
+        // Barre de progression
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: context.spacingL),
+          child: LinearProgressIndicator(
+            value: (_currentSlide + 1) / _totalSlides,
+            backgroundColor: Colors.grey.shade200,
+            valueColor: AlwaysStoppedAnimation<Color>(_currentSectionColor),
+            minHeight: 3,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        
+        // Zone des éléments
         Expanded(
           child: PageView.builder(
             controller: _slideController,
@@ -1293,18 +1241,6 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
                 }).toList(),
               );
             },
-          ),
-        ),
-        
-        // Barre de progression
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
-          child: LinearProgressIndicator(
-            value: (_currentSlide + 1) / _totalSlides,
-            backgroundColor: Colors.grey.shade200,
-            valueColor: AlwaysStoppedAnimation<Color>(_currentSectionColor),
-            minHeight: 4,
-            borderRadius: BorderRadius.circular(2),
           ),
         ),
       ],
@@ -1866,46 +1802,56 @@ class _EtapeCelluleTransformateur extends StatefulWidget {
 class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur> {
   final PageController _slideController = PageController();
   
+  // 0 = Cellule données, 1 = Cellule éléments, 2 = Transfo données, 3 = Transfo éléments
   int _currentSection = 0;
   int _currentSlide = 0;
   
   late List<List<ElementControle>> _celluleElementsSlides;
   late List<List<ElementControle>> _transfoElementsSlides;
-  late List<Map<String, dynamic>> _sections;
 
   @override
   void initState() {
     super.initState();
     _buildSlides();
-    _buildSections();
   }
 
   void _buildSlides() {
     _celluleElementsSlides = [];
     for (int i = 0; i < widget.celluleElements.length; i += 3) {
-      _celluleElementsSlides.add(widget.celluleElements.sublist(i, (i + 3).clamp(0, widget.celluleElements.length)));
+      _celluleElementsSlides.add(widget.celluleElements.sublist(
+        i, 
+        (i + 3).clamp(0, widget.celluleElements.length)
+      ));
     }
     
     _transfoElementsSlides = [];
     for (int i = 0; i < widget.transfoElements.length; i += 3) {
-      _transfoElementsSlides.add(widget.transfoElements.sublist(i, (i + 3).clamp(0, widget.transfoElements.length)));
+      _transfoElementsSlides.add(widget.transfoElements.sublist(
+        i, 
+        (i + 3).clamp(0, widget.transfoElements.length)
+      ));
     }
   }
 
-  void _buildSections() {
-    _sections = [
-      {'title': 'CELLULE - Données techniques', 'type': 'cellule_donnees', 'color': const Color(0xFFE67E22), 'icon': Icons.info_outline},
-    ];
+  // Sections disponibles (fusionnées : plus d'onglets séparés pour données/éléments)
+  List<Map<String, dynamic>> get _sections {
+    final sections = <Map<String, dynamic>>[];
     
-    if (_celluleElementsSlides.isNotEmpty) {
-      _sections.add({'title': 'CELLULE - Éléments vérifiés', 'type': 'cellule_elements', 'color': const Color(0xFFE67E22), 'icon': Icons.checklist});
-    }
+    // Section 0 : Cellule (données + éléments combinés)
+    sections.add({
+      'title': 'CELLULE',
+      'type': 'cellule',
+      'color': const Color(0xFFE67E22),
+    });
     
-    _sections.add({'title': 'TRANSFORMATEUR - Données techniques', 'type': 'transfo_donnees', 'color': const Color(0xFF2980B9), 'icon': Icons.info_outline});
+    // Section 1 : Transformateur (données + éléments combinés)
+    sections.add({
+      'title': 'TRANSFORMATEUR',
+      'type': 'transfo',
+      'color': const Color(0xFF2980B9),
+    });
     
-    if (_transfoElementsSlides.isNotEmpty) {
-      _sections.add({'title': 'TRANSFORMATEUR - Éléments vérifiés', 'type': 'transfo_elements', 'color': const Color(0xFF2980B9), 'icon': Icons.checklist});
-    }
+    return sections;
   }
 
   Map<String, dynamic> get _currentSectionData => _sections[_currentSection];
@@ -1913,38 +1859,41 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
   Color get _currentColor => _currentSectionData['color'];
   bool get _isLastSection => _currentSection == _sections.length - 1;
 
-  int _getTotalSlides() {
-    switch (_currentSectionType) {
-      case 'cellule_donnees':
-      case 'transfo_donnees':
-        return 1;
-      case 'cellule_elements':
-        return _celluleElementsSlides.length;
-      case 'transfo_elements':
-        return _transfoElementsSlides.length;
-      default:
-        return 1;
+  int _getTotalSlidesForCurrentSection() {
+    if (_currentSection == 0) {
+      // Cellule : 1 slide pour données + N slides pour éléments
+      return 1 + _celluleElementsSlides.length;
+    } else {
+      // Transformateur : 1 slide pour données + N slides pour éléments
+      return 1 + _transfoElementsSlides.length;
     }
   }
 
-  bool get _isLastSlide => _currentSlide == _getTotalSlides() - 1;
+  int get _totalSlides => _getTotalSlidesForCurrentSection();
+  bool get _isLastSlide => _currentSlide == _totalSlides - 1;
   bool get _isFirstSlide => _currentSlide == 0;
 
   bool _isCurrentSlideValid() {
-    switch (_currentSectionType) {
-      case 'cellule_donnees':
+    if (_currentSection == 0) {
+      if (_currentSlide == 0) {
         return _validateCelluleDonnees();
-      case 'transfo_donnees':
+      } else {
+        final elementSlideIndex = _currentSlide - 1;
+        if (elementSlideIndex < _celluleElementsSlides.length) {
+          return _validateElementsSlide(_celluleElementsSlides[elementSlideIndex], 1000);
+        }
+      }
+    } else {
+      if (_currentSlide == 0) {
         return _validateTransfoDonnees();
-      case 'cellule_elements':
-        if (_celluleElementsSlides.isEmpty) return true;
-        return _validateElementsSlide(_celluleElementsSlides[_currentSlide], 1000);
-      case 'transfo_elements':
-        if (_transfoElementsSlides.isEmpty) return true;
-        return _validateElementsSlide(_transfoElementsSlides[_currentSlide], 2000);
-      default:
-        return true;
+      } else {
+        final elementSlideIndex = _currentSlide - 1;
+        if (elementSlideIndex < _transfoElementsSlides.length) {
+          return _validateElementsSlide(_transfoElementsSlides[elementSlideIndex], 2000);
+        }
+      }
     }
+    return true;
   }
 
   bool _validateCelluleDonnees() {
@@ -1972,7 +1921,7 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
       if (!(widget.conformeSelected[element] ?? false)) return false;
       if (element.priorite == null) return false;
       
-      final elementIndex = _currentSectionType == 'cellule_elements'
+      final elementIndex = _currentSection == 0
           ? baseIndex + widget.celluleElements.indexOf(element)
           : baseIndex + widget.transfoElements.indexOf(element);
       
@@ -1995,10 +1944,16 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
           _currentSection++;
           _currentSlide = 0;
         });
-        _slideController.jumpToPage(0);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_slideController.hasClients) {
+            _slideController.jumpToPage(0);
+          }
+        });
       }
     } else {
-      _slideController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      if (_slideController.hasClients) {
+        _slideController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      }
     }
   }
 
@@ -2007,28 +1962,26 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
       if (_currentSection > 0) {
         setState(() {
           _currentSection--;
-          _currentSlide = _getTotalSlidesForSection(_currentSection) - 1;
+          _currentSlide = _getTotalSlidesForPreviousSection() - 1;
         });
-        _slideController.jumpToPage(_currentSlide);
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_slideController.hasClients) {
+            _slideController.jumpToPage(_currentSlide);
+          }
+        });
       }
     } else {
-      _slideController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      if (_slideController.hasClients) {
+        _slideController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      }
     }
   }
 
-  int _getTotalSlidesForSection(int sectionIndex) {
-    final sectionType = _sections[sectionIndex]['type'];
-    switch (sectionType) {
-      case 'cellule_donnees':
-      case 'transfo_donnees':
-        return 1;
-      case 'cellule_elements':
-        return _celluleElementsSlides.length;
-      case 'transfo_elements':
-        return _transfoElementsSlides.length;
-      default:
-        return 1;
+  int _getTotalSlidesForPreviousSection() {
+    if (_currentSection == 1) {
+      return 1 + _celluleElementsSlides.length;
     }
+    return 1;
   }
 
   void _showError(String message) {
@@ -2050,6 +2003,7 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
   Widget build(BuildContext context) {
     return Column(
       children: [
+        // En-tête
         Container(
           padding: EdgeInsets.all(context.spacingL),
           decoration: BoxDecoration(
@@ -2058,159 +2012,205 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
               BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: context.spacingS, offset: const Offset(0, 2)),
             ],
           ),
-          child: Column(
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: context.iconSizeXL * 1.2,
-                    height: context.iconSizeXL * 1.2,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [Color(0xFFE67E22), Color(0xFF2980B9)]),
-                      borderRadius: BorderRadius.circular(context.spacingS),
-                    ),
-                    child: Icon(Icons.electric_bolt, color: Colors.white, size: context.iconSizeM),
-                  ),
-                  SizedBox(width: context.spacingM),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Cellule & Transformateur',
-                          style: TextStyle(fontSize: context.fontSizeXXL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
-                        ),
-                        Text(
-                          'Données techniques et vérifications',
-                          style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
+              Container(
+                width: context.iconSizeXL * 1.2,
+                height: context.iconSizeXL * 1.2,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [Color(0xFFE67E22), Color(0xFF2980B9)]),
+                  borderRadius: BorderRadius.circular(context.spacingS),
+                ),
+                child: Icon(Icons.electric_bolt, color: Colors.white, size: context.iconSizeM),
               ),
-              SizedBox(height: context.spacingM),
-              
-              // Indicateurs de section (non cliquables)
-              SizedBox(
-                height: context.screenHeight * 0.05,
-                child: ListView.builder(
-                  scrollDirection: Axis.horizontal,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: _sections.length,
-                  itemBuilder: (context, index) {
-                    final section = _sections[index];
-                    final isActive = index <= _currentSection;
-                    final isCompleted = index < _currentSection;
-                    final color = section['color'] as Color;
-                    
-                    return Container(
-                      margin: EdgeInsets.only(right: context.spacingS),
-                      padding: EdgeInsets.symmetric(horizontal: context.spacingM),
-                      decoration: BoxDecoration(
-                        color: index == _currentSection 
-                            ? color 
-                            : (isCompleted ? color.withOpacity(0.3) : Colors.grey.shade100),
-                        borderRadius: BorderRadius.circular(context.spacingXL),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            isCompleted ? Icons.check_circle : section['icon'],
-                            size: context.iconSizeXS,
-                            color: (index == _currentSection || isCompleted) ? Colors.white : Colors.grey.shade700,
-                          ),
-                          SizedBox(width: context.spacingXS),
-                          Flexible(
-                            child: FittedBox(
-                              fit: BoxFit.scaleDown,
-                              child: Text(
-                                section['title'].toString().split(' - ')[0],
-                                style: TextStyle(
-                                  fontSize: context.fontSizeXS,
-                                  fontWeight: FontWeight.w600,
-                                  color: (index == _currentSection || isCompleted) ? Colors.white : Colors.grey.shade700,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
+              SizedBox(width: context.spacingM),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Cellule & Transformateur',
+                      style: TextStyle(fontSize: context.fontSizeXXL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                    ),
+                    Text(
+                      'Données techniques et vérifications',
+                      style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
         ),
         
+        // Indicateurs de section (2 onglets seulement)
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
+          child: Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: context.spacingS),
+                  decoration: BoxDecoration(
+                    color: _currentSection == 0 
+                        ? const Color(0xFFE67E22) 
+                        : (_currentSection > 0 ? const Color(0xFFE67E22).withOpacity(0.3) : Colors.grey.shade100),
+                    borderRadius: BorderRadius.circular(context.spacingXL),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        _currentSection > 0 ? Icons.check_circle : Icons.power,
+                        size: context.iconSizeXS,
+                        color: _currentSection == 0 || _currentSection > 0 ? Colors.white : Colors.grey.shade700,
+                      ),
+                      SizedBox(width: context.spacingXS),
+                      Flexible(
+                        child: Text(
+                          'CELLULE',
+                          style: TextStyle(
+                            fontSize: context.fontSizeXS,
+                            fontWeight: FontWeight.w600,
+                            color: _currentSection == 0 || _currentSection > 0 ? Colors.white : Colors.grey.shade700,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(width: context.spacingS),
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: context.spacingS),
+                  decoration: BoxDecoration(
+                    color: _currentSection == 1 
+                        ? const Color(0xFF2980B9) 
+                        : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(context.spacingXL),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.transform,
+                        size: context.iconSizeXS,
+                        color: _currentSection == 1 ? Colors.white : Colors.grey.shade700,
+                      ),
+                      SizedBox(width: context.spacingXS),
+                      Flexible(
+                        child: Text(
+                          'TRANSFORMATEUR',
+                          style: TextStyle(
+                            fontSize: context.fontSizeXS,
+                            fontWeight: FontWeight.w600,
+                            color: _currentSection == 1 ? Colors.white : Colors.grey.shade700,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Titre de section avec compteur
         Container(
           padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
           child: Row(
             children: [
               Container(
-                width: context.spacingXS,
-                height: context.spacingXL,
-                decoration: BoxDecoration(color: _currentColor, borderRadius: BorderRadius.circular(2)),
+                width: 4,
+                height: context.iconSizeL,
+                decoration: BoxDecoration(
+                  color: _currentColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
               SizedBox(width: context.spacingS),
-              Flexible(
+              Expanded(
                 child: Text(
-                  _currentSectionData['title'],
+                  _currentSection == 0 
+                      ? (_currentSlide == 0 ? 'CELLULE - Données techniques' : 'CELLULE - Éléments vérifiés')
+                      : (_currentSlide == 0 ? 'TRANSFORMATEUR - Données techniques' : 'TRANSFORMATEUR - Éléments vérifiés'),
                   style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.bold, color: _currentColor),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
-              if (_getTotalSlides() > 1)
-                Padding(
-                  padding: EdgeInsets.only(left: context.spacingM),
-                  child: Text(
-                    '${_currentSlide + 1}/${_getTotalSlides()}',
-                    style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
-                  ),
-                ),
+              Text(
+                '${_currentSlide + 1}/${_totalSlides}',
+                style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+              ),
             ],
           ),
         ),
         
+        // Barre de progression
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: context.spacingL),
+          child: LinearProgressIndicator(
+            value: (_currentSlide + 1) / _totalSlides,
+            backgroundColor: Colors.grey.shade200,
+            valueColor: AlwaysStoppedAnimation<Color>(_currentColor),
+            minHeight: 3,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        
+        // Contenu
         Expanded(
           child: PageView.builder(
             controller: _slideController,
             physics: const NeverScrollableScrollPhysics(),
             onPageChanged: (index) => setState(() => _currentSlide = index),
-            itemCount: _getTotalSlides(),
-            itemBuilder: (context, slideIndex) => _buildSectionContent(context),
+            itemCount: _totalSlides,
+            itemBuilder: (context, slideIndex) => _buildSectionContent(context, slideIndex),
           ),
         ),
-        
-        if (_getTotalSlides() > 1)
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
-            child: LinearProgressIndicator(
-              value: (_currentSlide + 1) / _getTotalSlides(),
-              backgroundColor: Colors.grey.shade200,
-              valueColor: AlwaysStoppedAnimation<Color>(_currentColor),
-              minHeight: 4,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
       ],
     );
   }
 
-  Widget _buildSectionContent(BuildContext context) {
-    switch (_currentSectionType) {
-      case 'cellule_donnees':
+  Widget _buildSectionContent(BuildContext context, int slideIndex) {
+    if (_currentSection == 0) {
+      // Cellule
+      if (slideIndex == 0) {
         return _buildCelluleDonnees(context);
-      case 'transfo_donnees':
+      } else {
+        final elementSlideIndex = slideIndex - 1;
+        if (elementSlideIndex < _celluleElementsSlides.length) {
+          return _buildElementsSlide(
+            context,
+            elements: _celluleElementsSlides[elementSlideIndex],
+            sectionType: 'cellule',
+            color: _currentColor,
+            baseIndex: 1000,
+          );
+        }
+      }
+    } else {
+      // Transformateur
+      if (slideIndex == 0) {
         return _buildTransfoDonnees(context);
-      case 'cellule_elements':
-        return _buildElementsSlide(context, elements: _celluleElementsSlides[_currentSlide], sectionType: 'cellule', color: _currentColor, baseIndex: 1000);
-      case 'transfo_elements':
-        return _buildElementsSlide(context, elements: _transfoElementsSlides[_currentSlide], sectionType: 'transformateur', color: _currentColor, baseIndex: 2000);
-      default:
-        return const SizedBox.shrink();
+      } else {
+        final elementSlideIndex = slideIndex - 1;
+        if (elementSlideIndex < _transfoElementsSlides.length) {
+          return _buildElementsSlide(
+            context,
+            elements: _transfoElementsSlides[elementSlideIndex],
+            sectionType: 'transformateur',
+            color: _currentColor,
+            baseIndex: 2000,
+          );
+        }
+      }
     }
+    return const SizedBox.shrink();
   }
 
   Widget _buildCelluleDonnees(BuildContext context) {

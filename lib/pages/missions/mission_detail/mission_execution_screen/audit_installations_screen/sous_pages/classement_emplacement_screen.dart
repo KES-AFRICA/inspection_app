@@ -23,7 +23,6 @@ class _ClassementEmplacementScreenState extends State<ClassementEmplacementScree
   late ClassementEmplacement _emplacement;
   final _origineController = TextEditingController();
   
-  // Variables de validation
   bool _origineValid = false;
   bool _afValid = false;
   bool _beValid = false;
@@ -31,13 +30,34 @@ class _ClassementEmplacementScreenState extends State<ClassementEmplacementScree
   bool _adValid = false;
   bool _agValid = false;
 
+  // Helper methods pour la responsivité
+  double _getResponsiveFontSize(double baseSize) {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 360) return baseSize * 0.8;
+    if (width < 600) return baseSize * 0.9;
+    return baseSize;
+  }
+
+  double _getResponsiveSpacing(double baseSpacing) {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 360) return baseSpacing * 0.7;
+    if (width < 600) return baseSpacing * 0.85;
+    return baseSpacing;
+  }
+
+  double _getResponsiveIconSize(double baseSize) {
+    final width = MediaQuery.of(context).size.width;
+    if (width < 360) return baseSize * 0.8;
+    if (width < 600) return baseSize * 0.9;
+    return baseSize;
+  }
+
   @override
   void initState() {
     super.initState();
     _emplacement = widget.emplacement;
     _origineController.text = _emplacement.origineClassement;
     
-    // Valider les champs existants
     _origineValid = _emplacement.origineClassement.isNotEmpty;
     _afValid = _emplacement.af != null && _emplacement.af!.isNotEmpty;
     _beValid = _emplacement.be != null && _emplacement.be!.isNotEmpty;
@@ -52,321 +72,258 @@ class _ClassementEmplacementScreenState extends State<ClassementEmplacementScree
     super.dispose();
   }
 
-  // Méthodes de validation
-  void _validateOrigine(String value) {
-    setState(() {
-      _origineValid = value.trim().isNotEmpty;
-    });
-  }
-
-  void _validateAF(String? value) {
-    setState(() {
-      _afValid = value != null && value.isNotEmpty;
-    });
-  }
-
-  void _validateBE(String? value) {
-    setState(() {
-      _beValid = value != null && value.isNotEmpty;
-    });
-  }
-
-  void _validateAE(String? value) {
-    setState(() {
-      _aeValid = value != null && value.isNotEmpty;
-    });
-  }
-
-  void _validateAD(String? value) {
-    setState(() {
-      _adValid = value != null && value.isNotEmpty;
-    });
-  }
-
-  void _validateAG(String? value) {
-    setState(() {
-      _agValid = value != null && value.isNotEmpty;
-    });
-  }
+  void _validateOrigine(String value) => setState(() => _origineValid = value.trim().isNotEmpty);
+  void _validateAF(String? value) => setState(() => _afValid = value != null && value.isNotEmpty);
+  void _validateBE(String? value) => setState(() => _beValid = value != null && value.isNotEmpty);
+  void _validateAE(String? value) => setState(() => _aeValid = value != null && value.isNotEmpty);
+  void _validateAD(String? value) => setState(() => _adValid = value != null && value.isNotEmpty);
+  void _validateAG(String? value) => setState(() => _agValid = value != null && value.isNotEmpty);
 
   bool _validateAllFields() {
     bool allValid = true;
-    
-    // Valider origine
-    if (_origineController.text.trim().isEmpty) {
-      _origineValid = false;
-      allValid = false;
-    }
-    
-    // Valider AF
-    if (_emplacement.af == null || _emplacement.af!.isEmpty) {
-      _afValid = false;
-      allValid = false;
-    }
-    
-    // Valider BE
-    if (_emplacement.be == null || _emplacement.be!.isEmpty) {
-      _beValid = false;
-      allValid = false;
-    }
-    
-    // Valider AE
-    if (_emplacement.ae == null || _emplacement.ae!.isEmpty) {
-      _aeValid = false;
-      allValid = false;
-    }
-    
-    // Valider AD
-    if (_emplacement.ad == null || _emplacement.ad!.isEmpty) {
-      _adValid = false;
-      allValid = false;
-    }
-    
-    // Valider AG
-    if (_emplacement.ag == null || _emplacement.ag!.isEmpty) {
-      _agValid = false;
-      allValid = false;
-    }
-    
+    if (_origineController.text.trim().isEmpty) { _origineValid = false; allValid = false; }
+    if (_emplacement.af == null || _emplacement.af!.isEmpty) { _afValid = false; allValid = false; }
+    if (_emplacement.be == null || _emplacement.be!.isEmpty) { _beValid = false; allValid = false; }
+    if (_emplacement.ae == null || _emplacement.ae!.isEmpty) { _aeValid = false; allValid = false; }
+    if (_emplacement.ad == null || _emplacement.ad!.isEmpty) { _adValid = false; allValid = false; }
+    if (_emplacement.ag == null || _emplacement.ag!.isEmpty) { _agValid = false; allValid = false; }
     setState(() {});
     return allValid;
   }
 
-void _sauvegarder() async {
-  // Valider tous les champs avant sauvegarde
-  if (!_validateAllFields()) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Veuillez remplir tous les champs obligatoires'),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 3),
-      ),
-    );
-    return;
-  }
+  void _sauvegarder() async {
+    if (!_validateAllFields()) {
+      _showSnackBar('Veuillez remplir tous les champs obligatoires', Colors.red);
+      return;
+    }
 
-  _emplacement.origineClassement = _origineController.text.trim();
-  _emplacement.calculerIndices();
-  
-  final success = await HiveService.updateEmplacement(_emplacement);
-  
-  if (success) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Classement sauvegardé'),
-        backgroundColor: Colors.green,
-      ),
-    );
-    // Retourner true pour indiquer succès
-    Navigator.pop(context, true);
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Erreur lors de la sauvegarde'),
-        backgroundColor: Colors.red,
-      ),
-    );
-  }
-}
-
-void _annuler() {
-  // Retourner false pour indiquer annulation
-  Navigator.pop(context, false);
-}
-
-Widget _buildSelecteur(String title, String? currentValue, List<String> options, Function(String?) onChanged, {required bool isValid}) {
-  return Container(
-    margin: EdgeInsets.only(bottom: 16),
-    padding: EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: isValid ? Colors.grey.shade300 : Colors.red,
-      ),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              '$title*', // Astérisque pour indiquer l'obligation
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: isValid ? AppTheme.darkBlue : Colors.red,
-              ),
-            ),
-            if (!isValid)
-              Padding(
-                padding: EdgeInsets.only(left: 8),
-                child: Text(
-                  '(obligatoire)',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Colors.red,
-                  ),
-                ),
-              ),
-          ],
-        ),
-        SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          value: currentValue,
-          decoration: InputDecoration(
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: isValid ? Colors.grey.shade400 : Colors.red,
-              ),
-            ),
-            contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
-          ),
-          items: options.map((option) {
-            return DropdownMenuItem<String>(
-              value: option,
-              child: Text(
-                '$option',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.black87,
-                ),
-              ),
-            );
-          }).toList(),
-          onChanged: (value) {
-            onChanged(value);
-            // Valider le champ après changement
-            switch (title) {
-              case 'AF - Substances corrosives ou polluantes*':
-                _validateAF(value);
-                break;
-              case 'BE - Matières traitées ou entreposées*':
-                _validateBE(value);
-                break;
-              case 'AE - Pénétration de corps solides*':
-                _validateAE(value);
-                break;
-              case 'AD - Pénétration de liquides*':
-                _validateAD(value);
-                break;
-              case 'AG - Risques de chocs mécaniques*':
-                _validateAG(value);
-                break;
-            }
-          },
-        ),
-      ],
-    ),
-  );
-}
-
-  Widget _buildIndices() {
-    // Recalculer les indices avant d'afficher
+    _emplacement.origineClassement = _origineController.text.trim();
     _emplacement.calculerIndices();
     
+    final success = await HiveService.updateEmplacement(_emplacement);
+    
+    if (success) {
+      _showSnackBar('Classement sauvegardé', Colors.green);
+      Navigator.pop(context, true);
+    } else {
+      _showSnackBar('Erreur lors de la sauvegarde', Colors.red);
+    }
+  }
+
+  void _showSnackBar(String message, Color color) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: color, duration: const Duration(seconds: 3)),
+    );
+  }
+
+  void _annuler() => Navigator.pop(context, false);
+
+  Widget _buildSelecteur(String title, String? currentValue, List<String> options, Function(String?) onChanged, {required bool isValid}) {
+    final titleFontSize = _getResponsiveFontSize(15);
+    final optionFontSize = _getResponsiveFontSize(13);
+    final spacing = _getResponsiveSpacing(12);
+    final iconSize = _getResponsiveIconSize(18);
+    
     return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      padding: EdgeInsets.all(16),
+      margin: EdgeInsets.only(bottom: spacing),
+      padding: EdgeInsets.all(spacing),
       decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.blue.shade200),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: isValid ? Colors.grey.shade300 : Colors.red),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Indices minimaux de protection (calculés automatiquement)',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.darkBlue,
-            ),
-          ),
-          SizedBox(height: 12),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      'IP',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      _emplacement.ip ?? '--',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade800,
-                      ),
-                    ),
-                  ],
+              Expanded(
+                child: Text(
+                  '$title*',
+                  style: TextStyle(
+                    fontSize: titleFontSize,
+                    fontWeight: FontWeight.w600,
+                    color: isValid ? AppTheme.darkBlue : Colors.red,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(8),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 4,
-                      offset: Offset(0, 2),
-                    ),
-                  ],
+              if (!isValid)
+                Container(
+                  margin: EdgeInsets.only(left: spacing * 0.5),
+                  padding: EdgeInsets.symmetric(horizontal: spacing * 0.6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Obligatoire',
+                    style: TextStyle(fontSize: optionFontSize * 0.8, color: Colors.red),
+                  ),
                 ),
-                child: Column(
-                  children: [
-                    Text(
-                      'IK',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    SizedBox(height: 4),
-                    Text(
-                      _emplacement.ik ?? '--',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.blue.shade800,
-                      ),
-                    ),
-                  ],
+            ],
+          ),
+          SizedBox(height: spacing * 0.6),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: isValid ? Colors.grey.shade300 : Colors.red.shade300),
+            ),
+            child: DropdownButtonFormField<String>(
+              value: currentValue,
+              isExpanded: true,
+              icon: Icon(Icons.arrow_drop_down_circle, size: iconSize, color: isValid ? AppTheme.primaryBlue : Colors.red),
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              hint: Text(
+                'Sélectionnez',
+                style: TextStyle(fontSize: optionFontSize, color: Colors.grey.shade500),
+              ),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(horizontal: spacing, vertical: spacing * 0.8),
+              ),
+              style: TextStyle(fontSize: optionFontSize, color: Colors.black87),
+              items: options.map((option) {
+                return DropdownMenuItem<String>(
+                  value: option,
+                  child: Text(
+                    option,
+                    style: TextStyle(fontSize: optionFontSize),
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
+                );
+              }).toList(),
+              onChanged: (value) {
+                onChanged(value);
+                switch (title) {
+                  case 'AF - Substances corrosives ou polluantes*': _validateAF(value); break;
+                  case 'BE - Matières traitées ou entreposées*': _validateBE(value); break;
+                  case 'AE - Pénétration de corps solides*': _validateAE(value); break;
+                  case 'AD - Pénétration de liquides*': _validateAD(value); break;
+                  case 'AG - Risques de chocs mécaniques*': _validateAG(value); break;
+                }
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIndices() {
+    _emplacement.calculerIndices();
+    
+    final titleFontSize = _getResponsiveFontSize(15);
+    final valueFontSize = _getResponsiveFontSize(22);
+    final smallFontSize = _getResponsiveFontSize(11);
+    final spacing = _getResponsiveSpacing(12);
+    final iconSize = _getResponsiveIconSize(18);
+    
+    return Container(
+      margin: EdgeInsets.only(bottom: spacing),
+      padding: EdgeInsets.all(spacing),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.blue.shade400, Colors.blue.shade600],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(color: Colors.blue.withOpacity(0.2), blurRadius: 8, offset: const Offset(0, 3)),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.shield, color: Colors.white, size: iconSize),
+              SizedBox(width: spacing * 0.6),
+              Expanded(
+                child: Text(
+                  'Indices minimaux de protection',
+                  style: TextStyle(
+                    fontSize: titleFontSize,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 8),
-          Text(
-            'Calculés à partir des influences AE, AD et AG',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-              fontStyle: FontStyle.italic,
-            ),
+          SizedBox(height: spacing),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: spacing * 0.8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))],
+                  ),
+                  child: Column(
+                    children: [
+                      Text('IP', style: TextStyle(fontSize: smallFontSize, color: Colors.grey.shade600)),
+                      SizedBox(height: 4),
+                      Text(
+                        _emplacement.ip ?? '--',
+                        style: TextStyle(
+                          fontSize: valueFontSize,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(width: spacing),
+              Expanded(
+                child: Container(
+                  padding: EdgeInsets.symmetric(vertical: spacing * 0.8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 4, offset: const Offset(0, 2))],
+                  ),
+                  child: Column(
+                    children: [
+                      Text('IK', style: TextStyle(fontSize: smallFontSize, color: Colors.grey.shade600)),
+                      SizedBox(height: 4),
+                      Text(
+                        _emplacement.ik ?? '--',
+                        style: TextStyle(
+                          fontSize: valueFontSize,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: spacing * 0.6),
+          Row(
+            children: [
+              Icon(Icons.info_outline, size: smallFontSize, color: Colors.white70),
+              SizedBox(width: 4),
+              Expanded(
+                child: Text(
+                  'Calculés à partir des influences AE, AD et AG',
+                  style: TextStyle(fontSize: smallFontSize * 0.9, color: Colors.white70, fontStyle: FontStyle.italic),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -375,84 +332,96 @@ Widget _buildSelecteur(String title, String? currentValue, List<String> options,
 
   @override
   Widget build(BuildContext context) {
+    final titleFontSize = _getResponsiveFontSize(20);
+    final subtitleFontSize = _getResponsiveFontSize(16);
+    final bodyFontSize = _getResponsiveFontSize(14);
+    final spacing = _getResponsiveSpacing(16);
+    final iconSize = _getResponsiveIconSize(24);
+    final smallIconSize = _getResponsiveIconSize(18);
+    
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: Text('Classement: ${_emplacement.localisation}'),
+        title: Text(
+          'Classement: ${_emplacement.localisation}',
+          style: TextStyle(fontSize: subtitleFontSize),
+          overflow: TextOverflow.ellipsis,
+        ),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
+        elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: Icon(Icons.arrow_back, size: smallIconSize),
           onPressed: _annuler,
         ),
         actions: [
           IconButton(
-            icon: Icon(Icons.check),
+            icon: Icon(Icons.check, size: smallIconSize),
             onPressed: _sauvegarder,
           ),
         ],
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(16),
+        padding: EdgeInsets.all(spacing),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Message d'information
+            // Message d'avertissement
             Container(
-              padding: EdgeInsets.all(12),
-              margin: EdgeInsets.only(bottom: 16),
+              padding: EdgeInsets.all(spacing * 0.8),
+              margin: EdgeInsets.only(bottom: spacing),
               decoration: BoxDecoration(
                 color: Colors.red.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.red.shade300),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red.shade200),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info, color: Colors.red, size: 20),
-                  SizedBox(width: 8),
+                  Icon(Icons.warning_amber_rounded, color: Colors.red, size: smallIconSize),
+                  SizedBox(width: spacing * 0.6),
                   Expanded(
                     child: Text(
                       'TOUS LES CHAMPS SONT OBLIGATOIRES',
                       style: TextStyle(
-                        color: Colors.red,
+                        fontSize: bodyFontSize * 0.9,
+                        color: Colors.red.shade800,
                         fontWeight: FontWeight.bold,
                       ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
               ),
             ),
             
-            // En-tête
+            // En-tête avec informations
             Container(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(spacing),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.shade200),
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.black12,
-                    blurRadius: 4,
-                    offset: Offset(0, 2),
-                  ),
+                  BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, 2)),
                 ],
+                border: Border.all(color: Colors.blue.shade100),
               ),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
-                    width: 50,
-                    height: 50,
+                    width: iconSize * 1.8,
+                    height: iconSize * 1.8,
                     decoration: BoxDecoration(
-                      color: Colors.blue.shade100,
+                      gradient: LinearGradient(
+                        colors: [Colors.blue.shade300, Colors.blue.shade500],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(
-                      Icons.location_on,
-                      size: 28,
-                      color: AppTheme.primaryBlue,
-                    ),
+                    child: Icon(Icons.location_on, size: iconSize, color: Colors.white),
                   ),
-                  SizedBox(width: 12),
+                  SizedBox(width: spacing * 0.8),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -460,29 +429,43 @@ Widget _buildSelecteur(String title, String? currentValue, List<String> options,
                         Text(
                           _emplacement.localisation,
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: titleFontSize,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87,
                           ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 2,
                         ),
                         if (_emplacement.zone != null) ...[
                           SizedBox(height: 4),
-                          Text(
-                            'Zone: ${_emplacement.zone}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
+                          Row(
+                            children: [
+                              Icon(Icons.place, size: smallIconSize * 0.7, color: Colors.grey.shade600),
+                              SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'Zone: ${_emplacement.zone}',
+                                  style: TextStyle(fontSize: bodyFontSize * 0.9, color: Colors.grey.shade600),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                         if (_emplacement.typeLocal != null) ...[
                           SizedBox(height: 4),
-                          Text(
-                            'Type: ${_emplacement.typeLocal}',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade600,
-                            ),
+                          Row(
+                            children: [
+                              Icon(Icons.category, size: smallIconSize * 0.7, color: Colors.grey.shade600),
+                              SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'Type: ${_emplacement.typeLocal}',
+                                  style: TextStyle(fontSize: bodyFontSize * 0.9, color: Colors.grey.shade600),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ],
@@ -492,68 +475,67 @@ Widget _buildSelecteur(String title, String? currentValue, List<String> options,
               ),
             ),
             
-            SizedBox(height: 20),
+            SizedBox(height: spacing * 1.2),
             
             // Origine classement
             Container(
-              padding: EdgeInsets.all(16),
+              padding: EdgeInsets.all(spacing),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(
-                  color: _origineValid ? Colors.grey.shade300 : Colors.red,
-                ),
+                boxShadow: [
+                  BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2)),
+                ],
+                border: Border.all(color: _origineValid ? Colors.grey.shade200 : Colors.red.shade300),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
-                      Text(
-                        'Origine du classement*',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: _origineValid ? AppTheme.darkBlue : Colors.red,
+                      Expanded(
+                        child: Text(
+                          'Origine du classement',
+                          style: TextStyle(
+                            fontSize: subtitleFontSize * 0.9,
+                            fontWeight: FontWeight.w600,
+                            color: _origineValid ? AppTheme.darkBlue : Colors.red,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
+                      Text(' *', style: TextStyle(fontSize: subtitleFontSize * 0.9, color: Colors.red)),
                       if (!_origineValid)
-                        Padding(
-                          padding: EdgeInsets.only(left: 8),
+                        Container(
+                          margin: EdgeInsets.only(left: spacing * 0.5),
+                          padding: EdgeInsets.symmetric(horizontal: spacing * 0.6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade50,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           child: Text(
-                            '(obligatoire)',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.red,
-                            ),
+                            'Obligatoire',
+                            style: TextStyle(fontSize: bodyFontSize * 0.7, color: Colors.red),
                           ),
                         ),
                     ],
                   ),
-                  SizedBox(height: 8),
-                  TextFormField(
-                    controller: _origineController,
-                    onChanged: _validateOrigine,
-                    decoration: InputDecoration(
-                      hintText: 'Ex: KES I&P',
-                      border: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: _origineValid ? Colors.grey : Colors.red,
-                        ),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: _origineValid ? Colors.grey : Colors.red,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderSide: BorderSide(
-                          color: _origineValid ? Colors.blue : Colors.red,
-                        ),
-                      ),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 12, 
-                        vertical: 16,
+                  SizedBox(height: spacing * 0.6),
+                  Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: _origineValid ? Colors.grey.shade300 : Colors.red.shade300),
+                    ),
+                    child: TextFormField(
+                      controller: _origineController,
+                      onChanged: _validateOrigine,
+                      style: TextStyle(fontSize: bodyFontSize),
+                      decoration: InputDecoration(
+                        hintText: 'Ex: KES I&P',
+                        hintStyle: TextStyle(fontSize: bodyFontSize, color: Colors.grey.shade500),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.symmetric(horizontal: spacing, vertical: spacing * 0.8),
                       ),
                     ),
                   ),
@@ -561,18 +543,34 @@ Widget _buildSelecteur(String title, String? currentValue, List<String> options,
               ),
             ),
             
-            SizedBox(height: 20),
+            SizedBox(height: spacing * 1.2),
             
             // Titre section influences
             Container(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Influences externes (tous les champs sont obligatoires)',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.darkBlue,
-                ),
+              padding: EdgeInsets.symmetric(vertical: spacing * 0.5),
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: iconSize * 0.8,
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  SizedBox(width: spacing * 0.6),
+                  Expanded(
+                    child: Text(
+                      'INFLUENCES EXTERNES',
+                      style: TextStyle(
+                        fontSize: subtitleFontSize,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.darkBlue,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
               ),
             ),
             
@@ -617,59 +615,52 @@ Widget _buildSelecteur(String title, String? currentValue, List<String> options,
               isValid: _agValid,
             ),
             
-            SizedBox(height: 20),
+            SizedBox(height: spacing),
             
             // Indices calculés
             _buildIndices(),
             
-            SizedBox(height: 30),
+            SizedBox(height: spacing * 1.5),
             
             // Boutons d'action
-            Column(
+            Row(
               children: [
-                Container(
-                  width: double.infinity,
-                  height: 50,
+                Expanded(
+                  flex: 2,
                   child: ElevatedButton(
                     onPressed: _sauvegarder,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryBlue,
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                      padding: EdgeInsets.symmetric(vertical: spacing * 0.9),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      elevation: 2,
                     ),
                     child: Text(
                       'SAUVEGARDER',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
+                      style: TextStyle(fontSize: bodyFontSize, fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
-                SizedBox(height: 10),
-                Container(
-                  width: double.infinity,
-                  height: 50,
+                SizedBox(width: spacing * 0.8),
+                Expanded(
                   child: OutlinedButton(
                     onPressed: _annuler,
                     style: OutlinedButton.styleFrom(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                      padding: EdgeInsets.symmetric(vertical: spacing * 0.9),
+                      side: BorderSide(color: Colors.grey.shade400),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
                     child: Text(
                       'ANNULER',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey.shade600,
-                      ),
+                      style: TextStyle(fontSize: bodyFontSize, color: Colors.grey.shade600),
                     ),
                   ),
                 ),
               ],
             ),
+            
+            SizedBox(height: spacing),
           ],
         ),
       ),
