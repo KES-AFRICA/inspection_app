@@ -160,7 +160,7 @@ class _DescriptionInstallationsScreenState extends State<DescriptionInstallation
               'Caractéristiques du groupe électrogène',
               Icons.electrical_services_outlined,
               'groupe_electrogene',
-              ['MARQUE', 'TYPE', 'SERIE', 'PUISSANCE (KVA)', 'INTENSITE', 'ANNEE DE FABRICATION', 'CALIBRE DU DISJONCTEUR', 'SECTION DU CABLE'],
+              ['MARQUE', 'TYPE', 'N° SERIE', 'PUISSANCE (KVA)', 'INTENSITE', 'ANNEE DE FABRICATION', 'CALIBRE DU DISJONCTEUR', 'SECTION DU CABLE'],
             ),
             
             _buildListTile(
@@ -176,7 +176,7 @@ class _DescriptionInstallationsScreenState extends State<DescriptionInstallation
               'Caractéristiques de l\'inverseur',
               Icons.swap_horiz_outlined,
               'inverseur',
-              ['MARQUE', 'TYPE', 'SERIE', 'INTENSITE (A)', 'REGLAGES'],
+              ['MARQUE', 'TYPE', 'N° SERIE', 'INTENSITE (A)', 'REGLAGES'],
             ),
             
             _buildListTile(
@@ -184,7 +184,7 @@ class _DescriptionInstallationsScreenState extends State<DescriptionInstallation
               'Caractéristiques du stabilisateur',
               Icons.tune_outlined,
               'stabilisateur',
-              ['MARQUE', 'TYPE', 'SERIE', 'ANNEE DE FABRICATION', 'ANNEE D\'INSTALLATION', 'PUISSANCE (KVA)', 'INTENSITE (A)', 'ENTREE', 'SORTIE'],
+              ['MARQUE', 'TYPE', 'N° SERIE', 'ANNEE DE FABRICATION', 'ANNEE D\'INSTALLATION', 'PUISSANCE (KVA)', 'INTENSITE (A)', 'ENTREE', 'SORTIE'],
             ),
             
             _buildListTile(
@@ -192,7 +192,7 @@ class _DescriptionInstallationsScreenState extends State<DescriptionInstallation
               'Caractéristiques des onduleurs',
               Icons.power_outlined,
               'onduleurs',
-              ['MARQUE', 'TYPE', 'SERIE', 'PUISSANCE (KVA)', 'INTENSITE (A)', 'NOMBRE DE PHASE'],
+              ['MARQUE', 'TYPE', 'N° SERIE', 'PUISSANCE (KVA)', 'INTENSITE (A)', 'NOMBRE DE PHASE'],
             ),
             
             _buildRadioTile(

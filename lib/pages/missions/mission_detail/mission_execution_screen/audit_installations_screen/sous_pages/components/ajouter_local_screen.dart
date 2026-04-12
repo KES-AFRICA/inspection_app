@@ -961,6 +961,7 @@ class _EtapeElementsControle extends StatefulWidget {
   final Function(ElementControle, int, int, String) onSupprimerPhotoElement;
   final Function(int, String, String) onObservationChanged;
   final Function(int, String, ElementControle, String) onUseSuggestion;
+  final Function(String) onAjouterAutre; // Nouveau : callback pour ajouter "Autre"
 
   const _EtapeElementsControle({
     super.key,
@@ -977,6 +978,7 @@ class _EtapeElementsControle extends StatefulWidget {
     required this.onSupprimerPhotoElement,
     required this.onObservationChanged,
     required this.onUseSuggestion,
+    required this.onAjouterAutre,
   });
 
   @override
@@ -1071,7 +1073,6 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
           _currentSection = 1;
           _currentSlide = 0;
         });
-        // Vérifier que le controller est attaché avant de l'utiliser
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_slideController.hasClients) {
             _slideController.jumpToPage(0);
@@ -1174,6 +1175,15 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
           padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
           child: Row(
             children: [
+              Container(
+                width: 4,
+                height: context.iconSizeL,
+                decoration: BoxDecoration(
+                  color: _currentSectionColor,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              SizedBox(width: context.spacingS),
               Expanded(
                 child: Text(
                   _currentSectionTitle,
@@ -1213,28 +1223,53 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
               
               return ListView(
                 padding: EdgeInsets.all(context.spacingL),
-                children: slideElements.map((element) {
-                  final originalIndex = _currentSection == 0 
-                      ? widget.dispositionsConstructives.indexOf(element)
-                      : widget.conditionsExploitation.indexOf(element);
-                  final globalIndex = _currentSection == 0 
-                      ? originalIndex 
-                      : widget.dispositionsConstructives.length + originalIndex;
+                children: [
+                  ...slideElements.map((element) {
+                    final originalIndex = _currentSection == 0 
+                        ? widget.dispositionsConstructives.indexOf(element)
+                        : widget.conditionsExploitation.indexOf(element);
+                    final globalIndex = _currentSection == 0 
+                        ? originalIndex 
+                        : widget.dispositionsConstructives.length + originalIndex;
+                    
+                    return _buildModernElementCard(
+                      context,
+                      element: element,
+                      index: originalIndex,
+                      globalIndex: globalIndex,
+                      sectionType: _currentSection == 0 ? 'dispositions' : 'conditions',
+                      color: _currentSectionColor,
+                    );
+                  }).toList(),
                   
-                  return _buildModernElementCard(
-                    context,
-                    element: element,
-                    index: originalIndex,
-                    globalIndex: globalIndex,
-                    sectionType: _currentSection == 0 ? 'dispositions' : 'conditions',
-                    color: _currentSectionColor,
-                  );
-                }).toList(),
+                  // Bouton "Autre" à la fin de chaque section
+                  SizedBox(height: context.spacingL),
+                  _buildAutreButton(),
+                ],
               );
             },
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildAutreButton() {
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: context.spacingL),
+      child: OutlinedButton.icon(
+        onPressed: () => widget.onAjouterAutre(_currentSection == 0 ? 'dispositions' : 'conditions'),
+        icon: Icon(Icons.add_circle_outline, size: context.iconSizeM, color: AppTheme.primaryBlue),
+        label: Text(
+          'AJOUTER UN ÉLÉMENT "AUTRE"',
+          style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w600, color: AppTheme.primaryBlue),
+        ),
+        style: OutlinedButton.styleFrom(
+          padding: EdgeInsets.symmetric(vertical: context.spacingM),
+          side: BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.spacingS)),
+        ),
+      ),
     );
   }
 
@@ -1257,7 +1292,7 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(context.spacingL),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: context.spacingS, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
         ],
       ),
       child: Column(
@@ -1369,8 +1404,6 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
               widget.onConformeChanged(element);
               widget.onElementChanged(element, index, 'conformite');
               
-              // Si conformité = Non -> Observation = Oui
-              // Si conformité = Oui -> Observation = Non (mais l'utilisateur peut changer)
               if (newValue == false) {
                 widget.onObservationToggleChanged(globalIndex, true, sectionType);
               } else {
@@ -1799,6 +1832,9 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
   
   late List<List<ElementControle>> _celluleElementsSlides;
   late List<List<ElementControle>> _transfoElementsSlides;
+  
+  // Options pour les dropdowns
+  static const List<String> _presentAbsentOptions = ['Présent', 'Absent'];
 
   @override
   void initState() {
@@ -1824,18 +1860,15 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
     }
   }
 
-  // Sections disponibles (fusionnées : plus d'onglets séparés pour données/éléments)
   List<Map<String, dynamic>> get _sections {
     final sections = <Map<String, dynamic>>[];
     
-    // Section 0 : Cellule (données + éléments combinés)
     sections.add({
       'title': 'CELLULE',
       'type': 'cellule',
       'color': const Color(0xFFE67E22),
     });
     
-    // Section 1 : Transformateur (données + éléments combinés)
     sections.add({
       'title': 'TRANSFORMATEUR',
       'type': 'transfo',
@@ -1852,10 +1885,8 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
 
   int _getTotalSlidesForCurrentSection() {
     if (_currentSection == 0) {
-      // Cellule : 1 slide pour données + N slides pour éléments
       return 1 + _celluleElementsSlides.length;
     } else {
-      // Transformateur : 1 slide pour données + N slides pour éléments
       return 1 + _transfoElementsSlides.length;
     }
   }
@@ -1893,8 +1924,8 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
            widget.celluleMarqueController.text.trim().isNotEmpty &&
            widget.celluleTensionController.text.trim().isNotEmpty &&
            widget.cellulePouvoirController.text.trim().isNotEmpty &&
-           widget.celluleNumerotationController.text.trim().isNotEmpty &&
-           widget.celluleParafoudresController.text.trim().isNotEmpty;
+           widget.celluleNumerotationController.text.isNotEmpty &&
+           widget.celluleParafoudresController.text.isNotEmpty;
   }
 
   bool _validateTransfoDonnees() {
@@ -2034,82 +2065,6 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
           ),
         ),
         
-        // Indicateurs de section (2 onglets seulement)
-        Padding(
-          padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
-          child: Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: EdgeInsets.symmetric(vertical: context.spacingS),
-                  decoration: BoxDecoration(
-                    color: _currentSection == 0 
-                        ? const Color(0xFFE67E22) 
-                        : (_currentSection > 0 ? const Color(0xFFE67E22).withOpacity(0.3) : Colors.grey.shade100),
-                    borderRadius: BorderRadius.circular(context.spacingXL),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        _currentSection > 0 ? Icons.check_circle : Icons.power,
-                        size: context.iconSizeXS,
-                        color: _currentSection == 0 || _currentSection > 0 ? Colors.white : Colors.grey.shade700,
-                      ),
-                      SizedBox(width: context.spacingXS),
-                      Flexible(
-                        child: Text(
-                          'CELLULE',
-                          style: TextStyle(
-                            fontSize: context.fontSizeXS,
-                            fontWeight: FontWeight.w600,
-                            color: _currentSection == 0 || _currentSection > 0 ? Colors.white : Colors.grey.shade700,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(width: context.spacingS),
-              Expanded(
-                child: Container(
-                  padding: EdgeInsets.symmetric(vertical: context.spacingS),
-                  decoration: BoxDecoration(
-                    color: _currentSection == 1 
-                        ? const Color(0xFF2980B9) 
-                        : Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(context.spacingXL),
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        Icons.transform,
-                        size: context.iconSizeXS,
-                        color: _currentSection == 1 ? Colors.white : Colors.grey.shade700,
-                      ),
-                      SizedBox(width: context.spacingXS),
-                      Flexible(
-                        child: Text(
-                          'TRANSFORMATEUR',
-                          style: TextStyle(
-                            fontSize: context.fontSizeXS,
-                            fontWeight: FontWeight.w600,
-                            color: _currentSection == 1 ? Colors.white : Colors.grey.shade700,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        
         // Titre de section avec compteur
         Container(
           padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
@@ -2169,7 +2124,6 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
 
   Widget _buildSectionContent(BuildContext context, int slideIndex) {
     if (_currentSection == 0) {
-      // Cellule
       if (slideIndex == 0) {
         return _buildCelluleDonnees(context);
       } else {
@@ -2185,7 +2139,6 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
         }
       }
     } else {
-      // Transformateur
       if (slideIndex == 0) {
         return _buildTransfoDonnees(context);
       } else {
@@ -2205,16 +2158,6 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
   }
 
   Widget _buildCelluleDonnees(BuildContext context) {
-    final fields = [
-      {'controller': widget.celluleFonctionController, 'label': 'Fonction de la cellule *', 'icon': Icons.power},
-      {'controller': widget.celluleTypeController, 'label': 'Type de cellule *', 'icon': Icons.category},
-      {'controller': widget.celluleMarqueController, 'label': 'Marque / modèle / année *', 'icon': Icons.branding_watermark},
-      {'controller': widget.celluleTensionController, 'label': 'Tension assignée *', 'icon': Icons.electrical_services},
-      {'controller': widget.cellulePouvoirController, 'label': 'Pouvoir de coupure (kA) *', 'icon': Icons.offline_bolt},
-      {'controller': widget.celluleNumerotationController, 'label': 'Numérotation / repérage *', 'icon': Icons.numbers},
-      {'controller': widget.celluleParafoudresController, 'label': 'Parafoudres installés *', 'icon': Icons.shield},
-    ];
-    
     return ListView(
       padding: EdgeInsets.all(context.spacingL),
       children: [
@@ -2248,29 +2191,82 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
           ),
         ),
         SizedBox(height: context.spacingL),
-        ...fields.map((field) => _buildModernInputField(
+        
+        _buildModernInputField(
           context,
-          controller: field['controller'] as TextEditingController,
-          label: field['label'] as String,
-          icon: field['icon'] as IconData,
+          controller: widget.celluleFonctionController,
+          label: 'Fonction de la cellule *',
+          icon: Icons.power,
           color: _currentColor,
           onChanged: () => setState(() {}),
-        )).toList(),
+        ),
+        _buildModernInputField(
+          context,
+          controller: widget.celluleTypeController,
+          label: 'Type de cellule *',
+          icon: Icons.category,
+          color: _currentColor,
+          onChanged: () => setState(() {}),
+        ),
+        _buildModernInputField(
+          context,
+          controller: widget.celluleMarqueController,
+          label: 'Marque / modèle / année *',
+          icon: Icons.branding_watermark,
+          color: _currentColor,
+          onChanged: () => setState(() {}),
+        ),
+        _buildModernInputField(
+          context,
+          controller: widget.celluleTensionController,
+          label: 'Tension assignée *',
+          icon: Icons.electrical_services,
+          color: _currentColor,
+          onChanged: () => setState(() {}),
+        ),
+        _buildModernInputField(
+          context,
+          controller: widget.cellulePouvoirController,
+          label: 'Pouvoir de coupure assigné (kA) *',
+          icon: Icons.offline_bolt,
+          color: _currentColor,
+          onChanged: () => setState(() {}),
+        ),
+        
+        // Dropdown pour Numérotation / repérage
+        _buildModernDropdown(
+          context,
+          label: 'Numérotation / repérage *',
+          value: widget.celluleNumerotationController.text,
+          items: _presentAbsentOptions,
+          icon: Icons.numbers,
+          color: _currentColor,
+          onChanged: (value) {
+            setState(() {
+              widget.celluleNumerotationController.text = value;
+            });
+          },
+        ),
+        
+        // Dropdown pour Parafoudres installés sur l'arrivée
+        _buildModernDropdown(
+          context,
+          label: 'Parafoudres installés sur l\'arrivée *',
+          value: widget.celluleParafoudresController.text,
+          items: _presentAbsentOptions,
+          icon: Icons.shield,
+          color: _currentColor,
+          onChanged: (value) {
+            setState(() {
+              widget.celluleParafoudresController.text = value;
+            });
+          },
+        ),
       ],
     );
   }
 
   Widget _buildTransfoDonnees(BuildContext context) {
-    final fields = [
-      {'controller': widget.transfoTypeController, 'label': 'Type de transformateur *', 'icon': Icons.transform},
-      {'controller': widget.transfoMarqueController, 'label': 'Marque / Année *', 'icon': Icons.branding_watermark},
-      {'controller': widget.transfoPuissanceController, 'label': 'Puissance assignée (kVA) *', 'icon': Icons.speed},
-      {'controller': widget.transfoTensionController, 'label': 'Tension primaire / secondaire *', 'icon': Icons.electrical_services},
-      {'controller': widget.transfoBuchholzController, 'label': 'Relais Buchholz *', 'icon': Icons.sensors},
-      {'controller': widget.transfoRefroidissementController, 'label': 'Type de refroidissement *', 'icon': Icons.ac_unit},
-      {'controller': widget.transfoRegimeController, 'label': 'Régime du neutre *', 'icon': Icons.settings_input_antenna},
-    ];
-    
     return ListView(
       padding: EdgeInsets.all(context.spacingL),
       children: [
@@ -2304,14 +2300,63 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
           ),
         ),
         SizedBox(height: context.spacingL),
-        ...fields.map((field) => _buildModernInputField(
+        
+        _buildModernInputField(
           context,
-          controller: field['controller'] as TextEditingController,
-          label: field['label'] as String,
-          icon: field['icon'] as IconData,
+          controller: widget.transfoTypeController,
+          label: 'Type de transformateur *',
+          icon: Icons.transform,
           color: _currentColor,
           onChanged: () => setState(() {}),
-        )).toList(),
+        ),
+        _buildModernInputField(
+          context,
+          controller: widget.transfoMarqueController,
+          label: 'Marque/ Année de fabrication *',
+          icon: Icons.branding_watermark,
+          color: _currentColor,
+          onChanged: () => setState(() {}),
+        ),
+        _buildModernInputField(
+          context,
+          controller: widget.transfoPuissanceController,
+          label: 'Puissance assignée (kVA) *',
+          icon: Icons.speed,
+          color: _currentColor,
+          onChanged: () => setState(() {}),
+        ),
+        _buildModernInputField(
+          context,
+          controller: widget.transfoTensionController,
+          label: 'Tension primaire / secondaire *',
+          icon: Icons.electrical_services,
+          color: _currentColor,
+          onChanged: () => setState(() {}),
+        ),
+        _buildModernInputField(
+          context,
+          controller: widget.transfoBuchholzController,
+          label: 'Présence du relais Buchholz *',
+          icon: Icons.sensors,
+          color: _currentColor,
+          onChanged: () => setState(() {}),
+        ),
+        _buildModernInputField(
+          context,
+          controller: widget.transfoRefroidissementController,
+          label: 'Type de refroidissement *',
+          icon: Icons.ac_unit,
+          color: _currentColor,
+          onChanged: () => setState(() {}),
+        ),
+        _buildModernInputField(
+          context,
+          controller: widget.transfoRegimeController,
+          label: 'Régime du neutre *',
+          icon: Icons.settings_input_antenna,
+          color: _currentColor,
+          onChanged: () => setState(() {}),
+        ),
       ],
     );
   }
@@ -2354,6 +2399,104 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
           fillColor: Colors.white,
           contentPadding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingM),
         ),
+      ),
+    );
+  }
+
+  Widget _buildModernDropdown(
+    BuildContext context, {
+    required String label,
+    required String value,
+    required List<String> items,
+    required IconData icon,
+    required Color color,
+    required Function(String) onChanged,
+  }) {
+    final isValid = value.isNotEmpty;
+    
+    return Container(
+      margin: EdgeInsets.only(bottom: context.spacingM),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingM),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
+        ],
+        border: Border.all(color: isValid ? Colors.transparent : Colors.red.shade300, width: isValid ? 0 : 1.5),
+      ),
+      child: DropdownButtonFormField<String>(
+        value: value.isNotEmpty ? value : null,
+        isExpanded: true,
+        icon: Icon(Icons.arrow_drop_down_circle, color: color, size: context.iconSizeM),
+        dropdownColor: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingM),
+        hint: Text(
+          'Sélectionnez...',
+          style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500),
+        ),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: context.fontSizeS),
+          prefixIcon: Icon(icon, color: color, size: context.iconSizeS),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingM),
+        ),
+        style: TextStyle(fontSize: context.fontSizeS, color: AppTheme.darkBlue),
+        items: items.map((item) {
+          return DropdownMenuItem<String>(
+            value: item,
+            child: Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: item == 'Présent' ? Colors.green : Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                SizedBox(width: context.spacingS),
+                Text(
+                  item,
+                  style: TextStyle(
+                    color: item == 'Présent' ? Colors.green.shade700 : Colors.red.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+        onChanged: (value) {
+          if (value != null) {
+            onChanged(value);
+          }
+        },
+        selectedItemBuilder: (BuildContext context) {
+          return items.map<Widget>((item) {
+            return Row(
+              children: [
+                Icon(
+                  Icons.check_circle,
+                  color: item == 'Présent' ? Colors.green : Colors.red,
+                  size: context.iconSizeS,
+                ),
+                SizedBox(width: context.spacingS),
+                Expanded(
+                  child: Text(
+                    item,
+                    style: TextStyle(
+                      fontSize: context.fontSizeS,
+                      color: item == 'Présent' ? Colors.green.shade700 : Colors.red.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            );
+          }).toList();
+        },
       ),
     );
   }
@@ -3040,8 +3183,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
            _celluleMarqueController.text.trim().isNotEmpty &&
            _celluleTensionController.text.trim().isNotEmpty &&
            _cellulePouvoirController.text.trim().isNotEmpty &&
-           _celluleNumerotationController.text.trim().isNotEmpty &&
-           _celluleParafoudresController.text.trim().isNotEmpty;
+           _celluleNumerotationController.text.isNotEmpty &&
+           _celluleParafoudresController.text.isNotEmpty;
   }
 
   bool _validateTransfoDonnees() {
@@ -3416,6 +3559,76 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     }
   }
 
+  void _onAjouterAutre(String sectionType) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final controller = TextEditingController();
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Ajouter un élément "Autre"'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Saisissez la description de l\'élément à ajouter :',
+                style: TextStyle(fontSize: context.fontSizeM),
+              ),
+              SizedBox(height: context.spacingM),
+              TextFormField(
+                controller: controller,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Ex: Présence de rongeurs...',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Annuler'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                final texte = controller.text.trim();
+                if (texte.isNotEmpty) {
+                  Navigator.pop(context);
+                  setState(() {
+                    final nouvelElement = ElementControle(
+                      elementControle: texte,
+                      conforme: false,
+                      priorite: 3,
+                    );
+                    _conformeSelected[nouvelElement] = false;
+                    
+                    if (sectionType == 'dispositions') {
+                      _dispositionsConstructives.add(nouvelElement);
+                      _hasObservation[_dispositionsConstructives.length - 1] = false;
+                    } else {
+                      _conditionsExploitation.add(nouvelElement);
+                      _hasObservation[_dispositionsConstructives.length + _conditionsExploitation.length - 1] = false;
+                    }
+                    
+                    // Reconstruire les slides
+                    _etapeElementsKey?.currentState?._buildSlides();
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: const Text('Ajouter'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Future<void> _prendrePhotoPourElement(ElementControle element, int elementIndex, String sectionType) async {
     try {
       final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
@@ -3567,8 +3780,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         marqueModeleAnnee: _celluleMarqueController.text.trim(),
         tensionAssignee: _celluleTensionController.text.trim(),
         pouvoirCoupure: _cellulePouvoirController.text.trim(),
-        numerotation: _celluleNumerotationController.text.trim(),
-        parafoudres: _celluleParafoudresController.text.trim(),
+        numerotation: _celluleNumerotationController.text,
+        parafoudres: _celluleParafoudresController.text,
         elementsVerifies: _celluleElements,
       ) : null,
       transformateur: _selectedType == 'LOCAL_TRANSFORMATEUR' ? TransformateurMTBT(
@@ -3712,6 +3925,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                       onSupprimerPhotoElement: _supprimerPhotoElement,
                       onObservationChanged: _onElementObservationChanged,
                       onUseSuggestion: _useElementSuggestion,
+                      onAjouterAutre: _onAjouterAutre,
                     ),
                   if (_selectedType == 'LOCAL_TRANSFORMATEUR')
                     _EtapeCelluleTransformateur(

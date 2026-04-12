@@ -63,7 +63,8 @@ class _EtapeInformationsBase extends StatefulWidget {
   final Function() onChoisirPhotoInterne;
   final bool isLoadingPhotosExterne;
   final bool isLoadingPhotosInterne;
-  final VoidCallback onSupprimerPhoto;
+  final Function(int) onSupprimerPhotoExterne;
+  final Function(int) onSupprimerPhotoInterne;
   final bool isInZone;
   
   // Observation équipement
@@ -92,7 +93,8 @@ class _EtapeInformationsBase extends StatefulWidget {
     required this.onChoisirPhotoInterne,
     required this.isLoadingPhotosExterne,
     required this.isLoadingPhotosInterne,
-    required this.onSupprimerPhoto,
+    required this.onSupprimerPhotoExterne,
+    required this.onSupprimerPhotoInterne,
     required this.isInZone,
     required this.observationController,
     required this.observationPhotos,
@@ -111,6 +113,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
   final PageController _photosInterneController = PageController();
   int _currentExterneIndex = 0;
   int _currentInterneIndex = 0;
+
   
   final List<Map<String, dynamic>> _niveauPuissanceOptions = [
     {'value': 'tres_petites_sections', 'label': 'Très petites sections', 'icon': Icons.energy_savings_leaf},
@@ -182,6 +185,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
           isLoading: widget.isLoadingPhotosExterne,
           onPrendrePhoto: widget.onPrendrePhotoExterne,
           onChoisirPhoto: widget.onChoisirPhotoExterne,
+          onSupprimerPhoto: widget.onSupprimerPhotoExterne,
           isRequired: true,
         ),
         SizedBox(height: context.spacingXL),
@@ -196,6 +200,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
           isLoading: widget.isLoadingPhotosInterne,
           onPrendrePhoto: widget.onPrendrePhotoInterne,
           onChoisirPhoto: widget.onChoisirPhotoInterne,
+          onSupprimerPhoto: widget.onSupprimerPhotoInterne,
           isRequired: true,
         ),
         SizedBox(height: context.spacingXL),
@@ -426,6 +431,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
     required bool isLoading,
     required Function() onPrendrePhoto,
     required Function() onChoisirPhoto,
+    required Function(int) onSupprimerPhoto,
     bool isRequired = false,
   }) {
     final photoHeight = context.screenHeight * 0.2;
@@ -472,7 +478,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
           ),
           
           if (isLoading)
-            Container(
+            SizedBox(
               height: photoHeight,
               width: double.infinity,
               child: Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue)),
@@ -515,16 +521,61 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
                     onPageChanged: onPageChanged,
                     itemCount: photos.length,
                     itemBuilder: (context, index) {
-                      return Container(
-                        margin: EdgeInsets.symmetric(horizontal: context.spacingXS),
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(context.spacingS),
-                          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 2))],
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(context.spacingS),
-                          child: Image.file(File(photos[index]), fit: BoxFit.cover),
-                        ),
+                      return Stack(
+                        children: [
+                          // Image
+                          Container(
+                            margin: EdgeInsets.symmetric(horizontal: context.spacingXS),
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(context.spacingS),
+                              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 6, offset: const Offset(0, 2))],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(context.spacingS),
+                              child: Image.file(File(photos[index]), fit: BoxFit.cover),
+                            ),
+                          ),
+                          // Bouton de suppression
+                          Positioned(
+                            top: context.spacingS,
+                            right: context.spacingS + context.spacingXS,
+                            child: GestureDetector(
+                              onTap: () => onSupprimerPhoto(index),
+                              child: Container(
+                                padding: EdgeInsets.all(context.spacingXS),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.withOpacity(0.8),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.delete_outline,
+                                  size: context.iconSizeS,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ),
+                          ),
+                          // Indicateur de numéro de photo (optionnel)
+                          Positioned(
+                            bottom: context.spacingS,
+                            left: context.spacingS + context.spacingXS,
+                            child: Container(
+                              padding: EdgeInsets.symmetric(horizontal: context.spacingS, vertical: context.spacingXS),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.6),
+                                borderRadius: BorderRadius.circular(context.spacingL),
+                              ),
+                              child: Text(
+                                '${index + 1}/${photos.length}',
+                                style: TextStyle(
+                                  fontSize: context.fontSizeXS,
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
                       );
                     },
                   ),
@@ -836,7 +887,7 @@ class _EtapeInformationsGenerales extends StatelessWidget {
             ),
           ),
           child: DropdownButtonFormField<String>(
-            value: domaineTension,
+            value: domaineTension.isNotEmpty ? domaineTension : null,
             isExpanded: true,
             icon: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryBlue, size: context.iconSizeM),
             dropdownColor: Colors.white,
@@ -1028,7 +1079,6 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     '150 mm²', '185 mm²', '240 mm²', '300 mm²',
   ];
 
-  // Contrôleurs pour chaque champ (pour le focus et la validation)
   final Map<String, TextEditingController> _controllers = {};
 
   @override
@@ -1336,22 +1386,26 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
 }
 
 // ================================================================
-// ÉTAPE 4 : POINTS DE VÉRIFICATION
+// ÉTAPE 4 : POINTS DE VÉRIFICATION (MODIFIÉ)
 // ================================================================
 class _EtapePointsVerification extends StatefulWidget {
   final List<PointVerification> pointsVerification;
   final Map<int, List<String>> pointSuggestions;
   final Map<int, bool> pointLoading;
+  final Map<int, bool> hasObservation; // Nouveau : pour le toggle observation
   final Function(int, String) onObservationChanged;
   final Function(int, String, PointVerification) onUseSuggestion;
+  final Function(int, bool) onObservationToggleChanged; // Nouveau : callback pour toggle
 
   const _EtapePointsVerification({
     super.key,
     required this.pointsVerification,
     required this.pointSuggestions,
     required this.pointLoading,
+    required this.hasObservation,
     required this.onObservationChanged,
     required this.onUseSuggestion,
+    required this.onObservationToggleChanged,
   });
 
   @override
@@ -1372,7 +1426,6 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
 
   void _buildSlides() {
     _pointsSlides = [];
-    // 3 éléments par slide
     for (int i = 0; i < widget.pointsVerification.length; i += 3) {
       final end = (i + 3).clamp(0, widget.pointsVerification.length);
       _pointsSlides.add(widget.pointsVerification.sublist(i, end));
@@ -1387,20 +1440,17 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
     
     final currentPoints = _pointsSlides[_currentSlide];
     for (var point in currentPoints) {
-      // Vérifier uniquement la conformité et la priorité (l'observation n'est plus obligatoire)
       if (point.conformite.isEmpty || point.conformite == 'non_applicable') {
-        continue; // Non applicable est acceptable
+        continue;
       }
-      if (point.priorite == null) {
-        return false;
-      }
+      // La priorité n'est plus obligatoire
     }
     return true;
   }
 
   void nextSlide() {
     if (!_isCurrentSlideValid()) {
-      _showError('Veuillez sélectionner la conformité et la priorité pour tous les points');
+      _showError('Veuillez sélectionner la conformité pour tous les points');
       return;
     }
     
@@ -1453,7 +1503,6 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
 
     return Column(
       children: [
-        // En-tête compact
         Container(
           padding: EdgeInsets.all(context.spacingL),
           decoration: BoxDecoration(
@@ -1497,7 +1546,6 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
           ),
         ),
         
-        // Barre de progression
         Padding(
           padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
           child: LinearProgressIndicator(
@@ -1509,7 +1557,6 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
           ),
         ),
         
-        // Liste des points - 3 par slide
         Expanded(
           child: PageView.builder(
             controller: _slideController,
@@ -1518,7 +1565,6 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
             itemCount: _totalSlides,
             itemBuilder: (context, slideIndex) {
               final slidePoints = _pointsSlides[slideIndex];
-              // Calculer l'index de départ pour les numéros
               final startIndex = slideIndex * 3;
               
               return ListView(
@@ -1538,6 +1584,7 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
   Widget _buildModernPointCard(BuildContext context, PointVerification point, int pointIndex) {
     final suggestions = widget.pointSuggestions[pointIndex] ?? [];
     final isLoading = widget.pointLoading[pointIndex] ?? false;
+    final hasObservation = widget.hasObservation[pointIndex] ?? false;
     
     return Container(
       margin: EdgeInsets.only(bottom: context.spacingL),
@@ -1552,7 +1599,6 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Numéro et question
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1583,63 +1629,25 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
           
           SizedBox(height: context.spacingM),
           
-          // Conformité et Priorité - côte à côte
+          // Conformité et Référence normative
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Expanded(child: _buildConformiteSelector(context, point)),
               SizedBox(width: context.spacingS),
-              Expanded(child: _buildPrioriteSelector(context, point)),
+              Expanded(child: _buildReferenceNormativeField(context, point)),
             ],
           ),
           
-          // Suggestions (optionnel)
-          if (suggestions.isNotEmpty) ...[
-            SizedBox(height: context.spacingS),
-            Container(
-              padding: EdgeInsets.all(context.spacingS),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(context.spacingS),
-                border: Border.all(color: Colors.green.withOpacity(0.2)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.lightbulb_outline, size: context.iconSizeXS, color: Colors.amber),
-                      SizedBox(width: context.spacingXS),
-                      Text('Suggestions', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
-                    ],
-                  ),
-                  SizedBox(height: context.spacingXS),
-                  Wrap(
-                    spacing: context.spacingS,
-                    runSpacing: context.spacingXS,
-                    children: suggestions.map((s) => GestureDetector(
-                      onTap: () => widget.onUseSuggestion(pointIndex, s, point),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: context.spacingS, vertical: context.spacingXS),
-                        decoration: BoxDecoration(
-                          color: Colors.green.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(context.spacingL),
-                        ),
-                        child: Text(s, style: TextStyle(fontSize: context.fontSizeXS, color: Colors.green.shade800)),
-                      ),
-                    )).toList(),
-                  ),
-                ],
-              ),
-            ),
-          ],
+          // Toggle Observation
+          SizedBox(height: context.spacingM),
+          _buildObservationToggle(context, pointIndex, hasObservation),
           
-          // Loading indicator
-          if (isLoading)
-            Padding(
-              padding: EdgeInsets.only(top: context.spacingS),
-              child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
-            ),
+          // Champ Observation (conditionnel)
+          if (hasObservation) ...[
+            SizedBox(height: context.spacingS),
+            _buildObservationField(context, point, pointIndex, suggestions, isLoading),
+          ],
         ],
       ),
     );
@@ -1712,7 +1720,7 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
             switch (value) {
               case 'oui': color = Colors.green; text = 'Oui'; break;
               case 'non': color = Colors.red; text = 'Non'; break;
-              default: color = Colors.orange; text = 'Non applicable';
+              default: color = Colors.orange; text = 'NA';
             }
             return Row(
               children: [
@@ -1727,85 +1735,149 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
     );
   }
 
-  Widget _buildPrioriteSelector(BuildContext context, PointVerification point) {
-    final isValid = point.priorite != null;
-    
+  Widget _buildReferenceNormativeField(BuildContext context, PointVerification point) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(context.spacingS),
-        border: Border.all(
-          color: isValid ? Colors.grey.shade300 : Colors.red.shade300,
-          width: isValid ? 1 : 1.5,
-        ),
+        border: Border.all(color: Colors.grey.shade300),
       ),
-      child: DropdownButtonFormField<int>(
-        value: point.priorite,
-        hint: Text(
-          'Priorité *',
-          style: TextStyle(fontSize: context.fontSizeS, color: isValid ? Colors.grey.shade500 : Colors.red.shade400),
-        ),
-        isExpanded: true,
-        onChanged: (v) {
-          setState(() {
-            point.priorite = v;
-          });
+      child: TextFormField(
+        initialValue: point.referenceNormative ?? '',
+        style: TextStyle(fontSize: context.fontSizeS),
+        onChanged: (value) {
+          point.referenceNormative = value.isEmpty ? null : value;
         },
         decoration: InputDecoration(
+          labelText: 'Référence normative',
+          labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
+          hintText: 'Ex: NFC 15-100',
+          hintStyle: TextStyle(fontSize: context.fontSizeXS, color: Colors.grey.shade400),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingM),
         ),
-        items: [
-          DropdownMenuItem(
-            value: 1,
-            child: Row(
-              children: [
-                Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle)),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text('N1 - Basse', style: TextStyle(fontSize: context.fontSizeS))),
-              ],
-            ),
-          ),
-          DropdownMenuItem(
-            value: 2,
-            child: Row(
-              children: [
-                Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle)),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text('N2 - Moyenne', style: TextStyle(fontSize: context.fontSizeS))),
-              ],
-            ),
-          ),
-          DropdownMenuItem(
-            value: 3,
-            child: Row(
-              children: [
-                Container(width: 8, height: 8, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text('N3 - Haute', style: TextStyle(fontSize: context.fontSizeS))),
-              ],
-            ),
-          ),
-        ],
-        selectedItemBuilder: (BuildContext context) {
-          return [1, 2, 3].map<Widget>((value) {
-            Color color;
-            String text;
-            switch (value) {
-              case 1: color = Colors.blue; text = 'N1 - Basse'; break;
-              case 2: color = Colors.orange; text = 'N2 - Moyenne'; break;
-              default: color = Colors.red; text = 'N3 - Haute';
-            }
-            return Row(
-              children: [
-                Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text(text, style: TextStyle(fontSize: context.fontSizeS, color: color))),
-              ],
-            );
-          }).toList();
-        },
       ),
+    );
+  }
+
+  Widget _buildObservationToggle(BuildContext context, int pointIndex, bool hasObservation) {
+    return Row(
+      children: [
+        Flexible(
+          child: Text(
+            'Ajouter une observation ?',
+            style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        SizedBox(width: context.spacingS),
+        GestureDetector(
+          onTap: () => widget.onObservationToggleChanged(pointIndex, true),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
+            decoration: BoxDecoration(
+              color: hasObservation ? Colors.green.withOpacity(0.15) : Colors.transparent,
+              borderRadius: BorderRadius.circular(context.spacingL),
+              border: Border.all(
+                color: hasObservation ? Colors.green : Colors.grey.shade300,
+                width: hasObservation ? 2 : 1,
+              ),
+            ),
+            child: Text('Oui', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: hasObservation ? Colors.green : Colors.grey.shade600)),
+          ),
+        ),
+        SizedBox(width: context.spacingS),
+        GestureDetector(
+          onTap: () => widget.onObservationToggleChanged(pointIndex, false),
+          child: Container(
+            padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
+            decoration: BoxDecoration(
+              color: !hasObservation ? Colors.red.withOpacity(0.15) : Colors.transparent,
+              borderRadius: BorderRadius.circular(context.spacingL),
+              border: Border.all(
+                color: !hasObservation ? Colors.red : Colors.grey.shade300,
+                width: !hasObservation ? 2 : 1,
+              ),
+            ),
+            child: Text('Non', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: !hasObservation ? Colors.red : Colors.grey.shade600)),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildObservationField(BuildContext context, PointVerification point, int pointIndex, List<String> suggestions, bool isLoading) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(context.spacingS),
+            border: Border.all(color: Colors.grey.shade200),
+          ),
+          child: TextFormField(
+            initialValue: point.observation ?? '',
+            style: TextStyle(fontSize: context.fontSizeS),
+            onChanged: (value) {
+              point.observation = value;
+              widget.onObservationChanged(pointIndex, value);
+            },
+            decoration: InputDecoration(
+              hintText: 'Saisissez votre observation...',
+              hintStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade400),
+              border: InputBorder.none,
+              contentPadding: EdgeInsets.all(context.spacingM),
+            ),
+            maxLines: 3,
+          ),
+        ),
+        
+        if (suggestions.isNotEmpty)
+          Container(
+            margin: EdgeInsets.only(top: context.spacingS),
+            padding: EdgeInsets.all(context.spacingS),
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(context.spacingS),
+              border: Border.all(color: Colors.green.withOpacity(0.2)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.lightbulb_outline, size: context.iconSizeXS, color: Colors.amber),
+                    SizedBox(width: context.spacingXS),
+                    Text('Suggestions', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
+                  ],
+                ),
+                SizedBox(height: context.spacingXS),
+                Wrap(
+                  spacing: context.spacingS,
+                  runSpacing: context.spacingXS,
+                  children: suggestions.map((s) => GestureDetector(
+                    onTap: () => widget.onUseSuggestion(pointIndex, s, point),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: context.spacingS, vertical: context.spacingXS),
+                      decoration: BoxDecoration(
+                        color: Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(context.spacingL),
+                      ),
+                      child: Text(s, style: TextStyle(fontSize: context.fontSizeXS, color: Colors.green.shade800)),
+                    ),
+                  )).toList(),
+                ),
+              ],
+            ),
+          ),
+        
+        if (isLoading)
+          Padding(
+            padding: EdgeInsets.only(top: context.spacingS),
+            child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
+          ),
+      ],
     );
   }
 }
@@ -1853,7 +1925,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   bool _isQrCodeValid = false;
 
   bool _zoneAtex = false;
-  String _domaineTension = '230/400';
+  String _domaineTension = '';
   bool _identificationArmoire = false;
   bool _signalisationDanger = false;
   bool _presenceSchema = false;
@@ -1879,13 +1951,17 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   Map<int, List<String>> _pointSuggestions = {};
   Map<int, bool> _pointLoading = {};
   Map<int, Timer?> _pointDebounceTimers = {};
+  Map<int, bool> _hasObservation = {}; // Nouveau : pour le toggle observation
 
   bool _nomValid = false;
   bool _typeValid = false;
   bool _repereValid = false;
   bool _alimentationsValid = false;
   bool _pointsValid = false;
-  bool _domaineTensionValid = true;
+  bool _domaineTensionValid = false;
+
+  bool _photosExterneValid = false;
+  bool _photosInterneValid = false;
 
   final PageController _mainPageController = PageController();
   int _currentStep = 0;
@@ -1961,7 +2037,6 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     for (var a in _alimentations) {
       if (a.typeProtection.isEmpty || a.pdcKA.isEmpty || a.calibre.isEmpty || a.sectionCable.isEmpty) {
         isValid = false;
-        print('❌ Alimentation invalide: type=${a.typeProtection}, pdc=${a.pdcKA}, calibre=${a.calibre}, cable=${a.sectionCable}');
         break;
       }
     }
@@ -1971,7 +2046,6 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
           _protectionTete!.calibre.isEmpty || 
           _protectionTete!.sectionCable.isEmpty) {
         isValid = false;
-        print('❌ Protection tête invalide: type=${_protectionTete!.typeProtection}, pdc=${_protectionTete!.pdcKA}, calibre=${_protectionTete!.calibre}, cable=${_protectionTete!.sectionCable}');
       }
     }
     setState(() => _alimentationsValid = isValid);
@@ -1980,7 +2054,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   void _validatePoints() {
     bool isValid = true;
     for (var point in _pointsVerification) {
-      if (point.conformite.isEmpty || point.priorite == null) {
+      if (point.conformite.isEmpty) {
         isValid = false;
         break;
       }
@@ -1998,11 +2072,26 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     if (!_alimentationsValid) allValid = false;
     
     _validatePoints();
-    if (!_pointsValid) allValid = false;
+      if (!_pointsValid) allValid = false;
     
     if (_domaineTension.isEmpty) { _domaineTensionValid = false; allValid = false; }
-    if (_coffretPhotosExterne.isEmpty) { allValid = false; _showError('Photo EXTERNE requise'); }
-    if (_coffretPhotosInterne.isEmpty) { allValid = false; _showError('Photo INTERNE requise'); }
+    
+    // Validation des photos
+    if (_coffretPhotosExterne.isEmpty) { 
+      _photosExterneValid = false; 
+      allValid = false; 
+      _showError('La photo EXTERNE est obligatoire');
+    } else {
+      _photosExterneValid = true;
+    }
+    
+    if (_coffretPhotosInterne.isEmpty) { 
+      _photosInterneValid = false; 
+      allValid = false; 
+      _showError('La photo INTERNE est obligatoire');
+    } else {
+      _photosInterneValid = true;
+    }
     
     setState(() {});
     return allValid;
@@ -2012,6 +2101,18 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     if (qrCode.isEmpty) { setState(() => _isQrCodeValid = false); return; }
     final existing = HiveService.findCoffretByQrCode(widget.mission.id, qrCode);
     _isQrCodeValid = widget.isEdition ? true : existing == null;
+  }
+
+  void _validatePhotosExterne() {
+    setState(() {
+      _photosExterneValid = _coffretPhotosExterne.isNotEmpty;
+    });
+  }
+
+  void _validatePhotosInterne() {
+    setState(() {
+      _photosInterneValid = _coffretPhotosInterne.isNotEmpty;
+    });
   }
 
   void _chargerDonneesExistantes() {
@@ -2031,8 +2132,16 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     _pointsVerification = List.from(coffret.pointsVerification.map((point) => PointVerification(
       pointVerification: point.pointVerification,
       conformite: point.conformite,
-      priorite: point.priorite ?? 3,
+      observation: point.observation,
+      referenceNormative: point.referenceNormative,
+      photos: List.from(point.photos),
     )));
+    
+    // Initialiser hasObservation pour les points existants
+    for (int i = 0; i < _pointsVerification.length; i++) {
+      _hasObservation[i] = _pointsVerification[i].observation != null && _pointsVerification[i].observation!.isNotEmpty;
+    }
+    
     if (coffret.photos.isNotEmpty) {
       _coffretPhotosExterne = List.from(coffret.photos);
     }
@@ -2045,13 +2154,17 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     _validateDomaineTension(coffret.domaineTension);
   }
 
+
   Future<void> _prendrePhotoExterne() async {
     try {
       final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
       if (photo != null) {
         setState(() => _isLoadingPhotosExterne = true);
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_externe');
-        setState(() => _coffretPhotosExterne.add(savedPath));
+        setState(() {
+          _coffretPhotosExterne.add(savedPath);
+          _validatePhotosExterne(); 
+        });
       }
     } catch (e) { _showError('Erreur photo externe: $e'); } finally { setState(() => _isLoadingPhotosExterne = false); }
   }
@@ -2062,7 +2175,10 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
       if (photo != null) {
         setState(() => _isLoadingPhotosExterne = true);
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_externe');
-        setState(() => _coffretPhotosExterne.add(savedPath));
+        setState(() {
+          _coffretPhotosExterne.add(savedPath);
+          _validatePhotosExterne(); 
+        });
       }
     } catch (e) { _showError('Erreur sélection photo externe: $e'); } finally { setState(() => _isLoadingPhotosExterne = false); }
   }
@@ -2073,21 +2189,27 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
       if (photo != null) {
         setState(() => _isLoadingPhotosInterne = true);
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_interne');
-        setState(() => _coffretPhotosInterne.add(savedPath));
+        setState(() {
+          _coffretPhotosInterne.add(savedPath);
+          _validatePhotosInterne();
+        });
       }
     } catch (e) { _showError('Erreur photo interne: $e'); } finally { setState(() => _isLoadingPhotosInterne = false); }
   }
 
-  Future<void> _choisirPhotoInterne() async {
-    try {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
-      if (photo != null) {
-        setState(() => _isLoadingPhotosInterne = true);
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_interne');
-        setState(() => _coffretPhotosInterne.add(savedPath));
-      }
-    } catch (e) { _showError('Erreur sélection photo interne: $e'); } finally { setState(() => _isLoadingPhotosInterne = false); }
-  }
+Future<void> _choisirPhotoInterne() async {
+  try {
+    final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
+    if (photo != null) {
+      setState(() => _isLoadingPhotosInterne = true);
+      final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_interne');
+      setState(() {
+        _coffretPhotosInterne.add(savedPath);
+        _validatePhotosInterne();
+      });
+    }
+  } catch (e) { _showError('Erreur sélection photo interne: $e'); } finally { setState(() => _isLoadingPhotosInterne = false); }
+}
 
   Future<void> _prendrePhotoObservation() async {
     try {
@@ -2119,6 +2241,61 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     return newPath;
   }
 
+
+  void _supprimerPhotoExterne(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer la photo'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer cette photo ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _coffretPhotosExterne.removeAt(index);
+                _validatePhotosExterne();
+              });
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _supprimerPhotoInterne(int index) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer la photo'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer cette photo ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _coffretPhotosInterne.removeAt(index);
+                _validatePhotosInterne();
+              });
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   void _showError(String message) => ScaffoldMessenger.of(context).showSnackBar(
     SnackBar(content: Text(message), backgroundColor: Colors.red, duration: const Duration(seconds: 3))
   );
@@ -2140,8 +2317,15 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     if (type == null) return;
     if (!widget.isEdition) {
       _pointsVerification = HiveService.getPointsVerificationForCoffret(type).map((point) => PointVerification(
-        pointVerification: point, conformite: '', priorite: 3,
+        pointVerification: point, conformite: '', observation: null, referenceNormative: null,
       )).toList();
+      
+      // Initialiser hasObservation
+      _hasObservation.clear();
+      for (int i = 0; i < _pointsVerification.length; i++) {
+        _hasObservation[i] = false;
+      }
+      
       _alimentations.clear();
       _protectionTete = null;
       if (type == 'INVERSEUR') {
@@ -2165,6 +2349,41 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
       }
       await HiveService.saveMesuresEssais(mesures);
     } catch (e) { _showError('Erreur transfert essais'); }
+  }
+
+  void _onPointObservationChanged(int index, String text) {
+    if (text.length >= 3) {
+      _pointDebounceTimers[index]?.cancel();
+      _pointDebounceTimers[index] = Timer(const Duration(milliseconds: 500), () async {
+        try {
+          final res = await http.post(
+            Uri.parse('$_baseUrl/api/v1/autocomplete'),
+            headers: {'Content-Type': 'application/json'},
+            body: json.encode({'query': text, 'max_results': 5}),
+          ).timeout(const Duration(seconds: 5));
+          if (res.statusCode == 200) {
+            final data = json.decode(res.body) as Map<String, dynamic>;
+            setState(() => _pointSuggestions[index] = List<String>.from(data['suggestions'] ?? []));
+          }
+        } catch (e) {}
+      });
+    } else {
+      setState(() => _pointSuggestions[index]?.clear());
+    }
+  }
+
+  void _onUsePointSuggestion(int index, String suggestion, PointVerification point) {
+    point.observation = suggestion;
+    setState(() => _pointSuggestions[index]?.clear());
+  }
+
+  void _onObservationToggleChanged(int index, bool value) {
+    setState(() {
+      _hasObservation[index] = value;
+      if (!value) {
+        _pointsVerification[index].observation = null;
+      }
+    });
   }
 
   void _sauvegarder() async {
@@ -2322,13 +2541,32 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     } catch (e) { return false; }
   }
 
+
   void _handleNext() {
     if (_currentStep == 0) {
-      if (_nomValid && _typeValid && _repereValid) {
-        _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-      } else {
-        _showError('Veuillez remplir tous les champs obligatoires');
+      // Vérifier tous les champs obligatoires de l'étape 1
+      if (!_nomValid) {
+        _showError('Veuillez saisir le nom de l\'équipement');
+        return;
       }
+      if (!_typeValid) {
+        _showError('Veuillez sélectionner le type d\'équipement');
+        return;
+      }
+      if (!_repereValid) {
+        _showError('Veuillez saisir le repère');
+        return;
+      }
+      if (!_photosExterneValid) {
+        _showError('La photo EXTERNE est obligatoire');
+        return;
+      }
+      if (!_photosInterneValid) {
+        _showError('La photo INTERNE est obligatoire');
+        return;
+      }
+      
+      _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     } else if (_currentStep == 1) {
       _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     } else if (_currentStep == 2) {
@@ -2348,7 +2586,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
         }
       }
     }
-  }
+  } 
 
   void _handlePrevious() {
     if (_currentStep == 3) {
@@ -2465,7 +2703,8 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
                     onChoisirPhotoInterne: _choisirPhotoInterne,
                     isLoadingPhotosExterne: _isLoadingPhotosExterne,
                     isLoadingPhotosInterne: _isLoadingPhotosInterne,
-                    onSupprimerPhoto: () {},
+                    onSupprimerPhotoExterne: _supprimerPhotoExterne,
+                    onSupprimerPhotoInterne: _supprimerPhotoInterne,
                     isInZone: widget.isInZone,
                     observationController: _observationController,
                     observationPhotos: _observationPhotos,
@@ -2506,7 +2745,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
                       verificationThermographie: _verificationThermographie,
                       onVerificationThermographieChanged: (v) => setState(() => _verificationThermographie = v ?? false),
                       domaineTension: _domaineTension,
-                      onDomaineTensionChanged: (v) { setState(() { _domaineTension = v ?? '230/400'; _validateDomaineTension(v); }); },
+                      onDomaineTensionChanged: (v) { setState(() { _domaineTension = v ?? ''; _validateDomaineTension(v); }); },
                       domaineTensionValid: _domaineTensionValid,
                     ),
                   
@@ -2527,30 +2766,10 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
                       pointsVerification: _pointsVerification,
                       pointSuggestions: _pointSuggestions,
                       pointLoading: _pointLoading,
-                      onObservationChanged: (index, text) {
-                        if (text.length >= 3) {
-                          _pointDebounceTimers[index]?.cancel();
-                          _pointDebounceTimers[index] = Timer(const Duration(milliseconds: 500), () async {
-                            try {
-                              final res = await http.post(
-                                Uri.parse('$_baseUrl/api/v1/autocomplete'),
-                                headers: {'Content-Type': 'application/json'},
-                                body: json.encode({'query': text, 'max_results': 5}),
-                              ).timeout(const Duration(seconds: 5));
-                              if (res.statusCode == 200) {
-                                final data = json.decode(res.body) as Map<String, dynamic>;
-                                setState(() => _pointSuggestions[index] = List<String>.from(data['suggestions'] ?? []));
-                              }
-                            } catch (e) {}
-                          });
-                        } else {
-                          setState(() => _pointSuggestions[index]?.clear());
-                        }
-                      },
-                      onUseSuggestion: (index, suggestion, point) {
-                        point.observation = suggestion;
-                        setState(() => _pointSuggestions[index]?.clear());
-                      },
+                      hasObservation: _hasObservation,
+                      onObservationChanged: _onPointObservationChanged,
+                      onUseSuggestion: _onUsePointSuggestion,
+                      onObservationToggleChanged: _onObservationToggleChanged,
                     ),
                 ].whereType<Widget>().toList(),
               ),
