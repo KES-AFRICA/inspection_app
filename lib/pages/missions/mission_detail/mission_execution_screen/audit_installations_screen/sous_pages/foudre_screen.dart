@@ -422,78 +422,81 @@ class _FoudreScreenState extends State<FoudreScreen> {
   Widget build(BuildContext context) {
     final filteredObservations = _getFilteredObservations();
     
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Observations Foudre'),
-        backgroundColor: AppTheme.primaryBlue,
-        foregroundColor: Colors.white,
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _ajouterObservation,
-        backgroundColor: AppTheme.primaryBlue,
-        foregroundColor: Colors.white,
-        child: Icon(Icons.add),
-      ),
-      body: Column(
-        children: [
-          _buildHeaderStats(),
-          SizedBox(height: 8),
-          //_buildSearchBar(),
-          _buildPriorityFilter(),
-          SizedBox(height: 8),
-          
-          if (_isLoading)
-            Expanded(
-              child: Center(
-                child: CircularProgressIndicator(),
-              ),
-            )
-          else if (filteredObservations.isEmpty)
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.warning_amber_outlined,
-                      size: 64,
-                      color: Colors.grey.shade400,
-                    ),
-                    SizedBox(height: 16),
-                    Text(
-                      _observations.isEmpty
-                          ? 'Aucune observation foudre'
-                          : 'Aucune observation correspondante',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.grey.shade600,
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Observations Foudre'),
+          backgroundColor: AppTheme.primaryBlue,
+          foregroundColor: Colors.white,
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _ajouterObservation,
+          backgroundColor: AppTheme.primaryBlue,
+          foregroundColor: Colors.white,
+          child: Icon(Icons.add),
+        ),
+        body: Column(
+          children: [
+            _buildHeaderStats(),
+            SizedBox(height: 8),
+            //_buildSearchBar(),
+            _buildPriorityFilter(),
+            SizedBox(height: 8),
+            
+            if (_isLoading)
+              Expanded(
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              )
+            else if (filteredObservations.isEmpty)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.warning_amber_outlined,
+                        size: 64,
+                        color: Colors.grey.shade400,
                       ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Cliquez sur le bouton + pour ajouter une observation',
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey.shade500,
+                      SizedBox(height: 16),
+                      Text(
+                        _observations.isEmpty
+                            ? 'Aucune observation foudre'
+                            : 'Aucune observation correspondante',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: Colors.grey.shade600,
+                        ),
                       ),
-                    ),
-                  ],
+                      SizedBox(height: 8),
+                      Text(
+                        'Cliquez sur le bouton + pour ajouter une observation',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Expanded(
+                child: RefreshIndicator(
+                  onRefresh: _loadObservations,
+                  child: ListView.builder(
+                    itemCount: filteredObservations.length,
+                    itemBuilder: (context, index) {
+                      return _buildObservationCard(filteredObservations[index]);
+                    },
+                  ),
                 ),
               ),
-            )
-          else
-            Expanded(
-              child: RefreshIndicator(
-                onRefresh: _loadObservations,
-                child: ListView.builder(
-                  itemCount: filteredObservations.length,
-                  itemBuilder: (context, index) {
-                    return _buildObservationCard(filteredObservations[index]);
-                  },
-                ),
-              ),
-            ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -179,90 +179,93 @@ class _MesuresEssaisScreenState extends State<MesuresEssaisScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Mesures et Essais'),
-        backgroundColor: AppTheme.primaryBlue,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _loadData,
-            tooltip: 'Actualiser',
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _loadData,
-              child: ListView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                children: [
-                  _buildSectionTile(
-                    'Conditions de mesure',
-                    Icons.thermostat_outlined,
-                    'Paramètres environnementaux de mesure',
-                    _navigateToConditionsMesure,
-                    'conditions_mesure',
-                  ),
-                  const Divider(height: 0, thickness: 0.5),
-                  
-                  _buildSectionTile(
-                    'Essais démarrage auto',
-                    Icons.power_settings_new_outlined,
-                    'Groupe électrogène - démarrage automatique',
-                    _navigateToDemarrageAuto,
-                    'demarrage_auto',
-                  ),
-                  const Divider(height: 0, thickness: 0.5),
-                  
-                  _buildSectionTile(
-                    'Test arrêt urgence',
-                    Icons.emergency_outlined,
-                    'Fonctionnement arrêt d\'urgence',
-                    _navigateToArretUrgence,
-                    'arret_urgence',
-                  ),
-                  const Divider(height: 0, thickness: 0.5),
-                  
-                  _buildSectionTile(
-                    'Prises de terre',
-                    Icons.bolt_outlined,
-                    'Mesures des prises de terre',
-                    _navigateToPrisesTerre,
-                    'prises_terre',
-                  ),
-                  const Divider(height: 0, thickness: 0.5),
-                  
-                  _buildSectionTile(
-                    'Avis sur les mesures',
-                    Icons.assessment_outlined,
-                    'Analyse et recommandations',
-                    _navigateToAvisMesures,
-                    'avis_mesures',
-                  ),
-                  const Divider(height: 0, thickness: 0.5),
-                  
-                  _buildSectionTile(
-                    'Essais déclenchement',
-                    Icons.flash_on_outlined,
-                    'Dispositifs différentiels',
-                    _navigateToEssaisDeclenchement,
-                    'essais_declenchement',
-                  ),
-                  const Divider(height: 0, thickness: 0.5),
-                  
-                  _buildSectionTile(
-                    'Continuité et résistance',
-                    Icons.cable_outlined,
-                    'Conducteurs de protection',
-                    _navigateToContinuiteResistance,
-                    'continuite_resistance',
-                  ),
-                ],
-              ),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Mesures et Essais'),
+          backgroundColor: AppTheme.primaryBlue,
+          foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _loadData,
+              tooltip: 'Actualiser',
             ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: _loadData,
+                child: ListView(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  children: [
+                    _buildSectionTile(
+                      'Conditions de mesure',
+                      Icons.thermostat_outlined,
+                      'Paramètres environnementaux de mesure',
+                      _navigateToConditionsMesure,
+                      'conditions_mesure',
+                    ),
+                    const Divider(height: 0, thickness: 0.5),
+                    
+                    _buildSectionTile(
+                      'Essais démarrage auto',
+                      Icons.power_settings_new_outlined,
+                      'Groupe électrogène - démarrage automatique',
+                      _navigateToDemarrageAuto,
+                      'demarrage_auto',
+                    ),
+                    const Divider(height: 0, thickness: 0.5),
+                    
+                    _buildSectionTile(
+                      'Test arrêt urgence',
+                      Icons.emergency_outlined,
+                      'Fonctionnement arrêt d\'urgence',
+                      _navigateToArretUrgence,
+                      'arret_urgence',
+                    ),
+                    const Divider(height: 0, thickness: 0.5),
+                    
+                    _buildSectionTile(
+                      'Prises de terre',
+                      Icons.bolt_outlined,
+                      'Mesures des prises de terre',
+                      _navigateToPrisesTerre,
+                      'prises_terre',
+                    ),
+                    const Divider(height: 0, thickness: 0.5),
+                    
+                    _buildSectionTile(
+                      'Avis sur les mesures',
+                      Icons.assessment_outlined,
+                      'Analyse et recommandations',
+                      _navigateToAvisMesures,
+                      'avis_mesures',
+                    ),
+                    const Divider(height: 0, thickness: 0.5),
+                    
+                    _buildSectionTile(
+                      'Essais déclenchement',
+                      Icons.flash_on_outlined,
+                      'Dispositifs différentiels',
+                      _navigateToEssaisDeclenchement,
+                      'essais_declenchement',
+                    ),
+                    const Divider(height: 0, thickness: 0.5),
+                    
+                    _buildSectionTile(
+                      'Continuité et résistance',
+                      Icons.cable_outlined,
+                      'Conducteurs de protection',
+                      _navigateToContinuiteResistance,
+                      'continuite_resistance',
+                    ),
+                  ],
+                ),
+              ),
+      ),
     );
   }
 }

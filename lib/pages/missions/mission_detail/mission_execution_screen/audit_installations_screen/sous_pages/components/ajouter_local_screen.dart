@@ -961,7 +961,8 @@ class _EtapeElementsControle extends StatefulWidget {
   final Function(ElementControle, int, int, String) onSupprimerPhotoElement;
   final Function(int, String, String) onObservationChanged;
   final Function(int, String, ElementControle, String) onUseSuggestion;
-  final Function(String) onAjouterAutre; // Nouveau : callback pour ajouter "Autre"
+  final Function(String) onAjouterAutre; // Callback pour ajouter "Autre"
+  final VoidCallback onRebuildSlides; // NOUVEAU : Callback pour reconstruire les slides après ajout
 
   const _EtapeElementsControle({
     super.key,
@@ -979,6 +980,7 @@ class _EtapeElementsControle extends StatefulWidget {
     required this.onObservationChanged,
     required this.onUseSuggestion,
     required this.onAjouterAutre,
+    required this.onRebuildSlides,
   });
 
   @override
@@ -1122,6 +1124,24 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
     return _isFirstSlide && _currentSection == 0;
   }
 
+  /// Méthode pour reconstruire les slides (appelée depuis le parent après ajout d'un élément)
+  void rebuildSlides() {
+    _buildSlides();
+    setState(() {});
+  }
+
+  /// Méthode pour aller au dernier slide de la section courante
+  void goToLastSlide() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_slideController.hasClients && _totalSlides > 0) {
+        _slideController.jumpToPage(_totalSlides - 1);
+        setState(() {
+          _currentSlide = _totalSlides - 1;
+        });
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_totalSlides == 0) {
@@ -1242,9 +1262,9 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
                     );
                   }).toList(),
                   
-                  // Bouton "Autre" à la fin de chaque section
-                  SizedBox(height: context.spacingL),
-                  _buildAutreButton(),
+                  // CORRECTION : Le bouton "Autre" n'apparaît que sur le DERNIER slide
+                  if (_isLastSlide)
+                    _buildAutreButton(),
                 ],
               );
             },
@@ -1258,10 +1278,15 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
     return Container(
       margin: EdgeInsets.symmetric(horizontal: context.spacingL),
       child: OutlinedButton.icon(
-        onPressed: () => widget.onAjouterAutre(_currentSection == 0 ? 'dispositions' : 'conditions'),
+        onPressed: () async {
+          // Appeler le callback pour ajouter un élément "Autre"
+          await widget.onAjouterAutre(_currentSection == 0 ? 'dispositions' : 'conditions');
+          // Après l'ajout, reconstruire les slides
+          widget.onRebuildSlides();
+        },
         icon: Icon(Icons.add_circle_outline, size: context.iconSizeM, color: AppTheme.primaryBlue),
         label: Text(
-          'AJOUTER UN ÉLÉMENT "AUTRE"',
+          'AUTRE',
           style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w600, color: AppTheme.primaryBlue),
         ),
         style: OutlinedButton.styleFrom(
@@ -3559,8 +3584,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     }
   }
 
-  void _onAjouterAutre(String sectionType) {
-    showDialog(
+  void _onAjouterAutre(String sectionType) async {
+    final result = await showDialog<ElementControle>(
       context: context,
       builder: (context) {
         final controller = TextEditingController();
@@ -3595,26 +3620,12 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
               onPressed: () {
                 final texte = controller.text.trim();
                 if (texte.isNotEmpty) {
-                  Navigator.pop(context);
-                  setState(() {
-                    final nouvelElement = ElementControle(
-                      elementControle: texte,
-                      conforme: false,
-                      priorite: 3,
-                    );
-                    _conformeSelected[nouvelElement] = false;
-                    
-                    if (sectionType == 'dispositions') {
-                      _dispositionsConstructives.add(nouvelElement);
-                      _hasObservation[_dispositionsConstructives.length - 1] = false;
-                    } else {
-                      _conditionsExploitation.add(nouvelElement);
-                      _hasObservation[_dispositionsConstructives.length + _conditionsExploitation.length - 1] = false;
-                    }
-                    
-                    // Reconstruire les slides
-                    _etapeElementsKey?.currentState?._buildSlides();
-                  });
+                  final nouvelElement = ElementControle(
+                    elementControle: texte,
+                    conforme: false,
+                    priorite: 3,
+                  );
+                  Navigator.pop(context, nouvelElement);
                 }
               },
               style: ElevatedButton.styleFrom(
@@ -3627,6 +3638,25 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         );
       },
     );
+
+    if (result != null) {
+      setState(() {
+        _conformeSelected[result] = false;
+        
+        if (sectionType == 'dispositions') {
+          _dispositionsConstructives.add(result);
+          _hasObservation[_dispositionsConstructives.length - 1] = false;
+        } else {
+          _conditionsExploitation.add(result);
+          _hasObservation[_dispositionsConstructives.length + _conditionsExploitation.length - 1] = false;
+        }
+      });
+      
+      // Reconstruire les slides dans l'étape éléments
+      _etapeElementsKey?.currentState?.rebuildSlides();
+      // Aller au dernier slide pour voir le nouvel élément
+      _etapeElementsKey?.currentState?.goToLastSlide();
+    }
   }
 
   Future<void> _prendrePhotoPourElement(ElementControle element, int elementIndex, String sectionType) async {
@@ -3911,22 +3941,26 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                   ),
                   if (_selectedType != null)
                     _EtapeElementsControle(
-                      key: _etapeElementsKey,
-                      dispositionsConstructives: _dispositionsConstructives,
-                      conditionsExploitation: _conditionsExploitation,
-                      hasObservation: _hasObservation,
-                      elementSuggestions: _elementSuggestions,
-                      conformeSelected: _conformeSelected,
-                      onElementChanged: (element, index, action) => setState(() {}),
-                      onConformeChanged: _onConformeChanged,
-                      onObservationToggleChanged: (index, value, section) => setState(() => _hasObservation[index] = value),
-                      onPrendrePhotoElement: _prendrePhotoPourElement,
-                      onChoisirPhotoElement: _choisirPhotoPourElement,
-                      onSupprimerPhotoElement: _supprimerPhotoElement,
-                      onObservationChanged: _onElementObservationChanged,
-                      onUseSuggestion: _useElementSuggestion,
-                      onAjouterAutre: _onAjouterAutre,
-                    ),
+                    key: _etapeElementsKey,
+                    dispositionsConstructives: _dispositionsConstructives,
+                    conditionsExploitation: _conditionsExploitation,
+                    hasObservation: _hasObservation,
+                    elementSuggestions: _elementSuggestions,
+                    conformeSelected: _conformeSelected,
+                    onElementChanged: (element, index, action) => setState(() {}),
+                    onConformeChanged: _onConformeChanged,
+                    onObservationToggleChanged: (index, value, section) => setState(() => _hasObservation[index] = value),
+                    onPrendrePhotoElement: _prendrePhotoPourElement,
+                    onChoisirPhotoElement: _choisirPhotoPourElement,
+                    onSupprimerPhotoElement: _supprimerPhotoElement,
+                    onObservationChanged: _onElementObservationChanged,
+                    onUseSuggestion: _useElementSuggestion,
+                    onAjouterAutre: _onAjouterAutre,
+                    onRebuildSlides: () {
+                      // Reconstruire les slides après ajout
+                      _etapeElementsKey?.currentState?.rebuildSlides();
+                    },
+                  ),
                   if (_selectedType == 'LOCAL_TRANSFORMATEUR')
                     _EtapeCelluleTransformateur(
                       key: _etapeCelluleTransfoKey,

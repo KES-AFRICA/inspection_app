@@ -46,9 +46,20 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
         _isLoading = false;
       });
       
-      if (!_hasPreference && !_isDialogShowing) {
-        _showMoyenneTensionDialog();
-      }
+      // CORRECTION : Afficher le dialogue si pas de préférence OU si la préférence est "non applicable"
+      // Utiliser addPostFrameCallback pour éviter l'erreur "setState during build"
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          if (!_hasPreference) {
+            // Première visite : demander si applicable
+            _showMoyenneTensionDialog();
+          } else if (!_isApplicable) {
+            // L'utilisateur avait choisi "non applicable" : lui demander à nouveau
+            // pour lui permettre de changer d'avis
+            _showMoyenneTensionDialog();
+          }
+        }
+      });
     } catch (e) {
       print('❌ Erreur chargement: $e');
       setState(() => _isLoading = false);
@@ -56,12 +67,15 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
   }
 
   void _showMoyenneTensionDialog() {
+    // Éviter d'afficher plusieurs dialogues en même temps
+    if (_isDialogShowing) return;
+    
     _isDialogShowing = true;
     
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => Dialog(
+      builder: (dialogContext) => Dialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         child: Container(
           padding: const EdgeInsets.all(20),
@@ -98,8 +112,20 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
                       icon: Icons.close,
                       color: Colors.red,
                       onTap: () async {
+                        // Fermer le dialogue
+                        Navigator.pop(dialogContext);
+                        _isDialogShowing = false;
+                        
+                        // Sauvegarder la préférence
                         await HiveService.saveMoyenneTensionPreference(widget.mission.id, false);
-                        if (mounted) Navigator.pop(context);
+                        
+                        // Mettre à jour l'état local
+                        setState(() {
+                          _hasPreference = true;
+                          _isApplicable = false;
+                        });
+                        
+                        // Rediriger vers Basse Tension
                         _redirectToBasseTension();
                       },
                     ),
@@ -111,8 +137,18 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
                       icon: Icons.check,
                       color: Colors.green,
                       onTap: () async {
+                        // Fermer le dialogue
+                        Navigator.pop(dialogContext);
+                        _isDialogShowing = false;
+                        
+                        // Sauvegarder la préférence
                         await HiveService.saveMoyenneTensionPreference(widget.mission.id, true);
-                        if (mounted) Navigator.pop(context);
+                        
+                        // Mettre à jour l'état local
+                        setState(() {
+                          _hasPreference = true;
+                          _isApplicable = true;
+                        });
                       },
                     ),
                   ),
@@ -122,7 +158,10 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
           ),
         ),
       ),
-    );
+    ).then((_) {
+      // Le dialogue a été fermé (par appui sur le bouton back ou autre)
+      _isDialogShowing = false;
+    });
   }
 
   Widget _buildDialogButton({
@@ -164,6 +203,9 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
   }
 
   void _redirectToBasseTension() {
+    // Vérifier si le contexte est toujours valide
+    if (!mounted) return;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Row(
@@ -180,6 +222,7 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
     
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
+        // Utiliser pushReplacement pour remplacer l'écran actuel
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -203,9 +246,11 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
 
     if (result == true) {
       _loadData();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Local ajouté avec succès')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Local ajouté avec succès')),
+        );
+      }
     }
   }
 
@@ -240,9 +285,11 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
 
     if (result == true) {
       _loadData();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Zone ajoutée avec succès')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Zone ajoutée avec succès')),
+        );
+      }
     }
   }
 
@@ -368,7 +415,9 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
               setState(() => _audit!.moyenneTensionLocaux.removeAt(index));
               await HiveService.saveAuditInstallations(_audit!);
               _loadData();
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Local supprimé')));
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Local supprimé')));
+              }
             },
             child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
@@ -391,7 +440,9 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
               setState(() => _audit!.moyenneTensionZones.removeAt(index));
               await HiveService.saveAuditInstallations(_audit!);
               _loadData();
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Zone supprimée')));
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Zone supprimée')));
+              }
             },
             child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
@@ -424,18 +475,86 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
     return total;
   }
 
+  // Widget pour afficher que la MT n'est pas applicable (avec option de changer)
+  Widget _buildNotApplicableScreen() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            width: 80,
+            height: 80,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade200,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.bolt, size: 40, color: Colors.grey.shade500),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Moyenne Tension non applicable',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey.shade700,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Vous avez indiqué que la moyenne tension\nn\'est pas applicable pour cette mission.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey.shade600,
+            ),
+          ),
+          const SizedBox(height: 32),
+          ElevatedButton.icon(
+            onPressed: () {
+              // Réinitialiser la préférence et réafficher le dialogue
+              setState(() {
+                _hasPreference = false;
+              });
+              _showMoyenneTensionDialog();
+            },
+            icon: const Icon(Icons.refresh),
+            label: const Text('Changer la préférence'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
     }
     
     if (_audit == null) {
-      return const Center(child: Text('Erreur de chargement'));
+      return const Scaffold(
+        body: Center(child: Text('Erreur de chargement')),
+      );
     }
 
+    // Si l'utilisateur a choisi "non applicable", afficher l'écran avec option de changer
+    // au lieu d'un CircularProgressIndicator bloquant
     if (_hasPreference && !_isApplicable) {
-      return const Center(child: CircularProgressIndicator());
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Moyenne Tension'),
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+        ),
+        body: _buildNotApplicableScreen(),
+      );
     }
 
     return Scaffold(
