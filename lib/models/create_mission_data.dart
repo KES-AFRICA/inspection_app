@@ -72,7 +72,7 @@ class CreateMissionData {
       verificateurs: verificateurs,
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
-      status: 'en_cours',
+      status: 'en_attente',
       docCahierPrescriptions: docCahierPrescriptions,
       docNotesCalculs: docNotesCalculs,
       docSchemasUnifilaires: docSchemasUnifilaires,

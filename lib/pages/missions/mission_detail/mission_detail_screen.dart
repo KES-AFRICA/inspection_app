@@ -1,3 +1,4 @@
+// lib/pages/missions/mission_detail_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:inspec_app/constants/app_theme.dart';
@@ -25,64 +26,93 @@ class MissionDetailScreen extends StatefulWidget {
 
 class _MissionDetailScreenState extends State<MissionDetailScreen> {
   late Mission _currentMission;
-  late Map<String, dynamic> _sequenceProgress;
-  bool _isLoadingProgress = true;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     _currentMission = widget.mission;
-    _loadProgress();
   }
 
-  Future<void> _loadProgress() async {
-    // TODO: Charger la progression depuis SequenceProgressService
-    setState(() => _isLoadingProgress = false);
-  }
-
-  void _handleStatusChanged(String newStatus) {
-    setState(() {
-      _currentMission.status = newStatus;
-      _currentMission.updatedAt = DateTime.now();
-    });
+  Future<void> _updateMissionStatus(String newStatus) async {
+    setState(() => _isLoading = true);
     
-    HiveService.updateMissionStatus(
+    final success = await HiveService.updateMissionStatus(
       missionId: _currentMission.id,
       newStatus: newStatus,
     );
+    
+    if (success) {
+      setState(() {
+        _currentMission.status = newStatus;
+        _currentMission.updatedAt = DateTime.now();
+      });
+    }
+    
+    setState(() => _isLoading = false);
   }
 
   String _getButtonText() {
-    switch (_currentMission.status.toLowerCase()) {
-      case 'en_cours':
-      case 'en cours':
-        return 'CONTINUER';
-      case 'termine':
-      case 'terminé':
-        return 'VOIR LE RAPPORT';
-      default:
-        return 'DÉMARRER';
+    if (_currentMission.isEnAttente) {
+      return 'DÉBUTER';
+    } else if (_currentMission.isEnCours) {
+      return 'CONTINUER';
+    } else {
+      return 'VOIR LE RAPPORT';
     }
   }
 
   IconData _getButtonIcon() {
-    switch (_currentMission.status.toLowerCase()) {
-      case 'en_cours':
-      case 'en cours':
-        return Icons.play_circle_filled;
-      case 'termine':
-      case 'terminé':
-        return Icons.assessment;
-      default:
-        return Icons.play_arrow;
+    if (_currentMission.isEnAttente) {
+      return Icons.play_arrow;
+    } else if (_currentMission.isEnCours) {
+      return Icons.play_circle_filled;
+    } else {
+      return Icons.assessment;
     }
   }
 
-  void _handleMainAction() {
-    if (_currentMission.status.toLowerCase() == 'terminé' || 
-        _currentMission.status.toLowerCase() == 'termine') {
-      _generateReport();
+  Color _getStatusColor() {
+    if (_currentMission.isEnAttente) {
+      return Colors.orange;
+    } else if (_currentMission.isEnCours) {
+      return AppTheme.primaryBlue;
     } else {
+      return Colors.green;
+    }
+  }
+
+  String _getStatusText() {
+    if (_currentMission.isEnAttente) {
+      return 'EN ATTENTE';
+    } else if (_currentMission.isEnCours) {
+      return 'EN COURS';
+    } else {
+      return 'TERMINÉ';
+    }
+  }
+
+  Future<void> _handleMainAction() async {
+    if (_currentMission.isEnAttente) {
+      // Passer de "en_attente" à "en_cours"
+      await _updateMissionStatus('en_cours');
+      
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => SequenceScreen(
+              mission: _currentMission,
+              user: widget.user,
+            ),
+          ),
+        ).then((_) {
+          // Rafraîchir la mission au retour
+          _refreshMission();
+        });
+      }
+    } else if (_currentMission.isEnCours) {
+      // Continuer la mission
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -91,7 +121,21 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
             user: widget.user,
           ),
         ),
-      );
+      ).then((_) {
+        _refreshMission();
+      });
+    } else {
+      // Mission terminée - Voir/Générer le rapport
+      _generateReport();
+    }
+  }
+
+  void _refreshMission() {
+    final refreshedMission = HiveService.getMissionById(_currentMission.id);
+    if (refreshedMission != null) {
+      setState(() {
+        _currentMission = refreshedMission;
+      });
     }
   }
 
@@ -112,7 +156,7 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
     );
 
     try {
-      final file = await PdfReportService.generateMissionReport(widget.mission.id);
+      final file = await PdfReportService.generateMissionReport(_currentMission.id);
 
       if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
@@ -148,7 +192,7 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
               Navigator.pop(context);
               await Share.shareXFiles(
                 [XFile(file.path)],
-                subject: 'Rapport - ${widget.mission.nomClient}',
+                subject: 'Rapport - ${_currentMission.nomClient}',
               );
             },
             icon: const Icon(Icons.share),
@@ -165,34 +209,19 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
-  }
-
-  Color _getStatusColor() {
-    switch (_currentMission.status.toLowerCase()) {
-      case 'en_cours':
-      case 'en cours':
-        return Colors.orange;
-      case 'termine':
-      case 'terminé':
-        return Colors.green;
-      default:
-        return Colors.blue;
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    final statusColor = _getStatusColor();
+    
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: CustomScrollView(
         slivers: [
-          // AppBar moderne
+          // AppBar moderne avec couleur dynamique
           SliverAppBar(
             expandedHeight: 240,
             pinned: true,
-            backgroundColor: _getStatusColor(),
+            backgroundColor: statusColor,
             elevation: 0,
             leading: Container(
               margin: const EdgeInsets.all(8),
@@ -212,19 +241,14 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
               ),
             ),
             flexibleSpace: FlexibleSpaceBar(
-              title: Column(
-                mainAxisAlignment: MainAxisAlignment.end,
-                crossAxisAlignment: CrossAxisAlignment.start,
-              ),
-              titlePadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
               background: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      _getStatusColor(),
-                      _getStatusColor().withOpacity(0.7),
+                      statusColor,
+                      statusColor.withOpacity(0.7),
                     ],
                   ),
                 ),
@@ -232,7 +256,7 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      SizedBox(height: 80,),
+                      const SizedBox(height: 80),
                       Container(
                         width: 80,
                         height: 80,
@@ -264,7 +288,7 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          _currentMission.status.toUpperCase(),
+                          _getStatusText(),
                           style: const TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
@@ -284,18 +308,22 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
             padding: const EdgeInsets.all(16),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
-                // Bouton principal (Démarrer/Continuer/Voir rapport)
-                _buildMainButton(),
-                // Carte d'informations modernes
+                // Bouton principal
+                _buildMainButton(statusColor),
+                
+                const SizedBox(height: 16),
+                
+                // Carte d'informations
                 _buildInfoCard(),
+                
                 const SizedBox(height: 16),
                 
                 // Carte de l'équipe
                 _buildTeamCard(),
+                
                 const SizedBox(height: 24),
                 
-                // Bouton Générer rapport PDF
-                const SizedBox(height: 12),
+                // Bouton Générer rapport PDF (toujours visible)
                 _buildPdfButton(),
                 
                 const SizedBox(height: 32),
@@ -303,6 +331,90 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildMainButton(Color statusColor) {
+    final buttonText = _getButtonText();
+    final buttonIcon = _getButtonIcon();
+
+    return Container(
+      width: double.infinity,
+      height: 56,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [statusColor, statusColor.withOpacity(0.8)],
+          begin: Alignment.centerLeft,
+          end: Alignment.centerRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: statusColor.withOpacity(0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ElevatedButton(
+        onPressed: _isLoading ? null : _handleMainAction,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.transparent,
+          shadowColor: Colors.transparent,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: _isLoading
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+              )
+            : Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(buttonIcon, size: 24),
+                  const SizedBox(width: 12),
+                  Text(
+                    buttonText,
+                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+      ),
+    );
+  }
+
+  Widget _buildPdfButton() {
+    return Container(
+      width: double.infinity,
+      height: 52,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.red.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ElevatedButton.icon(
+        onPressed: _generateReport,
+        icon: const Icon(Icons.picture_as_pdf, size: 22),
+        label: const Text(
+          'GÉNÉRER RAPPORT PDF',
+          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 0.5),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.red,
+          foregroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(14),
+          ),
+        ),
       ),
     );
   }
@@ -322,7 +434,6 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
       ),
       child: Column(
         children: [
-          // En-tête
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -350,8 +461,6 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
               ],
             ),
           ),
-          
-          // Contenu
           Padding(
             padding: const EdgeInsets.all(16),
             child: Column(
@@ -467,85 +576,6 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
     );
   }
 
-  Widget _buildMainButton() {
-    final buttonText = _getButtonText();
-    final buttonIcon = _getButtonIcon();
-    final statusColor = _getStatusColor();
-
-    return Container(
-      width: double.infinity,
-      height: 56,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [statusColor, statusColor.withOpacity(0.8)],
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: statusColor.withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: ElevatedButton(
-        onPressed: _handleMainAction,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          shadowColor: Colors.transparent,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(buttonIcon, size: 24),
-            const SizedBox(width: 12),
-            Text(
-              buttonText,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPdfButton() {
-    return Container(
-      width: double.infinity,
-      height: 52,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.red.withOpacity(0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: ElevatedButton.icon(
-        onPressed: _generateReport,
-        icon: const Icon(Icons.picture_as_pdf, size: 22),
-        label: const Text(
-          'GÉNÉRER RAPPORT PDF',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 0.5),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-      ),
-    );
-  }
-
   Widget _buildInfoRow({
     required IconData icon,
     required String label,
@@ -578,7 +608,7 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
                 value,
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 maxLines: multiline ? 3 : 1,
-                overflow: multiline ? TextOverflow.ellipsis : TextOverflow.ellipsis,
+                overflow: TextOverflow.ellipsis,
               ),
             ],
           ),

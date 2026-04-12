@@ -1174,15 +1174,6 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
           padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
           child: Row(
             children: [
-              Container(
-                width: 4,
-                height: context.iconSizeL,
-                decoration: BoxDecoration(
-                  color: _currentSectionColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              SizedBox(width: context.spacingS),
               Expanded(
                 child: Text(
                   _currentSectionTitle,
@@ -1266,7 +1257,7 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(context.spacingL),
         boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
+          BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: context.spacingS, offset: const Offset(0, 2)),
         ],
       ),
       child: Column(

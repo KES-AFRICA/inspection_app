@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/constants/app_theme.dart';
+import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/services/pdf_report_service.dart';
 import 'package:inspec_app/services/word_report_service.dart';
@@ -40,6 +41,20 @@ class _SummaryStepState extends State<SummaryStep> {
     _loadProgress();
     // Notifier que cette étape est active
     widget.onDataChanged({'summary_active': true});
+    _ensureStatusIsTermine();
+  }
+
+  /// S'assure que le statut de la mission est bien "termine"
+  Future<void> _ensureStatusIsTermine() async {
+    final mission = HiveService.getMissionById(widget.mission.id);
+    if (mission != null && !mission.isTermine) {
+      await HiveService.updateMissionStatus(
+        missionId: widget.mission.id,
+        newStatus: 'termine',
+      );
+      // Mettre à jour la mission locale
+      widget.mission.status = 'termine';
+    }
   }
 
   Future<void> _loadProgress() async {

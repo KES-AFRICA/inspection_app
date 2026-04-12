@@ -238,4 +238,9 @@ class Mission extends HiveObject {
       'mesures_essais_id': mesuresEssaisId,
     };
   }
+
+  // Méthodes utilitaires pour vérifier le statut
+  bool get isEnAttente => status.toLowerCase() == 'en_attente';
+  bool get isEnCours => status.toLowerCase() == 'en_cours' || status.toLowerCase() == 'en cours';
+  bool get isTermine => status.toLowerCase() == 'termine' || status.toLowerCase() == 'terminé';
 }

@@ -436,18 +436,21 @@ static bool hasAccompagnateur({
         return false;
       }
 
-      // Modifier directement le statut de la mission existante
-      mission.status = newStatus;
-      mission.updatedAt = DateTime.now(); // Mettre à jour la date de modification
+      // Normaliser le statut
+      String normalizedStatus = newStatus.toLowerCase();
+      if (normalizedStatus == 'en cours') normalizedStatus = 'en_cours';
+      if (normalizedStatus == 'terminé') normalizedStatus = 'termine';
+      if (normalizedStatus == 'en attente') normalizedStatus = 'en_attente';
 
-      // Sauvegarder la mission modifiée
+      mission.status = normalizedStatus;
+      mission.updatedAt = DateTime.now();
       await mission.save();
       
-      print('✅ Statut mis à jour localement: $missionId -> $newStatus');
+      print('✅ Statut mis à jour: $missionId -> $normalizedStatus');
       return true;
 
     } catch (e) {
-      print('❌ Erreur mise à jour statut local: $e');
+      print('❌ Erreur mise à jour statut: $e');
       return false;
     }
   }

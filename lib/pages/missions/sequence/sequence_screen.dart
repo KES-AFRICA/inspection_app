@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
+import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/pages/missions/sequence/steps/general_info_step.dart';
 import 'package:inspec_app/pages/missions/sequence/steps/jsa_step.dart';
@@ -37,6 +38,20 @@ class _SequenceScreenState extends State<SequenceScreen> {
     super.initState();
     _initializeSteps();
     _loadProgress();
+    _ensureStatusIsEnCours();
+  }
+
+  /// S'assure que le statut de la mission est bien "en_cours"
+  Future<void> _ensureStatusIsEnCours() async {
+    final mission = HiveService.getMissionById(widget.mission.id);
+    if (mission != null && mission.isEnAttente) {
+      await HiveService.updateMissionStatus(
+        missionId: widget.mission.id,
+        newStatus: 'en_cours',
+      );
+      // Mettre à jour la mission locale
+      widget.mission.status = 'en_cours';
+    }
   }
 
   void _initializeSteps() {
