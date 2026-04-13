@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/pages/missions/home_screen.dart';
 import 'package:inspec_app/pages/register_screen.dart';
 import '../services/hive_service.dart';
-import '../models/verificateur.dart';
 import '../constants/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -76,16 +75,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Image.asset("assets/images/logo.png", height: 100),
-                    const SizedBox(height: 20),
-                    
-                    Text(
-                      'INSPECTION APP',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.darkBlue,
-                      ),
-                    ),
       
                     const SizedBox(height: 48),
       

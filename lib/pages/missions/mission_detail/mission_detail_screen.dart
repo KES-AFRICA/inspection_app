@@ -212,25 +212,33 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor();
+    // Récupération des dimensions de l'écran pour la responsivité
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenWidth < 360;
+    final isLargeScreen = screenWidth > 600;
+    
+    // Calcul dynamique de la hauteur de l'appbar
+    final appBarExpandedHeight = screenHeight * 0.28; // 28% de la hauteur de l'écran
     
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       body: CustomScrollView(
         slivers: [
-          // AppBar moderne avec couleur dynamique
+          // AppBar moderne avec couleur dynamique et hauteur responsive
           SliverAppBar(
-            expandedHeight: 240,
+            expandedHeight: appBarExpandedHeight,
             pinned: true,
             backgroundColor: statusColor,
             elevation: 0,
             leading: Container(
-              margin: const EdgeInsets.all(8),
+              margin: EdgeInsets.all(isSmallScreen ? 6 : 8),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.white),
+                icon: Icon(Icons.arrow_back, size: isSmallScreen ? 20 : 24, color: Colors.white),
                 onPressed: () {
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
@@ -256,41 +264,51 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const SizedBox(height: 80),
+                      // Espacement dynamique pour le status bar
+                      SizedBox(height: MediaQuery.of(context).padding.top + (isSmallScreen ? 20 : 30)),
                       Container(
-                        width: 80,
-                        height: 80,
+                        width: isSmallScreen ? 60 : 80,
+                        height: isSmallScreen ? 60 : 80,
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
                         ),
                         child: Icon(
                           Icons.assignment_turned_in,
-                          size: 40,
+                          size: isSmallScreen ? 30 : 40,
                           color: Colors.white.withOpacity(0.9),
                         ),
                       ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _currentMission.nomClient,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      SizedBox(height: isSmallScreen ? 12 : 16),
+                      // Gestion du débordement du texte du client
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: Text(
+                          _currentMission.nomClient,
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 18 : (isLargeScreen ? 28 : 24),
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        textAlign: TextAlign.center,
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: isSmallScreen ? 6 : 8),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 8 : 12, 
+                          vertical: isSmallScreen ? 2 : 4
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.white.withOpacity(0.2),
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
                           _getStatusText(),
-                          style: const TextStyle(
-                            fontSize: 12,
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 10 : 12,
                             fontWeight: FontWeight.w600,
                             color: Colors.white,
                           ),
@@ -303,30 +321,30 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
             ),
           ),
 
-          // Contenu principal
+          // Contenu principal avec padding responsive
           SliverPadding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmallScreen ? 12.0 : 16.0),
             sliver: SliverList(
               delegate: SliverChildListDelegate([
                 // Bouton principal
-                _buildMainButton(statusColor),
+                _buildMainButton(statusColor, isSmallScreen),
                 
-                const SizedBox(height: 16),
+                SizedBox(height: isSmallScreen ? 12 : 16),
                 
                 // Carte d'informations
-                _buildInfoCard(),
+                _buildInfoCard(isSmallScreen, isLargeScreen),
                 
-                const SizedBox(height: 16),
+                SizedBox(height: isSmallScreen ? 12 : 16),
                 
                 // Carte de l'équipe
-                _buildTeamCard(),
+                _buildTeamCard(isSmallScreen),
                 
-                const SizedBox(height: 24),
+                SizedBox(height: isSmallScreen ? 20 : 24),
                 
                 // Bouton Générer rapport PDF (toujours visible)
-                _buildPdfButton(),
+                _buildPdfButton(isSmallScreen),
                 
-                const SizedBox(height: 32),
+                SizedBox(height: isSmallScreen ? 24 : 32),
               ]),
             ),
           ),
@@ -335,20 +353,20 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
     );
   }
 
-  Widget _buildMainButton(Color statusColor) {
+  Widget _buildMainButton(Color statusColor, bool isSmallScreen) {
     final buttonText = _getButtonText();
     final buttonIcon = _getButtonIcon();
 
     return Container(
       width: double.infinity,
-      height: 56,
+      height: isSmallScreen ? 48 : 56,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [statusColor, statusColor.withOpacity(0.8)],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
         boxShadow: [
           BoxShadow(
             color: statusColor.withOpacity(0.3),
@@ -363,23 +381,32 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
           ),
+          padding: EdgeInsets.zero, // Important pour éviter les contraintes fixes
         ),
         child: _isLoading
-            ? const SizedBox(
-                width: 24,
-                height: 24,
-                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+            ? SizedBox(
+                width: isSmallScreen ? 20 : 24,
+                height: isSmallScreen ? 20 : 24,
+                child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(buttonIcon, size: 24),
-                  const SizedBox(width: 12),
-                  Text(
-                    buttonText,
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  Icon(buttonIcon, size: isSmallScreen ? 20 : 24),
+                  SizedBox(width: isSmallScreen ? 8 : 12),
+                  Flexible(
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(
+                        buttonText,
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 16 : 18, 
+                          fontWeight: FontWeight.bold
+                        ),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -387,12 +414,12 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
     );
   }
 
-  Widget _buildPdfButton() {
+  Widget _buildPdfButton(bool isSmallScreen) {
     return Container(
       width: double.infinity,
-      height: 52,
+      height: isSmallScreen ? 46 : 52,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(14),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
         boxShadow: [
           BoxShadow(
             color: Colors.red.withOpacity(0.15),
@@ -403,27 +430,34 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
       ),
       child: ElevatedButton.icon(
         onPressed: _generateReport,
-        icon: const Icon(Icons.picture_as_pdf, size: 22),
-        label: const Text(
-          'GÉNÉRER RAPPORT PDF',
-          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, letterSpacing: 0.5),
+        icon: Icon(Icons.picture_as_pdf, size: isSmallScreen ? 18 : 22),
+        label: FittedBox(
+          fit: BoxFit.scaleDown,
+          child: Text(
+            'GÉNÉRER RAPPORT PDF',
+            style: TextStyle(
+              fontSize: isSmallScreen ? 13 : 15, 
+              fontWeight: FontWeight.w600, 
+              letterSpacing: 0.5
+            ),
+          ),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.red,
           foregroundColor: Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
+            borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildInfoCard() {
+  Widget _buildInfoCard(bool isSmallScreen, bool isLargeScreen) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -435,61 +469,74 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
               color: AppTheme.primaryBlue.withOpacity(0.05),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(isSmallScreen ? 16 : 20),
+                topRight: Radius.circular(isSmallScreen ? 16 : 20),
               ),
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
                   decoration: BoxDecoration(
                     color: AppTheme.primaryBlue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
                   ),
-                  child: Icon(Icons.info_outline, color: AppTheme.primaryBlue),
+                  child: Icon(
+                    Icons.info_outline, 
+                    size: isSmallScreen ? 18 : 20, 
+                    color: AppTheme.primaryBlue
+                  ),
                 ),
-                const SizedBox(width: 12),
-                const Text(
+                SizedBox(width: isSmallScreen ? 10 : 12),
+                Text(
                   'Informations générales',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 14 : 16, 
+                    fontWeight: FontWeight.bold
+                  ),
                 ),
               ],
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             child: Column(
               children: [
                 _buildInfoRow(
                   icon: Icons.business,
                   label: 'Client',
                   value: _currentMission.nomClient,
+                  isSmallScreen: isSmallScreen,
                 ),
-                const Divider(height: 24),
-                if (_currentMission.activiteClient != null)
+                Divider(height: isSmallScreen ? 20 : 24),
+                if (_currentMission.activiteClient != null) ...[
                   _buildInfoRow(
                     icon: Icons.work,
                     label: 'Activité',
                     value: _currentMission.activiteClient!,
+                    isSmallScreen: isSmallScreen,
                   ),
-                if (_currentMission.activiteClient != null) const Divider(height: 24),
-                if (_currentMission.adresseClient != null)
+                  Divider(height: isSmallScreen ? 20 : 24),
+                ],
+                if (_currentMission.adresseClient != null) ...[
                   _buildInfoRow(
                     icon: Icons.location_on,
                     label: 'Adresse',
                     value: _currentMission.adresseClient!,
                     multiline: true,
+                    isSmallScreen: isSmallScreen,
                   ),
-                if (_currentMission.adresseClient != null) const Divider(height: 24),
+                  Divider(height: isSmallScreen ? 20 : 24),
+                ],
                 _buildInfoRow(
                   icon: Icons.description,
                   label: 'Nature',
                   value: _currentMission.natureMission ?? 'Non spécifiée',
+                  isSmallScreen: isSmallScreen,
                 ),
               ],
             ),
@@ -499,14 +546,14 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
     );
   }
 
-  Widget _buildTeamCard() {
+  Widget _buildTeamCard(bool isSmallScreen) {
     final hasVerificateurs = _currentMission.verificateurs != null && _currentMission.verificateurs!.isNotEmpty;
     final hasAccompagnateurs = _currentMission.accompagnateurs != null && _currentMission.accompagnateurs!.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.05),
@@ -518,34 +565,41 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
               color: Colors.orange.withOpacity(0.05),
-              borderRadius: const BorderRadius.only(
-                topLeft: Radius.circular(20),
-                topRight: Radius.circular(20),
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(isSmallScreen ? 16 : 20),
+                topRight: Radius.circular(isSmallScreen ? 16 : 20),
               ),
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
                   decoration: BoxDecoration(
                     color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
                   ),
-                  child: const Icon(Icons.people, color: Colors.orange),
+                  child: Icon(
+                    Icons.people, 
+                    size: isSmallScreen ? 18 : 20, 
+                    color: Colors.orange
+                  ),
                 ),
-                const SizedBox(width: 12),
-                const Text(
+                SizedBox(width: isSmallScreen ? 10 : 12),
+                Text(
                   'Équipe',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 14 : 16, 
+                    fontWeight: FontWeight.bold
+                  ),
                 ),
               ],
             ),
           ),
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             child: Column(
               children: [
                 if (hasVerificateurs)
@@ -555,18 +609,24 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
                     values: _currentMission.verificateurs!
                         .map((v) => '${v['prenom']} ${v['nom']} (${v['matricule']})')
                         .toList(),
+                    isSmallScreen: isSmallScreen,
                   ),
-                if (hasVerificateurs && hasAccompagnateurs) const SizedBox(height: 16),
+                if (hasVerificateurs && hasAccompagnateurs) 
+                  SizedBox(height: isSmallScreen ? 12 : 16),
                 if (hasAccompagnateurs)
                   _buildTeamRow(
                     icon: Icons.person_add,
                     label: 'Accompagnateurs',
                     values: _currentMission.accompagnateurs!,
+                    isSmallScreen: isSmallScreen,
                   ),
                 if (!hasVerificateurs && !hasAccompagnateurs)
-                  const Text(
+                  Text(
                     'Aucune information d\'équipe',
-                    style: TextStyle(color: Colors.grey),
+                    style: TextStyle(
+                      color: Colors.grey, 
+                      fontSize: isSmallScreen ? 12 : 14
+                    ),
                   ),
               ],
             ),
@@ -581,32 +641,43 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
     required String label,
     required String value,
     bool multiline = false,
+    required bool isSmallScreen,
   }) {
     return Row(
       crossAxisAlignment: multiline ? CrossAxisAlignment.start : CrossAxisAlignment.center,
       children: [
         Container(
-          width: 36,
-          height: 36,
+          width: isSmallScreen ? 32 : 36,
+          height: isSmallScreen ? 32 : 36,
           decoration: BoxDecoration(
             color: AppTheme.primaryBlue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
           ),
-          child: Icon(icon, size: 18, color: AppTheme.primaryBlue),
+          child: Icon(
+            icon, 
+            size: isSmallScreen ? 16 : 18, 
+            color: AppTheme.primaryBlue
+          ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: isSmallScreen ? 10 : 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 label,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 11 : 12, 
+                  color: Colors.grey.shade600
+                ),
               ),
-              const SizedBox(height: 2),
+              SizedBox(height: isSmallScreen ? 2 : 4),
               Text(
                 value,
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 13 : 14, 
+                  fontWeight: FontWeight.w500
+                ),
                 maxLines: multiline ? 3 : 1,
                 overflow: TextOverflow.ellipsis,
               ),
@@ -621,36 +692,46 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
     required IconData icon,
     required String label,
     required List<String> values,
+    required bool isSmallScreen,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: 36,
-          height: 36,
+          width: isSmallScreen ? 32 : 36,
+          height: isSmallScreen ? 32 : 36,
           decoration: BoxDecoration(
             color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
           ),
-          child: Icon(icon, size: 18, color: Colors.grey.shade600),
+          child: Icon(
+            icon, 
+            size: isSmallScreen ? 16 : 18, 
+            color: Colors.grey.shade600
+          ),
         ),
-        const SizedBox(width: 12),
+        SizedBox(width: isSmallScreen ? 10 : 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 label,
-                style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 11 : 12, 
+                  color: Colors.grey.shade600
+                ),
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: isSmallScreen ? 3 : 4),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: values.map((v) => Padding(
-                  padding: const EdgeInsets.only(bottom: 4),
+                  padding: EdgeInsets.only(bottom: isSmallScreen ? 3 : 4),
                   child: Text(
                     '• $v',
-                    style: const TextStyle(fontSize: 13),
+                    style: TextStyle(fontSize: isSmallScreen ? 12 : 13),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 )).toList(),
               ),

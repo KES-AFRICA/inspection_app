@@ -32,6 +32,7 @@ class _SequenceScreenState extends State<SequenceScreen> {
   late List<Map<String, dynamic>> _steps;
   late PageController _pageController;
   bool _isLoading = true;
+  final Map<String, bool> _stepValidation = {};
 
   @override
   void initState() {
@@ -68,6 +69,12 @@ class _SequenceScreenState extends State<SequenceScreen> {
         'widget': GeneralInfoStep(
           mission: widget.mission,
           onDataChanged: (data) => _saveStepData('general_info', data),
+          onValidationChanged: (isValid) {
+            // Mettre à jour l'état de validation de cette étape
+            setState(() {
+              _stepValidation['general_info'] = isValid;
+            });
+          },
         ),
       },
       {
@@ -127,6 +134,18 @@ class _SequenceScreenState extends State<SequenceScreen> {
   }
 
   Future<void> _goToNextStep() async {
+    if (_currentStep == 1) { // Étape Renseignements généraux
+      final isValid = _stepValidation['general_info'] ?? false;
+      if (!isValid) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Veuillez remplir tous les champs obligatoires'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+    }
     if (_currentStep < _steps.length - 1) {
       // Sauvegarder l'étape actuelle
       await SequenceProgressService.saveCurrentStep(widget.mission.id, _currentStep);
