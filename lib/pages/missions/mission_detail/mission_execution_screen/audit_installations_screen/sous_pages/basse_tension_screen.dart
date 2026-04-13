@@ -183,7 +183,7 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
               children: [
                 _buildStatCard('Zones', _audit!.basseTensionZones.length, Icons.map_outlined),
                 _buildStatCard('Locaux', _getTotalLocaux(), Icons.domain),
-                _buildStatCard('Coffrets', _getTotalCoffrets(), Icons.electrical_services),
+                _buildStatCard('Équipements', _getTotalCoffrets(), Icons.electrical_services),
               ],
             ),
           ),
@@ -364,8 +364,8 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildZoneStat('Locaux', totalLocaux, Icons.domain),
-                    _buildZoneStat('Coffrets directs', zone.coffretsDirects.length, Icons.electrical_services),
-                    _buildZoneStat('Total coffrets', totalCoffrets as int, Icons.assessment),
+                    _buildZoneStat('Équipements directs', zone.coffretsDirects.length, Icons.electrical_services),
+                    _buildZoneStat('Total Équipements', totalCoffrets as int, Icons.assessment),
                   ],
                 ),
               ),

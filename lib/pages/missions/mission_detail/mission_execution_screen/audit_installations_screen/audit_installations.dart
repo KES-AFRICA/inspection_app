@@ -90,14 +90,14 @@ class AuditInstallationsScreen extends StatelessWidget {
             Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
       
             // Section CLASSEMENT DES LOCAUX
-            _buildSectionTile(
-              context,
-              'CLASSEMENT DES LOCAUX',
-              Icons.location_on_outlined,
-              'Influences externes et indices de protection',
-              _navigateToClassementLocaux,
-              color: AppTheme.primaryBlue,
-            ),
+            // _buildSectionTile(
+            //   context,
+            //   'CLASSEMENT DES LOCAUX',
+            //   Icons.location_on_outlined,
+            //   'Influences externes et indices de protection',
+            //   _navigateToClassementLocaux,
+            //   color: AppTheme.primaryBlue,
+            // ),
             
             Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
             

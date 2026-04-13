@@ -1090,7 +1090,7 @@ class PdfReportService {
       );
     }
 
-    final headers = ['LOCALISATION', 'COFFRET / ARMOIRE', 'NON-CONFORMITÉ - PRÉCONISATION', 'RÉF. NORMATIVE', 'PRIORITÉ'];
+    final headers = ['LOCALISATION', 'ÉQUIPEMENT', 'NON-CONFORMITÉ - PRÉCONISATION', 'RÉF. NORMATIVE', 'PRIORITÉ'];
 
     return pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.4),

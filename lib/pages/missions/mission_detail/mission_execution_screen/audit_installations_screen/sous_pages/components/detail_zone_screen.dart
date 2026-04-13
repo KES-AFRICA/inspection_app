@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_locaux_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/observation_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/qr_scan_coffret_screen.dart';
 import 'package:path_provider/path_provider.dart';
@@ -1145,8 +1144,8 @@ void _editerObservation(int index) async {
               icon: Icon(Icons.electrical_services, size: 24),
               label: Text(
                 widget.isMoyenneTension 
-                  ? 'Ajouter un coffret' 
-                  : 'Ajouter un coffret direct',
+                  ? 'Ajouter un équipement' 
+                  : 'Ajouter un équipement direct',
                 style: TextStyle(fontSize: 16),
               ),
               style: ElevatedButton.styleFrom(
@@ -1283,7 +1282,7 @@ void _editerObservation(int index) async {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(height: 4),
-            Text('${local.coffrets.length} coffret(s) • ${totalPhotosLocal} photo(s) • ${local.observationsLibres.length} observation(s)'),
+            Text('${local.coffrets.length} équipement(s) • $totalPhotosLocal photo(s) • ${local.observationsLibres.length} observation(s)'),
             SizedBox(height: 4),
             if (totalCount > 0) ...[
               LinearProgressIndicator(
@@ -1485,7 +1484,7 @@ void _editerObservation(int index) async {
             children: [
               _buildZoneStat('Locaux', _zone.locaux.length),
               _buildZoneStat(
-                'Coffrets', 
+                'Équipements', 
                 widget.isMoyenneTension ? _zone.coffrets.length : _zone.coffretsDirects.length
               ),
               _buildZoneStat('Photos', totalPhotos),
@@ -1536,8 +1535,8 @@ void _editerObservation(int index) async {
                   Tab(text: 'PHOTOS (${_zonePhotos.length})'),
                   Tab(text: 'LOCAUX (${_zone.locaux.length})'),
                   Tab(text: isMoyenneTension 
-                    ? 'COFFRETS (${_zone.coffrets.length})' 
-                    : 'COFFRETS DIRECTS (${_zone.coffretsDirects.length})'
+                    ? 'ÉQUIPEMENTS (${_zone.coffrets.length})' 
+                    : 'ÉQUIPEMENTS DIRECTS (${_zone.coffretsDirects.length})'
                   ),
                 ],
               ),
@@ -1572,13 +1571,13 @@ void _editerObservation(int index) async {
                   // Tab COFFRETS
                   !hasCoffrets
                       ? _buildEmptyState(
-                          'coffrets', 
+                          'Équipement', 
                           isMoyenneTension 
-                            ? 'Aucun coffret dans cette zone' 
-                            : 'Aucun coffret direct dans cette zone',
+                            ? 'Aucun Équipement dans cette zone' 
+                            : 'Aucun Équipement direct dans cette zone',
                           isMoyenneTension ? _ajouterCoffretMT : _ajouterCoffretDirectBT,
                           Icons.electrical_services,
-                          'AJOUTER UN COFFRET',
+                          'AJOUTER UN EQUIPE?ENT',
                         )
                       : ListView.builder(
                           padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),

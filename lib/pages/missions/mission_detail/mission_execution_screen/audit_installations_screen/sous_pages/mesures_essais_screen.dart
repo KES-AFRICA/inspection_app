@@ -246,13 +246,13 @@ class _MesuresEssaisScreenState extends State<MesuresEssaisScreen> {
                     ),
                     const Divider(height: 0, thickness: 0.5),
                     
-                    _buildSectionTile(
-                      'Essais déclenchement',
-                      Icons.flash_on_outlined,
-                      'Dispositifs différentiels',
-                      _navigateToEssaisDeclenchement,
-                      'essais_declenchement',
-                    ),
+                    // _buildSectionTile(
+                    //   'Essais déclenchement',
+                    //   Icons.flash_on_outlined,
+                    //   'Dispositifs différentiels',
+                    //   _navigateToEssaisDeclenchement,
+                    //   'essais_declenchement',
+                    // ),
                     const Divider(height: 0, thickness: 0.5),
                     
                     _buildSectionTile(

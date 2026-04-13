@@ -867,7 +867,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer ce coffret ?'),
+        content: Text('Voulez-vous vraiment supprimer ce Équipement ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1601,7 +1601,7 @@ Widget _buildElementItem(ElementControle element) {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildZoneStat('Coffrets', _local.coffrets.length),
+          _buildZoneStat('Équipements', _local.coffrets.length),
           _buildZoneStat('Photos', totalPhotos),
           _buildZoneStat('Observations', _local.observationsLibres.length),
         ],
@@ -1650,7 +1650,7 @@ Widget _buildElementItem(ElementControle element) {
           IconButton(
             icon: Icon(Icons.add),
             onPressed: _ajouterCoffret,
-            tooltip: 'Ajouter un coffret',
+            tooltip: 'Ajouter un équipement',
           ),
         ],
       ),
@@ -1675,7 +1675,7 @@ Widget _buildElementItem(ElementControle element) {
                         Tab(text: 'VÉRIFICATIONS'),
                         if (isTransformateur) Tab(text: 'CELLULE'),
                         if (isTransformateur) Tab(text: 'TRANSFORMATEUR'),
-                        Tab(text: 'COFFRETS (${_local.coffrets.length})'),
+                        Tab(text: 'ÉQUIPEMENTS (${_local.coffrets.length})'),
                         Tab(text: 'CLASSEMENT'), 
                       ],
                     ),
@@ -1799,14 +1799,14 @@ Widget _buildElementItem(ElementControle element) {
                                     Icon(Icons.electrical_services_outlined, size: 64, color: Colors.grey.shade400),
                                     SizedBox(height: 16),
                                     Text(
-                                      'Aucun coffret ajouté',
+                                      'Aucun Équipement ajouté',
                                       style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
                                     ),
                                     SizedBox(height: 8),
                                     ElevatedButton.icon(
                                       onPressed: _ajouterCoffret,
                                       icon: Icon(Icons.add),
-                                      label: Text('AJOUTER UN COFFRET'),
+                                      label: Text('AJOUTER UN ÉQUIPEMENT'),
                                       style: ElevatedButton.styleFrom(
                                         backgroundColor: AppTheme.primaryBlue,
                                         foregroundColor: Colors.white,

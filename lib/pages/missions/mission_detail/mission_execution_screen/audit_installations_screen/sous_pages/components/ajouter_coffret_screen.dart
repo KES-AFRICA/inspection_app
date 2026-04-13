@@ -203,9 +203,6 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
           onSupprimerPhoto: widget.onSupprimerPhotoInterne,
           isRequired: true,
         ),
-        SizedBox(height: context.spacingXL),
-        
-        _buildModernObservationCard(context),
         SizedBox(height: context.spacingXXL),
       ],
     );
@@ -596,226 +593,42 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
                   ),
               ],
             ),
-          
-          Padding(
-            padding: EdgeInsets.all(context.spacingL),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildModernPhotoButton(
-                    context,
-                    icon: Icons.camera_alt,
-                    label: 'Prendre',
-                    onTap: onPrendrePhoto,
-                  ),
-                ),
-                SizedBox(width: context.spacingS),
-                Expanded(
-                  child: _buildModernPhotoButton(
-                    context,
-                    icon: Icons.photo_library,
-                    label: 'Galerie',
-                    onTap: onChoisirPhoto,
-                    isSecondary: true,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildModernPhotoButton(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    bool isSecondary = false,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(context.spacingS),
-        child: Container(
-          padding: EdgeInsets.symmetric(vertical: context.spacingS),
-          decoration: BoxDecoration(
-            gradient: isSecondary ? null : LinearGradient(
-              colors: [AppTheme.primaryBlue, AppTheme.primaryBlue.withOpacity(0.8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            color: isSecondary ? Colors.grey.shade100 : null,
-            borderRadius: BorderRadius.circular(context.spacingS),
-            border: isSecondary ? Border.all(color: Colors.grey.shade300) : null,
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(icon, size: context.iconSizeS, color: isSecondary ? Colors.grey.shade700 : Colors.white),
-              SizedBox(width: context.spacingS),
-              Flexible(
-                child: Text(
-                  label,
-                  style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w600, color: isSecondary ? Colors.grey.shade700 : Colors.white),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModernObservationCard(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(context.spacingM),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.all(context.spacingL),
-            child: Row(
-              children: [
-                Icon(Icons.notes_outlined, color: AppTheme.primaryBlue, size: context.iconSizeM),
-                SizedBox(width: context.spacingS),
-                Flexible(
-                  child: Text(
-                    'OBSERVATION SUR L\'ÉQUIPEMENT',
-                    style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.w600, color: AppTheme.darkBlue),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: context.spacingL),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(context.spacingS),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: DropdownButtonFormField<String>(
-                value: widget.selectedNiveauPuissance,
-                isExpanded: true,
-                icon: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryBlue, size: context.iconSizeM),
-                dropdownColor: Colors.white,
-                borderRadius: BorderRadius.circular(context.spacingS),
-                hint: Row(
-                  children: [
-                    Icon(Icons.speed, size: context.iconSizeS, color: Colors.grey.shade500),
-                    SizedBox(width: context.spacingS),
-                    Flexible(
-                      child: Text(
-                        'Niveau de puissance',
-                        style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500),
-                      ),
-                    ),
-                  ],
-                ),
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingM),
-                ),
-                items: _niveauPuissanceOptions.map<DropdownMenuItem<String>>((option) => DropdownMenuItem<String>(
-                  value: option['value'] as String,
-                  child: Row(
-                    children: [
-                      Icon(option['icon'] as IconData, size: context.iconSizeS, color: AppTheme.primaryBlue),
-                      SizedBox(width: context.spacingS),
-                      Flexible(
-                        child: Text(
-                          option['label'] as String,
-                          style: TextStyle(fontSize: context.fontSizeS),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                )).toList(),
-                onChanged: widget.onNiveauPuissanceChanged,
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(context.spacingL),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(context.spacingS),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: TextFormField(
-                controller: widget.observationController,
-                style: TextStyle(fontSize: context.fontSizeS),
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Saisissez votre observation...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: context.fontSizeS),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(context.spacingM),
-                ),
-              ),
-            ),
-          ),
-          if (widget.observationPhotos.isNotEmpty)
-            Container(
-              height: context.screenHeight * 0.08,
-              margin: EdgeInsets.symmetric(horizontal: context.spacingL),
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: widget.observationPhotos.length,
-                itemBuilder: (context, index) {
-                  return Container(
-                    width: context.screenWidth * 0.18,
-                    margin: EdgeInsets.only(right: context.spacingS),
-                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(context.spacingS),
-                      child: Image.file(File(widget.observationPhotos[index]), fit: BoxFit.cover),
-                    ),
-                  );
-                },
-              ),
-            ),
+          // Boutons ajouter photo (toujours visibles pour permettre d'en rajouter)
           Padding(
             padding: EdgeInsets.all(context.spacingL),
             child: Row(
               children: [
                 Expanded(
-                  child: _buildModernPhotoButton(
-                    context,
-                    icon: Icons.camera_alt,
-                    label: 'Photo',
-                    onTap: widget.onPrendrePhotoObservation,
+                  child: OutlinedButton.icon(
+                    onPressed: onPrendrePhoto,
+                    icon: Icon(Icons.camera_alt_outlined, size: context.iconSizeS),
+                    label: Text('Caméra', style: TextStyle(fontSize: context.fontSizeXS)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primaryBlue,
+                      side: BorderSide(color: AppTheme.primaryBlue.withOpacity(0.4)),
+                      padding: EdgeInsets.symmetric(vertical: context.spacingS),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.spacingS)),
+                    ),
                   ),
                 ),
                 SizedBox(width: context.spacingS),
                 Expanded(
-                  child: _buildModernPhotoButton(
-                    context,
-                    icon: Icons.photo_library,
-                    label: 'Galerie',
-                    onTap: widget.onChoisirPhotoObservation,
-                    isSecondary: true,
+                  child: OutlinedButton.icon(
+                    onPressed: onChoisirPhoto,
+                    icon: Icon(Icons.photo_library_outlined, size: context.iconSizeS),
+                    label: Text('Galerie', style: TextStyle(fontSize: context.fontSizeXS)),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppTheme.primaryBlue,
+                      side: BorderSide(color: AppTheme.primaryBlue.withOpacity(0.4)),
+                      padding: EdgeInsets.symmetric(vertical: context.spacingS),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.spacingS)),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-          SizedBox(height: context.spacingL),
         ],
       ),
     );
@@ -1392,10 +1205,10 @@ class _EtapePointsVerification extends StatefulWidget {
   final List<PointVerification> pointsVerification;
   final Map<int, List<String>> pointSuggestions;
   final Map<int, bool> pointLoading;
-  final Map<int, bool> hasObservation; // Nouveau : pour le toggle observation
+  final Map<int, bool> hasObservation;
   final Function(int, String) onObservationChanged;
   final Function(int, String, PointVerification) onUseSuggestion;
-  final Function(int, bool) onObservationToggleChanged; // Nouveau : callback pour toggle
+  final Function(int, bool) onObservationToggleChanged;
 
   const _EtapePointsVerification({
     super.key,
@@ -1443,7 +1256,6 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
       if (point.conformite.isEmpty || point.conformite == 'non_applicable') {
         continue;
       }
-      // La priorité n'est plus obligatoire
     }
     return true;
   }
@@ -1883,7 +1695,12 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
 }
 
 // ================================================================
-// WIDGET PRINCIPAL : AjouterCoffretScreen
+// ENUM : Phase de capture photo séquentielle après scan QR
+// ================================================================
+enum _PhotoCapturePhase { none, externe, interne, done }
+
+// ================================================================
+// WIDGET PRINCIPAL : AjouterEquipementScreen
 // ================================================================
 
 class AjouterCoffretScreen extends StatefulWidget {
@@ -1896,6 +1713,7 @@ class AjouterCoffretScreen extends StatefulWidget {
   final int? coffretIndex;
   final bool isInZone;
   final String? qrCode;
+  final bool shouldAutoCapturePhotos;
 
   const AjouterCoffretScreen({
     super.key,
@@ -1908,6 +1726,7 @@ class AjouterCoffretScreen extends StatefulWidget {
     this.coffretIndex,
     this.isInZone = false,
     this.qrCode,
+    this.shouldAutoCapturePhotos = false,
   });
 
   bool get isEdition => coffret != null;
@@ -1937,7 +1756,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   List<PointVerification> _pointsVerification = [];
 
   final _observationController = TextEditingController();
-  List<String> _observationPhotos = [];
+  final List<String> _observationPhotos = [];
   String? _selectedNiveauPuissance;
 
   List<String> _coffretPhotosExterne = [];
@@ -1951,7 +1770,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   Map<int, List<String>> _pointSuggestions = {};
   Map<int, bool> _pointLoading = {};
   Map<int, Timer?> _pointDebounceTimers = {};
-  Map<int, bool> _hasObservation = {}; // Nouveau : pour le toggle observation
+  Map<int, bool> _hasObservation = {};
 
   bool _nomValid = false;
   bool _typeValid = false;
@@ -1968,6 +1787,11 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   
   GlobalKey<_EtapePointsVerificationState>? _etapePointsKey;
 
+  // ---------------------------------------------------------------
+  // NOUVEAU : Gestion de la capture séquentielle post-scan QR
+  // ---------------------------------------------------------------
+  _PhotoCapturePhase _capturePhase = _PhotoCapturePhase.none;
+
   @override
   void initState() {
     super.initState();
@@ -1983,6 +1807,346 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     } else {
       _initializeAlimentations();
     }
+
+    // Lancer le flow séquentiel de capture uniquement si demandé et pas en édition
+    if (widget.shouldAutoCapturePhotos && !widget.isEdition) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _lancerCaptureSequentielle();
+      });
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // NOUVEAU : Démarre le flow de capture séquentielle
+  // ---------------------------------------------------------------
+  Future<void> _lancerCaptureSequentielle() async {
+    // --- Photo EXTERNE ---
+    setState(() => _capturePhase = _PhotoCapturePhase.externe);
+    await _afficherDialogueCapture(
+      phase: _PhotoCapturePhase.externe,
+      titre: 'Photo externe',
+      sousTitre: 'Prenez une photo de l\'extérieur de l\'équipement',
+      icone: Icons.camera_rear_outlined,
+      couleur: Colors.blue,
+      onCapture: _capturerPhotoExternePourFlow,
+    );
+
+    if (!mounted) return;
+
+    // Vérifier que la photo externe a bien été prise
+    if (_coffretPhotosExterne.isEmpty) {
+      setState(() => _capturePhase = _PhotoCapturePhase.none);
+      _showError('La photo externe est obligatoire. Veuillez la prendre depuis le formulaire.');
+      return;
+    }
+
+    // --- Photo INTERNE ---
+    setState(() => _capturePhase = _PhotoCapturePhase.interne);
+    await _afficherDialogueCapture(
+      phase: _PhotoCapturePhase.interne,
+      titre: 'Photo interne',
+      sousTitre: 'Prenez une photo de l\'intérieur de l\'équipement',
+      icone: Icons.camera_front_outlined,
+      couleur: Colors.teal,
+      onCapture: _capturerPhotoInternePourFlow,
+    );
+
+    if (!mounted) return;
+
+    // Vérifier que la photo interne a bien été prise
+    if (_coffretPhotosInterne.isEmpty) {
+      setState(() => _capturePhase = _PhotoCapturePhase.none);
+      _showError('La photo interne est obligatoire. Veuillez la prendre depuis le formulaire.');
+      return;
+    }
+
+    // --- Tout est bon : on affiche le formulaire normalement ---
+    setState(() => _capturePhase = _PhotoCapturePhase.done);
+    _showSuccess('Photos enregistrées. Complétez maintenant le formulaire.');
+  }
+
+  // ---------------------------------------------------------------
+  // NOUVEAU : Dialogue de capture photo (externe ou interne)
+  // ---------------------------------------------------------------
+  Future<void> _afficherDialogueCapture({
+    required _PhotoCapturePhase phase,
+    required String titre,
+    required String sousTitre,
+    required IconData icone,
+    required Color couleur,
+    required Future<bool> Function() onCapture,
+  }) async {
+    // On boucle tant que l'utilisateur n'a pas validé une photo
+    bool photoValide = false;
+    while (!photoValide && mounted) {
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogContext) {
+          return _PhotoCaptureDialog(
+            titre: titre,
+            sousTitre: sousTitre,
+            icone: icone,
+            couleur: couleur,
+            photosExistantes: phase == _PhotoCapturePhase.externe
+                ? _coffretPhotosExterne
+                : _coffretPhotosInterne,
+            onPrendrePhoto: () async {
+              Navigator.of(dialogContext).pop();
+              await onCapture();
+            },
+          );
+        },
+      );
+
+      // Après fermeture du dialogue, vérifier si une photo a été prise
+      final photos = phase == _PhotoCapturePhase.externe
+          ? _coffretPhotosExterne
+          : _coffretPhotosInterne;
+
+      if (photos.isNotEmpty) {
+        photoValide = true;
+        // Afficher un dialogue de confirmation avec aperçu et bouton "Valider"
+        if (mounted) {
+          final validated = await _afficherDialogueValidation(
+            phase: phase,
+            couleur: couleur,
+            titre: titre,
+          );
+          if (!validated) {
+            // L'utilisateur veut reprendre la photo : vider et reboucler
+            setState(() {
+              if (phase == _PhotoCapturePhase.externe) {
+                _coffretPhotosExterne.clear();
+                _photosExterneValid = false;
+              } else {
+                _coffretPhotosInterne.clear();
+                _photosInterneValid = false;
+              }
+            });
+            photoValide = false;
+          }
+        }
+      } else {
+        // Aucune photo prise : on propose de réessayer ou d'abandonner
+        if (mounted) {
+          final retry = await _afficherDialogueRetry(titre: titre);
+          if (!retry) break; // L'utilisateur abandonne
+        }
+      }
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // NOUVEAU : Dialogue de validation avec aperçu de la photo
+  // ---------------------------------------------------------------
+  Future<bool> _afficherDialogueValidation({
+    required _PhotoCapturePhase phase,
+    required Color couleur,
+    required String titre,
+  }) async {
+    final photos = phase == _PhotoCapturePhase.externe
+        ? _coffretPhotosExterne
+        : _coffretPhotosInterne;
+    final lastPhoto = photos.last;
+
+    return await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // En-tête
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: couleur.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Icon(Icons.check_circle_outline, color: couleur, size: 22),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            titre,
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          Text(
+                            'Photo prise — validez ou reprenez',
+                            style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // Aperçu photo
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.file(
+                    File(lastPhoto),
+                    height: 200,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                  ),
+                ),
+                const SizedBox(height: 20),
+                // Boutons
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton.icon(
+                        onPressed: () => Navigator.pop(dialogContext, false),
+                        icon: const Icon(Icons.replay, size: 16),
+                        label: const Text('Reprendre'),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: Colors.grey.shade700,
+                          side: BorderSide(color: Colors.grey.shade400),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => Navigator.pop(dialogContext, true),
+                        icon: const Icon(Icons.check, size: 16),
+                        label: const Text('Valider'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: couleur,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          elevation: 0,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    ) ?? false;
+  }
+
+  // ---------------------------------------------------------------
+  // NOUVEAU : Dialogue de retry si aucune photo n'a été prise
+  // ---------------------------------------------------------------
+  Future<bool> _afficherDialogueRetry({required String titre}) async {
+    return await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 22),
+            const SizedBox(width: 8),
+            const Text('Photo manquante'),
+          ],
+        ),
+        content: Text(
+          'Aucune photo n\'a été prise pour "$titre". Cette photo est obligatoire.\n\nVoulez-vous réessayer ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text('Ignorer', style: TextStyle(color: Colors.grey.shade600)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Réessayer'),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
+  // ---------------------------------------------------------------
+  // NOUVEAU : Capture photo externe pour le flow séquentiel
+  // ---------------------------------------------------------------
+  Future<bool> _capturerPhotoExternePourFlow() async {
+    try {
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
+      if (photo != null) {
+        setState(() => _isLoadingPhotosExterne = true);
+        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_externe');
+        setState(() {
+          _coffretPhotosExterne.add(savedPath);
+          _photosExterneValid = true;
+        });
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _showError('Erreur photo externe: $e');
+      return false;
+    } finally {
+      if (mounted) setState(() => _isLoadingPhotosExterne = false);
+    }
+  }
+
+  // ---------------------------------------------------------------
+  // NOUVEAU : Capture photo interne pour le flow séquentiel
+  // ---------------------------------------------------------------
+  Future<bool> _capturerPhotoInternePourFlow() async {
+    try {
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 85,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
+      if (photo != null) {
+        setState(() => _isLoadingPhotosInterne = true);
+        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_interne');
+        setState(() {
+          _coffretPhotosInterne.add(savedPath);
+          _photosInterneValid = true;
+        });
+        return true;
+      }
+      return false;
+    } catch (e) {
+      _showError('Erreur photo interne: $e');
+      return false;
+    } finally {
+      if (mounted) setState(() => _isLoadingPhotosInterne = false);
+    }
+  }
+
+  void _showSuccess(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   void _autoFillRepere() {
@@ -2072,11 +2236,10 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     if (!_alimentationsValid) allValid = false;
     
     _validatePoints();
-      if (!_pointsValid) allValid = false;
+    if (!_pointsValid) allValid = false;
     
     if (_domaineTension.isEmpty) { _domaineTensionValid = false; allValid = false; }
     
-    // Validation des photos
     if (_coffretPhotosExterne.isEmpty) { 
       _photosExterneValid = false; 
       allValid = false; 
@@ -2137,13 +2300,13 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
       photos: List.from(point.photos),
     )));
     
-    // Initialiser hasObservation pour les points existants
     for (int i = 0; i < _pointsVerification.length; i++) {
       _hasObservation[i] = _pointsVerification[i].observation != null && _pointsVerification[i].observation!.isNotEmpty;
     }
     
     if (coffret.photos.isNotEmpty) {
       _coffretPhotosExterne = List.from(coffret.photos);
+      _photosExterneValid = true;
     }
     _initializeForCoffretType(_selectedType);
     _validateNom(coffret.nom);
@@ -2153,7 +2316,6 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     _validatePoints();
     _validateDomaineTension(coffret.domaineTension);
   }
-
 
   Future<void> _prendrePhotoExterne() async {
     try {
@@ -2197,19 +2359,19 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     } catch (e) { _showError('Erreur photo interne: $e'); } finally { setState(() => _isLoadingPhotosInterne = false); }
   }
 
-Future<void> _choisirPhotoInterne() async {
-  try {
-    final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
-    if (photo != null) {
-      setState(() => _isLoadingPhotosInterne = true);
-      final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_interne');
-      setState(() {
-        _coffretPhotosInterne.add(savedPath);
-        _validatePhotosInterne();
-      });
-    }
-  } catch (e) { _showError('Erreur sélection photo interne: $e'); } finally { setState(() => _isLoadingPhotosInterne = false); }
-}
+  Future<void> _choisirPhotoInterne() async {
+    try {
+      final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
+      if (photo != null) {
+        setState(() => _isLoadingPhotosInterne = true);
+        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_interne');
+        setState(() {
+          _coffretPhotosInterne.add(savedPath);
+          _validatePhotosInterne();
+        });
+      }
+    } catch (e) { _showError('Erreur sélection photo interne: $e'); } finally { setState(() => _isLoadingPhotosInterne = false); }
+  }
 
   Future<void> _prendrePhotoObservation() async {
     try {
@@ -2240,7 +2402,6 @@ Future<void> _choisirPhotoInterne() async {
     await photoFile.copy(newPath);
     return newPath;
   }
-
 
   void _supprimerPhotoExterne(int index) {
     showDialog(
@@ -2320,7 +2481,6 @@ Future<void> _choisirPhotoInterne() async {
         pointVerification: point, conformite: '', observation: null, referenceNormative: null,
       )).toList();
       
-      // Initialiser hasObservation
       _hasObservation.clear();
       for (int i = 0; i < _pointsVerification.length; i++) {
         _hasObservation[i] = false;
@@ -2541,10 +2701,8 @@ Future<void> _choisirPhotoInterne() async {
     } catch (e) { return false; }
   }
 
-
   void _handleNext() {
     if (_currentStep == 0) {
-      // Vérifier tous les champs obligatoires de l'étape 1
       if (!_nomValid) {
         _showError('Veuillez saisir le nom de l\'équipement');
         return;
@@ -2586,7 +2744,7 @@ Future<void> _choisirPhotoInterne() async {
         }
       }
     }
-  } 
+  }
 
   void _handlePrevious() {
     if (_currentStep == 3) {
@@ -2614,6 +2772,11 @@ Future<void> _choisirPhotoInterne() async {
 
   int _getTotalSteps() => 4;
 
+  // Indique si le flow de capture séquentielle est encore en cours
+  bool get _isCaptureFlowActive =>
+      _capturePhase == _PhotoCapturePhase.externe ||
+      _capturePhase == _PhotoCapturePhase.interne;
+
   @override
   Widget build(BuildContext context) {
     final totalSteps = _getTotalSteps();
@@ -2637,6 +2800,7 @@ Future<void> _choisirPhotoInterne() async {
         ),
         body: Column(
           children: [
+            // Stepper de navigation (toujours visible)
             Container(
               padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingM),
               decoration: BoxDecoration(
@@ -2679,6 +2843,7 @@ Future<void> _choisirPhotoInterne() async {
               ),
             ),
             
+            // Contenu principal
             Expanded(
               child: PageView(
                 controller: _mainPageController,
@@ -2775,38 +2940,189 @@ Future<void> _choisirPhotoInterne() async {
               ),
             ),
             
-            Container(
-              padding: EdgeInsets.all(context.spacingL),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: context.spacingS, offset: const Offset(0, -2))],
-              ),
-              child: Row(
-                children: [
-                  if (_currentStep > 0)
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _handlePrevious,
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: context.spacingM),
-                          side: BorderSide(color: Colors.grey.shade400),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.spacingS)),
+            // Boutons de navigation (désactivés pendant le flow de capture)
+            if (!_isCaptureFlowActive)
+              Container(
+                padding: EdgeInsets.all(context.spacingL),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: context.spacingS, offset: const Offset(0, -2))],
+                ),
+                child: Row(
+                  children: [
+                    if (_currentStep > 0)
+                      Expanded(
+                        child: OutlinedButton(
+                          onPressed: _handlePrevious,
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: context.spacingM),
+                            side: BorderSide(color: Colors.grey.shade400),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.spacingS)),
+                          ),
+                          child: Text('Précédent', style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
                         ),
-                        child: Text('Précédent', style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
+                      ),
+                    if (_currentStep > 0) SizedBox(width: context.spacingM),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _handleNext,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: context.spacingM),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.spacingS)),
+                          elevation: 2,
+                        ),
+                        child: Text(_getNextButtonText(), style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.bold)),
                       ),
                     ),
-                  if (_currentStep > 0) SizedBox(width: context.spacingM),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _handleNext,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: context.spacingM),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.spacingS)),
-                        elevation: 2,
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ================================================================
+// NOUVEAU WIDGET : Dialogue de capture photo séquentielle
+// ================================================================
+class _PhotoCaptureDialog extends StatelessWidget {
+  final String titre;
+  final String sousTitre;
+  final IconData icone;
+  final Color couleur;
+  final List<String> photosExistantes;
+  final VoidCallback onPrendrePhoto;
+
+  const _PhotoCaptureDialog({
+    required this.titre,
+    required this.sousTitre,
+    required this.icone,
+    required this.couleur,
+    required this.photosExistantes,
+    required this.onPrendrePhoto,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      elevation: 0,
+      backgroundColor: Colors.transparent,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: couleur.withOpacity(0.15),
+              blurRadius: 30,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // En-tête coloré
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [couleur, couleur.withOpacity(0.75)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    width: 64,
+                    height: 64,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(icone, color: Colors.white, size: 32),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    titre,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.3,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    sousTitre,
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.85),
+                      fontSize: 13,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+
+            // Corps
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+              child: Column(
+                children: [
+                  // Instruction
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: couleur.withOpacity(0.06),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: couleur.withOpacity(0.15)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info_outline, color: couleur, size: 18),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Cette photo est obligatoire pour continuer.',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: couleur.withOpacity(0.9),
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Bouton principal : Prendre la photo
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: onPrendrePhoto,
+                      icon: const Icon(Icons.camera_alt, size: 20),
+                      label: const Text(
+                        'Prendre la photo',
+                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold),
                       ),
-                      child: Text(_getNextButtonText(), style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: couleur,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        elevation: 0,
+                      ),
                     ),
                   ),
                 ],

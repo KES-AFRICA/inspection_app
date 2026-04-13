@@ -588,7 +588,7 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
               children: [
                 _buildStatCard('Zones', _audit!.moyenneTensionZones.length, Icons.map_outlined),
                 _buildStatCard('Locaux', _getTotalLocaux(), Icons.domain),
-                _buildStatCard('Coffrets', _getTotalCoffrets(), Icons.electrical_services),
+                _buildStatCard('Équipements', _getTotalCoffrets(), Icons.electrical_services),
               ],
             ),
           ),
@@ -800,8 +800,8 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildZoneStat('Locaux', totalLocaux, Icons.domain),
-                    _buildZoneStat('Coffrets directs', zone.coffrets.length, Icons.electrical_services),
-                    _buildZoneStat('Total coffrets', totalCoffrets.toInt(), Icons.assessment),
+                    _buildZoneStat('Équipements directs', zone.coffrets.length, Icons.electrical_services),
+                    _buildZoneStat('Total Équipements', totalCoffrets.toInt(), Icons.assessment),
                   ],
                 ),
               ),
