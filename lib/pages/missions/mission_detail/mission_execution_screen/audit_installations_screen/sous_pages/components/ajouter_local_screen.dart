@@ -56,7 +56,7 @@ class _EtapeInformationsGenerales extends StatefulWidget {
   final List<String> localPhotos;
   final Function() onPrendrePhoto;
   final Function() onChoisirPhoto;
-  final VoidCallback onSupprimerPhoto;
+  final Function(int) onSupprimerPhoto;
   final bool isLoadingPhotos;
   final bool addObservation;
   final Function(bool) onAddObservationChanged;
@@ -392,184 +392,434 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
   }
 
   Widget _buildModernPhotoCarousel(BuildContext context) {
-    final photoHeight = context.screenHeight * 0.25;
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(context.spacingM),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: context.spacingS,
-            offset: Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.all(context.spacingL),
-            child: Row(
-              children: [
-                Icon(Icons.photo_camera_outlined, color: AppTheme.primaryBlue, size: context.iconSizeM),
-                SizedBox(width: context.spacingS),
-                Flexible(
-                  child: Text(
-                    'Photos du local',
-                    style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.w600, color: AppTheme.darkBlue),
+  final photoHeight = context.screenHeight * 0.25;
+  
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(context.spacingM),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.04),
+          blurRadius: context.spacingS,
+          offset: Offset(0, 2),
+        ),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // En-tête avec titre et compteur
+        Padding(
+          padding: EdgeInsets.all(context.spacingL),
+          child: Row(
+            children: [
+              Container(
+                width: context.iconSizeL,
+                height: context.iconSizeL,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(context.spacingS),
+                ),
+                child: Icon(
+                  Icons.photo_camera_outlined, 
+                  color: AppTheme.primaryBlue, 
+                  size: context.iconSizeM,
+                ),
+              ),
+              SizedBox(width: context.spacingS),
+              Expanded(
+                child: Text(
+                  'Photos du local',
+                  style: TextStyle(
+                    fontSize: context.fontSizeL, 
+                    fontWeight: FontWeight.w600, 
+                    color: AppTheme.darkBlue,
                   ),
                 ),
-                const Spacer(),
-                if (widget.localPhotos.isNotEmpty)
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: context.spacingS, vertical: context.spacingXS),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(context.spacingL),
-                    ),
-                    child: Text(
-                      '${widget.localPhotos.length} photo${widget.localPhotos.length > 1 ? 's' : ''}',
-                      style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: AppTheme.primaryBlue),
+              ),
+              if (widget.localPhotos.isNotEmpty)
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: context.spacingS, 
+                    vertical: context.spacingXS,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryBlue.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(context.spacingL),
+                  ),
+                  child: Text(
+                    '${widget.localPhotos.length} photo${widget.localPhotos.length > 1 ? 's' : ''}',
+                    style: TextStyle(
+                      fontSize: context.fontSizeXS, 
+                      fontWeight: FontWeight.w600, 
+                      color: AppTheme.primaryBlue,
                     ),
                   ),
-              ],
-            ),
+                ),
+            ],
           ),
-          
-          if (widget.isLoadingPhotos)
-            Container(
-              height: photoHeight,
-              width: double.infinity,
-              child: Center(child: CircularProgressIndicator(color: AppTheme.primaryBlue)),
-            )
-          else if (widget.localPhotos.isEmpty)
-            Container(
-              height: photoHeight,
-              width: double.infinity,
-              margin: EdgeInsets.symmetric(horizontal: context.spacingL),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(context.spacingS),
-                border: Border.all(color: Colors.grey.shade200, width: 1.5),
-              ),
+        ),
+        
+        // Zone de photos avec gestion d'état de chargement
+        if (widget.isLoadingPhotos)
+          Container(
+            height: photoHeight,
+            margin: EdgeInsets.symmetric(horizontal: context.spacingL),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(context.spacingS),
+              border: Border.all(color: Colors.grey.shade200, width: 1.5),
+            ),
+            child: Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.add_photo_alternate_outlined, size: context.iconSizeXL * 1.5, color: Colors.grey.shade400),
+                  SizedBox(
+                    width: context.iconSizeXL,
+                    height: context.iconSizeXL,
+                    child: CircularProgressIndicator(
+                      color: AppTheme.primaryBlue,
+                      strokeWidth: 2.5,
+                    ),
+                  ),
                   SizedBox(height: context.spacingM),
-                  Flexible(
-                    child: Text(
-                      'Aucune photo',
-                      style: TextStyle(color: Colors.grey.shade600, fontSize: context.fontSizeM),
+                  Text(
+                    'Chargement...',
+                    style: TextStyle(
+                      fontSize: context.fontSizeS,
+                      color: Colors.grey.shade600,
                     ),
                   ),
                 ],
               ),
-            )
-          else
-            Column(
-              children: [
-                Container(
-                  height: photoHeight,
-                  width: double.infinity,
-                  margin: EdgeInsets.symmetric(horizontal: context.spacingL),
-                  child: PageView.builder(
-                    controller: _photosController,
-                    onPageChanged: (index) => setState(() => _currentPhotoIndex = index),
-                    itemCount: widget.localPhotos.length,
-                    itemBuilder: (context, index) {
-                      return GestureDetector(
+            ),
+          )
+        else if (widget.localPhotos.isEmpty)
+          // État vide
+          Container(
+            height: photoHeight,
+            margin: EdgeInsets.symmetric(horizontal: context.spacingL),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(context.spacingS),
+              border: Border.all(color: Colors.grey.shade200, width: 1.5),
+            ),
+            child: ClipRRect(  // ← AJOUTER ClipRRect pour les coins arrondis
+              borderRadius: BorderRadius.circular(context.spacingS),
+              child: Container(  // ← AJOUTER un Container qui prend tout l'espace
+                width: double.infinity,
+                height: double.infinity,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  crossAxisAlignment: CrossAxisAlignment.center,  // ← AJOUTER pour centrer horizontalement
+                  children: [
+                    Container(
+                      padding: EdgeInsets.all(context.spacingM),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        Icons.add_photo_alternate_outlined, 
+                        size: context.iconSizeXL * 1.3, 
+                        color: Colors.grey.shade400,
+                      ),
+                    ),
+                    SizedBox(height: context.spacingM),
+                    Text(
+                      'Aucune photo',
+                      style: TextStyle(
+                        color: Colors.grey.shade600, 
+                        fontSize: context.fontSizeM,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    SizedBox(height: context.spacingXS),
+                    Text(
+                      'Ajoutez des photos du local',
+                      style: TextStyle(
+                        color: Colors.grey.shade500, 
+                        fontSize: context.fontSizeXS,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          )
+        else
+          // Carrousel de photos
+          Column(
+            children: [
+              // PageView avec hauteur fixe
+              Container(
+                height: photoHeight,
+                margin: EdgeInsets.symmetric(horizontal: context.spacingL),
+                child: PageView.builder(
+                  controller: _photosController,
+                  onPageChanged: (index) {
+                    if (mounted) {
+                      setState(() => _currentPhotoIndex = index);
+                    }
+                  },
+                  itemCount: widget.localPhotos.length,
+                  itemBuilder: (context, index) {
+                    // Vérification de sécurité
+                    if (index >= widget.localPhotos.length) {
+                      return const SizedBox.shrink();
+                    }
+                    
+                    final photoPath = widget.localPhotos[index];
+                    final photoFile = File(photoPath);
+                    
+                    return Padding(
+                      padding: EdgeInsets.symmetric(horizontal: context.spacingXS),
+                      child: GestureDetector(
                         onTap: () => _showFullScreenPhoto(widget.localPhotos, index),
-                        child: Container(
-                          margin: EdgeInsets.symmetric(horizontal: context.spacingXS),
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(context.spacingS),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 6,
-                                offset: Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(context.spacingS),
-                            child: Stack(
-                              fit: StackFit.expand,
-                              children: [
-                                Image.file(File(widget.localPhotos[index]), fit: BoxFit.cover),
-                                Positioned(
-                                  top: context.spacingS,
-                                  right: context.spacingS,
-                                  child: GestureDetector(
-                                    onTap: () => _confirmDeletePhoto(index),
-                                    child: Container(
-                                      padding: EdgeInsets.all(context.spacingXS),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.6),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(Icons.delete_outline, color: Colors.white, size: context.iconSizeS),
-                                    ),
-                                  ),
+                        child: Hero(
+                          tag: 'photo_$index-${photoPath.hashCode}',
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(context.spacingS),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withOpacity(0.1),
+                                  blurRadius: 6,
+                                  offset: Offset(0, 2),
                                 ),
                               ],
                             ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(context.spacingS),
+                              child: Stack(
+                                children: [
+                                  // Image
+                                  Positioned.fill(
+                                    child: photoFile.existsSync()
+                                        ? Image.file(
+                                            photoFile,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) {
+                                              return Container(
+                                                color: Colors.grey.shade100,
+                                                child: Column(
+                                                  mainAxisAlignment: MainAxisAlignment.center,
+                                                  children: [
+                                                    Icon(
+                                                      Icons.broken_image,
+                                                      color: Colors.grey.shade400,
+                                                      size: context.iconSizeXL,
+                                                    ),
+                                                    SizedBox(height: context.spacingS),
+                                                    Text(
+                                                      'Image corrompue',
+                                                      style: TextStyle(
+                                                        fontSize: context.fontSizeXS,
+                                                        color: Colors.grey.shade600,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            },
+                                          )
+                                        : Container(
+                                            color: Colors.grey.shade100,
+                                            child: Column(
+                                              mainAxisAlignment: MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.image_not_supported,
+                                                  color: Colors.grey.shade400,
+                                                  size: context.iconSizeXL,
+                                                ),
+                                                SizedBox(height: context.spacingS),
+                                                Text(
+                                                  'Image introuvable',
+                                                  style: TextStyle(
+                                                    fontSize: context.fontSizeXS,
+                                                    color: Colors.grey.shade600,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                  ),
+                                  
+                                  // Overlay gradient en bas pour meilleure visibilité des boutons
+                                  Positioned(
+                                    bottom: 0,
+                                    left: 0,
+                                    right: 0,
+                                    child: Container(
+                                      height: 50,
+                                      decoration: BoxDecoration(
+                                        gradient: LinearGradient(
+                                          begin: Alignment.bottomCenter,
+                                          end: Alignment.topCenter,
+                                          colors: [
+                                            Colors.black.withOpacity(0.5),
+                                            Colors.transparent,
+                                          ],
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  
+                                  // Indicateur de position (ex: "2/5")
+                                  Positioned(
+                                    bottom: context.spacingS,
+                                    left: context.spacingS,
+                                    child: Container(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: context.spacingS,
+                                        vertical: context.spacingXS,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.6),
+                                        borderRadius: BorderRadius.circular(context.spacingL),
+                                      ),
+                                      child: Text(
+                                        '${index + 1}/${widget.localPhotos.length}',
+                                        style: TextStyle(
+                                          color: Colors.white,
+                                          fontSize: context.fontSizeXS,
+                                          fontWeight: FontWeight.w500,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  
+                                  // Bouton de suppression
+                                  Positioned(
+                                    top: context.spacingS,
+                                    right: context.spacingS,
+                                    child: Material(
+                                      color: Colors.transparent,
+                                      child: InkWell(
+                                        onTap: () => _confirmDeletePhoto(index),
+                                        borderRadius: BorderRadius.circular(context.spacingL),
+                                        child: Container(
+                                          padding: EdgeInsets.all(context.spacingS),
+                                          decoration: BoxDecoration(
+                                            color: Colors.black.withOpacity(0.6),
+                                            shape: BoxShape.circle,
+                                            border: Border.all(
+                                              color: Colors.white.withOpacity(0.3),
+                                              width: 1,
+                                            ),
+                                          ),
+                                          child: Icon(
+                                            Icons.delete_outline,
+                                            color: Colors.white,
+                                            size: context.iconSizeS,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           ),
                         ),
-                      );
+                      ),
+                    );
+                  },
+                ),
+              ),
+              
+              // Indicateur de page (dots)
+              if (widget.localPhotos.length > 1)
+                Padding(
+                  padding: EdgeInsets.only(top: context.spacingM, bottom: context.spacingS),
+                  child: SmoothPageIndicator(
+                    controller: _photosController,
+                    count: widget.localPhotos.length,
+                    effect: ExpandingDotsEffect(
+                      dotWidth: context.spacingS,
+                      dotHeight: context.spacingS,
+                      expansionFactor: 3,
+                      spacing: context.spacingXS,
+                      activeDotColor: AppTheme.primaryBlue,
+                      dotColor: Colors.grey.shade300,
+                    ),
+                    onDotClicked: (index) {
+                      if (_photosController.hasClients) {
+                        _photosController.animateToPage(
+                          index,
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        );
+                      }
                     },
                   ),
                 ),
-                if (widget.localPhotos.length > 1)
-                  Padding(
-                    padding: EdgeInsets.only(top: context.spacingS, bottom: context.spacingS),
-                    child: SmoothPageIndicator(
-                      controller: _photosController,
-                      count: widget.localPhotos.length,
-                      effect: WormEffect(
-                        dotWidth: context.spacingS,
-                        dotHeight: context.spacingS,
-                        activeDotColor: AppTheme.primaryBlue,
-                        dotColor: Colors.grey.shade300,
-                      ),
-                    ),
-                  ),
-              ],
-            ),
-          
+            ],
+          ),
+        
+        // Boutons d'action
+        Padding(
+          padding: EdgeInsets.all(context.spacingL),
+          child: Row(
+            children: [
+              Expanded(
+                child: _buildModernPhotoButton(
+                  context,
+                  icon: Icons.camera_alt,
+                  label: 'Prendre une photo',
+                  onTap: widget.onPrendrePhoto,
+                ),
+              ),
+              SizedBox(width: context.spacingS),
+              Expanded(
+                child: _buildModernPhotoButton(
+                  context,
+                  icon: Icons.photo_library,
+                  label: 'Galerie',
+                  onTap: widget.onChoisirPhoto,
+                  isSecondary: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // Message d'aide
+        if (widget.localPhotos.isNotEmpty)
           Padding(
-            padding: EdgeInsets.all(context.spacingL),
+            padding: EdgeInsets.fromLTRB(
+              context.spacingL, 
+              0, 
+              context.spacingL, 
+              context.spacingL,
+            ),
             child: Row(
               children: [
-                Expanded(
-                  child: _buildModernPhotoButton(
-                    context,
-                    icon: Icons.camera_alt,
-                    label: 'Prendre',
-                    onTap: widget.onPrendrePhoto,
-                  ),
+                Icon(
+                  Icons.info_outline,
+                  size: context.iconSizeXS,
+                  color: Colors.grey.shade500,
                 ),
-                SizedBox(width: context.spacingS),
+                SizedBox(width: context.spacingXS),
                 Expanded(
-                  child: _buildModernPhotoButton(
-                    context,
-                    icon: Icons.photo_library,
-                    label: 'Galerie',
-                    onTap: widget.onChoisirPhoto,
-                    isSecondary: true,
+                  child: Text(
+                    'Appuyez sur une photo pour l\'agrandir',
+                    style: TextStyle(
+                      fontSize: context.fontSizeXS,
+                      color: Colors.grey.shade500,
+                      fontStyle: FontStyle.italic,
+                    ),
                   ),
                 ),
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
+      ],
+    ),
+  );
+}
   Widget _buildModernPhotoButton(
     BuildContext context, {
     required IconData icon,
@@ -924,12 +1174,40 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
-              widget.onSupprimerPhoto();
-              setState(() {
-                if (_currentPhotoIndex >= widget.localPhotos.length) {
-                  _currentPhotoIndex = widget.localPhotos.length - 1;
-                }
-                _photosController.jumpToPage(_currentPhotoIndex.clamp(0, widget.localPhotos.length - 1));
+              
+              // Sauvegarder la longueur actuelle avant suppression
+              final currentLength = widget.localPhotos.length;
+              
+              // Appeler le callback du parent AVANT de mettre à jour l'état local
+              widget.onSupprimerPhoto(index);
+              
+              // Mettre à jour l'index après suppression (dans un microtask pour laisser le temps au parent de se mettre à jour)
+              Future.microtask(() {
+                if (!mounted) return;
+                
+                setState(() {
+                  // Calculer le nouvel index de manière sécurisée
+                  if (currentLength <= 1) {
+                    _currentPhotoIndex = 0;
+                  } else if (_currentPhotoIndex >= currentLength - 1) {
+                    _currentPhotoIndex = (currentLength - 2).clamp(0, currentLength - 2);
+                  }
+                  // Ne pas essayer de sauter à une page si le contrôleur n'est pas prêt
+                });
+                
+                // Attendre que le setState soit appliqué avant de manipuler le PageController
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (!mounted) return;
+                  if (_photosController.hasClients && widget.localPhotos.isNotEmpty) {
+                    try {
+                      _photosController.jumpToPage(_currentPhotoIndex);
+                    } catch (e) {
+                      // En cas d'erreur, créer un nouveau PageController
+                      _photosController.dispose();
+                      // On ne recrée pas le contrôleur ici car il sera recréé dans didUpdateWidget
+                    }
+                  }
+                });
               });
             },
             style: ElevatedButton.styleFrom(
@@ -941,6 +1219,38 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
         ],
       ),
     );
+  }
+  
+  @override
+  void didUpdateWidget(_EtapeInformationsGenerales oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    
+    // Si la liste de photos a changé
+    if (oldWidget.localPhotos.length != widget.localPhotos.length) {
+      // Si la liste est vide, réinitialiser l'index
+      if (widget.localPhotos.isEmpty) {
+        setState(() {
+          _currentPhotoIndex = 0;
+        });
+      } 
+      // Si l'index courant dépasse la nouvelle longueur
+      else if (_currentPhotoIndex >= widget.localPhotos.length) {
+        setState(() {
+          _currentPhotoIndex = widget.localPhotos.length - 1;
+        });
+        
+        // Mettre à jour le PageController
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_photosController.hasClients) {
+            try {
+              _photosController.jumpToPage(_currentPhotoIndex);
+            } catch (e) {
+              // Ignorer les erreurs de page
+            }
+          }
+        });
+      }
+    }
   }
 }
 
@@ -3337,6 +3647,15 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     }
   }
 
+  void _supprimerPhotoLocal(int index) {
+    setState(() {
+      if (index >= 0 && index < _localPhotos.length) {
+        _localPhotos.removeAt(index);
+        _validateLocalPhotos();
+      }
+    });
+  }
+
   Future<void> _getElementSuggestions(int elementIndex, String query, String sectionType) async {
     if (query.length < 3) return;
     final body = <String, dynamic>{'query': query, 'max_results': 5};
@@ -3778,23 +4097,67 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       Navigator.pop(context, true);
       return;
     }
+    
     try {
       ClassementEmplacement? classement;
       if (widget.isEdition) {
         classement = HiveService.getClassementExisting(missionId: widget.mission.id, localisation: local.nom);
       }
+      
       classement ??= await HiveService.getOrCreateClassementForLocal(
         missionId: widget.mission.id,
         localisation: local.nom,
         zone: widget.isInZone && widget.zoneIndex != null ? 'Zone ${widget.zoneIndex! + 1}' : null,
         typeLocal: local.type,
       );
-      final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => ClassementEmplacementScreen(mission: widget.mission, emplacement: classement!)));
-      if (result == true) Navigator.pop(context, true);
+      
+      if (!mounted) return;
+      
+      // AJOUTER UN DIALOGUE DE CHARGEMENT
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (BuildContext context) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        },
+      );
+      
+      // PETIT DÉLAI POUR LAISSER LE TEMPS AU DIALOGUE DE S'AFFICHER
+      await Future.delayed(const Duration(milliseconds: 100));
+      
+      if (!mounted) return;
+      
+      // FERMER LE DIALOGUE DE CHARGEMENT
+      Navigator.of(context).pop();
+      
+      // NAVIGUER VERS L'ÉCRAN DE CLASSEMENT
+      final result = await Navigator.push(
+        context, 
+        MaterialPageRoute(
+          builder: (context) => ClassementEmplacementScreen(
+            mission: widget.mission, 
+            emplacement: classement!
+          )
+        )
+      );
+      
+      if (!mounted) return;
+      
+      if (result == true) {
+        Navigator.pop(context, true);
+      } else {
+        // SI L'UTILISATEUR REVIENT SANS SAUVEGARDER, ON RESTE SUR CET ÉCRAN
+        // MAIS ON POP PAS POUR ÉVITER DE PERDRE LES DONNÉES
+      }
     } catch (e) {
       print('❌ Erreur allerAuClassement: $e');
-      _showError('Erreur lors de l\'accès au classement: $e');
-      Navigator.pop(context, true);
+      if (mounted) {
+        // FERMER LE DIALOGUE DE CHARGEMENT SI OUVERT
+        Navigator.of(context).maybePop();
+        _showError('Erreur lors de l\'accès au classement: $e');
+      }
     }
   }
 
@@ -3919,7 +4282,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                     localPhotos: _localPhotos,
                     onPrendrePhoto: _prendrePhotoLocal,
                     onChoisirPhoto: _choisirPhotoLocalDepuisGalerie,
-                    onSupprimerPhoto: () {},
+                    onSupprimerPhoto: _supprimerPhotoLocal,
                     isLoadingPhotos: _isLoadingPhotos,
                     addObservation: _addObservation,
                     onAddObservationChanged: (value) {

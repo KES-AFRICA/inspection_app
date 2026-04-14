@@ -1,5 +1,4 @@
-// pdf_report_service.dart - Version corrigée finale
-
+// pdf_report_service.dart - Version corrigée
 import 'dart:io';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/widgets.dart';
@@ -19,8 +18,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 
 // ================================================================
-//  PdfReportService - Version améliorée avec filigrane, footers
-//  et marges personnalisées
+//  PdfReportService - Version améliorée
 // ================================================================
 
 class PdfReportService {
@@ -32,7 +30,7 @@ class PdfReportService {
   static const double kLeftMargin = 3.0 * 28.35;   // 3 cm à gauche
   static const double kTopMargin = 2.0 * 28.35;    // 2 cm en haut
   static const double kRightMargin = 2.0 * 28.35;  // 2 cm à droite
-  static const double kBottomMargin = 2.0 * 28.35; // 2 cm en bas
+  static const double kBottomMargin = 1.2 * 28.35; // 1.2 cm en bas
   
   // ──────────────────────────────────────────────────────────────
   //  COULEURS
@@ -66,10 +64,6 @@ class PdfReportService {
   static pw.MemoryImage? _otherPageFooterImage;
   static pw.MemoryImage? _logoKesImage;
   static bool _imagesLoaded = false;
-
-  static late final pw.Font _fontRegular;
-  static late final pw.Font _fontBold;
-  static bool _fontsLoaded = false;
 
   /// Charge toutes les images nécessaires (appelé une seule fois)
   static Future<void> _loadImages() async {
@@ -110,27 +104,6 @@ class PdfReportService {
     _imagesLoaded = true;
   }
 
-  /// Charge les polices nécessaires
-  static Future<void> _loadFonts() async {
-    if (_fontsLoaded) return;
-    
-    // Utiliser une police qui supporte Unicode (Roboto, OpenSans, etc.)
-    // Si tu as des fichiers de police dans assets, tu peux les charger :
-    try {
-      final regularData = await rootBundle.load('assets/fonts/Roboto-Regular.ttf');
-      final boldData = await rootBundle.load('assets/fonts/Roboto-Bold.ttf');
-      _fontRegular = pw.Font.ttf(regularData);
-      _fontBold = pw.Font.ttf(boldData);
-    } catch (e) {
-      // Fallback sur les polices standard (mais sans accents)
-      print('⚠️ Polices personnalisées non trouvées, utilisation des polices standard');
-      _fontRegular = pw.Font.helvetica();
-      _fontBold = pw.Font.helveticaBold();
-    }
-    
-    _fontsLoaded = true;
-  }
-
   // ──────────────────────────────────────────────────────────────
   //  CONSTRUCTION DU THÈME DE PAGE
   // ──────────────────────────────────────────────────────────────
@@ -159,12 +132,12 @@ class PdfReportService {
   }) {
     return pw.Stack(
       children: [
-        // Filigrane centré
+        // Filigrane centré - OPACITÉ NORMALE (1.0)
         if (_watermarkImage != null)
           pw.Center(
             child: pw.Opacity(
-              opacity: 0.08,
-              child: pw.Image(_watermarkImage!, width: 400, height: 400),
+              opacity: 1.0, // Opacité normale
+              child: pw.Image(_watermarkImage!, width: 450, height: 450), // Agrandi
             ),
           ),
         
@@ -176,40 +149,28 @@ class PdfReportService {
           child: pw.Column(
             mainAxisSize: pw.MainAxisSize.min,
             children: [
-              // Image du footer
-              if (isFirstPage && _firstPageFooterImage != null)
-                pw.Container(
-                  width: double.infinity,
-                  child: pw.Image(
-                    _firstPageFooterImage!,
-                    fit: pw.BoxFit.fitWidth,  // ← fitWidth au lieu de fill
-                  ),
-                )
-              else if (!isFirstPage && _otherPageFooterImage != null)
-                pw.Container(
-                  width: double.infinity,
-                  child: pw.Image(
-                    _otherPageFooterImage!,
-                    fit: pw.BoxFit.fitWidth,  // ← fitWidth au lieu de fill
-                  ),
-                )
-              else
-                pw.Container(height: 40, color: PdfColors.grey300),
-              
-              // Pagination (seulement pour les pages intérieures)
+              // Pagination SUPERPOSÉE sur le footer (pour les pages intérieures)
               if (!isFirstPage)
                 pw.Container(
-                  padding: const pw.EdgeInsets.only(left: 20, bottom: 8),
+                  padding: const pw.EdgeInsets.only(left: 20, bottom: 15),
                   alignment: pw.Alignment.centerLeft,
                   child: pw.Text(
                     'Page ${context.pageNumber} / ${context.pagesCount}',
                     style: pw.TextStyle(
-                      fontSize: 8,
+                      fontSize: 9,
                       color: PdfColors.white,
                       fontWeight: pw.FontWeight.bold,
                     ),
                   ),
                 ),
+              
+              // Image du footer
+              if (isFirstPage && _firstPageFooterImage != null)
+                pw.Image(_firstPageFooterImage!, fit: pw.BoxFit.fitWidth)
+              else if (!isFirstPage && _otherPageFooterImage != null)
+                pw.Image(_otherPageFooterImage!, fit: pw.BoxFit.fitWidth)
+              else
+                pw.Container(height: 40, color: PdfColors.grey300),
             ],
           ),
         ),
@@ -224,18 +185,19 @@ class PdfReportService {
     try {
       // Charger les images
       await _loadImages();
-      await _loadFonts();
       
       // Récupérer les données
       final mission = HiveService.getMissionById(missionId);
       if (mission == null) return null;
+      
+      // Récupérer les renseignements généraux (NOUVEAU : source principale)
+      final renseignements = await HiveService.getOrCreateRenseignementsGeneraux(missionId);
       
       final description = HiveService.getDescriptionInstallationsByMissionId(missionId);
       final audit = HiveService.getAuditInstallationsByMissionId(missionId);
       final classements = HiveService.getEmplacementsByMissionId(missionId);
       final mesures = HiveService.getMesuresEssaisByMissionId(missionId);
       final foudres = HiveService.getFoudreObservationsByMissionId(missionId);
-      final renseignements = HiveService.getRenseignementsGenerauxByMissionId(missionId);
 
       // Créer le document
       final pdf = pw.Document(
@@ -244,98 +206,123 @@ class PdfReportService {
         compress: true,
       );
 
+      // Générer le numéro de rapport
+      final reportNumber = _generateReportNumber(mission);
+      final dateIntervention = renseignements.dateDebut ?? mission.dateIntervention;
+      final dateRapport = DateTime.now();
+
       // ────────────────────────────────────────────────────────────
       //  1. PAGE DE COUVERTURE
       // ────────────────────────────────────────────────────────────
       pdf.addPage(
         pw.Page(
-          pageTheme: _buildPageTheme(isFirstPage: true),  // ← Appel direct, pas de lambda
-          build: (ctx) => _buildCoverPage(mission),
+          pageTheme: _buildPageTheme(isFirstPage: true),
+          build: (ctx) => _buildCoverPage(
+            mission: mission,
+            renseignements: renseignements,
+            reportNumber: reportNumber,
+            dateIntervention: dateIntervention,
+            dateRapport: dateRapport,
+          ),
         ),
       );
 
       // ────────────────────────────────────────────────────────────
-      //  PAGES SUIVANTES
+      //  2. SOMMAIRE (NOUVEAU - automatique)
       // ────────────────────────────────────────────────────────────
+      // Le sommaire est généré automatiquement par le package pdf
+      // Il faut ajouter des bookmarks pour chaque section
       
-      // 2. Rappel des responsabilités
       pdf.addPage(
         pw.Page(
-          pageTheme: _buildPageTheme(isFirstPage: false),  // ← Appel direct
+          pageTheme: _buildPageTheme(isFirstPage: false),
+          build: (ctx) => _buildSommaire(),
+        ),
+      );
+
+      // ────────────────────────────────────────────────────────────
+      //  3. RAPPEL DES RESPONSABILITÉS
+      // ────────────────────────────────────────────────────────────
+      pdf.addPage(
+        pw.Page(
+          pageTheme: _buildPageTheme(isFirstPage: false),
           build: (ctx) => _buildRappelResponsabilites(),
         ),
       );
 
-      pdf.addPage(
-      pw.Page(
-        pageTheme: _buildPageTheme(isFirstPage: false),
-        build: (ctx) => _buildObjetVerification(),
-      ),
-    );
-
-    // 4. Renseignements généraux
-    pdf.addPage(
-      pw.Page(
-        pageTheme: _buildPageTheme(isFirstPage: false),
-        build: (ctx) => _buildRenseignementsGeneraux(mission, renseignements),
-      ),
-    );
-
-    // 5. Description des installations
-    pdf.addPage(
-      pw.Page(
-        pageTheme: _buildPageTheme(isFirstPage: false),
-        build: (ctx) => _buildDescriptionInstallations(description),
-      ),
-    );
-
-    // 6. Liste récapitulative des observations
-    if (audit != null) {
+      // 4. Objet de la vérification
       pdf.addPage(
         pw.Page(
           pageTheme: _buildPageTheme(isFirstPage: false),
-          build: (ctx) => _buildListeRecapitulative(audit),
+          build: (ctx) => _buildObjetVerification(),
         ),
       );
-    }
 
-    // 7. Audit des installations électriques
-    if (audit != null) {
+      // 5. Renseignements généraux (utilise renseignements + mission)
       pdf.addPage(
         pw.Page(
           pageTheme: _buildPageTheme(isFirstPage: false),
-          build: (ctx) => _buildAuditInstallations(audit),
+          build: (ctx) => _buildRenseignementsGeneraux(mission, renseignements),
         ),
       );
-    }
 
-    // 8. Classement des emplacements
-    pdf.addPage(
-      pw.Page(
-        pageTheme: _buildPageTheme(isFirstPage: false),
-        build: (ctx) => _buildClassementEmplacements(classements),
-      ),
-    );
+      // 6. Description des installations
+      if (description != null) {
+        pdf.addPage(
+          pw.Page(
+            pageTheme: _buildPageTheme(isFirstPage: false),
+            build: (ctx) => _buildDescriptionInstallations(description),
+          ),
+        );
+      }
 
-    // 9. Foudre
-    pdf.addPage(
-      pw.Page(
-        pageTheme: _buildPageTheme(isFirstPage: false),
-        build: (ctx) => _buildFoudre(foudres),
-      ),
-    );
+      // 7. Liste récapitulative des observations
+      if (audit != null) {
+        pdf.addPage(
+          pw.Page(
+            pageTheme: _buildPageTheme(isFirstPage: false),
+            build: (ctx) => _buildListeRecapitulative(audit),
+          ),
+        );
+      }
 
-    // 10. Résultats des mesures et essais
-    if (mesures != null) {
+      // 8. Audit des installations électriques
+      if (audit != null) {
+        pdf.addPage(
+          pw.Page(
+            pageTheme: _buildPageTheme(isFirstPage: false),
+            build: (ctx) => _buildAuditInstallations(audit),
+          ),
+        );
+      }
+
+      // 9. Classement des emplacements
       pdf.addPage(
         pw.Page(
           pageTheme: _buildPageTheme(isFirstPage: false),
-          build: (ctx) => _buildMesuresEssais(mesures),
+          build: (ctx) => _buildClassementEmplacements(classements),
         ),
       );
-    }
 
-      // 11. Photos
+      // 10. Foudre
+      pdf.addPage(
+        pw.Page(
+          pageTheme: _buildPageTheme(isFirstPage: false),
+          build: (ctx) => _buildFoudre(foudres),
+        ),
+      );
+
+      // 11. Résultats des mesures et essais
+      if (mesures != null) {
+        pdf.addPage(
+          pw.Page(
+            pageTheme: _buildPageTheme(isFirstPage: false),
+            build: (ctx) => _buildMesuresEssais(mesures),
+          ),
+        );
+      }
+
+      // 12. Photos
       await _addPhotosSection(pdf, mission, missionId, audit);
 
       // ────────────────────────────────────────────────────────────
@@ -358,51 +345,26 @@ class PdfReportService {
   }
 
   // ──────────────────────────────────────────────────────────────
-  //  EN-TÊTE DE PAGE (pour les pages intérieures)
+  //  GÉNÉRATION NUMÉRO DE RAPPORT
   // ──────────────────────────────────────────────────────────────
-  static pw.Widget _buildPageHeader(Mission mission) {
-    return pw.Container(
-      margin: const pw.EdgeInsets.only(bottom: 12),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          if (_logoKesImage != null)
-            pw.Image(_logoKesImage!, width: 55, height: 22, fit: pw.BoxFit.contain)
-          else
-            pw.Text('KES INSPECTIONS AND PROJECTS',
-                style: pw.TextStyle(fontSize: 6, color: accentColor, fontWeight: pw.FontWeight.bold)),
-          pw.Text('RAPPORT DE VÉRIFICATION DES INSTALLATIONS ÉLECTRIQUES',
-              style: pw.TextStyle(fontSize: 6, color: darkGrey)),
-          pw.Text(mission.nomClient,
-              style: pw.TextStyle(fontSize: 6, color: darkGrey)),
-        ],
-      ),
-    );
-  }
-
-  // Helper pour l'en-tête dans les pages sans header automatique
-  static pw.Widget _buildPageHeaderWidget() {
-    return pw.Container(
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        children: [
-          if (_logoKesImage != null)
-            pw.Image(_logoKesImage!, width: 55, height: 22, fit: pw.BoxFit.contain)
-          else
-            pw.Text('KES INSPECTIONS AND PROJECTS',
-                style: pw.TextStyle(fontSize: 6, color: accentColor, fontWeight: pw.FontWeight.bold)),
-          pw.Text('RAPPORT DE VÉRIFICATION DES INSTALLATIONS ÉLECTRIQUES',
-              style: pw.TextStyle(fontSize: 6, color: darkGrey)),
-          pw.Text('', style: pw.TextStyle(fontSize: 6, color: darkGrey)),
-        ],
-      ),
-    );
+  static String _generateReportNumber(Mission mission) {
+    final now = DateTime.now();
+    final year = now.year.toString().substring(2);
+    final month = now.month.toString().padLeft(2, '0');
+    final random = (mission.id.hashCode % 10000).abs().toString().padLeft(4, '0');
+    return 'KES/V$year/$month/216/$random/I052/SA001';
   }
 
   // ──────────────────────────────────────────────────────────────
-  //  PAGE DE COUVERTURE
+  //  PAGE DE COUVERTURE (MODIFIÉE)
   // ──────────────────────────────────────────────────────────────
-  static pw.Widget _buildCoverPage(Mission mission) {
+  static pw.Widget _buildCoverPage({
+    required Mission mission,
+    required RenseignementsGeneraux renseignements,
+    required String reportNumber,
+    required DateTime? dateIntervention,
+    required DateTime dateRapport,
+  }) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -411,66 +373,64 @@ class PdfReportService {
           pw.Image(_logoKesImage!, width: 140, height: 80, fit: pw.BoxFit.contain)
         else
           pw.Text('KES INSPECTIONS AND PROJECTS',
-              style: pw.TextStyle(color: PdfColors.white, fontSize: 8, fontWeight: pw.FontWeight.bold)),
+              style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold)),
         
-        pw.SizedBox(height: 40),
+        // ESPACEMENT D'UNE LIGNE (ajouté)
+        pw.SizedBox(height: 20),
         
-        // Bloc "À l'attention de"
-        pw.Row(
-          mainAxisAlignment: pw.MainAxisAlignment.end,
-          children: [
-            pw.Container(
-              child: pw.Center(
-                child: pw.Column(
-                  mainAxisAlignment: pw.MainAxisAlignment.end,
-                  children: [
-                    pw.Container(
-                      width: 80, height: 80,
-                      decoration: pw.BoxDecoration(
-                        border: pw.Border.all(color: PdfColors.grey400, width: 1),
-                        color: PdfColors.grey200,
-                      ),
-                      child: pw.Center(
-                        child: pw.Column(
-                          mainAxisAlignment: pw.MainAxisAlignment.center,
-                          children: [
-                            pw.Text('LOGO CLIENT',
-                              style: pw.TextStyle(fontSize: 8, color: PdfColors.grey600, fontWeight: pw.FontWeight.bold)),
-                            pw.SizedBox(height: 3),
-                            pw.Text('(a coller ici)',
-                              style: pw.TextStyle(fontSize: 7, color: PdfColors.grey500)),
-                          ],
-                        ),
-                      ),
+        // Bloc "À l'attention de" - CENTRÉ
+        pw.Center(
+          child: pw.Container(
+            alignment: pw.Alignment.center,
+            child: pw.Column(
+              mainAxisSize: pw.MainAxisSize.min,
+              children: [
+                pw.Container(
+                  width: 80, height: 80,
+                  decoration: pw.BoxDecoration(
+                    border: pw.Border.all(color: PdfColors.grey400, width: 1),
+                    color: PdfColors.grey200,
+                  ),
+                  child: pw.Center(
+                    child: pw.Column(
+                      mainAxisAlignment: pw.MainAxisAlignment.center,
+                      children: [
+                        pw.Text('LOGO CLIENT',
+                          style: pw.TextStyle(fontSize: 8, color: PdfColors.grey600, fontWeight: pw.FontWeight.bold)),
+                        pw.SizedBox(height: 3),
+                        pw.Text('(a coller ici)',
+                          style: pw.TextStyle(fontSize: 7, color: PdfColors.grey500)),
+                      ],
                     ),
-                    pw.SizedBox(height: 3),
-                    pw.Text("A l'attention de Monsieur le \n Directeur General",
-                      style: pw.TextStyle(fontSize: 9, color: PdfColors.black)),
-                  ],
+                  ),
                 ),
-              ),
+                pw.SizedBox(height: 5),
+                pw.Text(
+                  "A l'attention de Monsieur le Directeur General",
+                  style: pw.TextStyle(fontSize: 10, color: PdfColors.black),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
         
         pw.SizedBox(height: 40),
         
         // Titre principal
-        pw.Container(
-          width: double.infinity,
-          padding: const pw.EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+        pw.Center(
           child: pw.Column(
             children: [
               pw.Text(
                 'RAPPORT',
                 style: pw.TextStyle(
-                  fontSize: 18, fontWeight: pw.FontWeight.bold, color: accentColor,
+                  fontSize: 22, fontWeight: pw.FontWeight.bold, color: accentColor,
                 ),
                 textAlign: pw.TextAlign.center,
               ),
               pw.SizedBox(height: 16),
               pw.Text(
-                'VERIFICATION PERIODIQUE REGLEMENTAIRE DES INSTALLATIONS ELECTRIQUES',
+                'AUDIT DES INSTALLATIONS ELECTRIQUES',
                 style: pw.TextStyle(fontSize: 14, color: accentColor),
                 textAlign: pw.TextAlign.center,
               ),
@@ -478,11 +438,9 @@ class PdfReportService {
           ),
         ),
         
-        pw.SizedBox(height: 16),
+        pw.SizedBox(height: 20),
         
-        pw.Container(
-          width: double.infinity,
-          padding: const pw.EdgeInsets.symmetric(vertical: 14, horizontal: 14),
+        pw.Center(
           child: pw.Text(
             mission.nomClient,
             style: pw.TextStyle(
@@ -494,29 +452,41 @@ class PdfReportService {
         
         pw.SizedBox(height: 50),
         
-        // Informations client
+        // Informations client - NOUVEAU FORMAT
         pw.Container(
           width: double.infinity,
-          height: 90,
           padding: const pw.EdgeInsets.symmetric(horizontal: 12),
           child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
             mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
             children: [
+              // Colonne de gauche - Informations
               pw.Expanded(
+                flex: 3,
                 child: pw.Column(
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
-                    _coverInfoRow('Date d\'intervention',
-                        _formatDate(mission.dateIntervention ?? DateTime.now())),
-                    _coverInfoRow('Date du rapport',
-                        _formatDate(mission.dateRapport ?? DateTime.now())),
-                    if (mission.natureMission != null)
-                      _coverInfoRow('Nature de la mission', mission.natureMission!),
-                    if (mission.periodicite != null)
-                      _coverInfoRow('Périodicité', mission.periodicite!),
+                    pw.Text(
+                      'a. Ce rapport contient : ',
+                      style: pw.TextStyle(fontSize: 9, fontWeight: pw.FontWeight.bold),
+                    ),
+                    pw.Text(
+                      'Date d\'intervention : ${dateIntervention != null ? _formatDate(dateIntervention) : ''}',
+                      style: pw.TextStyle(fontSize: 9),
+                    ),
+                    pw.Text(
+                      'Date du rapport : ${_formatDate(dateRapport)}',
+                      style: pw.TextStyle(fontSize: 9),
+                    ),
+                    pw.Text(
+                      'Rapport N° : $reportNumber',
+                      style: pw.TextStyle(fontSize: 9),
+                    ),
                   ],
                 ),
               ),
+              
+              // Colonne de droite - QR Code
               pw.Container(
                 width: 80, height: 80,
                 decoration: pw.BoxDecoration(
@@ -540,44 +510,108 @@ class PdfReportService {
           ),
         ),
         
-        pw.Spacer(),
-        
-        // Pied de couverture
-        pw.Container(
-          decoration: pw.BoxDecoration(
-            color: headerColor,
-            borderRadius: pw.BorderRadius.circular(3),
-          ),
-          padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-          child: pw.Row(
-            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-            children: [
-              pw.Text('KES INSPECTIONS AND PROJECTS',
-                  style: pw.TextStyle(color: PdfColors.white, fontSize: 7, fontWeight: pw.FontWeight.bold)),
-              pw.Text('Rapport généré le ${_formatDate(DateTime.now())}',
-                  style: pw.TextStyle(color: PdfColors.white, fontSize: 7)),
-            ],
-          ),
-        ),
+        // Note : Le bloc qui était après a été SUPPRIMÉ
+        // Le footer est géré par le PageTheme
       ],
     );
   }
 
-  static pw.Widget _coverInfoRow(String label, String value) {
+  // ──────────────────────────────────────────────────────────────
+  //  SOMMAIRE (NOUVEAU)
+  // ──────────────────────────────────────────────────────────────
+  static pw.Widget _buildSommaire() {
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        _buildPageHeaderWidget(),
+        pw.SizedBox(height: 20),
+        pw.Center(
+          child: pw.Text(
+            'SOMMAIRE',
+            style: pw.TextStyle(
+              fontSize: 16,
+              fontWeight: pw.FontWeight.bold,
+              color: headerColor,
+            ),
+          ),
+        ),
+        pw.SizedBox(height: 30),
+        
+        // Le sommaire est généré automatiquement par le package pdf
+        // quand on utilise des bookmarks. Pour l'instant, on fait une liste manuelle
+        _sommaireItem('RAPPEL DES RESPONSABILITES DE L\'EMPLOYEUR', 6),
+        _sommaireItem('OBJET DE LA VERIFICATION', 8),
+        _sommaireItem('RENSEIGNEMENTS GENERAUX DE L\'ETABLISSEMENT', 9),
+        _sommaireItem('DESCRIPTION DES INSTALLATIONS', 10),
+        _sommaireItem('LISTE RECAPITULATIVE DES OBSERVATIONS', 12),
+        _sommaireItem('AUDIT DES INSTALLATIONS ELECTRIQUES', 18),
+        _sommaireItem('CLASSEMENT DES LOCAUX ET EMPLACEMENTS', 68),
+        _sommaireItem('FOUDRE', 70),
+        _sommaireItem('RESULTATS DES MESURES ET ESSAIS', 71),
+        _sommaireItem('PHOTOS', 76),
+        _sommaireItem('SCHEMA DE L\'INSTALLATION ELECTRIQUE EXISTANTE', 91),
+      ],
+    );
+  }
+
+  static pw.Widget _sommaireItem(String title, int page) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 2),
+      padding: const pw.EdgeInsets.only(bottom: 8),
       child: pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.SizedBox(
-            width: 100,
-            child: pw.Text(label,
-                style: pw.TextStyle(fontSize: fsBody, fontWeight: pw.FontWeight.bold, color: headerColor)),
-          ),
-          pw.Text(': ', style: pw.TextStyle(fontSize: fsBody, fontWeight: pw.FontWeight.bold)),
           pw.Expanded(
-            child: pw.Text(value, style: pw.TextStyle(fontSize: fsBody)),
+            child: pw.Text(
+              title,
+              style: pw.TextStyle(fontSize: 10, color: darkGrey),
+            ),
           ),
+          pw.Text(
+            page.toString(),
+            style: pw.TextStyle(fontSize: 10, color: darkGrey),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ──────────────────────────────────────────────────────────────
+  //  EN-TÊTE DE PAGE
+  // ──────────────────────────────────────────────────────────────
+  static pw.Widget _buildPageHeader(Mission mission) {
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(bottom: 12),
+      padding: const pw.EdgeInsets.only(top: 8), // Top padding ajouté
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          if (_logoKesImage != null)
+            pw.Image(_logoKesImage!, width: 55, height: 22, fit: pw.BoxFit.contain)
+          else
+            pw.Text('KES INSPECTIONS AND PROJECTS',
+                style: pw.TextStyle(fontSize: 6, color: accentColor, fontWeight: pw.FontWeight.bold)),
+          pw.Text('RAPPORT DE VÉRIFICATION DES INSTALLATIONS ÉLECTRIQUES',
+              style: pw.TextStyle(fontSize: 6, color: darkGrey)),
+          pw.Text(mission.nomClient,
+              style: pw.TextStyle(fontSize: 6, color: darkGrey)),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildPageHeaderWidget() {
+    return pw.Container(
+      padding: const pw.EdgeInsets.only(top: 8), // Top padding ajouté
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        children: [
+          if (_logoKesImage != null)
+            pw.Image(_logoKesImage!, width: 55, height: 22, fit: pw.BoxFit.contain)
+          else
+            pw.Text('KES INSPECTIONS AND PROJECTS',
+                style: pw.TextStyle(fontSize: 6, color: accentColor, fontWeight: pw.FontWeight.bold)),
+          pw.Text('RAPPORT DE VÉRIFICATION DES INSTALLATIONS ÉLECTRIQUES',
+              style: pw.TextStyle(fontSize: 6, color: darkGrey)),
+          pw.Text('', style: pw.TextStyle(fontSize: 6, color: darkGrey)),
         ],
       ),
     );
@@ -776,9 +810,9 @@ class PdfReportService {
   }
 
   // ──────────────────────────────────────────────────────────────
-  //  RENSEIGNEMENTS GÉNÉRAUX
+  //  RENSEIGNEMENTS GÉNÉRAUX (MODIFIÉ - utilise RenseignementsGeneraux)
   // ──────────────────────────────────────────────────────────────
-  static pw.Widget _buildRenseignementsGeneraux(Mission mission, RenseignementsGeneraux? rg) {
+  static pw.Widget _buildRenseignementsGeneraux(Mission mission, RenseignementsGeneraux rg) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -796,28 +830,22 @@ class PdfReportService {
             1: const pw.FlexColumnWidth(3),
           },
           children: [
-            _tableDataRow(['Etablissement vérifié', mission.nomClient], alt: false),
-            if (rg != null) ...[
-              _tableDataRow(['Installation vérifiée', rg.installation], alt: true),
-              _tableDataRow(['Activité principale', rg.activite], alt: false),
-            ] else if (mission.activiteClient != null)
-              _tableDataRow(['Activité principale', mission.activiteClient!], alt: false),
+            _tableDataRow(['Etablissement vérifié', rg.etablissement], alt: false),
+            _tableDataRow(['Installation vérifiée', rg.installation], alt: true),
+            _tableDataRow(['Activité principale', rg.activite], alt: false),
             if (mission.adresseClient != null)
-              _tableDataRow(['Adresse', mission.adresseClient!], alt: rg != null ? true : false),
-            _tableDataRow(['Vérification - Nature', mission.natureMission ?? ''], alt: true),
-            _tableDataRow(['Périodicité réglementaire', mission.periodicite ?? ''], alt: false),
+              _tableDataRow(['Adresse', mission.adresseClient!], alt: true),
+            _tableDataRow(['Vérification - Nature', rg.verificationType ?? ''], alt: false),
+            _tableDataRow(['Périodicité réglementaire', mission.periodicite ?? ''], alt: true),
             _tableDataRow(['Dates d\'intervention',
-                mission.dateIntervention != null ? _formatDate(mission.dateIntervention!) : ''], alt: true),
-            if (mission.dureeMissionJours != null)
-              _tableDataRow(['Durée', '${mission.dureeMissionJours} jour(s)'], alt: false),
-            if (mission.dgResponsable != null)
-              _tableDataRow(['Accompagnateur / Responsable', mission.dgResponsable!], alt: true),
-            if (rg != null) ...[
-              _tableDataRow(['Registre de contrôle', rg.registreControle], alt: false),
-              _tableDataRow(['Compte rendu de fin de visite fait à', rg.compteRendu], alt: true),
-            ],
-            if (rg != null && rg.verificateurs.isNotEmpty)
-              _tableDataRow(['Vérificateur(s)', rg.verificateurs.map((v) => v['nom'] ?? '').join(', ')], alt: false),
+                rg.dateDebut != null ? _formatDate(rg.dateDebut!) : ''], alt: false),
+            _tableDataRow(['Durée', '${rg.dureeJours} jour(s)'], alt: true),
+            if (rg.accompagnateurs.isNotEmpty)
+              _tableDataRow(['Accompagnateur(s)', rg.accompagnateurs.map((a) => a['nom'] ?? '').join(', ')], alt: false),
+            if (rg.verificateurs.isNotEmpty)
+              _tableDataRow(['Vérificateur(s)', rg.verificateurs.map((v) => v['nom'] ?? '').join(', ')], alt: true),
+            _tableDataRow(['Registre de contrôle', rg.registreControle], alt: false),
+            _tableDataRow(['Compte rendu de fin de visite fait à', rg.compteRendu], alt: true),
           ],
         ),
         
@@ -868,7 +896,7 @@ class PdfReportService {
   // ──────────────────────────────────────────────────────────────
   //  DESCRIPTION DES INSTALLATIONS
   // ──────────────────────────────────────────────────────────────
-  static pw.Widget _buildDescriptionInstallations(DescriptionInstallations? desc) {
+  static pw.Widget _buildDescriptionInstallations(DescriptionInstallations desc) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -876,69 +904,66 @@ class PdfReportService {
         pw.SizedBox(height: 10),
         _sectionBox('DESCRIPTION DES INSTALLATIONS'),
         pw.SizedBox(height: 8),
-        if (desc == null)
-          _bodyText('Aucune donnée disponible.')
-        else
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              if (desc.alimentationMoyenneTension.isNotEmpty) ...[
-                _subTitle('Caractéristiques de l\'alimentation moyenne tension'),
-                _buildInstallationTable(desc.alimentationMoyenneTension),
-                pw.SizedBox(height: 8),
-              ],
-              if (desc.alimentationBasseTension.isNotEmpty) ...[
-                _subTitle('Caractéristiques de l\'alimentation basse tension sortie transformateur'),
-                _buildInstallationTable(desc.alimentationBasseTension),
-                pw.SizedBox(height: 8),
-              ],
-              if (desc.groupeElectrogene.isNotEmpty) ...[
-                _subTitle('Caractéristiques du groupe électrogène'),
-                _buildInstallationTable(desc.groupeElectrogene),
-                pw.SizedBox(height: 8),
-              ],
-              if (desc.alimentationCarburant.isNotEmpty) ...[
-                _subTitle('Alimentation du groupe électrogène en carburant'),
-                _buildInstallationTable(desc.alimentationCarburant),
-                pw.SizedBox(height: 8),
-              ],
-              if (desc.inverseur.isNotEmpty) ...[
-                _subTitle('Caractéristiques de l\'inverseur'),
-                _buildInstallationTable(desc.inverseur),
-                pw.SizedBox(height: 8),
-              ],
-              _subTitle('Caractéristiques du stabilisateur'),
-              if (desc.stabilisateur.isNotEmpty)
-                _buildInstallationTable(desc.stabilisateur)
-              else
-                _bodyText('- Pas de stabilisateur'),
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            if (desc.alimentationMoyenneTension.isNotEmpty) ...[
+              _subTitle('Caractéristiques de l\'alimentation moyenne tension'),
+              _buildInstallationTable(desc.alimentationMoyenneTension),
               pw.SizedBox(height: 8),
-              if (desc.onduleurs.isNotEmpty) ...[
-                _subTitle('Caractéristiques des onduleurs'),
-                _buildInstallationTable(desc.onduleurs),
-                pw.SizedBox(height: 8),
-              ],
-              _subTitle('Régime de neutre'),
-              _bodyText('- ${desc.regimeNeutre ?? 'TT'}'),
-              pw.SizedBox(height: 5),
-              _subTitle('Eclairage de sécurité'),
-              _bodyText('- ${desc.eclairageSecurite ?? 'Présent'}'),
-              pw.SizedBox(height: 5),
-              _subTitle('Modifications apportées aux installations'),
-              _bodyText('Modifications apportées aux installations : ${desc.modificationsInstallations ?? 'Sans Objet'}'),
-              pw.SizedBox(height: 5),
-              _subTitle('Note de calcul des installations électriques'),
-              _bodyText('- ${desc.noteCalcul ?? 'Non transmis'}'),
-              pw.SizedBox(height: 5),
-              _subTitle('Présence de paratonnerre'),
-              _bodyText('Présence de paratonnerre : ${desc.presenceParatonnerre ?? 'NON'}'),
-              _bodyText('Analyse risque foudre : ${desc.analyseRisqueFoudre ?? ''}'),
-              _bodyText('Etude technique foudre : ${desc.etudeTechniqueFoudre ?? ''}'),
-              pw.SizedBox(height: 5),
-              _subTitle('Registre de sécurité'),
-              _bodyText('- ${desc.registreSecurite ?? 'Non transmis'}'),
             ],
-          ),
+            if (desc.alimentationBasseTension.isNotEmpty) ...[
+              _subTitle('Caractéristiques de l\'alimentation basse tension sortie transformateur'),
+              _buildInstallationTable(desc.alimentationBasseTension),
+              pw.SizedBox(height: 8),
+            ],
+            if (desc.groupeElectrogene.isNotEmpty) ...[
+              _subTitle('Caractéristiques du groupe électrogène'),
+              _buildInstallationTable(desc.groupeElectrogene),
+              pw.SizedBox(height: 8),
+            ],
+            if (desc.alimentationCarburant.isNotEmpty) ...[
+              _subTitle('Alimentation du groupe électrogène en carburant'),
+              _buildInstallationTable(desc.alimentationCarburant),
+              pw.SizedBox(height: 8),
+            ],
+            if (desc.inverseur.isNotEmpty) ...[
+              _subTitle('Caractéristiques de l\'inverseur'),
+              _buildInstallationTable(desc.inverseur),
+              pw.SizedBox(height: 8),
+            ],
+            _subTitle('Caractéristiques du stabilisateur'),
+            if (desc.stabilisateur.isNotEmpty)
+              _buildInstallationTable(desc.stabilisateur)
+            else
+              _bodyText('- Pas de stabilisateur'),
+            pw.SizedBox(height: 8),
+            if (desc.onduleurs.isNotEmpty) ...[
+              _subTitle('Caractéristiques des onduleurs'),
+              _buildInstallationTable(desc.onduleurs),
+              pw.SizedBox(height: 8),
+            ],
+            _subTitle('Régime de neutre'),
+            _bodyText('- ${desc.regimeNeutre ?? 'TT'}'),
+            pw.SizedBox(height: 5),
+            _subTitle('Eclairage de sécurité'),
+            _bodyText('- ${desc.eclairageSecurite ?? 'Présent'}'),
+            pw.SizedBox(height: 5),
+            _subTitle('Modifications apportées aux installations'),
+            _bodyText('Modifications apportées aux installations : ${desc.modificationsInstallations ?? 'Sans Objet'}'),
+            pw.SizedBox(height: 5),
+            _subTitle('Note de calcul des installations électriques'),
+            _bodyText('- ${desc.noteCalcul ?? 'Non transmis'}'),
+            pw.SizedBox(height: 5),
+            _subTitle('Présence de paratonnerre'),
+            _bodyText('Présence de paratonnerre : ${desc.presenceParatonnerre ?? 'NON'}'),
+            _bodyText('Analyse risque foudre : ${desc.analyseRisqueFoudre ?? ''}'),
+            _bodyText('Etude technique foudre : ${desc.etudeTechniqueFoudre ?? ''}'),
+            pw.SizedBox(height: 5),
+            _subTitle('Registre de sécurité'),
+            _bodyText('- ${desc.registreSecurite ?? 'Non transmis'}'),
+          ],
+        ),
       ],
     );
   }
@@ -1090,7 +1115,7 @@ class PdfReportService {
       );
     }
 
-    final headers = ['LOCALISATION', 'ÉQUIPEMENT', 'NON-CONFORMITÉ - PRÉCONISATION', 'RÉF. NORMATIVE', 'PRIORITÉ'];
+    final headers = ['LOCALISATION', 'COFFRET / ARMOIRE', 'NON-CONFORMITÉ - PRÉCONISATION', 'RÉF. NORMATIVE', 'PRIORITÉ'];
 
     return pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.4),
@@ -2008,7 +2033,7 @@ class PdfReportService {
   }
 
   // ──────────────────────────────────────────────────────────────
-  //  UTILITAIRES PDF (cellules, lignes, titres...)
+  //  UTILITAIRES PDF
   // ──────────────────────────────────────────────────────────────
   static pw.Widget _sectionBox(String title) {
     return pw.Container(
