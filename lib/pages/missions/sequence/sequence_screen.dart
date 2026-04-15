@@ -34,6 +34,9 @@ class _SequenceScreenState extends State<SequenceScreen> {
   bool _isLoading = true;
   final Map<String, bool> _stepValidation = {};
 
+  // Clé pour accéder à l'état de GeneralInfoStep
+  final GlobalKey<GeneralInfoStepState> _generalInfoKey = GlobalKey<GeneralInfoStepState>();
+
   @override
   void initState() {
     super.initState();
@@ -50,7 +53,6 @@ class _SequenceScreenState extends State<SequenceScreen> {
         missionId: widget.mission.id,
         newStatus: 'en_cours',
       );
-      // Mettre à jour la mission locale
       widget.mission.status = 'en_cours';
     }
   }
@@ -67,10 +69,10 @@ class _SequenceScreenState extends State<SequenceScreen> {
       {
         'title': 'Renseignements généraux',
         'widget': GeneralInfoStep(
+          key: _generalInfoKey,
           mission: widget.mission,
           onDataChanged: (data) => _saveStepData('general_info', data),
           onValidationChanged: (isValid) {
-            // Mettre à jour l'état de validation de cette étape
             setState(() {
               _stepValidation['general_info'] = isValid;
             });
@@ -89,6 +91,8 @@ class _SequenceScreenState extends State<SequenceScreen> {
         'widget': DescriptionStep(
           mission: widget.mission,
           onDataChanged: (data) => _saveStepData('description', data),
+          onPreviousStep: _goToPreviousStep,  // Revenir à Documents
+          onNextStep: _goToNextStep,
         ),
       },
       {
@@ -115,11 +119,8 @@ class _SequenceScreenState extends State<SequenceScreen> {
     final progress = await SequenceProgressService.getProgress(widget.mission.id);
     var savedStep = progress['currentStep'] ?? 0;
     
-    // CORRECTION : S'assurer que le step chargé est dans les limites valides (0 à 5)
-    // Si savedStep = 6 (Summary), on revient à l'étape Schéma (5)
     if (savedStep >= _steps.length) {
       savedStep = _steps.length - 1;
-      // Mettre à jour la progression pour éviter de rester bloqué sur une valeur invalide
       await SequenceProgressService.saveCurrentStep(widget.mission.id, savedStep);
     }
     
@@ -133,54 +134,82 @@ class _SequenceScreenState extends State<SequenceScreen> {
     await SequenceProgressService.saveStepData(widget.mission.id, stepKey, data);
   }
 
+  // NOUVEAU : Méthode pour fermer le clavier avant toute transition
+  void _dismissKeyboard() {
+    FocusScope.of(context).unfocus();
+  }
+
   Future<void> _goToNextStep() async {
-    if (_currentStep == 1) { // Étape Renseignements généraux
-      final isValid = _stepValidation['general_info'] ?? false;
+    // Fermer le clavier immédiatement
+    _dismissKeyboard();
+    
+    if (_currentStep == 1) {
+      // Déclencher la validation visuelle
+      _generalInfoKey.currentState?.triggerValidation();
+      
+      // Vérifier si le formulaire est valide
+      final isValid = _generalInfoKey.currentState?.isFormValid ?? false;
+      
       if (!isValid) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Veuillez remplir tous les champs obligatoires'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        // Attendre un peu que l'UI se mette à jour
+        await Future.delayed(const Duration(milliseconds: 50));
+        
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Veuillez remplir tous les champs obligatoires (marqués en rouge)'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
         return;
       }
     }
+    
     if (_currentStep < _steps.length - 1) {
-      // Sauvegarder l'étape actuelle
       await SequenceProgressService.saveCurrentStep(widget.mission.id, _currentStep);
       await SequenceProgressService.markStepCompleted(widget.mission.id, _currentStep);
       
       setState(() {
         _currentStep++;
       });
+      
+      // Animation de transition
       await _pageController.animateToPage(
         _currentStep,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+      
       await SequenceProgressService.saveCurrentStep(widget.mission.id, _currentStep);
     }
   }
 
   Future<void> _goToPreviousStep() async {
+    // Fermer le clavier immédiatement
+    _dismissKeyboard();
+    
     if (_currentStep > 0) {
       await SequenceProgressService.saveCurrentStep(widget.mission.id, _currentStep);
       
       setState(() {
         _currentStep--;
       });
+      
       await _pageController.animateToPage(
         _currentStep,
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+      
       await SequenceProgressService.saveCurrentStep(widget.mission.id, _currentStep);
     }
   }
 
   void _onSequenceComplete() async {
-    // Marquer la dernière étape comme complétée
+    _dismissKeyboard();
+    
     await SequenceProgressService.markStepCompleted(widget.mission.id, _steps.length - 1);
     
     if (mounted) {
@@ -197,6 +226,12 @@ class _SequenceScreenState extends State<SequenceScreen> {
   }
 
   @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (_isLoading) {
       return GestureDetector(
@@ -207,14 +242,12 @@ class _SequenceScreenState extends State<SequenceScreen> {
       );
     }
 
-    // CORRECTION : Vérification supplémentaire de sécurité
     if (_currentStep >= _steps.length) {
       _currentStep = _steps.length - 1;
     }
 
     final currentStepTitle = _steps[_currentStep]['title'] as String;
     final totalSteps = _steps.length;
-    final currentWidget = _steps[_currentStep]['widget'] as Widget;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -230,6 +263,7 @@ class _SequenceScreenState extends State<SequenceScreen> {
           leading: IconButton(
             icon: const Icon(Icons.arrow_back),
             onPressed: () {
+              _dismissKeyboard();
               _showExitDialog();
             },
           ),
@@ -246,11 +280,12 @@ class _SequenceScreenState extends State<SequenceScreen> {
             Expanded(
               child: PageView(
                 controller: _pageController,
-                physics: const NeverScrollableScrollPhysics(), // Désactive le swipe
+                physics: const NeverScrollableScrollPhysics(),
                 children: _steps.map((step) => step['widget'] as Widget).toList(),
               ),
             ),
             // Navigation buttons
+            if (_currentStep != 3)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -285,8 +320,9 @@ class _SequenceScreenState extends State<SequenceScreen> {
                         ),
                       ),
                     ),
-                  if (_currentStep > 0) const SizedBox(width: 12),
-                  if (_currentStep != _steps.length - 1)
+                  if (_currentStep > 0 && _currentStep < _steps.length - 1) 
+                    const SizedBox(width: 12),
+                  if (_currentStep < _steps.length - 1)
                     Expanded(
                       child: ElevatedButton(
                         onPressed: _goToNextStep,

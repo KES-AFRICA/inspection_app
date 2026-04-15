@@ -1,3 +1,4 @@
+// lib/pages/missions/mission_detail/mission_execution_screen/mission_execution.dart
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
@@ -16,7 +17,19 @@ class MissionExecutionScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => DescriptionInstallationsSequenceScreen(mission: mission),
+        builder: (context) => DescriptionInstallationsSequenceScreen(
+          mission: mission,
+          // Callbacks pour la navigation depuis cet écran
+          onPreviousStep: () {
+            // Retour à l'écran précédent (MissionExecutionScreen)
+            Navigator.pop(context);
+          },
+          onNextStep: () {
+            // Passer à l'écran d'audit
+            Navigator.pop(context);
+            _navigateToAudit(context);
+          },
+        ),
       ),
     );
   }
@@ -36,14 +49,14 @@ class MissionExecutionScreen extends StatelessWidget {
       appBar: AppBar(
         title: Text(
           mission.nomClient,
-          style: TextStyle(
+          style: const TextStyle(
             fontWeight: FontWeight.w600,
             color: Colors.white,
           ),
         ),
         backgroundColor: Colors.blue,
         elevation: 0,
-        iconTheme: IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: Column(
         children: [
@@ -70,7 +83,7 @@ class MissionExecutionScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionTile(BuildContext context, String title, IconData icon, Function onTap) {
+  Widget _buildSectionTile(BuildContext context, String title, IconData icon, Function(BuildContext) onTap) {
     return ListTile(
       leading: Container(
         width: 40,
@@ -83,14 +96,14 @@ class MissionExecutionScreen extends StatelessWidget {
       ),
       title: Text(
         title,
-        style: TextStyle(
+        style: const TextStyle(
           fontSize: 16,
           fontWeight: FontWeight.w500,
           color: Colors.black87,
         ),
       ),
       trailing: Icon(Icons.chevron_right, color: Colors.grey.shade500),
-      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       onTap: () => onTap(context),
     );
   }

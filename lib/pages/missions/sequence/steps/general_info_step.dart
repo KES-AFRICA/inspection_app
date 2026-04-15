@@ -9,7 +9,7 @@ import 'package:inspec_app/services/hive_service.dart';
 class GeneralInfoStep extends StatefulWidget {
   final Mission mission;
   final Function(Map<String, dynamic>) onDataChanged;
-  final Function(bool) onValidationChanged; // NOUVEAU : Callback pour notifier la validation
+  final Function(bool) onValidationChanged;
 
   const GeneralInfoStep({
     super.key,
@@ -19,10 +19,10 @@ class GeneralInfoStep extends StatefulWidget {
   });
 
   @override
-  State<GeneralInfoStep> createState() => _GeneralInfoStepState();
+  State<GeneralInfoStep> createState() => GeneralInfoStepState();
 }
 
-class _GeneralInfoStepState extends State<GeneralInfoStep> {
+class GeneralInfoStepState extends State<GeneralInfoStep> {
   // Contrôleurs
   late TextEditingController _etablissementController;
   late TextEditingController _installationController;
@@ -46,6 +46,14 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
   final FocusNode _etablissementFocus = FocusNode();
   final FocusNode _installationFocus = FocusNode();
   final FocusNode _activiteFocus = FocusNode();
+
+  // NOUVEAU : Flag pour savoir si on a déjà tenté de valider
+  bool _hasAttemptedValidation = false;
+  
+  // NOUVEAU : États de focus pour chaque champ (pour savoir si l'utilisateur a interagi)
+  bool _etablissementTouched = false;
+  bool _installationTouched = false;
+  bool _activiteTouched = false;
 
   // Options pour les dropdowns stylisés
   final List<Map<String, dynamic>> _verificationOptions = [
@@ -106,12 +114,44 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
            _compteRenduDestinataire != null;
   }
 
+  // NOUVEAU : Méthode pour déclencher la validation (appelée depuis le parent)
+  void triggerValidation() {
+    setState(() {
+      _hasAttemptedValidation = true;
+      _etablissementTouched = true;
+      _installationTouched = true;
+      _activiteTouched = true;
+    });
+    _notifyValidation();
+  }
+
+  // NOUVEAU : Vérifie si un champ doit afficher une erreur
+  bool _shouldShowError({required bool hasValue, required bool isTouched}) {
+    return !hasValue && (_hasAttemptedValidation || isTouched);
+  }
 
   @override
   void initState() {
     super.initState();
     _initControllers();
     _loadData();
+    
+    // Ajouter des listeners pour marquer les champs comme "touchés"
+    _etablissementFocus.addListener(() {
+      if (!_etablissementFocus.hasFocus) {
+        setState(() => _etablissementTouched = true);
+      }
+    });
+    _installationFocus.addListener(() {
+      if (!_installationFocus.hasFocus) {
+        setState(() => _installationTouched = true);
+      }
+    });
+    _activiteFocus.addListener(() {
+      if (!_activiteFocus.hasFocus) {
+        setState(() => _activiteTouched = true);
+      }
+    });
   }
 
   void _initControllers() {
@@ -139,9 +179,13 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
         _compteRenduDestinataire = _data!.compteRendu.isNotEmpty ? _data!.compteRendu : null;
         _accompagnateurs = List.from(_data!.accompagnateurs);
         _verificateurs = List.from(_data!.verificateurs);
+        
+        // Marquer comme touchés si déjà remplis (pour l'édition)
+        if (_etablissementController.text.isNotEmpty) _etablissementTouched = true;
+        if (_installationController.text.isNotEmpty) _installationTouched = true;
+        if (_activiteController.text.isNotEmpty) _activiteTouched = true;
       });
       
-      // Notifier la validation initiale
       _notifyValidation();
     } catch (e) {
       print('❌ Erreur chargement: $e');
@@ -321,7 +365,6 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Handle
           Container(
             margin: EdgeInsets.only(top: isSmallScreen ? 8 : 12),
             width: isSmallScreen ? 30 : 40,
@@ -331,7 +374,6 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          // Title
           Padding(
             padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
             child: Text(
@@ -344,7 +386,6 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
             ),
           ),
           const Divider(height: 0),
-          // Options avec scroll pour éviter les débordements
           Flexible(
             child: SingleChildScrollView(
               child: Column(
@@ -418,7 +459,6 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
             ),
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
-          // Bouton fermer
           Padding(
             padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             child: SizedBox(
@@ -444,6 +484,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
     );
   }
 
+  // MODIFIÉ : Ajout du paramètre showError pour contrôler l'affichage de l'erreur
   Widget _buildDisplayField({
     required String label,
     required String? value,
@@ -452,13 +493,19 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
     required VoidCallback onTap,
     Color? color,
     bool isRequired = false,
+    bool showError = false, // NOUVEAU
   }) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
-    final displayColor = color ?? (value != null ? AppTheme.primaryBlue : (isRequired ? Colors.red : Colors.grey));
-    final borderColor = value != null 
-        ? displayColor.withOpacity(0.3) 
-        : (isRequired ? Colors.red.shade300 : Colors.grey.shade200);
+    
+    // Si showError est true et que la valeur est vide, on affiche en rouge
+    final hasError = showError && value == null;
+    final displayColor = hasError 
+        ? Colors.red 
+        : (color ?? (value != null ? AppTheme.primaryBlue : Colors.grey));
+    final borderColor = hasError 
+        ? Colors.red.shade300 
+        : (value != null ? displayColor.withOpacity(0.3) : Colors.grey.shade200);
     
     return InkWell(
       onTap: onTap,
@@ -500,7 +547,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                         label,
                         style: TextStyle(
                           fontSize: isSmallScreen ? 11 : 12, 
-                          color: Colors.grey
+                          color: hasError ? Colors.red : Colors.grey
                         ),
                       ),
                       if (isRequired)
@@ -508,7 +555,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                           ' *',
                           style: TextStyle(
                             fontSize: isSmallScreen ? 11 : 12,
-                            color: Colors.red,
+                            color: hasError ? Colors.red : Colors.red,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -520,7 +567,9 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                     style: TextStyle(
                       fontSize: isSmallScreen ? 13 : 14,
                       fontWeight: FontWeight.w500,
-                      color: value != null ? Colors.black87 : (isRequired ? Colors.red.shade400 : Colors.grey.shade500),
+                      color: hasError 
+                          ? Colors.red.shade400 
+                          : (value != null ? Colors.black87 : Colors.grey.shade500),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -722,7 +771,6 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
     final accompagnateurSupprime = _accompagnateurs[index];
     setState(() {
       _accompagnateurs.removeAt(index);
-      // Si le destinataire du compte rendu était cet accompagnateur, réinitialiser
       if (_compteRenduDestinataire == accompagnateurSupprime['nom']) {
         _compteRenduDestinataire = null;
       }
@@ -798,10 +846,10 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                     decoration: BoxDecoration(
                       color: isFormValid 
                           ? Colors.green.withOpacity(0.1) 
-                          : Colors.red.withOpacity(0.1),
+                          : Colors.orange.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
                       border: Border.all(
-                        color: isFormValid ? Colors.green : Colors.red,
+                        color: isFormValid ? Colors.green : Colors.orange,
                         width: 1.5,
                       ),
                     ),
@@ -809,17 +857,17 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          isFormValid ? Icons.check_circle : Icons.warning,
+                          isFormValid ? Icons.check_circle : Icons.info_outline,
                           size: isSmallScreen ? 14 : 16,
-                          color: isFormValid ? Colors.green : Colors.red,
+                          color: isFormValid ? Colors.green : Colors.orange,
                         ),
                         SizedBox(width: isSmallScreen ? 4 : 6),
                         Text(
-                          isFormValid ? 'Complet' : 'Incomplet',
+                          isFormValid ? 'Complet' : 'En cours',
                           style: TextStyle(
                             fontSize: isSmallScreen ? 11 : 12,
                             fontWeight: FontWeight.w600,
-                            color: isFormValid ? Colors.green : Colors.red,
+                            color: isFormValid ? Colors.green : Colors.orange,
                           ),
                         ),
                       ],
@@ -837,6 +885,10 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                 icon: Icons.business,
                 focusNode: _etablissementFocus,
                 isRequired: true,
+                showError: _shouldShowError(
+                  hasValue: _etablissementController.text.trim().isNotEmpty,
+                  isTouched: _etablissementTouched,
+                ),
               ),
               SizedBox(height: isSmallScreen ? 12 : 16),
 
@@ -848,6 +900,10 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                 hint: 'Ex: Bâtiment A',
                 focusNode: _installationFocus,
                 isRequired: true,
+                showError: _shouldShowError(
+                  hasValue: _installationController.text.trim().isNotEmpty,
+                  isTouched: _installationTouched,
+                ),
               ),
               SizedBox(height: isSmallScreen ? 12 : 16),
 
@@ -859,6 +915,10 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                 hint: 'Ex: BTP, Industrie, Services...',
                 focusNode: _activiteFocus,
                 isRequired: true,
+                showError: _shouldShowError(
+                  hasValue: _activiteController.text.trim().isNotEmpty,
+                  isTouched: _activiteTouched,
+                ),
               ),
               SizedBox(height: isSmallScreen ? 20 : 24),
 
@@ -871,6 +931,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                 onTap: _showVerificationPicker,
                 color: _verificationType != null ? Colors.blue : null,
                 isRequired: true,
+                showError: _hasAttemptedValidation,
               ),
               SizedBox(height: isSmallScreen ? 20 : 24),
 
@@ -887,10 +948,10 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                     ),
                   ],
                   border: Border.all(
-                    color: (_dateDebut == null || _dateFin == null) 
+                    color: _hasAttemptedValidation && (_dateDebut == null || _dateFin == null) 
                         ? Colors.red.shade300 
                         : Colors.transparent,
-                    width: (_dateDebut == null || _dateFin == null) ? 1.5 : 0,
+                    width: _hasAttemptedValidation && (_dateDebut == null || _dateFin == null) ? 1.5 : 0,
                   ),
                 ),
                 child: Column(
@@ -948,6 +1009,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                             icon: Icons.play_arrow,
                             onTap: () => _selectDate(context, true),
                             isRequired: true,
+                            showError: _hasAttemptedValidation,
                           ),
                           SizedBox(height: isSmallScreen ? 12 : 16),
                           _buildDateField(
@@ -956,6 +1018,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                             icon: Icons.check,
                             onTap: () => _selectDate(context, false),
                             isRequired: true,
+                            showError: _hasAttemptedValidation,
                           ),
                           SizedBox(height: isSmallScreen ? 12 : 16),
                           Container(
@@ -1053,6 +1116,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                 onAdd: _showAjouterAccompagnateurDialog,
                 onDelete: _supprimerAccompagnateur,
                 isRequired: true,
+                showError: _hasAttemptedValidation,
               ),
               SizedBox(height: isSmallScreen ? 20 : 24),
 
@@ -1085,6 +1149,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                 onAdd: _showAjouterVerificateurDialog,
                 onDelete: _supprimerVerificateur,
                 isRequired: true,
+                showError: _hasAttemptedValidation,
               ),
               SizedBox(height: isSmallScreen ? 20 : 24),
 
@@ -1099,6 +1164,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                     ? (_registreControle == 'Présenté' ? Colors.green : Colors.red)
                     : null,
                 isRequired: true,
+                showError: _hasAttemptedValidation,
               ),
               SizedBox(height: isSmallScreen ? 20 : 24),
 
@@ -1113,6 +1179,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                 onTap: _showCompteRenduPicker,
                 color: _compteRenduDestinataire != null ? Colors.purple : null,
                 isRequired: true,
+                showError: _hasAttemptedValidation,
               ),
               SizedBox(height: isSmallScreen ? 24 : 32),
             ],
@@ -1122,6 +1189,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
     );
   }
 
+  // MODIFIÉ : Ajout du paramètre showError
   Widget _buildTextField({
     required TextEditingController controller,
     required String label,
@@ -1129,12 +1197,15 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
     required FocusNode focusNode,
     String? hint,
     bool isRequired = false,
+    bool showError = false, // NOUVEAU
   }) {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
     final hasText = controller.text.trim().isNotEmpty;
-    final borderColor = hasText 
-        ? AppTheme.primaryBlue.withOpacity(0.3)
-        : (isRequired ? Colors.red.shade300 : Colors.grey.shade200);
+    
+    // La bordure devient rouge seulement si showError est true et que le champ est vide
+    final borderColor = showError && !hasText
+        ? Colors.red.shade300
+        : (hasText ? AppTheme.primaryBlue.withOpacity(0.3) : Colors.grey.shade200);
     
     return AnimatedBuilder(
       animation: focusNode,
@@ -1163,22 +1234,35 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
           child: TextFormField(
             controller: controller,
             focusNode: focusNode,
+            onChanged: (_) {
+              _saveData();
+              // Marquer comme touché quand l'utilisateur commence à taper
+              if (!_etablissementTouched && controller == _etablissementController) {
+                setState(() => _etablissementTouched = true);
+              } else if (!_installationTouched && controller == _installationController) {
+                setState(() => _installationTouched = true);
+              } else if (!_activiteTouched && controller == _activiteController) {
+                setState(() => _activiteTouched = true);
+              }
+            },
             decoration: InputDecoration(
               labelText: isRequired ? '$label *' : label,
               labelStyle: TextStyle(
-                color: hasText 
-                    ? Colors.grey.shade600 
-                    : (isRequired ? Colors.red.shade400 : Colors.grey.shade600),
+                color: showError && !hasText 
+                    ? Colors.red 
+                    : (hasText ? Colors.grey.shade600 : Colors.grey.shade600),
               ),
               hintText: hint,
               prefixIcon: Icon(
                 icon, 
                 size: isSmallScreen ? 18 : 20,
-                color: focusNode.hasFocus ? AppTheme.primaryBlue : (hasText ? AppTheme.primaryBlue : Colors.grey)
+                color: focusNode.hasFocus 
+                    ? AppTheme.primaryBlue 
+                    : (showError && !hasText ? Colors.red : (hasText ? AppTheme.primaryBlue : Colors.grey))
               ),
               suffixIcon: hasText 
                   ? Icon(Icons.check_circle, color: Colors.green, size: isSmallScreen ? 16 : 18)
-                  : (isRequired ? Icon(Icons.error_outline, color: Colors.red, size: isSmallScreen ? 16 : 18) : null),
+                  : (showError && isRequired ? Icon(Icons.error_outline, color: Colors.red, size: isSmallScreen ? 16 : 18) : null),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
                 borderSide: BorderSide.none,
@@ -1190,7 +1274,6 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                 vertical: isSmallScreen ? 14 : 18
               ),
             ),
-            onChanged: (_) => _saveData(),
             onEditingComplete: () => focusNode.unfocus(),
           ),
         );
@@ -1198,17 +1281,20 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
     );
   }
 
+  // MODIFIÉ : Ajout du paramètre showError
   Widget _buildDateField({
     required String label,
     required DateTime? date,
     required IconData icon,
     required VoidCallback onTap,
     bool isRequired = false,
+    bool showError = false, // NOUVEAU
   }) {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
-    final borderColor = date != null 
-        ? Colors.grey.shade200 
-        : (isRequired ? Colors.red.shade300 : Colors.grey.shade200);
+    final hasError = showError && date == null;
+    final borderColor = hasError 
+        ? Colors.red.shade300 
+        : (date != null ? Colors.grey.shade200 : Colors.grey.shade200);
     
     return InkWell(
       onTap: onTap,
@@ -1227,15 +1313,15 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
             Container(
               padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
               decoration: BoxDecoration(
-                color: date != null 
-                    ? AppTheme.primaryBlue.withOpacity(0.1) 
-                    : (isRequired ? Colors.red.withOpacity(0.1) : Colors.grey.withOpacity(0.1)),
+                color: hasError 
+                    ? Colors.red.withOpacity(0.1)
+                    : (date != null ? AppTheme.primaryBlue.withOpacity(0.1) : Colors.grey.withOpacity(0.1)),
                 borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
               ),
               child: Icon(
                 icon, 
                 size: isSmallScreen ? 16 : 18, 
-                color: date != null ? AppTheme.primaryBlue : (isRequired ? Colors.red : Colors.grey)
+                color: hasError ? Colors.red : (date != null ? AppTheme.primaryBlue : Colors.grey)
               ),
             ),
             SizedBox(width: isSmallScreen ? 10 : 12),
@@ -1249,7 +1335,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                         label,
                         style: TextStyle(
                           fontSize: isSmallScreen ? 11 : 12, 
-                          color: Colors.grey
+                          color: hasError ? Colors.red : Colors.grey
                         ),
                       ),
                       if (isRequired)
@@ -1257,7 +1343,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                           ' *',
                           style: TextStyle(
                             fontSize: isSmallScreen ? 11 : 12,
-                            color: Colors.red,
+                            color: hasError ? Colors.red : Colors.red,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
@@ -1271,7 +1357,9 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                     style: TextStyle(
                       fontSize: isSmallScreen ? 13 : 14,
                       fontWeight: FontWeight.w500,
-                      color: date != null ? Colors.black87 : (isRequired ? Colors.red.shade400 : Colors.grey.shade500),
+                      color: hasError 
+                          ? Colors.red.shade400 
+                          : (date != null ? Colors.black87 : Colors.grey.shade500),
                     ),
                   ),
                 ],
@@ -1280,7 +1368,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
             Icon(
               Icons.calendar_today, 
               size: isSmallScreen ? 16 : 18, 
-              color: date != null ? AppTheme.primaryBlue : (isRequired ? Colors.red.shade300 : Colors.grey.shade400)
+              color: hasError ? Colors.red.shade300 : (date != null ? AppTheme.primaryBlue : Colors.grey.shade400)
             ),
           ],
         ),
@@ -1288,6 +1376,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
     );
   }
 
+  // MODIFIÉ : Ajout du paramètre showError
   Widget _buildDynamicListSection({
     required String title,
     required IconData icon,
@@ -1297,17 +1386,17 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
     required VoidCallback onAdd,
     required Function(int) onDelete,
     bool isRequired = false,
+    bool showError = false, // NOUVEAU
   }) {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
-    final borderColor = items.isNotEmpty 
-        ? Colors.transparent 
-        : (isRequired ? Colors.red.shade300 : Colors.transparent);
+    final hasError = showError && items.isEmpty;
+    final borderColor = hasError ? Colors.red.shade300 : Colors.transparent;
     
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
-        border: Border.all(color: borderColor, width: items.isEmpty && isRequired ? 1.5 : 0),
+        border: Border.all(color: borderColor, width: hasError ? 1.5 : 0),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.03),
@@ -1326,10 +1415,14 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                 Container(
                   padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
+                    color: hasError ? Colors.red.withOpacity(0.1) : color.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
                   ),
-                  child: Icon(icon, color: color, size: isSmallScreen ? 18 : 20),
+                  child: Icon(
+                    icon, 
+                    color: hasError ? Colors.red : color, 
+                    size: isSmallScreen ? 18 : 20
+                  ),
                 ),
                 SizedBox(width: isSmallScreen ? 10 : 12),
                 Expanded(
@@ -1339,7 +1432,8 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                         title,
                         style: TextStyle(
                           fontSize: isSmallScreen ? 14 : 16, 
-                          fontWeight: FontWeight.w600
+                          fontWeight: FontWeight.w600,
+                          color: hasError ? Colors.red : Colors.black87,
                         ),
                       ),
                       if (isRequired)
@@ -1347,14 +1441,14 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                           ' *',
                           style: TextStyle(
                             fontSize: isSmallScreen ? 14 : 16,
-                            color: Colors.red,
+                            color: hasError ? Colors.red : Colors.red,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                     ],
                   ),
                 ),
-                if (items.isEmpty && isRequired)
+                if (hasError)
                   Icon(
                     Icons.warning_amber_rounded,
                     size: isSmallScreen ? 16 : 18,
@@ -1399,7 +1493,7 @@ class _GeneralInfoStepState extends State<GeneralInfoStep> {
                       ),
                     );
                   }),
-                if (items.isEmpty && isRequired)
+                if (hasError)
                   Container(
                     padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
                     margin: EdgeInsets.only(bottom: isSmallScreen ? 10 : 12),

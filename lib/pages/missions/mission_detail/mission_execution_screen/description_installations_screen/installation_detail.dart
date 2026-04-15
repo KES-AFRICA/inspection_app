@@ -257,7 +257,7 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
                     ],
                   ),
                 );
-              }).toList(),
+              }),
               
               // Séparateur
               Container(

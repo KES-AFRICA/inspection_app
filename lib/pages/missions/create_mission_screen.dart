@@ -1,6 +1,5 @@
 // lib/pages/missions/create_mission_screen.dart
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/models/create_mission_data.dart';
 import 'package:inspec_app/models/mission.dart';
@@ -18,267 +17,341 @@ class CreateMissionScreen extends StatefulWidget {
 
 class _CreateMissionScreenState extends State<CreateMissionScreen> {
   final _formKey = GlobalKey<FormState>();
-  late final CreateMissionData _formData;
-
-  // Controllers
+  
+  // Controllers pour les champs
   final _nomClientCtrl = TextEditingController();
   final _activiteClientCtrl = TextEditingController();
   final _adresseClientCtrl = TextEditingController();
-  final _dgResponsableCtrl = TextEditingController();
-  final _natureMissionCtrl = TextEditingController();
-  final _periodiciteCtrl = TextEditingController();
-  final _dureeMissionCtrl = TextEditingController();
+  
+  // Sélection pour Nature de vérification
+  String? _natureMission;
+  
+  // Options pour Nature de vérification
+  final List<Map<String, dynamic>> _natureOptions = [
+    {
+      'value': 'Périodique réglementaire',
+      'title': 'Périodique réglementaire',
+      'description': 'Vérification périodique selon la réglementation en vigueur',
+      'icon': Icons.calendar_today,
+      'color': Colors.blue,
+    },
+    {
+      'value': 'Initiale réglementaire',
+      'title': 'Initiale réglementaire',
+      'description': 'Vérification initiale avant mise en service',
+      'icon': Icons.note_add,
+      'color': Colors.green,
+    },
+    {
+      'value': 'Audit réglementaire',
+      'title': 'Audit réglementaire',
+      'description': 'Audit complet de conformité réglementaire',
+      'icon': Icons.assignment,
+      'color': Colors.purple,
+    },
+  ];
 
-  DateTime? _selectedDateIntervention;
-  DateTime? _selectedDateRapport;
-  List<Verificateur> _allVerificateurs = [];
-  List<Verificateur> _selectedVerificateurs = [];
+  bool _isLoading = false;
 
   @override
-  void initState() {
-    super.initState();
-    _loadVerificateurs();
-
-  // Initialiser _formData avec des listes modifiables
-  _formData = CreateMissionData(
-    nomClient: '',
-    accompagnateurs: [],  // Liste vide modifiable
-    verificateurs: [],    // Liste vide modifiable
-  );
-
-    // Ajouter l'utilisateur courant par défaut
-    _selectedVerificateurs.add(widget.currentUser);
-  }
-
-  void _loadVerificateurs() {
-    _allVerificateurs = HiveService.getAllVerificateurs();
-    setState(() {});
-  }
-
-  Future<void> _selectDate(BuildContext context, bool isIntervention) async {
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2020),
-      lastDate: DateTime(2030),
-    );
-    if (picked != null) {
-      setState(() {
-        if (isIntervention) {
-          _selectedDateIntervention = picked;
-        } else {
-          _selectedDateRapport = picked;
-        }
-      });
-    }
-  }
-
-  void _selectVerificateurs() async {
-    final result = await showDialog<List<Verificateur>>(
-      context: context,
-      builder: (context) => VerificateurSelectionDialog(
-        allVerificateurs: _allVerificateurs,
-        selectedVerificateurs: _selectedVerificateurs,
-      ),
-    );
-    if (result != null) {
-      setState(() {
-        _selectedVerificateurs = result;
-      });
-    }
-  }
-
-  void _addAccompagnateur() async {
-    final result = await showDialog<String>(
-      context: context,
-      builder: (context) => const AddAccompagnateurDialog(),
-    );
-    if (result != null && result.isNotEmpty) {
-      setState(() {
-        _formData.accompagnateurs.add(result);
-      });
-    }
-  }
-
-  void _removeAccompagnateur(int index) {
-    setState(() {
-      _formData.accompagnateurs.removeAt(index);
-    });
+  void dispose() {
+    _nomClientCtrl.dispose();
+    _activiteClientCtrl.dispose();
+    _adresseClientCtrl.dispose();
+    super.dispose();
   }
 
   Future<void> _saveMission() async {
     if (!_formKey.currentState!.validate()) return;
-
-    // Valider les vérificateurs
-    if (_selectedVerificateurs.isEmpty) {
+    
+    // Valider que la nature est sélectionnée
+    if (_natureMission == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sélectionnez au moins un vérificateur')),
+        const SnackBar(
+          content: Text('Veuillez sélectionner la nature de la vérification'),
+          backgroundColor: Colors.red,
+        ),
       );
       return;
     }
 
-    // Remplir les données du formulaire
-    _formData.nomClient = _nomClientCtrl.text.trim();
-    _formData.activiteClient = _activiteClientCtrl.text.trim().isEmpty ? null : _activiteClientCtrl.text.trim();
-    _formData.adresseClient = _adresseClientCtrl.text.trim().isEmpty ? null : _adresseClientCtrl.text.trim();
-    _formData.dgResponsable = _dgResponsableCtrl.text.trim().isEmpty ? null : _dgResponsableCtrl.text.trim();
-    _formData.natureMission = _natureMissionCtrl.text.trim().isEmpty ? null : _natureMissionCtrl.text.trim();
-    _formData.periodicite = _periodiciteCtrl.text.trim().isEmpty ? null : _periodiciteCtrl.text.trim();
-    _formData.dureeMissionJours = _dureeMissionCtrl.text.trim().isEmpty ? null : int.tryParse(_dureeMissionCtrl.text.trim());
-    _formData.dateIntervention = _selectedDateIntervention;
-    _formData.dateRapport = _selectedDateRapport;
-    
-    // Convertir les vérificateurs sélectionnés
-    _formData.verificateurs = _selectedVerificateurs.map((v) => {
-      'matricule': v.matricule,
-      'nom': v.nom,
-      'prenom': v.prenom,
-    }).toList();
+    setState(() => _isLoading = true);
 
-    // Créer l'ID unique
-    final missionId = DateTime.now().millisecondsSinceEpoch.toString();
-    
-    // Créer la mission
-    final mission = _formData.toMission(missionId, widget.currentUser.matricule);
-    
-    // Sauvegarder
-    await HiveService.saveMission(mission);
-    
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mission créée avec succès')),
+    try {
+      // Créer les données simplifiées
+      final formData = CreateMissionData(
+        nomClient: _nomClientCtrl.text.trim(),
+        activiteClient: _activiteClientCtrl.text.trim().isEmpty ? null : _activiteClientCtrl.text.trim(),
+        adresseClient: _adresseClientCtrl.text.trim().isEmpty ? null : _adresseClientCtrl.text.trim(),
       );
-      Navigator.pop(context, true);
+
+      // Créer l'ID unique
+      final missionId = DateTime.now().millisecondsSinceEpoch.toString();
+      
+      // Créer la mission avec le statut "en_attente"
+      final mission = Mission(
+        id: missionId,
+        nomClient: formData.nomClient,
+        activiteClient: formData.activiteClient,
+        adresseClient: formData.adresseClient,
+        natureMission: _natureMission,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        status: 'en_attente',
+        // Ajouter le vérificateur courant par défaut
+        verificateurs: [
+          {
+            'matricule': widget.currentUser.matricule,
+            'nom': widget.currentUser.nom,
+            'prenom': widget.currentUser.prenom,
+          }
+        ],
+      );
+      
+      // Sauvegarder
+      await HiveService.saveMission(mission);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Mission créée avec succès'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      setState(() => _isLoading = false);
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: const Text('Nouvelle Mission'),
-        backgroundColor: AppTheme.primaryBlue,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          TextButton(
-            onPressed: _saveMission,
-            child: const Text('Enregistrer', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+  void _showNaturePicker() {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Section Client
-              _buildSectionTitle('Informations Client'),
-              _buildTextField(_nomClientCtrl, 'Nom du client *', Icons.business),
-              const SizedBox(height: 12),
-              _buildTextField(_activiteClientCtrl, 'Activité du client', Icons.work),
-              const SizedBox(height: 12),
-              _buildTextField(_adresseClientCtrl, 'Adresse', Icons.location_on),
-
-              const SizedBox(height: 24),
-              _buildSectionTitle('Mission'),
-              _buildTextField(_dgResponsableCtrl, 'DG / Responsable', Icons.person),
-              const SizedBox(height: 12),
-              _buildDateField('Date d\'intervention', _selectedDateIntervention, true),
-              const SizedBox(height: 12),
-              _buildDateField('Date du rapport', _selectedDateRapport, false),
-              const SizedBox(height: 12),
-              _buildTextField(_natureMissionCtrl, 'Nature de la mission', Icons.description),
-              const SizedBox(height: 12),
-              _buildTextField(_periodiciteCtrl, 'Périodicité', Icons.calendar_today),
-              const SizedBox(height: 12),
-              _buildTextField(_dureeMissionCtrl, 'Durée (jours)', Icons.timer, keyboardType: TextInputType.number),
-
-              const SizedBox(height: 24),
-              _buildSectionTitle('Vérificateurs'),
-              _buildVerificateurSelector(),
-
-              const SizedBox(height: 24),
-              _buildSectionTitle('Accompagnateurs'),
-              _buildAccompagnateursList(),
-
-              const SizedBox(height: 32),
-              // Bouton sauvegarde
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: _saveMission,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Text('Créer la mission', style: TextStyle(fontSize: 16)),
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.6,
+        ),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Handle
+            Container(
+              margin: EdgeInsets.only(top: isSmallScreen ? 8 : 12),
+              width: isSmallScreen ? 30 : 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            // Title
+            Padding(
+              padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+              child: Text(
+                'Nature de la vérification',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 18 : 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const Divider(height: 0),
+            // Options
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  children: _natureOptions.map((option) {
+                    final isSelected = _natureMission == option['value'];
+                    return InkWell(
+                      onTap: () {
+                        setState(() => _natureMission = option['value']);
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                        decoration: BoxDecoration(
+                          color: isSelected ? (option['color'] as Color).withOpacity(0.05) : Colors.transparent,
+                          border: isSelected
+                              ? Border(
+                                  left: BorderSide(color: option['color'], width: 4),
+                                )
+                              : null,
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: isSmallScreen ? 40 : 48,
+                              height: isSmallScreen ? 40 : 48,
+                              decoration: BoxDecoration(
+                                color: (option['color'] as Color).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                              ),
+                              child: Icon(
+                                option['icon'],
+                                color: option['color'],
+                                size: isSmallScreen ? 20 : 24,
+                              ),
+                            ),
+                            SizedBox(width: isSmallScreen ? 12 : 16),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    option['title'],
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 14 : 16,
+                                      fontWeight: FontWeight.w600,
+                                      color: isSelected ? option['color'] : Colors.black87,
+                                    ),
+                                  ),
+                                  SizedBox(height: isSmallScreen ? 2 : 4),
+                                  Text(
+                                    option['description'],
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 11 : 13,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            if (isSelected)
+                              Icon(
+                                Icons.check_circle,
+                                color: option['color'],
+                                size: isSmallScreen ? 20 : 24,
+                              ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
               ),
-              const SizedBox(height: 20),
-            ],
-          ),
+            ),
+            SizedBox(height: isSmallScreen ? 12 : 16),
+            // Bouton fermer
+            Padding(
+              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+              child: SizedBox(
+                width: double.infinity,
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                    ),
+                  ),
+                  child: Text(
+                    'Fermer',
+                    style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
+                  ),
+                ),
+              ),
+            ),
+            SizedBox(height: isSmallScreen ? 6 : 8),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildSectionTitle(String title) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 18,
-          fontWeight: FontWeight.bold,
-          color: AppTheme.darkBlue,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTextField(TextEditingController controller, String label, IconData icon, {TextInputType? keyboardType}) {
-    return TextFormField(
-      controller: controller,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, color: AppTheme.primaryBlue),
-        border: const OutlineInputBorder(),
-        filled: true,
-        fillColor: Colors.white,
-      ),
-      keyboardType: keyboardType,
-      validator: label.contains('*') ? (v) => v?.isEmpty ?? true ? 'Requis' : null : null,
-    );
-  }
-
-  Widget _buildDateField(String label, DateTime? selectedDate, bool isIntervention) {
+  Widget _buildDisplayField({
+    required String label,
+    required String? value,
+    required String hint,
+    required IconData icon,
+    required VoidCallback onTap,
+    Color? color,
+  }) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    final displayColor = color ?? (value != null ? AppTheme.primaryBlue : Colors.grey);
+    
     return InkWell(
-      onTap: () => _selectDate(context, isIntervention),
+      onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+        padding: EdgeInsets.symmetric(
+          horizontal: isSmallScreen ? 12 : 16, 
+          vertical: isSmallScreen ? 12 : 16
+        ),
         decoration: BoxDecoration(
-          border: Border.all(color: Colors.grey.shade400),
-          borderRadius: BorderRadius.circular(8),
           color: Colors.white,
+          borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+          border: Border.all(
+            color: value != null ? displayColor.withOpacity(0.3) : Colors.grey.shade200,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 10,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Row(
           children: [
-            Icon(Icons.calendar_today, color: AppTheme.primaryBlue),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                selectedDate != null
-                    ? DateFormat('dd/MM/yyyy').format(selectedDate)
-                    : label,
-                style: TextStyle(
-                  color: selectedDate != null ? Colors.black : Colors.grey.shade600,
-                ),
+            Container(
+              padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+              decoration: BoxDecoration(
+                color: displayColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
               ),
+              child: Icon(icon, size: isSmallScreen ? 20 : 22, color: displayColor),
+            ),
+            SizedBox(width: isSmallScreen ? 12 : 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 12 : 13, 
+                      color: Colors.grey.shade600
+                    ),
+                  ),
+                  SizedBox(height: isSmallScreen ? 2 : 4),
+                  Text(
+                    value ?? hint,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 14 : 15,
+                      fontWeight: FontWeight.w500,
+                      color: value != null ? Colors.black87 : Colors.grey.shade500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_drop_down, 
+              color: displayColor, 
+              size: isSmallScreen ? 24 : 28
             ),
           ],
         ),
@@ -286,163 +359,228 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
     );
   }
 
-  Widget _buildVerificateurSelector() {
-    return Card(
-      child: ListTile(
-        leading: const Icon(Icons.people),
-        title: Text('${_selectedVerificateurs.length} vérificateur(s) sélectionné(s)'),
-        subtitle: Text(_selectedVerificateurs.map((v) => v.fullName).join(', ')),
-        trailing: const Icon(Icons.chevron_right),
-        onTap: _selectVerificateurs,
-      ),
-    );
-  }
-
-  Widget _buildAccompagnateursList() {
-    return Column(
-      children: [
-        if (_formData.accompagnateurs.isEmpty)
-          const Card(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Text('Aucun accompagnateur', style: TextStyle(color: Colors.grey)),
-            ),
-          )
-        else
-          ..._formData.accompagnateurs.asMap().entries.map((entry) {
-            final index = entry.key;
-            final name = entry.value;
-            return Card(
-              child: ListTile(
-                title: Text(name),
-                trailing: IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red),
-                  onPressed: () => _removeAccompagnateur(index),
-                ),
-              ),
-            );
-          }),
-        const SizedBox(height: 8),
-        TextButton.icon(
-          onPressed: _addAccompagnateur,
-          icon: const Icon(Icons.add),
-          label: const Text('Ajouter un accompagnateur'),
-        ),
-      ],
-    );
-  }
-}
-
-// Dialog pour sélectionner les vérificateurs
-class VerificateurSelectionDialog extends StatefulWidget {
-  final List<Verificateur> allVerificateurs;
-  final List<Verificateur> selectedVerificateurs;
-
-  const VerificateurSelectionDialog({
-    super.key,
-    required this.allVerificateurs,
-    required this.selectedVerificateurs,
-  });
-
-  @override
-  State<VerificateurSelectionDialog> createState() => _VerificateurSelectionDialogState();
-}
-
-class _VerificateurSelectionDialogState extends State<VerificateurSelectionDialog> {
-  late Set<String> _selectedIds;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedIds = widget.selectedVerificateurs.map((v) => v.id).toSet();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Sélectionner les vérificateurs'),
-      content: SizedBox(
-        width: double.maxFinite,
-        height: 400,
-        child: ListView.builder(
-          itemCount: widget.allVerificateurs.length,
-          itemBuilder: (context, index) {
-            final verif = widget.allVerificateurs[index];
-            return CheckboxListTile(
-              title: Text(verif.fullName),
-              subtitle: Text(verif.matricule),
-              value: _selectedIds.contains(verif.id),
-              onChanged: (checked) {
-                setState(() {
-                  if (checked == true) {
-                    _selectedIds.add(verif.id);
-                  } else {
-                    _selectedIds.remove(verif.id);
-                  }
-                });
-              },
-            );
-          },
-        ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Annuler'),
-        ),
-        ElevatedButton(
-          onPressed: () {
-            final selected = widget.allVerificateurs
-                .where((v) => _selectedIds.contains(v.id))
-                .toList();
-            Navigator.pop(context, selected);
-          },
-          child: const Text('Valider'),
-        ),
-      ],
-    );
-  }
-}
-
-// Dialog pour ajouter un accompagnateur
-class AddAccompagnateurDialog extends StatefulWidget {
-  const AddAccompagnateurDialog({super.key});
-
-  @override
-  State<AddAccompagnateurDialog> createState() => _AddAccompagnateurDialogState();
-}
-
-class _AddAccompagnateurDialogState extends State<AddAccompagnateurDialog> {
-  final _controller = TextEditingController();
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: AlertDialog(
-        title: const Text('Ajouter un accompagnateur'),
-        content: TextField(
-          controller: _controller,
-          decoration: const InputDecoration(
-            labelText: 'Nom complet',
-            hintText: 'Ex: Jean Martin',
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              if (_controller.text.trim().isNotEmpty) {
-                Navigator.pop(context, _controller.text.trim());
-              }
-            },
-            child: const Text('Ajouter'),
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    String? hint,
+    bool isRequired = false,
+    int maxLines = 1,
+  }) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
         ],
+      ),
+      child: TextFormField(
+        controller: controller,
+        maxLines: maxLines,
+        decoration: InputDecoration(
+          labelText: isRequired ? '$label *' : label,
+          hintText: hint,
+          prefixIcon: Icon(icon, size: isSmallScreen ? 20 : 22, color: AppTheme.primaryBlue),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+            borderSide: BorderSide.none,
+          ),
+          filled: true,
+          fillColor: Colors.white,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 16 : 20, 
+            vertical: isSmallScreen ? 14 : 18
+          ),
+        ),
+        validator: isRequired ? (value) {
+          if (value == null || value.trim().isEmpty) {
+            return 'Ce champ est requis';
+          }
+          return null;
+        } : null,
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: Colors.grey.shade50,
+        appBar: AppBar(
+          title: Text(
+            'Nouvelle Mission',
+            style: TextStyle(fontSize: isSmallScreen ? 18 : 20),
+          ),
+          backgroundColor: AppTheme.primaryBlue,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          actions: [
+            TextButton(
+              onPressed: _isLoading ? null : _saveMission,
+              child: _isLoading
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                    )
+                  : Text(
+                      'Créer',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 14 : 16,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+            ),
+          ],
+        ),
+        body: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                
+                Text(
+                  'INFORMATIONS CLIENT',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.darkBlue,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+                SizedBox(height: isSmallScreen ? 12 : 16),
+                
+                // Nom du client (obligatoire)
+                _buildTextField(
+                  controller: _nomClientCtrl,
+                  label: 'Nom du client',
+                  icon: Icons.business,
+                  hint: 'Ex: Société Générale',
+                  isRequired: true,
+                ),
+                SizedBox(height: isSmallScreen ? 14 : 16),
+                
+                // Activité du client
+                _buildTextField(
+                  controller: _activiteClientCtrl,
+                  label: 'Activité du client',
+                  icon: Icons.work_outline,
+                  hint: 'Ex: Banque, Industrie, Services...',
+                ),
+                SizedBox(height: isSmallScreen ? 14 : 16),
+                
+                // Adresse
+                _buildTextField(
+                  controller: _adresseClientCtrl,
+                  label: 'Adresse',
+                  icon: Icons.location_on_outlined,
+                  hint: 'Ex: Yaoundé, Cameroun',
+                  maxLines: 2,
+                ),
+                SizedBox(height: isSmallScreen ? 24 : 28),
+                
+                // Section Nature de vérification
+                Text(
+                  'NATURE DE LA VÉRIFICATION',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.darkBlue,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+                SizedBox(height: isSmallScreen ? 12 : 16),
+                
+                // Sélection de la nature
+                _buildDisplayField(
+                  label: 'Type de vérification',
+                  value: _natureMission,
+                  hint: 'Sélectionnez le type de vérification',
+                  icon: Icons.verified_outlined,
+                  onTap: _showNaturePicker,
+                  color: _natureMission != null ? Colors.blue : null,
+                ),
+                
+                SizedBox(height: isSmallScreen ? 32 : 40),
+                
+                // Bouton de création
+                Container(
+                  width: double.infinity,
+                  height: isSmallScreen ? 50 : 56,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        AppTheme.primaryBlue,
+                        AppTheme.primaryBlue.withOpacity(0.85),
+                      ],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.primaryBlue.withOpacity(0.3),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
+                      ),
+                    ],
+                  ),
+                  child: ElevatedButton(
+                    onPressed: _isLoading ? null : _saveMission,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.transparent,
+                      shadowColor: Colors.transparent,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 24,
+                            height: 24,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.add_circle_outline,
+                                size: isSmallScreen ? 20 : 22,
+                                color: Colors.white,
+                              ),
+                              SizedBox(width: isSmallScreen ? 8 : 10),
+                              Text(
+                                'CRÉER LA MISSION',
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 15 : 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                  ),
+                ),
+                
+                SizedBox(height: isSmallScreen ? 20 : 24),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

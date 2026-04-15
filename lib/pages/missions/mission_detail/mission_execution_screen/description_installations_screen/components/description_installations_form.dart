@@ -41,8 +41,24 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
   bool _addingMore = false;
   List<InstallationItem> _items = [];
   
-  // Variable pour suivre la validation des photos
-  bool _photosValid = false;
+  // Variables pour les dropdowns Oui/Non
+  String? _selectedCuveRetention;
+  String? _selectedIndicateurNiveau;
+  String? _selectedMiseALaTerre;
+  
+  // Variable pour section de câble
+  String? _selectedSectionCable;
+  
+  // Options Oui/Non
+  static const List<String> _ouiNonOptions = ['Oui', 'Non'];
+  
+  // Liste des sections de câble disponibles
+  static const List<String> _sectionCableOptions = [
+    '0,5 mm²', '0,75 mm²', '1 mm²', '1,5 mm²', '2,5 mm²', '4 mm²', '6 mm²',
+    '10 mm²', '16 mm²', '25 mm²', '35 mm²', '50 mm²', '70 mm²', '95 mm²',
+    '120 mm²', '150 mm²', '185 mm²', '240 mm²', '300 mm²', '400 mm²',
+    '500 mm²', '630 mm²',
+  ];
 
   @override
   void initState() {
@@ -52,7 +68,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
   }
 
   void _initializeForm() {
-    // IMPORTANT: Toujours vider et recréer les contrôleurs
     for (var controller in _controllers.values) {
       controller.dispose();
     }
@@ -63,13 +78,15 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     }
     _photoPaths.clear();
     _addingMore = false;
-    _photosValid = false; // Les photos sont obligatoires
+    _selectedCuveRetention = null;
+    _selectedIndicateurNiveau = null;
+    _selectedMiseALaTerre = null;
+    _selectedSectionCable = null;
   }
 
   Future<void> _loadExistingItems() async {
-    setState(() {
-      _isLoading = true;
-    });
+    if (!mounted) return;
+    setState(() => _isLoading = true);
 
     try {
       final items = await HiveService.getInstallationItemsFromSection(
@@ -77,93 +94,230 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
         section: widget.sectionKey,
       );
       
+      if (!mounted) return;
       setState(() {
         _items = items;
         _isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      if (!mounted) return;
+      setState(() => _isLoading = false);
     }
   }
 
   Future<void> _takePhoto() async {
     final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
-    if (photo != null) {
-      setState(() {
-        _photoPaths.add(photo.path);
-        _photosValid = _photoPaths.isNotEmpty;
-      });
+    if (photo != null && mounted) {
+      setState(() => _photoPaths.add(photo.path));
     }
   }
 
   Future<void> _pickFromGallery() async {
     final XFile? photo = await _picker.pickImage(source: ImageSource.gallery);
-    if (photo != null) {
-      setState(() {
-        _photoPaths.add(photo.path);
-        _photosValid = _photoPaths.isNotEmpty;
-      });
+    if (photo != null && mounted) {
+      setState(() => _photoPaths.add(photo.path));
     }
   }
 
   void _removePhoto(int index) {
+    if (!mounted) return;
+    setState(() => _photoPaths.removeAt(index));
+  }
+
+  bool _estChampObservations(String champ) {
+    final lowerChamp = champ.toLowerCase();
+    return lowerChamp.contains('observation') || 
+           lowerChamp.contains('remarque') ||
+           lowerChamp.contains('note');
+  }
+
+  bool _isSectionCableField(String champ) {
+    final lowerChamp = champ.toUpperCase();
+    return lowerChamp.contains('SECTION') && 
+           (lowerChamp.contains('CABLE') || lowerChamp.contains('CÂBLE'));
+  }
+
+  bool _isAnneeField(String champ) {
+    final upperChamp = champ.toUpperCase();
+    return upperChamp.contains('ANNEE') || upperChamp.contains('ANNÉE');
+  }
+
+  bool _isCuveRetentionField(String champ) {
+    final upperChamp = champ.toUpperCase();
+    return upperChamp.contains('CUVE') && upperChamp.contains('RETENTION');
+  }
+
+  bool _isIndicateurNiveauField(String champ) {
+    final upperChamp = champ.toUpperCase();
+    return upperChamp.contains('INDICATEUR') && upperChamp.contains('NIVEAU');
+  }
+
+  bool _isMiseALaTerreField(String champ) {
+    final upperChamp = champ.toUpperCase();
+    return upperChamp.contains('MISE') && upperChamp.contains('TERRE');
+  }
+
+  bool _isOuiNonField(String champ) {
+    return _isCuveRetentionField(champ) || 
+           _isIndicateurNiveauField(champ) || 
+           _isMiseALaTerreField(champ);
+  }
+
+  bool _hasAtLeastOneFieldFilled() {
+    for (var champ in widget.champs) {
+      if (_isOuiNonField(champ)) {
+        final value = _getOuiNonFieldValue(champ);
+        if (value != null && value.isNotEmpty) return true;
+      } else if (_isSectionCableField(champ)) {
+        if (_selectedSectionCable != null && _selectedSectionCable!.isNotEmpty) return true;
+      } else {
+        final value = _controllers[champ]!.text.trim();
+        if (value.isNotEmpty) return true;
+      }
+    }
+    if (_photoPaths.isNotEmpty) return true;
+    return false;
+  }
+
+  String? _getOuiNonFieldValue(String champ) {
+    if (_isCuveRetentionField(champ)) return _selectedCuveRetention;
+    if (_isIndicateurNiveauField(champ)) return _selectedIndicateurNiveau;
+    if (_isMiseALaTerreField(champ)) return _selectedMiseALaTerre;
+    return null;
+  }
+
+  void _setOuiNonFieldValue(String champ, String? value) {
     setState(() {
-      _photoPaths.removeAt(index);
-      _photosValid = _photoPaths.isNotEmpty;
+      if (_isCuveRetentionField(champ)) {
+        _selectedCuveRetention = value;
+        _controllers[champ]?.text = value ?? '';
+      } else if (_isIndicateurNiveauField(champ)) {
+        _selectedIndicateurNiveau = value;
+        _controllers[champ]?.text = value ?? '';
+      } else if (_isMiseALaTerreField(champ)) {
+        _selectedMiseALaTerre = value;
+        _controllers[champ]?.text = value ?? '';
+      }
     });
   }
 
-  // Validation de tous les champs du formulaire
-  bool _validateForm() {
-    bool isValid = true;
+  // Validation d'une année
+  String? _validateAnnee(String? value) {
+    if (value == null || value.trim().isEmpty) return null;
     
-    // Vérifier tous les champs textuels
-    for (var champ in widget.champs) {
-      if (_controllers[champ]!.text.trim().isEmpty) {
-        // Pour l'édition, on valide immédiatement
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Le champ "$champ" est obligatoire'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
-          ),
-        );
-        isValid = false;
-        break;
+    final annee = int.tryParse(value.trim());
+    final anneeActuelle = DateTime.now().year;
+    
+    if (annee == null) {
+      return 'Veuillez entrer une année valide (ex: 2023)';
+    }
+    if (annee < 1900) {
+      return 'L\'année doit être supérieure à 1900';
+    }
+    if (annee > anneeActuelle) {
+      return 'L\'année ne peut pas dépasser $anneeActuelle';
+    }
+    return null;
+  }
+
+  // Validation spécifique stabilisateur : fabrication < installation
+  String? _validateFabricationVsInstallation() {
+    if (widget.sectionKey != 'stabilisateur') return null;
+    
+    final anneeFabController = _controllers['ANNEE DE FABRICATION'];
+    final anneeInstController = _controllers['ANNEE D\'INSTALLATION'];
+    
+    if (anneeFabController == null || anneeInstController == null) return null;
+    
+    final anneeFab = anneeFabController.text.trim();
+    final anneeInst = anneeInstController.text.trim();
+    
+    if (anneeFab.isEmpty || anneeInst.isEmpty) return null;
+    
+    final fab = int.tryParse(anneeFab);
+    final inst = int.tryParse(anneeInst);
+    
+    if (fab != null && inst != null) {
+      if (fab >= inst) {
+        return 'L\'année de fabrication ($fab) doit être strictement inférieure à l\'année d\'installation ($inst)';
       }
     }
-    
-    // Vérifier les photos (obligatoires aussi)
-    if (!_photosValid) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Au moins une photo est obligatoire'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-        ),
-      );
-      isValid = false;
+    return null;
+  }
+
+  // Validation complète AVEC BLOCAGE
+  bool _validateForm() {
+    // 1. Vérifier qu'au moins un champ est rempli
+    if (!_hasAtLeastOneFieldFilled()) {
+      _showErrorSnackBar('Veuillez remplir au moins un champ');
+      return false;
     }
-    
-    return isValid;
+
+    // 2. Valider toutes les années (fabrication ≤ année en cours)
+    for (var champ in widget.champs) {
+      if (_isAnneeField(champ) && !_isOuiNonField(champ)) {
+        final value = _controllers[champ]!.text.trim();
+        if (value.isNotEmpty) {
+          final error = _validateAnnee(value);
+          if (error != null) {
+            _showErrorSnackBar('$champ : $error');
+            return false;
+          }
+        }
+      }
+    }
+
+    // 3. Validation spécifique stabilisateur : fabrication < installation
+    final errorStab = _validateFabricationVsInstallation();
+    if (errorStab != null) {
+      _showErrorSnackBar(errorStab);
+      return false;
+    }
+
+    return true;
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 4),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   Future<void> _saveItem() async {
-    // Valider le formulaire
+    // VALIDATION STRICTE - BLOQUE SI INVALIDE
     if (!_validateForm()) {
-      return;
+      return; // BLOQUÉ ICI - Ne passe pas à l'étape suivante
     }
-
-    setState(() {
-      _isLoading = true;
-    });
+    
+    if (!mounted) return;
+    setState(() => _isLoading = true);
 
     try {
       final data = <String, String>{};
+      
       for (var champ in widget.champs) {
-        data[champ] = _controllers[champ]!.text.trim();
+        if (_isOuiNonField(champ)) {
+          final value = _getOuiNonFieldValue(champ);
+          if (value != null && value.isNotEmpty) {
+            data[champ] = value;
+          }
+        } else if (_isSectionCableField(champ)) {
+          if (_selectedSectionCable != null && _selectedSectionCable!.isNotEmpty) {
+            data[champ] = _selectedSectionCable!;
+          }
+        } else {
+          final value = _controllers[champ]!.text.trim();
+          if (value.isNotEmpty) {
+            data[champ] = value;
+          }
+        }
       }
 
       final item = InstallationItem(
@@ -177,55 +331,63 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
         item: item,
       );
 
+      if (!mounted) return;
+      
       if (success) {
-        // REINITIALISER LE FORMULAIRE TOUJOURS
-        _resetForm();
+        // Afficher un message de succès
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Élément enregistré avec succès'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          ),
+        );
         
-        // Demander si on veut ajouter un autre seulement si ce n'est pas en mode "ajouter un autre"
+        _resetForm();
+        await _loadExistingItems();
+        
         if (!_addingMore) {
           final addAnother = await showDialog<bool>(
             context: context,
+            barrierDismissible: false,
             builder: (context) => AlertDialog(
-              title: Text('Élément ajouté'),
-              content: Text('Voulez-vous ajouter un autre élément ?'),
+              title: const Text('Élément ajouté'),
+              content: const Text('Voulez-vous ajouter un autre élément ?'),
               actions: [
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context, false);
-                    // Appeler onComplete pour marquer comme terminé
                     widget.onComplete(widget.sectionKey);
                   },
-                  child: Text('Terminer'),
+                  child: const Text('Terminer'),
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: Text('Ajouter un autre'),
+                  child: const Text('Ajouter un autre'),
                 ),
               ],
             ),
           );
-
-          if (addAnother != null && addAnother) {
-            setState(() {
-              _addingMore = true;
-            });
+          
+          if (addAnother == true && mounted) {
+            setState(() => _addingMore = true);
           }
+        } else {
+          setState(() {});
         }
       } else {
         throw Exception('Échec de la sauvegarde');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors de l\'enregistrement: $e'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-        ),
-      );
+      if (!mounted) return;
+      _showErrorSnackBar('Erreur lors de l\'enregistrement: $e');
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
   
@@ -234,9 +396,13 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     for (var controller in _controllers.values) {
       controller.clear();
     }
+    if (!mounted) return;
     setState(() {
       _photoPaths.clear();
-      _photosValid = false;
+      _selectedCuveRetention = null;
+      _selectedIndicateurNiveau = null;
+      _selectedMiseALaTerre = null;
+      _selectedSectionCable = null;
     });
   }
 
@@ -250,12 +416,12 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
           item: item,
           index: index,
           champs: widget.champs,
-          requiredFields: widget.champs, // Tous les champs sont obligatoires
+          requiredFields: widget.champs,
         ),
       ),
     );
 
-    if (result == true) {
+    if (result == true && mounted) {
       await _loadExistingItems();
     }
   }
@@ -268,7 +434,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
         insetPadding: EdgeInsets.zero,
         child: Stack(
           children: [
-            // Image en plein écran
             Container(
               width: MediaQuery.of(context).size.width,
               height: MediaQuery.of(context).size.height,
@@ -282,39 +447,33 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                 ),
               ),
             ),
-            // Bouton de fermeture
             Positioned(
               top: 40,
               right: 20,
               child: GestureDetector(
                 onTap: () => Navigator.pop(context),
                 child: Container(
-                  padding: EdgeInsets.all(8),
-                  decoration: BoxDecoration(
+                  padding: const EdgeInsets.all(8),
+                  decoration: const BoxDecoration(
                     color: Colors.black54,
                     shape: BoxShape.circle,
                   ),
-                  child: Icon(
-                    Icons.close,
-                    color: Colors.white,
-                    size: 24,
-                  ),
+                  child: const Icon(Icons.close, color: Colors.white, size: 24),
                 ),
               ),
             ),
-            // Numéro de la photo
             Positioned(
               top: 40,
               left: 20,
               child: Container(
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: Colors.black54,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
                   'Photo ${index + 1}/${_photoPaths.length}',
-                  style: TextStyle(
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 14,
                     fontWeight: FontWeight.bold,
@@ -322,7 +481,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                 ),
               ),
             ),
-            // Bouton suppression
             Positioned(
               bottom: 40,
               right: 20,
@@ -332,12 +490,12 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                   _removePhoto(index);
                 },
                 child: Container(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                   decoration: BoxDecoration(
                     color: Colors.red,
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  child: Row(
+                  child: const Row(
                     children: [
                       Icon(Icons.delete, color: Colors.white, size: 18),
                       SizedBox(width: 8),
@@ -359,25 +517,21 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     );
   }
 
-  // Méthode pour obtenir les champs à afficher
   Map<String, String> _getDisplayFields(InstallationItem item) {
     final Map<String, String> result = {};
     int displayed = 0;
     
-    // Essayer d'obtenir les 2 premiers champs non vides
     for (var champ in widget.champs) {
       if (displayed >= 2) break;
       
       final value = item.data[champ];
       if (value != null && value.trim().isNotEmpty) {
-        // Formater le label pour qu'il soit plus court si nécessaire
         final label = champ.length > 20 ? '${champ.substring(0, 20)}...' : champ;
         result[label] = value;
         displayed++;
       }
     }
     
-    // Si on n'a pas assez de champs, ajouter les suivants même s'ils sont vides
     if (result.length < 2) {
       for (var champ in widget.champs) {
         if (result.length >= 2) break;
@@ -400,44 +554,180 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     super.dispose();
   }
 
+  Widget _buildOuiNonDropdown(String champ, bool isSmallScreen) {
+    final currentValue = _getOuiNonFieldValue(champ);
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: DropdownButtonFormField<String>(
+        value: currentValue,
+        isExpanded: true,
+        icon: Icon(Icons.arrow_drop_down, size: isSmallScreen ? 20 : 24, color: Colors.grey.shade600),
+        dropdownColor: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        hint: Text(
+          'Sélectionnez Oui ou Non',
+          style: TextStyle(
+            fontSize: isSmallScreen ? 12 : 13,
+            color: Colors.grey.shade500,
+          ),
+        ),
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 10 : 12, 
+            vertical: isSmallScreen ? 12 : 14
+          ),
+        ),
+        style: TextStyle(
+          fontSize: isSmallScreen ? 13 : 14,
+          color: Colors.black87,
+        ),
+        items: _ouiNonOptions.map((option) {
+          return DropdownMenuItem<String>(
+            value: option,
+            child: Row(
+              children: [
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: BoxDecoration(
+                    color: option == 'Oui' ? Colors.green : Colors.red,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  option,
+                  style: TextStyle(
+                    color: option == 'Oui' ? Colors.green.shade700 : Colors.red.shade700,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+        onChanged: (value) => _setOuiNonFieldValue(champ, value),
+      ),
+    );
+  }
+
+  Widget _buildSectionCableDropdown(bool isSmallScreen) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: DropdownButtonFormField<String>(
+        value: _selectedSectionCable,
+        isExpanded: true,
+        icon: Icon(Icons.arrow_drop_down, size: isSmallScreen ? 20 : 24, color: Colors.grey.shade600),
+        dropdownColor: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        hint: Text(
+          'Sélectionnez la section de câble',
+          style: TextStyle(
+            fontSize: isSmallScreen ? 12 : 13,
+            color: Colors.grey.shade500,
+          ),
+        ),
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 10 : 12, 
+            vertical: isSmallScreen ? 12 : 14
+          ),
+        ),
+        style: TextStyle(
+          fontSize: isSmallScreen ? 13 : 14,
+          color: Colors.black87,
+        ),
+        items: _sectionCableOptions.map((option) {
+          return DropdownMenuItem<String>(
+            value: option,
+            child: Text(option, style: TextStyle(fontSize: isSmallScreen ? 13 : 14)),
+          );
+        }).toList(),
+        onChanged: (value) {
+          setState(() {
+            _selectedSectionCable = value;
+            for (var champ in widget.champs) {
+              if (_isSectionCableField(champ)) {
+                _controllers[champ]?.text = value ?? '';
+              }
+            }
+          });
+        },
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading && _items.isEmpty) {
-      return Center(child: CircularProgressIndicator());
+      return const Center(child: CircularProgressIndicator());
     }
+
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
 
     return Column(
       children: [
         Expanded(
           child: SingleChildScrollView(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  
-                  // Titre de la section
                   Row(
+                    mainAxisAlignment: MainAxisAlignment.start, // 👈 ici
                     children: [
-                      Icon(Icons.check_circle, 
-                        color: widget.isComplete ? Colors.green : Colors.grey.shade300,
-                        size: 24,
-                      ),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          widget.title,
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black87,
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 12 : 16,
+                          vertical: isSmallScreen ? 3 : 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: widget.isComplete 
+                              ? Colors.green.withOpacity(0.1)
+                              : Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(30),
+                          border: Border.all(
+                            color: widget.isComplete 
+                                ? Colors.green.withOpacity(0.4)
+                                : Colors.orange.withOpacity(0.4),
+                            width: 1,
                           ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              widget.isComplete ? Icons.check_circle : Icons.pending_outlined,
+                              color: widget.isComplete ? Colors.green : Colors.orange,
+                              size: isSmallScreen ? 16 : 18,
+                            ),
+                            SizedBox(width: isSmallScreen ? 8 : 10),
+                            Text(
+                              widget.isComplete ? 'Section complétée' : 'En attente de saisie',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 12 : 13,
+                                color: widget.isComplete ? Colors.green.shade700 : Colors.orange.shade700,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  SizedBox(height: 16),
-
+                  SizedBox(height: isSmallScreen ? 12 : 16),
                   // Liste des éléments existants
                   if (_items.isNotEmpty)
                     Column(
@@ -446,14 +736,14 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                         Text(
                           'Éléments déjà ajoutés (${_items.length})',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: isSmallScreen ? 13 : 14,
                             fontWeight: FontWeight.w500,
                             color: Colors.grey.shade700,
                           ),
                         ),
-                        SizedBox(height: 8),
-                        Container(
-                          height: 160,
+                        SizedBox(height: isSmallScreen ? 6 : 8),
+                        SizedBox(
+                          height: isSmallScreen ? 140 : 160,
                           child: ListView.builder(
                             scrollDirection: Axis.horizontal,
                             itemCount: _items.length,
@@ -464,16 +754,16 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                               return GestureDetector(
                                 onTap: () => _viewItemDetails(item, index),
                                 child: Container(
-                                  width: 200,
-                                  margin: EdgeInsets.only(right: 12),
+                                  width: isSmallScreen ? 170 : 200,
+                                  margin: EdgeInsets.only(right: isSmallScreen ? 8 : 12),
                                   decoration: BoxDecoration(
                                     color: Colors.white,
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
                                     boxShadow: [
                                       BoxShadow(
                                         color: Colors.black.withOpacity(0.05),
                                         blurRadius: 6,
-                                        offset: Offset(0, 3),
+                                        offset: const Offset(0, 3),
                                       ),
                                     ],
                                     border: Border.all(
@@ -483,17 +773,18 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                                   ),
                                   child: Stack(
                                     children: [
-                                      // Contenu principal
                                       Padding(
-                                        padding: EdgeInsets.all(12),
+                                        padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
                                         child: Column(
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
-                                            // Indicateur de position
                                             Row(
                                               children: [
                                                 Container(
-                                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                  padding: EdgeInsets.symmetric(
+                                                    horizontal: isSmallScreen ? 6 : 8, 
+                                                    vertical: isSmallScreen ? 3 : 4
+                                                  ),
                                                   decoration: BoxDecoration(
                                                     color: AppTheme.primaryBlue,
                                                     borderRadius: BorderRadius.circular(6),
@@ -502,53 +793,50 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                                                     'Élément ${index + 1}',
                                                     style: TextStyle(
                                                       color: Colors.white,
-                                                      fontSize: 10,
+                                                      fontSize: isSmallScreen ? 9 : 10,
                                                       fontWeight: FontWeight.bold,
                                                     ),
                                                   ),
                                                 ),
-                                                Spacer(),
+                                                const Spacer(),
                                                 if (item.photoPaths.isNotEmpty)
                                                   Container(
-                                                    padding: EdgeInsets.all(4),
+                                                    padding: const EdgeInsets.all(4),
                                                     decoration: BoxDecoration(
                                                       color: Colors.green.withOpacity(0.1),
                                                       shape: BoxShape.circle,
                                                     ),
                                                     child: Icon(
                                                       Icons.photo,
-                                                      size: 14,
+                                                      size: isSmallScreen ? 12 : 14,
                                                       color: Colors.green,
                                                     ),
                                                   ),
                                               ],
                                             ),
-                                            
-                                            SizedBox(height: 12),
-                                            
-                                            // Affichage des champs
+                                            SizedBox(height: isSmallScreen ? 10 : 12),
                                             Expanded(
                                               child: Column(
                                                 crossAxisAlignment: CrossAxisAlignment.start,
                                                 children: fields.entries.map((entry) {
                                                   return Padding(
-                                                    padding: EdgeInsets.only(bottom: 8),
+                                                    padding: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
                                                     child: Column(
                                                       crossAxisAlignment: CrossAxisAlignment.start,
                                                       children: [
                                                         Text(
                                                           entry.key,
                                                           style: TextStyle(
-                                                            fontSize: 10,
+                                                            fontSize: isSmallScreen ? 9 : 10,
                                                             color: Colors.grey.shade600,
                                                             fontWeight: FontWeight.w500,
                                                           ),
                                                         ),
-                                                        SizedBox(height: 2),
+                                                        const SizedBox(height: 2),
                                                         Text(
                                                           entry.value,
                                                           style: TextStyle(
-                                                            fontSize: 12,
+                                                            fontSize: isSmallScreen ? 11 : 12,
                                                             color: Colors.black87,
                                                             fontWeight: FontWeight.w600,
                                                           ),
@@ -564,21 +852,19 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                                           ],
                                         ),
                                       ),
-                                      
-                                      // Badge pour les photos
                                       if (item.photoPaths.isNotEmpty)
                                         Positioned(
                                           top: 8,
                                           right: 8,
                                           child: Container(
-                                            padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
                                               color: Colors.green,
                                               borderRadius: BorderRadius.circular(10),
                                             ),
                                             child: Text(
                                               '${item.photoPaths.length}',
-                                              style: TextStyle(
+                                              style: const TextStyle(
                                                 color: Colors.white,
                                                 fontSize: 10,
                                                 fontWeight: FontWeight.bold,
@@ -593,25 +879,24 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                             },
                           ),
                         ),
-                        SizedBox(height: 16),
-                        Divider(),
-                        SizedBox(height: 16),
+                        SizedBox(height: isSmallScreen ? 12 : 16),
+                        const Divider(),
+                        SizedBox(height: isSmallScreen ? 12 : 16),
                       ],
                     ),
 
-                  // Formulaire d'ajout - TOUS LES CHAMPS OBLIGATOIRES
+                  // Formulaire d'ajout
                   Form(
                     key: _formKey,
                     child: Column(
                       children: [
-                        // Champs du formulaire - tous obligatoires
                         ...widget.champs.map((champ) {
-                          final isObservationField = champ.toLowerCase().contains('observation') || 
-                                                    champ.toLowerCase().contains('note') || 
-                                                    champ.toLowerCase().contains('commentaire');
+                          final estObservations = _estChampObservations(champ);
+                          final isSectionCable = _isSectionCableField(champ);
+                          final isOuiNon = _isOuiNonField(champ);
                           
                           return Padding(
-                            padding: EdgeInsets.only(bottom: 16),
+                            padding: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -619,11 +904,11 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                                   children: [
                                     Expanded(
                                       child: Text(
-                                        '$champ*', // Astérisque pour tous
+                                        champ,
                                         maxLines: 3,
                                         overflow: TextOverflow.ellipsis,
                                         style: TextStyle(
-                                          fontSize: 14,
+                                          fontSize: isSmallScreen ? 13 : 14,
                                           fontWeight: FontWeight.w600,
                                           color: Colors.black87,
                                         ),
@@ -631,48 +916,68 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                                     ),
                                   ],
                                 ),
-                                SizedBox(height: 4),
-                                TextFormField(
-                                  controller: _controllers[champ],
-                                  maxLines: isObservationField ? 5 : 2,
-                                  minLines: isObservationField ? 3 : 1,
-                                  decoration: InputDecoration(
-                                    hintText: 'Saisissez ${champ.toLowerCase()}...',
-                                    border: OutlineInputBorder(
-                                      borderSide: BorderSide(color: Colors.grey),
+                                const SizedBox(height: 4),
+                                
+                                if (isSectionCable)
+                                  _buildSectionCableDropdown(isSmallScreen)
+                                else if (isOuiNon)
+                                  _buildOuiNonDropdown(champ, isSmallScreen)
+                                else if (estObservations)
+                                  TextFormField(
+                                    controller: _controllers[champ],
+                                    maxLines: 5,
+                                    minLines: 3,
+                                    decoration: InputDecoration(
+                                      hintText: 'Saisissez vos observations (optionnel)...',
+                                      hintStyle: TextStyle(
+                                        fontSize: isSmallScreen ? 12 : 13,
+                                        color: Colors.grey.shade400,
+                                      ),
+                                      border: OutlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.grey.shade300),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.grey.shade300),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                                      ),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: isSmallScreen ? 10 : 12, 
+                                        vertical: isSmallScreen ? 10 : 12
+                                      ),
                                     ),
-                                    enabledBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(color: Colors.grey),
-                                    ),
-                                    focusedBorder: OutlineInputBorder(
-                                      borderSide: BorderSide(color: AppTheme.primaryBlue),
-                                    ),
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 12, 
-                                      vertical: isObservationField ? 12 : 10
-                                    ),
-                                    alignLabelWithHint: isObservationField,
-                                    errorStyle: TextStyle(
-                                      color: Colors.red,
-                                      fontSize: 12,
+                                  )
+                                else
+                                  TextFormField(
+                                    controller: _controllers[champ],
+                                    maxLines: 2,
+                                    minLines: 1,
+                                    decoration: InputDecoration(
+                                      hintText: 'Saisissez ${champ.toLowerCase()}...',
+                                      border: OutlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.grey.shade300),
+                                      ),
+                                      enabledBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(color: Colors.grey.shade300),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                                      ),
+                                      contentPadding: EdgeInsets.symmetric(
+                                        horizontal: isSmallScreen ? 10 : 12, 
+                                        vertical: isSmallScreen ? 10 : 12
+                                      ),
                                     ),
                                   ),
-                                  validator: (value) {
-                                    // Tous les champs sont obligatoires
-                                    if (value == null || value.trim().isEmpty) {
-                                      return 'Ce champ est obligatoire';
-                                    }
-                                    return null;
-                                  },
-                                ),
                               ],
                             ),
                           );
                         }).toList(),
 
-                        // Section photos - OBLIGATOIRE
+                        // Section photos
                         Padding(
-                          padding: EdgeInsets.only(bottom: 16),
+                          padding: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -680,91 +985,67 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                                 children: [
                                   Expanded(
                                     child: Text(
-                                      'Photos*',
+                                      'Photos',
                                       maxLines: 3,
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
-                                        fontSize: 14,
+                                        fontSize: isSmallScreen ? 13 : 14,
                                         fontWeight: FontWeight.w600,
                                         color: Colors.black87,
                                       ),
                                     ),
                                   ),
                                   Text(
-                                    '(obligatoire)',
+                                    '(optionnel)',
                                     style: TextStyle(
-                                      color: Colors.red,
-                                      fontSize: 12,
+                                      color: Colors.grey.shade500,
+                                      fontSize: isSmallScreen ? 11 : 12,
                                     ),
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 8),
+                              SizedBox(height: isSmallScreen ? 6 : 8),
                               
-                              // Message si pas de photos
-                              if (!_photosValid)
-                                Container(
-                                  padding: EdgeInsets.all(12),
-                                  margin: EdgeInsets.only(bottom: 12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.red.shade50,
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.red.shade300),
-                                  ),
-                                  child: Row(
-                                    children: [
-                                      Icon(Icons.warning, color: Colors.red, size: 16),
-                                      SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          'Au moins une photo est requise',
-                                          style: TextStyle(
-                                            color: Colors.red,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w500,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              
-                              // Boutons pour ajouter des photos
                               Row(
                                 children: [
                                   Expanded(
                                     child: OutlinedButton.icon(
                                       onPressed: _takePhoto,
-                                      icon: Icon(Icons.camera_alt_outlined),
-                                      label: Text('Prendre une photo'),
+                                      icon: Icon(Icons.camera_alt_outlined, size: isSmallScreen ? 16 : 18),
+                                      label: Text(
+                                        'Prendre',
+                                        style: TextStyle(fontSize: isSmallScreen ? 11 : 12),
+                                      ),
                                       style: OutlinedButton.styleFrom(
-                                        padding: EdgeInsets.symmetric(vertical: 12),
-                                        side: BorderSide(color: Colors.grey),
+                                        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
+                                        side: const BorderSide(color: Colors.grey),
                                       ),
                                     ),
                                   ),
-                                  SizedBox(width: 12),
+                                  SizedBox(width: isSmallScreen ? 8 : 12),
                                   Expanded(
                                     child: OutlinedButton.icon(
                                       onPressed: _pickFromGallery,
-                                      icon: Icon(Icons.photo_library_outlined),
-                                      label: Text('Galerie'),
+                                      icon: Icon(Icons.photo_library_outlined, size: isSmallScreen ? 16 : 18),
+                                      label: Text(
+                                        'Galerie',
+                                        style: TextStyle(fontSize: isSmallScreen ? 11 : 12),
+                                      ),
                                       style: OutlinedButton.styleFrom(
-                                        padding: EdgeInsets.symmetric(vertical: 12),
-                                        side: BorderSide(color: Colors.grey),
+                                        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
+                                        side: const BorderSide(color: Colors.grey),
                                       ),
                                     ),
                                   ),
                                 ],
                               ),
-                              SizedBox(height: 12),
+                              SizedBox(height: isSmallScreen ? 8 : 12),
                               
-                              // Affichage des photos en grille
                               if (_photoPaths.isNotEmpty)
                                 GridView.builder(
                                   shrinkWrap: true,
-                                  physics: NeverScrollableScrollPhysics(),
-                                  gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                  physics: const NeverScrollableScrollPhysics(),
+                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                                     crossAxisCount: 3,
                                     crossAxisSpacing: 8,
                                     mainAxisSpacing: 8,
@@ -785,44 +1066,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                                               ),
                                             ),
                                           ),
-                                          // Overlay au survol
-                                          MouseRegion(
-                                            cursor: SystemMouseCursors.click,
-                                            child: Container(
-                                              decoration: BoxDecoration(
-                                                borderRadius: BorderRadius.circular(8),
-                                                color: Colors.black.withOpacity(0.1),
-                                              ),
-                                              child: Center(
-                                                child: Icon(
-                                                  Icons.zoom_in,
-                                                  color: Colors.white.withOpacity(0.8),
-                                                  size: 30,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          // Numéro de la photo en bas à gauche
-                                          Positioned(
-                                            bottom: 4,
-                                            left: 4,
-                                            child: Container(
-                                              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: Colors.black.withOpacity(0.6),
-                                                borderRadius: BorderRadius.circular(10),
-                                              ),
-                                              child: Text(
-                                                '${index + 1}',
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 10,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                          // Bouton de suppression rapide
                                           Positioned(
                                             top: 4,
                                             right: 4,
@@ -831,11 +1074,11 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                                               child: Container(
                                                 width: 22,
                                                 height: 22,
-                                                decoration: BoxDecoration(
+                                                decoration: const BoxDecoration(
                                                   color: Colors.red,
                                                   shape: BoxShape.circle,
                                                 ),
-                                                child: Icon(
+                                                child: const Icon(
                                                   Icons.close,
                                                   size: 14,
                                                   color: Colors.white,
@@ -854,22 +1097,29 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                       ],
                     ),
                   ),
-                  
-                  // Bouton d'action (dans le scroll, pas fixe)
+                  SizedBox(height: isSmallScreen ? 16 : 20),
+                ],
+              ),
+            ),
+          ),
+          
+        ),
+        SizedBox(height: isSmallScreen ? 16 : 20),
+        // Bouton d'action
                   SizedBox(
-                    width: double.infinity,
+                    width: isSmallScreen ? 250 : 350,
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _saveItem,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
+                        backgroundColor: Colors.green,
                         foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: 16),
+                        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 14 : 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                       child: _isLoading
-                          ? SizedBox(
+                          ? const SizedBox(
                               width: 20,
                               height: 20,
                               child: CircularProgressIndicator(
@@ -880,19 +1130,17 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                           : Row(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                Icon(Icons.save),
-                                SizedBox(width: 8),
-                                Text(_addingMore ? 'AJOUTER UN AUTRE' : 'SAUVEGARDER'),
+                                const Icon(Icons.save, size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  _addingMore ? 'AJOUTER UN AUTRE' : 'SAUVEGARDER',
+                                  style: const TextStyle(fontSize: 14),
+                                ),
                               ],
                             ),
                     ),
                   ),
-                  SizedBox(height: 20), // Espace en bas pour le scroll
-                ],
-              ),
-            ),
-          ),
-        ),
+                  SizedBox(height: isSmallScreen ? 15 : 18),
       ],
     );
   }

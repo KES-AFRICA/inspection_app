@@ -6,7 +6,7 @@ import 'package:inspec_app/constants/app_theme.dart';
 
 class ParatonnerreSequenceScreen extends StatefulWidget {
   final Mission mission;
-final void Function(String missionId) onComplete;
+  final void Function(String missionId) onComplete;
   final bool isComplete;
 
   const ParatonnerreSequenceScreen({
@@ -33,9 +33,7 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
   }
 
   Future<void> _loadSelections() async {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final desc = await HiveService.getOrCreateDescriptionInstallations(widget.mission.id);
@@ -47,44 +45,40 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
         _isLoading = false;
       });
     } catch (e) {
-      setState(() {
-        _isLoading = false;
-      });
+      setState(() => _isLoading = false);
     }
   }
 
   bool _validateForm() {
     if (_presenceParatonnerre == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Veuillez sélectionner la présence de paratonnerre'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorSnackBar('Veuillez sélectionner la présence de paratonnerre');
       return false;
     }
     
     if (_analyseRisqueFoudre == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Veuillez sélectionner l\'analyse risque foudre'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorSnackBar('Veuillez sélectionner l\'analyse risque foudre');
       return false;
     }
     
     if (_etudeTechniqueFoudre == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Veuillez sélectionner l\'étude technique foudre'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _showErrorSnackBar('Veuillez sélectionner l\'étude technique foudre');
       return false;
     }
     
     return true;
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
   }
 
   Future<void> _saveSelections() async {
@@ -92,9 +86,7 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
       return;
     }
 
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
 
     try {
       final success1 = await HiveService.updateSelection(
@@ -115,46 +107,51 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
         value: _etudeTechniqueFoudre!,
       );
 
-      if (success1 && success2 && success3) {
+      if (success1 && success2 && success3 && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Sélections sauvegardées'),
+            content: const Text('Sélections sauvegardées avec succès'),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           ),
         );
         widget.onComplete(widget.mission.id);
+      } else {
+        _showErrorSnackBar('Erreur lors de la sauvegarde');
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        _showErrorSnackBar('Erreur: $e');
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   Widget _buildRadioGroup(String title, String? selectedValue, Function(String?) onChanged) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    
     return Card(
-      margin: EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               title,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: isSmallScreen ? 15 : 16,
                 fontWeight: FontWeight.w600,
                 color: Colors.black87,
               ),
             ),
-            SizedBox(height: 12),
+            SizedBox(height: isSmallScreen ? 8 : 12),
             Row(
               children: [
                 Expanded(
@@ -170,18 +167,19 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
                             : Colors.grey.shade300,
                         width: selectedValue == 'OUI' ? 2 : 1,
                       ),
-                      padding: EdgeInsets.symmetric(vertical: 16),
+                      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 16),
                     ),
                     child: Text(
                       'OUI',
                       style: TextStyle(
                         color: selectedValue == 'OUI' ? Colors.green : Colors.grey.shade700,
                         fontWeight: FontWeight.w500,
+                        fontSize: isSmallScreen ? 13 : 14,
                       ),
                     ),
                   ),
                 ),
-                SizedBox(width: 12),
+                SizedBox(width: isSmallScreen ? 8 : 12),
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () => onChanged('NON'),
@@ -195,13 +193,14 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
                             : Colors.grey.shade300,
                         width: selectedValue == 'NON' ? 2 : 1,
                       ),
-                      padding: EdgeInsets.symmetric(vertical: 16),
+                      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 16),
                     ),
                     child: Text(
                       'NON',
                       style: TextStyle(
                         color: selectedValue == 'NON' ? Colors.red : Colors.grey.shade700,
                         fontWeight: FontWeight.w500,
+                        fontSize: isSmallScreen ? 13 : 14,
                       ),
                     ),
                   ),
@@ -216,45 +215,64 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
 
   @override
   Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+
     return Padding(
-      padding: const EdgeInsets.all(16.0),
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // En-tête
-          Row(
-            children: [
-              Icon(Icons.check_circle, 
-                color: widget.isComplete ? Colors.green : Colors.grey.shade300,
-                size: 24,
-              ),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  'Paratonnerre',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
+          // Badge de statut ALIGNÉ À GAUCHE
+          Padding(
+            padding: EdgeInsets.only(bottom: isSmallScreen ? 16 : 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.start, // ALIGNÉ À GAUCHE
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isSmallScreen ? 12 : 16,
+                    vertical: isSmallScreen ? 3 : 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: widget.isComplete 
+                        ? Colors.green.withOpacity(0.1)
+                        : Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(30),
+                    border: Border.all(
+                      color: widget.isComplete 
+                          ? Colors.green.withOpacity(0.4)
+                          : Colors.orange.withOpacity(0.4),
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        widget.isComplete ? Icons.check_circle : Icons.pending_outlined,
+                        color: widget.isComplete ? Colors.green : Colors.orange,
+                        size: isSmallScreen ? 16 : 18,
+                      ),
+                      SizedBox(width: isSmallScreen ? 8 : 10),
+                      Text(
+                        widget.isComplete ? 'Section complétée' : 'En attente de saisie',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 12 : 13,
+                          color: widget.isComplete ? Colors.green.shade700 : Colors.orange.shade700,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-            ],
-          ),
-          SizedBox(height: 8),
-          Text(
-            'Toutes les sélections sont obligatoires',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
+              ],
             ),
           ),
-          SizedBox(height: 32),
 
           // Options de sélection
           Expanded(
             child: _isLoading
-                ? Center(child: CircularProgressIndicator())
+                ? const Center(child: CircularProgressIndicator())
                 : ListView(
                     children: [
                       _buildRadioGroup(
@@ -268,7 +286,7 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
                         (value) => setState(() => _analyseRisqueFoudre = value),
                       ),
                       _buildRadioGroup(
-                        'Etude technique foudre',
+                        'Étude technique foudre',
                         _etudeTechniqueFoudre,
                         (value) => setState(() => _etudeTechniqueFoudre = value),
                       ),
@@ -277,14 +295,14 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
           ),
 
           // Bouton d'action
-          Container(
+          SizedBox(
             width: double.infinity,
             child: ElevatedButton(
               onPressed: _isLoading ? null : _saveSelections,
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlue,
+                backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(vertical: 16),
+                padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 14 : 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
@@ -301,9 +319,12 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.save),
+                        Icon(Icons.save, size: isSmallScreen ? 16 : 18),
                         SizedBox(width: 8),
-                        Text('SAUVEGARDER'),
+                        Text(
+                          'SAUVEGARDER',
+                          style: TextStyle(fontSize: isSmallScreen ? 14 : 15),
+                        ),
                       ],
                     ),
             ),
