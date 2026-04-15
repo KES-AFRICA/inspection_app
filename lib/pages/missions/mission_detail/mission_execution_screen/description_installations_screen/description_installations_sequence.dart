@@ -6,6 +6,7 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/paratonnerre_sequence_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/radio_sequence_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/sequence_progress_service.dart';
 
 class DescriptionInstallationsSequenceScreen extends StatefulWidget {
   final Mission mission;
@@ -179,11 +180,37 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
         setState(() {
           _currentStep = newPage;
         });
+        _saveCurrentPosition(newPage);
       }
     }
 
     if (MediaQuery.of(context).viewInsets.bottom > 0) {
       FocusScope.of(context).unfocus();
+    }
+  }
+
+  Future<void> _saveCurrentPosition(int position) async {
+    try {
+      // Sauvegarder dans Hive ou SequenceProgressService
+      await SequenceProgressService.saveStepData(
+        widget.mission.id, 
+        'description_current_step', 
+        position
+      );
+    } catch (e) {
+      // Ignorer les erreurs
+    }
+  }
+
+  Future<int> _getSavedPosition() async {
+    try {
+      final saved = await SequenceProgressService.getStepData(
+        widget.mission.id, 
+        'description_current_step'
+      );
+      return saved ?? 0;
+    } catch (e) {
+      return 0;
     }
   }
 
@@ -200,15 +227,16 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
         _isLoading = false;
       });
       
-      // UNIQUEMENT au premier chargement, trouver la première étape incomplète
-      if (_isFirstLoad) {
-        _isFirstLoad = false;
-        
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted && _pageController.hasClients) {
-            int targetStep = 0;
-            
-            // Chercher la première étape incomplète
+      // Récupérer la position sauvegardée
+      final savedPosition = await _getSavedPosition();
+      
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pageController.hasClients) {
+          int targetStep = savedPosition;
+          
+          // UNIQUEMENT au premier chargement, si on n'a pas de position sauvegardée,
+          // trouver la première étape incomplète
+          if (_isFirstLoad && savedPosition == 0) {
             for (int i = 0; i < _sections.length; i++) {
               final section = _sections[i];
               final key = section['key'] as String;
@@ -217,15 +245,16 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
                 break;
               }
             }
-            
-            // Si tout est complet, rester sur la première page
-            _pageController.jumpToPage(targetStep);
-            setState(() {
-              _currentStep = targetStep;
-            });
           }
-        });
-      }
+          
+          _isFirstLoad = false;
+          
+          _pageController.jumpToPage(targetStep);
+          setState(() {
+            _currentStep = targetStep;
+          });
+        }
+      });
     } catch (e) {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -277,7 +306,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
     }
   }
 
-    @override
+  @override
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
     if (_isLoading) {

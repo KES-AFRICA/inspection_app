@@ -36,6 +36,7 @@ class _SequenceScreenState extends State<SequenceScreen> {
 
   // Clé pour accéder à l'état de GeneralInfoStep
   final GlobalKey<GeneralInfoStepState> _generalInfoKey = GlobalKey<GeneralInfoStepState>();
+  Widget? _cachedDescriptionWidget;
 
   @override
   void initState() {
