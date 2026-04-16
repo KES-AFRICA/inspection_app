@@ -36,7 +36,8 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
   List<String> _zonePhotos = [];
   bool _isLoadingPhotos = false;
   
-  // Observations libres
+  // Observations libres - NOUVEAU : Toggle Oui/Non
+  bool _addObservation = false; // Par défaut Non
   final _observationController = TextEditingController();
   List<String> _observationPhotos = [];
   final List<ObservationLibre> _observationsExistantes = [];
@@ -49,7 +50,6 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
     }
   }
   
-
   void _chargerDonneesExistantes() {
     final zone = widget.zone!;
     _nomController.text = zone.nom;
@@ -173,7 +173,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
       context: context,
       builder: (context) => Dialog(
         backgroundColor: Colors.transparent,
-        insetPadding: EdgeInsets.all(20),
+        insetPadding: const EdgeInsets.all(20),
         child: Stack(
           children: [
             Container(
@@ -201,26 +201,26 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
               child: Row(
                 children: [
                   Container(
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.black54,
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      icon: Icon(Icons.delete, color: Colors.white),
+                      icon: const Icon(Icons.delete, color: Colors.white),
                       onPressed: () {
                         Navigator.pop(context);
                         _supprimerPhoto(photos, index);
                       },
                     ),
                   ),
-                  SizedBox(width: 8),
+                  const SizedBox(width: 8),
                   Container(
-                    decoration: BoxDecoration(
+                    decoration: const BoxDecoration(
                       color: Colors.black54,
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                      icon: Icon(Icons.close, color: Colors.white),
+                      icon: const Icon(Icons.close, color: Colors.white),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ),
@@ -237,12 +237,12 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Supprimer la photo'),
-        content: Text('Êtes-vous sûr de vouloir supprimer cette photo ?'),
+        title: const Text('Supprimer la photo'),
+        content: const Text('Êtes-vous sûr de vouloir supprimer cette photo ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Annuler'),
+            child: const Text('Annuler'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -252,7 +252,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
               });
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text('Supprimer'),
+            child: const Text('Supprimer'),
           ),
         ],
       ),
@@ -260,41 +260,51 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
   }
 
   Widget _buildPhotosSection(String title, List<String> photos, Function prendrePhoto, Function choisirPhoto) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Column(
-          mainAxisAlignment: MainAxisAlignment.start,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
               title,
               style: TextStyle(
-                fontSize: 16,
+                fontSize: isSmallScreen ? 14 : 16,
                 fontWeight: FontWeight.w600,
                 color: AppTheme.darkBlue,
               ),
             ),
-            Text(
-              '${photos.length} photo(s)',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey.shade600,
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 6 : 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryBlue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '${photos.length}',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 12 : 13,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.primaryBlue,
+                ),
               ),
             ),
           ],
         ),
-        SizedBox(height: 8),
+        SizedBox(height: isSmallScreen ? 6 : 8),
         
         if (_isLoadingPhotos && title.contains('zone'))
-          Center(
+          const Center(
             child: Padding(
-              padding: const EdgeInsets.all(16.0),
+              padding: EdgeInsets.all(16.0),
               child: CircularProgressIndicator(),
             ),
           )
         else if (photos.isEmpty)
           Container(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
               borderRadius: BorderRadius.circular(8),
@@ -305,14 +315,15 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                 children: [
                   Icon(
                     Icons.photo_camera_outlined,
-                    size: 48,
+                    size: isSmallScreen ? 40 : 48,
                     color: Colors.grey.shade400,
                   ),
-                  SizedBox(height: 8),
+                  SizedBox(height: isSmallScreen ? 6 : 8),
                   Text(
                     'Aucune photo',
                     style: TextStyle(
                       color: Colors.grey.shade600,
+                      fontSize: isSmallScreen ? 12 : 13,
                     ),
                   ),
                 ],
@@ -322,7 +333,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
         else
           GridView.builder(
             shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
+            physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: 3,
               crossAxisSpacing: 8,
@@ -367,12 +378,12 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                       child: GestureDetector(
                         onTap: () => _supprimerPhoto(photos, index),
                         child: Container(
-                          padding: EdgeInsets.all(4),
+                          padding: const EdgeInsets.all(4),
                           decoration: BoxDecoration(
                             color: Colors.red.withOpacity(0.8),
                             shape: BoxShape.circle,
                           ),
-                          child: Icon(
+                          child: const Icon(
                             Icons.close,
                             size: 14,
                             color: Colors.white,
@@ -386,60 +397,66 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
             },
           ),
         
-        SizedBox(height: 16),
+        SizedBox(height: isSmallScreen ? 12 : 16),
         
         Row(
           children: [
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: () => prendrePhoto(),
-                icon: Icon(Icons.camera_alt, size: 20),
-                label: Text('Prendre'),
+                icon: Icon(Icons.camera_alt, size: isSmallScreen ? 18 : 20),
+                label: Text(
+                  'Prendre',
+                  style: TextStyle(fontSize: isSmallScreen ? 12 : 13),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryBlue,
                   foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
                 ),
               ),
             ),
-            
-            SizedBox(width: 4),
+            SizedBox(width: isSmallScreen ? 6 : 8),
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: () => choisirPhoto(),
-                icon: Icon(Icons.photo_library, size: 20),
-                label: Text('Galerie'),
+                icon: Icon(Icons.photo_library, size: isSmallScreen ? 18 : 20),
+                label: Text(
+                  'Galerie',
+                  style: TextStyle(fontSize: isSmallScreen ? 12 : 13),
+                ),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.grey.shade800,
                   foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 12),
+                  padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
                 ),
               ),
             ),
-            
           ],
         ),
         
-        SizedBox(height: 24),
+        SizedBox(height: isSmallScreen ? 20 : 24),
       ],
     );
   }
 
-  // ===== GESTION DES OBSERVATIONS =====
+  // ===== GESTION DES OBSERVATIONS AVEC TOGGLE OUI/NON =====
 
   Widget _buildObservationsSection() {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           'OBSERVATIONS SUR LA ZONE',
           style: TextStyle(
-            fontSize: 14,
+            fontSize: isSmallScreen ? 13 : 14,
             fontWeight: FontWeight.bold,
             color: AppTheme.primaryBlue,
           ),
         ),
-        SizedBox(height: 10),
+        SizedBox(height: isSmallScreen ? 8 : 10),
 
         // Observations existantes
         if (_observationsExistantes.isNotEmpty)
@@ -447,9 +464,11 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
             final index = entry.key;
             final observation = entry.value;
             return Card(
-              margin: EdgeInsets.only(bottom: 12),
+              margin: EdgeInsets.only(bottom: isSmallScreen ? 10 : 12),
+              elevation: 1,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Padding(
-                padding: EdgeInsets.all(12),
+                padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -459,12 +478,19 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                         Expanded(
                           child: Text(
                             observation.texte,
-                            style: TextStyle(fontWeight: FontWeight.w500),
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              fontSize: isSmallScreen ? 13 : 14,
+                            ),
                           ),
                         ),
                         IconButton(
-                          icon: Icon(Icons.delete, color: Colors.red),
+                          icon: Icon(Icons.delete_outline, color: Colors.red, size: isSmallScreen ? 18 : 20),
                           onPressed: () => _supprimerObservationExistante(index),
+                          constraints: BoxConstraints(
+                            minWidth: isSmallScreen ? 32 : 40,
+                            minHeight: isSmallScreen ? 32 : 40,
+                          ),
                         ),
                       ],
                     ),
@@ -472,15 +498,18 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          SizedBox(height: 8),
+                          SizedBox(height: isSmallScreen ? 6 : 8),
                           Text(
                             'Photos associées (${observation.photos.length})',
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 11 : 12,
+                              color: Colors.grey.shade600,
+                            ),
                           ),
-                          SizedBox(height: 4),
+                          SizedBox(height: isSmallScreen ? 4 : 6),
                           GridView.builder(
                             shrinkWrap: true,
-                            physics: NeverScrollableScrollPhysics(),
+                            physics: const NeverScrollableScrollPhysics(),
                             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
                               crossAxisCount: 3,
                               crossAxisSpacing: 4,
@@ -491,9 +520,18 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                             itemBuilder: (context, photoIndex) {
                               return GestureDetector(
                                 onTap: () => _previsualiserPhoto(observation.photos, photoIndex),
-                                child: Image.file(
-                                  File(observation.photos[photoIndex]),
-                                  fit: BoxFit.cover,
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.file(
+                                      File(observation.photos[photoIndex]),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
                                 ),
                               );
                             },
@@ -506,51 +544,138 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
             );
           }),
 
-        // Nouvelle observation
+        // Toggle Oui/Non pour ajouter une nouvelle observation
         Card(
           elevation: 1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Nouvelle observation',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                // Toggle Oui/Non
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Ajouter une observation ?',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 14 : 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.darkBlue,
+                        ),
+                      ),
+                    ),
+                    // Bouton Oui
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _addObservation = true;
+                        });
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 14 : 18,
+                          vertical: isSmallScreen ? 6 : 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _addObservation ? Colors.green.withOpacity(0.15) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: _addObservation ? Colors.green : Colors.grey.shade300,
+                            width: _addObservation ? 2 : 1,
+                          ),
+                        ),
+                        child: Text(
+                          'Oui',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 13 : 14,
+                            fontWeight: FontWeight.w600,
+                            color: _addObservation ? Colors.green : Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Bouton Non
+                    GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _addObservation = false;
+                          _observationController.clear();
+                          _observationPhotos.clear();
+                        });
+                      },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 14 : 18,
+                          vertical: isSmallScreen ? 6 : 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: !_addObservation ? Colors.red.withOpacity(0.15) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: !_addObservation ? Colors.red : Colors.grey.shade300,
+                            width: !_addObservation ? 2 : 1,
+                          ),
+                        ),
+                        child: Text(
+                          'Non',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 13 : 14,
+                            fontWeight: FontWeight.w600,
+                            color: !_addObservation ? Colors.red : Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                SizedBox(height: 12),
 
-                TextFormField(
-                  controller: _observationController,
-                  decoration: InputDecoration(
-                    labelText: 'Observation',
-                    border: OutlineInputBorder(),
-                    hintText: 'Saisissez votre observation...',
+                // Champs d'observation (affichés uniquement si Oui)
+                if (_addObservation) ...[
+                  SizedBox(height: isSmallScreen ? 14 : 18),
+                  
+                  TextFormField(
+                    controller: _observationController,
+                    decoration: InputDecoration(
+                      labelText: 'Observation',
+                      border: const OutlineInputBorder(),
+                      hintText: 'Saisissez votre observation...',
+                      filled: true,
+                      fillColor: Colors.grey.shade50,
+                    ),
+                    maxLines: 3,
                   ),
-                  maxLines: 3,
-                ),
 
-                SizedBox(height: 16),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
 
-                // Photos pour la nouvelle observation
-                _buildPhotosSection(
-                  'Photos pour cette observation',
-                  _observationPhotos,
-                  _prendrePhotoObservation,
-                  _choisirPhotoObservationDepuisGalerie,
-                ),
-
-                SizedBox(height: 16),
-
-                ElevatedButton(
-                  onPressed: _ajouterObservation,
-                  child: Text('Ajouter cette observation'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    foregroundColor: Colors.white,
-                    minimumSize: Size(double.infinity, 48),
+                  // Photos pour la nouvelle observation
+                  _buildPhotosSection(
+                    'Photos pour cette observation',
+                    _observationPhotos,
+                    _prendrePhotoObservation,
+                    _choisirPhotoObservationDepuisGalerie,
                   ),
-                ),
+
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+
+                  ElevatedButton(
+                    onPressed: _ajouterObservation,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: Text(
+                      'Ajouter cette observation',
+                      style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -573,19 +698,22 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
       ));
       _observationController.clear();
       _observationPhotos.clear();
+      _addObservation = false; // Réinitialiser le toggle à Non après ajout
     });
+    
+    _showSuccess('Observation ajoutée');
   }
 
   void _supprimerObservationExistante(int index) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Supprimer l\'observation',style: TextStyle(fontSize: 16),),
-        content: Text('Êtes-vous sûr de vouloir supprimer cette observation ?'),
+        title: const Text('Supprimer l\'observation', style: TextStyle(fontSize: 16)),
+        content: const Text('Êtes-vous sûr de vouloir supprimer cette observation ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Annuler'),
+            child: const Text('Annuler'),
           ),
           ElevatedButton(
             onPressed: () {
@@ -593,11 +721,25 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
               setState(() {
                 _observationsExistantes.removeAt(index);
               });
+              _showSuccess('Observation supprimée');
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: Text('Supprimer'),
+            child: const Text('Supprimer'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -613,7 +755,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
           zone = MoyenneTensionZone(
             nom: _nomController.text.trim(),
             coffrets: widget.isEdition ? widget.zone.coffrets : [],
-            observationsLibres: _observationsExistantes, // Liste d'ObservationLibre
+            observationsLibres: _observationsExistantes,
             photos: _zonePhotos,
             locaux: widget.isEdition ? widget.zone.locaux : [],
           );
@@ -622,7 +764,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
             nom: _nomController.text.trim(),
             locaux: widget.isEdition ? widget.zone.locaux : [],
             coffretsDirects: widget.isEdition ? widget.zone.coffretsDirects : [],
-            observationsLibres: _observationsExistantes, // Liste d'ObservationLibre
+            observationsLibres: _observationsExistantes,
             photos: _zonePhotos,
           );
         }
@@ -645,7 +787,19 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
         }
 
         if (success) {
-          Navigator.pop(context, true);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(widget.isEdition ? 'Zone modifiée avec succès' : 'Zone ajoutée avec succès'),
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 2),
+                behavior: SnackBarBehavior.floating,
+                margin: const EdgeInsets.all(16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            );
+            Navigator.pop(context, true);
+          }
         } else {
           _showError('Erreur lors de la sauvegarde');
         }
@@ -682,23 +836,26 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
       SnackBar(
         content: Text(message),
         backgroundColor: Colors.red,
-        duration: Duration(seconds: 3),
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
 
   Widget _buildTextField(TextEditingController controller, String label, {bool isMultiline = false, bool isRequired = false}) {
     return Padding(
-      padding: EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.only(bottom: 16),
       child: TextFormField(
         controller: controller,
         decoration: InputDecoration(
           labelText: label,
-          border: OutlineInputBorder(),
+          border: const OutlineInputBorder(),
           hintText: label.contains('Nom') ? 'Ex: Sous-sol 1, RDC, Étage 2...' : null,
-          prefixIcon: label.contains('Nom') ? Icon(Icons.place) : null,
+          prefixIcon: label.contains('Nom') ? const Icon(Icons.place) : null,
           filled: true,
-          fillColor: Colors.grey.shade100,
+          fillColor: Colors.grey.shade50,
         ),
         maxLines: isMultiline ? 4 : 1,
         validator: isRequired ? (value) {
@@ -713,16 +870,21 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    
     return GestureDetector(
-      onTap: () {FocusScope.of(context).unfocus();},
+      onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.isEdition ? 'Modifier la Zone' : 'Ajouter une Zone'),
-          backgroundColor: widget.isMoyenneTension ? Colors.blue : Colors.blue,
+          title: Text(
+            widget.isEdition ? 'Modifier la Zone' : 'Ajouter une Zone',
+            style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
+          ),
+          backgroundColor: Colors.blue,
           foregroundColor: Colors.white,
           actions: [
             IconButton(
-              icon: Icon(Icons.check),
+              icon: const Icon(Icons.check),
               onPressed: _sauvegarder,
               tooltip: 'Enregistrer',
             ),
@@ -731,19 +893,20 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
         body: Form(
           key: _formKey,
           child: Padding(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             child: ListView(
               children: [
-                 SizedBox(height: 12),
+                SizedBox(height: isSmallScreen ? 8 : 12),
                 // Nom de la zone
                 _buildTextField(_nomController, 'Nom de la zone*', isRequired: true),
-                SizedBox(height: 12),
+                SizedBox(height: isSmallScreen ? 8 : 12),
       
                 // Photos de la zone
                 Card(
                   elevation: 1,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   child: Padding(
-                    padding: EdgeInsets.all(16),
+                    padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
                     child: _buildPhotosSection(
                       'Photos de la zone',
                       _zonePhotos,
@@ -752,23 +915,21 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                     ),
                   ),
                 ),
-                SizedBox(height: 12),
+                SizedBox(height: isSmallScreen ? 8 : 12),
       
                 // Observations libres
-                if(!widget.isEdition)
-                _buildObservationsSection(),
-                if(!widget.isEdition)
-                SizedBox(height: 32),
+                if (!widget.isEdition)
+                  _buildObservationsSection(),
+                if (!widget.isEdition)
+                  SizedBox(height: isSmallScreen ? 24 : 32),
                 
                 // Bouton d'enregistrement
                 ElevatedButton(
                   onPressed: _sauvegarder,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: widget.isMoyenneTension 
-                        ? Colors.blue 
-                        : Colors.blue,
+                    backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: 16),
+                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 14 : 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(8),
                     ),
@@ -776,19 +937,19 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.save),
-                      SizedBox(width: 8),
+                      Icon(Icons.save, size: isSmallScreen ? 18 : 20),
+                      const SizedBox(width: 8),
                       Text(
                         widget.isEdition ? 'MODIFIER LA ZONE' : 'AJOUTER LA ZONE',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: isSmallScreen ? 14 : 16,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 ),
-                SizedBox(height: 16),
+                SizedBox(height: isSmallScreen ? 12 : 16),
               ],
             ),
           ),
