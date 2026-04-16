@@ -330,7 +330,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
             margin: EdgeInsets.all(isSmallScreen ? 10 : 14),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [sectionColor, sectionColor.withOpacity(0.8)],
+                colors: [AppTheme.primaryBlue,AppTheme.primaryBlue.withOpacity(0.8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -376,7 +376,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
                                 color: Colors.white,
                                 height: 1.3,
                               ),
-                              maxLines: 2,
+                              maxLines: 3,
                               overflow: TextOverflow.ellipsis,
                             ),
                             SizedBox(height: isSmallScreen ? 4 : 6),

@@ -65,6 +65,7 @@ class _SequenceScreenState extends State<SequenceScreen> {
         'widget': JsaStep(
           mission: widget.mission,
           onDataChanged: (data) => _saveStepData('jsa', data),
+          onNextStep: _goToNextStep, // ← Pour aller vers Renseignements
         ),
       },
       {
@@ -286,7 +287,7 @@ class _SequenceScreenState extends State<SequenceScreen> {
               ),
             ),
             // Navigation buttons
-            if (_currentStep != 3)
+            if (_currentStep != 0 && _currentStep != 3)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -321,7 +322,7 @@ class _SequenceScreenState extends State<SequenceScreen> {
                         ),
                       ),
                     ),
-                  if (_currentStep > 0 && _currentStep < _steps.length - 1) 
+                  if (_currentStep > 0 && _currentStep < _steps.length - 1)
                     const SizedBox(width: 12),
                   if (_currentStep < _steps.length - 1)
                     Expanded(
