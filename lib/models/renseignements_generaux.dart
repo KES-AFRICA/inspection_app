@@ -32,7 +32,7 @@ class RenseignementsGeneraux extends HiveObject {
   String registreControle;
 
   @HiveField(9)
-  String compteRendu;
+  List<String> compteRendu;
 
   @HiveField(10)
   List<Map<String, String>> accompagnateurs;
@@ -42,6 +42,9 @@ class RenseignementsGeneraux extends HiveObject {
 
   @HiveField(12)
   DateTime updatedAt;
+
+  @HiveField(13)
+  String nomSite;
 
   RenseignementsGeneraux({
     required this.missionId,
@@ -53,10 +56,11 @@ class RenseignementsGeneraux extends HiveObject {
     this.dureeJours = 0,
     this.verificationType,
     this.registreControle = '',
-    this.compteRendu = '',
+    this.compteRendu = const [],
     this.accompagnateurs = const [],
     this.verificateurs = const [],
     required this.updatedAt,
+    required this.nomSite,
   });
 
   factory RenseignementsGeneraux.create(String missionId) {
@@ -66,6 +70,7 @@ class RenseignementsGeneraux extends HiveObject {
       installation: '',
       activite: '',
       updatedAt: DateTime.now(),
+      nomSite: '',
     );
   }
 
@@ -84,6 +89,7 @@ class RenseignementsGeneraux extends HiveObject {
       'accompagnateurs': accompagnateurs,
       'verificateurs': verificateurs,
       'updatedAt': updatedAt.toIso8601String(),
+      'nomSite': nomSite,
     };
   }
 }

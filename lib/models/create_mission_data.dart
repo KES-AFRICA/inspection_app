@@ -5,6 +5,7 @@ class CreateMissionData {
   String nomClient;
   String? activiteClient;
   String? adresseClient;
+  String nomSite;
   String? dgResponsable;
   DateTime? dateIntervention;
   DateTime? dateRapport;
@@ -33,6 +34,7 @@ class CreateMissionData {
     required this.nomClient,
     this.activiteClient,
     this.adresseClient,
+    required this.nomSite,
     this.dgResponsable,
     this.dateIntervention,
     this.dateRapport,
@@ -63,6 +65,7 @@ class CreateMissionData {
       activiteClient: activiteClient,
       adresseClient: adresseClient,
       dgResponsable: dgResponsable,
+      nomSite: nomSite,
       dateIntervention: dateIntervention,
       dateRapport: dateRapport,
       natureMission: natureMission,

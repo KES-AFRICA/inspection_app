@@ -522,6 +522,15 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
                   ),
                   Divider(height: isSmallScreen ? 20 : 24),
                 ],
+                if (_currentMission.nomSite != null) ...[
+                  _buildInfoRow(
+                    icon: Icons.location_city,
+                    label: 'Site',
+                    value: _currentMission.nomSite!,
+                    isSmallScreen: isSmallScreen,
+                  ),
+                  Divider(height: isSmallScreen ? 20 : 24),
+                ],
                 if (_currentMission.adresseClient != null) ...[
                   _buildInfoRow(
                     icon: Icons.location_on,

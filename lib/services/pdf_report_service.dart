@@ -779,47 +779,73 @@ class PdfReportService {
   //  RENSEIGNEMENTS GÉNÉRAUX
   // ──────────────────────────────────────────────────────────────
   static pw.Widget _buildRenseignementsGeneraux(Mission mission, RenseignementsGeneraux? rg) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _buildPageHeaderWidget(),
-        pw.SizedBox(height: 10),
-        _sectionBox('RENSEIGNEMENTS GENERAUX DE L\'ETABLISSEMENT'),
-        pw.SizedBox(height: 8),
-        _subTitle('RENSEIGNEMENTS PRINCIPAUX'),
-        pw.SizedBox(height: 5),
-        
-        pw.Table(
-          border: pw.TableBorder.all(color: borderColor, width: 0.4),
-          columnWidths: {
-            0: const pw.FlexColumnWidth(2),
-            1: const pw.FlexColumnWidth(3),
-          },
-          children: [
-            _tableDataRow(['Etablissement vérifié', mission.nomClient], alt: false),
-            if (rg != null) ...[
-              _tableDataRow(['Installation vérifiée', rg.installation], alt: true),
-              _tableDataRow(['Activité principale', rg.activite], alt: false),
-            ] else if (mission.activiteClient != null)
-              _tableDataRow(['Activité principale', mission.activiteClient!], alt: false),
-            if (mission.adresseClient != null)
-              _tableDataRow(['Adresse', mission.adresseClient!], alt: rg != null ? true : false),
-            _tableDataRow(['Vérification - Nature', mission.natureMission ?? ''], alt: true),
-            _tableDataRow(['Périodicité réglementaire', mission.periodicite ?? ''], alt: false),
-            _tableDataRow(['Dates d\'intervention',
-                mission.dateIntervention != null ? _formatDate(mission.dateIntervention!) : ''], alt: true),
-            if (mission.dureeMissionJours != null)
-              _tableDataRow(['Durée', '${mission.dureeMissionJours} jour(s)'], alt: false),
-            if (mission.dgResponsable != null)
-              _tableDataRow(['Accompagnateur / Responsable', mission.dgResponsable!], alt: true),
-            if (rg != null) ...[
-              _tableDataRow(['Registre de contrôle', rg.registreControle], alt: false),
-              _tableDataRow(['Compte rendu de fin de visite fait à', rg.compteRendu], alt: true),
-            ],
-            if (rg != null && rg.verificateurs.isNotEmpty)
-              _tableDataRow(['Vérificateur(s)', rg.verificateurs.map((v) => v['nom'] ?? '').join(', ')], alt: false),
+  return pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      _buildPageHeaderWidget(),
+      pw.SizedBox(height: 10),
+      _sectionBox('RENSEIGNEMENTS GENERAUX DE L\'ETABLISSEMENT'),
+      pw.SizedBox(height: 8),
+      _subTitle('RENSEIGNEMENTS PRINCIPAUX'),
+      pw.SizedBox(height: 5),
+      
+      pw.Table(
+        border: pw.TableBorder.all(color: borderColor, width: 0.4),
+        columnWidths: {
+          0: const pw.FlexColumnWidth(2),
+          1: const pw.FlexColumnWidth(3),
+        },
+        children: [
+          _tableDataRow(['Etablissement vérifié', mission.nomClient], alt: false),
+          if (rg != null) ...[
+            _tableDataRow(['Installation vérifiée', rg.installation], alt: true),
+            _tableDataRow(['Activité principale', rg.activite], alt: false),
+          ] else if (mission.activiteClient != null)
+            _tableDataRow(['Activité principale', mission.activiteClient!], alt: false),
+          if (mission.adresseClient != null)
+            _tableDataRow(['Adresse', mission.adresseClient!], alt: rg != null ? true : false),
+          
+          // Nom du site
+          if (rg != null && rg.nomSite.isNotEmpty) ...[
+            _tableDataRow(['Nom du site', rg.nomSite], alt: true),
+          ]else if (mission.nomSite != null && mission.nomSite!.isNotEmpty)
+            _tableDataRow(['Nom du site', mission.nomSite!], alt: rg != null ? false : true),
+          
+          _tableDataRow(['Vérification - Nature', mission.natureMission ?? ''], alt: true),
+          _tableDataRow(['Périodicité réglementaire', mission.periodicite ?? ''], alt: false),
+          _tableDataRow(['Dates d\'intervention',
+              mission.dateIntervention != null ? _formatDate(mission.dateIntervention!) : ''], alt: true),
+          if (mission.dureeMissionJours != null)
+            _tableDataRow(['Durée', '${mission.dureeMissionJours} jour(s)'], alt: false),
+          if (mission.dgResponsable != null)
+            _tableDataRow(['Accompagnateur / Responsable', mission.dgResponsable!], alt: true),
+          if (rg != null) ...[
+            _tableDataRow(['Registre de contrôle', rg.registreControle], alt: false),
+            
+            // ✅ CORRECTION ICI : compteRendu est une List<String>
+            if (rg.compteRendu.isNotEmpty)
+              _tableDataRow([
+                'Compte rendu de fin de visite fait à', 
+                rg.compteRendu.join(', ')
+              ], alt: true),
+            
+            // Afficher aussi en liste à puces si plusieurs destinataires
+            if (rg.compteRendu.length > 1)
+              pw.TableRow(
+                decoration: pw.BoxDecoration(color: tableRowAlt),
+                children: [
+                  _cell('', isHeader: false),
+                  _cell(
+                    rg.compteRendu.map((d) => '• $d').join('\n'),
+                    isHeader: false,
+                  ),
+                ],
+              ),
           ],
-        ),
+          if (rg != null && rg.verificateurs.isNotEmpty)
+            _tableDataRow(['Vérificateur(s)', rg.verificateurs.map((v) => v['nom'] ?? '').join(', ')], alt: false),
+        ],
+      ),
         
         pw.SizedBox(height: 16),
         _subTitle('DOCUMENTS NECESSAIRES A LA VERIFICATION'),

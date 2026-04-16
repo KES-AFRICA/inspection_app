@@ -109,6 +109,12 @@ class Mission extends HiveObject {
   @HiveField(34)
   String? renseignementsGenerauxId;
 
+  @HiveField(35)
+  String? nomSite;
+
+  @HiveField(36)
+  String? jsaId;
+
   Mission({
     required this.id,
     required this.nomClient,
@@ -144,6 +150,7 @@ class Mission extends HiveObject {
     this.classementLocauxId,
     this.foudreIds, 
     this.mesuresEssaisId,
+    this.nomSite,
   });
 
   factory Mission.fromJson(Map<String, dynamic> json) {
@@ -197,6 +204,7 @@ class Mission extends HiveObject {
           ? List<String>.from(json['foudre_ids'])
           : null,
       mesuresEssaisId: json['mesures_essais_id'],
+      nomSite: json['nom_site'],
     );
   }
 
@@ -236,6 +244,7 @@ class Mission extends HiveObject {
       'classement_locaux_id': classementLocauxId,
       'foudre_ids': foudreIds,
       'mesures_essais_id': mesuresEssaisId,
+      'nom_site': nomSite,
     };
   }
 

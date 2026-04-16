@@ -22,6 +22,7 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
   final _nomClientCtrl = TextEditingController();
   final _activiteClientCtrl = TextEditingController();
   final _adresseClientCtrl = TextEditingController();
+  final _nomSiteCtrl = TextEditingController();
   
   // Sélection pour Nature de vérification
   String? _natureMission;
@@ -43,11 +44,18 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
       'color': Colors.green,
     },
     {
-      'value': 'Audit réglementaire',
-      'title': 'Audit réglementaire',
+      'value': 'Audit',
+      'title': 'Audit',
       'description': 'Audit complet de conformité réglementaire',
       'icon': Icons.assignment,
-      'color': Colors.purple,
+      'color': Colors.blue,
+    },
+    {
+      'value': 'Expertise',
+      'title': 'Expertise',
+      'description': 'Expertise technique approfondie',
+      'icon': Icons.engineering,
+      'color': Colors.green,
     },
   ];
 
@@ -58,6 +66,7 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
     _nomClientCtrl.dispose();
     _activiteClientCtrl.dispose();
     _adresseClientCtrl.dispose();
+    _nomSiteCtrl.dispose();
     super.dispose();
   }
 
@@ -75,30 +84,31 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
       return;
     }
 
+    if (_nomSiteCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez saisir le nom du site'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
-      // Créer les données simplifiées
-      final formData = CreateMissionData(
+      final missionId = DateTime.now().millisecondsSinceEpoch.toString();
+      
+      final mission = Mission(
+        id: missionId,
         nomClient: _nomClientCtrl.text.trim(),
         activiteClient: _activiteClientCtrl.text.trim().isEmpty ? null : _activiteClientCtrl.text.trim(),
         adresseClient: _adresseClientCtrl.text.trim().isEmpty ? null : _adresseClientCtrl.text.trim(),
-      );
-
-      // Créer l'ID unique
-      final missionId = DateTime.now().millisecondsSinceEpoch.toString();
-      
-      // Créer la mission avec le statut "en_attente"
-      final mission = Mission(
-        id: missionId,
-        nomClient: formData.nomClient,
-        activiteClient: formData.activiteClient,
-        adresseClient: formData.adresseClient,
+        nomSite: _nomSiteCtrl.text.trim(), // NOUVEAU
         natureMission: _natureMission,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
         status: 'en_attente',
-        // Ajouter le vérificateur courant par défaut
         verificateurs: [
           {
             'matricule': widget.currentUser.matricule,
@@ -108,7 +118,6 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
         ],
       );
       
-      // Sauvegarder
       await HiveService.saveMission(mission);
       
       if (mounted) {
@@ -482,6 +491,16 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
                   hint: 'Ex: Banque, Industrie, Services...',
                 ),
                 SizedBox(height: isSmallScreen ? 14 : 16),
+
+                // Nom du site
+                _buildTextField(
+                  controller: _nomSiteCtrl,
+                  label: 'Nom du site',
+                  icon: Icons.location_city,
+                  hint: 'Ex: Siège Social, Agence Centrale...',
+                  isRequired: true,
+                ),
+                SizedBox(height: isSmallScreen ? 24 : 28),
                 
                 // Adresse
                 _buildTextField(

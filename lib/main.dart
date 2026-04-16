@@ -1,3 +1,4 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:inspec_app/pages/missions/home_screen.dart';
@@ -9,6 +10,8 @@ import 'models/verificateur.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Toute la logique Hive est dans HiveService.init()
   await HiveService.init();
 
   await SystemChrome.setPreferredOrientations([

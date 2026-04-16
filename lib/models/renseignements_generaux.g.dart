@@ -27,7 +27,7 @@ class RenseignementsGenerauxAdapter
       dureeJours: fields[6] as int,
       verificationType: fields[7] as String?,
       registreControle: fields[8] as String,
-      compteRendu: fields[9] as String,
+      compteRendu: (fields[9] as List).cast<String>(),
       accompagnateurs: (fields[10] as List)
           .map((dynamic e) => (e as Map).cast<String, String>())
           .toList(),
@@ -35,13 +35,14 @@ class RenseignementsGenerauxAdapter
           .map((dynamic e) => (e as Map).cast<String, String>())
           .toList(),
       updatedAt: fields[12] as DateTime,
+      nomSite: fields[13] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, RenseignementsGeneraux obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)
@@ -67,7 +68,9 @@ class RenseignementsGenerauxAdapter
       ..writeByte(11)
       ..write(obj.verificateurs)
       ..writeByte(12)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(13)
+      ..write(obj.nomSite);
   }
 
   @override

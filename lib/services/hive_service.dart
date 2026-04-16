@@ -5,6 +5,7 @@ import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/classement_locaux.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/models/foudre.dart';
+import 'package:inspec_app/models/jsa.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import '../models/verificateur.dart';
 import '../models/mission.dart';
@@ -19,6 +20,7 @@ class HiveService {
   static const String _classementBox = 'classement_locaux';
   static const String _foudreBox = 'foudre_observations';
   static const String _mesuresEssaisBox = 'mesures_essais';
+  static const String _jsaBox = 'jsa';
 
   // Initialiser Hive
   static Future<void> init() async {
@@ -51,6 +53,14 @@ class HiveService {
   Hive.registerAdapter(ObservationLibreAdapter());
   Hive.registerAdapter(InstallationItemAdapter()); 
   Hive.registerAdapter(RenseignementsGenerauxAdapter());
+  Hive.registerAdapter(JSAAdapter());
+  Hive.registerAdapter(JSAInspecteurAdapter());
+  Hive.registerAdapter(JSAPlanUrgenceAdapter());
+  Hive.registerAdapter(JSADangersAdapter());
+  Hive.registerAdapter(JSAExigencesGeneralesAdapter());
+  Hive.registerAdapter(JSAEPIAdapter());
+  Hive.registerAdapter(JSAVerificationFinaleAdapter());
+  await Hive.openBox<JSA>(_jsaBox);
   
 
     // Ouvrir les boxes
@@ -4854,24 +4864,53 @@ static ClassementEmplacement? getClassementExisting({
 // ============================================================
 
 /// Créer ou récupérer les renseignements généraux pour une mission
+// lib/services/hive_service.dart
+
+// Dans getOrCreateRenseignementsGeneraux, ajouter la synchronisation :
+
+/// Créer ou récupérer les renseignements généraux pour une mission
 static Future<RenseignementsGeneraux> getOrCreateRenseignementsGeneraux(String missionId) async {
   final box = Hive.box<RenseignementsGeneraux>(_renseignementsGenerauxBox);
   
   try {
+    // Chercher si des renseignements existent déjà pour cette mission
     final existing = box.values.firstWhere((r) => r.missionId == missionId);
     return existing;
   } catch (e) {
+    // Aucun renseignement trouvé, on crée une nouvelle instance
+    final mission = getMissionById(missionId);
     final newData = RenseignementsGeneraux.create(missionId);
+    
+    // ✅ PRÉREMPLISSAGE AUTOMATIQUE depuis la mission
+    if (mission != null) {
+      // Correspondance : Mission.nomClient → RenseignementsGeneraux.etablissement
+      newData.etablissement = mission.nomClient;
+      
+      // Correspondance : Mission.activiteClient → RenseignementsGeneraux.activite
+      newData.activite = mission.activiteClient ?? '';
+      
+      // Correspondance : Mission.nomSite → RenseignementsGeneraux.nomSite
+      newData.nomSite = mission.nomSite ?? '';
+      
+      // Correspondance : Mission.natureMission → RenseignementsGeneraux.verificationType
+      // On garde la même valeur mais on peut aussi mapper si les noms diffèrent
+      newData.verificationType = mission.natureMission;
+      
+      // Optionnel : préremplir l'installation avec le nom du site aussi
+      newData.installation = mission.nomSite ?? '';
+    }
+    
     await box.add(newData);
     
     // Mettre à jour la référence dans la mission
     final missionBox = Hive.box<Mission>(_missionBox);
-    final mission = missionBox.get(missionId);
-    if (mission != null) {
-      mission.renseignementsGenerauxId = newData.key.toString();
-      await mission.save();
+    final missionToUpdate = missionBox.get(missionId);
+    if (missionToUpdate != null) {
+      missionToUpdate.renseignementsGenerauxId = newData.key.toString();
+      await missionToUpdate.save();
     }
     
+    print('✅ RenseignementsGeneraux créé et prérempli pour mission: $missionId');
     return newData;
   }
 }
@@ -4924,6 +4963,43 @@ static Future<bool> isMoyenneTensionApplicable(String missionId) async {
     return data['isApplicable'] ?? true;
   }
   return true; // Par défaut applicable
+}
+
+// Méthodes JSA
+static Future<JSA> getOrCreateJSA(String missionId) async {
+  final box = Hive.box<JSA>(_jsaBox);
+  
+  try {
+    final existing = box.values.firstWhere((jsa) => jsa.missionId == missionId);
+    return existing;
+  } catch (e) {
+    final newJSA = JSA.create(missionId);
+    await box.add(newJSA);
+    
+    // Mettre à jour la référence dans la mission
+    final missionBox = Hive.box<Mission>(_missionBox);
+    final mission = missionBox.get(missionId);
+    if (mission != null) {
+      mission.jsaId = newJSA.key.toString();
+      await mission.save();
+    }
+    
+    return newJSA;
+  }
+}
+
+static Future<void> saveJSA(JSA jsa) async {
+  jsa.updatedAt = DateTime.now();
+  await jsa.save();
+}
+
+static JSA? getJSAByMissionId(String missionId) {
+  final box = Hive.box<JSA>(_jsaBox);
+  try {
+    return box.values.firstWhere((jsa) => jsa.missionId == missionId);
+  } catch (e) {
+    return null;
+  }
 }
 
 }
