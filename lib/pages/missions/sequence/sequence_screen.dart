@@ -199,11 +199,21 @@ class _SequenceScreenState extends State<SequenceScreen> {
         _currentStep--;
       });
       
-      await _pageController.animateToPage(
-        _currentStep,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeInOut,
-      );
+      // Vérifier si on revient de l'étape "Description des installations" (index 3)
+      // vers "Documents nécessaires" (index 2)
+      final bool isComingFromDescriptionToDocuments = (_currentStep + 1) == 3 && _currentStep == 2;
+      
+      if (isComingFromDescriptionToDocuments) {
+        // Utiliser jumpToPage pour une transition instantanée SANS effet de glissement
+        _pageController.jumpToPage(_currentStep);
+      } else {
+        // Pour toutes les autres transitions, garder l'animation normale
+        await _pageController.animateToPage(
+          _currentStep,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
+      }
       
       await SequenceProgressService.saveCurrentStep(widget.mission.id, _currentStep);
     }

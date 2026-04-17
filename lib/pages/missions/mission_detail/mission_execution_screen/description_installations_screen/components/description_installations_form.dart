@@ -41,16 +41,34 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
   bool _addingMore = false;
   List<InstallationItem> _items = [];
   
+  // Scroll controller pour faire défiler vers le haut quand le clavier apparaît
+  final ScrollController _scrollController = ScrollController();
+  
   // Variables pour les dropdowns Oui/Non
   String? _selectedCuveRetention;
   String? _selectedIndicateurNiveau;
   String? _selectedMiseALaTerre;
+
+  final FocusNode _focusNode = FocusNode();
   
   // Variable pour section de câble
   String? _selectedSectionCable;
   
+  // Variable pour TYPE DE CELLULE
+  String? _selectedTypeCellule;
+  
   // Options Oui/Non
   static const List<String> _ouiNonOptions = ['Oui', 'Non'];
+  
+  // Options pour TYPE DE CELLULE
+  static const List<String> _typeCelluleOptions = [
+    'Type 1',
+    'Type 2',
+    'Type 3',
+    'Cellule A',
+    'Cellule B',
+    'Cellule C'
+  ];
   
   // Liste des sections de câble disponibles
   static const List<String> _sectionCableOptions = [
@@ -65,6 +83,24 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     super.initState();
     _initializeForm();
     _loadExistingItems();
+    
+    // Ajouter un listener sur le FocusNode
+    _focusNode.addListener(_onFocusChange);
+  }
+  
+  void _onFocusChange() {
+    if (_focusNode.hasFocus) {
+      // Attendre que le clavier soit complètement ouvert
+      Future.delayed(const Duration(milliseconds: 300), () {
+        if (mounted && _scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
   }
 
   void _initializeForm() {
@@ -82,6 +118,7 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     _selectedIndicateurNiveau = null;
     _selectedMiseALaTerre = null;
     _selectedSectionCable = null;
+    _selectedTypeCellule = null;
   }
 
   Future<void> _loadExistingItems() async {
@@ -109,6 +146,16 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
     if (photo != null && mounted) {
       setState(() => _photoPaths.add(photo.path));
+      // Faire défiler vers le bas pour voir la nouvelle photo
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted && _scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
     }
   }
 
@@ -116,6 +163,15 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     final XFile? photo = await _picker.pickImage(source: ImageSource.gallery);
     if (photo != null && mounted) {
       setState(() => _photoPaths.add(photo.path));
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted && _scrollController.hasClients) {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        }
+      });
     }
   }
 
@@ -129,6 +185,10 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     return lowerChamp.contains('observation') || 
            lowerChamp.contains('remarque') ||
            lowerChamp.contains('note');
+  }
+
+  bool _isTypeCelluleField(String champ) {
+    return champ == 'Type De Cellule';
   }
 
   bool _isSectionCableField(String champ) {
@@ -165,7 +225,9 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
 
   bool _hasAtLeastOneFieldFilled() {
     for (var champ in widget.champs) {
-      if (_isOuiNonField(champ)) {
+      if (_isTypeCelluleField(champ)) {
+        if (_selectedTypeCellule != null && _selectedTypeCellule!.isNotEmpty) return true;
+      } else if (_isOuiNonField(champ)) {
         final value = _getOuiNonFieldValue(champ);
         if (value != null && value.isNotEmpty) return true;
       } else if (_isSectionCableField(champ)) {
@@ -224,8 +286,8 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
   String? _validateFabricationVsInstallation() {
     if (widget.sectionKey != 'stabilisateur') return null;
     
-    final anneeFabController = _controllers['ANNEE DE FABRICATION'];
-    final anneeInstController = _controllers['ANNEE D\'INSTALLATION'];
+    final anneeFabController = _controllers['Annee De Fabrication'];
+    final anneeInstController = _controllers['Annee D\'Installation'];
     
     if (anneeFabController == null || anneeInstController == null) return null;
     
@@ -303,7 +365,11 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
       final data = <String, String>{};
       
       for (var champ in widget.champs) {
-        if (_isOuiNonField(champ)) {
+        if (_isTypeCelluleField(champ)) {
+          if (_selectedTypeCellule != null && _selectedTypeCellule!.isNotEmpty) {
+            data[champ] = _selectedTypeCellule!;
+          }
+        } else if (_isOuiNonField(champ)) {
           final value = _getOuiNonFieldValue(champ);
           if (value != null && value.isNotEmpty) {
             data[champ] = value;
@@ -360,12 +426,16 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context, false);
+                    // Appeler onComplete pour marquer la section comme complétée
                     widget.onComplete(widget.sectionKey);
                   },
                   child: const Text('Terminer'),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.pop(context, true),
+                  onPressed: () {
+                    Navigator.pop(context, true);
+                    // Ne pas appeler onComplete ici, on reste dans la même section
+                  },
                   child: const Text('Ajouter un autre'),
                 ),
               ],
@@ -373,10 +443,36 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
           );
           
           if (addAnother == true && mounted) {
-            setState(() => _addingMore = true);
+            setState(() {
+              _addingMore = true;
+            });
+            // Faire défiler vers le haut après avoir ajouté un autre élément
+            Future.delayed(const Duration(milliseconds: 100), () {
+              if (mounted && _scrollController.hasClients) {
+                _scrollController.animateTo(
+                  0,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.easeOut,
+                );
+              }
+            });
+          } else if (addAnother == false && mounted) {
+            // L'utilisateur a choisi "Terminer" - la section est déjà marquée complétée
+            // On ne fait rien de plus
           }
         } else {
+          // En mode _addingMore, on reset le formulaire et on reste
           setState(() {});
+          // Faire défiler vers le haut
+          Future.delayed(const Duration(milliseconds: 100), () {
+            if (mounted && _scrollController.hasClients) {
+              _scrollController.animateTo(
+                0,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOut,
+              );
+            }
+          });
         }
       } else {
         throw Exception('Échec de la sauvegarde');
@@ -403,6 +499,7 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
       _selectedIndicateurNiveau = null;
       _selectedMiseALaTerre = null;
       _selectedSectionCable = null;
+      _selectedTypeCellule = null;
     });
   }
 
@@ -548,10 +645,65 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
 
   @override
   void dispose() {
+    // Supprimer le listener du FocusNode
+    _focusNode.removeListener(_onFocusChange);
+    _focusNode.dispose();
+    _scrollController.dispose();
     for (var controller in _controllers.values) {
       controller.dispose();
     }
     super.dispose();
+  }
+
+  Widget _buildTypeCelluleDropdown(bool isSmallScreen) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: DropdownButtonFormField<String>(
+        value: _selectedTypeCellule,
+        isExpanded: true,
+        icon: Icon(Icons.arrow_drop_down, size: isSmallScreen ? 20 : 24, color: Colors.grey.shade600),
+        dropdownColor: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        hint: Text(
+          'Sélectionnez le type de cellule',
+          style: TextStyle(
+            fontSize: isSmallScreen ? 12 : 13,
+            color: Colors.grey.shade500,
+          ),
+        ),
+        decoration: InputDecoration(
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(
+            horizontal: isSmallScreen ? 10 : 12, 
+            vertical: isSmallScreen ? 12 : 14
+          ),
+        ),
+        style: TextStyle(
+          fontSize: isSmallScreen ? 13 : 14,
+          color: Colors.black87,
+        ),
+        items: _typeCelluleOptions.map((option) {
+          return DropdownMenuItem<String>(
+            value: option,
+            child: Text(option, style: TextStyle(fontSize: isSmallScreen ? 13 : 14)),
+          );
+        }).toList(),
+        onChanged: (value) {
+          setState(() {
+            _selectedTypeCellule = value;
+            for (var champ in widget.champs) {
+              if (_isTypeCelluleField(champ)) {
+                _controllers[champ]?.text = value ?? '';
+              }
+            }
+          });
+        },
+      ),
+    );
   }
 
   Widget _buildOuiNonDropdown(String champ, bool isSmallScreen) {
@@ -676,472 +828,474 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
 
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
 
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+    return GestureDetector(
+      onTap: () => _focusNode.unfocus(),
+      child: SingleChildScrollView(
+        controller: _scrollController,
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        child: Padding(
+          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.start, // 👈 ici
-                    children: [
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 12 : 16,
-                          vertical: isSmallScreen ? 3 : 4,
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 12 : 16,
+                      vertical: isSmallScreen ? 3 : 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: widget.isComplete 
+                          ? Colors.green.withOpacity(0.1)
+                          : Colors.orange.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(
+                        color: widget.isComplete 
+                            ? Colors.green.withOpacity(0.4)
+                            : Colors.orange.withOpacity(0.4),
+                        width: 1,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          widget.isComplete ? Icons.check_circle : Icons.pending_outlined,
+                          color: widget.isComplete ? Colors.green : Colors.orange,
+                          size: isSmallScreen ? 16 : 18,
                         ),
-                        decoration: BoxDecoration(
-                          color: widget.isComplete 
-                              ? Colors.green.withOpacity(0.1)
-                              : Colors.orange.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(30),
-                          border: Border.all(
-                            color: widget.isComplete 
-                                ? Colors.green.withOpacity(0.4)
-                                : Colors.orange.withOpacity(0.4),
-                            width: 1,
+                        SizedBox(width: isSmallScreen ? 8 : 10),
+                        Text(
+                          widget.isComplete ? 'Section complétée' : 'En attente de saisie',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 12 : 13,
+                            color: widget.isComplete ? Colors.green.shade700 : Colors.orange.shade700,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              widget.isComplete ? Icons.check_circle : Icons.pending_outlined,
-                              color: widget.isComplete ? Colors.green : Colors.orange,
-                              size: isSmallScreen ? 16 : 18,
-                            ),
-                            SizedBox(width: isSmallScreen ? 8 : 10),
-                            Text(
-                              widget.isComplete ? 'Section complétée' : 'En attente de saisie',
-                              style: TextStyle(
-                                fontSize: isSmallScreen ? 12 : 13,
-                                color: widget.isComplete ? Colors.green.shade700 : Colors.orange.shade700,
-                                fontWeight: FontWeight.w600,
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: isSmallScreen ? 12 : 16),
+              
+              // Liste des éléments existants
+              if (_items.isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Éléments déjà ajoutés (${_items.length})',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 13 : 14,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade700,
+                      ),
+                    ),
+                    SizedBox(height: isSmallScreen ? 6 : 8),
+                    SizedBox(
+                      height: isSmallScreen ? 140 : 160,
+                      child: ListView.builder(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _items.length,
+                        itemBuilder: (context, index) {
+                          final item = _items[index];
+                          final fields = _getDisplayFields(item);
+                          
+                          return GestureDetector(
+                            onTap: () => _viewItemDetails(item, index),
+                            child: Container(
+                              width: isSmallScreen ? 170 : 200,
+                              margin: EdgeInsets.only(right: isSmallScreen ? 8 : 12),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 6,
+                                    offset: const Offset(0, 3),
+                                  ),
+                                ],
+                                border: Border.all(
+                                  color: AppTheme.primaryBlue.withOpacity(0.1),
+                                  width: 1,
+                                ),
                               ),
+                              child: Stack(
+                                children: [
+                                  Padding(
+                                    padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Container(
+                                              padding: EdgeInsets.symmetric(
+                                                horizontal: isSmallScreen ? 6 : 8, 
+                                                vertical: isSmallScreen ? 3 : 4
+                                              ),
+                                              decoration: BoxDecoration(
+                                                color: AppTheme.primaryBlue,
+                                                borderRadius: BorderRadius.circular(6),
+                                              ),
+                                              child: Text(
+                                                'Élément ${index + 1}',
+                                                style: TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: isSmallScreen ? 9 : 10,
+                                                  fontWeight: FontWeight.bold,
+                                                ),
+                                              ),
+                                            ),
+                                            const Spacer(),
+                                            if (item.photoPaths.isNotEmpty)
+                                              Container(
+                                                padding: const EdgeInsets.all(4),
+                                                decoration: BoxDecoration(
+                                                  color: Colors.green.withOpacity(0.1),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                                child: Icon(
+                                                  Icons.photo,
+                                                  size: isSmallScreen ? 12 : 14,
+                                                  color: Colors.green,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                        SizedBox(height: isSmallScreen ? 10 : 12),
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: fields.entries.map((entry) {
+                                              return Padding(
+                                                padding: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
+                                                child: Column(
+                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                  children: [
+                                                    Text(
+                                                      entry.key,
+                                                      style: TextStyle(
+                                                        fontSize: isSmallScreen ? 9 : 10,
+                                                        color: Colors.grey.shade600,
+                                                        fontWeight: FontWeight.w500,
+                                                      ),
+                                                    ),
+                                                    const SizedBox(height: 2),
+                                                    Text(
+                                                      entry.value,
+                                                      style: TextStyle(
+                                                        fontSize: isSmallScreen ? 11 : 12,
+                                                        color: Colors.black87,
+                                                        fontWeight: FontWeight.w600,
+                                                      ),
+                                                      maxLines: 2,
+                                                      overflow: TextOverflow.ellipsis,
+                                                    ),
+                                                  ],
+                                                ),
+                                              );
+                                            }).toList(),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  if (item.photoPaths.isNotEmpty)
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                        decoration: BoxDecoration(
+                                          color: Colors.green,
+                                          borderRadius: BorderRadius.circular(10),
+                                        ),
+                                        child: Text(
+                                          '${item.photoPaths.length}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    SizedBox(height: isSmallScreen ? 12 : 16),
+                    const Divider(),
+                    SizedBox(height: isSmallScreen ? 12 : 16),
+                  ],
+                ),
+      
+              // Formulaire d'ajout
+              Form(
+                key: _formKey,
+                child: Column(
+                  children: [
+                    ...widget.champs.map((champ) {
+                      final estObservations = _estChampObservations(champ);
+                      final isTypeCellule = _isTypeCelluleField(champ);
+                      final isSectionCable = _isSectionCableField(champ);
+                      final isOuiNon = _isOuiNonField(champ);
+                      
+                      return Padding(
+                        padding: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    champ,
+                                    maxLines: 3,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 13 : 14,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                            
+                            if (isTypeCellule)
+                              _buildTypeCelluleDropdown(isSmallScreen)
+                            else if (isSectionCable)
+                              _buildSectionCableDropdown(isSmallScreen)
+                            else if (isOuiNon)
+                              _buildOuiNonDropdown(champ, isSmallScreen)
+                            else if (estObservations)
+                              TextFormField(
+                                controller: _controllers[champ],
+                                maxLines: 5,
+                                minLines: 3,
+                                decoration: InputDecoration(
+                                  hintText: 'Saisissez vos observations (optionnel)...',
+                                  hintStyle: TextStyle(
+                                    fontSize: isSmallScreen ? 12 : 13,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                  border: OutlineInputBorder(
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                                  ),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: isSmallScreen ? 10 : 12, 
+                                    vertical: isSmallScreen ? 10 : 12
+                                  ),
+                                ),
+                              )
+                            else
+                              TextFormField(
+                                controller: _controllers[champ],
+                                maxLines: 2,
+                                minLines: 1,
+                                decoration: InputDecoration(
+                                  hintText: 'Saisissez ${champ.toLowerCase()}...',
+                                  border: OutlineInputBorder(
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  enabledBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(color: Colors.grey.shade300),
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                                  ),
+                                  contentPadding: EdgeInsets.symmetric(
+                                    horizontal: isSmallScreen ? 10 : 12, 
+                                    vertical: isSmallScreen ? 10 : 12
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                      );
+                    }).toList(),
+      
+                    // Section photos
+                    Padding(
+                      padding: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  'Photos',
+                                  maxLines: 3,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 13 : 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                '(optionnel)',
+                                style: TextStyle(
+                                  color: Colors.grey.shade500,
+                                  fontSize: isSmallScreen ? 11 : 12,
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: isSmallScreen ? 6 : 8),
+                          
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _takePhoto,
+                                  icon: Icon(Icons.camera_alt_outlined, size: isSmallScreen ? 16 : 18),
+                                  label: Text(
+                                    'Prendre',
+                                    style: TextStyle(fontSize: isSmallScreen ? 11 : 12),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
+                                    side: const BorderSide(color: Colors.grey),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: isSmallScreen ? 8 : 12),
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  onPressed: _pickFromGallery,
+                                  icon: Icon(Icons.photo_library_outlined, size: isSmallScreen ? 16 : 18),
+                                  label: Text(
+                                    'Galerie',
+                                    style: TextStyle(fontSize: isSmallScreen ? 11 : 12),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
+                                    side: const BorderSide(color: Colors.grey),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: isSmallScreen ? 8 : 12),
+                          
+                          if (_photoPaths.isNotEmpty)
+                            GridView.builder(
+                              shrinkWrap: true,
+                              physics: const NeverScrollableScrollPhysics(),
+                              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                crossAxisCount: 3,
+                                crossAxisSpacing: 8,
+                                mainAxisSpacing: 8,
+                                childAspectRatio: 1,
+                              ),
+                              itemCount: _photoPaths.length,
+                              itemBuilder: (context, index) {
+                                return GestureDetector(
+                                  onTap: () => _showPhotoFullScreen(index),
+                                  child: Stack(
+                                    children: [
+                                      Container(
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(8),
+                                          image: DecorationImage(
+                                            image: FileImage(File(_photoPaths[index])),
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      ),
+                                      Positioned(
+                                        top: 4,
+                                        right: 4,
+                                        child: GestureDetector(
+                                          onTap: () => _removePhoto(index),
+                                          child: Container(
+                                            width: 22,
+                                            height: 22,
+                                            decoration: const BoxDecoration(
+                                              color: Colors.red,
+                                              shape: BoxShape.circle,
+                                            ),
+                                            child: const Icon(
+                                              Icons.close,
+                                              size: 14,
+                                              color: Colors.white,
+                                            ),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: isSmallScreen ? 16 : 20),
+              
+              // Bouton d'action
+              SizedBox(
+                width: isSmallScreen ? 250 : 350,
+                child: ElevatedButton(
+                  onPressed: _isLoading ? null : _saveItem,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 14 : 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.save, size: 18),
+                            const SizedBox(width: 8),
+                            Text(
+                              _addingMore ? 'AJOUTER UN AUTRE' : 'SAUVEGARDER',
+                              style: const TextStyle(fontSize: 14),
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
-                  SizedBox(height: isSmallScreen ? 12 : 16),
-                  // Liste des éléments existants
-                  if (_items.isNotEmpty)
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Éléments déjà ajoutés (${_items.length})',
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 13 : 14,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
-                        SizedBox(height: isSmallScreen ? 6 : 8),
-                        SizedBox(
-                          height: isSmallScreen ? 140 : 160,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _items.length,
-                            itemBuilder: (context, index) {
-                              final item = _items[index];
-                              final fields = _getDisplayFields(item);
-                              
-                              return GestureDetector(
-                                onTap: () => _viewItemDetails(item, index),
-                                child: Container(
-                                  width: isSmallScreen ? 170 : 200,
-                                  margin: EdgeInsets.only(right: isSmallScreen ? 8 : 12),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white,
-                                    borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.black.withOpacity(0.05),
-                                        blurRadius: 6,
-                                        offset: const Offset(0, 3),
-                                      ),
-                                    ],
-                                    border: Border.all(
-                                      color: AppTheme.primaryBlue.withOpacity(0.1),
-                                      width: 1,
-                                    ),
-                                  ),
-                                  child: Stack(
-                                    children: [
-                                      Padding(
-                                        padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(
-                                              children: [
-                                                Container(
-                                                  padding: EdgeInsets.symmetric(
-                                                    horizontal: isSmallScreen ? 6 : 8, 
-                                                    vertical: isSmallScreen ? 3 : 4
-                                                  ),
-                                                  decoration: BoxDecoration(
-                                                    color: AppTheme.primaryBlue,
-                                                    borderRadius: BorderRadius.circular(6),
-                                                  ),
-                                                  child: Text(
-                                                    'Élément ${index + 1}',
-                                                    style: TextStyle(
-                                                      color: Colors.white,
-                                                      fontSize: isSmallScreen ? 9 : 10,
-                                                      fontWeight: FontWeight.bold,
-                                                    ),
-                                                  ),
-                                                ),
-                                                const Spacer(),
-                                                if (item.photoPaths.isNotEmpty)
-                                                  Container(
-                                                    padding: const EdgeInsets.all(4),
-                                                    decoration: BoxDecoration(
-                                                      color: Colors.green.withOpacity(0.1),
-                                                      shape: BoxShape.circle,
-                                                    ),
-                                                    child: Icon(
-                                                      Icons.photo,
-                                                      size: isSmallScreen ? 12 : 14,
-                                                      color: Colors.green,
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                            SizedBox(height: isSmallScreen ? 10 : 12),
-                                            Expanded(
-                                              child: Column(
-                                                crossAxisAlignment: CrossAxisAlignment.start,
-                                                children: fields.entries.map((entry) {
-                                                  return Padding(
-                                                    padding: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
-                                                    child: Column(
-                                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                                      children: [
-                                                        Text(
-                                                          entry.key,
-                                                          style: TextStyle(
-                                                            fontSize: isSmallScreen ? 9 : 10,
-                                                            color: Colors.grey.shade600,
-                                                            fontWeight: FontWeight.w500,
-                                                          ),
-                                                        ),
-                                                        const SizedBox(height: 2),
-                                                        Text(
-                                                          entry.value,
-                                                          style: TextStyle(
-                                                            fontSize: isSmallScreen ? 11 : 12,
-                                                            color: Colors.black87,
-                                                            fontWeight: FontWeight.w600,
-                                                          ),
-                                                          maxLines: 2,
-                                                          overflow: TextOverflow.ellipsis,
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  );
-                                                }).toList(),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      if (item.photoPaths.isNotEmpty)
-                                        Positioned(
-                                          top: 8,
-                                          right: 8,
-                                          child: Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: Colors.green,
-                                              borderRadius: BorderRadius.circular(10),
-                                            ),
-                                            child: Text(
-                                              '${item.photoPaths.length}',
-                                              style: const TextStyle(
-                                                color: Colors.white,
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                    ],
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        SizedBox(height: isSmallScreen ? 12 : 16),
-                        const Divider(),
-                        SizedBox(height: isSmallScreen ? 12 : 16),
-                      ],
-                    ),
-
-                  // Formulaire d'ajout
-                  Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        ...widget.champs.map((champ) {
-                          final estObservations = _estChampObservations(champ);
-                          final isSectionCable = _isSectionCableField(champ);
-                          final isOuiNon = _isOuiNonField(champ);
-                          
-                          return Padding(
-                            padding: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        champ,
-                                        maxLines: 3,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: TextStyle(
-                                          fontSize: isSmallScreen ? 13 : 14,
-                                          fontWeight: FontWeight.w600,
-                                          color: Colors.black87,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 4),
-                                
-                                if (isSectionCable)
-                                  _buildSectionCableDropdown(isSmallScreen)
-                                else if (isOuiNon)
-                                  _buildOuiNonDropdown(champ, isSmallScreen)
-                                else if (estObservations)
-                                  TextFormField(
-                                    controller: _controllers[champ],
-                                    maxLines: 5,
-                                    minLines: 3,
-                                    decoration: InputDecoration(
-                                      hintText: 'Saisissez vos observations (optionnel)...',
-                                      hintStyle: TextStyle(
-                                        fontSize: isSmallScreen ? 12 : 13,
-                                        color: Colors.grey.shade400,
-                                      ),
-                                      border: OutlineInputBorder(
-                                        borderSide: BorderSide(color: Colors.grey.shade300),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(color: Colors.grey.shade300),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
-                                      ),
-                                      contentPadding: EdgeInsets.symmetric(
-                                        horizontal: isSmallScreen ? 10 : 12, 
-                                        vertical: isSmallScreen ? 10 : 12
-                                      ),
-                                    ),
-                                  )
-                                else
-                                  TextFormField(
-                                    controller: _controllers[champ],
-                                    maxLines: 2,
-                                    minLines: 1,
-                                    decoration: InputDecoration(
-                                      hintText: 'Saisissez ${champ.toLowerCase()}...',
-                                      border: OutlineInputBorder(
-                                        borderSide: BorderSide(color: Colors.grey.shade300),
-                                      ),
-                                      enabledBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(color: Colors.grey.shade300),
-                                      ),
-                                      focusedBorder: OutlineInputBorder(
-                                        borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
-                                      ),
-                                      contentPadding: EdgeInsets.symmetric(
-                                        horizontal: isSmallScreen ? 10 : 12, 
-                                        vertical: isSmallScreen ? 10 : 12
-                                      ),
-                                    ),
-                                  ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
-
-                        // Section photos
-                        Padding(
-                          padding: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: Text(
-                                      'Photos',
-                                      maxLines: 3,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                        fontSize: isSmallScreen ? 13 : 14,
-                                        fontWeight: FontWeight.w600,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                  ),
-                                  Text(
-                                    '(optionnel)',
-                                    style: TextStyle(
-                                      color: Colors.grey.shade500,
-                                      fontSize: isSmallScreen ? 11 : 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: isSmallScreen ? 6 : 8),
-                              
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: _takePhoto,
-                                      icon: Icon(Icons.camera_alt_outlined, size: isSmallScreen ? 16 : 18),
-                                      label: Text(
-                                        'Prendre',
-                                        style: TextStyle(fontSize: isSmallScreen ? 11 : 12),
-                                      ),
-                                      style: OutlinedButton.styleFrom(
-                                        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
-                                        side: const BorderSide(color: Colors.grey),
-                                      ),
-                                    ),
-                                  ),
-                                  SizedBox(width: isSmallScreen ? 8 : 12),
-                                  Expanded(
-                                    child: OutlinedButton.icon(
-                                      onPressed: _pickFromGallery,
-                                      icon: Icon(Icons.photo_library_outlined, size: isSmallScreen ? 16 : 18),
-                                      label: Text(
-                                        'Galerie',
-                                        style: TextStyle(fontSize: isSmallScreen ? 11 : 12),
-                                      ),
-                                      style: OutlinedButton.styleFrom(
-                                        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
-                                        side: const BorderSide(color: Colors.grey),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              SizedBox(height: isSmallScreen ? 8 : 12),
-                              
-                              if (_photoPaths.isNotEmpty)
-                                GridView.builder(
-                                  shrinkWrap: true,
-                                  physics: const NeverScrollableScrollPhysics(),
-                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 3,
-                                    crossAxisSpacing: 8,
-                                    mainAxisSpacing: 8,
-                                    childAspectRatio: 1,
-                                  ),
-                                  itemCount: _photoPaths.length,
-                                  itemBuilder: (context, index) {
-                                    return GestureDetector(
-                                      onTap: () => _showPhotoFullScreen(index),
-                                      child: Stack(
-                                        children: [
-                                          Container(
-                                            decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(8),
-                                              image: DecorationImage(
-                                                image: FileImage(File(_photoPaths[index])),
-                                                fit: BoxFit.cover,
-                                              ),
-                                            ),
-                                          ),
-                                          Positioned(
-                                            top: 4,
-                                            right: 4,
-                                            child: GestureDetector(
-                                              onTap: () => _removePhoto(index),
-                                              child: Container(
-                                                width: 22,
-                                                height: 22,
-                                                decoration: const BoxDecoration(
-                                                  color: Colors.red,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                                child: const Icon(
-                                                  Icons.close,
-                                                  size: 14,
-                                                  color: Colors.white,
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    );
-                                  },
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: isSmallScreen ? 16 : 20),
-                ],
+                ),
               ),
-            ),
+              SizedBox(height: isSmallScreen ? 15 : 18),
+            ],
           ),
-          
         ),
-        SizedBox(height: isSmallScreen ? 16 : 20),
-        // Bouton d'action
-                  SizedBox(
-                    width: isSmallScreen ? 250 : 350,
-                    child: ElevatedButton(
-                      onPressed: _isLoading ? null : _saveItem,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 14 : 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: _isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                const Icon(Icons.save, size: 18),
-                                const SizedBox(width: 8),
-                                Text(
-                                  _addingMore ? 'AJOUTER UN AUTRE' : 'SAUVEGARDER',
-                                  style: const TextStyle(fontSize: 14),
-                                ),
-                              ],
-                            ),
-                    ),
-                  ),
-                  SizedBox(height: isSmallScreen ? 15 : 18),
-      ],
+      ),
     );
   }
 }
