@@ -302,7 +302,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
   }
 
   Widget _buildModernTypeSelector(BuildContext context) {
-    const types = ['INVERSEUR', 'Armoire', 'Coffret', 'TGBT'];
+    const types = ['INVERSEUR', 'ARMOIRE', 'COFFRET', 'TGBT'];
     
     return Container(
       decoration: BoxDecoration(

@@ -3,6 +3,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
@@ -747,67 +748,84 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
   // ===== FIN GESTION OBSERVATIONS =====
 
   void _sauvegarder() async {
-    if (_formKey.currentState!.validate()) {
-      try {
-        dynamic zone;
-        
+  if (_formKey.currentState!.validate()) {
+    try {
+      dynamic zone;
+      
+      if (widget.isMoyenneTension) {
+        zone = MoyenneTensionZone(
+          nom: _nomController.text.trim(),
+          coffrets: widget.isEdition ? widget.zone.coffrets : [],
+          observationsLibres: _observationsExistantes,
+          photos: _zonePhotos,
+          locaux: widget.isEdition ? widget.zone.locaux : [],
+        );
+      } else {
+        zone = BasseTensionZone(
+          nom: _nomController.text.trim(),
+          locaux: widget.isEdition ? widget.zone.locaux : [],
+          coffretsDirects: widget.isEdition ? widget.zone.coffretsDirects : [],
+          observationsLibres: _observationsExistantes,
+          photos: _zonePhotos,
+        );
+      }
+
+      bool success;
+      if (widget.isEdition) {
+        success = await _updateZone(zone);
+      } else {
         if (widget.isMoyenneTension) {
-          zone = MoyenneTensionZone(
-            nom: _nomController.text.trim(),
-            coffrets: widget.isEdition ? widget.zone.coffrets : [],
-            observationsLibres: _observationsExistantes,
-            photos: _zonePhotos,
-            locaux: widget.isEdition ? widget.zone.locaux : [],
+          success = await HiveService.addMoyenneTensionZone(
+            missionId: widget.mission.id,
+            zone: zone as MoyenneTensionZone,
           );
         } else {
-          zone = BasseTensionZone(
-            nom: _nomController.text.trim(),
-            locaux: widget.isEdition ? widget.zone.locaux : [],
-            coffretsDirects: widget.isEdition ? widget.zone.coffretsDirects : [],
-            observationsLibres: _observationsExistantes,
-            photos: _zonePhotos,
+          success = await HiveService.addBasseTensionZone(
+            missionId: widget.mission.id,
+            zone: zone as BasseTensionZone,
           );
         }
+      }
 
-        bool success;
-        if (widget.isEdition) {
-          success = await _updateZone(zone);
-        } else {
-          if (widget.isMoyenneTension) {
-            success = await HiveService.addMoyenneTensionZone(
+      if (success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(widget.isEdition ? 'Zone modifiée' : 'Zone ajoutée'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          
+          // ===== Rediriger vers le classement de la zone =====
+          if (!widget.isEdition) {
+            // Créer le classement pour cette zone
+            final classement = await HiveService.getOrCreateClassementForZone(
               missionId: widget.mission.id,
-              zone: zone as MoyenneTensionZone,
+              nomZone: _nomController.text.trim(),
             );
-          } else {
-            success = await HiveService.addBasseTensionZone(
-              missionId: widget.mission.id,
-              zone: zone as BasseTensionZone,
-            );
-          }
-        }
-
-        if (success) {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(widget.isEdition ? 'Zone modifiée avec succès' : 'Zone ajoutée avec succès'),
-                backgroundColor: Colors.green,
-                duration: const Duration(seconds: 2),
-                behavior: SnackBarBehavior.floating,
-                margin: const EdgeInsets.all(16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            
+            // Rediriger vers l'écran de classement
+            final result = await Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ClassementEmplacementScreen(
+                  mission: widget.mission,
+                  emplacement: classement,
+                ),
               ),
             );
-            Navigator.pop(context, true);
           }
-        } else {
-          _showError('Erreur lors de la sauvegarde');
+          
+          Navigator.pop(context, true);
         }
-      } catch (e) {
-        _showError('Erreur: $e');
+      } else {
+        _showError('Erreur lors de la sauvegarde');
       }
+    } catch (e) {
+      _showError('Erreur: $e');
     }
   }
+}
 
   Future<bool> _updateZone(dynamic zone) async {
     try {

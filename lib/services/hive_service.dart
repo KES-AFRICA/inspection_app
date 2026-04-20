@@ -2148,6 +2148,198 @@ static Map<String, dynamic> getEmplacementsStats(String missionId) {
   };
 }
 
+// Ajouter cette méthode pour récupérer un classement par ID
+static ClassementEmplacement? getClassementById(String id) {
+  final box = Hive.box<ClassementEmplacement>(_classementBox);
+  return box.get(id);
+}
+
+/// Synchroniser automatiquement les ZONES depuis l'audit
+static Future<List<ClassementEmplacement>> syncZonesFromAudit(String missionId) async {
+  final classementBox = Hive.box<ClassementEmplacement>(_classementBox);
+  final auditBox = Hive.box<AuditInstallationsElectriques>(_auditBox);
+  
+  try {
+    final audit = auditBox.values.firstWhere((audit) => audit.missionId == missionId);
+    final List<ClassementEmplacement> zones = [];
+    
+    // ===== ZONES MOYENNE TENSION =====
+    for (var zone in audit.moyenneTensionZones) {
+      var existant = classementBox.values.firstWhere(
+        (e) => e.missionId == missionId && 
+               e.localisation == zone.nom && 
+               e.typeEmplacement == 'zone',
+        orElse: () => ClassementEmplacement.createZone(
+          missionId: missionId,
+          nomZone: zone.nom,
+        ),
+      );
+      
+      if (existant.key == null) {
+        await classementBox.add(existant);
+      }
+      
+      zones.add(existant);
+    }
+    
+    // ===== ZONES BASSE TENSION =====
+    for (var zone in audit.basseTensionZones) {
+      var existant = classementBox.values.firstWhere(
+        (e) => e.missionId == missionId && 
+               e.localisation == zone.nom && 
+               e.typeEmplacement == 'zone',
+        orElse: () => ClassementEmplacement.createZone(
+          missionId: missionId,
+          nomZone: zone.nom,
+        ),
+      );
+      
+      if (existant.key == null) {
+        await classementBox.add(existant);
+      }
+      
+      zones.add(existant);
+    }
+    
+    print('✅ ${zones.length} ZONES synchronisées pour mission $missionId');
+    return zones;
+  } catch (e) {
+    print('❌ Erreur syncZonesFromAudit: $e');
+    return [];
+  }
+}
+
+/// Synchroniser TOUT (zones + locaux) depuis l'audit
+static Future<List<ClassementEmplacement>> syncAllEmplacementsFromAudit(String missionId) async {
+  final zones = await syncZonesFromAudit(missionId);
+  final locaux = await syncEmplacementsFromAudit(missionId);
+  
+  // Pour chaque local, vérifier s'il a une zone parente et proposer l'héritage
+  for (var local in locaux) {
+    if (local.zone != null) {
+      // Chercher la zone correspondante
+      final zoneParente = zones.firstWhere(
+        (z) => z.localisation == local.zone,
+        orElse: () => null as ClassementEmplacement,
+      );
+      
+      if (zoneParente != null && local.af == null) {
+        // Si le local n'a pas encore de classement, on peut proposer l'héritage
+        // (sera fait au moment de l'édition)
+      }
+    }
+  }
+  
+  return [...zones, ...locaux];
+}
+
+/// Récupérer les zones uniquement
+static List<ClassementEmplacement> getZonesByMissionId(String missionId) {
+  final box = Hive.box<ClassementEmplacement>(_classementBox);
+  try {
+    return box.values
+        .where((e) => e.missionId == missionId && e.typeEmplacement == 'zone')
+        .toList();
+  } catch (e) {
+    return [];
+  }
+}
+
+/// Récupérer les locaux uniquement
+static List<ClassementEmplacement> getLocauxByMissionId(String missionId) {
+  final box = Hive.box<ClassementEmplacement>(_classementBox);
+  try {
+    return box.values
+        .where((e) => e.missionId == missionId && e.typeEmplacement == 'local')
+        .toList();
+  } catch (e) {
+    return [];
+  }
+}
+
+/// Appliquer l'héritage d'une zone à un local
+static Future<void> appliquerHeritageZone({
+  required String missionId,
+  required String localId,
+  required String zoneId,
+}) async {
+  final local = getClassementById(localId);
+  final zone = getClassementById(zoneId);
+  
+  if (local != null && zone != null) {
+    local.heriteDeZone = true;
+    local.zoneParenteId = zoneId;
+    // On ne copie pas les valeurs, on utilise les getters effective
+    local.updatedAt = DateTime.now();
+    await local.save();
+  }
+}
+
+/// Retirer l'héritage et passer en classement spécifique
+static Future<void> passerEnClassementSpecifique({
+  required String localId,
+}) async {
+  final local = getClassementById(localId);
+  if (local != null) {
+    // Copier les valeurs effectives actuelles
+    local.af = local.afEffective;
+    local.be = local.beEffective;
+    local.ae = local.aeEffective;
+    local.ad = local.adEffective;
+    local.ag = local.agEffective;
+    local.ip = local.ipEffective;
+    local.ik = local.ikEffective;
+    
+    local.heriteDeZone = false;
+    local.zoneParenteId = null;
+    local.updatedAt = DateTime.now();
+    await local.save();
+  }
+}
+
+// Créer ou récupérer le classement pour une zone
+static Future<ClassementEmplacement> getOrCreateClassementForZone({
+  required String missionId,
+  required String nomZone,
+}) async {
+  final classementBox = Hive.box<ClassementEmplacement>(_classementBox);
+  
+  try {
+    // Chercher un classement existant pour cette zone
+    for (var classement in classementBox.values) {
+      if (classement.missionId == missionId && 
+          classement.localisation == nomZone &&
+          classement.typeEmplacement == 'zone') {
+        return classement;
+      }
+    }
+    
+    // Créer un nouveau classement
+    final newClassement = ClassementEmplacement.createZone(
+      missionId: missionId,
+      nomZone: nomZone,
+    );
+    await classementBox.add(newClassement);
+    print('✅ Classement zone créé: $nomZone');
+    return newClassement;
+  } catch (e) {
+    print('❌ Erreur getOrCreateClassementForZone: $e');
+    final newClassement = ClassementEmplacement.createZone(
+      missionId: missionId,
+      nomZone: nomZone,
+    );
+    await classementBox.add(newClassement);
+    return newClassement;
+  }
+}
+
+/// Sauvegarder un classement
+static Future<void> saveClassement(ClassementEmplacement classement) async {
+  classement.updatedAt = DateTime.now();
+  classement.calculerIndices();
+  await classement.save();
+}
+
 // ============================================================
 //          OPTIONS ET DESCRIPTIONS (COMPLET)
 // ============================================================

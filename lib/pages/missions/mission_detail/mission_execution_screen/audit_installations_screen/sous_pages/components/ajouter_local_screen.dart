@@ -3778,24 +3778,286 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       Navigator.pop(context, true);
       return;
     }
-    try {
-      ClassementEmplacement? classement;
-      if (widget.isEdition) {
-        classement = HiveService.getClassementExisting(missionId: widget.mission.id, localisation: local.nom);
+    
+    // Vérifier si le local est dans une zone
+    final bool estDansUneZone = widget.isInZone && widget.zoneIndex != null;
+    
+    if (estDansUneZone) {
+      // Proposer le choix à l'utilisateur
+      final choix = await _showChoixClassementDialog(local);
+      
+      if (choix == null) {
+        // Annulé
+        Navigator.pop(context, true);
+        return;
       }
-      classement ??= await HiveService.getOrCreateClassementForLocal(
+      
+      if (choix == 'heriter') {
+        // Récupérer le classement de la zone parente
+        final zoneParente = await _getZoneParenteClassement();
+        
+        if (zoneParente != null) {
+          // Créer un classement qui hérite
+          final classement = ClassementEmplacement.createLocalHeritant(
+            missionId: widget.mission.id,
+            nomLocal: local.nom,
+            zoneParente: zoneParente.localisation,
+            zoneParenteId: zoneParente.key.toString(),
+          );
+          
+          await HiveService.saveClassement(classement);
+          
+          // Pas besoin d'ouvrir l'écran de classement, on a déjà hérité
+          Navigator.pop(context, true);
+          return;
+        }
+      }
+      
+      // Si choix 'specifique' ou si la zone parente n'a pas de classement
+      // Créer un classement spécifique
+      final classement = await HiveService.getOrCreateClassementForLocal(
         missionId: widget.mission.id,
         localisation: local.nom,
-        zone: widget.isInZone && widget.zoneIndex != null ? 'Zone ${widget.zoneIndex! + 1}' : null,
+        zone: 'Zone ${widget.zoneIndex! + 1}',
         typeLocal: local.type,
       );
-      final result = await Navigator.push(context, MaterialPageRoute(builder: (context) => ClassementEmplacementScreen(mission: widget.mission, emplacement: classement!)));
-      if (result == true) Navigator.pop(context, true);
-    } catch (e) {
-      print('❌ Erreur allerAuClassement: $e');
-      _showError('Erreur lors de l\'accès au classement: $e');
-      Navigator.pop(context, true);
+      
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ClassementEmplacementScreen(
+            mission: widget.mission,
+            emplacement: classement,
+          ),
+        ),
+      );
+      
+      if (result == true) {
+        Navigator.pop(context, true);
+      }
+    } else {
+      // Local hors zone : classement spécifique obligatoire
+      final classement = await HiveService.getOrCreateClassementForLocal(
+        missionId: widget.mission.id,
+        localisation: local.nom,
+        zone: null,
+        typeLocal: local.type,
+      );
+      
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => ClassementEmplacementScreen(
+            mission: widget.mission,
+            emplacement: classement,
+          ),
+        ),
+      );
+      
+      if (result == true) {
+        Navigator.pop(context, true);
+      }
     }
+  }
+
+  // NOUVEAU : Dialogue de choix héritage/spécifique
+  Future<String?> _showChoixClassementDialog(dynamic local) async {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    
+    return showDialog<String>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Padding(
+          padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 60,
+                height: 60,
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.security_outlined,
+                  size: 30,
+                  color: AppTheme.primaryBlue,
+                ),
+              ),
+              SizedBox(height: 16),
+              Text(
+                'Classement du local',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 18 : 20,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Ce local appartient à une zone. Comment souhaitez-vous définir son classement ?',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 13 : 14,
+                  color: Colors.grey.shade600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 20),
+              
+              // Option 1 : Hériter
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: InkWell(
+                  onTap: () => Navigator.pop(context, 'heriter'),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.blue.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.link, color: Colors.blue, size: 22),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Hériter du classement de la zone',
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 14 : 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.blue.shade800,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Le local suivra automatiquement le classement de sa zone parente',
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 11 : 12,
+                                  color: Colors.blue.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              
+              SizedBox(height: 12),
+              
+              // Option 2 : Spécifique
+              Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.orange.shade200),
+                ),
+                child: InkWell(
+                  onTap: () => Navigator.pop(context, 'specifique'),
+                  borderRadius: BorderRadius.circular(12),
+                  child: Padding(
+                    padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.edit_note, color: Colors.orange, size: 22),
+                        ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Définir un classement spécifique',
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 14 : 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.orange.shade800,
+                                ),
+                              ),
+                              SizedBox(height: 2),
+                              Text(
+                                'Vous pourrez définir des influences externes différentes de la zone',
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 11 : 12,
+                                  color: Colors.orange.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              
+              SizedBox(height: 16),
+              
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text(
+                  'Annuler',
+                  style: TextStyle(fontSize: isSmallScreen ? 14 : 15, color: Colors.grey.shade600),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // NOUVEAU : Récupérer le classement de la zone parente
+  Future<ClassementEmplacement?> _getZoneParenteClassement() async {
+    if (!widget.isInZone || widget.zoneIndex == null) return null;
+    
+    final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+    String? nomZone;
+    
+    if (widget.isMoyenneTension) {
+      if (widget.zoneIndex! < audit.moyenneTensionZones.length) {
+        nomZone = audit.moyenneTensionZones[widget.zoneIndex!].nom;
+      }
+    } else {
+      if (widget.zoneIndex! < audit.basseTensionZones.length) {
+        nomZone = audit.basseTensionZones[widget.zoneIndex!].nom;
+      }
+    }
+    
+    if (nomZone == null) return null;
+    
+    // Chercher le classement de la zone
+    final zones = await HiveService.syncZonesFromAudit(widget.mission.id);
+    return zones.firstWhere(
+      (z) => z.localisation == nomZone,
+      orElse: () => null as ClassementEmplacement,
+    );
   }
 
   MoyenneTensionLocal _creerMoyenneTensionLocal() {

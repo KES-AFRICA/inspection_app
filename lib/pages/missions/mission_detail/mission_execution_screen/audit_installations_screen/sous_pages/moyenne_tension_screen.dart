@@ -1,9 +1,11 @@
 // moyenne_tension_screen.dart
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
+import 'package:inspec_app/models/classement_locaux.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/basse_tension_screen.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_local_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_zone_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_local_screen.dart';
@@ -596,116 +598,295 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
-    }
-    
-    if (_audit == null) {
-      return const Scaffold(
-        body: Center(child: Text('Erreur de chargement')),
-      );
-    }
+  if (_isLoading) {
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
+    );
+  }
+  
+  if (_audit == null) {
+    return const Scaffold(
+      body: Center(child: Text('Erreur de chargement')),
+    );
+  }
 
-    if (_hasPreference && !_isApplicable) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Moyenne Tension'),
-          backgroundColor: Colors.blue,
-          foregroundColor: Colors.white,
-        ),
-        body: _buildNotApplicableScreen(),
-      );
-    }
-
+  // Si l'utilisateur a choisi "non applicable", afficher l'écran avec option de changer
+  if (_hasPreference && !_isApplicable) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Moyenne Tension'),
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
-        actions: [
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              if (value == 'local') _ajouterLocal();
-              if (value == 'zone') _ajouterZone();
-            },
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'local', child: Text('Ajouter un local')),
-              PopupMenuItem(value: 'zone', child: Text('Ajouter une zone')),
+      ),
+      body: _buildNotApplicableScreen(),
+    );
+  }
+
+  // Retour principal
+  return Scaffold(
+    appBar: AppBar(
+      title: const Text('Moyenne Tension'),
+      backgroundColor: Colors.blue,
+      foregroundColor: Colors.white,
+      actions: [
+        PopupMenuButton<String>(
+          onSelected: (value) {
+            if (value == 'local') _ajouterLocal();
+            if (value == 'zone') _ajouterZone();
+          },
+          itemBuilder: (context) => const [
+            PopupMenuItem(value: 'local', child: Text('Ajouter un local')),
+            PopupMenuItem(value: 'zone', child: Text('Ajouter une zone')),
+          ],
+        ),
+      ],
+    ),
+    body: Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            border: Border(bottom: BorderSide(color: Colors.blue.shade100)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildStatCard('Zones', _audit!.moyenneTensionZones.length, Icons.map_outlined),
+              _buildStatCard('Locaux', _getTotalLocaux(), Icons.domain),
+              _buildStatCard('Coffrets', _getTotalCoffrets(), Icons.electrical_services),
             ],
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              border: Border(bottom: BorderSide(color: Colors.blue.shade100)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
+        ),
+        Expanded(
+          child: DefaultTabController(
+            length: 3,
+            child: Column(
               children: [
-                _buildStatCard('Zones', _audit!.moyenneTensionZones.length, Icons.map_outlined),
-                _buildStatCard('Locaux', _getTotalLocaux(), Icons.domain),
-                _buildStatCard('Coffrets', _getTotalCoffrets(), Icons.electrical_services),
+                const TabBar(
+                  labelColor: Colors.blue,
+                  unselectedLabelColor: Colors.grey,
+                  indicatorColor: Colors.blue,
+                  tabs: [
+                    Tab(text: 'ZONES'),
+                    Tab(text: 'CLASSEMENT'),
+                    Tab(text: 'LOCAUX'),
+                  ],
+                ),
+                Expanded(
+                  child: TabBarView(
+                    children: [
+                      // Onglet ZONES
+                      _audit!.moyenneTensionZones.isEmpty
+                          ? _buildEmptyState('zones', _ajouterZone)
+                          : ListView.builder(
+                              padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
+                              itemCount: _audit!.moyenneTensionZones.length,
+                              itemBuilder: (context, index) {
+                                final zone = _audit!.moyenneTensionZones[index];
+                                return _buildZoneCard(zone, index);
+                              },
+                            ),
+                      
+                      // Onglet CLASSEMENT
+                      _buildClassementTab(),
+                      
+                      // Onglet LOCAUX
+                      _audit!.moyenneTensionLocaux.isEmpty
+                          ? _buildEmptyState('locaux', _ajouterLocal)
+                          : ListView.builder(
+                              padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
+                              itemCount: _audit!.moyenneTensionLocaux.length,
+                              itemBuilder: (context, index) {
+                                final local = _audit!.moyenneTensionLocaux[index];
+                                return _buildLocalCard(local, index);
+                              },
+                            ),
+                    ],
+                  ),
+                ),
               ],
             ),
           ),
-          Expanded(
-            child: DefaultTabController(
-              length: 2,
-              child: Column(
-                children: [
-                  const TabBar(
-                    labelColor: Colors.blue,
-                    unselectedLabelColor: Colors.grey,
-                    indicatorColor: Colors.blue,
-                    tabs: [
-                      Tab(text: 'ZONES'),
-                      Tab(text: 'LOCAUX'),
+        ),
+      ],
+    ),
+    floatingActionButton: FloatingActionButton(
+      onPressed: _showAddModal,
+      backgroundColor: AppTheme.primaryBlue,
+      child: const Icon(Icons.add, color: Colors.white),
+    ),
+  );
+}
+
+Widget _buildInfluenceChip(String type, String code) {
+  final Map<String, Color> colorMap = {
+    'AF': Colors.blue,
+    'BE': Colors.purple,
+    'AE': Colors.orange,
+    'AD': Colors.teal,
+    'AG': Colors.red,
+  };
+  
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+    decoration: BoxDecoration(
+      color: colorMap[type]!.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: colorMap[type]!.withOpacity(0.3)),
+    ),
+    child: Text(
+      '$type: $code',
+      style: TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.w500,
+        color: colorMap[type]!,
+      ),
+    ),
+  );
+}
+
+// NOUVEAU : Onglet classement dans moyenne tension
+  Widget _buildClassementTab() {
+    return FutureBuilder<List<ClassementEmplacement>>(
+      future: HiveService.syncZonesFromAudit(widget.mission.id),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        final zones = snapshot.data ?? [];
+        
+        if (zones.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.security_outlined, size: 64, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                Text(
+                  'Aucune zone à classer',
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Ajoutez une zone pour la classer',
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                ),
+              ],
+            ),
+          );
+        }
+        
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: zones.length,
+          itemBuilder: (context, index) {
+            final zone = zones[index];
+            final estComplet = zone.af != null && zone.be != null && 
+                              zone.ae != null && zone.ad != null && zone.ag != null;
+            
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: InkWell(
+                onTap: () => _ouvrirClassementZone(zone),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: estComplet ? Colors.green.shade50 : Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.map_outlined,
+                              color: estComplet ? Colors.green : AppTheme.primaryBlue,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              zone.localisation,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: estComplet ? Colors.green.shade100 : Colors.orange.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              estComplet ? 'Classée' : 'À classer',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: estComplet ? Colors.green.shade800 : Colors.orange.shade800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (estComplet) ...[
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _buildInfluenceChip('AF', zone.af!),
+                            _buildInfluenceChip('BE', zone.be!),
+                            _buildInfluenceChip('AE', zone.ae!),
+                            _buildInfluenceChip('AD', zone.ad!),
+                            _buildInfluenceChip('AG', zone.ag!),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            Text('IP: ${zone.ip ?? "N/A"}',
+                                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800)),
+                            Text('IK: ${zone.ik ?? "N/A"}',
+                                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800)),
+                          ],
+                        ),
+                      ],
                     ],
                   ),
-                  Expanded(
-                    child: TabBarView(
-                      children: [
-                        _audit!.moyenneTensionZones.isEmpty
-                            ? _buildEmptyState('zones', _ajouterZone)
-                            : ListView.builder(
-                                padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
-                                itemCount: _audit!.moyenneTensionZones.length,
-                                itemBuilder: (context, index) {
-                                  final zone = _audit!.moyenneTensionZones[index];
-                                  return _buildZoneCard(zone, index);
-                                },
-                              ),
-                        _audit!.moyenneTensionLocaux.isEmpty
-                            ? _buildEmptyState('locaux', _ajouterLocal)
-                            : ListView.builder(
-                                padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
-                                itemCount: _audit!.moyenneTensionLocaux.length,
-                                itemBuilder: (context, index) {
-                                  final local = _audit!.moyenneTensionLocaux[index];
-                                  return _buildLocalCard(local, index);
-                                },
-                              ),
-                      ],
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _showAddModal,
-        backgroundColor: AppTheme.primaryBlue,
-        child: const Icon(Icons.add, color: Colors.white),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _ouvrirClassementZone(ClassementEmplacement zone) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ClassementEmplacementScreen(
+          mission: widget.mission,
+          emplacement: zone,
+        ),
       ),
     );
+    
+    if (result == true) {
+      setState(() {});
+    }
   }
 
   Widget _buildStatCard(String title, int count, IconData icon) {

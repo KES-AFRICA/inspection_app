@@ -1,5 +1,6 @@
 // classement_locaux.dart
 import 'package:hive/hive.dart';
+import 'package:inspec_app/services/hive_service.dart';
 
 part 'classement_locaux.g.dart';
 
@@ -40,15 +41,14 @@ class ClassementEmplacement extends HiveObject {
   @HiveField(12)
   String? typeLocal; // Type du local ou "ZONE_MT" / "ZONE_BT"
 
-  // ===== NOUVEAUX CHAMPS =====
+  @HiveField(13)
+  String typeEmplacement; // 'zone' ou 'local'
+  
+  @HiveField(14)
+  bool heriteDeZone; // true si le local hérite du classement de sa zone
+  
   @HiveField(15)
-  bool estZone; // true si c'est une zone, false si c'est un local
-
-  @HiveField(16)
-  String? heritageDe; // Nom de la zone dont il hérite (si héritage)
-
-  @HiveField(17)
-  bool heritageActive; // true si le local hérite de sa zone
+  String? zoneParenteId;
 
   ClassementEmplacement({
     required this.missionId,
@@ -64,9 +64,9 @@ class ClassementEmplacement extends HiveObject {
     this.ik,
     required this.updatedAt,
     this.typeLocal,
-    this.estZone = false,
-    this.heritageDe,
-    this.heritageActive = false,
+    this.typeEmplacement = 'local', // Par défaut 'local' pour rétrocompatibilité
+    this.heriteDeZone = false,
+    this.zoneParenteId,
   });
 
   factory ClassementEmplacement.create({
@@ -74,7 +74,9 @@ class ClassementEmplacement extends HiveObject {
     required String localisation,
     String? zone,
     String? typeLocal,
-    bool estZone = false,
+    String typeEmplacement = 'local',
+    bool heriteDeZone = false,
+    String? zoneParenteId,
   }) {
     return ClassementEmplacement(
       missionId: missionId,
@@ -83,35 +85,102 @@ class ClassementEmplacement extends HiveObject {
       origineClassement: 'KES I&P',
       updatedAt: DateTime.now(),
       typeLocal: typeLocal,
-      estZone: estZone,
-      heritageActive: false,
+      typeEmplacement: typeEmplacement,
+      heriteDeZone: heriteDeZone,
+      zoneParenteId: zoneParenteId,
     );
   }
 
-  // ===== NOUVEAU : Copier les valeurs d'un autre classement (héritage) =====
-  void copierDepuis(ClassementEmplacement source) {
-    af = source.af;
-    be = source.be;
-    ae = source.ae;
-    ad = source.ad;
-    ag = source.ag;
-    ip = source.ip;
-    ik = source.ik;
-    origineClassement = 'Hérité de ${source.localisation}';
-    heritageDe = source.localisation;
-    heritageActive = true;
-    updatedAt = DateTime.now();
+  factory ClassementEmplacement.createZone({
+    required String missionId,
+    required String nomZone,
+  }) {
+    return ClassementEmplacement(
+      missionId: missionId,
+      localisation: nomZone,
+      origineClassement: 'KES I&P',
+      updatedAt: DateTime.now(),
+      typeEmplacement: 'zone',
+      heriteDeZone: false,
+    );
   }
 
-  // ===== NOUVEAU : Réinitialiser l'héritage (passer en mode spécifique) =====
-  void desactiverHeritage() {
-    heritageActive = false;
-    heritageDe = null;
-    origineClassement = 'KES I&P';
-    updatedAt = DateTime.now();
+  // Créer un classement pour un local qui hérite de sa zone
+  factory ClassementEmplacement.createLocalHeritant({
+    required String missionId,
+    required String nomLocal,
+    required String zoneParente,
+    required String zoneParenteId,
+  }) {
+    return ClassementEmplacement(
+      missionId: missionId,
+      localisation: nomLocal,
+      zone: zoneParente,
+      origineClassement: 'KES I&P',
+      updatedAt: DateTime.now(),
+      typeEmplacement: 'local',
+      heriteDeZone: true,
+      zoneParenteId: zoneParenteId,
+    );
   }
 
-  // Méthode existante modifiée
+  // Récupérer les valeurs effectives (en tenant compte de l'héritage)
+  String? get afEffective {
+    if (heriteDeZone && zoneParenteId != null) {
+      // Récupérer depuis HiveService
+      return HiveService.getClassementById(zoneParenteId!)?.af;
+    }
+    return af;
+  }
+
+  String? get beEffective {
+    if (heriteDeZone && zoneParenteId != null) {
+      return HiveService.getClassementById(zoneParenteId!)?.be;
+    }
+    return be;
+  }
+
+  String? get aeEffective {
+    if (heriteDeZone && zoneParenteId != null) {
+      return HiveService.getClassementById(zoneParenteId!)?.ae;
+    }
+    return ae;
+  }
+
+  String? get adEffective {
+    if (heriteDeZone && zoneParenteId != null) {
+      return HiveService.getClassementById(zoneParenteId!)?.ad;
+    }
+    return ad;
+  }
+
+  String? get agEffective {
+    if (heriteDeZone && zoneParenteId != null) {
+      return HiveService.getClassementById(zoneParenteId!)?.ag;
+    }
+    return ag;
+  }
+
+  String? get ipEffective {
+    if (heriteDeZone && zoneParenteId != null) {
+      return HiveService.getClassementById(zoneParenteId!)?.ip;
+    }
+    return ip;
+  }
+
+  String? get ikEffective {
+    if (heriteDeZone && zoneParenteId != null) {
+      return HiveService.getClassementById(zoneParenteId!)?.ik;
+    }
+    return ik;
+  }
+
+  // Vérifier si c'est une zone
+  bool get isZone => typeEmplacement == 'zone';
+  
+  // Vérifier si c'est un local
+  bool get isLocal => typeEmplacement == 'local';
+
   void calculerIndices() {
     ip = _calculerIP();
     ik = _calculerIK();

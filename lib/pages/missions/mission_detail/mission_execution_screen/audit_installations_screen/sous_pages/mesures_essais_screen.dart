@@ -3,7 +3,6 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/arret_urgence_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/avis_mesures_screen.dart';
-import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/conditions_mesure_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/continuite_resistance_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/demarrage_auto_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
@@ -39,7 +38,6 @@ class _MesuresEssaisScreenState extends State<MesuresEssaisScreen> {
       
       // Vérifier l'état de chaque section
       _sectionStatus = {
-        'conditions_mesure': _stats['condition_mesure_renseignee'] ?? false,
         'demarrage_auto': _stats['demarrage_auto_renseigne'] ?? false,
         'arret_urgence': _stats['arret_urgence_renseigne'] ?? false,
         'prises_terre': (mesures.prisesTerre.isNotEmpty),
@@ -114,14 +112,6 @@ class _MesuresEssaisScreenState extends State<MesuresEssaisScreen> {
     );
   }
 
-  void _navigateToConditionsMesure() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ConditionsMesureScreen(mission: widget.mission),
-      ),
-    ).then((_) => _loadData());
-  }
 
   void _navigateToDemarrageAuto() {
     Navigator.push(
@@ -201,13 +191,6 @@ class _MesuresEssaisScreenState extends State<MesuresEssaisScreen> {
                 child: ListView(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   children: [
-                    _buildSectionTile(
-                      'Conditions de mesure',
-                      Icons.thermostat_outlined,
-                      'Paramètres environnementaux de mesure',
-                      _navigateToConditionsMesure,
-                      'conditions_mesure',
-                    ),
                     const Divider(height: 0, thickness: 0.5),
                     
                     _buildSectionTile(
