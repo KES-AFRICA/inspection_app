@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_locaux_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/observation_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/qr_scan_coffret_screen.dart';
 import 'package:path_provider/path_provider.dart';
@@ -1325,6 +1324,7 @@ void _editerObservation(int index) async {
     final pointsConformes = coffret.pointsVerification.where((p) => p.conformite == 'oui').length;
     final totalPoints = coffret.pointsVerification.length;
     final pourcentage = totalPoints > 0 ? (pointsConformes / totalPoints * 100).round() : 0;
+    final isComplet = _isCoffretComplet(coffret);
 
     // Calculer le nombre total de photos pour ce coffret
     int totalPhotosCoffret = coffret.photos.length;
@@ -1338,7 +1338,9 @@ void _editerObservation(int index) async {
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey),
+        border: Border.all(
+          color: isComplet ? Colors.green.shade200 : Colors.red.shade200, // MODIFIÉ
+        ),
       ),
       child: ListTile(
         leading: Container(
@@ -1350,9 +1352,32 @@ void _editerObservation(int index) async {
           ),
           child: Icon(Icons.electrical_services, color: Colors.orange),
         ),
-        title: Text(
-          coffret.nom,
-          style: TextStyle(fontWeight: FontWeight.w600),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                coffret.nom,
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            // NOUVEAU : Badge "Incomplet"
+            if (!isComplet)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Incomplet',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade700,
+                  ),
+                ),
+              ),
+          ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1392,6 +1417,23 @@ void _editerObservation(int index) async {
         onTap: () => isMoyenneTension ? _voirCoffretMT(index) : _voirCoffretDirectBT(index),
       ),
     );
+  }
+
+  bool _isCoffretComplet(CoffretArmoire coffret) {
+    // Vérifier les champs obligatoires
+    if (coffret.nom.isEmpty) return false;
+    if (coffret.type.isEmpty) return false;
+    if (coffret.domaineTension.isEmpty) return false;
+    
+    // Vérifier les photos
+    if (coffret.photos.isEmpty) return false;
+    
+    // Vérifier les points de vérification
+    for (var point in coffret.pointsVerification) {
+      if (point.conformite.isEmpty) return false;
+    }
+    
+    return true;
   }
 
   Color _getProgressColor(int pourcentage) {

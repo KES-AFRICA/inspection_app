@@ -43,17 +43,20 @@ extension ScreenSize on BuildContext {
 }
 
 // ================================================================
-// ÉTAPE 1 : INFORMATIONS DE BASE + PHOTOS + OBSERVATION ÉQUIPEMENT
+// ÉTAPE 1 : INFORMATIONS DE BASE + PHOTOS
 // ================================================================
 class _EtapeInformationsBase extends StatefulWidget {
   final TextEditingController nomController;
   final TextEditingController repereController;
+  final TextEditingController numeroEquipementController;
   final String? selectedType;
   final Function(String?) onTypeChanged;
   final bool typeValid;
+  final bool numeroEquipementValid;
   final bool nomValid;
   final bool repereValid;
   final VoidCallback onValidateNom;
+  final VoidCallback onValidateNumeroEquipement;
   final VoidCallback onValidateRepere;
   final List<String> photosExterne;
   final List<String> photosInterne;
@@ -66,23 +69,18 @@ class _EtapeInformationsBase extends StatefulWidget {
   final Function(int) onSupprimerPhotoExterne;
   final Function(int) onSupprimerPhotoInterne;
   final bool isInZone;
-  
-  // Observation équipement
-  final TextEditingController observationController;
-  final List<String> observationPhotos;
-  final Function() onPrendrePhotoObservation;
-  final Function() onChoisirPhotoObservation;
-  final String? selectedNiveauPuissance;
-  final Function(String?) onNiveauPuissanceChanged;
 
   const _EtapeInformationsBase({
     required this.nomController,
+    required this.numeroEquipementController,
     required this.repereController,
     required this.selectedType,
     required this.onTypeChanged,
     required this.typeValid,
     required this.nomValid,
     required this.repereValid,
+    required this.numeroEquipementValid,
+    required this.onValidateNumeroEquipement,
     required this.onValidateNom,
     required this.onValidateRepere,
     required this.photosExterne,
@@ -96,12 +94,6 @@ class _EtapeInformationsBase extends StatefulWidget {
     required this.onSupprimerPhotoExterne,
     required this.onSupprimerPhotoInterne,
     required this.isInZone,
-    required this.observationController,
-    required this.observationPhotos,
-    required this.onPrendrePhotoObservation,
-    required this.onChoisirPhotoObservation,
-    required this.selectedNiveauPuissance,
-    required this.onNiveauPuissanceChanged,
   });
 
   @override
@@ -113,14 +105,6 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
   final PageController _photosInterneController = PageController();
   int _currentExterneIndex = 0;
   int _currentInterneIndex = 0;
-
-  
-  final List<Map<String, dynamic>> _niveauPuissanceOptions = [
-    {'value': 'tres_petites_sections', 'label': 'Très petites sections', 'icon': Icons.energy_savings_leaf},
-    {'value': 'installations_domestiques', 'label': 'Installations domestiques / tertiaires', 'icon': Icons.home},
-    {'value': 'puissances_moyennes', 'label': 'Puissances moyennes', 'icon': Icons.business},
-    {'value': 'puissances_evelees', 'label': 'Puissances élevées / industrie', 'icon': Icons.factory},
-  ];
 
   @override
   Widget build(BuildContext context) {
@@ -159,6 +143,18 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
           icon: Icons.label_outline,
           isValid: widget.nomValid,
           onChanged: (_) => widget.onValidateNom(),
+        ),
+        SizedBox(height: context.spacingM),
+      
+        // NOUVEAU : Numéro de l'équipement
+        _buildModernTextField(
+          context,
+          controller: widget.numeroEquipementController,
+          label: 'Numéro de l\'équipement',
+          icon: Icons.numbers_outlined,
+          isValid: widget.numeroEquipementValid,
+          onChanged: (_) => widget.onValidateNumeroEquipement(),
+          isRequired: false,
         ),
         SizedBox(height: context.spacingM),
         
@@ -203,14 +199,14 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
           onSupprimerPhoto: widget.onSupprimerPhotoInterne,
           isRequired: true,
         ),
-        SizedBox(height: context.spacingXL),
-        
-        _buildModernObservationCard(context),
         SizedBox(height: context.spacingXXL),
       ],
     );
   }
 
+  // ... (méthodes _buildModernHeader, _buildModernTextField, _buildModernTypeSelector, 
+  // _buildModernPhotoCarousel, _buildModernPhotoButton inchangées - garder le code existant)
+  
   Widget _buildModernHeader(BuildContext context, String title, int currentStep, int totalSteps) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -275,6 +271,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
     required IconData icon,
     required bool isValid,
     required Function(String) onChanged,
+    bool isRequired = true,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -289,7 +286,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
         onChanged: onChanged,
         style: TextStyle(fontSize: context.fontSizeM),
         decoration: InputDecoration(
-          labelText: label,
+          labelText: isRequired ? '$label *' : label,
           labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: context.fontSizeM),
           prefixIcon: Icon(icon, color: AppTheme.primaryBlue, size: context.iconSizeM),
           suffixIcon: isValid ? Icon(Icons.check_circle, color: Colors.green, size: context.iconSizeS) : null,
@@ -523,7 +520,6 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
                     itemBuilder: (context, index) {
                       return Stack(
                         children: [
-                          // Image
                           Container(
                             margin: EdgeInsets.symmetric(horizontal: context.spacingXS),
                             decoration: BoxDecoration(
@@ -535,7 +531,6 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
                               child: Image.file(File(photos[index]), fit: BoxFit.cover),
                             ),
                           ),
-                          // Bouton de suppression
                           Positioned(
                             top: context.spacingS,
                             right: context.spacingS + context.spacingXS,
@@ -555,7 +550,6 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
                               ),
                             ),
                           ),
-                          // Indicateur de numéro de photo (optionnel)
                           Positioned(
                             bottom: context.spacingS,
                             left: context.spacingS + context.spacingXS,
@@ -670,162 +664,13 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
       ),
     );
   }
-
-  Widget _buildModernObservationCard(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(context.spacingM),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Padding(
-            padding: EdgeInsets.all(context.spacingL),
-            child: Row(
-              children: [
-                Icon(Icons.notes_outlined, color: AppTheme.primaryBlue, size: context.iconSizeM),
-                SizedBox(width: context.spacingS),
-                Flexible(
-                  child: Text(
-                    'OBSERVATION SUR L\'ÉQUIPEMENT',
-                    style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.w600, color: AppTheme.darkBlue),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.symmetric(horizontal: context.spacingL),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(context.spacingS),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: DropdownButtonFormField<String>(
-                value: widget.selectedNiveauPuissance,
-                isExpanded: true,
-                icon: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryBlue, size: context.iconSizeM),
-                dropdownColor: Colors.white,
-                borderRadius: BorderRadius.circular(context.spacingS),
-                hint: Row(
-                  children: [
-                    Icon(Icons.speed, size: context.iconSizeS, color: Colors.grey.shade500),
-                    SizedBox(width: context.spacingS),
-                    Flexible(
-                      child: Text(
-                        'Niveau de puissance',
-                        style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500),
-                      ),
-                    ),
-                  ],
-                ),
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingM),
-                ),
-                items: _niveauPuissanceOptions.map<DropdownMenuItem<String>>((option) => DropdownMenuItem<String>(
-                  value: option['value'] as String,
-                  child: Row(
-                    children: [
-                      Icon(option['icon'] as IconData, size: context.iconSizeS, color: AppTheme.primaryBlue),
-                      SizedBox(width: context.spacingS),
-                      Flexible(
-                        child: Text(
-                          option['label'] as String,
-                          style: TextStyle(fontSize: context.fontSizeS),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                )).toList(),
-                onChanged: widget.onNiveauPuissanceChanged,
-              ),
-            ),
-          ),
-          Padding(
-            padding: EdgeInsets.all(context.spacingL),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(context.spacingS),
-                border: Border.all(color: Colors.grey.shade200),
-              ),
-              child: TextFormField(
-                controller: widget.observationController,
-                style: TextStyle(fontSize: context.fontSizeS),
-                maxLines: 3,
-                decoration: InputDecoration(
-                  hintText: 'Saisissez votre observation...',
-                  hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: context.fontSizeS),
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.all(context.spacingM),
-                ),
-              ),
-            ),
-          ),
-          if (widget.observationPhotos.isNotEmpty)
-            Container(
-              height: context.screenHeight * 0.08,
-              margin: EdgeInsets.symmetric(horizontal: context.spacingL),
-              child: ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: widget.observationPhotos.length,
-                itemBuilder: (context, index) {
-                  return Container(
-                    width: context.screenWidth * 0.18,
-                    margin: EdgeInsets.only(right: context.spacingS),
-                    decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(context.spacingS),
-                      child: Image.file(File(widget.observationPhotos[index]), fit: BoxFit.cover),
-                    ),
-                  );
-                },
-              ),
-            ),
-          Padding(
-            padding: EdgeInsets.all(context.spacingL),
-            child: Row(
-              children: [
-                Expanded(
-                  child: _buildModernPhotoButton(
-                    context,
-                    icon: Icons.camera_alt,
-                    label: 'Photo',
-                    onTap: widget.onPrendrePhotoObservation,
-                  ),
-                ),
-                SizedBox(width: context.spacingS),
-                Expanded(
-                  child: _buildModernPhotoButton(
-                    context,
-                    icon: Icons.photo_library,
-                    label: 'Galerie',
-                    onTap: widget.onChoisirPhotoObservation,
-                    isSecondary: true,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          SizedBox(height: context.spacingL),
-        ],
-      ),
-    );
-  }
 }
 
 // ================================================================
-// ÉTAPE 2 : INFORMATIONS GÉNÉRALES (Checkboxes + Domaine tension)
+// ÉTAPE 2 : INFORMATIONS GÉNÉRALES (inchangée)
 // ================================================================
 class _EtapeInformationsGenerales extends StatelessWidget {
+  // ... (inchangé - garder le code existant)
   final bool zoneAtex;
   final Function(bool?) onZoneAtexChanged;
   final bool identificationArmoire;
@@ -1044,19 +889,21 @@ class _EtapeInformationsGenerales extends StatelessWidget {
 }
 
 // ================================================================
-// ÉTAPE 3 : ALIMENTATIONS
+// ÉTAPE 3 : ALIMENTATIONS 
 // ================================================================
 class _EtapeAlimentations extends StatefulWidget {
   final String? selectedType;
   final List<Alimentation> alimentations;
   final Alimentation? protectionTete;
   final VoidCallback onDataChanged;
+  final List<String> sourcesDisponibles;
 
   const _EtapeAlimentations({
     required this.selectedType,
     required this.alimentations,
     required this.protectionTete,
     required this.onDataChanged,
+    required this.sourcesDisponibles,
   });
 
   @override
@@ -1064,6 +911,7 @@ class _EtapeAlimentations extends StatefulWidget {
 }
 
 class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
+
   final List<String> _typeProtectionOptions = const [
     'Sectionneur porte Fusibles',
     'Fusibles',
@@ -1071,6 +919,14 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     'Interrupteurs-sectionneur',
     'Disjoncteurs différentiels',
     'Interrupteurs différentiels',
+    'Inconnu',
+  ];
+
+  static const List<String> _sourceOptions = [
+    'Inverseur',
+    'Armoire',
+    'Coffret',
+    'TGBT',
   ];
 
   final List<String> _sectionCableOptions = const [
@@ -1138,6 +994,29 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
       children: [
         _buildModernHeader(context, 'Alimentations', 3, 4),
         SizedBox(height: context.spacingXL),
+        
+        // Message informatif : champs non obligatoires
+        Container(
+          padding: EdgeInsets.all(context.spacingM),
+          margin: EdgeInsets.only(bottom: context.spacingL),
+          decoration: BoxDecoration(
+            color: Colors.blue.shade50,
+            borderRadius: BorderRadius.circular(context.spacingS),
+            border: Border.all(color: Colors.blue.shade200),
+          ),
+          child: Row(
+            children: [
+              Icon(Icons.info_outline, color: Colors.blue, size: context.iconSizeS),
+              SizedBox(width: context.spacingS),
+              Expanded(
+                child: Text(
+                  'Les champs d\'alimentation sont optionnels. Remplissez uniquement les informations disponibles.',
+                  style: TextStyle(fontSize: context.fontSizeXS, color: Colors.blue.shade700),
+                ),
+              ),
+            ],
+          ),
+        ),
         
         if (widget.selectedType == 'INVERSEUR') ...[
           if (widget.alimentations.length >= 3) ...[
@@ -1279,16 +1158,27 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           
           _buildModernDropdown(
             context,
-            label: 'Type de protection *',
+            label: 'Type de protection',
             value: a.typeProtection,
             items: _typeProtectionOptions,
             onChanged: (v) => onChanged('typeProtection', v),
           ),
           SizedBox(height: context.spacingS),
+
+          if (title == 'ORIGINE DE LA SOURCE') ...[
+            _buildModernDropdown(
+              context,
+              label: 'Source',
+              value: a.source,
+              items: _sourceOptions,
+              onChanged: (v) => onChanged('source', v),
+            ),
+            SizedBox(height: context.spacingS),
+          ],
           
           _buildModernTextField(
             context,
-            label: 'PDC kA *',
+            label: 'PDC kA',
             controller: isProtectionTete 
                 ? _controllers['prot_pdc']!
                 : _controllers['alim${index}_pdc']!,
@@ -1298,7 +1188,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           
           _buildModernTextField(
             context,
-            label: isProtectionTete ? 'Calibre protection *' : 'Calibre *',
+            label: isProtectionTete ? 'Calibre protection' : 'Calibre',
             controller: isProtectionTete 
                 ? _controllers['prot_calibre']!
                 : _controllers['alim${index}_calibre']!,
@@ -1308,7 +1198,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           
           _buildModernDropdown(
             context,
-            label: 'Section de câble *',
+            label: 'Section de câble',
             value: a.sectionCable,
             items: _sectionCableOptions,
             onChanged: (v) => onChanged('sectionCable', v),
@@ -1351,27 +1241,23 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     required List<String> items,
     required Function(String) onChanged,
   }) {
-    final isValid = value.isNotEmpty;
     return Container(
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(context.spacingS),
-        border: Border.all(
-          color: isValid ? Colors.grey.shade300 : Colors.red.shade300,
-          width: isValid ? 1 : 1.5,
-        ),
+        border: Border.all(color: Colors.grey.shade300),
       ),
       child: DropdownButtonFormField<String>(
-        value: value.isNotEmpty ? value : null,
+        initialValue: value.isNotEmpty ? value : null,
         isExpanded: true,
-        icon: Icon(Icons.arrow_drop_down, color: isValid ? Colors.grey.shade600 : Colors.red),
+        icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
         hint: Text(
           'Sélectionnez...',
-          style: TextStyle(fontSize: context.fontSizeS, color: isValid ? Colors.grey.shade500 : Colors.red.shade400),
+          style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500),
         ),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(fontSize: context.fontSizeS, color: isValid ? Colors.grey.shade600 : Colors.red.shade400),
+          labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
         ),
@@ -1386,16 +1272,16 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
 }
 
 // ================================================================
-// ÉTAPE 4 : POINTS DE VÉRIFICATION (MODIFIÉ)
+// ÉTAPE 4 : POINTS DE VÉRIFICATION (CONFORMITÉ EN BOUTONS + RÉFÉRENCE NORMATIVE TOGGLE)
 // ================================================================
 class _EtapePointsVerification extends StatefulWidget {
   final List<PointVerification> pointsVerification;
   final Map<int, List<String>> pointSuggestions;
   final Map<int, bool> pointLoading;
-  final Map<int, bool> hasObservation; // Nouveau : pour le toggle observation
+  final Map<int, bool> hasObservation;
   final Function(int, String) onObservationChanged;
   final Function(int, String, PointVerification) onUseSuggestion;
-  final Function(int, bool) onObservationToggleChanged; // Nouveau : callback pour toggle
+  final Function(int, bool) onObservationToggleChanged;
 
   const _EtapePointsVerification({
     super.key,
@@ -1417,6 +1303,9 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
   int _currentSlide = 0;
   
   late List<List<PointVerification>> _pointsSlides;
+  
+  // NOUVEAU : Map pour gérer l'affichage de la référence normative
+  final Map<int, bool> _showReferenceNormative = {};
 
   @override
   void initState() {
@@ -1440,17 +1329,16 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
     
     final currentPoints = _pointsSlides[_currentSlide];
     for (var point in currentPoints) {
-      if (point.conformite.isEmpty || point.conformite == 'non_applicable') {
-        continue;
+      if (point.conformite.isEmpty) {
+        return false;
       }
-      // La priorité n'est plus obligatoire
     }
     return true;
   }
 
   void nextSlide() {
     if (!_isCurrentSlideValid()) {
-      _showError('Veuillez sélectionner la conformité pour tous les points');
+      _showError('Veuillez sélectionner Oui ou Non pour tous les points');
       return;
     }
     
@@ -1477,6 +1365,9 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
         content: Text(message),
         backgroundColor: Colors.red,
         duration: const Duration(seconds: 2),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
@@ -1585,6 +1476,7 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
     final suggestions = widget.pointSuggestions[pointIndex] ?? [];
     final isLoading = widget.pointLoading[pointIndex] ?? false;
     final hasObservation = widget.hasObservation[pointIndex] ?? false;
+    final showReference = _showReferenceNormative[pointIndex] ?? false;
     
     return Container(
       margin: EdgeInsets.only(bottom: context.spacingL),
@@ -1629,15 +1521,12 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
           
           SizedBox(height: context.spacingM),
           
-          // Conformité et Référence normative
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: _buildConformiteSelector(context, point)),
-              SizedBox(width: context.spacingS),
-              Expanded(child: _buildReferenceNormativeField(context, point)),
-            ],
-          ),
+          // NOUVEAU : Conformité en boutons Oui/Non
+          _buildConformiteToggle(context, point, pointIndex),
+          
+          // NOUVEAU : Bouton pour afficher/masquer la référence normative
+          SizedBox(height: context.spacingS),
+          _buildReferenceNormativeToggle(context, point, pointIndex, showReference),
           
           // Toggle Observation
           SizedBox(height: context.spacingM),
@@ -1653,110 +1542,196 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
     );
   }
 
-  Widget _buildConformiteSelector(BuildContext context, PointVerification point) {
+  // NOUVEAU : Widget de conformité en boutons Oui/Non
+  Widget _buildConformiteToggle(BuildContext context, PointVerification point, int pointIndex) {
     final isValid = point.conformite.isNotEmpty;
     
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(context.spacingS),
-        border: Border.all(
-          color: isValid ? Colors.grey.shade300 : Colors.red.shade300,
-          width: isValid ? 1 : 1.5,
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Conformité *',
+              style: TextStyle(
+                fontSize: context.fontSizeS,
+                fontWeight: FontWeight.w600,
+                color: isValid ? Colors.grey.shade700 : Colors.red,
+              ),
+            ),
+          ],
         ),
-      ),
-      child: DropdownButtonFormField<String>(
-        value: point.conformite.isNotEmpty ? point.conformite : null,
-        hint: Text(
-          'Conformité *',
-          style: TextStyle(fontSize: context.fontSizeS, color: isValid ? Colors.grey.shade500 : Colors.red.shade400),
+        SizedBox(height: context.spacingS),
+        Row(
+          children: [
+            Expanded(
+              child: _buildConformiteButton(
+                context,
+                label: 'Oui',
+                isSelected: point.conformite == 'oui',
+                color: Colors.green,
+                onTap: () {
+                  setState(() {
+                    point.conformite = 'oui';
+                  });
+                },
+              ),
+            ),
+            SizedBox(width: context.spacingS),
+            Expanded(
+              child: _buildConformiteButton(
+                context,
+                label: 'Non',
+                isSelected: point.conformite == 'non',
+                color: Colors.red,
+                onTap: () {
+                  setState(() {
+                    point.conformite = 'non';
+                    // Si Non est sélectionné, on active automatiquement l'observation ?
+                    // widget.onObservationToggleChanged(pointIndex, true);
+                  });
+                },
+              ),
+            ),
+          ],
         ),
-        isExpanded: true,
-        onChanged: (v) {
-          setState(() {
-            point.conformite = v!;
-          });
-        },
-        decoration: InputDecoration(
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingM),
-        ),
-        items: [
-          DropdownMenuItem(
-            value: 'oui',
-            child: Row(
-              children: [
-                Container(width: 8, height: 8, decoration: BoxDecoration(color: Colors.green, shape: BoxShape.circle)),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text('Oui', style: TextStyle(fontSize: context.fontSizeS, color: Colors.green))),
-              ],
+        if (!isValid)
+          Padding(
+            padding: EdgeInsets.only(top: context.spacingXS),
+            child: Text(
+              'Veuillez sélectionner Oui ou Non',
+              style: TextStyle(fontSize: context.fontSizeXS, color: Colors.red),
             ),
           ),
-          DropdownMenuItem(
-            value: 'non',
-            child: Row(
-              children: [
-                Container(width: 8, height: 8, decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text('Non', style: TextStyle(fontSize: context.fontSizeS, color: Colors.red))),
-              ],
-            ),
+      ],
+    );
+  }
+
+  Widget _buildConformiteButton(
+    BuildContext context, {
+    required String label,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(vertical: context.spacingM),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.1) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(context.spacingS),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
           ),
-          DropdownMenuItem(
-            value: 'non_applicable',
-            child: Row(
-              children: [
-                Container(width: 8, height: 8, decoration: BoxDecoration(color: Colors.orange, shape: BoxShape.circle)),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text('Non applicable', style: TextStyle(fontSize: context.fontSizeS, color: Colors.orange))),
-              ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isSelected 
+                  ? (label == 'Oui' ? Icons.check_circle : Icons.cancel)
+                  : (label == 'Oui' ? Icons.check_circle_outline : Icons.cancel_outlined),
+              size: context.iconSizeS,
+              color: isSelected ? color : Colors.grey.shade500,
             ),
-          ),
-        ],
-        selectedItemBuilder: (BuildContext context) {
-          return ['oui', 'non', 'non_applicable'].map<Widget>((value) {
-            Color color;
-            String text;
-            switch (value) {
-              case 'oui': color = Colors.green; text = 'Oui'; break;
-              case 'non': color = Colors.red; text = 'Non'; break;
-              default: color = Colors.orange; text = 'NA';
-            }
-            return Row(
-              children: [
-                Container(width: 8, height: 8, decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text(text, style: TextStyle(fontSize: context.fontSizeS, color: color))),
-              ],
-            );
-          }).toList();
-        },
+            SizedBox(width: context.spacingS),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: context.fontSizeM,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? color : Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildReferenceNormativeField(BuildContext context, PointVerification point) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(context.spacingS),
-        border: Border.all(color: Colors.grey.shade300),
-      ),
-      child: TextFormField(
-        initialValue: point.referenceNormative ?? '',
-        style: TextStyle(fontSize: context.fontSizeS),
-        onChanged: (value) {
-          point.referenceNormative = value.isEmpty ? null : value;
-        },
-        decoration: InputDecoration(
-          labelText: 'Référence normative',
-          labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
-          hintText: 'Ex: NFC 15-100',
-          hintStyle: TextStyle(fontSize: context.fontSizeXS, color: Colors.grey.shade400),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingM),
+  // NOUVEAU : Bouton toggle pour la référence normative
+  Widget _buildReferenceNormativeToggle(
+    BuildContext context,
+    PointVerification point,
+    int pointIndex,
+    bool showReference,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Bouton discret pour afficher/masquer
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              _showReferenceNormative[pointIndex] = !showReference;
+            });
+          },
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: context.spacingS,
+              vertical: context.spacingXS,
+            ),
+            decoration: BoxDecoration(
+              color: showReference ? AppTheme.primaryBlue.withOpacity(0.05) : Colors.transparent,
+              borderRadius: BorderRadius.circular(context.spacingL),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  showReference ? Icons.article : Icons.article_outlined,
+                  size: context.iconSizeXS,
+                  color: showReference ? AppTheme.primaryBlue : Colors.grey.shade500,
+                ),
+                SizedBox(width: context.spacingXS),
+                Text(
+                  'Référence normative',
+                  style: TextStyle(
+                    fontSize: context.fontSizeXS,
+                    color: showReference ? AppTheme.primaryBlue : Colors.grey.shade500,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                Icon(
+                  showReference ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                  size: context.iconSizeXS,
+                  color: showReference ? AppTheme.primaryBlue : Colors.grey.shade500,
+                ),
+              ],
+            ),
+          ),
         ),
-      ),
+        
+        // Champ de référence (affiché conditionnellement)
+        if (showReference)
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 200),
+            margin: EdgeInsets.only(top: context.spacingS),
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(context.spacingS),
+                border: Border.all(color: Colors.grey.shade200),
+              ),
+              child: TextFormField(
+                initialValue: point.referenceNormative ?? '',
+                style: TextStyle(fontSize: context.fontSizeS),
+                onChanged: (value) {
+                  point.referenceNormative = value.isEmpty ? null : value;
+                },
+                decoration: InputDecoration(
+                  hintText: 'Ex: NFC 15-100',
+                  hintStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade400),
+                  border: InputBorder.none,
+                  contentPadding: EdgeInsets.all(context.spacingM),
+                ),
+              ),
+            ),
+          ),
+      ],
     );
   }
 
@@ -1919,6 +1894,7 @@ class AjouterCoffretScreen extends StatefulWidget {
 class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nomController = TextEditingController();
+  final _numeroEquipementController = TextEditingController();
   final _repereController = TextEditingController();
   String? _selectedType;
   final _qrCodeController = TextEditingController();
@@ -1927,6 +1903,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   bool _zoneAtex = false;
   String _domaineTension = '';
   bool _identificationArmoire = false;
+  bool _numeroEquipementValid = false;
   bool _signalisationDanger = false;
   bool _presenceSchema = false;
   bool _presenceParafoudre = false;
@@ -1936,9 +1913,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   Alimentation? _protectionTete;
   List<PointVerification> _pointsVerification = [];
 
-  final _observationController = TextEditingController();
-  List<String> _observationPhotos = [];
-  String? _selectedNiveauPuissance;
+  // SUPPRIMÉ : _observationController, _observationPhotos, _selectedNiveauPuissance
 
   List<String> _coffretPhotosExterne = [];
   List<String> _coffretPhotosInterne = [];
@@ -1951,12 +1926,13 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   Map<int, List<String>> _pointSuggestions = {};
   Map<int, bool> _pointLoading = {};
   Map<int, Timer?> _pointDebounceTimers = {};
-  Map<int, bool> _hasObservation = {}; // Nouveau : pour le toggle observation
+  Map<int, bool> _hasObservation = {};
 
   bool _nomValid = false;
   bool _typeValid = false;
   bool _repereValid = false;
-  bool _alimentationsValid = false;
+  // MODIFIÉ : Alimentations non obligatoires
+  bool _alimentationsValid = true;
   bool _pointsValid = false;
   bool _domaineTensionValid = false;
 
@@ -1967,6 +1943,10 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   int _currentStep = 0;
   
   GlobalKey<_EtapePointsVerificationState>? _etapePointsKey;
+
+  bool _isSaving = false;
+  bool _hasUnsavedChanges = false;
+  Timer? _autoSaveTimer;
 
   @override
   void initState() {
@@ -1982,7 +1962,111 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
       _chargerDonneesExistantes();
     } else {
       _initializeAlimentations();
+      _loadDraft();
     }
+  }
+
+  Future<void> _loadDraft() async {
+    final draftData = await HiveService.getCoffretDraftData( 
+      widget.mission.id,
+      widget.parentType,
+      widget.parentIndex,
+      widget.isMoyenneTension,
+      widget.zoneIndex,
+    );
+    
+    if (draftData != null) {
+      final draft = draftData['coffret'] as CoffretArmoire;
+      final savedStep = draftData['currentStep'] as int? ?? 0; // ← Récupéré de la Map
+      
+      setState(() {
+        _nomController.text = draft.nom;
+        _numeroEquipementController.text = draft.numeroEquipement ?? '';
+        _repereController.text = draft.repere ?? '';
+        _selectedType = draft.type;
+        _zoneAtex = draft.zoneAtex;
+        _domaineTension = draft.domaineTension;
+        _identificationArmoire = draft.identificationArmoire;
+        _signalisationDanger = draft.signalisationDanger;
+        _presenceSchema = draft.presenceSchema;
+        _presenceParafoudre = draft.presenceParafoudre;
+        _verificationThermographie = draft.verificationThermographie;
+        _alimentations = List.from(draft.alimentations);
+        _protectionTete = draft.protectionTete;
+        _pointsVerification = List.from(draft.pointsVerification);
+        _coffretPhotosExterne = draft.photos.where((p) => p.contains('externe')).toList();
+        _coffretPhotosInterne = draft.photos.where((p) => p.contains('interne')).toList();
+        _currentStep = savedStep; // ← Utiliser la variable locale
+        
+        // Initialiser hasObservation pour les points existants
+        for (int i = 0; i < _pointsVerification.length; i++) {
+          _hasObservation[i] = _pointsVerification[i].observation != null && _pointsVerification[i].observation!.isNotEmpty;
+        }
+        
+        // Positionner le PageController
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_mainPageController.hasClients) {
+            _mainPageController.jumpToPage(_currentStep);
+          }
+        });
+        
+        _validateNom(_nomController.text);
+        _validateNumeroEquipement(_numeroEquipementController.text);
+        _validateType(_selectedType);
+        _validateRepere(_repereController.text);
+        _validateDomaineTension(_domaineTension);
+        _validatePhotosExterne();
+        _validatePhotosInterne();
+        _validatePoints();
+      });
+    }
+  }
+
+  void _scheduleAutoSave() {
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(const Duration(milliseconds: 500), () {
+      _saveDraft();
+    });
+  }
+
+  Future<void> _saveDraft() async {
+    if (!mounted) return;
+    
+    final toutesPhotos = [..._coffretPhotosExterne, ..._coffretPhotosInterne];
+    
+    final draft = CoffretArmoire(
+      qrCode: _qrCodeController.text.trim(),
+      nom: _nomController.text.trim(),
+      type: _selectedType ?? '',
+      numeroEquipement: _numeroEquipementController.text.trim().isEmpty 
+          ? null 
+          : _numeroEquipementController.text.trim(),
+      repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
+      zoneAtex: _zoneAtex,
+      domaineTension: _domaineTension,
+      identificationArmoire: _identificationArmoire,
+      signalisationDanger: _signalisationDanger,
+      presenceSchema: _presenceSchema,
+      presenceParafoudre: _presenceParafoudre,
+      verificationThermographie: _verificationThermographie,
+      alimentations: _alimentations,
+      protectionTete: _protectionTete,
+      pointsVerification: _pointsVerification,
+      observationsLibres: [],
+      photos: toutesPhotos,
+    );
+    
+    await HiveService.saveCoffretDraft(
+      widget.mission.id,
+      widget.parentType,
+      widget.parentIndex,
+      widget.isMoyenneTension,
+      widget.zoneIndex,
+      draft,
+      _currentStep,
+    );
+    
+    _hasUnsavedChanges = false;
   }
 
   void _autoFillRepere() {
@@ -2021,34 +2105,36 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     _pointDebounceTimers.forEach((key, timer) => timer?.cancel());
     _nomController.dispose();
     _repereController.dispose();
-    _observationController.dispose();
+    // SUPPRIMÉ : _observationController.dispose();
     _qrCodeController.dispose();
     _mainPageController.dispose();
     super.dispose();
   }
 
-  void _validateNom(String value) => setState(() => _nomValid = value.trim().isNotEmpty);
-  void _validateType(String? value) => setState(() => _typeValid = value != null && value.isNotEmpty);
-  void _validateRepere(String value) => setState(() => _repereValid = value.trim().isNotEmpty);
-  void _validateDomaineTension(String? value) => setState(() => _domaineTensionValid = value != null && value.isNotEmpty);
+  void _validateNom(String value) {
+    setState(() => _nomValid = value.trim().isNotEmpty);
+    _scheduleAutoSave();
+  }
+  void _validateNumeroEquipement(String value) {
+    setState(() => _numeroEquipementValid = true); 
+    _scheduleAutoSave();
+  }
+  void _validateType(String? value){
+    setState(() => _typeValid = value != null && value.isNotEmpty);
+    _scheduleAutoSave();
+  }
+  void _validateRepere(String value){
+    setState(() => _repereValid = value.trim().isNotEmpty);
+    _scheduleAutoSave();
+  }
+  void _validateDomaineTension(String? value){
+    setState(() => _domaineTensionValid = value != null && value.isNotEmpty);
+    _scheduleAutoSave();
+  }
 
   void _validateAlimentations() {
-    bool isValid = true;
-    for (var a in _alimentations) {
-      if (a.typeProtection.isEmpty || a.pdcKA.isEmpty || a.calibre.isEmpty || a.sectionCable.isEmpty) {
-        isValid = false;
-        break;
-      }
-    }
-    if (_protectionTete != null) {
-      if (_protectionTete!.typeProtection.isEmpty || 
-          _protectionTete!.pdcKA.isEmpty || 
-          _protectionTete!.calibre.isEmpty || 
-          _protectionTete!.sectionCable.isEmpty) {
-        isValid = false;
-      }
-    }
-    setState(() => _alimentationsValid = isValid);
+    setState(() => _alimentationsValid = true);
+    _scheduleAutoSave();
   }
 
   void _validatePoints() {
@@ -2060,6 +2146,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
       }
     }
     setState(() => _pointsValid = isValid);
+    _scheduleAutoSave();
   }
 
   bool _validateAllFields() {
@@ -2068,15 +2155,14 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     if (_selectedType == null || _selectedType!.isEmpty) { _typeValid = false; allValid = false; }
     if (_repereController.text.trim().isEmpty) { _repereValid = false; allValid = false; }
     
-    _validateAlimentations();
-    if (!_alimentationsValid) allValid = false;
+    // Alimentations optionnelles - pas de validation
+    _alimentationsValid = true;
     
     _validatePoints();
-      if (!_pointsValid) allValid = false;
+    if (!_pointsValid) allValid = false;
     
     if (_domaineTension.isEmpty) { _domaineTensionValid = false; allValid = false; }
     
-    // Validation des photos
     if (_coffretPhotosExterne.isEmpty) { 
       _photosExterneValid = false; 
       allValid = false; 
@@ -2094,6 +2180,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     }
     
     setState(() {});
+    _scheduleAutoSave();
     return allValid;
   }
 
@@ -2101,18 +2188,21 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     if (qrCode.isEmpty) { setState(() => _isQrCodeValid = false); return; }
     final existing = HiveService.findCoffretByQrCode(widget.mission.id, qrCode);
     _isQrCodeValid = widget.isEdition ? true : existing == null;
+    _scheduleAutoSave();
   }
 
   void _validatePhotosExterne() {
     setState(() {
       _photosExterneValid = _coffretPhotosExterne.isNotEmpty;
     });
+    _scheduleAutoSave();
   }
 
   void _validatePhotosInterne() {
     setState(() {
       _photosInterneValid = _coffretPhotosInterne.isNotEmpty;
     });
+    _scheduleAutoSave();
   }
 
   void _chargerDonneesExistantes() {
@@ -2137,12 +2227,13 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
       photos: List.from(point.photos),
     )));
     
-    // Initialiser hasObservation pour les points existants
     for (int i = 0; i < _pointsVerification.length; i++) {
       _hasObservation[i] = _pointsVerification[i].observation != null && _pointsVerification[i].observation!.isNotEmpty;
     }
     
     if (coffret.photos.isNotEmpty) {
+      // Supposons que la première moitié sont externes, deuxième moitié internes
+      // Dans la pratique, il faudrait distinguer, mais on simplifie
       _coffretPhotosExterne = List.from(coffret.photos);
     }
     _initializeForCoffretType(_selectedType);
@@ -2154,10 +2245,15 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     _validateDomaineTension(coffret.domaineTension);
   }
 
-
   Future<void> _prendrePhotoExterne() async {
     try {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.rear,
+        imageQuality: 85,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
       if (photo != null) {
         setState(() => _isLoadingPhotosExterne = true);
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_externe');
@@ -2185,7 +2281,13 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
 
   Future<void> _prendrePhotoInterne() async {
     try {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.rear,
+        imageQuality: 85,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
       if (photo != null) {
         setState(() => _isLoadingPhotosInterne = true);
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_interne');
@@ -2197,38 +2299,18 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     } catch (e) { _showError('Erreur photo interne: $e'); } finally { setState(() => _isLoadingPhotosInterne = false); }
   }
 
-Future<void> _choisirPhotoInterne() async {
-  try {
-    final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
-    if (photo != null) {
-      setState(() => _isLoadingPhotosInterne = true);
-      final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_interne');
-      setState(() {
-        _coffretPhotosInterne.add(savedPath);
-        _validatePhotosInterne();
-      });
-    }
-  } catch (e) { _showError('Erreur sélection photo interne: $e'); } finally { setState(() => _isLoadingPhotosInterne = false); }
-}
-
-  Future<void> _prendrePhotoObservation() async {
-    try {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
-      if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations');
-        setState(() => _observationPhotos.add(savedPath));
-      }
-    } catch (e) { _showError('Erreur photo observation: $e'); }
-  }
-
-  Future<void> _choisirPhotoObservation() async {
+  Future<void> _choisirPhotoInterne() async {
     try {
       final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
       if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations');
-        setState(() => _observationPhotos.add(savedPath));
+        setState(() => _isLoadingPhotosInterne = true);
+        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_interne');
+        setState(() {
+          _coffretPhotosInterne.add(savedPath);
+          _validatePhotosInterne();
+        });
       }
-    } catch (e) { _showError('Erreur sélection photo observation: $e'); }
+    } catch (e) { _showError('Erreur sélection photo interne: $e'); } finally { setState(() => _isLoadingPhotosInterne = false); }
   }
 
   Future<String> _savePhotoToAppDirectory(File photoFile, String subDir) async {
@@ -2240,7 +2322,6 @@ Future<void> _choisirPhotoInterne() async {
     await photoFile.copy(newPath);
     return newPath;
   }
-
 
   void _supprimerPhotoExterne(int index) {
     showDialog(
@@ -2320,7 +2401,6 @@ Future<void> _choisirPhotoInterne() async {
         pointVerification: point, conformite: '', observation: null, referenceNormative: null,
       )).toList();
       
-      // Initialiser hasObservation
       _hasObservation.clear();
       for (int i = 0; i < _pointsVerification.length; i++) {
         _hasObservation[i] = false;
@@ -2477,6 +2557,14 @@ Future<void> _choisirPhotoInterne() async {
           ));
           Navigator.pop(context, true);
         }
+
+        await HiveService.deleteCoffretDraft(
+          widget.mission.id,
+          widget.parentType,
+          widget.parentIndex,
+          widget.isMoyenneTension,
+          widget.zoneIndex,
+        );
       } else {
         _showError('Erreur lors de la sauvegarde');
       }
@@ -2541,10 +2629,8 @@ Future<void> _choisirPhotoInterne() async {
     } catch (e) { return false; }
   }
 
-
   void _handleNext() {
     if (_currentStep == 0) {
-      // Vérifier tous les champs obligatoires de l'étape 1
       if (!_nomValid) {
         _showError('Veuillez saisir le nom de l\'équipement');
         return;
@@ -2570,12 +2656,8 @@ Future<void> _choisirPhotoInterne() async {
     } else if (_currentStep == 1) {
       _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     } else if (_currentStep == 2) {
-      _validateAlimentations();
-      if (_alimentationsValid) {
-        _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-      } else {
-        _showError('Veuillez remplir tous les champs des alimentations');
-      }
+      // MODIFIÉ : Pas de validation bloquante pour les alimentations
+      _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     } else if (_currentStep == 3) {
       final pointsState = _etapePointsKey?.currentState;
       if (pointsState != null) {
@@ -2586,7 +2668,7 @@ Future<void> _choisirPhotoInterne() async {
         }
       }
     }
-  } 
+  }
 
   void _handlePrevious() {
     if (_currentStep == 3) {
@@ -2685,16 +2767,20 @@ Future<void> _choisirPhotoInterne() async {
                 physics: const NeverScrollableScrollPhysics(),
                 onPageChanged: (index) => setState(() => _currentStep = index),
                 children: [
+                  // Étape 1 : Informations de base (sans observation équipement)
                   _EtapeInformationsBase(
                     nomController: _nomController,
+                    numeroEquipementController: _numeroEquipementController,
                     repereController: _repereController,
                     selectedType: _selectedType,
                     onTypeChanged: _onTypeChanged,
                     typeValid: _typeValid,
                     nomValid: _nomValid,
+                    numeroEquipementValid: _numeroEquipementValid,
                     repereValid: _repereValid,
                     onValidateNom: () => _validateNom(_nomController.text),
                     onValidateRepere: () => _validateRepere(_repereController.text),
+                    onValidateNumeroEquipement: () => _validateNumeroEquipement(_numeroEquipementController.text),
                     photosExterne: _coffretPhotosExterne,
                     photosInterne: _coffretPhotosInterne,
                     onPrendrePhotoExterne: _prendrePhotoExterne,
@@ -2706,28 +2792,6 @@ Future<void> _choisirPhotoInterne() async {
                     onSupprimerPhotoExterne: _supprimerPhotoExterne,
                     onSupprimerPhotoInterne: _supprimerPhotoInterne,
                     isInZone: widget.isInZone,
-                    observationController: _observationController,
-                    observationPhotos: _observationPhotos,
-                    onPrendrePhotoObservation: _prendrePhotoObservation,
-                    onChoisirPhotoObservation: _choisirPhotoObservation,
-                    selectedNiveauPuissance: _selectedNiveauPuissance,
-                    onNiveauPuissanceChanged: (value) {
-                      setState(() {
-                        _selectedNiveauPuissance = value;
-                        if (value != null) {
-                          const options = [
-                            {'value': 'tres_petites_sections', 'label': 'Très petites sections'},
-                            {'value': 'installations_domestiques', 'label': 'Installations domestiques / tertiaires'},
-                            {'value': 'puissances_moyennes', 'label': 'Puissances moyennes'},
-                            {'value': 'puissances_evelees', 'label': 'Puissances élevées / industrie'},
-                          ];
-                          final selected = options.firstWhere((opt) => opt['value'] == value);
-                          if (_observationController.text.isEmpty) {
-                            _observationController.text = selected['label'] as String;
-                          }
-                        }
-                      });
-                    },
                   ),
                   
                   if (_selectedType != null)
@@ -2758,6 +2822,7 @@ Future<void> _choisirPhotoInterne() async {
                         _validateAlimentations();
                         setState(() {});
                       },
+                      sourcesDisponibles: _getSourcesDisponibles(),
                     ),
                   
                   if (_selectedType != null && _pointsVerification.isNotEmpty)
@@ -2817,4 +2882,12 @@ Future<void> _choisirPhotoInterne() async {
       ),
     );
   }
+}
+
+// Récupérer les sources disponibles depuis l'audit
+List<String> _getSourcesDisponibles() {
+  // Récupérer les coffrets existants pour les proposer comme sources
+  final sources = <String>['Inverseur', 'Armoire', 'Coffret', 'TGBT'];
+  // On pourrait aussi ajouter les noms des coffrets existants
+  return sources;
 }

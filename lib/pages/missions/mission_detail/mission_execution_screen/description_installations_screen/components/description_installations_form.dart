@@ -1,4 +1,5 @@
 // description_installations_form.dart
+
 import 'package:flutter/material.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
@@ -41,15 +42,13 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
   bool _addingMore = false;
   List<InstallationItem> _items = [];
   
-  // Scroll controller pour faire défiler vers le haut quand le clavier apparaît
+  // Scroll controller
   final ScrollController _scrollController = ScrollController();
   
   // Variables pour les dropdowns Oui/Non
   String? _selectedCuveRetention;
   String? _selectedIndicateurNiveau;
   String? _selectedMiseALaTerre;
-
-  final FocusNode _focusNode = FocusNode();
   
   // Variable pour section de câble
   String? _selectedSectionCable;
@@ -62,12 +61,62 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
   
   // Options pour TYPE DE CELLULE
   static const List<String> _typeCelluleOptions = [
-    'Type 1',
-    'Type 2',
-    'Type 3',
-    'Cellule A',
-    'Cellule B',
-    'Cellule C'
+    'I : Interrupteur-sectionneur (arrivée / départ boucle)'
+
+    'IM : Interrupteur-sectionneur avec mise à la terre'
+
+    'IQ : Interrupteur avec disjoncteur'
+
+    'ID : Interrupteur départ ligne'
+
+    'Q : Disjoncteur HTA'
+
+    'IF : Interrupteur-fusibles (protection transformateur)'
+
+    'D : Départ direct'
+
+    'DM : Départ avec mise à la terre'
+
+    'M : Mesure HTA'
+
+    'DE : Cellule de mise à la terre'
+
+    'QM : Interrupteur-sectionneur (arrivée, boucle, couplage)'
+
+    'QMC : Interrupteur motorisé'
+
+    'QF : Interrupteur-fusibles (protection transformateur)'
+
+    'Q : Disjoncteur HTA'
+
+    'DM1 / DM2 : Départ câble'
+
+    'GBC : Disjoncteur général'
+
+    'BC : Couplage jeux de barres'
+
+    'M : Mesure HTA'
+
+    'SE : Sectionnement avec mise à la terre'
+
+    'Incoming (I) : Arrivée réseau'
+
+    'Outgoing (O) : Départ ligne ou câble'
+
+    'Bus Coupler (BC) : Couplage jeux de barres'
+
+    'Transformer Feeder (TF) : Départ transformateur'
+
+    'Generator Feeder (GF) : Groupe électrogène'
+
+    'Motor Feeder (MF) : Moteur HTA'
+
+    'Capacitor Feeder (CF) : Batterie de condensateurs'
+
+    'Metering (M) : Mesure HTA'
+
+    'Bus Riser (BR) : Liaison tableau'
+
   ];
   
   // Liste des sections de câble disponibles
@@ -83,24 +132,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     super.initState();
     _initializeForm();
     _loadExistingItems();
-    
-    // Ajouter un listener sur le FocusNode
-    _focusNode.addListener(_onFocusChange);
-  }
-  
-  void _onFocusChange() {
-    if (_focusNode.hasFocus) {
-      // Attendre que le clavier soit complètement ouvert
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted && _scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    }
   }
 
   void _initializeForm() {
@@ -146,16 +177,7 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
     if (photo != null && mounted) {
       setState(() => _photoPaths.add(photo.path));
-      // Faire défiler vers le bas pour voir la nouvelle photo
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted && _scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
+      _scrollToBottom();
     }
   }
 
@@ -163,16 +185,32 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     final XFile? photo = await _picker.pickImage(source: ImageSource.gallery);
     if (photo != null && mounted) {
       setState(() => _photoPaths.add(photo.path));
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (mounted && _scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
+      _scrollToBottom();
     }
+  }
+  
+  void _scrollToBottom() {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted && _scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+  
+  void _scrollToTop() {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (mounted && _scrollController.hasClients) {
+        _scrollController.animateTo(
+          0,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   void _removePhoto(int index) {
@@ -263,7 +301,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     });
   }
 
-  // Validation d'une année
   String? _validateAnnee(String? value) {
     if (value == null || value.trim().isEmpty) return null;
     
@@ -282,7 +319,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     return null;
   }
 
-  // Validation spécifique stabilisateur : fabrication < installation
   String? _validateFabricationVsInstallation() {
     if (widget.sectionKey != 'stabilisateur') return null;
     
@@ -307,15 +343,12 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     return null;
   }
 
-  // Validation complète AVEC BLOCAGE
   bool _validateForm() {
-    // 1. Vérifier qu'au moins un champ est rempli
     if (!_hasAtLeastOneFieldFilled()) {
       _showErrorSnackBar('Veuillez remplir au moins un champ');
       return false;
     }
 
-    // 2. Valider toutes les années (fabrication ≤ année en cours)
     for (var champ in widget.champs) {
       if (_isAnneeField(champ) && !_isOuiNonField(champ)) {
         final value = _controllers[champ]!.text.trim();
@@ -329,7 +362,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
       }
     }
 
-    // 3. Validation spécifique stabilisateur : fabrication < installation
     final errorStab = _validateFabricationVsInstallation();
     if (errorStab != null) {
       _showErrorSnackBar(errorStab);
@@ -353,9 +385,10 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
   }
 
   Future<void> _saveItem() async {
-    // VALIDATION STRICTE - BLOQUE SI INVALIDE
+    FocusScope.of(context).unfocus();
+    
     if (!_validateForm()) {
-      return; // BLOQUÉ ICI - Ne passe pas à l'étape suivante
+      return;
     }
     
     if (!mounted) return;
@@ -400,7 +433,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
       if (!mounted) return;
       
       if (success) {
-        // Afficher un message de succès
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Élément enregistré avec succès'),
@@ -426,7 +458,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                 TextButton(
                   onPressed: () {
                     Navigator.pop(context, false);
-                    // Appeler onComplete pour marquer la section comme complétée
                     widget.onComplete(widget.sectionKey);
                   },
                   child: const Text('Terminer'),
@@ -434,7 +465,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                 ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context, true);
-                    // Ne pas appeler onComplete ici, on reste dans la même section
                   },
                   child: const Text('Ajouter un autre'),
                 ),
@@ -446,33 +476,11 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
             setState(() {
               _addingMore = true;
             });
-            // Faire défiler vers le haut après avoir ajouté un autre élément
-            Future.delayed(const Duration(milliseconds: 100), () {
-              if (mounted && _scrollController.hasClients) {
-                _scrollController.animateTo(
-                  0,
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeOut,
-                );
-              }
-            });
-          } else if (addAnother == false && mounted) {
-            // L'utilisateur a choisi "Terminer" - la section est déjà marquée complétée
-            // On ne fait rien de plus
+            _scrollToTop();
           }
         } else {
-          // En mode _addingMore, on reset le formulaire et on reste
           setState(() {});
-          // Faire défiler vers le haut
-          Future.delayed(const Duration(milliseconds: 100), () {
-            if (mounted && _scrollController.hasClients) {
-              _scrollController.animateTo(
-                0,
-                duration: const Duration(milliseconds: 300),
-                curve: Curves.easeOut,
-              );
-            }
-          });
+          _scrollToTop();
         }
       } else {
         throw Exception('Échec de la sauvegarde');
@@ -645,9 +653,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
 
   @override
   void dispose() {
-    // Supprimer le listener du FocusNode
-    _focusNode.removeListener(_onFocusChange);
-    _focusNode.dispose();
     _scrollController.dispose();
     for (var controller in _controllers.values) {
       controller.dispose();
@@ -829,7 +834,7 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
 
     return GestureDetector(
-      onTap: () => _focusNode.unfocus(),
+      onTap: () => FocusScope.of(context).unfocus(),
       child: SingleChildScrollView(
         controller: _scrollController,
         keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -882,7 +887,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
               ),
               SizedBox(height: isSmallScreen ? 12 : 16),
               
-              // Liste des éléments existants
               if (_items.isNotEmpty)
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1038,8 +1042,7 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                     SizedBox(height: isSmallScreen ? 12 : 16),
                   ],
                 ),
-      
-              // Formulaire d'ajout
+
               Form(
                 key: _formKey,
                 child: Column(
@@ -1131,8 +1134,7 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                         ),
                       );
                     }).toList(),
-      
-                    // Section photos
+
                     Padding(
                       padding: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
                       child: Column(
@@ -1256,7 +1258,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
               ),
               SizedBox(height: isSmallScreen ? 16 : 20),
               
-              // Bouton d'action
               SizedBox(
                 width: isSmallScreen ? 250 : 350,
                 child: ElevatedButton(

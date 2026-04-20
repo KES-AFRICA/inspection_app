@@ -272,6 +272,8 @@ class Cellule {
   @HiveField(8)
   List<String> photos; // Chemins des photos de la cellule
 
+  
+
   Cellule({
     required this.fonction,
     required this.type,
@@ -334,7 +336,7 @@ class TransformateurMTBT {
 @HiveType(typeId: 11)
 class CoffretArmoire {
   @HiveField(0)
-  String qrCode; // Nouveau champ pour stocker le QR code
+  String qrCode; 
 
   @HiveField(1)
   String nom;
@@ -389,6 +391,9 @@ class CoffretArmoire {
   @HiveField(16)
   List<String> photos; // Chemins des photos du coffret/armoire
 
+  @HiveField(17)
+  String? numeroEquipement;
+
   CoffretArmoire({
     required this.qrCode, // Ajouté dans le constructeur
     required this.nom,
@@ -407,6 +412,7 @@ class CoffretArmoire {
     List<PointVerification>? pointsVerification,
     List<ObservationLibre>? observationsLibres,
     List<String>? photos,
+    this.numeroEquipement,
   })  : alimentations = alimentations ?? [],
         pointsVerification = pointsVerification ?? [],
         observationsLibres = observationsLibres ?? [],
@@ -431,12 +437,16 @@ class Alimentation {
   @HiveField(4)
   List<String> photos; // Photos de l'étiquette ou de l'installation
 
+  @HiveField(5)
+  String source;
+
   Alimentation({
     required this.typeProtection,
     required this.pdcKA,
     required this.calibre,
     required this.sectionCable,
     List<String>? photos,
+    this.source = '',
   }) : photos = photos ?? [];
 }
 

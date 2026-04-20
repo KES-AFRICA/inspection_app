@@ -21,6 +21,7 @@ class HiveService {
   static const String _foudreBox = 'foudre_observations';
   static const String _mesuresEssaisBox = 'mesures_essais';
   static const String _jsaBox = 'jsa';
+  static const String _coffretDraftsBox = 'coffret_drafts';
 
   // Initialiser Hive
   static Future<void> init() async {
@@ -61,6 +62,7 @@ class HiveService {
   Hive.registerAdapter(JSAEPIAdapter());
   Hive.registerAdapter(JSAVerificationFinaleAdapter());
   await Hive.openBox<JSA>(_jsaBox);
+  await Hive.openBox<Map>(_coffretDraftsBox);
   
 
     // Ouvrir les boxes
@@ -1573,7 +1575,7 @@ static List<String> getConditionsExploitationForLocal(String localType) {
 /// Obtenir les points de vérification pour un type de coffret
 static List<String> getPointsVerificationForCoffret(String coffretType) {
   final pointsBase = [
-    'Emplacement / Dégagement autour de l\'armoire',
+    'Emplacement / Dégagement autour',
     'Protection IP/IK adaptée au local d\'installation',
     'Etat du coffret / Armoire',
     'Identification complète des circuits',
@@ -5000,6 +5002,105 @@ static JSA? getJSAByMissionId(String missionId) {
   } catch (e) {
     return null;
   }
+}
+
+/// Sauvegarder un brouillon de coffret
+static Future<void> saveCoffretDraft(
+  String missionId,
+  String parentType,
+  int parentIndex,
+  bool isMoyenneTension,
+  int? zoneIndex,
+  CoffretArmoire coffret,
+  int currentStep,
+) async {
+  final box = Hive.box<Map>(_coffretDraftsBox);
+  final key = _getDraftKey(missionId, parentType, parentIndex, isMoyenneTension, zoneIndex);
+  
+  await box.put(key, {
+    'coffret': coffret,
+    'currentStep': currentStep,
+    'savedAt': DateTime.now().toIso8601String(),
+  });
+}
+
+/// Récupérer un brouillon de coffret
+static CoffretArmoire? getCoffretDraft(
+  String missionId,
+  String parentType,
+  int parentIndex,
+  bool isMoyenneTension,
+  int? zoneIndex,
+) {
+  final box = Hive.box<Map>(_coffretDraftsBox);
+  final key = _getDraftKey(missionId, parentType, parentIndex, isMoyenneTension, zoneIndex);
+  final data = box.get(key);
+  
+  if (data != null && data['coffret'] is CoffretArmoire) {
+    return data['coffret'] as CoffretArmoire;
+  }
+  return null;
+}
+
+/// Récupérer le step courant du brouillon
+static int getCoffretDraftStep(
+  String missionId,
+  String parentType,
+  int parentIndex,
+  bool isMoyenneTension,
+  int? zoneIndex,
+) {
+  final box = Hive.box<Map>(_coffretDraftsBox);
+  final key = _getDraftKey(missionId, parentType, parentIndex, isMoyenneTension, zoneIndex);
+  final data = box.get(key);
+  
+  if (data != null && data['currentStep'] is int) {
+    return data['currentStep'] as int;
+  }
+  return 0;
+}
+
+/// Supprimer un brouillon après sauvegarde complète
+static Future<void> deleteCoffretDraft(
+  String missionId,
+  String parentType,
+  int parentIndex,
+  bool isMoyenneTension,
+  int? zoneIndex,
+) async {
+  final box = Hive.box<Map>(_coffretDraftsBox);
+  final key = _getDraftKey(missionId, parentType, parentIndex, isMoyenneTension, zoneIndex);
+  await box.delete(key);
+}
+
+static String _getDraftKey(
+  String missionId,
+  String parentType,
+  int parentIndex,
+  bool isMoyenneTension,
+  int? zoneIndex,
+) {
+  return '${missionId}_${parentType}_${parentIndex}_${isMoyenneTension}_${zoneIndex ?? 0}';
+}
+
+static Map<String, dynamic>? getCoffretDraftData(
+  String missionId,
+  String parentType,
+  int parentIndex,
+  bool isMoyenneTension,
+  int? zoneIndex,
+) {
+  final box = Hive.box<Map>(_coffretDraftsBox);
+  final key = _getDraftKey(missionId, parentType, parentIndex, isMoyenneTension, zoneIndex);
+  final data = box.get(key);
+  
+  if (data != null && data['coffret'] is CoffretArmoire) {
+    return {
+      'coffret': data['coffret'] as CoffretArmoire,
+      'currentStep': data['currentStep'] as int? ?? 0,
+    };
+  }
+  return null;
 }
 
 }

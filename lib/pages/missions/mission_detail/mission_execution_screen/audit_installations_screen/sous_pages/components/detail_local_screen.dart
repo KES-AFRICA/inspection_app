@@ -1481,6 +1481,7 @@ Widget _buildElementItem(ElementControle element) {
     final pointsConformes = coffret.pointsVerification.where((p) => p.conformite == 'oui').length;
     final totalPoints = coffret.pointsVerification.length;
     final pourcentage = totalPoints > 0 ? (pointsConformes / totalPoints * 100).round() : 0;
+    final isComplet = _isCoffretComplet(coffret);
 
     return  Container(
       margin: EdgeInsets.only(bottom: 8),
@@ -1489,7 +1490,7 @@ Widget _buildElementItem(ElementControle element) {
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Colors.grey
+          color: isComplet ? Colors.green.shade200 : Colors.red.shade200,
         ),
       ),
       child: ListTile(
@@ -1502,9 +1503,32 @@ Widget _buildElementItem(ElementControle element) {
           ),
           child: Icon(Icons.electrical_services, color: AppTheme.primaryBlue),
         ),
-        title: Text(
-          coffret.nom,
-          style: TextStyle(fontWeight: FontWeight.w600),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                coffret.nom,
+                style: TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            // NOUVEAU : Badge "Incomplet"
+            if (!isComplet)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Incomplet',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade700,
+                  ),
+                ),
+              ),
+          ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1584,6 +1608,24 @@ Widget _buildElementItem(ElementControle element) {
       )
     );
   }
+
+  // Vérifier si un coffret est complet
+bool _isCoffretComplet(CoffretArmoire coffret) {
+  // Vérifier les champs obligatoires
+  if (coffret.nom.isEmpty) return false;
+  if (coffret.type.isEmpty) return false;
+  if (coffret.domaineTension.isEmpty) return false;
+  
+  // Vérifier les photos
+  if (coffret.photos.isEmpty) return false;
+  
+  // Vérifier les points de vérification
+  for (var point in coffret.pointsVerification) {
+    if (point.conformite.isEmpty) return false;
+  }
+  
+  return true;
+}
 
   Widget _buildLocalStats() {
     // Calculer le nombre total de photos (local + toutes les observations)

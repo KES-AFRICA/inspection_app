@@ -691,6 +691,11 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
     final conformiteCount = local.dispositionsConstructives.where((e) => e.conforme).length;
     final totalCount = local.dispositionsConstructives.length;
     final pourcentage = totalCount > 0 ? (conformiteCount / totalCount * 100).round() : 0;
+    
+    // NOUVEAU : Vérifier si tous les coffrets du local sont complets
+    final allCoffretsComplets = local.coffrets.isEmpty || 
+        local.coffrets.every((c) => _isCoffretComplet(c));
+    final hasIncompletCoffrets = !allCoffretsComplets;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -703,10 +708,36 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
         leading: Container(
           width: 40,
           height: 40,
-          decoration: BoxDecoration(color: AppTheme.primaryBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+          decoration: BoxDecoration(
+            color: AppTheme.primaryBlue.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
           child: Icon(Icons.domain, color: AppTheme.primaryBlue),
         ),
-        title: Text(local.nom, style: const TextStyle(fontWeight: FontWeight.w600)),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(local.nom, style: const TextStyle(fontWeight: FontWeight.w600)),
+            ),
+            // NOUVEAU : Badge si coffrets incomplets
+            if (hasIncompletCoffrets)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'Coffrets incomplets',
+                  style: TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade700,
+                  ),
+                ),
+              ),
+          ],
+        ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -740,6 +771,21 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
       ),
     );
   }
+
+  // NOUVEAU : Ajouter cette méthode dans la classe
+  bool _isCoffretComplet(CoffretArmoire coffret) {
+    if (coffret.nom.isEmpty) return false;
+    if (coffret.type.isEmpty) return false;
+    if (coffret.domaineTension.isEmpty) return false;
+    if (coffret.photos.isEmpty) return false;
+    
+    for (var point in coffret.pointsVerification) {
+      if (point.conformite.isEmpty) return false;
+    }
+    
+    return true;
+  }
+
 
   Widget _buildZoneCard(MoyenneTensionZone zone, int index) {
     final totalLocaux = zone.locaux.length;

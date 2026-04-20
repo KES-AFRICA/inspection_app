@@ -283,12 +283,16 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
   Widget _buildZoneCard(BasseTensionZone zone, int index) {
     final totalLocaux = zone.locaux.length;
     final totalCoffrets = zone.coffretsDirects.length + zone.locaux.fold(0, (sum, local) => sum + local.coffrets.length);
+    
+    // Vérifier les coffrets incomplets
+    final allCoffretsComplets = _areAllCoffretsCompletsInZone(zone);
+    final hasIncompletCoffrets = !allCoffretsComplets;
 
-    return  Container(
+    return Container(
       margin: EdgeInsets.only(bottom: 8),
       padding: EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
           color: Colors.grey.shade400,
@@ -318,13 +322,38 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          zone.nom,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                zone.nom,
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                            // NOUVEAU : Badge équipements incomplets
+                            if (hasIncompletCoffrets)
+                              Container(
+                                margin: EdgeInsets.only(left: 8),
+                                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade100,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.red.shade300),
+                                ),
+                                child: Text(
+                                  'Incomplet',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red.shade700,
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                         if (zone.description != null) ...[
                           SizedBox(height: 4),
@@ -385,6 +414,36 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
         ),
       ),
     );
+  }
+
+  // Ajouter ces méthodes dans la classe _BasseTensionScreenState
+  bool _areAllCoffretsCompletsInZone(BasseTensionZone zone) {
+    // Vérifier les coffrets directs
+    for (var coffret in zone.coffretsDirects) {
+      if (!_isCoffretComplet(coffret)) return false;
+    }
+    
+    // Vérifier les coffrets dans les locaux
+    for (var local in zone.locaux) {
+      for (var coffret in local.coffrets) {
+        if (!_isCoffretComplet(coffret)) return false;
+      }
+    }
+    
+    return true;
+  }
+
+  bool _isCoffretComplet(CoffretArmoire coffret) {
+    if (coffret.nom.isEmpty) return false;
+    if (coffret.type.isEmpty) return false;
+    if (coffret.domaineTension.isEmpty) return false;
+    if (coffret.photos.isEmpty) return false;
+    
+    for (var point in coffret.pointsVerification) {
+      if (point.conformite.isEmpty) return false;
+    }
+    
+    return true;
   }
 
   Widget _buildZoneStat(String title, int count, IconData icon) {
