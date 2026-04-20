@@ -61,61 +61,61 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
   
   // Options pour TYPE DE CELLULE
   static const List<String> _typeCelluleOptions = [
-    'I : Interrupteur-sectionneur (arrivée / départ boucle)'
+    'I : Interrupteur-sectionneur (arrivée / départ boucle)',
 
-    'IM : Interrupteur-sectionneur avec mise à la terre'
+    'IM : Interrupteur-sectionneur avec mise à la terre',
 
-    'IQ : Interrupteur avec disjoncteur'
+    'IQ : Interrupteur avec disjoncteur',
 
-    'ID : Interrupteur départ ligne'
+    'ID : Interrupteur départ ligne',
 
-    'Q : Disjoncteur HTA'
+    'Q : Disjoncteur HTA',
 
-    'IF : Interrupteur-fusibles (protection transformateur)'
+    'IF : Interrupteur-fusibles (protection transformateur)',
 
-    'D : Départ direct'
+    'D : Départ direct',
 
-    'DM : Départ avec mise à la terre'
+    'DM : Départ avec mise à la terre',
 
-    'M : Mesure HTA'
+    'M : Mesure HTA',
 
-    'DE : Cellule de mise à la terre'
+    'DE : Cellule de mise à la terre',
 
-    'QM : Interrupteur-sectionneur (arrivée, boucle, couplage)'
+    'QM : Interrupteur-sectionneur (arrivée, boucle, couplage)',
 
-    'QMC : Interrupteur motorisé'
+    'QMC : Interrupteur motorisé',
 
-    'QF : Interrupteur-fusibles (protection transformateur)'
+    'QF : Interrupteur-fusibles (protection transformateur)',
 
-    'Q : Disjoncteur HTA'
+    'Q : Disjoncteur HTA',
 
-    'DM1 / DM2 : Départ câble'
+    'DM1 / DM2 : Départ câble',
 
-    'GBC : Disjoncteur général'
+    'GBC : Disjoncteur général',
 
-    'BC : Couplage jeux de barres'
+    'BC : Couplage jeux de barres',
 
-    'M : Mesure HTA'
+    'M : Mesure HTA',
 
-    'SE : Sectionnement avec mise à la terre'
+    'SE : Sectionnement avec mise à la terre',
 
-    'Incoming (I) : Arrivée réseau'
+    'Incoming (I) : Arrivée réseau',
 
-    'Outgoing (O) : Départ ligne ou câble'
+    'Outgoing (O) : Départ ligne ou câble',
 
-    'Bus Coupler (BC) : Couplage jeux de barres'
+    'Bus Coupler (BC) : Couplage jeux de barres',
 
-    'Transformer Feeder (TF) : Départ transformateur'
+    'Transformer Feeder (TF) : Départ transformateur',
 
-    'Generator Feeder (GF) : Groupe électrogène'
+    'Generator Feeder (GF) : Groupe électrogène',
 
-    'Motor Feeder (MF) : Moteur HTA'
+    'Motor Feeder (MF) : Moteur HTA',
 
-    'Capacitor Feeder (CF) : Batterie de condensateurs'
+    'Capacitor Feeder (CF) : Batterie de condensateurs',
 
-    'Metering (M) : Mesure HTA'
+    'Metering (M) : Mesure HTA',
 
-    'Bus Riser (BR) : Liaison tableau'
+    'Bus Riser (BR) : Liaison tableau',
 
   ];
   

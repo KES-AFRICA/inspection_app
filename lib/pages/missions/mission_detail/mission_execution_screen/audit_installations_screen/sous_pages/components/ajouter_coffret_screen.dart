@@ -2016,10 +2016,11 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
       _chargerDonneesExistantes();
     } else {
       _initializeAlimentations();
+      _loadDraft;
       // Si on a un QR code, charger le brouillon existant
       if (_draftQrCode != null && _draftQrCode!.isNotEmpty) {
         _loadDraftByQrCode(_draftQrCode!);
-      }else{_loadDraft;}
+      }
     }
   }
 
@@ -2099,13 +2100,11 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
         _protectionTete = draft.protectionTete;
         _pointsVerification = List.from(draft.pointsVerification);
         
-        // Séparer les photos (on suppose qu'elles sont toutes mélangées)
         _coffretPhotosExterne = draft.photos.where((p) => p.contains('externe')).toList();
         _coffretPhotosInterne = draft.photos.where((p) => p.contains('interne')).toList();
         
         _currentStep = savedStep;
         
-        // Initialiser hasObservation
         for (int i = 0; i < _pointsVerification.length; i++) {
           final point = _pointsVerification[i];
           if (point.conformite == 'non') {
@@ -2115,7 +2114,6 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
           }
         }
         
-        // Positionner le PageController
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (_mainPageController.hasClients) {
             _mainPageController.jumpToPage(_currentStep);
