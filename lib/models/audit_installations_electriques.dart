@@ -394,6 +394,13 @@ class CoffretArmoire {
   @HiveField(17)
   String? numeroEquipement;
 
+  @HiveField(18)
+  String statut; // 'complet' ou 'incomplet'
+
+  //Étape courante pour reprise
+  @HiveField(19)
+  int currentStep;
+
   CoffretArmoire({
     required this.qrCode, // Ajouté dans le constructeur
     required this.nom,
@@ -412,6 +419,8 @@ class CoffretArmoire {
     List<PointVerification>? pointsVerification,
     List<ObservationLibre>? observationsLibres,
     List<String>? photos,
+    this.statut = 'incomplet',
+    this.currentStep = 0,
     this.numeroEquipement,
   })  : alimentations = alimentations ?? [],
         pointsVerification = pointsVerification ?? [],

@@ -5004,100 +5004,83 @@ static JSA? getJSAByMissionId(String missionId) {
   }
 }
 
-/// Sauvegarder un brouillon de coffret
-static Future<void> saveCoffretDraft(
-  String missionId,
-  String parentType,
-  int parentIndex,
-  bool isMoyenneTension,
-  int? zoneIndex,
-  CoffretArmoire coffret,
-  int currentStep,
-) async {
-  final box = Hive.box<Map>(_coffretDraftsBox);
-  final key = _getDraftKey(missionId, parentType, parentIndex, isMoyenneTension, zoneIndex);
+/// Sauvegarder un brouillon de coffret (identifié par son QR code)
+static Future<void> saveCoffretDraft({
+  required String missionId,
+  required String parentType,
+  required int parentIndex,
+  required bool isMoyenneTension,
+  required int? zoneIndex,
+  required CoffretArmoire coffret,
+  required int currentStep,
+}) async {
+  final box = Hive.box<CoffretArmoire>(_coffretDraftsBox);
   
-  await box.put(key, {
-    'coffret': coffret,
-    'currentStep': currentStep,
-    'savedAt': DateTime.now().toIso8601String(),
-  });
+  // Le QR code est l'identifiant unique du brouillon
+  String draftKey = coffret.qrCode;
+  if (draftKey.isEmpty) {
+    draftKey = 'TEMP_${DateTime.now().millisecondsSinceEpoch}';
+    coffret.qrCode = draftKey;
+  }
+  
+  // Ajouter les métadonnées
+  coffret.statut = 'incomplet';
+  coffret.currentStep = currentStep;
+  
+  await box.put(draftKey, coffret);
+  print('✅ Brouillon sauvegardé: $draftKey (step $currentStep)');
 }
 
-/// Récupérer un brouillon de coffret
-static CoffretArmoire? getCoffretDraft(
-  String missionId,
-  String parentType,
-  int parentIndex,
-  bool isMoyenneTension,
-  int? zoneIndex,
-) {
-  final box = Hive.box<Map>(_coffretDraftsBox);
-  final key = _getDraftKey(missionId, parentType, parentIndex, isMoyenneTension, zoneIndex);
-  final data = box.get(key);
-  
-  if (data != null && data['coffret'] is CoffretArmoire) {
-    return data['coffret'] as CoffretArmoire;
-  }
-  return null;
+/// Récupérer un brouillon par QR code
+static CoffretArmoire? getCoffretDraftByQrCode(String qrCode) {
+  final box = Hive.box<CoffretArmoire>(_coffretDraftsBox);
+  return box.get(qrCode);
 }
 
-/// Récupérer le step courant du brouillon
-static int getCoffretDraftStep(
-  String missionId,
-  String parentType,
-  int parentIndex,
-  bool isMoyenneTension,
-  int? zoneIndex,
-) {
-  final box = Hive.box<Map>(_coffretDraftsBox);
-  final key = _getDraftKey(missionId, parentType, parentIndex, isMoyenneTension, zoneIndex);
-  final data = box.get(key);
-  
-  if (data != null && data['currentStep'] is int) {
-    return data['currentStep'] as int;
-  }
-  return 0;
+/// Récupérer tous les brouillons pour une mission
+static List<CoffretArmoire> getAllCoffretDrafts(String missionId) {
+  final box = Hive.box<CoffretArmoire>(_coffretDraftsBox);
+  return box.values.where((c) => c.statut == 'incomplet').toList();
 }
 
 /// Supprimer un brouillon après sauvegarde complète
-static Future<void> deleteCoffretDraft(
-  String missionId,
-  String parentType,
-  int parentIndex,
-  bool isMoyenneTension,
-  int? zoneIndex,
-) async {
-  final box = Hive.box<Map>(_coffretDraftsBox);
-  final key = _getDraftKey(missionId, parentType, parentIndex, isMoyenneTension, zoneIndex);
-  await box.delete(key);
+static Future<void> deleteCoffretDraft(String qrCode) async {
+  final box = Hive.box<CoffretArmoire>(_coffretDraftsBox);
+  await box.delete(qrCode);
+  if (kDebugMode) {
+    print('✅ Brouillon supprimé: $qrCode');
+  }
 }
 
-static String _getDraftKey(
-  String missionId,
-  String parentType,
-  int parentIndex,
-  bool isMoyenneTension,
-  int? zoneIndex,
-) {
-  return '${missionId}_${parentType}_${parentIndex}_${isMoyenneTension}_${zoneIndex ?? 0}';
-}
-
-static Map<String, dynamic>? getCoffretDraftData(
-  String missionId,
-  String parentType,
-  int parentIndex,
-  bool isMoyenneTension,
-  int? zoneIndex,
-) {
-  final box = Hive.box<Map>(_coffretDraftsBox);
-  final key = _getDraftKey(missionId, parentType, parentIndex, isMoyenneTension, zoneIndex);
-  final data = box.get(key);
+/// Récupérer les brouillons pour un emplacement spécifique
+static List<CoffretArmoire> getCoffretDraftsForLocation({
+  required String missionId,
+  required String parentType,
+  required int parentIndex,
+  required bool isMoyenneTension,
+  required int? zoneIndex,
+}) {
+  final box = Hive.box<CoffretArmoire>(_coffretDraftsBox);
+  final drafts = <CoffretArmoire>[];
   
-  if (data != null && data['coffret'] is CoffretArmoire) {
+  for (var coffret in box.values) {
+    if (coffret.statut == 'incomplet') {
+      drafts.add(coffret);
+    }
+  }
+  
+  return drafts;
+}
+
+/// Récupérer les données complètes du brouillon (coffret + currentStep)
+static Map<String, dynamic>? getCoffretDraftData(String qrCode) {
+  final box = Hive.box<CoffretArmoire>(_coffretDraftsBox);
+  final coffret = box.get(qrCode);
+  
+  if (coffret != null) {
     return {
-      'coffret': data['coffret'] as CoffretArmoire,
-      'currentStep': data['currentStep'] as int? ?? 0,
+      'coffret': coffret,
+      'currentStep': coffret.currentStep,
     };
   }
   return null;

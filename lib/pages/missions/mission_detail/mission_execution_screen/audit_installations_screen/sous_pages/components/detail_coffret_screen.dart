@@ -85,7 +85,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
         });
         
         await _sauvegarderCoffret();
-        _showSuccess('Photo ajoutée au coffret');
+        _showSuccess('Photo ajoutée à l\' équipement');
       }
     } catch (e) {
       _showError('Erreur lors de la prise de photo: $e');

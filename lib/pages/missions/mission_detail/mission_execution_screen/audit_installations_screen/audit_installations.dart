@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/basse_tension_screen.dart';
-import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_locaux_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/foudre_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/moyenne_tension_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/mesures_essais_screen.dart'; // Nouvelle importation
@@ -30,14 +29,6 @@ class AuditInstallationsScreen extends StatelessWidget {
     );
   }
 
-  void _navigateToClassementLocaux(BuildContext context) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ClassementLocauxScreen(mission: mission),
-      ),
-    );
-  }
 
   void _navigateToFoudre(BuildContext context) {
     Navigator.push(
@@ -89,16 +80,6 @@ class AuditInstallationsScreen extends StatelessWidget {
             
             Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
       
-            // Section CLASSEMENT DES LOCAUX
-            _buildSectionTile(
-              context,
-              'CLASSEMENT DES LOCAUX',
-              Icons.location_on_outlined,
-              'Influences externes et indices de protection',
-              _navigateToClassementLocaux,
-              color: AppTheme.primaryBlue,
-            ),
-            
             Divider(height: 0, thickness: 0.5, color: Colors.grey.shade300),
             
             // Section OBSERVATIONS FOUDRES

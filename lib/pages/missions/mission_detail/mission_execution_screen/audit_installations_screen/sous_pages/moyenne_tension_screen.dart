@@ -46,16 +46,11 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
         _isLoading = false;
       });
       
-      // CORRECTION : Afficher le dialogue si pas de préférence OU si la préférence est "non applicable"
-      // Utiliser addPostFrameCallback pour éviter l'erreur "setState during build"
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           if (!_hasPreference) {
-            // Première visite : demander si applicable
             _showMoyenneTensionDialog();
           } else if (!_isApplicable) {
-            // L'utilisateur avait choisi "non applicable" : lui demander à nouveau
-            // pour lui permettre de changer d'avis
             _showMoyenneTensionDialog();
           }
         }
@@ -66,8 +61,88 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
     }
   }
 
+  // Récupérer les brouillons pour un local
+  List<CoffretArmoire> _getCoffretsForLocal(MoyenneTensionLocal local, int localIndex) {
+    final savedCoffrets = List<CoffretArmoire>.from(local.coffrets);
+    
+    final drafts = HiveService.getCoffretDraftsForLocation(
+      missionId: widget.mission.id,
+      parentType: 'local',
+      parentIndex: localIndex,
+      isMoyenneTension: true,
+      zoneIndex: null,
+    );
+    
+    // Filtrer les doublons
+    final savedQrCodes = savedCoffrets.map((c) => c.qrCode).toSet();
+    final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).toList();
+    
+    return [...uniqueDrafts, ...savedCoffrets];
+  }
+
+  // Récupérer les coffrets pour un local dans une zone
+  List<CoffretArmoire> _getCoffretsForLocalInZone(MoyenneTensionLocal local, int zoneIndex, int localIndex) {
+    final savedCoffrets = List<CoffretArmoire>.from(local.coffrets);
+    
+    final drafts = HiveService.getCoffretDraftsForLocation(
+      missionId: widget.mission.id,
+      parentType: 'local_in_zone',
+      parentIndex: localIndex,
+      isMoyenneTension: true,
+      zoneIndex: zoneIndex,
+    );
+    
+    final savedQrCodes = savedCoffrets.map((c) => c.qrCode).toSet();
+    final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).toList();
+    
+    return [...uniqueDrafts, ...savedCoffrets];
+  }
+
+  // Vérifier si une zone a des coffrets incomplets
+  bool _hasIncompletCoffretsInZone(MoyenneTensionZone zone, int zoneIndex) {
+    // Vérifier les coffrets directs
+    for (var coffret in zone.coffrets) {
+      if (!_isCoffretComplet(coffret)) return true;
+    }
+    
+    // Vérifier les brouillons directs
+    final drafts = HiveService.getCoffretDraftsForLocation(
+      missionId: widget.mission.id,
+      parentType: 'zone_mt',
+      parentIndex: zoneIndex,
+      isMoyenneTension: true,
+      zoneIndex: null,
+    );
+    if (drafts.isNotEmpty) return true;
+    
+    // Vérifier les locaux
+    for (int i = 0; i < zone.locaux.length; i++) {
+      final local = zone.locaux[i];
+      final allCoffrets = _getCoffretsForLocalInZone(local, zoneIndex, i);
+      if (allCoffrets.any((c) => !_isCoffretComplet(c))) return true;
+    }
+    
+    return false;
+  }
+
+  // Vérifier si un coffret est complet
+  bool _isCoffretComplet(CoffretArmoire coffret) {
+    if (coffret.nom.isEmpty) return false;
+    if (coffret.type.isEmpty) return false;
+    if (coffret.domaineTension.isEmpty) return false;
+    if (coffret.photos.isEmpty) return false;
+    
+    for (var point in coffret.pointsVerification) {
+      if (point.conformite.isEmpty) return false;
+      if (point.conformite == 'non') {
+        if (point.observation == null || point.observation!.trim().isEmpty) return false;
+      }
+    }
+    
+    return true;
+  }
+
   void _showMoyenneTensionDialog() {
-    // Éviter d'afficher plusieurs dialogues en même temps
     if (_isDialogShowing) return;
     
     _isDialogShowing = true;
@@ -112,20 +187,16 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
                       icon: Icons.close,
                       color: Colors.red,
                       onTap: () async {
-                        // Fermer le dialogue
                         Navigator.pop(dialogContext);
                         _isDialogShowing = false;
                         
-                        // Sauvegarder la préférence
                         await HiveService.saveMoyenneTensionPreference(widget.mission.id, false);
                         
-                        // Mettre à jour l'état local
                         setState(() {
                           _hasPreference = true;
                           _isApplicable = false;
                         });
                         
-                        // Rediriger vers Basse Tension
                         _redirectToBasseTension();
                       },
                     ),
@@ -137,14 +208,11 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
                       icon: Icons.check,
                       color: Colors.green,
                       onTap: () async {
-                        // Fermer le dialogue
                         Navigator.pop(dialogContext);
                         _isDialogShowing = false;
                         
-                        // Sauvegarder la préférence
                         await HiveService.saveMoyenneTensionPreference(widget.mission.id, true);
                         
-                        // Mettre à jour l'état local
                         setState(() {
                           _hasPreference = true;
                           _isApplicable = true;
@@ -159,7 +227,6 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
         ),
       ),
     ).then((_) {
-      // Le dialogue a été fermé (par appui sur le bouton back ou autre)
       _isDialogShowing = false;
     });
   }
@@ -203,7 +270,6 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
   }
 
   void _redirectToBasseTension() {
-    // Vérifier si le contexte est toujours valide
     if (!mounted) return;
     
     ScaffoldMessenger.of(context).showSnackBar(
@@ -222,7 +288,6 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
     
     Future.delayed(const Duration(milliseconds: 500), () {
       if (mounted) {
-        // Utiliser pushReplacement pour remplacer l'écran actuel
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -464,18 +529,18 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
     if (_audit == null) return 0;
     int total = 0;
     for (var local in _audit!.moyenneTensionLocaux) {
-      total += local.coffrets.length;
+      total += _getCoffretsForLocal(local, _audit!.moyenneTensionLocaux.indexOf(local)).length;
     }
     for (var zone in _audit!.moyenneTensionZones) {
       total += zone.coffrets.length;
-      for (var local in zone.locaux) {
-        total += local.coffrets.length;
+      for (int i = 0; i < zone.locaux.length; i++) {
+        final local = zone.locaux[i];
+        total += _getCoffretsForLocalInZone(local, _audit!.moyenneTensionZones.indexOf(zone), i).length;
       }
     }
     return total;
   }
 
-  // Widget pour afficher que la MT n'est pas applicable (avec option de changer)
   Widget _buildNotApplicableScreen() {
     return Center(
       child: Column(
@@ -511,7 +576,6 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
           const SizedBox(height: 32),
           ElevatedButton.icon(
             onPressed: () {
-              // Réinitialiser la préférence et réafficher le dialogue
               setState(() {
                 _hasPreference = false;
               });
@@ -544,8 +608,6 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
       );
     }
 
-    // Si l'utilisateur a choisi "non applicable", afficher l'écran avec option de changer
-    // au lieu d'un CircularProgressIndicator bloquant
     if (_hasPreference && !_isApplicable) {
       return Scaffold(
         appBar: AppBar(
@@ -687,15 +749,15 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
     );
   }
 
+  // MODIFIÉ : _buildLocalCard pour afficher les brouillons
   Widget _buildLocalCard(MoyenneTensionLocal local, int index) {
     final conformiteCount = local.dispositionsConstructives.where((e) => e.conforme).length;
     final totalCount = local.dispositionsConstructives.length;
     final pourcentage = totalCount > 0 ? (conformiteCount / totalCount * 100).round() : 0;
     
-    // NOUVEAU : Vérifier si tous les coffrets du local sont complets
-    final allCoffretsComplets = local.coffrets.isEmpty || 
-        local.coffrets.every((c) => _isCoffretComplet(c));
-    final hasIncompletCoffrets = !allCoffretsComplets;
+    // Récupérer tous les coffrets (existants + brouillons)
+    final allCoffrets = _getCoffretsForLocal(local, index);
+    final hasIncompletCoffrets = allCoffrets.any((c) => !_isCoffretComplet(c));
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -719,18 +781,19 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
             Expanded(
               child: Text(local.nom, style: const TextStyle(fontWeight: FontWeight.w600)),
             ),
-            // NOUVEAU : Badge si coffrets incomplets
             if (hasIncompletCoffrets)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                margin: const EdgeInsets.only(left: 6),
                 decoration: BoxDecoration(
                   color: Colors.red.shade100,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.red.shade300),
                 ),
                 child: Text(
-                  'Coffrets incomplets',
+                  'Incomplet',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 9,
                     fontWeight: FontWeight.bold,
                     color: Colors.red.shade700,
                   ),
@@ -742,7 +805,7 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
-            Text('${local.coffrets.length} coffret(s)'),
+            Text('${allCoffrets.length} coffret(s)'),
             const SizedBox(height: 4),
             if (totalCount > 0) ...[
               LinearProgressIndicator(
@@ -772,24 +835,18 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
     );
   }
 
-  // NOUVEAU : Ajouter cette méthode dans la classe
-  bool _isCoffretComplet(CoffretArmoire coffret) {
-    if (coffret.nom.isEmpty) return false;
-    if (coffret.type.isEmpty) return false;
-    if (coffret.domaineTension.isEmpty) return false;
-    if (coffret.photos.isEmpty) return false;
-    
-    for (var point in coffret.pointsVerification) {
-      if (point.conformite.isEmpty) return false;
-    }
-    
-    return true;
-  }
-
-
+  // MODIFIÉ : _buildZoneCard pour afficher les brouillons
   Widget _buildZoneCard(MoyenneTensionZone zone, int index) {
     final totalLocaux = zone.locaux.length;
-    final totalCoffrets = zone.coffrets.length + zone.locaux.fold(0, (sum, local) => sum + local.coffrets.length);
+    
+    // Compter tous les coffrets (existants + brouillons)
+    int totalCoffrets = zone.coffrets.length;
+    for (int i = 0; i < zone.locaux.length; i++) {
+      final local = zone.locaux[i];
+      totalCoffrets += _getCoffretsForLocalInZone(local, index, i).length;
+    }
+    
+    final hasIncompletCoffrets = _hasIncompletCoffretsInZone(zone, index);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -811,7 +868,10 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
                   Container(
                     width: 40,
                     height: 40,
-                    decoration: BoxDecoration(color: AppTheme.primaryBlue.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                     child: Icon(Icons.map_outlined, color: AppTheme.primaryBlue),
                   ),
                   const SizedBox(width: 12),
@@ -819,8 +879,38 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(zone.nom, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87)),
-                        if (zone.description != null) Text(zone.description!, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                zone.nom,
+                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
+                              ),
+                            ),
+                            if (hasIncompletCoffrets)
+                              Container(
+                                margin: const EdgeInsets.only(left: 8),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.red.shade100,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: Colors.red.shade300),
+                                ),
+                                child: Text(
+                                  'Incomplet',
+                                  style: TextStyle(
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.red.shade700,
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
+                        if (zone.description != null) ...[
+                          const SizedBox(height: 4),
+                          Text(zone.description!, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+                        ],
                       ],
                     ),
                   ),
@@ -841,7 +931,10 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
               const SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(8)),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
@@ -853,7 +946,10 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
               ),
               if (zone.observationsLibres.isNotEmpty) ...[
                 const SizedBox(height: 8),
-                Text('Observations: ${zone.observationsLibres.length}', style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic)),
+                Text(
+                  'Observations: ${zone.observationsLibres.length}',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+                ),
               ],
             ],
           ),

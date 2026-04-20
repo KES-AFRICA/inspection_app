@@ -38,6 +38,10 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   List<String> _zonePhotos = [];
   bool _isLoadingZonePhotos = false;
   
+  // Listes combinées (brouillons + coffrets existants)
+  List<CoffretArmoire> _coffretsDirects = [];
+  List<CoffretArmoire> _coffretsDansLocaux = []; // Pour les coffrets dans les locaux
+  
   // Pour les nouvelles observations
   final _nouvelleObservationController = TextEditingController();
   List<String> _photosPourNouvelleObservation = [];
@@ -48,6 +52,50 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     super.initState();
     _zone = widget.zone;
     _chargerPhotosZone();
+    _loadCoffrets();
+  }
+
+  // Charger les coffrets (existants + brouillons)
+  void _loadCoffrets() {
+    // Récupérer les coffrets déjà sauvegardés
+    final savedCoffrets = widget.isMoyenneTension 
+        ? List<CoffretArmoire>.from(_zone.coffrets)
+        : List<CoffretArmoire>.from(_zone.coffretsDirects);
+    
+    // Récupérer les brouillons pour cette zone
+    final drafts = HiveService.getCoffretDraftsForLocation(
+      missionId: widget.mission.id,
+      parentType: widget.isMoyenneTension ? 'zone_mt' : 'zone_bt',
+      parentIndex: widget.zoneIndex,
+      isMoyenneTension: widget.isMoyenneTension,
+      zoneIndex: null,
+    );
+    
+    // Filtrer les brouillons qui ne sont PAS déjà dans les coffrets sauvegardés
+    // (pour éviter les doublons si un brouillon a été converti)
+    final savedQrCodes = savedCoffrets.map((c) => c.qrCode).toSet();
+    final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).toList();
+    
+    setState(() {
+      _coffretsDirects = [...uniqueDrafts, ...savedCoffrets];
+    });
+    
+    // Pour les coffrets dans les locaux (uniquement pour les zones MT et BT)
+    _loadCoffretsDansLocaux();
+  }
+  
+  void _loadCoffretsDansLocaux() {
+    final allCoffretsInLocaux = <CoffretArmoire>[];
+    
+    for (var local in _zone.locaux) {
+      // Coffrets existants dans ce local
+      final savedCoffrets = List<CoffretArmoire>.from(local.coffrets);
+      allCoffretsInLocaux.addAll(savedCoffrets);
+    }
+    
+    setState(() {
+      _coffretsDansLocaux = allCoffretsInLocaux;
+    });
   }
 
   void _chargerPhotosZone() {
@@ -460,50 +508,51 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     }
   }
 
-void _ajouterObservation() async {
-  final result = await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => ObservationScreen(
-        title: 'Nouvelle observation',
-        onSave: (ObservationLibre observation) async {
-          setState(() {
-            _zone.observationsLibres.add(observation);
-          });
-          await _sauvegarderZone();
-          _showSuccess('Observation ajoutée');
-        },
+  void _ajouterObservation() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ObservationScreen(
+          title: 'Nouvelle observation',
+          onSave: (ObservationLibre observation) async {
+            setState(() {
+              _zone.observationsLibres.add(observation);
+            });
+            await _sauvegarderZone();
+            _showSuccess('Observation ajoutée');
+          },
+        ),
       ),
-    ),
-  );
-  
-  // Rafraîchir la liste même si l'utilisateur a annulé
-  _rechargerZone();
-}
+    );
+    
+    // Rafraîchir la liste même si l'utilisateur a annulé
+    _rechargerZone();
+  }
 
-void _editerObservation(int index) async {
-  final observation = _zone.observationsLibres[index];
-  
-  await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => ObservationScreen(
-        observation: observation,
-        title: 'Modifier l\'observation',
-        onSave: (ObservationLibre updatedObservation) async {
-          setState(() {
-            _zone.observationsLibres[index] = updatedObservation;
-          });
-          await _sauvegarderZone();
-          _showSuccess('Observation modifiée');
-        },
+  void _editerObservation(int index) async {
+    final observation = _zone.observationsLibres[index];
+    
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ObservationScreen(
+          observation: observation,
+          title: 'Modifier l\'observation',
+          onSave: (ObservationLibre updatedObservation) async {
+            setState(() {
+              _zone.observationsLibres[index] = updatedObservation;
+            });
+            await _sauvegarderZone();
+            _showSuccess('Observation modifiée');
+          },
+        ),
       ),
-    ),
-  );
+    );
+    
+    // Rafraîchir après retour
+    _rechargerZone();
+  }
   
-  // Rafraîchir après retour
-  _rechargerZone();
-}
   void _supprimerObservation(int index) {
     showDialog(
       context: context,
@@ -1095,88 +1144,88 @@ void _editerObservation(int index) async {
   }
 
   void _showActionModal() {
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(20.0),
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(
+          top: Radius.circular(20.0),
+        ),
       ),
-    ),
-    builder: (context) => Container(
-      padding: EdgeInsets.all(20),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          // Bouton pour ajouter un local
-          Container(
-            margin: EdgeInsets.only(bottom: 12),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                widget.isMoyenneTension ? _ajouterLocalMT() : _ajouterLocalBT();
-              },
-              icon: Icon(Icons.domain, size: 24),
-              label: Text(
-                'Ajouter un local',
-                style: TextStyle(fontSize: 16),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlue,
-                foregroundColor: Colors.white,
-                minimumSize: Size(double.infinity, 56),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+      builder: (context) => Container(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Bouton pour ajouter un local
+            Container(
+              margin: EdgeInsets.only(bottom: 12),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  widget.isMoyenneTension ? _ajouterLocalMT() : _ajouterLocalBT();
+                },
+                icon: Icon(Icons.domain, size: 24),
+                label: Text(
+                  'Ajouter un local',
+                  style: TextStyle(fontSize: 16),
                 ),
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-              ),
-            ),
-          ),
-          
-          // Bouton pour ajouter un coffret
-          Container(
-            margin: EdgeInsets.only(bottom: 20),
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.pop(context);
-                widget.isMoyenneTension ? _ajouterCoffretMT() : _ajouterCoffretDirectBT();
-              },
-              icon: Icon(Icons.electrical_services, size: 24),
-              label: Text(
-                widget.isMoyenneTension 
-                  ? 'Ajouter un coffret' 
-                  : 'Ajouter un coffret direct',
-                style: TextStyle(fontSize: 16),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-                minimumSize: Size(double.infinity, 56),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue,
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(double.infinity, 56),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                 ),
-                padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
               ),
             ),
-          ),
-          
-          // Bouton pour annuler
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(
-              'Annuler',
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey.shade600,
+            
+            // Bouton pour ajouter un coffret
+            Container(
+              margin: EdgeInsets.only(bottom: 20),
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                  widget.isMoyenneTension ? _ajouterCoffretMT() : _ajouterCoffretDirectBT();
+                },
+                icon: Icon(Icons.electrical_services, size: 24),
+                label: Text(
+                  widget.isMoyenneTension 
+                    ? 'Ajouter un coffret' 
+                    : 'Ajouter un coffret direct',
+                  style: TextStyle(fontSize: 16),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  minimumSize: Size(double.infinity, 56),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  padding: EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                ),
               ),
             ),
-          ),
-          SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
-        ],
+            
+            // Bouton pour annuler
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Annuler',
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ),
+            SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   void _rechargerZone() async {
     final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
@@ -1192,6 +1241,7 @@ void _editerObservation(int index) async {
         }
       }
       _chargerPhotosZone();
+      _loadCoffrets();
     });
   }
 
@@ -1320,11 +1370,14 @@ void _editerObservation(int index) async {
     );
   }
 
+  // MODIFIER : _buildCoffretCard pour gérer les brouillons
   Widget _buildCoffretCard(CoffretArmoire coffret, int index, bool isMoyenneTension) {
     final pointsConformes = coffret.pointsVerification.where((p) => p.conformite == 'oui').length;
     final totalPoints = coffret.pointsVerification.length;
     final pourcentage = totalPoints > 0 ? (pointsConformes / totalPoints * 100).round() : 0;
-    final isComplet = _isCoffretComplet(coffret);
+
+    final isComplet = coffret.statut == 'complet' || _isCoffretComplet(coffret);
+    final isDraft = coffret.statut == 'incomplet';
 
     // Calculer le nombre total de photos pour ce coffret
     int totalPhotosCoffret = coffret.photos.length;
@@ -1336,10 +1389,10 @@ void _editerObservation(int index) async {
       margin: EdgeInsets.only(bottom: 8),
       padding: EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: isDraft ? Colors.orange.shade50 : Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: isComplet ? Colors.green.shade200 : Colors.red.shade200, // MODIFIÉ
+          color: isComplet ? Colors.green.shade200 : Colors.red.shade200,
         ),
       ),
       child: ListTile(
@@ -1347,31 +1400,34 @@ void _editerObservation(int index) async {
           width: 40,
           height: 40,
           decoration: BoxDecoration(
-            color: Colors.orange.withOpacity(0.1),
+            color: isDraft ? Colors.orange.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
             borderRadius: BorderRadius.circular(8),
           ),
-          child: Icon(Icons.electrical_services, color: Colors.orange),
+          child: Icon(
+            isDraft ? Icons.drafts_outlined : Icons.electrical_services,
+            color: isDraft ? Colors.orange : Colors.orange,
+          ),
         ),
         title: Row(
           children: [
             Expanded(
               child: Text(
-                coffret.nom,
+                coffret.nom.isEmpty ? 'Sans nom' : coffret.nom,
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
-            // NOUVEAU : Badge "Incomplet"
             if (!isComplet)
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.red.shade100,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.red.shade300),
                 ),
                 child: Text(
                   'Incomplet',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 9,
                     fontWeight: FontWeight.bold,
                     color: Colors.red.shade700,
                   ),
@@ -1399,38 +1455,107 @@ void _editerObservation(int index) async {
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
             if (value == 'view') {
-              isMoyenneTension ? _voirCoffretMT(index) : _voirCoffretDirectBT(index);
+              if (isDraft) {
+                _ouvrirBrouillon(coffret);
+              } else {
+                isMoyenneTension ? _voirCoffretMT(index) : _voirCoffretDirectBT(index);
+              }
             }
             if (value == 'edit') {
               isMoyenneTension ? _editerCoffretMT(index) : _editerCoffretDirectBT(index);
             }
             if (value == 'delete') {
-              isMoyenneTension ? _supprimerCoffretMT(index) : _supprimerCoffretDirectBT(index);
+              if (isDraft) {
+                _supprimerBrouillon(coffret);
+              } else {
+                isMoyenneTension ? _supprimerCoffretMT(index) : _supprimerCoffretDirectBT(index);
+              }
             }
           },
           itemBuilder: (context) => [
-            PopupMenuItem(value: 'view', child: Text('Voir détails')),
+            PopupMenuItem(
+              value: 'view', 
+              child: Text(isDraft ? 'Continuer' : 'Voir détails')
+            ),
             PopupMenuItem(value: 'edit', child: Text('Éditer')),
-            PopupMenuItem(value: 'delete', child: Text('Supprimer', style: TextStyle(color: Colors.red))),
+            PopupMenuItem(
+              value: 'delete', 
+              child: Text('Supprimer', style: TextStyle(color: Colors.red))
+            ),
           ],
         ),
-        onTap: () => isMoyenneTension ? _voirCoffretMT(index) : _voirCoffretDirectBT(index),
+        onTap: () {
+          if (isDraft) {
+            _ouvrirBrouillon(coffret);
+          } else {
+            isMoyenneTension ? _voirCoffretMT(index) : _voirCoffretDirectBT(index);
+          }
+        },
       ),
     );
   }
 
+  // Ouvrir un brouillon pour continuer
+  void _ouvrirBrouillon(CoffretArmoire draft) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AjouterCoffretScreen(
+          mission: widget.mission,
+          parentType: widget.isMoyenneTension ? 'zone_mt' : 'zone_bt',
+          parentIndex: widget.zoneIndex,
+          isMoyenneTension: widget.isMoyenneTension,
+          isInZone: false,
+          qrCode: draft.qrCode,
+          coffret: null,
+        ),
+      ),
+    );
+    
+    if (result == true) {
+      _rechargerZone();
+    }
+  }
+
+  // Supprimer un brouillon
+  void _supprimerBrouillon(CoffretArmoire draft) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Supprimer le brouillon'),
+        content: Text('Voulez-vous vraiment supprimer ce brouillon ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await HiveService.deleteCoffretDraft(draft.qrCode);
+              _loadCoffrets();
+              _showSuccess('Brouillon supprimé');
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Vérifier si un coffret est complet
   bool _isCoffretComplet(CoffretArmoire coffret) {
-    // Vérifier les champs obligatoires
     if (coffret.nom.isEmpty) return false;
     if (coffret.type.isEmpty) return false;
     if (coffret.domaineTension.isEmpty) return false;
-    
-    // Vérifier les photos
     if (coffret.photos.isEmpty) return false;
     
-    // Vérifier les points de vérification
     for (var point in coffret.pointsVerification) {
       if (point.conformite.isEmpty) return false;
+      if (point.conformite == 'non') {
+        if (point.observation == null || point.observation!.trim().isEmpty) return false;
+      }
     }
     
     return true;
@@ -1544,9 +1669,7 @@ void _editerObservation(int index) async {
     final isMoyenneTension = widget.isMoyenneTension;
     
     final hasLocaux = _zone.locaux.isNotEmpty;
-    final hasCoffrets = isMoyenneTension 
-        ? _zone.coffrets.isNotEmpty 
-        : _zone.coffretsDirects.isNotEmpty;
+    final hasCoffrets = _coffretsDirects.isNotEmpty;
 
     return Scaffold(
       appBar: AppBar(
@@ -1578,8 +1701,8 @@ void _editerObservation(int index) async {
                   Tab(text: 'PHOTOS (${_zonePhotos.length})'),
                   Tab(text: 'LOCAUX (${_zone.locaux.length})'),
                   Tab(text: isMoyenneTension 
-                    ? 'COFFRETS (${_zone.coffrets.length})' 
-                    : 'COFFRETS DIRECTS (${_zone.coffretsDirects.length})'
+                    ? 'COFFRETS (${_coffretsDirects.length})'
+                    : 'COFFRETS DIRECTS (${_coffretsDirects.length})'
                   ),
                 ],
               ),
@@ -1624,14 +1747,10 @@ void _editerObservation(int index) async {
                         )
                       : ListView.builder(
                           padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),
-                          itemCount: isMoyenneTension 
-                            ? _zone.coffrets.length 
-                            : _zone.coffretsDirects.length,
+                          itemCount: _coffretsDirects.length,
                           itemBuilder: (context, index) {
                             return _buildCoffretCard(
-                              isMoyenneTension 
-                                ? _zone.coffrets[index] 
-                                : _zone.coffretsDirects[index],
+                              _coffretsDirects[index],
                               index,
                               isMoyenneTension,
                             );
@@ -1644,7 +1763,7 @@ void _editerObservation(int index) async {
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _showActionModal, // Changez cette ligne
+        onPressed: _showActionModal,
         backgroundColor: AppTheme.primaryBlue,
         child: Icon(Icons.add, color: Colors.white),
       ),

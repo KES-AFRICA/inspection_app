@@ -138,12 +138,67 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
     
     int total = 0;
     for (var zone in _audit!.basseTensionZones) {
-      total += zone.coffretsDirects.length;
+      // Récupérer les brouillons pour cette zone
+      final drafts = HiveService.getCoffretDraftsForLocation(
+        missionId: widget.mission.id,
+        parentType: 'zone_bt',
+        parentIndex: _audit!.basseTensionZones.indexOf(zone),
+        isMoyenneTension: false,
+        zoneIndex: null,
+      );
+      final savedQrCodes = zone.coffretsDirects.map((c) => c.qrCode).toSet();
+      final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).toList();
+      
+      total += zone.coffretsDirects.length + uniqueDrafts.length;
       for (var local in zone.locaux) {
         total += local.coffrets.length;
       }
     }
     return total;
+  }
+
+  // Vérifier si un coffret est complet
+  bool _isCoffretComplet(CoffretArmoire coffret) {
+    if (coffret.nom.isEmpty) return false;
+    if (coffret.type.isEmpty) return false;
+    if (coffret.domaineTension.isEmpty) return false;
+    if (coffret.photos.isEmpty) return false;
+    
+    for (var point in coffret.pointsVerification) {
+      if (point.conformite.isEmpty) return false;
+      if (point.conformite == 'non') {
+        if (point.observation == null || point.observation!.trim().isEmpty) return false;
+      }
+    }
+    
+    return true;
+  }
+
+  // Vérifier si une zone a des coffrets incomplets
+  bool _hasIncompletCoffretsInZone(BasseTensionZone zone, int zoneIndex) {
+    // Vérifier les coffrets directs
+    for (var coffret in zone.coffretsDirects) {
+      if (!_isCoffretComplet(coffret)) return true;
+    }
+    
+    // Vérifier les brouillons directs
+    final drafts = HiveService.getCoffretDraftsForLocation(
+      missionId: widget.mission.id,
+      parentType: 'zone_bt',
+      parentIndex: zoneIndex,
+      isMoyenneTension: false,
+      zoneIndex: null,
+    );
+    if (drafts.any((d) => !_isCoffretComplet(d))) return true;
+    
+    // Vérifier les locaux
+    for (var local in zone.locaux) {
+      for (var coffret in local.coffrets) {
+        if (!_isCoffretComplet(coffret)) return true;
+      }
+    }
+    
+    return false;
   }
 
   @override
@@ -171,7 +226,6 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
       ),
       body: Column(
         children: [
-          // En-tête avec statistiques
           Container(
             padding: EdgeInsets.all(16),
             decoration: BoxDecoration(
@@ -187,8 +241,6 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
               ],
             ),
           ),
-
-          // Contenu principal
           Expanded(
             child: _audit!.basseTensionZones.isEmpty
                 ? _buildEmptyState()
@@ -280,13 +332,31 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
     );
   }
 
+  // MODIFIÉ : _buildZoneCard pour afficher les brouillons
   Widget _buildZoneCard(BasseTensionZone zone, int index) {
     final totalLocaux = zone.locaux.length;
-    final totalCoffrets = zone.coffretsDirects.length + zone.locaux.fold(0, (sum, local) => sum + local.coffrets.length);
     
-    // Vérifier les coffrets incomplets
-    final allCoffretsComplets = _areAllCoffretsCompletsInZone(zone);
-    final hasIncompletCoffrets = !allCoffretsComplets;
+    // Récupérer les brouillons pour cette zone
+    final drafts = HiveService.getCoffretDraftsForLocation(
+      missionId: widget.mission.id,
+      parentType: 'zone_bt',
+      parentIndex: index,
+      isMoyenneTension: false,
+      zoneIndex: null,
+    );
+    
+    final savedQrCodes = zone.coffretsDirects.map((c) => c.qrCode).toSet();
+    final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).toList();
+    
+    final allCoffretsDirects = [...uniqueDrafts, ...zone.coffretsDirects];
+    
+    // Compter tous les coffrets (existants + brouillons)
+    int totalCoffrets = allCoffretsDirects.length;
+    for (var local in zone.locaux) {
+      totalCoffrets += local.coffrets.length;
+    }
+    
+    final hasIncompletCoffrets = _hasIncompletCoffretsInZone(zone, index);
 
     return Container(
       margin: EdgeInsets.only(bottom: 8),
@@ -334,7 +404,6 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
                                 ),
                               ),
                             ),
-                            // NOUVEAU : Badge équipements incomplets
                             if (hasIncompletCoffrets)
                               Container(
                                 margin: EdgeInsets.only(left: 8),
@@ -393,7 +462,7 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
                     _buildZoneStat('Locaux', totalLocaux, Icons.domain),
-                    _buildZoneStat('Coffrets directs', zone.coffretsDirects.length, Icons.electrical_services),
+                    _buildZoneStat('Coffrets directs', allCoffretsDirects.length, Icons.electrical_services),
                     _buildZoneStat('Total coffrets', totalCoffrets as int, Icons.assessment),
                   ],
                 ),
@@ -414,36 +483,6 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
         ),
       ),
     );
-  }
-
-  // Ajouter ces méthodes dans la classe _BasseTensionScreenState
-  bool _areAllCoffretsCompletsInZone(BasseTensionZone zone) {
-    // Vérifier les coffrets directs
-    for (var coffret in zone.coffretsDirects) {
-      if (!_isCoffretComplet(coffret)) return false;
-    }
-    
-    // Vérifier les coffrets dans les locaux
-    for (var local in zone.locaux) {
-      for (var coffret in local.coffrets) {
-        if (!_isCoffretComplet(coffret)) return false;
-      }
-    }
-    
-    return true;
-  }
-
-  bool _isCoffretComplet(CoffretArmoire coffret) {
-    if (coffret.nom.isEmpty) return false;
-    if (coffret.type.isEmpty) return false;
-    if (coffret.domaineTension.isEmpty) return false;
-    if (coffret.photos.isEmpty) return false;
-    
-    for (var point in coffret.pointsVerification) {
-      if (point.conformite.isEmpty) return false;
-    }
-    
-    return true;
   }
 
   Widget _buildZoneStat(String title, int count, IconData icon) {

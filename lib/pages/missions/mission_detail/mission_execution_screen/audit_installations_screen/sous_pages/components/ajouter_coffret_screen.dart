@@ -1329,16 +1329,55 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
     
     final currentPoints = _pointsSlides[_currentSlide];
     for (var point in currentPoints) {
+      // Vérifier la conformité
       if (point.conformite.isEmpty) {
         return false;
+      }
+      
+      // Si conformité = "non", l'observation est OBLIGATOIRE
+      if (point.conformite == 'non') {
+        final pointIndex = _getPointIndex(point);
+        final hasObservation = widget.hasObservation[pointIndex] ?? false;
+        
+        // L'observation doit être activée ET non vide
+        if (!hasObservation) {
+          return false;
+        }
+        if (point.observation == null || point.observation!.trim().isEmpty) {
+          return false;
+        }
       }
     }
     return true;
   }
 
+  // Méthode helper pour retrouver l'index d'un point
+  int _getPointIndex(PointVerification point) {
+    final globalIndex = widget.pointsVerification.indexOf(point);
+    return globalIndex;
+  }
+
   void nextSlide() {
     if (!_isCurrentSlideValid()) {
-      _showError('Veuillez sélectionner Oui ou Non pour tous les points');
+      // Message plus précis
+      for (var point in _pointsSlides[_currentSlide]) {
+        if (point.conformite.isEmpty) {
+          _showError('Veuillez sélectionner Oui ou Non pour tous les points');
+          return;
+        }
+        if (point.conformite == 'non') {
+          final pointIndex = _getPointIndex(point);
+          final hasObservation = widget.hasObservation[pointIndex] ?? false;
+          if (!hasObservation) {
+            _showError('L\'observation est obligatoire quand la conformité est "Non"');
+            return;
+          }
+          if (point.observation == null || point.observation!.trim().isEmpty) {
+            _showError('Veuillez saisir une observation pour le point non conforme');
+            return;
+          }
+        }
+      }
       return;
     }
     
@@ -1542,7 +1581,7 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
     );
   }
 
-  // NOUVEAU : Widget de conformité en boutons Oui/Non
+  // Widget de conformité en boutons Oui/Non
   Widget _buildConformiteToggle(BuildContext context, PointVerification point, int pointIndex) {
     final isValid = point.conformite.isNotEmpty;
     
@@ -1573,7 +1612,11 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
                 onTap: () {
                   setState(() {
                     point.conformite = 'oui';
+                    // Si on passe à Oui, on peut garder l'observation ou la désactiver
+                    // mais on ne force rien
                   });
+                  // Notifier le parent du changement
+                  _notifyConformiteChanged(pointIndex, 'oui');
                 },
               ),
             ),
@@ -1587,9 +1630,12 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
                 onTap: () {
                   setState(() {
                     point.conformite = 'non';
-                    // Si Non est sélectionné, on active automatiquement l'observation ?
-                    // widget.onObservationToggleChanged(pointIndex, true);
+                    // ACTIVER AUTOMATIQUEMENT L'OBSERVATION
                   });
+                  // Forcer l'observation à Oui et la rendre obligatoire
+                  widget.onObservationToggleChanged(pointIndex, true);
+                  // Notifier le parent
+                  _notifyConformiteChanged(pointIndex, 'non');
                 },
               ),
             ),
@@ -1605,6 +1651,12 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
           ),
       ],
     );
+  }
+
+  // Nouvelle méthode pour notifier les changements
+  void _notifyConformiteChanged(int pointIndex, String value) {
+    // Cette méthode peut être utilisée pour d'autres actions si nécessaire
+    print('Point $pointIndex conformité: $value');
   }
 
   Widget _buildConformiteButton(
@@ -1947,6 +1999,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   bool _isSaving = false;
   bool _hasUnsavedChanges = false;
   Timer? _autoSaveTimer;
+  String? _draftQrCode;
 
   @override
   void initState() {
@@ -1957,28 +2010,23 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     if (widget.qrCode != null) {
       _qrCodeController.text = widget.qrCode!;
       _validateQrCode(widget.qrCode!);
+      _draftQrCode = widget.qrCode;
     }
     if (widget.isEdition) {
       _chargerDonneesExistantes();
     } else {
       _initializeAlimentations();
-      _loadDraft();
+      // Si on a un QR code, charger le brouillon existant
+      if (_draftQrCode != null && _draftQrCode!.isNotEmpty) {
+        _loadDraftByQrCode(_draftQrCode!);
+      }else{_loadDraft;}
     }
   }
 
-  Future<void> _loadDraft() async {
-    final draftData = await HiveService.getCoffretDraftData( 
-      widget.mission.id,
-      widget.parentType,
-      widget.parentIndex,
-      widget.isMoyenneTension,
-      widget.zoneIndex,
-    );
-    
-    if (draftData != null) {
-      final draft = draftData['coffret'] as CoffretArmoire;
-      final savedStep = draftData['currentStep'] as int? ?? 0; // ← Récupéré de la Map
-      
+  // Charger un brouillon par QR code
+  Future<void> _loadDraftByQrCode(String qrCode) async {
+    final draft = HiveService.getCoffretDraftByQrCode(qrCode);
+    if (draft != null) {
       setState(() {
         _nomController.text = draft.nom;
         _numeroEquipementController.text = draft.numeroEquipement ?? '';
@@ -1996,11 +2044,16 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
         _pointsVerification = List.from(draft.pointsVerification);
         _coffretPhotosExterne = draft.photos.where((p) => p.contains('externe')).toList();
         _coffretPhotosInterne = draft.photos.where((p) => p.contains('interne')).toList();
-        _currentStep = savedStep; // ← Utiliser la variable locale
+        _currentStep = draft.currentStep;
         
-        // Initialiser hasObservation pour les points existants
+        // Initialiser hasObservation
         for (int i = 0; i < _pointsVerification.length; i++) {
-          _hasObservation[i] = _pointsVerification[i].observation != null && _pointsVerification[i].observation!.isNotEmpty;
+          final point = _pointsVerification[i];
+          if (point.conformite == 'non') {
+            _hasObservation[i] = true;
+          } else {
+            _hasObservation[i] = point.observation != null && point.observation!.isNotEmpty;
+          }
         }
         
         // Positionner le PageController
@@ -2011,7 +2064,65 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
         });
         
         _validateNom(_nomController.text);
-        _validateNumeroEquipement(_numeroEquipementController.text);
+        _validateType(_selectedType);
+        _validateRepere(_repereController.text);
+        _validateDomaineTension(_domaineTension);
+        _validatePhotosExterne();
+        _validatePhotosInterne();
+        _validatePoints();
+      });
+    }
+  }
+
+  Future<void> _loadDraft() async {
+    if (_draftQrCode == null || _draftQrCode!.isEmpty) return;
+    
+    final draftData = HiveService.getCoffretDraftData(_draftQrCode!);
+    
+    if (draftData != null) {
+      final draft = draftData['coffret'] as CoffretArmoire;
+      final savedStep = draftData['currentStep'] as int? ?? 0;
+      
+      setState(() {
+        _nomController.text = draft.nom;
+        _numeroEquipementController.text = draft.numeroEquipement ?? '';
+        _repereController.text = draft.repere ?? '';
+        _selectedType = draft.type;
+        _zoneAtex = draft.zoneAtex;
+        _domaineTension = draft.domaineTension;
+        _identificationArmoire = draft.identificationArmoire;
+        _signalisationDanger = draft.signalisationDanger;
+        _presenceSchema = draft.presenceSchema;
+        _presenceParafoudre = draft.presenceParafoudre;
+        _verificationThermographie = draft.verificationThermographie;
+        _alimentations = List.from(draft.alimentations);
+        _protectionTete = draft.protectionTete;
+        _pointsVerification = List.from(draft.pointsVerification);
+        
+        // Séparer les photos (on suppose qu'elles sont toutes mélangées)
+        _coffretPhotosExterne = draft.photos.where((p) => p.contains('externe')).toList();
+        _coffretPhotosInterne = draft.photos.where((p) => p.contains('interne')).toList();
+        
+        _currentStep = savedStep;
+        
+        // Initialiser hasObservation
+        for (int i = 0; i < _pointsVerification.length; i++) {
+          final point = _pointsVerification[i];
+          if (point.conformite == 'non') {
+            _hasObservation[i] = true;
+          } else {
+            _hasObservation[i] = point.observation != null && point.observation!.isNotEmpty;
+          }
+        }
+        
+        // Positionner le PageController
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_mainPageController.hasClients) {
+            _mainPageController.jumpToPage(_currentStep);
+          }
+        });
+        
+        _validateNom(_nomController.text);
         _validateType(_selectedType);
         _validateRepere(_repereController.text);
         _validateDomaineTension(_domaineTension);
@@ -2029,13 +2140,22 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     });
   }
 
+  // _saveDraft utilise maintenant le QR code
   Future<void> _saveDraft() async {
     if (!mounted) return;
+    
+    // Si on n'a pas de QR code, on en génère un temporaire
+    String qrCode = _qrCodeController.text.trim();
+    if (qrCode.isEmpty) {
+      qrCode = 'TEMP_${DateTime.now().millisecondsSinceEpoch}';
+      _qrCodeController.text = qrCode;
+      _draftQrCode = qrCode;
+    }
     
     final toutesPhotos = [..._coffretPhotosExterne, ..._coffretPhotosInterne];
     
     final draft = CoffretArmoire(
-      qrCode: _qrCodeController.text.trim(),
+      qrCode: qrCode,
       nom: _nomController.text.trim(),
       type: _selectedType ?? '',
       numeroEquipement: _numeroEquipementController.text.trim().isEmpty 
@@ -2054,16 +2174,18 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
       pointsVerification: _pointsVerification,
       observationsLibres: [],
       photos: toutesPhotos,
+      statut: 'incomplet',
+      currentStep: _currentStep,
     );
     
     await HiveService.saveCoffretDraft(
-      widget.mission.id,
-      widget.parentType,
-      widget.parentIndex,
-      widget.isMoyenneTension,
-      widget.zoneIndex,
-      draft,
-      _currentStep,
+      missionId: widget.mission.id,
+      parentType: widget.parentType,
+      parentIndex: widget.parentIndex,
+      isMoyenneTension: widget.isMoyenneTension,
+      zoneIndex: widget.zoneIndex,
+      coffret: draft,
+      currentStep: _currentStep,
     );
     
     _hasUnsavedChanges = false;
@@ -2228,7 +2350,13 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     )));
     
     for (int i = 0; i < _pointsVerification.length; i++) {
-      _hasObservation[i] = _pointsVerification[i].observation != null && _pointsVerification[i].observation!.isNotEmpty;
+      final point = _pointsVerification[i];
+      // Si conformité = "non", forcer hasObservation = true
+      if (point.conformite == 'non') {
+        _hasObservation[i] = true;
+      } else {
+        _hasObservation[i] = point.observation != null && point.observation!.isNotEmpty;
+      }
     }
     
     if (coffret.photos.isNotEmpty) {
@@ -2458,13 +2586,24 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   }
 
   void _onObservationToggleChanged(int index, bool value) {
+    final point = _pointsVerification[index];
+    
+    // Si on essaie de mettre "Non" alors que conformité = "non", on bloque
+    if (!value && point.conformite == 'non') {
+      _showError('L\'observation est obligatoire quand la conformité est "Non"');
+      return;
+    }
+    
     setState(() {
       _hasObservation[index] = value;
       if (!value) {
         _pointsVerification[index].observation = null;
       }
     });
+    _scheduleAutoSave();
   }
+
+  
 
   void _sauvegarder() async {
     if (!_validateAllFields()) { _showError('Veuillez remplir tous les champs obligatoires'); return; }
@@ -2474,6 +2613,9 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
         qrCode: _qrCodeController.text.trim(),
         nom: _nomController.text.trim(),
         type: _selectedType!,
+        numeroEquipement: _numeroEquipementController.text.trim().isEmpty 
+          ? null 
+          : _numeroEquipementController.text.trim(),
         repere: _repereController.text.trim().isNotEmpty ? _repereController.text.trim() : null,
         zoneAtex: _zoneAtex,
         domaineTension: _domaineTension,
@@ -2487,6 +2629,8 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
         pointsVerification: _pointsVerification,
         observationsLibres: [],
         photos: toutesPhotos,
+        statut: 'complet',
+        currentStep: 0,
       );
 
       if (widget.isEdition && widget.coffret != null && widget.coffret!.nom != _nomController.text.trim()) {
@@ -2558,13 +2702,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
           Navigator.pop(context, true);
         }
 
-        await HiveService.deleteCoffretDraft(
-          widget.mission.id,
-          widget.parentType,
-          widget.parentIndex,
-          widget.isMoyenneTension,
-          widget.zoneIndex,
-        );
+         await HiveService.deleteCoffretDraft(_draftQrCode ?? _qrCodeController.text.trim());
       } else {
         _showError('Erreur lors de la sauvegarde');
       }
