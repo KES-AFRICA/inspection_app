@@ -2,10 +2,12 @@
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/classement_locaux.dart';
+import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/basse_tension_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_zone_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_local_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_zone_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_local_screen.dart';
@@ -350,8 +352,9 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
       ),
     );
 
+    _loadData();
+
     if (result == true) {
-      _loadData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Zone ajoutée avec succès')),
@@ -494,29 +497,70 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
   }
 
   void _supprimerZone(int index) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Confirmer la suppression'),
-        content: const Text('Voulez-vous vraiment supprimer cette zone ?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              setState(() => _audit!.moyenneTensionZones.removeAt(index));
-              await HiveService.saveAuditInstallations(_audit!);
-              _loadData();
-              if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Zone supprimée')));
-              }
-            },
-            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
-          ),
-        ],
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Confirmer la suppression'),
+      content: const Text(
+        'Voulez-vous vraiment supprimer cette zone ?\n\n'
+        'TOUS les locaux et coffrets contenus dans cette zone seront également supprimés définitivement.'
       ),
-    );
-  }
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Annuler'),
+        ),
+        TextButton(
+          onPressed: () async {
+            Navigator.pop(context);
+            
+            final zone = _audit!.moyenneTensionZones[index];
+            final nomZone = zone.nom;
+            
+            // 1. Supprimer tous les coffrets directs de la zone
+            for (var coffret in zone.coffrets) {
+              await HiveService.deleteCoffretDraft(coffret.qrCode);
+            }
+            
+            // 2. Supprimer tous les locaux et leurs coffrets
+            for (var local in zone.locaux) {
+              for (var coffret in local.coffrets) {
+                await HiveService.deleteCoffretDraft(coffret.qrCode);
+              }
+              // Supprimer le classement du local
+              await HiveService.deleteClassementLocal(
+                missionId: widget.mission.id,
+                nomLocal: local.nom,
+              );
+            }
+            
+            // 3. Supprimer la zone de l'audit
+            setState(() {
+              _audit!.moyenneTensionZones.removeAt(index);
+            });
+            await HiveService.saveAuditInstallations(_audit!);
+            
+            // 4. Supprimer le classement de la zone
+            await HiveService.deleteClassementZone(
+              missionId: widget.mission.id,
+              nomZone: nomZone,
+            );
+            
+            // 5. Rafraîchir
+            _loadData();
+            
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Zone et tout son contenu supprimés')),
+              );
+            }
+          },
+          child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+        ),
+      ],
+    ),
+  );
+}
 
   int _getTotalLocaux() {
     if (_audit == null) return 0;
@@ -746,148 +790,139 @@ Widget _buildInfluenceChip(String type, String code) {
   );
 }
 
-// NOUVEAU : Onglet classement dans moyenne tension
-  Widget _buildClassementTab() {
-    return FutureBuilder<List<ClassementEmplacement>>(
-      future: HiveService.syncZonesFromAudit(widget.mission.id),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        
-        final zones = snapshot.data ?? [];
-        
-        if (zones.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.security_outlined, size: 64, color: Colors.grey.shade400),
-                const SizedBox(height: 16),
-                Text(
-                  'Aucune zone à classer',
-                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Ajoutez une zone pour la classer',
-                  style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-                ),
-              ],
-            ),
-          );
-        }
-        
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: zones.length,
-          itemBuilder: (context, index) {
-            final zone = zones[index];
-            final estComplet = zone.af != null && zone.be != null && 
-                              zone.ae != null && zone.ad != null && zone.ag != null;
-            
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              child: InkWell(
-                onTap: () => _ouvrirClassementZone(zone),
-                borderRadius: BorderRadius.circular(12),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            width: 40,
-                            height: 40,
-                            decoration: BoxDecoration(
-                              color: estComplet ? Colors.green.shade50 : Colors.blue.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Icon(
-                              Icons.map_outlined,
-                              color: estComplet ? Colors.green : AppTheme.primaryBlue,
-                            ),
+Widget _buildClassementTab() {
+  return FutureBuilder<List<ClassementZone>>(
+    future: HiveService.syncClassementsZonesFromAudit(widget.mission.id).then(
+      (_) => HiveService.getClassementsZonesByMissionId(widget.mission.id)
+          .where((cz) => cz.typeZone == 'MT')
+          .toList(),
+    ),
+    builder: (context, snapshot) {
+      if (snapshot.connectionState == ConnectionState.waiting) {
+        return const Center(child: CircularProgressIndicator());
+      }
+      
+      final zones = snapshot.data ?? [];
+      
+      if (zones.isEmpty) {
+        return Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.security_outlined, size: 64, color: Colors.grey.shade400),
+              const SizedBox(height: 16),
+              Text('Aucune zone à classer', style: TextStyle(fontSize: 16, color: Colors.grey.shade600)),
+            ],
+          ),
+        );
+      }
+      
+      return ListView.builder(
+        padding: const EdgeInsets.all(16),
+        itemCount: zones.length,
+        itemBuilder: (context, index) {
+          final zone = zones[index];
+          final estComplet = zone.estComplet;
+          
+          return Card(
+            margin: const EdgeInsets.only(bottom: 12),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: InkWell(
+              onTap: () => _ouvrirClassementZone(zone),
+              borderRadius: BorderRadius.circular(12),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: estComplet ? Colors.green.shade50 : Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              zone.localisation,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
+                          child: Icon(
+                            Icons.map_outlined,
+                            color: estComplet ? Colors.green : AppTheme.primaryBlue,
                           ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: estComplet ? Colors.green.shade100 : Colors.orange.shade100,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Text(
-                              estComplet ? 'Classée' : 'À classer',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w500,
-                                color: estComplet ? Colors.green.shade800 : Colors.orange.shade800,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      if (estComplet) ...[
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: [
-                            _buildInfluenceChip('AF', zone.af!),
-                            _buildInfluenceChip('BE', zone.be!),
-                            _buildInfluenceChip('AE', zone.ae!),
-                            _buildInfluenceChip('AD', zone.ad!),
-                            _buildInfluenceChip('AG', zone.ag!),
-                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceAround,
-                          children: [
-                            Text('IP: ${zone.ip ?? "N/A"}',
-                                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800)),
-                            Text('IK: ${zone.ik ?? "N/A"}',
-                                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800)),
-                          ],
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            zone.nomZone,
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: estComplet ? Colors.green.shade100 : Colors.orange.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            estComplet ? 'Classée' : 'À classer',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: estComplet ? Colors.green.shade800 : Colors.orange.shade800,
+                            ),
+                          ),
                         ),
                       ],
+                    ),
+                    if (estComplet) ...[
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          _buildInfluenceChip('AF', zone.af!),
+                          _buildInfluenceChip('BE', zone.be!),
+                          _buildInfluenceChip('AE', zone.ae!),
+                          _buildInfluenceChip('AD', zone.ad!),
+                          _buildInfluenceChip('AG', zone.ag!),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          Text('IP: ${zone.ip ?? "N/A"}',
+                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800)),
+                          Text('IK: ${zone.ik ?? "N/A"}',
+                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800)),
+                        ],
+                      ),
                     ],
-                  ),
+                  ],
                 ),
               ),
-            );
-          },
-        );
-      },
-    );
-  }
+            ),
+          );
+        },
+      );
+    },
+  );
+}
 
-  void _ouvrirClassementZone(ClassementEmplacement zone) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ClassementEmplacementScreen(
-          mission: widget.mission,
-          emplacement: zone,
-        ),
+void _ouvrirClassementZone(ClassementZone classement) async {
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => ClassementZoneScreen(
+        mission: widget.mission,
+        classement: classement,
       ),
-    );
-    
-    if (result == true) {
-      setState(() {});
-    }
+    ),
+  );
+  
+  if (result == true) {
+    setState(() {});
   }
+}
 
   Widget _buildStatCard(String title, int count, IconData icon) {
     return Column(
@@ -1026,8 +1061,6 @@ Widget _buildInfluenceChip(String type, String code) {
       final local = zone.locaux[i];
       totalCoffrets += _getCoffretsForLocalInZone(local, index, i).length;
     }
-    
-    final hasIncompletCoffrets = _hasIncompletCoffretsInZone(zone, index);
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -1068,24 +1101,6 @@ Widget _buildInfluenceChip(String type, String code) {
                                 style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
                               ),
                             ),
-                            if (hasIncompletCoffrets)
-                              Container(
-                                margin: const EdgeInsets.only(left: 8),
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.shade100,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.red.shade300),
-                                ),
-                                child: Text(
-                                  'Incomplet',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.red.shade700,
-                                  ),
-                                ),
-                              ),
                           ],
                         ),
                         if (zone.description != null) ...[

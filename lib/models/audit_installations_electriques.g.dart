@@ -131,13 +131,14 @@ class MoyenneTensionZoneAdapter extends TypeAdapter<MoyenneTensionZone> {
       observationsLibres: (fields[3] as List?)?.cast<ObservationLibre>(),
       photos: (fields[4] as List?)?.cast<String>(),
       locaux: (fields[5] as List?)?.cast<MoyenneTensionLocal>(),
+      classementZoneId: fields[6] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, MoyenneTensionZone obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.nom)
       ..writeByte(1)
@@ -149,7 +150,9 @@ class MoyenneTensionZoneAdapter extends TypeAdapter<MoyenneTensionZone> {
       ..writeByte(4)
       ..write(obj.photos)
       ..writeByte(5)
-      ..write(obj.locaux);
+      ..write(obj.locaux)
+      ..writeByte(6)
+      ..write(obj.classementZoneId);
   }
 
   @override
@@ -180,13 +183,14 @@ class BasseTensionZoneAdapter extends TypeAdapter<BasseTensionZone> {
       coffretsDirects: (fields[3] as List?)?.cast<CoffretArmoire>(),
       observationsLibres: (fields[4] as List?)?.cast<ObservationLibre>(),
       photos: (fields[5] as List?)?.cast<String>(),
+      classementZoneId: fields[6] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, BasseTensionZone obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.nom)
       ..writeByte(1)
@@ -198,7 +202,9 @@ class BasseTensionZoneAdapter extends TypeAdapter<BasseTensionZone> {
       ..writeByte(4)
       ..write(obj.observationsLibres)
       ..writeByte(5)
-      ..write(obj.photos);
+      ..write(obj.photos)
+      ..writeByte(6)
+      ..write(obj.classementZoneId);
   }
 
   @override
@@ -457,13 +463,16 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       pointsVerification: (fields[14] as List?)?.cast<PointVerification>(),
       observationsLibres: (fields[15] as List?)?.cast<ObservationLibre>(),
       photos: (fields[16] as List?)?.cast<String>(),
+      statut: fields[18] as String,
+      currentStep: fields[19] as int,
+      numeroEquipement: fields[17] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, CoffretArmoire obj) {
     writer
-      ..writeByte(17)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.qrCode)
       ..writeByte(1)
@@ -497,7 +506,13 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       ..writeByte(15)
       ..write(obj.observationsLibres)
       ..writeByte(16)
-      ..write(obj.photos);
+      ..write(obj.photos)
+      ..writeByte(17)
+      ..write(obj.numeroEquipement)
+      ..writeByte(18)
+      ..write(obj.statut)
+      ..writeByte(19)
+      ..write(obj.currentStep);
   }
 
   @override
@@ -527,13 +542,14 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
       calibre: fields[2] as String,
       sectionCable: fields[3] as String,
       photos: (fields[4] as List?)?.cast<String>(),
+      source: fields[5] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, Alimentation obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(6)
       ..writeByte(0)
       ..write(obj.typeProtection)
       ..writeByte(1)
@@ -543,7 +559,9 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
       ..writeByte(3)
       ..write(obj.sectionCable)
       ..writeByte(4)
-      ..write(obj.photos);
+      ..write(obj.photos)
+      ..writeByte(5)
+      ..write(obj.source);
   }
 
   @override

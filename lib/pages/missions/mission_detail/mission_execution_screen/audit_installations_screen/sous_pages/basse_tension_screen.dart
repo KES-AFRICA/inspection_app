@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/classement_locaux.dart';
+import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_zone_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_zone_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_zone_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
@@ -54,8 +56,9 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
       ),
     );
 
+    _loadAudit();
+
     if (result == true) {
-      _loadAudit();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Zone ajoutée avec succès')),
       );
@@ -100,26 +103,62 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer cette zone ?'),
+        title: const Text('Confirmer la suppression'),
+        content: const Text(
+          'Voulez-vous vraiment supprimer cette zone ?\n\n'
+          'TOUS les locaux et coffrets contenus dans cette zone seront également supprimés définitivement.'
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Annuler'),
+            child: const Text('Annuler'),
           ),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
+              
+              final zone = _audit!.basseTensionZones[index];
+              final nomZone = zone.nom;
+              
+              // 1. Supprimer tous les coffrets directs de la zone
+              for (var coffret in zone.coffretsDirects) {
+                await HiveService.deleteCoffretDraft(coffret.qrCode);
+              }
+              
+              // 2. Supprimer tous les locaux et leurs coffrets
+              for (var local in zone.locaux) {
+                for (var coffret in local.coffrets) {
+                  await HiveService.deleteCoffretDraft(coffret.qrCode);
+                }
+                // Supprimer le classement du local
+                await HiveService.deleteClassementLocal(
+                  missionId: widget.mission.id,
+                  nomLocal: local.nom,
+                );
+              }
+              
+              // 3. Supprimer la zone de l'audit
               setState(() {
                 _audit!.basseTensionZones.removeAt(index);
               });
               await HiveService.saveAuditInstallations(_audit!);
-              _loadAudit();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Zone supprimée')),
+              
+              // 4. Supprimer le classement de la zone
+              await HiveService.deleteClassementZone(
+                missionId: widget.mission.id,
+                nomZone: nomZone,
               );
+              
+              // 5. Rafraîchir
+              _loadAudit();
+              
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Zone et tout son contenu supprimés')),
+                );
+              }
             },
-            child: Text('Supprimer', style: TextStyle(color: Colors.red)),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -292,178 +331,187 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
   );
 }
 
-// NOUVEAU : Onglet classement dans basse tension
-Widget _buildClassementTab() {
-  return FutureBuilder<List<ClassementEmplacement>>(
-    future: HiveService.syncZonesFromAudit(widget.mission.id),
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return const Center(child: CircularProgressIndicator());
-      }
-      
-      // Filtrer uniquement les zones basse tension
-      final zones = (snapshot.data ?? [])
-          .where((z) => _audit!.basseTensionZones.any((bz) => bz.nom == z.localisation))
-          .toList();
-      
-      if (zones.isEmpty) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.security_outlined, size: 64, color: Colors.grey.shade400),
-              const SizedBox(height: 16),
-              Text(
-                'Aucune zone à classer',
-                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Ajoutez une zone pour la classer',
-                style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
-              ),
-            ],
-          ),
-        );
-      }
-      
-      return ListView.builder(
-        padding: const EdgeInsets.all(16),
-        itemCount: zones.length,
-        itemBuilder: (context, index) {
-          final zone = zones[index];
-          final estComplet = zone.af != null && zone.be != null && 
-                            zone.ae != null && zone.ad != null && zone.ag != null;
-          
-          return Card(
-            margin: const EdgeInsets.only(bottom: 12),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            child: InkWell(
-              onTap: () => _ouvrirClassementZone(zone),
-              borderRadius: BorderRadius.circular(12),
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: estComplet ? Colors.green.shade50 : Colors.blue.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Icon(
-                            Icons.map_outlined,
-                            color: estComplet ? Colors.green : AppTheme.primaryBlue,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            zone.localisation,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: estComplet ? Colors.green.shade100 : Colors.orange.shade100,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text(
-                            estComplet ? 'Classée' : 'À classer',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: estComplet ? Colors.green.shade800 : Colors.orange.shade800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    if (estComplet) ...[
-                      const SizedBox(height: 12),
-                      Wrap(
-                        spacing: 8,
-                        runSpacing: 8,
-                        children: [
-                          _buildInfluenceChip('AF', zone.af!),
-                          _buildInfluenceChip('BE', zone.be!),
-                          _buildInfluenceChip('AE', zone.ae!),
-                          _buildInfluenceChip('AD', zone.ad!),
-                          _buildInfluenceChip('AG', zone.ag!),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          Text('IP: ${zone.ip ?? "N/A"}',
-                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800)),
-                          Text('IK: ${zone.ik ?? "N/A"}',
-                              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green.shade800)),
-                        ],
-                      ),
-                    ],
-                  ],
+  Widget _buildClassementTab() {
+    return FutureBuilder<List<ClassementZone>>(
+      future: HiveService.syncClassementsZonesFromAudit(widget.mission.id).then(
+        (_) => HiveService.getClassementsZonesByMissionId(widget.mission.id)
+            .where((cz) => cz.typeZone == 'BT')
+            .toList(),
+      ),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
+        
+        final zones = snapshot.data ?? [];
+        
+        if (zones.isEmpty) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.security_outlined, size: 64, color: Colors.grey.shade400),
+                const SizedBox(height: 16),
+                Text(
+                  'Aucune zone à classer',
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                 ),
-              ),
+                const SizedBox(height: 8),
+                Text(
+                  'Ajoutez une zone pour la classer',
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade500),
+                ),
+              ],
             ),
           );
-        },
-      );
-    },
-  );
-}
-
-void _ouvrirClassementZone(ClassementEmplacement zone) async {
-  final result = await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => ClassementEmplacementScreen(
-        mission: widget.mission,
-        emplacement: zone,
-      ),
-    ),
-  );
-  
-  if (result == true) {
-    setState(() {});
+        }
+        
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: zones.length,
+          itemBuilder: (context, index) {
+            final zone = zones[index];
+            final estComplet = zone.estComplet;
+            
+            return Card(
+              margin: const EdgeInsets.only(bottom: 12),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: InkWell(
+                onTap: () => _ouvrirClassementZone(zone),
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: estComplet ? Colors.green.shade50 : Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Icon(
+                              Icons.map_outlined,
+                              color: estComplet ? Colors.green : AppTheme.primaryBlue,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              zone.nomZone,
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: estComplet ? Colors.green.shade100 : Colors.orange.shade100,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Text(
+                              estComplet ? 'Classée' : 'À classer',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w500,
+                                color: estComplet ? Colors.green.shade800 : Colors.orange.shade800,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      if (estComplet) ...[
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            _buildInfluenceChip('AF', zone.af!),
+                            _buildInfluenceChip('BE', zone.be!),
+                            _buildInfluenceChip('AE', zone.ae!),
+                            _buildInfluenceChip('AD', zone.ad!),
+                            _buildInfluenceChip('AG', zone.ag!),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            Text(
+                              'IP: ${zone.ip ?? "N/A"}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green.shade800,
+                              ),
+                            ),
+                            Text(
+                              'IK: ${zone.ik ?? "N/A"}',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.green.shade800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
-}
 
-Widget _buildInfluenceChip(String type, String code) {
-  final Map<String, Color> colorMap = {
-    'AF': Colors.blue,
-    'BE': Colors.purple,
-    'AE': Colors.orange,
-    'AD': Colors.teal,
-    'AG': Colors.red,
-  };
-  
-  return Container(
-    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    decoration: BoxDecoration(
-      color: colorMap[type]!.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(6),
-      border: Border.all(color: colorMap[type]!.withOpacity(0.3)),
-    ),
-    child: Text(
-      '$type: $code',
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        color: colorMap[type]!,
+  void _ouvrirClassementZone(ClassementZone classement) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ClassementZoneScreen(
+          mission: widget.mission,
+          classement: classement,
+        ),
       ),
-    ),
-  );
-}
+    );
+    
+    if (result == true) {
+      setState(() {});
+    }
+  }
+
+  Widget _buildInfluenceChip(String type, String code) {
+    final Map<String, Color> colorMap = {
+      'AF': Colors.blue,
+      'BE': Colors.purple,
+      'AE': Colors.orange,
+      'AD': Colors.teal,
+      'AG': Colors.red,
+    };
+    
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: colorMap[type]!.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: colorMap[type]!.withOpacity(0.3)),
+      ),
+      child: Text(
+        '$type: $code',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: colorMap[type]!,
+        ),
+      ),
+    );
+  }
 
   Widget _buildStatCard(String title, int count, IconData icon) {
     return Column(
@@ -558,7 +606,6 @@ Widget _buildInfluenceChip(String type, String code) {
       totalCoffrets += local.coffrets.length;
     }
     
-    final hasIncompletCoffrets = _hasIncompletCoffretsInZone(zone, index);
 
     return Container(
       margin: EdgeInsets.only(bottom: 8),
@@ -606,24 +653,6 @@ Widget _buildInfluenceChip(String type, String code) {
                                 ),
                               ),
                             ),
-                            if (hasIncompletCoffrets)
-                              Container(
-                                margin: EdgeInsets.only(left: 8),
-                                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.red.shade100,
-                                  borderRadius: BorderRadius.circular(10),
-                                  border: Border.all(color: Colors.red.shade300),
-                                ),
-                                child: Text(
-                                  'Incomplet',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.red.shade700,
-                                  ),
-                                ),
-                              ),
                           ],
                         ),
                         if (zone.description != null) ...[

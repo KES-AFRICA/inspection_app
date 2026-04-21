@@ -121,6 +121,9 @@ class MoyenneTensionZone {
   @HiveField(5)
   List<MoyenneTensionLocal> locaux;
 
+  @HiveField(6)
+  String? classementZoneId;
+
   MoyenneTensionZone({
     required this.nom,
     this.description,
@@ -128,6 +131,7 @@ class MoyenneTensionZone {
     List<ObservationLibre>? observationsLibres,
     List<String>? photos,
     List<MoyenneTensionLocal>? locaux,
+    this.classementZoneId,
   })  : coffrets = coffrets ?? [],
         observationsLibres = observationsLibres ?? [],
         photos = photos ?? [],
@@ -156,6 +160,9 @@ class BasseTensionZone {
   @HiveField(5)
   List<String> photos; // Chemins des photos de la zone basse tension
 
+  @HiveField(6)
+  String? classementZoneId;
+
   BasseTensionZone({
     required this.nom,
     this.description,
@@ -163,6 +170,7 @@ class BasseTensionZone {
     List<CoffretArmoire>? coffretsDirects,
     List<ObservationLibre>? observationsLibres,
     List<String>? photos,
+    this.classementZoneId,
   })  : locaux = locaux ?? [],
         coffretsDirects = coffretsDirects ?? [],
         observationsLibres = observationsLibres ?? [],
@@ -401,6 +409,12 @@ class CoffretArmoire {
   @HiveField(19)
   int currentStep;
 
+  @HiveField(20)
+  List<String> photosExternes;
+
+  @HiveField(21)
+  List<String> photosInternes;
+
   CoffretArmoire({
     required this.qrCode, // Ajouté dans le constructeur
     required this.nom,
@@ -422,10 +436,14 @@ class CoffretArmoire {
     this.statut = 'incomplet',
     this.currentStep = 0,
     this.numeroEquipement,
+    List<String>? photosExternes,
+    List<String>? photosInternes,
   })  : alimentations = alimentations ?? [],
         pointsVerification = pointsVerification ?? [],
         observationsLibres = observationsLibres ?? [],
-        photos = photos ?? [];
+        photos = photos ?? [],
+        photosExternes = photosExternes ?? [],
+        photosInternes = photosInternes ?? [];
 }
 
 @HiveType(typeId: 12)

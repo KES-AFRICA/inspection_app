@@ -30,13 +30,16 @@ class ClassementEmplacementAdapter extends TypeAdapter<ClassementEmplacement> {
       ik: fields[10] as String?,
       updatedAt: fields[11] as DateTime,
       typeLocal: fields[12] as String?,
+      typeEmplacement: fields[13] as String,
+      heriteDeZone: fields[14] as bool,
+      zoneParenteId: fields[15] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ClassementEmplacement obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)
@@ -62,7 +65,13 @@ class ClassementEmplacementAdapter extends TypeAdapter<ClassementEmplacement> {
       ..writeByte(11)
       ..write(obj.updatedAt)
       ..writeByte(12)
-      ..write(obj.typeLocal);
+      ..write(obj.typeLocal)
+      ..writeByte(13)
+      ..write(obj.typeEmplacement)
+      ..writeByte(14)
+      ..write(obj.heriteDeZone)
+      ..writeByte(15)
+      ..write(obj.zoneParenteId);
   }
 
   @override

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/classement_locaux.dart';
+import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/models/foudre.dart';
 import 'package:inspec_app/models/jsa.dart';
@@ -22,6 +23,7 @@ class HiveService {
   static const String _mesuresEssaisBox = 'mesures_essais';
   static const String _jsaBox = 'jsa';
   static const String _coffretDraftsBox = 'coffret_drafts';
+  static const String _classementZoneBox = 'classement_zones';
 
   // Initialiser Hive
   static Future<void> init() async {
@@ -61,6 +63,7 @@ class HiveService {
   Hive.registerAdapter(JSAExigencesGeneralesAdapter());
   Hive.registerAdapter(JSAEPIAdapter());
   Hive.registerAdapter(JSAVerificationFinaleAdapter());
+  Hive.registerAdapter(ClassementZoneAdapter());
   
 
     // Ouvrir les boxes
@@ -75,6 +78,7 @@ class HiveService {
     await Hive.openBox<RenseignementsGeneraux>(_renseignementsGenerauxBox);
     await Hive.openBox<JSA>(_jsaBox);
     await Hive.openBox<Map>(_coffretDraftsBox);
+    await Hive.openBox<ClassementZone>(_classementZoneBox);
   
   }
 
@@ -1652,14 +1656,22 @@ static Future<bool> addMoyenneTensionZone({
   try {
     final audit = await getOrCreateAuditInstallations(missionId);
     
-    // S'assurer que la liste est modifiable
     if (audit.moyenneTensionZones.isEmpty) {
       audit.moyenneTensionZones = [];
     }
     
+    // Créer le classement pour la zone AVANT de l'ajouter
+    final classement = await getOrCreateClassementForZone(
+      missionId: missionId,
+      nomZone: zone.nom,
+    );
+    
+    // Lier le classement à la zone
+    zone.classementZoneId = classement.key.toString();
+    
     audit.moyenneTensionZones.add(zone);
     await saveAuditInstallations(audit);
-    print('✅ Zone moyenne tension ajoutée: ${zone.nom}');
+    print('✅ Zone moyenne tension ajoutée: ${zone.nom} avec classement ${zone.classementZoneId}');
     return true;
   } catch (e) {
     print('❌ Erreur addMoyenneTensionZone: $e');
@@ -1675,14 +1687,22 @@ static Future<bool> addBasseTensionZone({
   try {
     final audit = await getOrCreateAuditInstallations(missionId);
     
-    // S'assurer que la liste est modifiable
     if (audit.basseTensionZones.isEmpty) {
       audit.basseTensionZones = [];
     }
     
+    // Créer le classement pour la zone AVANT de l'ajouter
+    final classement = await getOrCreateClassementForZone(
+      missionId: missionId,
+      nomZone: zone.nom,
+    );
+    
+    // Lier le classement à la zone
+    zone.classementZoneId = classement.key.toString();
+    
     audit.basseTensionZones.add(zone);
     await saveAuditInstallations(audit);
-    print('✅ Zone basse tension ajoutée: ${zone.nom}');
+    print('✅ Zone basse tension ajoutée: ${zone.nom} avec classement ${zone.classementZoneId}');
     return true;
   } catch (e) {
     print('❌ Erreur addBasseTensionZone: $e');
@@ -2074,12 +2094,19 @@ static Future<bool> updateEmplacement(ClassementEmplacement emplacement) async {
   try {
     final box = Hive.box<ClassementEmplacement>(_classementBox);
     
-    // Recalculer les indices avant sauvegarde
     emplacement.calculerIndices();
     emplacement.updatedAt = DateTime.now();
     
-    await emplacement.save();
-    print('✅ Emplacement mis à jour: ${emplacement.localisation}');
+    if (emplacement.key != null) {
+      await box.put(emplacement.key, emplacement);
+    } else {
+      await box.add(emplacement);
+    }
+    
+    print('✅ Emplacement sauvegardé: ${emplacement.localisation} (${emplacement.typeEmplacement})');
+    print('   AF: ${emplacement.af}, BE: ${emplacement.be}, AE: ${emplacement.ae}');
+    print('   AD: ${emplacement.ad}, AG: ${emplacement.ag}');
+    
     return true;
   } catch (e) {
     print('❌ Erreur updateEmplacement: $e');
@@ -2165,40 +2192,73 @@ static Future<List<ClassementEmplacement>> syncZonesFromAudit(String missionId) 
     
     // ===== ZONES MOYENNE TENSION =====
     for (var zone in audit.moyenneTensionZones) {
-      var existant = classementBox.values.firstWhere(
-        (e) => e.missionId == missionId && 
-               e.localisation == zone.nom && 
-               e.typeEmplacement == 'zone',
-        orElse: () => ClassementEmplacement.createZone(
-          missionId: missionId,
-          nomZone: zone.nom,
-        ),
-      );
+      ClassementEmplacement? classement;
       
-      if (existant.key == null) {
-        await classementBox.add(existant);
+      // D'abord essayer de récupérer via l'ID sauvegardé
+      if (zone.classementZoneId != null) {
+        classement = classementBox.get(zone.classementZoneId);
       }
       
-      zones.add(existant);
+      // Si pas trouvé, chercher par nom
+      if (classement == null) {
+        try {
+          classement = classementBox.values.firstWhere(
+            (e) => e.missionId == missionId && 
+                   e.localisation == zone.nom && 
+                   e.typeEmplacement == 'zone',
+          );
+        } catch (e) {
+          classement = null;
+        }
+      }
+      
+      // Si toujours pas trouvé, créer
+      if (classement == null) {
+        classement = ClassementEmplacement.createZone(
+          missionId: missionId,
+          nomZone: zone.nom,
+        );
+        await classementBox.add(classement);
+        zone.classementZoneId = classement.key.toString();
+        await saveAuditInstallations(audit);
+        print('✅ Nouveau classement zone MT créé: ${zone.nom}');
+      }
+      
+      zones.add(classement);
     }
     
     // ===== ZONES BASSE TENSION =====
     for (var zone in audit.basseTensionZones) {
-      var existant = classementBox.values.firstWhere(
-        (e) => e.missionId == missionId && 
-               e.localisation == zone.nom && 
-               e.typeEmplacement == 'zone',
-        orElse: () => ClassementEmplacement.createZone(
-          missionId: missionId,
-          nomZone: zone.nom,
-        ),
-      );
+      ClassementEmplacement? classement;
       
-      if (existant.key == null) {
-        await classementBox.add(existant);
+      if (zone.classementZoneId != null) {
+        classement = classementBox.get(zone.classementZoneId);
       }
       
-      zones.add(existant);
+      if (classement == null) {
+        try {
+          classement = classementBox.values.firstWhere(
+            (e) => e.missionId == missionId && 
+                   e.localisation == zone.nom && 
+                   e.typeEmplacement == 'zone',
+          );
+        } catch (e) {
+          classement = null;
+        }
+      }
+      
+      if (classement == null) {
+        classement = ClassementEmplacement.createZone(
+          missionId: missionId,
+          nomZone: zone.nom,
+        );
+        await classementBox.add(classement);
+        zone.classementZoneId = classement.key.toString();
+        await saveAuditInstallations(audit);
+        print('✅ Nouveau classement zone BT créé: ${zone.nom}');
+      }
+      
+      zones.add(classement);
     }
     
     print('✅ ${zones.length} ZONES synchronisées pour mission $missionId');
@@ -2208,6 +2268,50 @@ static Future<List<ClassementEmplacement>> syncZonesFromAudit(String missionId) 
     return [];
   }
 }
+
+static Future<void> ensureZonesHaveClassement(String missionId) async {
+  final audit = getAuditInstallationsByMissionId(missionId);
+  if (audit == null) return;
+  
+  final classementBox = Hive.box<ClassementEmplacement>(_classementBox);
+  
+  // Vérifier les zones MT
+  for (var zone in audit.moyenneTensionZones) {
+    final exists = classementBox.values.any(
+      (c) => c.missionId == missionId && 
+             c.localisation == zone.nom && 
+             c.typeEmplacement == 'zone'
+    );
+    
+    if (!exists) {
+      final newClassement = ClassementEmplacement.createZone(
+        missionId: missionId,
+        nomZone: zone.nom,
+      );
+      await classementBox.add(newClassement);
+      print('✅ Classement manquant créé pour zone MT: ${zone.nom}');
+    }
+  }
+  
+  // Vérifier les zones BT
+  for (var zone in audit.basseTensionZones) {
+    final exists = classementBox.values.any(
+      (c) => c.missionId == missionId && 
+             c.localisation == zone.nom && 
+             c.typeEmplacement == 'zone'
+    );
+    
+    if (!exists) {
+      final newClassement = ClassementEmplacement.createZone(
+        missionId: missionId,
+        nomZone: zone.nom,
+      );
+      await classementBox.add(newClassement);
+      print('✅ Classement manquant créé pour zone BT: ${zone.nom}');
+    }
+  }
+}
+
 
 /// Synchroniser TOUT (zones + locaux) depuis l'audit
 static Future<List<ClassementEmplacement>> syncAllEmplacementsFromAudit(String missionId) async {
@@ -5199,15 +5303,17 @@ static JSA? getJSAByMissionId(String missionId) {
 // ===== MÉTHODES POUR LES BROUILLONS DE COFFRET =====
   
   /// Sauvegarder un brouillon de coffret
-  static Future<void> saveCoffretDraft({
-    required String missionId,
-    required String parentType,
-    required int parentIndex,
-    required bool isMoyenneTension,
-    required int? zoneIndex,
-    required CoffretArmoire coffret,
-    required int currentStep,
-  }) async {
+static Future<void> saveCoffretDraft({
+  required String missionId,
+  required String parentType,
+  required int parentIndex,
+  required bool isMoyenneTension,
+  required int? zoneIndex,
+  required CoffretArmoire coffret,
+  required int currentStep,
+}) async {
+  try {
+    // Utiliser Box<Map> comme partout ailleurs
     final box = Hive.box<Map>(_coffretDraftsBox);
     
     String draftKey = coffret.qrCode;
@@ -5216,7 +5322,16 @@ static JSA? getJSAByMissionId(String missionId) {
       coffret.qrCode = draftKey;
     }
     
-    // Ajouter les métadonnées de localisation dans une Map
+    coffret.statut = 'incomplet';
+    coffret.currentStep = currentStep;
+    
+    // S'assurer que les photos sont bien dans les nouveaux champs
+    if (coffret.photosExternes.isEmpty && coffret.photosInternes.isEmpty && coffret.photos.isNotEmpty) {
+      coffret.photosExternes = coffret.photos.where((p) => p.contains('externe')).toList();
+      coffret.photosInternes = coffret.photos.where((p) => p.contains('interne')).toList();
+    }
+    
+    // Sauvegarder une Map avec toutes les métadonnées (comme dans les autres méthodes)
     final draftData = {
       'coffret': coffret,
       'currentStep': currentStep,
@@ -5230,7 +5345,11 @@ static JSA? getJSAByMissionId(String missionId) {
     
     await box.put(draftKey, draftData);
     print('✅ Brouillon sauvegardé: $draftKey (step $currentStep)');
+  } catch (e) {
+    print('❌ Erreur saveCoffretDraft: $e');
+    rethrow;
   }
+}
 
   /// Récupérer les données complètes du brouillon
   static Map<String, dynamic>? getCoffretDraftData(String qrCode) {
@@ -5309,6 +5428,159 @@ static JSA? getJSAByMissionId(String missionId) {
     
     return drafts;
   }
+
+  /// Récupérer ou créer le classement d'une zone
+static Future<ClassementZone> getOrCreateClassementZone({
+  required String missionId,
+  required String nomZone,
+  String typeZone = 'BT',
+}) async {
+  final box = Hive.box<ClassementZone>(_classementZoneBox);
+  
+  try {
+    // Chercher un classement existant
+    for (var cz in box.values) {
+      if (cz.missionId == missionId && cz.nomZone == nomZone) {
+        return cz;
+      }
+    }
+    
+    // Créer un nouveau classement
+    final newClassement = ClassementZone.create(
+      missionId: missionId,
+      nomZone: nomZone,
+      typeZone: typeZone,
+    );
+    await box.add(newClassement);
+    print('✅ ClassementZone créé: $nomZone');
+    return newClassement;
+  } catch (e) {
+    print('❌ Erreur getOrCreateClassementZone: $e');
+    final newClassement = ClassementZone.create(
+      missionId: missionId,
+      nomZone: nomZone,
+      typeZone: typeZone,
+    );
+    await box.add(newClassement);
+    return newClassement;
+  }
+}
+
+/// Sauvegarder un classement de zone
+static Future<bool> saveClassementZone(ClassementZone classement) async {
+  try {
+    final box = Hive.box<ClassementZone>(_classementZoneBox);
+    classement.updatedAt = DateTime.now();
+    classement.calculerIndices();
+    
+    if (classement.key != null) {
+      await box.put(classement.key, classement);
+    } else {
+      await box.add(classement);
+    }
+    
+    print('✅ ClassementZone sauvegardé: ${classement.nomZone}');
+    print('   AF: ${classement.af}, BE: ${classement.be}, AE: ${classement.ae}');
+    return true;
+  } catch (e) {
+    print('❌ Erreur saveClassementZone: $e');
+    return false;
+  }
+}
+
+/// Récupérer tous les classements de zones d'une mission
+static List<ClassementZone> getClassementsZonesByMissionId(String missionId) {
+  final box = Hive.box<ClassementZone>(_classementZoneBox);
+  return box.values.where((cz) => cz.missionId == missionId).toList();
+}
+
+/// Récupérer un classement de zone par son nom
+static ClassementZone? getClassementZoneByNom(String missionId, String nomZone) {
+  final box = Hive.box<ClassementZone>(_classementZoneBox);
+  try {
+    return box.values.firstWhere(
+      (cz) => cz.missionId == missionId && cz.nomZone == nomZone,
+    );
+  } catch (e) {
+    return null;
+  }
+}
+
+/// Synchroniser les classements de zones depuis l'audit
+static Future<void> syncClassementsZonesFromAudit(String missionId) async {
+  final audit = getAuditInstallationsByMissionId(missionId);
+  if (audit == null) return;
+  
+  // Zones MT
+  for (var zone in audit.moyenneTensionZones) {
+    await getOrCreateClassementZone(
+      missionId: missionId,
+      nomZone: zone.nom,
+      typeZone: 'MT',
+    );
+  }
+  
+  // Zones BT
+  for (var zone in audit.basseTensionZones) {
+    await getOrCreateClassementZone(
+      missionId: missionId,
+      nomZone: zone.nom,
+      typeZone: 'BT',
+    );
+  }
+  
+  print('✅ Classements zones synchronisés pour mission $missionId');
+}
+
+/// Supprimer le classement d'un local
+static Future<void> deleteClassementLocal({
+  required String missionId,
+  required String nomLocal,
+}) async {
+  final box = Hive.box<ClassementEmplacement>(_classementBox);
+  
+  try {
+    ClassementEmplacement? toDelete;
+    for (var ce in box.values) {
+      if (ce.missionId == missionId && ce.localisation == nomLocal && ce.typeEmplacement == 'local') {
+        toDelete = ce;
+        break;
+      }
+    }
+    
+    if (toDelete != null) {
+      await toDelete.delete();
+      print('✅ ClassementLocal supprimé: $nomLocal');
+    }
+  } catch (e) {
+    print('❌ Erreur deleteClassementLocal: $e');
+  }
+}
+
+/// Supprimer le classement d'une zone
+static Future<void> deleteClassementZone({
+  required String missionId,
+  required String nomZone,
+}) async {
+  final box = Hive.box<ClassementZone>(_classementZoneBox);
+  
+  try {
+    ClassementZone? toDelete;
+    for (var cz in box.values) {
+      if (cz.missionId == missionId && cz.nomZone == nomZone) {
+        toDelete = cz;
+        break;
+      }
+    }
+    
+    if (toDelete != null) {
+      await toDelete.delete();
+      print('✅ ClassementZone supprimé: $nomZone');
+    }
+  } catch (e) {
+    print('❌ Erreur deleteClassementZone: $e');
+  }
+}
 
 }
 

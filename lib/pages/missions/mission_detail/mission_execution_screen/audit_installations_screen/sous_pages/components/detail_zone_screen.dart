@@ -72,16 +72,12 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     );
     
     // Filtrer les brouillons qui ne sont PAS déjà dans les coffrets sauvegardés
-    // (pour éviter les doublons si un brouillon a été converti)
     final savedQrCodes = savedCoffrets.map((c) => c.qrCode).toSet();
     final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).toList();
     
     setState(() {
       _coffretsDirects = [...uniqueDrafts, ...savedCoffrets];
     });
-    
-    // Pour les coffrets dans les locaux (uniquement pour les zones MT et BT)
-    _loadCoffretsDansLocaux();
   }
   
   void _loadCoffretsDansLocaux() {
@@ -1228,22 +1224,22 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   }
 
   void _rechargerZone() async {
-    final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-    
-    setState(() {
-      if (widget.isMoyenneTension) {
-        if (widget.zoneIndex < audit.moyenneTensionZones.length) {
-          _zone = audit.moyenneTensionZones[widget.zoneIndex];
-        }
-      } else {
-        if (widget.zoneIndex < audit.basseTensionZones.length) {
-          _zone = audit.basseTensionZones[widget.zoneIndex];
-        }
+  final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+  
+  setState(() {
+    if (widget.isMoyenneTension) {
+      if (widget.zoneIndex < audit.moyenneTensionZones.length) {
+        _zone = audit.moyenneTensionZones[widget.zoneIndex];
       }
-      _chargerPhotosZone();
-      _loadCoffrets();
-    });
-  }
+    } else {
+      if (widget.zoneIndex < audit.basseTensionZones.length) {
+        _zone = audit.basseTensionZones[widget.zoneIndex];
+      }
+    }
+    _chargerPhotosZone();
+    _loadCoffrets(); // ← IMPORTANT : Recharger les coffrets
+  });
+}
 
   Future<void> _sauvegarderZone() async {
     final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
@@ -1372,128 +1368,228 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
 
   // MODIFIER : _buildCoffretCard pour gérer les brouillons
   Widget _buildCoffretCard(CoffretArmoire coffret, int index, bool isMoyenneTension) {
-    final pointsConformes = coffret.pointsVerification.where((p) => p.conformite == 'oui').length;
-    final totalPoints = coffret.pointsVerification.length;
-    final pourcentage = totalPoints > 0 ? (pointsConformes / totalPoints * 100).round() : 0;
+  final pointsConformes = coffret.pointsVerification.where((p) => p.conformite == 'oui').length;
+  final totalPoints = coffret.pointsVerification.length;
+  final pourcentage = totalPoints > 0 ? (pointsConformes / totalPoints * 100).round() : 0;
 
-    final isComplet = coffret.statut == 'complet' || _isCoffretComplet(coffret);
-    final isDraft = coffret.statut == 'incomplet';
+  final isComplet = coffret.statut == 'complet' || _isCoffretComplet(coffret);
+  final isDraft = coffret.statut == 'incomplet';
 
-    // Calculer le nombre total de photos pour ce coffret
-    int totalPhotosCoffret = coffret.photos.length;
-    for (var observation in coffret.observationsLibres) {
-      totalPhotosCoffret += observation.photos.length;
-    }
-
-    return Container(
-      margin: EdgeInsets.only(bottom: 8),
-      padding: EdgeInsets.all(4),
-      decoration: BoxDecoration(
-        color: isDraft ? Colors.orange.shade50 : Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: isComplet ? Colors.green.shade200 : Colors.red.shade200,
+  return Container(
+    margin: EdgeInsets.only(bottom: 8),
+    padding: EdgeInsets.all(4),
+    decoration: BoxDecoration(
+      color: isDraft ? Colors.orange.shade50 : Colors.grey.shade50,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(
+        color: isComplet ? Colors.green.shade200 : Colors.red.shade200,
+      ),
+    ),
+    child: ListTile(
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: isDraft ? Colors.orange.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Icon(
+          isDraft ? Icons.drafts_outlined : Icons.electrical_services,
+          color: isDraft ? Colors.orange : Colors.orange,
         ),
       ),
-      child: ListTile(
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: isDraft ? Colors.orange.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
+      title: Row(
+        children: [
+          Expanded(
+            child: Text(
+              coffret.nom.isEmpty ? 'Sans nom' : coffret.nom,
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
           ),
-          child: Icon(
-            isDraft ? Icons.drafts_outlined : Icons.electrical_services,
-            color: isDraft ? Colors.orange : Colors.orange,
-          ),
-        ),
-        title: Row(
-          children: [
-            Expanded(
+          if (!isComplet)
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.red.shade100,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.red.shade300),
+              ),
               child: Text(
-                coffret.nom.isEmpty ? 'Sans nom' : coffret.nom,
-                style: TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-            if (!isComplet)
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade100,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.red.shade300),
-                ),
-                child: Text(
-                  'Incomplet',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red.shade700,
-                  ),
+                'Incomplet',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.red.shade700,
                 ),
               ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(height: 4),
-            Text('${coffret.type} • ${totalPhotosCoffret} photo(s) • ${coffret.observationsLibres.length} observation(s)'),
-            SizedBox(height: 4),
-            if (totalPoints > 0) ...[
-              LinearProgressIndicator(
-                value: pointsConformes / totalPoints,
-                backgroundColor: Colors.grey.shade200,
-                color: _getProgressColor(pourcentage),
+            ),
+          if (isComplet && !isDraft)
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.green.shade100,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.green.shade300),
               ),
-              SizedBox(height: 4),
-              Text('$pourcentage% conforme ($pointsConformes/$totalPoints)'),
-            ],
-          ],
-        ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) {
-            if (value == 'view') {
-              if (isDraft) {
-                _ouvrirBrouillon(coffret);
-              } else {
-                isMoyenneTension ? _voirCoffretMT(index) : _voirCoffretDirectBT(index);
-              }
-            }
-            if (value == 'edit') {
-              isMoyenneTension ? _editerCoffretMT(index) : _editerCoffretDirectBT(index);
-            }
-            if (value == 'delete') {
-              if (isDraft) {
-                _supprimerBrouillon(coffret);
-              } else {
-                isMoyenneTension ? _supprimerCoffretMT(index) : _supprimerCoffretDirectBT(index);
-              }
-            }
-          },
-          itemBuilder: (context) => [
-            PopupMenuItem(
-              value: 'view', 
-              child: Text(isDraft ? 'Continuer' : 'Voir détails')
+              child: Text(
+                'Complet',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green.shade700,
+                ),
+              ),
             ),
-            PopupMenuItem(value: 'edit', child: Text('Éditer')),
-            PopupMenuItem(
-              value: 'delete', 
-              child: Text('Supprimer', style: TextStyle(color: Colors.red))
+        ],
+      ),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(height: 4),
+          Text('${coffret.type} • ${coffret.photos.length} photo(s) • ${coffret.observationsLibres.length} observation(s)'),
+          SizedBox(height: 4),
+          if (totalPoints > 0) ...[
+            LinearProgressIndicator(
+              value: pointsConformes / totalPoints,
+              backgroundColor: Colors.grey.shade200,
+              color: _getProgressColor(pourcentage),
             ),
+            SizedBox(height: 4),
+            Text('$pourcentage% conforme ($pointsConformes/$totalPoints)'),
           ],
-        ),
-        onTap: () {
-          if (isDraft) {
-            _ouvrirBrouillon(coffret);
-          } else {
-            isMoyenneTension ? _voirCoffretMT(index) : _voirCoffretDirectBT(index);
+        ],
+      ),
+      trailing: PopupMenuButton<String>(
+        onSelected: (value) {
+          if (value == 'edit') {
+            _editerCoffret(coffret, index, isMoyenneTension);
+          } else if (value == 'delete') {
+            if (isDraft) {
+              _supprimerBrouillon(coffret);
+            } else {
+              _supprimerCoffret(index, isMoyenneTension);
+            }
           }
         },
+        itemBuilder: (context) => [
+          const PopupMenuItem(
+            value: 'edit',
+            child: Row(
+              children: [
+                Icon(Icons.edit_outlined, size: 18),
+                SizedBox(width: 8),
+                Text('Éditer'),
+              ],
+            ),
+          ),
+          const PopupMenuItem(
+            value: 'delete',
+            child: Row(
+              children: [
+                Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                SizedBox(width: 8),
+                Text('Supprimer', style: TextStyle(color: Colors.red)),
+              ],
+            ),
+          ),
+        ],
       ),
-    );
+      onTap: () {
+        if (isDraft) {
+          _ouvrirBrouillon(coffret);
+        } else {
+          _voirCoffret(index, isMoyenneTension);
+        }
+      },
+    ),
+  );
+}
+
+// MODIFIER : Éditer un coffret (brouillon ou complet)
+void _editerCoffret(CoffretArmoire coffret, int index, bool isMoyenneTension) async {
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => AjouterCoffretScreen(
+        mission: widget.mission,
+        parentType: widget.isMoyenneTension ? 'zone_mt' : 'zone_bt',
+        parentIndex: widget.zoneIndex,
+        isMoyenneTension: widget.isMoyenneTension,
+        isInZone: false,
+        qrCode: coffret.qrCode, // ← Passer le QR code existant
+        coffret: coffret.statut == 'complet' ? coffret : null, // Si complet, passer le coffret
+        coffretIndex: coffret.statut == 'complet' ? index : null,
+      ),
+    ),
+  );
+  
+  if (result == true) {
+    _rechargerZone();
   }
+}
+
+// MODIFIER : Voir un coffret complet
+void _voirCoffret(int index, bool isMoyenneTension) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => DetailCoffretScreen(
+        mission: widget.mission,
+        isMoyenneTension: widget.isMoyenneTension,
+        parentType: widget.isMoyenneTension ? 'zone_mt' : 'zone_bt',
+        parentIndex: widget.zoneIndex,
+        coffretIndex: index,
+        coffret: isMoyenneTension ? _zone.coffrets[index] : _zone.coffretsDirects[index],
+      ),
+    ),
+  ).then((_) => _rechargerZone());
+}
+
+// MODIFIER : Supprimer un coffret complet
+void _supprimerCoffret(int index, bool isMoyenneTension) {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Confirmer la suppression'),
+      content: const Text('Voulez-vous vraiment supprimer ce coffret ?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Annuler'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            Navigator.pop(context);
+            
+            final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+            
+            if (isMoyenneTension) {
+              if (widget.zoneIndex < audit.moyenneTensionZones.length) {
+                if (index < audit.moyenneTensionZones[widget.zoneIndex].coffrets.length) {
+                  audit.moyenneTensionZones[widget.zoneIndex].coffrets.removeAt(index);
+                  await HiveService.saveAuditInstallations(audit);
+                }
+              }
+            } else {
+              if (widget.zoneIndex < audit.basseTensionZones.length) {
+                if (index < audit.basseTensionZones[widget.zoneIndex].coffretsDirects.length) {
+                  audit.basseTensionZones[widget.zoneIndex].coffretsDirects.removeAt(index);
+                  await HiveService.saveAuditInstallations(audit);
+                }
+              }
+            }
+            
+            _rechargerZone();
+            _showSuccess('Coffret supprimé');
+          },
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          child: const Text('Supprimer'),
+        ),
+      ],
+    ),
+  );
+}
+
 
   // Ouvrir un brouillon pour continuer
   void _ouvrirBrouillon(CoffretArmoire draft) async {

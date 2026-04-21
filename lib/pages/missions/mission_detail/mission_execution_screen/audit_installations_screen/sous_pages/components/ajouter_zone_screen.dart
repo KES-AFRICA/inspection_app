@@ -4,6 +4,7 @@ import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_zone_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
@@ -796,27 +797,36 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
             ),
           );
           
-          // ===== Rediriger vers le classement de la zone =====
           if (!widget.isEdition) {
-            // Créer le classement pour cette zone
-            final classement = await HiveService.getOrCreateClassementForZone(
+            // Synchroniser les classements
+            await HiveService.syncClassementsZonesFromAudit(widget.mission.id);
+            
+            // Récupérer le classement créé
+            final classement = await HiveService.getOrCreateClassementZone(
               missionId: widget.mission.id,
               nomZone: _nomController.text.trim(),
+              typeZone: widget.isMoyenneTension ? 'MT' : 'BT',
             );
             
             // Rediriger vers l'écran de classement
             final result = await Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => ClassementEmplacementScreen(
+                builder: (context) => ClassementZoneScreen(
                   mission: widget.mission,
-                  emplacement: classement,
+                  classement: classement,
                 ),
               ),
             );
+            
+            // Si le classement a été sauvegardé (result == true)
+            if (result == true) {
+              // Fermer AjouterZoneScreen et retourner à l'écran précédent
+              Navigator.pop(context, true);
+            }
+          } else {
+            Navigator.pop(context, true);
           }
-          
-          Navigator.pop(context, true);
         }
       } else {
         _showError('Erreur lors de la sauvegarde');

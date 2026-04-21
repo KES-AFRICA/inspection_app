@@ -302,121 +302,127 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
   }
 
   Widget _buildModernTypeSelector(BuildContext context) {
-    const types = ['INVERSEUR', 'ARMOIRE', 'COFFRET', 'TGBT'];
-    
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(context.spacingM),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+  const types = ['INVERSEUR', 'Armoire', 'Coffret', 'TGBT'];
+  
+  // S'assurer que la valeur est valide
+  final validValue = (widget.selectedType != null && types.contains(widget.selectedType)) 
+      ? widget.selectedType 
+      : null;
+  
+  return Container(
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(context.spacingM),
+      boxShadow: [
+        BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
+      ],
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(context.spacingL, context.spacingM, context.spacingL, context.spacingS),
+          child: Row(
+            children: [
+              Icon(Icons.category_outlined, color: AppTheme.primaryBlue, size: context.iconSizeM),
+              SizedBox(width: context.spacingS),
+              Flexible(
+                child: Text(
+                  'Type d\'équipement',
+                  style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.w600, color: AppTheme.darkBlue),
+                ),
+              ),
+              Text(' *', style: TextStyle(color: Colors.red, fontSize: context.fontSizeL)),
+            ],
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.all(context.spacingL),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(context.spacingS),
+              border: Border.all(
+                color: !widget.typeValid ? Colors.red.shade300 : Colors.grey.shade300,
+                width: !widget.typeValid ? 1.5 : 1,
+              ),
+            ),
+            child: DropdownButtonFormField<String>(
+              // Utiliser la valeur validée
+              value: validValue,
+              isExpanded: true,
+              icon: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryBlue, size: context.iconSizeM),
+              dropdownColor: Colors.white,
+              borderRadius: BorderRadius.circular(context.spacingM),
+              hint: Row(
+                children: [
+                  Icon(Icons.search, size: context.iconSizeS, color: Colors.grey.shade500),
+                  SizedBox(width: context.spacingS),
+                  Flexible(
+                    child: Text(
+                      'Sélectionnez un type',
+                      style: TextStyle(fontSize: context.fontSizeM, color: Colors.grey.shade500),
+                    ),
+                  ),
+                ],
+              ),
+              decoration: InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingM),
+              ),
+              style: TextStyle(fontSize: context.fontSizeM, color: AppTheme.darkBlue, fontWeight: FontWeight.w500),
+              items: types.map((t) => DropdownMenuItem<String>(
+                value: t,
+                child: Row(
+                  children: [
+                    Container(
+                      width: context.spacingS,
+                      height: context.spacingS,
+                      decoration: BoxDecoration(
+                        color: widget.selectedType == t ? AppTheme.primaryBlue : Colors.transparent,
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: widget.selectedType == t ? AppTheme.primaryBlue : Colors.grey.shade400,
+                          width: 1.5,
+                        ),
+                      ),
+                      child: widget.selectedType == t ? Icon(Icons.check, size: context.spacingXS, color: Colors.white) : null,
+                    ),
+                    SizedBox(width: context.spacingS),
+                    Expanded(child: Text(t, style: TextStyle(fontSize: context.fontSizeM))),
+                  ],
+                ),
+              )).toList(),
+              onChanged: widget.onTypeChanged,
+              selectedItemBuilder: (BuildContext context) {
+                return types.map<Widget>((t) {
+                  return Row(
+                    children: [
+                      Icon(Icons.check_circle, color: AppTheme.primaryBlue, size: context.iconSizeS),
+                      SizedBox(width: context.spacingS),
+                      Expanded(child: Text(t, style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w500, color: AppTheme.darkBlue))),
+                    ],
+                  );
+                }).toList();
+              },
+            ),
+          ),
+        ),
+        if (!widget.typeValid)
           Padding(
-            padding: EdgeInsets.fromLTRB(context.spacingL, context.spacingM, context.spacingL, context.spacingS),
+            padding: EdgeInsets.only(left: context.spacingL, bottom: context.spacingM),
             child: Row(
               children: [
-                Icon(Icons.category_outlined, color: AppTheme.primaryBlue, size: context.iconSizeM),
-                SizedBox(width: context.spacingS),
-                Flexible(
-                  child: Text(
-                    'Type d\'équipement',
-                    style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.w600, color: AppTheme.darkBlue),
-                  ),
-                ),
-                Text(' *', style: TextStyle(color: Colors.red, fontSize: context.fontSizeL)),
+                Icon(Icons.error_outline, color: Colors.red, size: context.iconSizeXS),
+                SizedBox(width: context.spacingXS),
+                Text('Sélectionnez un type', style: TextStyle(color: Colors.red, fontSize: context.fontSizeXS)),
               ],
             ),
           ),
-          Padding(
-            padding: EdgeInsets.all(context.spacingL),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(context.spacingS),
-                border: Border.all(
-                  color: !widget.typeValid ? Colors.red.shade300 : Colors.grey.shade300,
-                  width: !widget.typeValid ? 1.5 : 1,
-                ),
-              ),
-              child: DropdownButtonFormField<String>(
-                value: widget.selectedType,
-                isExpanded: true,
-                icon: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryBlue, size: context.iconSizeM),
-                dropdownColor: Colors.white,
-                borderRadius: BorderRadius.circular(context.spacingM),
-                hint: Row(
-                  children: [
-                    Icon(Icons.search, size: context.iconSizeS, color: Colors.grey.shade500),
-                    SizedBox(width: context.spacingS),
-                    Flexible(
-                      child: Text(
-                        'Sélectionnez un type',
-                        style: TextStyle(fontSize: context.fontSizeM, color: Colors.grey.shade500),
-                      ),
-                    ),
-                  ],
-                ),
-                decoration: InputDecoration(
-                  border: InputBorder.none,
-                  contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingM),
-                ),
-                style: TextStyle(fontSize: context.fontSizeM, color: AppTheme.darkBlue, fontWeight: FontWeight.w500),
-                items: types.map((t) => DropdownMenuItem<String>(
-                  value: t,
-                  child: Row(
-                    children: [
-                      Container(
-                        width: context.spacingS,
-                        height: context.spacingS,
-                        decoration: BoxDecoration(
-                          color: widget.selectedType == t ? AppTheme.primaryBlue : Colors.transparent,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: widget.selectedType == t ? AppTheme.primaryBlue : Colors.grey.shade400,
-                            width: 1.5,
-                          ),
-                        ),
-                        child: widget.selectedType == t ? Icon(Icons.check, size: context.spacingXS, color: Colors.white) : null,
-                      ),
-                      SizedBox(width: context.spacingS),
-                      Expanded(child: Text(t, style: TextStyle(fontSize: context.fontSizeM))),
-                    ],
-                  ),
-                )).toList(),
-                onChanged: widget.onTypeChanged,
-                selectedItemBuilder: (BuildContext context) {
-                  return types.map<Widget>((t) {
-                    return Row(
-                      children: [
-                        Icon(Icons.check_circle, color: AppTheme.primaryBlue, size: context.iconSizeS),
-                        SizedBox(width: context.spacingS),
-                        Expanded(child: Text(t, style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w500, color: AppTheme.darkBlue))),
-                      ],
-                    );
-                  }).toList();
-                },
-              ),
-            ),
-          ),
-          if (!widget.typeValid)
-            Padding(
-              padding: EdgeInsets.only(left: context.spacingL, bottom: context.spacingM),
-              child: Row(
-                children: [
-                  Icon(Icons.error_outline, color: Colors.red, size: context.iconSizeXS),
-                  SizedBox(width: context.spacingXS),
-                  Text('Sélectionnez un type', style: TextStyle(color: Colors.red, fontSize: context.fontSizeXS)),
-                ],
-              ),
-            ),
-        ],
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
 
   Widget _buildModernPhotoCarousel(
     BuildContext context, {
@@ -968,6 +974,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
         case 'pdcKA': a.pdcKA = value; break;
         case 'calibre': a.calibre = value; break;
         case 'sectionCable': a.sectionCable = value; break;
+        case 'source': a.source = value; break;
       }
       widget.onDataChanged();
     });
@@ -2100,11 +2107,25 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
         _protectionTete = draft.protectionTete;
         _pointsVerification = List.from(draft.pointsVerification);
         
-        _coffretPhotosExterne = draft.photos.where((p) => p.contains('externe')).toList();
-        _coffretPhotosInterne = draft.photos.where((p) => p.contains('interne')).toList();
+        // CHARGER LES PHOTOS SÉPARÉMENT
+        if (draft.photosExternes.isNotEmpty || draft.photosInternes.isNotEmpty) {
+          _coffretPhotosExterne = List.from(draft.photosExternes);
+          _coffretPhotosInterne = List.from(draft.photosInternes);
+        } else if (draft.photos.isNotEmpty) {
+          _coffretPhotosExterne = draft.photos.where((p) => p.contains('externe')).toList();
+          _coffretPhotosInterne = draft.photos.where((p) => p.contains('interne')).toList();
+          if (_coffretPhotosExterne.isEmpty && _coffretPhotosInterne.isEmpty) {
+            _coffretPhotosExterne = List.from(draft.photos);
+          }
+        }
         
         _currentStep = savedStep;
         
+        // VALIDER LES PHOTOS
+        _validatePhotosExterne();
+        _validatePhotosInterne();
+        
+        // Initialiser hasObservation
         for (int i = 0; i < _pointsVerification.length; i++) {
           final point = _pointsVerification[i];
           if (point.conformite == 'non') {
@@ -2121,11 +2142,10 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
         });
         
         _validateNom(_nomController.text);
+        _validateNumeroEquipement(_numeroEquipementController.text);
         _validateType(_selectedType);
         _validateRepere(_repereController.text);
         _validateDomaineTension(_domaineTension);
-        _validatePhotosExterne();
-        _validatePhotosInterne();
         _validatePoints();
       });
     }
@@ -2138,11 +2158,9 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     });
   }
 
-  // _saveDraft utilise maintenant le QR code
   Future<void> _saveDraft() async {
     if (!mounted) return;
     
-    // Si on n'a pas de QR code, on en génère un temporaire
     String qrCode = _qrCodeController.text.trim();
     if (qrCode.isEmpty) {
       qrCode = 'TEMP_${DateTime.now().millisecondsSinceEpoch}';
@@ -2167,11 +2185,13 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
       presenceSchema: _presenceSchema,
       presenceParafoudre: _presenceParafoudre,
       verificationThermographie: _verificationThermographie,
-      alimentations: _alimentations,
+      alimentations: _alimentations, // ← source est inclus dans chaque Alimentation
       protectionTete: _protectionTete,
       pointsVerification: _pointsVerification,
       observationsLibres: [],
-      photos: toutesPhotos,
+      photos: [..._coffretPhotosExterne, ..._coffretPhotosInterne],
+      photosExternes: List.from(_coffretPhotosExterne),
+      photosInternes: List.from(_coffretPhotosInterne),
       statut: 'incomplet',
       currentStep: _currentStep,
     );
@@ -2328,6 +2348,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   void _chargerDonneesExistantes() {
     final coffret = widget.coffret!;
     _nomController.text = coffret.nom;
+    _numeroEquipementController.text = coffret.numeroEquipement ?? '';
     _selectedType = coffret.type;
     _repereController.text = coffret.repere ?? '';
     _zoneAtex = coffret.zoneAtex;
@@ -2346,6 +2367,31 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
       referenceNormative: point.referenceNormative,
       photos: List.from(point.photos),
     )));
+
+    // CHARGER LES PHOTOS SÉPARÉMENT
+    // Priorité aux nouveaux champs, sinon fallback sur l'ancien
+    if (coffret.photosExternes.isNotEmpty || coffret.photosInternes.isNotEmpty) {
+      _coffretPhotosExterne = List.from(coffret.photosExternes);
+      _coffretPhotosInterne = List.from(coffret.photosInternes);
+    } else if (coffret.photos.isNotEmpty) {
+      // Pour la rétrocompatibilité, on essaie de deviner
+      // Si le chemin contient "externe" ou "interne"
+      _coffretPhotosExterne = coffret.photos
+          .where((p) => p.contains('externe') || p.contains('externe'))
+          .toList();
+      _coffretPhotosInterne = coffret.photos
+          .where((p) => p.contains('interne') || p.contains('interne'))
+          .toList();
+      
+      // Si aucun critère, on met tout dans externe (comportement actuel)
+      if (_coffretPhotosExterne.isEmpty && _coffretPhotosInterne.isEmpty) {
+        _coffretPhotosExterne = List.from(coffret.photos);
+      }
+    }
+    
+    // VALIDER LES PHOTOS APRÈS CHARGEMENT
+    _validatePhotosExterne();
+    _validatePhotosInterne();
     
     for (int i = 0; i < _pointsVerification.length; i++) {
       final point = _pointsVerification[i];
@@ -2364,6 +2410,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     }
     _initializeForCoffretType(_selectedType);
     _validateNom(coffret.nom);
+    _validateNumeroEquipement(coffret.numeroEquipement ?? '');
     _validateType(coffret.type);
     _validateRepere(coffret.repere ?? '');
     _validateAlimentations();
@@ -2604,107 +2651,161 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   
 
   void _sauvegarder() async {
-    if (!_validateAllFields()) { _showError('Veuillez remplir tous les champs obligatoires'); return; }
-    try {
-      final toutesPhotos = [..._coffretPhotosExterne, ..._coffretPhotosInterne];
-      final nouveauCoffret = CoffretArmoire(
-        qrCode: _qrCodeController.text.trim(),
-        nom: _nomController.text.trim(),
-        type: _selectedType!,
-        numeroEquipement: _numeroEquipementController.text.trim().isEmpty 
+  if (!_validateAllFields()) { 
+    _showError('Veuillez remplir tous les champs obligatoires'); 
+    return; 
+  }
+  
+  try {
+    final toutesPhotos = [..._coffretPhotosExterne, ..._coffretPhotosInterne];
+    final nouveauCoffret = CoffretArmoire(
+      qrCode: _qrCodeController.text.trim(),
+      nom: _nomController.text.trim(),
+      type: _selectedType!,
+      numeroEquipement: _numeroEquipementController.text.trim().isEmpty 
           ? null 
           : _numeroEquipementController.text.trim(),
-        repere: _repereController.text.trim().isNotEmpty ? _repereController.text.trim() : null,
-        zoneAtex: _zoneAtex,
-        domaineTension: _domaineTension,
-        identificationArmoire: _identificationArmoire,
-        signalisationDanger: _signalisationDanger,
-        presenceSchema: _presenceSchema,
-        presenceParafoudre: _presenceParafoudre,
-        verificationThermographie: _verificationThermographie,
-        alimentations: _alimentations,
-        protectionTete: _protectionTete,
-        pointsVerification: _pointsVerification,
-        observationsLibres: [],
-        photos: toutesPhotos,
-        statut: 'complet',
-        currentStep: 0,
-      );
+      repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
+      zoneAtex: _zoneAtex,
+      domaineTension: _domaineTension,
+      identificationArmoire: _identificationArmoire,
+      signalisationDanger: _signalisationDanger,
+      presenceSchema: _presenceSchema,
+      presenceParafoudre: _presenceParafoudre,
+      verificationThermographie: _verificationThermographie,
+      alimentations: _alimentations,
+      protectionTete: _protectionTete,
+      pointsVerification: _pointsVerification,
+      observationsLibres: [],
+      photos: toutesPhotos,
+      photosExternes: List.from(_coffretPhotosExterne),
+      photosInternes: List.from(_coffretPhotosInterne),
+      statut: 'complet',
+      currentStep: 0,
+    );
 
-      if (widget.isEdition && widget.coffret != null && widget.coffret!.nom != _nomController.text.trim()) {
-        await _transfererEssais(widget.coffret!.nom, _nomController.text.trim());
-      }
-      
-      bool success = false;
-      if (widget.isEdition) {
-        success = await _updateCoffret(nouveauCoffret);
+    if (widget.isEdition && widget.coffret != null && widget.coffret!.nom != _nomController.text.trim()) {
+      await _transfererEssais(widget.coffret!.nom, _nomController.text.trim());
+    }
+    
+    bool success = false;
+    if (widget.isEdition) {
+      success = await _updateCoffret(nouveauCoffret);
+    } else {
+      if (widget.parentType == 'local') {
+        if (widget.isMoyenneTension) {
+          if (widget.isInZone && widget.zoneIndex != null) {
+            success = await _addCoffretToLocalInMoyenneTensionZone(nouveauCoffret);
+          } else {
+            success = await HiveService.addCoffretToMoyenneTensionLocal(
+              missionId: widget.mission.id, 
+              localIndex: widget.parentIndex, 
+              coffret: nouveauCoffret, 
+              qrCode: widget.qrCode!,
+            );
+          }
+        } else {
+          success = await HiveService.addCoffretToBasseTensionLocal(
+            missionId: widget.mission.id, 
+            zoneIndex: widget.zoneIndex ?? 0, 
+            localIndex: widget.parentIndex, 
+            coffret: nouveauCoffret,
+          );
+        }
       } else {
+        if (widget.isMoyenneTension) {
+          success = await HiveService.addCoffretToMoyenneTensionZone(
+            missionId: widget.mission.id, 
+            zoneIndex: widget.parentIndex, 
+            coffret: nouveauCoffret,
+          );
+        } else {
+          success = await HiveService.addCoffretToBasseTensionZone(
+            missionId: widget.mission.id, 
+            zoneIndex: widget.parentIndex, 
+            coffret: nouveauCoffret,
+          );
+        }
+      }
+    }
+
+    if (success) {
+      // Supprimer le brouillon si existant
+      await HiveService.deleteCoffretDraft(_draftQrCode ?? _qrCodeController.text.trim());
+      
+      if (widget.isEdition) {
+        // En édition, on retourne simplement à l'écran précédent
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Équipement mis à jour avec succès'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context, true);
+      } else {
+        // En création, on propose d'ajouter un essai
+        String localisation = '';
+        final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
         if (widget.parentType == 'local') {
           if (widget.isMoyenneTension) {
-            if (widget.isInZone && widget.zoneIndex != null) {
-              success = await _addCoffretToLocalInMoyenneTensionZone(nouveauCoffret);
-            } else {
-              success = await HiveService.addCoffretToMoyenneTensionLocal(
-                missionId: widget.mission.id, localIndex: widget.parentIndex, coffret: nouveauCoffret, qrCode: widget.qrCode!
-              );
-            }
-          } else {
-            success = await HiveService.addCoffretToBasseTensionLocal(
-              missionId: widget.mission.id, zoneIndex: widget.zoneIndex ?? 0, localIndex: widget.parentIndex, coffret: nouveauCoffret
-            );
-          }
-        } else {
-          if (widget.isMoyenneTension) {
-            success = await HiveService.addCoffretToMoyenneTensionZone(
-              missionId: widget.mission.id, zoneIndex: widget.parentIndex, coffret: nouveauCoffret
-            );
-          } else {
-            success = await HiveService.addCoffretToBasseTensionZone(
-              missionId: widget.mission.id, zoneIndex: widget.parentIndex, coffret: nouveauCoffret
-            );
-          }
-        }
-      }
-
-      if (success) {
-        if (widget.isEdition) {
-          Navigator.pop(context, true);
-        } else {
-          String localisation = '';
-          final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-          if (widget.parentType == 'local') {
-            if (widget.isMoyenneTension) {
-              if (widget.isInZone && widget.zoneIndex != null && widget.zoneIndex! < audit.moyenneTensionZones.length) {
-                final zone = audit.moyenneTensionZones[widget.zoneIndex!];
-                if (widget.parentIndex < zone.locaux.length) localisation = zone.locaux[widget.parentIndex].nom;
-              } else if (widget.parentIndex < audit.moyenneTensionLocaux.length) {
-                localisation = audit.moyenneTensionLocaux[widget.parentIndex].nom;
-              }
-            } else if (widget.zoneIndex != null && widget.zoneIndex! < audit.basseTensionZones.length) {
-              final zone = audit.basseTensionZones[widget.zoneIndex!];
+            if (widget.isInZone && widget.zoneIndex != null && widget.zoneIndex! < audit.moyenneTensionZones.length) {
+              final zone = audit.moyenneTensionZones[widget.zoneIndex!];
               if (widget.parentIndex < zone.locaux.length) localisation = zone.locaux[widget.parentIndex].nom;
+            } else if (widget.parentIndex < audit.moyenneTensionLocaux.length) {
+              localisation = audit.moyenneTensionLocaux[widget.parentIndex].nom;
             }
-          } else {
-            if (widget.isMoyenneTension && widget.parentIndex < audit.moyenneTensionZones.length) {
-              localisation = audit.moyenneTensionZones[widget.parentIndex].nom;
-            } else if (!widget.isMoyenneTension && widget.parentIndex < audit.basseTensionZones.length) {
-              localisation = audit.basseTensionZones[widget.parentIndex].nom;
-            }
+          } else if (widget.zoneIndex != null && widget.zoneIndex! < audit.basseTensionZones.length) {
+            final zone = audit.basseTensionZones[widget.zoneIndex!];
+            if (widget.parentIndex < zone.locaux.length) localisation = zone.locaux[widget.parentIndex].nom;
           }
-          if (localisation.isEmpty) localisation = 'Localisation non définie';
-          await Navigator.push(context, MaterialPageRoute(
-            builder: (context) => AjouterEssaiDeclenchementScreen(
-              mission: widget.mission, localisationPredefinie: localisation, coffretPredefini: nouveauCoffret.nom,
-            ),
-          ));
-          Navigator.pop(context, true);
+        } else {
+          if (widget.isMoyenneTension && widget.parentIndex < audit.moyenneTensionZones.length) {
+            localisation = audit.moyenneTensionZones[widget.parentIndex].nom;
+          } else if (!widget.isMoyenneTension && widget.parentIndex < audit.basseTensionZones.length) {
+            localisation = audit.basseTensionZones[widget.parentIndex].nom;
+          }
         }
-
-         await HiveService.deleteCoffretDraft(_draftQrCode ?? _qrCodeController.text.trim());
-      } else {
-        _showError('Erreur lors de la sauvegarde');
+        if (localisation.isEmpty) localisation = 'Localisation non définie';
+        
+        await Navigator.push(context, MaterialPageRoute(
+          builder: (context) => AjouterEssaiDeclenchementScreen(
+            mission: widget.mission, 
+            localisationPredefinie: localisation, 
+            coffretPredefini: nouveauCoffret.nom,
+          ),
+        ));
+        Navigator.pop(context, true);
       }
-    } catch (e) { _showError('Erreur: $e'); }
+    } else {
+      _showError('Erreur lors de la sauvegarde');
+    }
+  } catch (e) { 
+    _showError('Erreur: $e'); 
+  }
+}
+
+  void _showExitConfirmation() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Quitter sans sauvegarder ?'),
+        content: const Text('Les modifications non sauvegardées seront perdues.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context); // Fermer le dialogue
+              Navigator.pop(context); // Quitter l'écran
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Quitter'),
+          ),
+        ],
+      ),
+    );
   }
   
   Future<bool> _addCoffretToLocalInMoyenneTensionZone(CoffretArmoire coffret) async {
@@ -2848,9 +2949,29 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
           backgroundColor: AppTheme.primaryBlue,
           foregroundColor: Colors.white,
           elevation: 0,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (_hasUnsavedChanges) {
+                _showExitConfirmation();
+              } else {
+                Navigator.pop(context);
+              }
+            },
+          ),
           actions: [
-            if (!widget.isEdition && _currentStep == totalSteps - 1)
-              IconButton(icon: Icon(Icons.check, size: context.iconSizeM), onPressed: _sauvegarder),
+            if (widget.isEdition)
+            IconButton(
+              icon: const Icon(Icons.check),
+              onPressed: _sauvegarder,
+              tooltip: 'Enregistrer les modifications',
+            ),
+          // Ancien bouton (pour création seulement)
+          if (!widget.isEdition && _currentStep == totalSteps - 1)
+            IconButton(
+              icon: Icon(Icons.check, size: context.iconSizeM),
+              onPressed: _sauvegarder,
+            ),
           ],
         ),
         body: Column(
