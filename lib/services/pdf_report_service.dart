@@ -1323,8 +1323,8 @@ class PdfReportService {
         _tableHeaderRow(['Éléments contrôlés', 'Conformité', 'Observations / Anomalies constatées']),
         ...elements.asMap().entries.map((e) {
           final el = e.value;
-          final conf = el.conforme ? 'Oui' : 'Non';
-          final confColor = el.conforme ? conformeColor : nonConformeColor;
+          final conf = el.conforme != null ? 'Oui' : 'Non';
+          final confColor = el.conforme != null ? conformeColor : nonConformeColor;
           return pw.TableRow(
             decoration: pw.BoxDecoration(color: e.key.isEven ? PdfColors.white : tableRowAlt),
             children: [

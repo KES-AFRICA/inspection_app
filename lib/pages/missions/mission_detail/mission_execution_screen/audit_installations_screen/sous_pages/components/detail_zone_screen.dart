@@ -1291,7 +1291,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     }
     
     final conformiteCount = dispositionsConstructives
-        .where((e) => e.conforme)
+        .where((e) => e.conforme!)
         .length;
     final totalCount = dispositionsConstructives.length;
     final pourcentage = totalCount > 0 ? (conformiteCount / totalCount * 100).round() : 0;

@@ -1032,6 +1032,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
     }
   }
 
+
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -1043,7 +1044,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   }
 
   Widget _buildSection(String title, List<ElementControle> elements) {
-    final conformiteCount = elements.where((e) => e.conforme).length;
+    final conformiteCount = elements.where((e) => e.conforme!).length;
     final totalCount = elements.length;
     final pourcentage = totalCount > 0 ? (conformiteCount / totalCount * 100).round() : 0;
 
@@ -1429,7 +1430,7 @@ Widget _buildElementItem(ElementControle element) {
       color: Colors.grey.shade50,
       borderRadius: BorderRadius.circular(8),
       border: Border.all(
-        color: element.conforme ? Colors.green.shade200 : Colors.red.shade200,
+        color: element.conforme != null ? Colors.green.shade200 : Colors.red.shade200,
       ),
     ),
     child: Column(
@@ -1447,15 +1448,15 @@ Widget _buildElementItem(ElementControle element) {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: element.conforme ? Colors.green.shade100 : Colors.red.shade100,
+                color: element.conforme != null  ? Colors.green.shade100 : Colors.red.shade100,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                element.conforme ? 'OUI' : 'NON',
+                element.conforme != null ? 'OUI' : 'NON',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: element.conforme ? Colors.green : Colors.red,
+                  color: element.conforme != null ? Colors.green : Colors.red,
                 ),
               ),
             ),
@@ -1524,7 +1525,7 @@ Widget _buildElementItem(ElementControle element) {
             style: TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w600,
-              color:element.conforme ? Colors.green : Colors.red,
+              color:element.conforme != null ? Colors.green : Colors.red,
             ),
           ),
           SizedBox(height: 4),

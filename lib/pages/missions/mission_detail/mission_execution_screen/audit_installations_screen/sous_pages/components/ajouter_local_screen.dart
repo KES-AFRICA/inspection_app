@@ -1046,12 +1046,19 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
     
     final currentElements = _currentSlides[_currentSlide];
     for (var element in currentElements) {
-      if (!(widget.conformeSelected[element] ?? false)) return false;
+      if (element.conforme == null) return false;
       if (element.priorite == null) return false;
       
       final elementIndex = _getElementIndex(element);
-      if (widget.hasObservation[elementIndex] == true) {
+      // Si conformité = Non, l'observation est OBLIGATOIRE
+      if (element.conforme == false) {
+        if (widget.hasObservation[elementIndex] != true) return false;
         if (element.observation == null || element.observation!.trim().isEmpty) return false;
+      } else {
+        // Si Oui, l'observation est optionnelle
+        if (widget.hasObservation[elementIndex] == true) {
+          if (element.observation == null || element.observation!.trim().isEmpty) return false;
+        }
       }
     }
     return true;
@@ -1310,7 +1317,7 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
   }) {
     final hasObservation = widget.hasObservation[globalIndex] ?? false;
     final suggestions = widget.elementSuggestions[index] ?? [];
-    final isConformeSelected = widget.conformeSelected[element] ?? false;
+    final isConformiteNon = element.conforme == false;
     
     return Container(
       margin: EdgeInsets.only(bottom: context.spacingL),
@@ -1325,6 +1332,7 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // En-tête avec numéro et titre
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1355,25 +1363,102 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
           
           SizedBox(height: context.spacingL),
           
-          // Conformité et Priorité
-          Row(
+          // Ligne 1 : Conformité (seule, sur toute la largeur)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _buildModernConformiteSelector(
-                  context, element, color, index, sectionType, isConformeSelected, globalIndex,
+              Row(
+                children: [
+                  Text(
+                    'Conformité *',
+                    style: TextStyle(
+                      fontSize: context.fontSizeS,
+                      fontWeight: FontWeight.w600,
+                      color: element.conforme != null ? Colors.grey.shade700 : Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: context.spacingS),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildConformiteButton(
+                      context,
+                      label: 'Oui',
+                      isSelected: element.conforme == true,
+                      color: Colors.green,
+                      onTap: () {
+                        setState(() {
+                          element.conforme = true;
+                          widget.onConformeChanged(element);
+                          widget.onElementChanged(element, index, 'conformite');
+                          // Forcer l'observation à Non
+                          widget.onObservationToggleChanged(globalIndex, false, sectionType);
+                        });
+                      },
+                    ),
+                  ),
+                  SizedBox(width: context.spacingS),
+                  Expanded(
+                    child: _buildConformiteButton(
+                      context,
+                      label: 'Non',
+                      isSelected: element.conforme == false,
+                      color: Colors.red,
+                      onTap: () {
+                        setState(() {
+                          element.conforme = false;
+                          widget.onConformeChanged(element);
+                          widget.onElementChanged(element, index, 'conformite');
+                          // Forcer l'observation à Oui
+                          widget.onObservationToggleChanged(globalIndex, true, sectionType);
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              if (element.conforme == null)
+                Padding(
+                  padding: EdgeInsets.only(top: context.spacingXS),
+                  child: Text(
+                    'Veuillez sélectionner Oui ou Non',
+                    style: TextStyle(fontSize: context.fontSizeXS, color: Colors.red),
+                  ),
                 ),
+            ],
+          ),
+          
+          SizedBox(height: context.spacingM),
+          
+          // Ligne 2 : Priorité (seule, sur toute la largeur)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Priorité',
+                    style: TextStyle(
+                      fontSize: context.fontSizeS,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ],
               ),
-              SizedBox(width: context.spacingS),
-              Expanded(
-                child: _buildModernPrioriteSelector(context, element, color, index, sectionType),
-              ),
+              SizedBox(height: context.spacingS),
+              _buildModernPrioriteSelector(context, element, color, index, sectionType),
             ],
           ),
           
           SizedBox(height: context.spacingM),
           
           // Toggle Observation
-          _buildModernObservationToggle(context, globalIndex, hasObservation, color, sectionType),
+          _buildModernObservationToggle(
+            context, globalIndex, hasObservation, color, sectionType, isConformiteNon,
+          ),
           
           if (hasObservation) ...[
             SizedBox(height: context.spacingS),
@@ -1399,6 +1484,126 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
             color: color,
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildModernConformiteToggle(
+    BuildContext context,
+    ElementControle element,
+    Color color,
+    int index,
+    int globalIndex,
+    String sectionType,
+  ) {
+    final isValid = widget.conformeSelected[element] ?? false;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Conformité *',
+              style: TextStyle(
+                fontSize: context.fontSizeS,
+                fontWeight: FontWeight.w600,
+                color: isValid ? Colors.grey.shade700 : Colors.red,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: context.spacingS),
+        Row(
+          children: [
+            Expanded(
+              child: _buildConformiteButton(
+                context,
+                label: 'Oui',
+                isSelected: element.conforme == true,
+                color: Colors.green,
+                onTap: () {
+                  setState(() {
+                    element.conforme = true;
+                    widget.onConformeChanged(element);
+                    widget.onElementChanged(element, index, 'conformite');
+                  });
+                },
+              ),
+            ),
+            SizedBox(width: context.spacingS),
+            Expanded(
+              child: _buildConformiteButton(
+                context,
+                label: 'Non',
+                isSelected: element.conforme == false,
+                color: Colors.red,
+                onTap: () {
+                  setState(() {
+                    element.conforme = false;
+                    widget.onConformeChanged(element);
+                    widget.onElementChanged(element, index, 'conformite');
+                    // Forcer l'observation à Oui
+                    widget.onObservationToggleChanged(globalIndex, true, sectionType);
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+        if (!isValid)
+          Padding(
+            padding: EdgeInsets.only(top: context.spacingXS),
+            child: Text(
+              'Veuillez sélectionner Oui ou Non',
+              style: TextStyle(fontSize: context.fontSizeXS, color: Colors.red),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildConformiteButton(
+    BuildContext context, {
+    required String label,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(vertical: context.spacingM),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.1) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(context.spacingS),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isSelected 
+                  ? (label == 'Oui' ? Icons.check_circle : Icons.cancel)
+                  : (label == 'Oui' ? Icons.check_circle_outline : Icons.cancel_outlined),
+              size: context.iconSizeS,
+              color: isSelected ? color : Colors.grey.shade500,
+            ),
+            SizedBox(width: context.spacingS),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: context.fontSizeM,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? color : Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1475,106 +1680,218 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
   Widget _buildModernPrioriteSelector(BuildContext context, ElementControle element, Color color, int index, String sectionType) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(context.spacingS),
       ),
-      child: DropdownButtonFormField<int?>(
-        value: element.priorite,
-        hint: Text('Sélectionnez *', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500)),
-        onChanged: (int? newValue) {
-          setState(() {
-            element.priorite = newValue;
-            widget.onElementChanged(element, index, 'priorite');
-          });
-        },
-        decoration: InputDecoration(
-          labelText: 'Priorité *',
-          labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
-        ),
-        items: [
-          DropdownMenuItem(
-            value: 1,
-            child: Row(
-              children: [
-                Container(width: context.spacingS, height: context.spacingS, decoration: BoxDecoration(color: Colors.blue, shape: BoxShape.circle)),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text('N1 - Basse', style: TextStyle(fontSize: context.fontSizeXS))),
-              ],
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildPrioriteButton(
+              context,
+              label: 'N1',
+              tooltip: 'Basse priorité',
+              isSelected: element.priorite == 1,
+              color: Colors.blue,
+              onTap: () {
+                setState(() {
+                  element.priorite = 1;
+                  widget.onElementChanged(element, index, 'priorite');
+                });
+              },
             ),
           ),
-          DropdownMenuItem(
-            value: 2,
-            child: Row(
-              children: [
-                Container(width: context.spacingS, height: context.spacingS, decoration: BoxDecoration(color: Colors.orange, shape: BoxShape.circle)),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text('N2 - Moyenne', style: TextStyle(fontSize: context.fontSizeXS))),
-              ],
+          SizedBox(width: context.spacingXS),
+          Expanded(
+            child: _buildPrioriteButton(
+              context,
+              label: 'N2',
+              tooltip: 'Moyenne priorité',
+              isSelected: element.priorite == 2,
+              color: Colors.orange,
+              onTap: () {
+                setState(() {
+                  element.priorite = 2;
+                  widget.onElementChanged(element, index, 'priorite');
+                });
+              },
             ),
           ),
-          DropdownMenuItem(
-            value: 3,
-            child: Row(
-              children: [
-                Container(width: context.spacingS, height: context.spacingS, decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text('N3 - Haute', style: TextStyle(fontSize: context.fontSizeXS))),
-              ],
+          SizedBox(width: context.spacingXS),
+          Expanded(
+            child: _buildPrioriteButton(
+              context,
+              label: 'N3',
+              tooltip: 'Haute priorité',
+              isSelected: element.priorite == 3,
+              color: Colors.red,
+              onTap: () {
+                setState(() {
+                  element.priorite = 3;
+                  widget.onElementChanged(element, index, 'priorite');
+                });
+              },
             ),
           ),
         ],
-        isExpanded: true,
       ),
     );
   }
 
-  Widget _buildModernObservationToggle(BuildContext context, int globalIndex, bool hasObservation, Color color, String sectionType) {
-    return Row(
-      children: [
-        Flexible(
-          child: Text(
-            'Ajouter une observation ?',
-            style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        SizedBox(width: context.spacingS),
-        GestureDetector(
-          onTap: () => widget.onObservationToggleChanged(globalIndex, true, sectionType),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
-            decoration: BoxDecoration(
-              color: hasObservation ? Colors.green.withOpacity(0.15) : Colors.transparent,
-              borderRadius: BorderRadius.circular(context.spacingL),
-              border: Border.all(
-                color: hasObservation ? Colors.green : Colors.grey.shade300,
-                width: hasObservation ? 2 : 1,
-              ),
+  Widget _buildPrioriteButton(
+    BuildContext context, {
+    required String label,
+    required String tooltip,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Tooltip(
+        message: tooltip,
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: context.spacingM),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withOpacity(0.1) : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(context.spacingS),
+            border: Border.all(
+              color: isSelected ? color : Colors.grey.shade300,
+              width: isSelected ? 2 : 1,
             ),
-            child: Text('Oui', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: hasObservation ? Colors.green : Colors.grey.shade600)),
           ),
-        ),
-        SizedBox(width: context.spacingS),
-        GestureDetector(
-          onTap: () => widget.onObservationToggleChanged(globalIndex, false, sectionType),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
-            decoration: BoxDecoration(
-              color: !hasObservation ? Colors.red.withOpacity(0.15) : Colors.transparent,
-              borderRadius: BorderRadius.circular(context.spacingL),
-              border: Border.all(
-                color: !hasObservation ? Colors.red : Colors.grey.shade300,
-                width: !hasObservation ? 2 : 1,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isSelected ? Icons.flag : Icons.flag_outlined,
+                size: context.iconSizeS,
+                color: isSelected ? color : Colors.grey.shade500,
               ),
-            ),
-            child: Text('Non', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: !hasObservation ? Colors.red : Colors.grey.shade600)),
+              SizedBox(height: context.spacingXS),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: context.fontSizeXS,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? color : Colors.grey.shade600,
+                ),
+              ),
+            ],
           ),
         ),
-      ],
+      ),
     );
   }
+
+  Widget _buildModernObservationToggle(
+  BuildContext context,
+  int globalIndex,
+  bool hasObservation,
+  Color color,
+  String sectionType,
+  bool isConformiteNon,
+) {
+  return Row(
+    children: [
+      Flexible(
+        child: Text(
+          'Ajouter une observation ?',
+          style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ),
+      SizedBox(width: context.spacingS),
+      // Bouton Oui
+      GestureDetector(
+        onTap: () {
+          // Si conformité = Non, on ne peut pas désactiver l'observation
+          if (!isConformiteNon) {
+            widget.onObservationToggleChanged(globalIndex, true, sectionType);
+          }
+        },
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
+          decoration: BoxDecoration(
+            color: hasObservation ? Colors.green.withOpacity(0.15) : Colors.transparent,
+            borderRadius: BorderRadius.circular(context.spacingL),
+            border: Border.all(
+              color: hasObservation ? Colors.green : (isConformiteNon ? Colors.grey.shade300 : Colors.grey.shade300),
+              width: hasObservation ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Oui',
+                style: TextStyle(
+                  fontSize: context.fontSizeXS,
+                  fontWeight: FontWeight.w600,
+                  color: hasObservation ? Colors.green : (isConformiteNon ? Colors.grey.shade400 : Colors.grey.shade600),
+                ),
+              ),
+              if (isConformiteNon && !hasObservation)
+                Padding(
+                  padding: EdgeInsets.only(left: 4),
+                  child: Icon(
+                    Icons.lock_open,
+                    size: context.fontSizeXS,
+                    color: Colors.grey.shade400,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+      SizedBox(width: context.spacingS),
+      // Bouton Non
+      GestureDetector(
+        onTap: isConformiteNon 
+            ? null 
+            : () => widget.onObservationToggleChanged(globalIndex, false, sectionType),
+        child: Container(
+          padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
+          decoration: BoxDecoration(
+            color: !hasObservation && !isConformiteNon
+                ? Colors.red.withOpacity(0.15)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(context.spacingL),
+            border: Border.all(
+              color: !hasObservation && !isConformiteNon
+                  ? Colors.red
+                  : (isConformiteNon ? Colors.grey.shade300 : Colors.grey.shade300),
+              width: !hasObservation && !isConformiteNon ? 2 : 1,
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                'Non',
+                style: TextStyle(
+                  fontSize: context.fontSizeXS,
+                  fontWeight: FontWeight.w600,
+                  color: isConformiteNon
+                      ? Colors.grey.shade400
+                      : (!hasObservation ? Colors.red : Colors.grey.shade600),
+                ),
+              ),
+              if (isConformiteNon)
+                Padding(
+                  padding: EdgeInsets.only(left: 4),
+                  child: Icon(
+                    Icons.lock_outline,
+                    size: context.fontSizeXS,
+                    color: Colors.grey.shade400,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    ],
+  );
+}
 
   Widget _buildModernObservationField({
     required BuildContext context,
@@ -1974,8 +2291,14 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
           ? baseIndex + widget.celluleElements.indexOf(element)
           : baseIndex + widget.transfoElements.indexOf(element);
       
-      if (widget.hasObservation[elementIndex] == true) {
+      // Si conformité = Non, l'observation est OBLIGATOIRE
+      if (element.conforme == false) {
+        if (widget.hasObservation[elementIndex] != true) return false;
         if (element.observation == null || element.observation!.trim().isEmpty) return false;
+      } else {
+        if (widget.hasObservation[elementIndex] == true) {
+          if (element.observation == null || element.observation!.trim().isEmpty) return false;
+        }
       }
     }
     return true;
@@ -2565,7 +2888,7 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
   }) {
     final hasObservation = widget.hasObservation[globalIndex] ?? false;
     final suggestions = widget.elementSuggestions[index] ?? [];
-    final isConformeSelected = widget.conformeSelected[element] ?? false;
+    final isConformiteNon = element.conforme == false;
     
     return Container(
       margin: EdgeInsets.only(bottom: context.spacingL),
@@ -2580,6 +2903,7 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // En-tête avec numéro et titre
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2607,25 +2931,103 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
               ),
             ],
           ),
+          
           SizedBox(height: context.spacingL),
           
-          Row(
+          // Ligne 1 : Conformité (seule, sur toute la largeur)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: _buildConformiteSelectorSimple(
-                  context, element, color, isConformeSelected, globalIndex, sectionType,
+              Row(
+                children: [
+                  Text(
+                    'Conformité *',
+                    style: TextStyle(
+                      fontSize: context.fontSizeS,
+                      fontWeight: FontWeight.w600,
+                      color: element.conforme != null ? Colors.grey.shade700 : Colors.red,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: context.spacingS),
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildConformiteButtonSimple(
+                      context,
+                      label: 'Oui',
+                      isSelected: element.conforme == true,
+                      color: Colors.green,
+                      onTap: () {
+                        setState(() {
+                          element.conforme = true;
+                          widget.onConformeChanged(element);
+                          // Forcer l'observation à Non
+                          widget.onObservationToggleChanged(globalIndex, false, sectionType);
+                        });
+                      },
+                    ),
+                  ),
+                  SizedBox(width: context.spacingS),
+                  Expanded(
+                    child: _buildConformiteButtonSimple(
+                      context,
+                      label: 'Non',
+                      isSelected: element.conforme == false,
+                      color: Colors.red,
+                      onTap: () {
+                        setState(() {
+                          element.conforme = false;
+                          widget.onConformeChanged(element);
+                          // Forcer l'observation à Oui
+                          widget.onObservationToggleChanged(globalIndex, true, sectionType);
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+              if (element.conforme == null)
+                Padding(
+                  padding: EdgeInsets.only(top: context.spacingXS),
+                  child: Text(
+                    'Veuillez sélectionner Oui ou Non',
+                    style: TextStyle(fontSize: context.fontSizeXS, color: Colors.red),
+                  ),
                 ),
-              ),
-              SizedBox(width: context.spacingS),
-              Expanded(
-                child: _buildPrioriteSelectorSimple(context, element, color),
-              ),
             ],
           ),
           
           SizedBox(height: context.spacingM),
           
-          _buildObservationToggleSimple(context, globalIndex, hasObservation, color, sectionType),
+          // Ligne 2 : Priorité (seule, sur toute la largeur)
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Priorité',
+                    style: TextStyle(
+                      fontSize: context.fontSizeS,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: context.spacingS),
+              _buildPrioriteSelectorSimple(context, element, color),
+            ],
+          ),
+          
+          SizedBox(height: context.spacingM),
+          
+          // Toggle Observation
+          _buildObservationToggleSimple(
+            context, globalIndex, hasObservation, color, sectionType, isConformiteNon,
+          ),
           
           if (hasObservation) ...[
             SizedBox(height: context.spacingS),
@@ -2641,6 +3043,7 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
           
           SizedBox(height: context.spacingM),
           
+          // Photos
           _buildElementPhotosSimple(
             context: context,
             element: element,
@@ -2649,6 +3052,125 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
             color: color,
           ),
         ],
+      ),
+    );
+  }
+
+  // Toggle de conformité pour cellule/transformateur
+  Widget _buildConformiteToggleSimple(
+    BuildContext context,
+    ElementControle element,
+    Color color,
+    int index,
+    int globalIndex,
+    String sectionType,
+  ) {
+    final isValid = widget.conformeSelected[element] ?? false;
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text(
+              'Conformité *',
+              style: TextStyle(
+                fontSize: context.fontSizeS,
+                fontWeight: FontWeight.w600,
+                color: isValid ? Colors.grey.shade700 : Colors.red,
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: context.spacingS),
+        Row(
+          children: [
+            Expanded(
+              child: _buildConformiteButtonSimple(
+                context,
+                label: 'Oui',
+                isSelected: element.conforme == true,
+                color: Colors.green,
+                onTap: () {
+                  setState(() {
+                    element.conforme = true;
+                    widget.onConformeChanged(element);
+                  });
+                },
+              ),
+            ),
+            SizedBox(width: context.spacingS),
+            Expanded(
+              child: _buildConformiteButtonSimple(
+                context,
+                label: 'Non',
+                isSelected: element.conforme == false,
+                color: Colors.red,
+                onTap: () {
+                  setState(() {
+                    element.conforme = false;
+                    widget.onConformeChanged(element);
+                    // Forcer l'observation à Oui
+                    widget.onObservationToggleChanged(globalIndex, true, sectionType);
+                  });
+                },
+              ),
+            ),
+          ],
+        ),
+        if (element.conforme == null)
+          Padding(
+            padding: EdgeInsets.only(top: context.spacingXS),
+            child: Text(
+              'Veuillez sélectionner Oui ou Non',
+              style: TextStyle(fontSize: context.fontSizeXS, color: Colors.red),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildConformiteButtonSimple(
+    BuildContext context, {
+    required String label,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: EdgeInsets.symmetric(vertical: context.spacingM),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.1) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(context.spacingS),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade300,
+            width: isSelected ? 2 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              isSelected 
+                  ? (label == 'Oui' ? Icons.check_circle : Icons.cancel)
+                  : (label == 'Oui' ? Icons.check_circle_outline : Icons.cancel_outlined),
+              size: context.iconSizeS,
+              color: isSelected ? color : Colors.grey.shade500,
+            ),
+            SizedBox(width: context.spacingS),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: context.fontSizeM,
+                fontWeight: FontWeight.w600,
+                color: isSelected ? color : Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -2722,57 +3244,103 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
 
   Widget _buildPrioriteSelectorSimple(BuildContext context, ElementControle element, Color color) {
     return Container(
-      decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(context.spacingS)),
-      child: DropdownButtonFormField<int?>(
-        value: element.priorite,
-        hint: Text('Sélectionnez *', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500)),
-        onChanged: (int? newValue) {
-          setState(() => element.priorite = newValue);
-        },
-        decoration: InputDecoration(
-          labelText: 'Priorité *',
-          labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
-        ),
-        items: [
-          DropdownMenuItem(
-            value: 1,
-            child: Row(
-              children: [
-                Container(width: context.spacingS, height: context.spacingS, decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle)),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text('N1 - Basse', style: TextStyle(fontSize: context.fontSizeXS))),
-              ],
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingS),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: _buildPrioriteButtonSimple(
+              context,
+              label: 'N1',
+              tooltip: 'Basse priorité',
+              isSelected: element.priorite == 1,
+              color: Colors.blue,
+              onTap: () => setState(() => element.priorite = 1),
             ),
           ),
-          DropdownMenuItem(
-            value: 2,
-            child: Row(
-              children: [
-                Container(width: context.spacingS, height: context.spacingS, decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle)),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text('N2 - Moyenne', style: TextStyle(fontSize: context.fontSizeXS))),
-              ],
+          SizedBox(width: context.spacingXS),
+          Expanded(
+            child: _buildPrioriteButtonSimple(
+              context,
+              label: 'N2',
+              tooltip: 'Moyenne priorité',
+              isSelected: element.priorite == 2,
+              color: Colors.orange,
+              onTap: () => setState(() => element.priorite = 2),
             ),
           ),
-          DropdownMenuItem(
-            value: 3,
-            child: Row(
-              children: [
-                Container(width: context.spacingS, height: context.spacingS, decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text('N3 - Haute', style: TextStyle(fontSize: context.fontSizeXS))),
-              ],
+          SizedBox(width: context.spacingXS),
+          Expanded(
+            child: _buildPrioriteButtonSimple(
+              context,
+              label: 'N3',
+              tooltip: 'Haute priorité',
+              isSelected: element.priorite == 3,
+              color: Colors.red,
+              onTap: () => setState(() => element.priorite = 3),
             ),
           ),
         ],
-        isExpanded: true,
       ),
     );
   }
 
-  Widget _buildObservationToggleSimple(BuildContext context, int globalIndex, bool hasObservation, Color color, String sectionType) {
+  Widget _buildPrioriteButtonSimple(
+    BuildContext context, {
+    required String label,
+    required String tooltip,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Tooltip(
+        message: tooltip,
+        child: Container(
+          padding: EdgeInsets.symmetric(vertical: context.spacingM),
+          decoration: BoxDecoration(
+            color: isSelected ? color.withOpacity(0.1) : Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(context.spacingS),
+            border: Border.all(
+              color: isSelected ? color : Colors.grey.shade300,
+              width: isSelected ? 2 : 1,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                isSelected ? Icons.flag : Icons.flag_outlined,
+                size: context.iconSizeS,
+                color: isSelected ? color : Colors.grey.shade500,
+              ),
+              SizedBox(height: context.spacingXS),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: context.fontSizeXS,
+                  fontWeight: FontWeight.w600,
+                  color: isSelected ? color : Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildObservationToggleSimple(
+    BuildContext context,
+    int globalIndex,
+    bool hasObservation,
+    Color color,
+    String sectionType,
+    bool isConformiteNon, // ← NOUVEAU
+  ) {
     return Row(
       children: [
         Flexible(
@@ -2790,22 +3358,53 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
             decoration: BoxDecoration(
               color: hasObservation ? Colors.green.withOpacity(0.15) : Colors.transparent,
               borderRadius: BorderRadius.circular(context.spacingL),
-              border: Border.all(color: hasObservation ? Colors.green : Colors.grey.shade300, width: hasObservation ? 2 : 1),
+              border: Border.all(
+                color: hasObservation ? Colors.green : Colors.grey.shade300,
+                width: hasObservation ? 2 : 1,
+              ),
             ),
             child: Text('Oui', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: hasObservation ? Colors.green : Colors.grey.shade600)),
           ),
         ),
         SizedBox(width: context.spacingS),
         GestureDetector(
-          onTap: () => widget.onObservationToggleChanged(globalIndex, false, sectionType),
+          onTap: isConformiteNon 
+              ? null 
+              : () => widget.onObservationToggleChanged(globalIndex, false, sectionType),
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
             decoration: BoxDecoration(
-              color: !hasObservation ? Colors.red.withOpacity(0.15) : Colors.transparent,
+              color: !hasObservation && !isConformiteNon ? Colors.red.withOpacity(0.15) : Colors.transparent,
               borderRadius: BorderRadius.circular(context.spacingL),
-              border: Border.all(color: !hasObservation ? Colors.red : Colors.grey.shade300, width: !hasObservation ? 2 : 1),
+              border: Border.all(
+                color: !hasObservation && !isConformiteNon ? Colors.red : Colors.grey.shade300,
+                width: !hasObservation && !isConformiteNon ? 2 : 1,
+              ),
             ),
-            child: Text('Non', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: !hasObservation ? Colors.red : Colors.grey.shade600)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Non',
+                  style: TextStyle(
+                    fontSize: context.fontSizeXS,
+                    fontWeight: FontWeight.w600,
+                    color: isConformiteNon
+                        ? Colors.grey.shade400
+                        : (!hasObservation ? Colors.red : Colors.grey.shade600),
+                  ),
+                ),
+                if (isConformiteNon)
+                  Padding(
+                    padding: EdgeInsets.only(left: 4),
+                    child: Icon(
+                      Icons.lock_outline,
+                      size: context.fontSizeXS,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
       ],
@@ -2846,7 +3445,7 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
               border: InputBorder.none,
               contentPadding: EdgeInsets.all(context.spacingM),
             ),
-            maxLines: 2,
+            maxLines: 3,
           ),
         ),
         
@@ -2862,21 +3461,29 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Suggestions', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.bold, color: color)),
+                Text(
+                  'Suggestions',
+                  style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.bold, color: color),
+                ),
                 SizedBox(height: context.spacingXS),
-                ...suggestions.map((s) => GestureDetector(
-                  onTap: () => widget.onUseSuggestion(index, s, element, sectionType),
-                  child: Padding(
-                    padding: EdgeInsets.symmetric(vertical: context.spacingXS),
-                    child: Row(
-                      children: [
-                        Icon(Icons.lightbulb_outline, size: context.iconSizeXS, color: Colors.amber),
-                        SizedBox(width: context.spacingS),
-                        Expanded(child: Text(s, style: TextStyle(fontSize: context.fontSizeXS, color: Colors.grey.shade700))),
-                      ],
+                Wrap(
+                  spacing: context.spacingS,
+                  runSpacing: context.spacingXS,
+                  children: suggestions.map((s) => GestureDetector(
+                    onTap: () => widget.onUseSuggestion(index, s, element, sectionType),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(horizontal: context.spacingS, vertical: context.spacingXS),
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(context.spacingL),
+                      ),
+                      child: Text(
+                        s,
+                        style: TextStyle(fontSize: context.fontSizeXS, color: color.withOpacity(0.7)),
+                      ),
                     ),
-                  ),
-                )).toList(),
+                  )).toList(),
+                ),
               ],
             ),
           ),
@@ -3231,7 +3838,40 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     return true;
   }
 
-  void _onConformeChanged(ElementControle element) => setState(() => _conformeSelected[element] = true);
+  void _onConformeChanged(ElementControle element) {
+    setState(() {
+      _conformeSelected[element] = true;
+      
+      // Si priorité n'est pas définie, mettre une valeur par défaut (par exemple 3)
+      element.priorite ??= 3;
+      
+      // Trouver l'index de l'élément pour mettre à jour hasObservation
+      int? elementIndex;
+      
+      // Chercher dans dispositions
+      for (int i = 0; i < _dispositionsConstructives.length; i++) {
+        if (_dispositionsConstructives[i] == element) {
+          elementIndex = i;
+          break;
+        }
+      }
+      
+      // Chercher dans conditions
+      if (elementIndex == null) {
+        for (int i = 0; i < _conditionsExploitation.length; i++) {
+          if (_conditionsExploitation[i] == element) {
+            elementIndex = _dispositionsConstructives.length + i;
+            break;
+          }
+        }
+      }
+      
+      // Si conformité = Non, forcer hasObservation = true
+      if (element.conforme == false && elementIndex != null) {
+        _hasObservation[elementIndex] = true;
+      }
+    });
+  }
 
   void _handleNext() {
     if (_currentStep == 0) {
@@ -3560,18 +4200,22 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     if (type == null) return;
     final dispositions = HiveService.getDispositionsConstructivesForLocal(type);
     _dispositionsConstructives = dispositions.map((element) {
-      final ec = ElementControle(elementControle: element, conforme: false, priorite: 3);
+      final ec = ElementControle(elementControle: element, conforme: null, priorite: 3);
       _conformeSelected[ec] = false;
       return ec;
     }).toList();
     final conditions = HiveService.getConditionsExploitationForLocal(type);
     _conditionsExploitation = conditions.map((element) {
-      final ec = ElementControle(elementControle: element, conforme: false, priorite: 3);
+      final ec = ElementControle(elementControle: element, conforme: null, priorite: 3);
       _conformeSelected[ec] = false;
       return ec;
     }).toList();
-    for (int i = 0; i < _dispositionsConstructives.length; i++) _hasObservation[i] = false;
-    for (int i = 0; i < _conditionsExploitation.length; i++) _hasObservation[_dispositionsConstructives.length + i] = false;
+    for (int i = 0; i < _dispositionsConstructives.length; i++) {
+      _hasObservation[i] = false;
+    }
+    for (int i = 0; i < _conditionsExploitation.length; i++) {
+      _hasObservation[_dispositionsConstructives.length + i] = false;
+    }
     if (type == 'LOCAL_TRANSFORMATEUR') {
       final celluleElements = ['Schéma unifilaire affiché dans le local', 'Cellule correctement posée et fixée', 'Jonctions inter-cellules', 'Canalisations et câbles d\'arrivée / départ', 'Respect des distances de sécurité', 'Commande manuelle / motorisée', 'Voyants de position (O / F / T)', 'Verrouillage mécanique', 'Terre de protection (PE) reliée à chaque cellule'];
       _celluleElements = celluleElements.map((element) {

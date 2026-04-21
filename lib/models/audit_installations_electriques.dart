@@ -225,7 +225,7 @@ class ElementControle {
   String elementControle;
 
   @HiveField(1)
-  bool conforme;
+  bool? conforme;
 
   @HiveField(2)
   String? observation;

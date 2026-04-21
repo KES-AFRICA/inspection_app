@@ -963,7 +963,7 @@ static void _addElementsTableWithNormes(Document doc, List<ElementControle> elem
   for (var element in elements) {
     rows.add(TableRow(cells: [
       TableCell.text(element.elementControle),
-      TableCell.text(element.conforme ? 'Conforme' : 'Non conforme'),
+      TableCell.text(element.conforme != null ? 'Conforme' : 'Non conforme'),
       TableCell.text(element.observation ?? '-'),
       TableCell.text(element.referenceNormative ?? '-'),
       TableCell.text(element.priorite?.toString() ?? '-'),
