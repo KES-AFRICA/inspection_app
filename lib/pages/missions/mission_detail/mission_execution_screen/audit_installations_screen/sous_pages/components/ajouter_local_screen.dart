@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/models/classement_locaux.dart';
+import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
@@ -3104,6 +3106,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   GlobalKey<_EtapeElementsControleState>? _etapeElementsKey;
   GlobalKey<_EtapeCelluleTransformateurState>? _etapeCelluleTransfoKey;
 
+  bool _isLoading = false;
+
   @override
   void initState() {
     super.initState();
@@ -3713,62 +3717,86 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       _mainPageController.animateToPage(0, duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       return;
     }
+    
+    setState(() => _isLoading = true);
+    
     try {
       dynamic nouveauLocal;
-      if (widget.isEdition && widget.local != null) {
-        final ancienNom = widget.local!.nom;
-        final nouveauNom = _nomController.text.trim();
-        if (ancienNom != nouveauNom) {
-          final ancienClassement = HiveService.getClassementForLocal(missionId: widget.mission.id, localisation: ancienNom);
-          if (ancienClassement != null) {
-            ancienClassement.localisation = nouveauNom;
-            if (widget.isInZone && widget.zoneIndex != null) ancienClassement.zone = 'Zone ${widget.zoneIndex! + 1}';
-            ancienClassement.typeLocal = _selectedType;
-            ancienClassement.updatedAt = DateTime.now();
-            await ancienClassement.save();
-          }
-        }
-      }
+      
       if (widget.isMoyenneTension) {
         if (widget.isInZone && widget.zoneIndex != null) {
           if (widget.isEdition && widget.localIndex != null) {
-            await HiveService.updateLocalInMoyenneTensionZone(missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, localIndex: widget.localIndex!, local: _creerMoyenneTensionLocal());
+            await HiveService.updateLocalInMoyenneTensionZone(
+              missionId: widget.mission.id, 
+              zoneIndex: widget.zoneIndex!, 
+              localIndex: widget.localIndex!, 
+              local: _creerMoyenneTensionLocal(),
+            );
             nouveauLocal = _creerMoyenneTensionLocal();
           } else {
-            await HiveService.addLocalToMoyenneTensionZone(missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, local: _creerMoyenneTensionLocal());
+            await HiveService.addLocalToMoyenneTensionZone(
+              missionId: widget.mission.id, 
+              zoneIndex: widget.zoneIndex!, 
+              local: _creerMoyenneTensionLocal(),
+            );
             nouveauLocal = _creerMoyenneTensionLocal();
           }
         } else {
           if (widget.isEdition && widget.localIndex != null) {
-            await HiveService.updateMoyenneTensionLocal(missionId: widget.mission.id, localIndex: widget.localIndex!, local: _creerMoyenneTensionLocal());
+            await HiveService.updateMoyenneTensionLocal(
+              missionId: widget.mission.id, 
+              localIndex: widget.localIndex!, 
+              local: _creerMoyenneTensionLocal(),
+            );
             nouveauLocal = _creerMoyenneTensionLocal();
           } else {
-            await HiveService.addMoyenneTensionLocal(missionId: widget.mission.id, local: _creerMoyenneTensionLocal());
+            await HiveService.addMoyenneTensionLocal(
+              missionId: widget.mission.id, 
+              local: _creerMoyenneTensionLocal(),
+            );
             nouveauLocal = _creerMoyenneTensionLocal();
           }
         }
       } else {
         if (widget.zoneIndex != null) {
           if (widget.isEdition && widget.localIndex != null) {
-            await HiveService.updateBasseTensionLocal(missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, localIndex: widget.localIndex!, local: _creerBasseTensionLocal());
+            await HiveService.updateBasseTensionLocal(
+              missionId: widget.mission.id, 
+              zoneIndex: widget.zoneIndex!, 
+              localIndex: widget.localIndex!, 
+              local: _creerBasseTensionLocal(),
+            );
             nouveauLocal = _creerBasseTensionLocal();
           } else {
-            await HiveService.addLocalToBasseTensionZone(missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, local: _creerBasseTensionLocal());
+            await HiveService.addLocalToBasseTensionZone(
+              missionId: widget.mission.id, 
+              zoneIndex: widget.zoneIndex!, 
+              local: _creerBasseTensionLocal(),
+            );
             nouveauLocal = _creerBasseTensionLocal();
           }
         } else {
           _showError('Erreur: pour basse tension, un local doit être dans une zone');
+          setState(() => _isLoading = false);
           return;
         }
       }
+      
+      setState(() => _isLoading = false);
+      
       if (widget.isEdition) {
+        // En édition, on ferme directement
         Navigator.pop(context, true);
       } else {
+        // En création, on va vers le classement
+        // Ne pas faire de pop ici, c'est _allerAuClassement qui le fera
         await _allerAuClassement(nouveauLocal);
       }
     } catch (e) {
+      setState(() => _isLoading = false);
       print('❌ Erreur sauvegarde: $e');
       _showError('Erreur lors de la sauvegarde: $e');
+      // Ne pas fermer l'écran en cas d'erreur
     }
   }
 
@@ -3779,42 +3807,62 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       return;
     }
     
-    // Vérifier si le local est dans une zone
     final bool estDansUneZone = widget.isInZone && widget.zoneIndex != null;
     
     if (estDansUneZone) {
-      // Proposer le choix à l'utilisateur
       final choix = await _showChoixClassementDialog(local);
       
       if (choix == null) {
-        // Annulé
-        Navigator.pop(context, true);
         return;
       }
       
       if (choix == 'heriter') {
-        // Récupérer le classement de la zone parente
-        final zoneParente = await _getZoneParenteClassement();
+        // Récupérer le ClassementZone complet
+        final zoneClassement = await _getZoneParenteClassement();
         
-        if (zoneParente != null) {
-          // Créer un classement qui hérite
-          final classement = ClassementEmplacement.createLocalHeritant(
-            missionId: widget.mission.id,
-            nomLocal: local.nom,
-            zoneParente: zoneParente.localisation,
-            zoneParenteId: zoneParente.key.toString(),
+        if (zoneClassement != null) {
+          // Vérifier que la zone a bien un classement complet
+          if (!zoneClassement.estComplet) {
+            _showSnackBar(
+              'La zone parente n\'a pas encore de classement complet. '
+              'Veuillez d\'abord classer la zone, ou choisir un classement spécifique.',
+              Colors.orange,
+            );
+            // Proposer de définir un classement spécifique à la place
+            final choix2 = await _showChoixClassementDialog(local, zoneNonClassee: true);
+            if (choix2 == 'specifique') {
+              // Continuer vers classement spécifique
+            } else {
+              return;
+            }
+          } else {
+            // Créer un classement qui hérite en COPIANT les valeurs
+            final classement = ClassementEmplacement.createLocalHeritant(
+              missionId: widget.mission.id,
+              nomLocal: local.nom,
+              zoneParente: zoneClassement.nomZone,
+              zoneClassement: zoneClassement, // ← Passer l'objet complet
+            );
+            
+            // Ajouter à la box
+            final classementBox = Hive.box<ClassementEmplacement>('classement_locaux');
+            await classementBox.add(classement);
+            
+            _showSnackBar('Classement hérité avec succès', Colors.green);
+            Navigator.pop(context, true);
+            return;
+          }
+        } else {
+          _showSnackBar(
+            'La zone parente n\'a pas encore de classement. '
+            'Veuillez définir un classement spécifique.',
+            Colors.orange,
           );
-          
-          await HiveService.saveClassement(classement);
-          
-          // Pas besoin d'ouvrir l'écran de classement, on a déjà hérité
-          Navigator.pop(context, true);
-          return;
+          // Continuer vers classement spécifique
         }
       }
       
-      // Si choix 'specifique' ou si la zone parente n'a pas de classement
-      // Créer un classement spécifique
+      // Si on arrive ici, c'est qu'on va en classement spécifique
       final classement = await HiveService.getOrCreateClassementForLocal(
         missionId: widget.mission.id,
         localisation: local.nom,
@@ -3859,9 +3907,10 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       }
     }
   }
-
+  
+  
   // NOUVEAU : Dialogue de choix héritage/spécifique
-  Future<String?> _showChoixClassementDialog(dynamic local) async {
+  Future<String?> _showChoixClassementDialog(dynamic local, {bool zoneNonClassee = false}) async {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
     
     return showDialog<String>(
@@ -3898,7 +3947,9 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
               ),
               SizedBox(height: 8),
               Text(
-                'Ce local appartient à une zone. Comment souhaitez-vous définir son classement ?',
+                zoneNonClassee 
+                  ? 'La zone parente n\'a pas encore de classement complet. Vous devez définir un classement spécifique pour ce local.'
+                  : 'Ce local appartient à une zone. Comment souhaitez-vous définir son classement ?',
                 style: TextStyle(
                   fontSize: isSmallScreen ? 13 : 14,
                   color: Colors.grey.shade600,
@@ -3907,61 +3958,62 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
               ),
               SizedBox(height: 20),
               
-              // Option 1 : Hériter
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: Colors.blue.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.blue.shade200),
-                ),
-                child: InkWell(
-                  onTap: () => Navigator.pop(context, 'heriter'),
-                  borderRadius: BorderRadius.circular(12),
-                  child: Padding(
-                    padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40,
-                          height: 40,
-                          decoration: BoxDecoration(
-                            color: Colors.blue.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(10),
+              // Option 1 : Hériter (seulement si la zone est classée)
+              if (!zoneNonClassee)
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.blue.shade200),
+                  ),
+                  child: InkWell(
+                    onTap: () => Navigator.pop(context, 'heriter'),
+                    borderRadius: BorderRadius.circular(12),
+                    child: Padding(
+                      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                      child: Row(
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: Colors.blue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Icon(Icons.link, color: Colors.blue, size: 22),
                           ),
-                          child: Icon(Icons.link, color: Colors.blue, size: 22),
-                        ),
-                        SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Hériter du classement de la zone',
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 14 : 15,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.blue.shade800,
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Hériter du classement de la zone',
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 14 : 15,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.blue.shade800,
+                                  ),
                                 ),
-                              ),
-                              SizedBox(height: 2),
-                              Text(
-                                'Le local suivra automatiquement le classement de sa zone parente',
-                                style: TextStyle(
-                                  fontSize: isSmallScreen ? 11 : 12,
-                                  color: Colors.blue.shade600,
+                                SizedBox(height: 2),
+                                Text(
+                                  'Le local suivra automatiquement le classement de sa zone parente',
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 11 : 12,
+                                    color: Colors.blue.shade600,
+                                  ),
                                 ),
-                              ),
-                            ],
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
-              ),
               
-              SizedBox(height: 12),
+              if (!zoneNonClassee) SizedBox(height: 12),
               
               // Option 2 : Spécifique
               Container(
@@ -4033,8 +4085,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     );
   }
 
-  // NOUVEAU : Récupérer le classement de la zone parente
-  Future<ClassementEmplacement?> _getZoneParenteClassement() async {
+  Future<ClassementZone?> _getZoneParenteClassement() async {
     if (!widget.isInZone || widget.zoneIndex == null) return null;
     
     final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
@@ -4052,12 +4103,11 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     
     if (nomZone == null) return null;
     
+    // Synchroniser d'abord pour s'assurer que le classement existe
+    await HiveService.syncClassementsZonesFromAudit(widget.mission.id);
+    
     // Chercher le classement de la zone
-    final zones = await HiveService.syncZonesFromAudit(widget.mission.id);
-    return zones.firstWhere(
-      (z) => z.localisation == nomZone,
-      orElse: () => null as ClassementEmplacement,
-    );
+    return HiveService.getClassementZoneByNom(widget.mission.id, nomZone);
   }
 
   MoyenneTensionLocal _creerMoyenneTensionLocal() {

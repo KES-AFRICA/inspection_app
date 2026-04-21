@@ -5582,5 +5582,16 @@ static Future<void> deleteClassementZone({
   }
 }
 
+/// Récupérer un classement de zone par son ID
+static ClassementZone? getClassementZoneById(String id) {
+  try {
+    final box = Hive.box<ClassementZone>(_classementZoneBox);
+    return box.get(id);
+  } catch (e) {
+    print('❌ Erreur getClassementZoneById: $e');
+    return null;
+  }
+}
+
 }
 

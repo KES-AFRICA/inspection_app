@@ -1,5 +1,6 @@
 // classement_locaux.dart
 import 'package:hive/hive.dart';
+import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/services/hive_service.dart';
 
 part 'classement_locaux.g.dart';
@@ -110,70 +111,34 @@ class ClassementEmplacement extends HiveObject {
     required String missionId,
     required String nomLocal,
     required String zoneParente,
-    required String zoneParenteId,
+    required ClassementZone zoneClassement,
   }) {
     return ClassementEmplacement(
       missionId: missionId,
       localisation: nomLocal,
       zone: zoneParente,
-      origineClassement: 'KES I&P',
+      origineClassement: zoneClassement.origineClassement, // ← Copier l'origine
+      af: zoneClassement.af,   // ← Copier AF
+      be: zoneClassement.be,   // ← Copier BE
+      ae: zoneClassement.ae,   // ← Copier AE
+      ad: zoneClassement.ad,   // ← Copier AD
+      ag: zoneClassement.ag,   // ← Copier AG
+      ip: zoneClassement.ip,   // ← Copier IP
+      ik: zoneClassement.ik,   // ← Copier IK
       updatedAt: DateTime.now(),
       typeEmplacement: 'local',
       heriteDeZone: true,
-      zoneParenteId: zoneParenteId,
+      zoneParenteId: zoneClassement.key.toString(),
     );
   }
 
-  // Récupérer les valeurs effectives (en tenant compte de l'héritage)
-  String? get afEffective {
-    if (heriteDeZone && zoneParenteId != null) {
-      // Récupérer depuis HiveService
-      return HiveService.getClassementById(zoneParenteId!)?.af;
-    }
-    return af;
-  }
-
-  String? get beEffective {
-    if (heriteDeZone && zoneParenteId != null) {
-      return HiveService.getClassementById(zoneParenteId!)?.be;
-    }
-    return be;
-  }
-
-  String? get aeEffective {
-    if (heriteDeZone && zoneParenteId != null) {
-      return HiveService.getClassementById(zoneParenteId!)?.ae;
-    }
-    return ae;
-  }
-
-  String? get adEffective {
-    if (heriteDeZone && zoneParenteId != null) {
-      return HiveService.getClassementById(zoneParenteId!)?.ad;
-    }
-    return ad;
-  }
-
-  String? get agEffective {
-    if (heriteDeZone && zoneParenteId != null) {
-      return HiveService.getClassementById(zoneParenteId!)?.ag;
-    }
-    return ag;
-  }
-
-  String? get ipEffective {
-    if (heriteDeZone && zoneParenteId != null) {
-      return HiveService.getClassementById(zoneParenteId!)?.ip;
-    }
-    return ip;
-  }
-
-  String? get ikEffective {
-    if (heriteDeZone && zoneParenteId != null) {
-      return HiveService.getClassementById(zoneParenteId!)?.ik;
-    }
-    return ik;
-  }
+  String? get afEffective => af;
+  String? get beEffective => be;
+  String? get aeEffective => ae;
+  String? get adEffective => ad;
+  String? get agEffective => ag;
+  String? get ipEffective => ip;
+  String? get ikEffective => ik;
 
   // Vérifier si c'est une zone
   bool get isZone => typeEmplacement == 'zone';
