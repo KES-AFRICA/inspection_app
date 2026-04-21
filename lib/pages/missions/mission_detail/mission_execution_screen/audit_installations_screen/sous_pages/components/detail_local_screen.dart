@@ -42,6 +42,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   final ImagePicker _picker = ImagePicker();
   List<String> _localPhotos = [];
   bool _isLoadingLocalPhotos = false;
+
   
   // Pour les nouvelles observations
   final _nouvelleObservationController = TextEditingController();
@@ -60,10 +61,10 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
 
   // Charger les coffrets (existants + brouillons)
   void _loadCoffrets() {
-    // Récupérer les coffrets déjà sauvegardés
+    // Récupérer les coffrets déjà sauvegardés dans le local
     final savedCoffrets = List<CoffretArmoire>.from(_local.coffrets);
     
-    // Récupérer les brouillons pour cet emplacement
+    // Récupérer les brouillons pour ce local
     final drafts = HiveService.getCoffretDraftsForLocation(
       missionId: widget.mission.id,
       parentType: 'local',
@@ -72,10 +73,63 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       zoneIndex: widget.zoneIndex,
     );
     
-    // Combiner les listes (les brouillons en premier)
+    // Filtrer les brouillons qui ne sont PAS déjà dans les coffrets sauvegardés
+    final savedQrCodes = savedCoffrets.map((c) => c.qrCode).toSet();
+    final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).toList();
+    
     setState(() {
-      _coffrets = [...drafts, ...savedCoffrets];
+      _coffrets = [...uniqueDrafts, ...savedCoffrets];
     });
+  }
+
+  // ===== Ouvrir un brouillon pour continuer =====
+  void _ouvrirBrouillon(CoffretArmoire draft) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AjouterCoffretScreen(
+          mission: widget.mission,
+          parentType: 'local',
+          parentIndex: widget.localIndex,
+          isMoyenneTension: widget.isMoyenneTension,
+          zoneIndex: widget.zoneIndex,
+          isInZone: widget.isInZone,
+          qrCode: draft.qrCode,
+          coffret: null,
+        ),
+      ),
+    );
+    
+    if (result == true) {
+      _rechargerLocal();
+    }
+  }
+
+  // ===== Supprimer un brouillon =====
+  void _supprimerBrouillon(CoffretArmoire draft) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer le brouillon'),
+        content: const Text('Voulez-vous vraiment supprimer ce brouillon ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await HiveService.deleteCoffretDraft(draft.qrCode);
+              _loadCoffrets();
+              _showSuccess('Brouillon supprimé');
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _chargerPhotosLocal() {
@@ -830,12 +884,41 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
             }
           }
           _chargerPhotosLocal();
+          _loadCoffrets(); // ← NOUVEAU : Recharger les coffrets
         });
       });
     } catch (e) {
       print('❌ Erreur rechargerLocal: $e');
     }
   }
+
+  // ===== NOUVEAU : Vérifier si un coffret est complet =====
+  bool _isCoffretComplet(CoffretArmoire coffret) {
+    if (coffret.nom.isEmpty) return false;
+    if (coffret.type.isEmpty) return false;
+    if (coffret.domaineTension.isEmpty) return false;
+    if (coffret.photos.isEmpty) return false;
+    
+    for (var point in coffret.pointsVerification) {
+      if (point.conformite.isEmpty) return false;
+      if (point.conformite == 'non') {
+        if (point.observation == null || point.observation!.trim().isEmpty) return false;
+      }
+    }
+    
+    return true;
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
 
   void _voirCoffret(int index) {
     Navigator.push(
@@ -947,16 +1030,6 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       print('❌ Erreur sauvegarderLocal: $e');
       throw e;
     }
-  }
-
-  void _showSuccess(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.green,
-        duration: Duration(seconds: 2),
-      ),
-    );
   }
 
   void _showError(String message) {
@@ -1503,7 +1576,7 @@ Widget _buildElementItem(ElementControle element) {
     final pointsConformes = coffret.pointsVerification.where((p) => p.conformite == 'oui').length;
     final totalPoints = coffret.pointsVerification.length;
     final pourcentage = totalPoints > 0 ? (pointsConformes / totalPoints * 100).round() : 0;
-    
+
     final isComplet = coffret.statut == 'complet' || _isCoffretComplet(coffret);
     final isDraft = coffret.statut == 'incomplet';
 
@@ -1538,19 +1611,39 @@ Widget _buildElementItem(ElementControle element) {
                 style: TextStyle(fontWeight: FontWeight.w600),
               ),
             ),
+            // Badge "Incomplet"
             if (!isComplet)
               Container(
-                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.red.shade100,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.red.shade300),
                 ),
                 child: Text(
                   'Incomplet',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 9,
                     fontWeight: FontWeight.bold,
                     color: Colors.red.shade700,
+                  ),
+                ),
+              ),
+            // Badge "Complet"
+            if (isComplet && !isDraft)
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.green.shade300),
+                ),
+                child: Text(
+                  'Complet',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green.shade700,
                   ),
                 ),
               ),
@@ -1582,13 +1675,34 @@ Widget _buildElementItem(ElementControle element) {
                 _voirCoffret(index);
               }
             }
-            if (value == 'edit') _editerCoffret(index);
-            if (value == 'delete') _supprimerCoffret(index);
+            if (value == 'edit') {
+              if (isDraft) {
+                _ouvrirBrouillon(coffret);
+              } else {
+                _editerCoffret(index);
+              }
+            }
+            if (value == 'delete') {
+              if (isDraft) {
+                _supprimerBrouillon(coffret);
+              } else {
+                _supprimerCoffret(index);
+              }
+            }
           },
           itemBuilder: (context) => [
-            PopupMenuItem(value: 'view', child: Text(isDraft ? 'Continuer' : 'Voir détails')),
-            PopupMenuItem(value: 'edit', child: Text('Éditer')),
-            PopupMenuItem(value: 'delete', child: Text('Supprimer', style: TextStyle(color: Colors.red))),
+            PopupMenuItem(
+              value: 'view',
+              child: Text(isDraft ? 'Continuer' : 'Voir détails'),
+            ),
+            PopupMenuItem(
+              value: 'edit',
+              child: Text('Éditer'),
+            ),
+            PopupMenuItem(
+              value: 'delete',
+              child: Text('Supprimer', style: TextStyle(color: Colors.red)),
+            ),
           ],
         ),
         onTap: () {
@@ -1600,45 +1714,6 @@ Widget _buildElementItem(ElementControle element) {
         },
       ),
     );
-  }
-  // Ouvrir un brouillon pour continuer
-  void _ouvrirBrouillon(CoffretArmoire draft) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AjouterCoffretScreen(
-          mission: widget.mission,
-          parentType: 'local',
-          parentIndex: widget.localIndex,
-          isMoyenneTension: widget.isMoyenneTension,
-          zoneIndex: widget.zoneIndex,
-          isInZone: widget.isInZone,
-          qrCode: draft.qrCode, // ← Passe le QR code pour charger le brouillon
-          coffret: null, // Pas d'édition, c'est une création
-        ),
-      ),
-    );
-    
-    if (result == true) {
-      _loadCoffrets();
-    }
-  }
-  
-  // Ajouter la méthode _isCoffretComplet
-  bool _isCoffretComplet(CoffretArmoire coffret) {
-    if (coffret.nom.isEmpty) return false;
-    if (coffret.type.isEmpty) return false;
-    if (coffret.domaineTension.isEmpty) return false;
-    if (coffret.photos.isEmpty) return false;
-    
-    for (var point in coffret.pointsVerification) {
-      if (point.conformite.isEmpty) return false;
-      if (point.conformite == 'non') {
-        if (point.observation == null || point.observation!.trim().isEmpty) return false;
-      }
-    }
-    
-    return true;
   }
 
 
@@ -1703,7 +1778,7 @@ Widget _buildElementItem(ElementControle element) {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
-          _buildZoneStat('Coffrets', _local.coffrets.length),
+          _buildZoneStat('Coffrets', _coffrets.length),
           _buildZoneStat('Photos', totalPhotos),
           _buildZoneStat('Observations', _local.observationsLibres.length),
         ],
@@ -1777,7 +1852,7 @@ Widget _buildElementItem(ElementControle element) {
                         Tab(text: 'VÉRIFICATIONS'),
                         if (isTransformateur) Tab(text: 'CELLULE'),
                         if (isTransformateur) Tab(text: 'TRANSFORMATEUR'),
-                        Tab(text: 'COFFRETS (${_local.coffrets.length})'),
+                        Tab(text: 'ÉQUIPEMENTS (${_coffrets.length})'),
                         Tab(text: 'CLASSEMENT'), 
                       ],
                     ),
@@ -1893,7 +1968,7 @@ Widget _buildElementItem(ElementControle element) {
                               : Center(child: Text('Aucune information transformateur')),
 
                         // Tab COFFRETS
-                        _local.coffrets.isEmpty
+                        _coffrets.isEmpty
                             ? Center(
                                 child: Column(
                                   mainAxisAlignment: MainAxisAlignment.center,
@@ -1919,9 +1994,9 @@ Widget _buildElementItem(ElementControle element) {
                               )
                             : ListView.builder(
                                 padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),
-                                itemCount: _local.coffrets.length,
+                                itemCount: _coffrets.length,  // ← MODIFIÉ
                                 itemBuilder: (context, index) {
-                                  return _buildCoffretCard(_local.coffrets[index], index);
+                                  return _buildCoffretCard(_coffrets[index], index);  // ← MODIFIÉ
                                 },
                               ),
 
