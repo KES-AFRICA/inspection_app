@@ -46,6 +46,20 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
     }
   }
 
+  Future<void> _refreshAllData() async {
+    setState(() => _isLoading = true);
+    
+    try {
+      final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+      setState(() {
+        _audit = audit;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
+
   void _ajouterZone() async {
     final result = await Navigator.push(
       context,

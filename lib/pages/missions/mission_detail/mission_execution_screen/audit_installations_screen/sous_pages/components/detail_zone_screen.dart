@@ -769,7 +769,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     );
 
     if (result == true) {
-      _rechargerZone();
+      await _refreshZone();
       _showSuccess('Local ajouté avec succès');
     }
   }
@@ -861,7 +861,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     );
 
     if (result == true) {
-      _rechargerZone();
+      await _refreshZone();
       _showSuccess('Local ajouté avec succès');
     }
   }
@@ -1224,22 +1224,22 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   }
 
   void _rechargerZone() async {
-  final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+    final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
   
-  setState(() {
-    if (widget.isMoyenneTension) {
-      if (widget.zoneIndex < audit.moyenneTensionZones.length) {
-        _zone = audit.moyenneTensionZones[widget.zoneIndex];
+    setState(() {
+      if (widget.isMoyenneTension) {
+        if (widget.zoneIndex < audit.moyenneTensionZones.length) {
+          _zone = audit.moyenneTensionZones[widget.zoneIndex];
+        }
+      } else {
+        if (widget.zoneIndex < audit.basseTensionZones.length) {
+          _zone = audit.basseTensionZones[widget.zoneIndex];
+        }
       }
-    } else {
-      if (widget.zoneIndex < audit.basseTensionZones.length) {
-        _zone = audit.basseTensionZones[widget.zoneIndex];
-      }
-    }
-    _chargerPhotosZone();
-    _loadCoffrets(); // ← IMPORTANT : Recharger les coffrets
-  });
-}
+      _chargerPhotosZone();
+      _loadCoffrets();
+    });
+  }
 
   Future<void> _sauvegarderZone() async {
     final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
@@ -1694,6 +1694,24 @@ void _supprimerCoffret(int index, bool isMoyenneTension) {
         ],
       ),
     );
+  }
+
+  Future<void> _refreshZone() async {
+    final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+    
+    setState(() {
+      if (widget.isMoyenneTension) {
+        if (widget.zoneIndex < audit.moyenneTensionZones.length) {
+          _zone = audit.moyenneTensionZones[widget.zoneIndex];
+        }
+      } else {
+        if (widget.zoneIndex < audit.basseTensionZones.length) {
+          _zone = audit.basseTensionZones[widget.zoneIndex];
+        }
+      }
+      _chargerPhotosZone();
+      _loadCoffrets();
+    });
   }
 
   Widget _buildZoneStat(String title, int count) {

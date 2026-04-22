@@ -1,4 +1,5 @@
 // moyenne_tension_screen.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/classement_locaux.dart';
@@ -36,33 +37,29 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
     _loadData();
   }
 
-  Future<void> _loadData() async {
+  Future<void> _refreshAllData() async {
     setState(() => _isLoading = true);
     
     try {
-      _hasPreference = await HiveService.hasMoyenneTensionPreference(widget.mission.id);
-      _isApplicable = await HiveService.isMoyenneTensionApplicable(widget.mission.id);
-      
+      // Recharger l'audit
       final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-      
+
       setState(() {
         _audit = audit;
         _isLoading = false;
       });
-      
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) {
-          if (!_hasPreference) {
-            _showMoyenneTensionDialog();
-          } else if (!_isApplicable) {
-            _showMoyenneTensionDialog();
-          }
-        }
-      });
     } catch (e) {
-      print('❌ Erreur chargement: $e');
+      if (kDebugMode) {
+        print('❌ Erreur refresh: $e');
+      }
       setState(() => _isLoading = false);
     }
+  }
+
+  // Modifiez la méthode _loadData pour appeler refresh :
+
+  Future<void> _loadData() async {
+    await _refreshAllData();
   }
 
   // Récupérer les brouillons pour un local
@@ -737,23 +734,26 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
                       
                       // Onglet LOCAUX
                       _audit!.moyenneTensionLocaux.isEmpty
-                          ? _buildEmptyState('locaux', _ajouterLocal)
-                          : Builder(
-                              builder: (context) {
-                                final drafts = HiveService.getLocalDraftsForMoyenneTensionHorsZone(
-                                  missionId: widget.mission.id,
-                                );
-                                final locauxExistants = _audit!.moyenneTensionLocaux;
-                                
-                                // Filtrer les brouillons qui ont déjà un local avec le même nom
-                                final nomsExistants = locauxExistants.map((l) => l.nom).toSet();
-                                final uniqueDrafts = drafts.where((d) => !nomsExistants.contains(d['nomLocal'])).toList();
-                                
-                                if (locauxExistants.isEmpty && uniqueDrafts.isEmpty) {
-                                  return _buildEmptyState('locaux', _ajouterLocal);
-                                }
-                                
-                                return ListView.builder(
+                        ? _buildEmptyState('locaux', _ajouterLocal)
+                        : Builder(
+                            builder: (context) {
+                              // ✅ Récupérer les brouillons à chaque rebuild (pas en cache)
+                              final drafts = HiveService.getLocalDraftsForMoyenneTensionHorsZone(
+                                missionId: widget.mission.id,
+                              );
+                              final locauxExistants = _audit!.moyenneTensionLocaux;
+                              
+                              // Filtrer les brouillons qui ont déjà un local avec le même nom
+                              final nomsExistants = locauxExistants.map((l) => l.nom).toSet();
+                              final uniqueDrafts = drafts.where((d) => !nomsExistants.contains(d['nomLocal'])).toList();
+                              
+                              if (locauxExistants.isEmpty && uniqueDrafts.isEmpty) {
+                                return _buildEmptyState('locaux', _ajouterLocal);
+                              }
+                              
+                              return RefreshIndicator(
+                                onRefresh: _refreshAllData,
+                                child: ListView.builder(
                                   padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
                                   itemCount: uniqueDrafts.length + locauxExistants.length,
                                   itemBuilder: (context, index) {
@@ -764,9 +764,10 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
                                       return _buildLocalCard(locauxExistants[localIndex], localIndex);
                                     }
                                   },
-                                );
-                              },
-                            ),
+                                ),
+                              );
+                            },
+                          ),
                     ],
                   ),
                 ),

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:image_picker/image_picker.dart';
@@ -3767,8 +3768,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       _nomController.text = local.nom ?? '';
       _selectedType = local.type;
       
-      // Si le type est le type par défaut (utilisé quand pas encore sélectionné)
-      // on ne le considère pas comme valide
       if (_selectedType == 'LOCAL_ELECTRIQUE' && local.nom == 'Sans nom') {
         _typeValid = false;
       } else {
@@ -3794,8 +3793,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       }
       _localPhotosValid = true;
       
-      // Cellule et Transformateur (si local MT et type TRANSFORMATEUR)
-      if (local is MoyenneTensionLocal && local.type == 'LOCAL_TRANSFORMATEUR') {
+      // Pour les locaux MT de type TRANSFORMATEUR - charger cellule et transformateur
+      if (widget.isMoyenneTension && local.type == 'LOCAL_TRANSFORMATEUR') {
         if (local.cellule != null) {
           _celluleFonctionController.text = local.cellule!.fonction ?? '';
           _celluleTypeController.text = local.cellule!.type ?? '';
@@ -3817,27 +3816,12 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           _transfoElements = List.from(local.transformateur!.elementsVerifies ?? []);
         }
       } else {
-        // Réinitialiser les contrôleurs cellule/transfo
-        _celluleFonctionController.clear();
-        _celluleTypeController.clear();
-        _celluleMarqueController.clear();
-        _celluleTensionController.clear();
-        _cellulePouvoirController.clear();
-        _celluleNumerotationController.clear();
-        _celluleParafoudresController.clear();
+        // Réinitialiser pour les autres types
         _celluleElements.clear();
-        
-        _transfoTypeController.clear();
-        _transfoMarqueController.clear();
-        _transfoPuissanceController.clear();
-        _transfoTensionController.clear();
-        _transfoBuchholzController.clear();
-        _transfoRefroidissementController.clear();
-        _transfoRegimeController.clear();
         _transfoElements.clear();
       }
       
-      // Étape courante
+      // RESTAURER L'ÉTAPE COURANTE
       _currentStep = savedStep;
       
       // Reconstruire conformeSelected
@@ -3860,7 +3844,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       for (int i = 0; i < _dispositionsConstructives.length; i++) {
         final obs = _dispositionsConstructives[i].observation;
         _hasObservation[i] = obs != null && obs.isNotEmpty;
-        // Si conformité = false, forcer hasObservation = true
         if (_dispositionsConstructives[i].conforme == false) {
           _hasObservation[i] = true;
         }
@@ -3877,7 +3860,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       // Validation des éléments
       _dispositionsValid = _validateElements(_dispositionsConstructives);
       _conditionsValid = _validateElements(_conditionsExploitation);
-      if (_selectedType == 'LOCAL_TRANSFORMATEUR') {
+      if (widget.isMoyenneTension && _selectedType == 'LOCAL_TRANSFORMATEUR') {
         _celluleDonneesValid = _validateCelluleDonnees();
         _transfoDonneesValid = _validateTransfoDonnees();
         _celluleElementsValid = _validateElements(_celluleElements);
@@ -3888,12 +3871,12 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       _elementSuggestions.clear();
       _elementLoading.clear();
       
-      // Positionner le PageController
+      // POSITIONNER LE PAGE CONTROLLER À L'ÉTAPE SAUVEGARDÉE
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_mainPageController.hasClients) {
           _mainPageController.jumpToPage(_currentStep);
         }
-        // Si on est à l'étape 1, reconstruire les slides
+        // Si on est à l'étape 1 (éléments de contrôle), reconstruire les slides
         if (_currentStep == 1) {
           _etapeElementsKey?.currentState?.rebuildSlides();
         }
@@ -3913,9 +3896,9 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     
     final nom = _nomController.text.trim();
     if (nom.isEmpty && _selectedType == null) {
-      return; //
+      return;
     }
-    final typeToSave = _selectedType ?? 'LOCAL_ELECTRIQUE'; // Type par défaut
+    final typeToSave = _selectedType ?? 'LOCAL_ELECTRIQUE';
     
     dynamic local;
     if (widget.isMoyenneTension) {
@@ -3930,7 +3913,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       zoneIndex: widget.zoneIndex,
       isInZone: widget.isInZone,
       local: local,
-      currentStep: _currentStep,
+      currentStep: _currentStep, 
       localId: _draftLocalId,
     );
     
@@ -4677,10 +4660,13 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      print('❌ Erreur sauvegarde: $e');
+      if (kDebugMode) {
+        print('❌ Erreur sauvegarde: $e');
+      }
       _showError('Erreur lors de la sauvegarde: $e');
     }
   }
+
 
 
   Future<void> _allerAuClassement(dynamic local) async {
@@ -5071,7 +5057,10 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
               child: PageView(
                 controller: _mainPageController,
                 physics: const NeverScrollableScrollPhysics(),
-                onPageChanged: (index) => setState(() => _currentStep = index),
+                onPageChanged: (index) {
+                  setState(() => _currentStep = index);
+                  _saveDraft();
+                },
                 children: [
                   _EtapeInformationsGenerales(
                     nomController: _nomController,

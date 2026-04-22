@@ -748,94 +748,94 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
 
   // ===== FIN GESTION OBSERVATIONS =====
 
-  void _sauvegarder() async {
-  if (_formKey.currentState!.validate()) {
-    try {
-      dynamic zone;
-      
-      if (widget.isMoyenneTension) {
-        zone = MoyenneTensionZone(
-          nom: _nomController.text.trim(),
-          coffrets: widget.isEdition ? widget.zone.coffrets : [],
-          observationsLibres: _observationsExistantes,
-          photos: _zonePhotos,
-          locaux: widget.isEdition ? widget.zone.locaux : [],
-        );
-      } else {
-        zone = BasseTensionZone(
-          nom: _nomController.text.trim(),
-          locaux: widget.isEdition ? widget.zone.locaux : [],
-          coffretsDirects: widget.isEdition ? widget.zone.coffretsDirects : [],
-          observationsLibres: _observationsExistantes,
-          photos: _zonePhotos,
-        );
-      }
-
-      bool success;
-      if (widget.isEdition) {
-        success = await _updateZone(zone);
-      } else {
+  Future<void> _sauvegarder() async {
+    if (_formKey.currentState!.validate()) {
+      try {
+        dynamic zone;
+        
         if (widget.isMoyenneTension) {
-          success = await HiveService.addMoyenneTensionZone(
-            missionId: widget.mission.id,
-            zone: zone as MoyenneTensionZone,
+          zone = MoyenneTensionZone(
+            nom: _nomController.text.trim(),
+            coffrets: widget.isEdition ? widget.zone.coffrets : [],
+            observationsLibres: _observationsExistantes,
+            photos: _zonePhotos,
+            locaux: widget.isEdition ? widget.zone.locaux : [],
           );
         } else {
-          success = await HiveService.addBasseTensionZone(
-            missionId: widget.mission.id,
-            zone: zone as BasseTensionZone,
+          zone = BasseTensionZone(
+            nom: _nomController.text.trim(),
+            locaux: widget.isEdition ? widget.zone.locaux : [],
+            coffretsDirects: widget.isEdition ? widget.zone.coffretsDirects : [],
+            observationsLibres: _observationsExistantes,
+            photos: _zonePhotos,
           );
         }
-      }
 
-      if (success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(widget.isEdition ? 'Zone modifiée' : 'Zone ajoutée'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          
-          if (!widget.isEdition) {
-            // Synchroniser les classements
-            await HiveService.syncClassementsZonesFromAudit(widget.mission.id);
-            
-            // Récupérer le classement créé
-            final classement = await HiveService.getOrCreateClassementZone(
+        bool success;
+        if (widget.isEdition) {
+          success = await _updateZone(zone);
+        } else {
+          if (widget.isMoyenneTension) {
+            success = await HiveService.addMoyenneTensionZone(
               missionId: widget.mission.id,
-              nomZone: _nomController.text.trim(),
-              typeZone: widget.isMoyenneTension ? 'MT' : 'BT',
+              zone: zone as MoyenneTensionZone,
             );
-            
-            // Rediriger vers l'écran de classement
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => ClassementZoneScreen(
-                  mission: widget.mission,
-                  classement: classement,
-                ),
+          } else {
+            success = await HiveService.addBasseTensionZone(
+              missionId: widget.mission.id,
+              zone: zone as BasseTensionZone,
+            );
+          }
+        }
+
+        if (success) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(widget.isEdition ? 'Zone modifiée' : 'Zone ajoutée'),
+                backgroundColor: Colors.green,
               ),
             );
             
-            // Si le classement a été sauvegardé (result == true)
-            if (result == true) {
-              // Fermer AjouterZoneScreen et retourner à l'écran précédent
+            if (!widget.isEdition) {
+              // Synchroniser les classements
+              await HiveService.syncClassementsZonesFromAudit(widget.mission.id);
+              
+              // Récupérer le classement créé
+              final classement = await HiveService.getOrCreateClassementZone(
+                missionId: widget.mission.id,
+                nomZone: _nomController.text.trim(),
+                typeZone: widget.isMoyenneTension ? 'MT' : 'BT',
+              );
+              
+              // Rediriger vers l'écran de classement
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ClassementZoneScreen(
+                    mission: widget.mission,
+                    classement: classement,
+                  ),
+                ),
+              );
+              
+              //  retourner à l'écran MT/BT (pas à l'audit principal)
+              if (result == true) {
+                // Retourner à l'écran précédent (MoyenneTensionScreen ou BasseTensionScreen)
+                Navigator.pop(context, true);
+              }
+            } else {
               Navigator.pop(context, true);
             }
-          } else {
-            Navigator.pop(context, true);
           }
+        } else {
+          _showError('Erreur lors de la sauvegarde');
         }
-      } else {
-        _showError('Erreur lors de la sauvegarde');
+      } catch (e) {
+        _showError('Erreur: $e');
       }
-    } catch (e) {
-      _showError('Erreur: $e');
     }
   }
-}
 
   Future<bool> _updateZone(dynamic zone) async {
     try {

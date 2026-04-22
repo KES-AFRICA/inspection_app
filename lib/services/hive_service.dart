@@ -3971,12 +3971,16 @@ static Future<bool> deleteContinuiteResistance({
     if (index < mesures.continuiteResistances.length) {
       final mesure = mesures.continuiteResistances.removeAt(index);
       await saveMesuresEssais(mesures);
-      print('✅ Continuité/résistance supprimée: ${mesure.designationTableau}');
+      if (kDebugMode) {
+        print('✅ Continuité/résistance supprimée: ${mesure.designationTableau}');
+      }
       return true;
     }
     return false;
   } catch (e) {
-    print('❌ Erreur deleteContinuiteResistance: $e');
+    if (kDebugMode) {
+      print('❌ Erreur deleteContinuiteResistance: $e');
+    }
     return false;
   }
 }
@@ -4048,12 +4052,16 @@ static Future<bool> deleteAllMesuresEssaisForMission(String missionId) async {
         await mission.save();
       }
       
-      print('✅ Toutes les mesures et essais supprimés pour mission $missionId');
+      if (kDebugMode) {
+        print('✅ Toutes les mesures et essais supprimés pour mission $missionId');
+      }
       return true;
     }
     return true; // Aucune donnée à supprimer
   } catch (e) {
-    print('❌ Erreur deleteAllMesuresEssaisForMission: $e');
+    if (kDebugMode) {
+      print('❌ Erreur deleteAllMesuresEssaisForMission: $e');
+    }
     return false;
   }
 }
@@ -4149,9 +4157,13 @@ static Future<void> createTestMesuresEssais(String missionId) async {
     }
     
     await saveMesuresEssais(mesures);
-    print('✅ Données de test créées pour mesures et essais');
+    if (kDebugMode) {
+      print('✅ Données de test créées pour mesures et essais');
+    }
   } catch (e) {
-    print('❌ Erreur createTestMesuresEssais: $e');
+    if (kDebugMode) {
+      print('❌ Erreur createTestMesuresEssais: $e');
+    }
   }
 }
 
@@ -4175,12 +4187,16 @@ static Future<bool> addObservationToMoyenneTensionLocal({
         photos: photos ?? [],
       ));
       await saveAuditInstallations(audit);
-      print('✅ Observation ajoutée au local MT: ${local.nom}');
+      if (kDebugMode) {
+        print('✅ Observation ajoutée au local MT: ${local.nom}');
+      }
       return true;
     }
     return false;
   } catch (e) {
-    print('❌ Erreur addObservationToMoyenneTensionLocal: $e');
+    if (kDebugMode) {
+      print('❌ Erreur addObservationToMoyenneTensionLocal: $e');
+    }
     return false;
   }
 }
@@ -4201,12 +4217,16 @@ static Future<bool> addObservationToMoyenneTensionZone({
         photos: photos ?? [],
       ));
       await saveAuditInstallations(audit);
-      print('✅ Observation ajoutée à la zone MT: ${zone.nom}');
+      if (kDebugMode) {
+        print('✅ Observation ajoutée à la zone MT: ${zone.nom}');
+      }
       return true;
     }
     return false;
   } catch (e) {
-    print('❌ Erreur addObservationToMoyenneTensionZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur addObservationToMoyenneTensionZone: $e');
+    }
     return false;
   }
 }
@@ -4227,12 +4247,16 @@ static Future<bool> addObservationToBasseTensionZone({
         photos: photos ?? [],
       ));
       await saveAuditInstallations(audit);
-      print('✅ Observation ajoutée à la zone BT: ${zone.nom}');
+      if (kDebugMode) {
+        print('✅ Observation ajoutée à la zone BT: ${zone.nom}');
+      }
       return true;
     }
     return false;
   } catch (e) {
-    print('❌ Erreur addObservationToBasseTensionZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur addObservationToBasseTensionZone: $e');
+    }
     return false;
   }
 }
@@ -4256,13 +4280,17 @@ static Future<bool> addObservationToBasseTensionLocal({
           photos: photos ?? [],
         ));
         await saveAuditInstallations(audit);
-        print('✅ Observation ajoutée au local BT: ${local.nom}');
+        if (kDebugMode) {
+          print('✅ Observation ajoutée au local BT: ${local.nom}');
+        }
         return true;
       }
     }
     return false;
   } catch (e) {
-    print('❌ Erreur addObservationToBasseTensionLocal: $e');
+    if (kDebugMode) {
+      print('❌ Erreur addObservationToBasseTensionLocal: $e');
+    }
     return false;
   }
 }
@@ -4338,13 +4366,17 @@ static Future<bool> addObservationToCoffret({
     
     if (found) {
       await saveAuditInstallations(audit);
-      print('✅ Observation ajoutée au coffret: ${coffret.nom}');
+      if (kDebugMode) {
+        print('✅ Observation ajoutée au coffret: ${coffret.nom}');
+      }
       return true;
     }
     
     return false;
   } catch (e) {
-    print('❌ Erreur addObservationToCoffret: $e');
+    if (kDebugMode) {
+      print('❌ Erreur addObservationToCoffret: $e');
+    }
     return false;
   }
 }
@@ -4366,10 +4398,14 @@ static Future<bool> updateObservationLibre({
     final audit = await getOrCreateAuditInstallations(missionId);
     await saveAuditInstallations(audit);
     
-    print('✅ Observation mise à jour');
+    if (kDebugMode) {
+      print('✅ Observation mise à jour');
+    }
     return true;
   } catch (e) {
-    print('❌ Erreur updateObservationLibre: $e');
+    if (kDebugMode) {
+      print('❌ Erreur updateObservationLibre: $e');
+    }
     return false;
   }
 }
@@ -4392,7 +4428,9 @@ static Future<bool> deleteObservationLibre({
     } else if (parent is CoffretArmoire) {
       parent.observationsLibres.remove(observation);
     } else {
-      print('❌ Type de parent non supporté');
+      if (kDebugMode) {
+        print('❌ Type de parent non supporté');
+      }
       return false;
     }
     
@@ -4400,10 +4438,14 @@ static Future<bool> deleteObservationLibre({
     final audit = await getOrCreateAuditInstallations(missionId);
     await saveAuditInstallations(audit);
     
-    print('✅ Observation supprimée');
+    if (kDebugMode) {
+      print('✅ Observation supprimée');
+    }
     return true;
   } catch (e) {
-    print('❌ Erreur deleteObservationLibre: $e');
+    if (kDebugMode) {
+      print('❌ Erreur deleteObservationLibre: $e');
+    }
     return false;
   }
 }
@@ -4421,10 +4463,14 @@ static Future<bool> addPhotoToObservation({
     final audit = await getOrCreateAuditInstallations(missionId);
     await saveAuditInstallations(audit);
     
-    print('✅ Photo ajoutée à l\'observation');
+    if (kDebugMode) {
+      print('✅ Photo ajoutée à l\'observation');
+    }
     return true;
   } catch (e) {
-    print('❌ Erreur addPhotoToObservation: $e');
+    if (kDebugMode) {
+      print('❌ Erreur addPhotoToObservation: $e');
+    }
     return false;
   }
 }
@@ -4442,10 +4488,14 @@ static Future<bool> removePhotoFromObservation({
     final audit = await getOrCreateAuditInstallations(missionId);
     await saveAuditInstallations(audit);
     
-    print('✅ Photo supprimée de l\'observation');
+    if (kDebugMode) {
+      print('✅ Photo supprimée de l\'observation');
+    }
     return true;
   } catch (e) {
-    print('❌ Erreur removePhotoFromObservation: $e');
+    if (kDebugMode) {
+      print('❌ Erreur removePhotoFromObservation: $e');
+    }
     return false;
   }
 }
@@ -4524,7 +4574,9 @@ static List<Map<String, dynamic>> getAllObservationsForMission(String missionId)
     
     return observations;
   } catch (e) {
-    print('❌ Erreur getAllObservationsForMission: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getAllObservationsForMission: $e');
+    }
     return [];
   }
 }
@@ -4627,14 +4679,20 @@ static Future<bool> migrateOldObservations(String missionId) async {
     
     if (migrated) {
       await saveAuditInstallations(audit);
-      print('✅ Anciennes observations migrées pour mission $missionId');
+      if (kDebugMode) {
+        print('✅ Anciennes observations migrées pour mission $missionId');
+      }
     } else {
-      print('✅ Aucune migration nécessaire');
+      if (kDebugMode) {
+        print('✅ Aucune migration nécessaire');
+      }
     }
     
     return true;
   } catch (e) {
-    print('❌ Erreur migrateOldObservations: $e');
+    if (kDebugMode) {
+      print('❌ Erreur migrateOldObservations: $e');
+    }
     return false;
   }
 }
@@ -4691,13 +4749,17 @@ static Future<bool> addPhotoToElementControle({
     
     if (found) {
       await saveAuditInstallations(audit);
-      print('✅ Photo ajoutée à l\'élément $elementIndex');
+      if (kDebugMode) {
+        print('✅ Photo ajoutée à l\'élément $elementIndex');
+      }
       return true;
     }
     
     return false;
   } catch (e) {
-    print('❌ Erreur addPhotoToElementControle: $e');
+    if (kDebugMode) {
+      print('❌ Erreur addPhotoToElementControle: $e');
+    }
     return false;
   }
 }
@@ -4792,13 +4854,17 @@ static Future<bool> removePhotoFromElementControle({
     
     if (found) {
       await saveAuditInstallations(audit);
-      print('✅ Photo supprimée de l\'élément $elementIndex');
+      if (kDebugMode) {
+        print('✅ Photo supprimée de l\'élément $elementIndex');
+      }
       return true;
     }
     
     return false;
   } catch (e) {
-    print('❌ Erreur removePhotoFromElementControle: $e');
+    if (kDebugMode) {
+      print('❌ Erreur removePhotoFromElementControle: $e');
+    }
     return false;
   }
 }
@@ -4904,7 +4970,9 @@ static List<Map<String, dynamic>> getAllElementPhotos(String missionId) {
     
     return allPhotos;
   } catch (e) {
-    print('❌ Erreur getAllElementPhotos: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getAllElementPhotos: $e');
+    }
     return [];
   }
 }
@@ -4949,10 +5017,14 @@ static Future<void> saveElementWithPhotos({
     
     if (updated) {
       await saveAuditInstallations(audit);
-      print('✅ Élément avec photos sauvegardé');
+      if (kDebugMode) {
+        print('✅ Élément avec photos sauvegardé');
+      }
     }
   } catch (e) {
-    print('❌ Erreur saveElementWithPhotos: $e');
+    if (kDebugMode) {
+      print('❌ Erreur saveElementWithPhotos: $e');
+    }
     rethrow;
   }
 }
@@ -5071,7 +5143,9 @@ static Future<ClassementEmplacement> getOrCreateClassementForLocal({
         await existing.save();
       }
       
-      print('✅ Classement existant trouvé pour: $localisation');
+      if (kDebugMode) {
+        print('✅ Classement existant trouvé pour: $localisation');
+      }
       return existing;
     } else {
       // Créer un nouveau classement
@@ -5082,12 +5156,16 @@ static Future<ClassementEmplacement> getOrCreateClassementForLocal({
         typeLocal: typeLocal,
       );
       await classementBox.add(newClassement);
-      print('✅ Nouveau classement créé pour: $localisation');
+      if (kDebugMode) {
+        print('✅ Nouveau classement créé pour: $localisation');
+      }
       return newClassement;
     }
     
   } catch (e) {
-    print('❌ Erreur getOrCreateClassementForLocal: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getOrCreateClassementForLocal: $e');
+    }
     // En cas d'erreur, créer une nouvelle instance
     final newClassement = ClassementEmplacement.create(
       missionId: missionId,
@@ -5136,14 +5214,18 @@ static Future<bool> updateClassementInfo({
       if (zone != null || typeLocal != null) {
         classement.updatedAt = DateTime.now();
         await classement.save();
-        print('✅ Informations classement mises à jour pour: $localisation');
+        if (kDebugMode) {
+          print('✅ Informations classement mises à jour pour: $localisation');
+        }
       }
       return true;
     }
     
     return false;
   } catch (e) {
-    print('❌ Erreur updateClassementInfo: $e');
+    if (kDebugMode) {
+      print('❌ Erreur updateClassementInfo: $e');
+    }
     return false;
   }
 }
@@ -5225,7 +5307,9 @@ static Future<void> saveRenseignementsGeneraux(RenseignementsGeneraux data) asyn
   final box = Hive.box<RenseignementsGeneraux>(_renseignementsGenerauxBox);
   data.updatedAt = DateTime.now();
   await data.save();
-  print('✅ Renseignements généraux sauvegardés pour mission ${data.missionId}');
+  if (kDebugMode) {
+    print('✅ Renseignements généraux sauvegardés pour mission ${data.missionId}');
+  }
 }
 
 /// Récupérer les renseignements généraux par missionId
@@ -5251,7 +5335,9 @@ static Future<void> saveMoyenneTensionPreference(String missionId, bool isApplic
     'isApplicable': isApplicable,
     'timestamp': DateTime.now().toIso8601String(),
   });
-  print('✅ Préférence MT sauvegardée pour mission $missionId: $isApplicable');
+  if (kDebugMode) {
+    print('✅ Préférence MT sauvegardée pour mission $missionId: $isApplicable');
+  }
 }
 
 /// Vérifier si la préférence MT a déjà été définie
@@ -5466,10 +5552,14 @@ static Future<ClassementZone> getOrCreateClassementZone({
       typeZone: typeZone,
     );
     await box.add(newClassement);
-    print('✅ ClassementZone créé: $nomZone');
+    if (kDebugMode) {
+      print('✅ ClassementZone créé: $nomZone');
+    }
     return newClassement;
   } catch (e) {
-    print('❌ Erreur getOrCreateClassementZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getOrCreateClassementZone: $e');
+    }
     final newClassement = ClassementZone.create(
       missionId: missionId,
       nomZone: nomZone,
@@ -5493,11 +5583,17 @@ static Future<bool> saveClassementZone(ClassementZone classement) async {
       await box.add(classement);
     }
     
-    print('✅ ClassementZone sauvegardé: ${classement.nomZone}');
-    print('   AF: ${classement.af}, BE: ${classement.be}, AE: ${classement.ae}');
+    if (kDebugMode) {
+      print('✅ ClassementZone sauvegardé: ${classement.nomZone}');
+    }
+    if (kDebugMode) {
+      print('   AF: ${classement.af}, BE: ${classement.be}, AE: ${classement.ae}');
+    }
     return true;
   } catch (e) {
-    print('❌ Erreur saveClassementZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur saveClassementZone: $e');
+    }
     return false;
   }
 }
@@ -5543,7 +5639,9 @@ static Future<void> syncClassementsZonesFromAudit(String missionId) async {
     );
   }
   
-  print('✅ Classements zones synchronisés pour mission $missionId');
+  if (kDebugMode) {
+    print('✅ Classements zones synchronisés pour mission $missionId');
+  }
 }
 
 /// Supprimer le classement d'un local
@@ -5564,10 +5662,14 @@ static Future<void> deleteClassementLocal({
     
     if (toDelete != null) {
       await toDelete.delete();
-      print('✅ ClassementLocal supprimé: $nomLocal');
+      if (kDebugMode) {
+        print('✅ ClassementLocal supprimé: $nomLocal');
+      }
     }
   } catch (e) {
-    print('❌ Erreur deleteClassementLocal: $e');
+    if (kDebugMode) {
+      print('❌ Erreur deleteClassementLocal: $e');
+    }
   }
 }
 
@@ -5592,7 +5694,9 @@ static Future<void> deleteClassementZone({
       print('✅ ClassementZone supprimé: $nomZone');
     }
   } catch (e) {
-    print('❌ Erreur deleteClassementZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur deleteClassementZone: $e');
+    }
   }
 }
 
@@ -5602,7 +5706,9 @@ static ClassementZone? getClassementZoneById(String id) {
     final box = Hive.box<ClassementZone>(_classementZoneBox);
     return box.get(id);
   } catch (e) {
-    print('❌ Erreur getClassementZoneById: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getClassementZoneById: $e');
+    }
     return null;
   }
 }
@@ -5644,9 +5750,13 @@ static Future<void> saveLocalDraft({
     };
     
     await box.put(draftKey, draftData);
-    print('✅ Brouillon local sauvegardé: ${local.nom} (step $currentStep)');
+    if (kDebugMode) {
+      print('✅ Brouillon local sauvegardé: ${local.nom} (step $currentStep)');
+    }
   } catch (e) {
-    print('❌ Erreur saveLocalDraft: $e');
+    if (kDebugMode) {
+      print('❌ Erreur saveLocalDraft: $e');
+    }
     rethrow;
   }
 }
@@ -5672,7 +5782,9 @@ static Map<String, dynamic>? getLocalDraftData(String draftKey) {
     }
     return null;
   } catch (e) {
-    print('❌ Erreur getLocalDraftData: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getLocalDraftData: $e');
+    }
     return null;
   }
 }
@@ -5682,9 +5794,13 @@ static Future<void> deleteLocalDraft(String draftKey) async {
   try {
     final box = Hive.box(_localDraftsBox);
     await box.delete(draftKey);
-    print('✅ Brouillon local supprimé: $draftKey');
+    if (kDebugMode) {
+      print('✅ Brouillon local supprimé: $draftKey');
+    }
   } catch (e) {
-    print('❌ Erreur deleteLocalDraft: $e');
+    if (kDebugMode) {
+      print('❌ Erreur deleteLocalDraft: $e');
+    }
   }
 }
 
@@ -5711,7 +5827,9 @@ static List<Map<String, dynamic>> getLocalDraftsForMission(String missionId) {
     
     return drafts;
   } catch (e) {
-    print('❌ Erreur getLocalDraftsForMission: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getLocalDraftsForMission: $e');
+    }
     return [];
   }
 }
@@ -5741,7 +5859,9 @@ static List<Map<String, dynamic>> getLocalDraftsForMoyenneTensionZone({
     
     return drafts;
   } catch (e) {
-    print('❌ Erreur getLocalDraftsForMoyenneTensionZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getLocalDraftsForMoyenneTensionZone: $e');
+    }
     return [];
   }
 }
@@ -5770,7 +5890,9 @@ static List<Map<String, dynamic>> getLocalDraftsForBasseTensionZone({
     
     return drafts;
   } catch (e) {
-    print('❌ Erreur getLocalDraftsForBasseTensionZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getLocalDraftsForBasseTensionZone: $e');
+    }
     return [];
   }
 }
@@ -5800,12 +5922,31 @@ static List<Map<String, dynamic>> getLocalDraftsForMoyenneTensionHorsZone({
     
     return drafts;
   } catch (e) {
-    print('❌ Erreur getLocalDraftsForMoyenneTensionHorsZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getLocalDraftsForMoyenneTensionHorsZone: $e');
+    }
     return [];
   }
 }
 
-
+static Future<void> refreshDrafts() async {
+  // Hive n'a pas de cache, mais cette méthode force la réouverture de la box
+  try {
+    if (Hive.isBoxOpen(_localDraftsBox)) {
+      await Hive.box(_localDraftsBox).compact();
+    }
+    if (Hive.isBoxOpen(_coffretDraftsBox)) {
+      await Hive.box(_coffretDraftsBox).compact();
+    }
+    if (kDebugMode) {
+      print('✅ Brouillons rafraîchis');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Erreur refreshDrafts: $e');
+    }
+  }
+}
 
 
 }
