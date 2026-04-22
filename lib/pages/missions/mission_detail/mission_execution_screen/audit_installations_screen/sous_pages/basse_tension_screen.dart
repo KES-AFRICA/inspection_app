@@ -7,6 +7,7 @@ import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_zone_screen.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_local_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_zone_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_zone_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
@@ -164,6 +165,178 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
       ),
     );
   }
+
+  Widget _buildLocalDraftCard(Map<String, dynamic> draftData, int zoneIndex) {
+    final local = draftData['local'];
+    final nomLocal = draftData['nomLocal'] ?? 'Sans nom';
+    final currentStep = draftData['currentStep'] as int? ?? 0;
+    final draftId = draftData['localId'] as String?;
+    
+    // Déterminer le type de local
+    String typeLocal = 'Local';
+    if (local is BasseTensionLocal) {
+      final localTypes = HiveService.getLocalTypes();
+      typeLocal = localTypes[local.type] ?? local.type;
+    }
+    
+    // Calculer la progression
+    final totalSteps = 2; // Basse tension : toujours 2 étapes (infos + éléments)
+    final pourcentage = (currentStep / totalSteps * 100).round();
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange.shade300),
+      ),
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.orange.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.drafts_outlined, color: Colors.orange),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                nomLocal,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.orange.shade300),
+              ),
+              child: Text(
+                'Brouillon',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text('$typeLocal • Étape $currentStep/$totalSteps • $pourcentage%'),
+            const SizedBox(height: 4),
+            LinearProgressIndicator(
+              value: currentStep / totalSteps,
+              backgroundColor: Colors.grey.shade200,
+              color: Colors.orange,
+            ),
+          ],
+        ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) {
+            if (value == 'continue') {
+              _ouvrirBrouillonLocal(draftData);
+            } else if (value == 'delete') {
+              _supprimerBrouillonLocal(draftId, nomLocal);
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'continue',
+              child: Row(
+                children: [
+                  Icon(Icons.play_arrow, size: 18, color: Colors.green),
+                  SizedBox(width: 8),
+                  Text('Continuer'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Supprimer', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          ],
+        ),
+        onTap: () => _ouvrirBrouillonLocal(draftData),
+      ),
+    );
+  }
+
+  // Ouvrir un brouillon de local =====
+  void _ouvrirBrouillonLocal(Map<String, dynamic> draftData) async {
+    final draftId = draftData['localId'] as String?;
+    
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AjouterLocalScreen(
+          mission: widget.mission,
+          isMoyenneTension: false,
+          zoneIndex: draftData['zoneIndex'],
+          isInZone: true,
+          local: null,
+          draftId: draftId, // ← NOUVEAU : Passer l'ID du brouillon
+        ),
+      ),
+    );
+    
+    if (result == true) {
+      _loadAudit();
+    }
+  }
+
+  // Supprimer un brouillon de local =====
+  void _supprimerBrouillonLocal(String? draftId, String nomLocal) {
+    if (draftId == null) return;
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer le brouillon'),
+        content: Text('Voulez-vous vraiment supprimer le brouillon "$nomLocal" ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await HiveService.deleteLocalDraft(draftId);
+              _loadAudit();
+              _showSuccess('Brouillon supprimé');
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 2),
+      ),
+    );
+  }
+
 
   int _getTotalLocaux() {
     if (_audit == null) return 0;
@@ -582,30 +755,23 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
     );
   }
 
-  // MODIFIÉ : _buildZoneCard pour afficher les brouillons
   Widget _buildZoneCard(BasseTensionZone zone, int index) {
     final totalLocaux = zone.locaux.length;
     
-    // Récupérer les brouillons pour cette zone
-    final drafts = HiveService.getCoffretDraftsForLocation(
+    // Récupérer les brouillons pour cette zone (pour le compteur uniquement)
+    final drafts = HiveService.getLocalDraftsForBasseTensionZone(
       missionId: widget.mission.id,
-      parentType: 'zone_bt',
-      parentIndex: index,
-      isMoyenneTension: false,
-      zoneIndex: null,
+      zoneIndex: index,
     );
+    final nomsExistants = zone.locaux.map((l) => l.nom).toSet();
+    final uniqueDrafts = drafts.where((d) => !nomsExistants.contains(d['nomLocal'])).toList();
     
-    final savedQrCodes = zone.coffretsDirects.map((c) => c.qrCode).toSet();
-    final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).toList();
+    final totalLocauxAvecBrouillons = totalLocaux + uniqueDrafts.length;
     
-    final allCoffretsDirects = [...uniqueDrafts, ...zone.coffretsDirects];
-    
-    // Compter tous les coffrets (existants + brouillons)
-    int totalCoffrets = allCoffretsDirects.length;
+    int totalCoffrets = zone.coffretsDirects.length;
     for (var local in zone.locaux) {
       totalCoffrets += local.coffrets.length;
     }
-    
 
     return Container(
       margin: EdgeInsets.only(bottom: 8),
@@ -641,19 +807,13 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                zone.nom,
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.black87,
-                                ),
-                              ),
-                            ),
-                          ],
+                        Text(
+                          zone.nom,
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.black87,
+                          ),
                         ),
                         if (zone.description != null) ...[
                           SizedBox(height: 4),
@@ -677,7 +837,10 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
                     itemBuilder: (context) => [
                       PopupMenuItem(value: 'view', child: Text('Voir détails')),
                       PopupMenuItem(value: 'edit', child: Text('Éditer')),
-                      PopupMenuItem(value: 'delete', child: Text('Supprimer', style: TextStyle(color: Colors.red))),
+                      PopupMenuItem(
+                        value: 'delete',
+                        child: Text('Supprimer', style: TextStyle(color: Colors.red)),
+                      ),
                     ],
                   ),
                 ],
@@ -692,9 +855,9 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceAround,
                   children: [
-                    _buildZoneStat('Locaux', totalLocaux, Icons.domain),
-                    _buildZoneStat('Coffrets directs', allCoffretsDirects.length, Icons.electrical_services),
-                    _buildZoneStat('Total coffrets', totalCoffrets as int, Icons.assessment),
+                    _buildZoneStat('Locaux', totalLocauxAvecBrouillons, Icons.domain),
+                    _buildZoneStat('Coffrets directs', zone.coffretsDirects.length, Icons.electrical_services),
+                    _buildZoneStat('Total coffrets', totalCoffrets, Icons.assessment),
                   ],
                 ),
               ),

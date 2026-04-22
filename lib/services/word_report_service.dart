@@ -1090,7 +1090,7 @@ static void _addElementsTableWithNormes(Document doc, List<ElementControle> elem
         rows.add(TableRow(cells: [
           TableCell.text(pt.localisation),
           TableCell.text(pt.identification),
-          TableCell.text(pt.conditionMesure),
+          TableCell.text(pt.conditionPriseTerre),
           TableCell.text(pt.naturePriseTerre),
           TableCell.text(pt.methodeMesure),
           TableCell.text(pt.valeurMesure?.toStringAsFixed(2) ?? '-'),

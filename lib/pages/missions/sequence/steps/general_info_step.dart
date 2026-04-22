@@ -191,15 +191,20 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
     setState(() => _isLoading = true);
 
     try {
-      // Récupérer les données (déjà préremplies par HiveService)
       _data = await HiveService.getOrCreateRenseignementsGeneraux(widget.mission.id);
 
-      // Ajouter automatiquement le vérificateur courant s'il n'est pas déjà présent
+      // ✅ Ajouter le vérificateur courant avec une copie modifiable
       final currentUser = HiveService.getCurrentUser();
       if (currentUser != null) {
+        // S'assurer que la liste est modifiable
+        if (_data!.verificateurs.isEmpty) {
+          _data!.verificateurs = [];
+        }
+        
         final currentUserExists = _data!.verificateurs.any((v) =>
             v['nom'] == '${currentUser.prenom} ${currentUser.nom}' ||
             v['email'] == currentUser.email);
+        
         if (!currentUserExists) {
           _data!.verificateurs.add({
             'nom': '${currentUser.prenom} ${currentUser.nom}',
@@ -224,7 +229,6 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
         _accompagnateurs = List.from(_data!.accompagnateurs);
         _verificateurs = List.from(_data!.verificateurs);
 
-        // Marquer comme touchés si déjà remplis
         if (_etablissementController.text.isNotEmpty) _etablissementTouched = true;
         if (_installationController.text.isNotEmpty) _installationTouched = true;
         if (_activiteController.text.isNotEmpty) _activiteTouched = true;
@@ -504,6 +508,49 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
       builder: (context) => StatefulBuilder(
         builder: (context, setStateBottom) => AppBottomSheet(
           title: 'Compte rendu fait à',
+          bottomButton: Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context),
+                  style: OutlinedButton.styleFrom(
+                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    'Annuler',
+                    style: TextStyle(fontSize: isSmallScreen ? 14 : 15),
+                  ),
+                ),
+              ),
+              SizedBox(width: isSmallScreen ? 10 : 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () async {
+                    Navigator.pop(context);
+                    setState(() {
+                      _compteRenduDestinataires = tempSelection.toList();
+                    });
+                    await _saveData();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: Text(
+                    'Valider (${tempSelection.length})',
+                    style: TextStyle(fontSize: isSmallScreen ? 14 : 15),
+                  ),
+                ),
+              ),
+            ],
+          ),
           children: [
             Container(
               margin: EdgeInsets.all(isSmallScreen ? 12 : 16),
@@ -563,49 +610,6 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
               );
             }).toList(),
           ],
-          bottomButton: Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    'Annuler',
-                    style: TextStyle(fontSize: isSmallScreen ? 14 : 15),
-                  ),
-                ),
-              ),
-              SizedBox(width: isSmallScreen ? 10 : 12),
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: () async {
-                    Navigator.pop(context);
-                    setState(() {
-                      _compteRenduDestinataires = tempSelection.toList();
-                    });
-                    await _saveData();
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                  ),
-                  child: Text(
-                    'Valider (${tempSelection.length})',
-                    style: TextStyle(fontSize: isSmallScreen ? 14 : 15),
-                  ),
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

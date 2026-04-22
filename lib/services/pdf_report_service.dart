@@ -1760,7 +1760,7 @@ class PdfReportService {
           children: [
             _tableHeaderRow([
               'Localisation', 'Identification de la prise de terre',
-              'Condition de mesure', 'Nature de la prise de terre',
+              'Condition de prise de terre', 'Nature de la prise de terre',
               'Méthode de mesure', 'Valeur de la mesure', 'Observation'
             ]),
             if (mesures.prisesTerre.isEmpty)
@@ -1769,7 +1769,7 @@ class PdfReportService {
               ...mesures.prisesTerre.asMap().entries.map((e) {
                 final pt = e.value;
                 return _tableDataRow([
-                  pt.localisation, pt.identification, pt.conditionMesure,
+                  pt.localisation, pt.identification, pt.conditionPriseTerre,
                   pt.naturePriseTerre, pt.methodeMesure,
                   pt.valeurMesure?.toStringAsFixed(2) ?? '-',
                   pt.observation ?? '',

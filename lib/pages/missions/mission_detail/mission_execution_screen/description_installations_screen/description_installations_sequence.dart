@@ -1,4 +1,5 @@
 // lib/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/description_installations_sequence.dart
+
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
@@ -40,7 +41,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'icon': Icons.bolt_outlined,
       'color': const Color(0xFFE67E22),
       'champs': ['Type De Cellule', 'Calibre Du Disjoncteur', 'Section Du Cable', 'Nature Du Reseau', 'Observations'],
-      'requiredFields': ['Type De Cellule', 'Calibre Du Disjoncteur', 'Section Du Cable', 'Nature Du Reseau'],
+      'requiredFields': ['Type De Cellule', ],
       'isList': true,
     },
     {
@@ -50,7 +51,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'icon': Icons.bolt_outlined,
       'color': const Color(0xFF2980B9),
       'champs': ['Puissance Transformateur', 'Calibre Du Disjoncteur Sortie Transformateur', 'Section Du Cable', 'Tension', 'Observations'],
-      'requiredFields': ['Puissance Transformateur', 'Calibre Du Disjoncteur Sortie Transformateur', 'Section Du Cable', 'Tension'],
+      'requiredFields': ['Puissance Transformateur',],
       'isList': true,
     },
     {
@@ -60,7 +61,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'icon': Icons.electrical_services_outlined,
       'color': const Color(0xFF27AE60),
       'champs': ['Marque', 'Type', 'N° Serie', 'Puissance (Kva)', 'Intensite', 'Annee De Fabrication', 'Calibre Du Disjoncteur', 'Section Du Cable'],
-      'requiredFields': ['Marque', 'Type', 'Puissance (Kva)', 'Intensite'],
+      'requiredFields': ['Marque', 'Type', ],
       'isList': true,
     },
     {
@@ -70,7 +71,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'icon': Icons.local_gas_station_outlined,
       'color': const Color(0xFF8E44AD),
       'champs': ['Mode', 'Capacite', 'Cuve De Retention', 'Indicateur De Niveau', 'Mise A La Terre', 'Annee De Fabrication'],
-      'requiredFields': ['Mode', 'Capacite', 'Cuve De Retention'],
+      'requiredFields': ['Mode', ],
       'isList': true,
     },
     {
@@ -80,7 +81,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'icon': Icons.swap_horiz_outlined,
       'color': const Color(0xFFC0392B),
       'champs': ['Marque', 'Type', 'N° Serie', 'Intensite (A)', 'Reglages'],
-      'requiredFields': ['Marque', 'Type', 'Intensite (A)'],
+      'requiredFields': ['Marque', 'Type',],
       'isList': true,
     },
     {
@@ -90,7 +91,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'icon': Icons.tune_outlined,
       'color': const Color(0xFFD35400),
       'champs': ['Marque', 'Type', 'N° Serie', 'Annee De Fabrication', 'Annee D\'Installation', 'Puissance (Kva)', 'Intensite (A)', 'Entree', 'Sortie'],
-      'requiredFields': ['Marque', 'Type', 'Puissance (Kva)', 'Entree', 'Sortie'],
+      'requiredFields': ['Marque', 'Type', ],
       'isList': true,
     },
     {
@@ -100,7 +101,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'icon': Icons.power_outlined,
       'color': const Color(0xFF16A085),
       'champs': ['Marque', 'Type', 'N° De Serie', 'Puissance (Kva)', 'Intensite (A)', 'Nombre De Phase'],
-      'requiredFields': ['Marque', 'Type', 'Puissance (Kva)', 'Intensite (A)'],
+      'requiredFields': ['Marque', 'Type', ],
       'isList': true,
     },
     {
@@ -118,7 +119,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'shortTitle': 'Éclairage sécurité',
       'icon': Icons.emergency_outlined,
       'color': const Color(0xFFF39C12),
-      'options': ['Présent', 'Non présent'],
+      'options': ['Présent', 'Non présent', 'Incomplet'], 
       'isRadio': true,
     },
     {
@@ -191,7 +192,6 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
 
   Future<void> _saveCurrentPosition(int position) async {
     try {
-      // Sauvegarder dans Hive ou SequenceProgressService
       await SequenceProgressService.saveStepData(
         widget.mission.id, 
         'description_current_step', 
@@ -227,15 +227,12 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
         _isLoading = false;
       });
       
-      // Récupérer la position sauvegardée
       final savedPosition = await _getSavedPosition();
       
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _pageController.hasClients) {
           int targetStep = savedPosition;
           
-          // UNIQUEMENT au premier chargement, si on n'a pas de position sauvegardée,
-          // trouver la première étape incomplète
           if (_isFirstLoad && savedPosition == 0) {
             for (int i = 0; i < _sections.length; i++) {
               final section = _sections[i];
@@ -289,7 +286,6 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
   }
 
   void _onSectionComplete(String sectionKey) async {
-    // Mettre à jour immédiatement le statut local SANS recharger
     setState(() {
       _progress[sectionKey] = true;
     });
@@ -302,7 +298,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
         });
       }
     } catch (e) {
-      // Ignorer les erreurs de rechargement
+      // Ignorer
     }
   }
 
@@ -325,12 +321,11 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       backgroundColor: Colors.grey.shade50,
       body: Column(
         children: [
-          // Carte d'en-tête moderne
           Container(
             margin: EdgeInsets.all(isSmallScreen ? 10 : 14),
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [AppTheme.primaryBlue,AppTheme.primaryBlue.withOpacity(0.8)],
+                colors: [AppTheme.primaryBlue, AppTheme.primaryBlue.withOpacity(0.8)],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -395,7 +390,6 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
                   
                   SizedBox(height: isSmallScreen ? 12 : 14),
                   
-                  // Barre de progression
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -436,7 +430,6 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
             ),
           ),
           
-          // Contenu de la catégorie
           Expanded(
             child: PageView(
               controller: _pageController,

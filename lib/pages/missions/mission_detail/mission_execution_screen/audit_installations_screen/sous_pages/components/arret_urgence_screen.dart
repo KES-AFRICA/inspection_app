@@ -1,3 +1,4 @@
+// lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/arret_urgence_screen.dart
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
@@ -13,9 +14,12 @@ class ArretUrgenceScreen extends StatefulWidget {
 }
 
 class _ArretUrgenceScreenState extends State<ArretUrgenceScreen> {
-  final _observationController = TextEditingController();
-  bool _isLoading = false;
-  bool _hasData = false;
+  String? _selectedValue;
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  // ✅ 3 options
+  final List<String> _options = ['Satisfaisant', 'Non satisfaisant', 'Sans objet'];
 
   @override
   void initState() {
@@ -28,204 +32,149 @@ class _ArretUrgenceScreenState extends State<ArretUrgenceScreen> {
     
     try {
       final mesures = await HiveService.getOrCreateMesuresEssais(widget.mission.id);
-      if (mesures.testArretUrgence.observation != null) {
-        _observationController.text = mesures.testArretUrgence.observation!;
-        _hasData = true;
+      
+      if (mounted) {
+        setState(() {
+          _selectedValue = mesures.testArretUrgence.observation;
+          _isLoading = false;
+        });
       }
     } catch (e) {
-      print('❌ Erreur chargement arrêt urgence: $e');
-    } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  Future<void> _sauvegarder() async {
-    if (_observationController.text.trim().isEmpty) {
-      _showError('Veuillez saisir une observation');
-      return;
-    }
-
-    setState(() => _isLoading = true);
+  Future<void> _saveSelection(String value) async {
+    setState(() => _isSaving = true);
     
     try {
       final success = await HiveService.updateTestArretUrgence(
         missionId: widget.mission.id,
-        observation: _observationController.text.trim(),
+        observation: value,
       );
       
-      if (success) {
+      if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Test arrêt urgence sauvegardé'),
+            content: Text('Enregistré : $value'),
             backgroundColor: Colors.green,
+            duration: const Duration(milliseconds: 800),
           ),
         );
-        Navigator.pop(context, true);
-      } else {
-        _showError('Erreur lors de la sauvegarde');
       }
     } catch (e) {
-      _showError('Erreur: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      setState(() => _isSaving = false);
     }
-  }
-
-  void _annuler() {
-    Navigator.pop(context);
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 3),
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text('Test arrêt urgence'),
-        backgroundColor: Colors.blue,
+        title: const Text('Test arrêt urgence'),
+        backgroundColor: AppTheme.primaryBlue,
         foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: _annuler,
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.check),
-            onPressed: _sauvegarder,
-          ),
-        ],
       ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Formulaire d'observation
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Résultats des tests d\'arrêt d\'urgence',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.darkBlue,
-                          ),
-                        ),
-                        SizedBox(height: 16),
-                        TextFormField(
-                          controller: _observationController,
-                          decoration: InputDecoration(
-                            labelText: 'Observations*',
-                            border: OutlineInputBorder(),
-                            hintText: 'Ex: Tous les boutons d\'arrêt d\'urgence fonctionnels, coupure immédiate, réarmement correct, signalisation OK...',
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                          ),
-                          maxLines: 8,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Veuillez saisir des observations';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  SizedBox(height: 20),
-                  
-                  // Boutons d'action
-                  Column(
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _sauvegarder,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(
-                            'SAUVEGARDER',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Message informatif
+              Container(
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                margin: EdgeInsets.only(bottom: isSmallScreen ? 20 : 24),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue, size: isSmallScreen ? 20 : 22),
+                    SizedBox(width: isSmallScreen ? 10 : 12),
+                    Expanded(
+                      child: Text(
+                        'Sélectionnez le résultat du test de fonctionnement de l\'arrêt d\'urgence',
+                        style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.blue.shade700),
                       ),
-                      SizedBox(height: 10),
-                      Container(
-                        width: double.infinity,
-                        height: 50,
-                        child: OutlinedButton(
-                          onPressed: _annuler,
-                          style: OutlinedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(
-                            'ANNULER',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey.shade600,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-    );
-  }
-
-  Widget _buildChecklistItem(String text) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        children: [
-          Icon(Icons.check_circle_outline, size: 20, color: Colors.red.shade700),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(fontSize: 14),
-            ),
+              
+              // Titre
+              Text(
+                'Résultat du test',
+                style: TextStyle(
+                  fontSize: isSmallScreen ? 16 : 18,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.darkBlue,
+                ),
+              ),
+              SizedBox(height: isSmallScreen ? 16 : 20),
+              
+              // Options
+              ..._options.map((option) {
+                final isSelected = _selectedValue == option;
+                return Container(
+                  margin: EdgeInsets.only(bottom: isSmallScreen ? 10 : 12),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppTheme.primaryBlue.withOpacity(0.05) : Colors.white,
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
+                    border: Border.all(
+                      color: isSelected ? AppTheme.primaryBlue : Colors.grey.shade300,
+                      width: isSelected ? 2 : 1,
+                    ),
+                  ),
+                  child: RadioListTile<String>(
+                    title: Text(
+                      option,
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 15 : 16,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        color: isSelected ? AppTheme.primaryBlue : Colors.black87,
+                      ),
+                    ),
+                    value: option,
+                    groupValue: _selectedValue,
+                    onChanged: _isSaving ? null : (value) {
+                      if (value != null) {
+                        setState(() => _selectedValue = value);
+                        _saveSelection(value);
+                      }
+                    },
+                    activeColor: AppTheme.primaryBlue,
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                );
+              }).toList(),
+              
+              if (_isSaving)
+                Padding(
+                  padding: EdgeInsets.only(top: isSmallScreen ? 20 : 24),
+                  child: const Center(child: CircularProgressIndicator()),
+                ),
+            ],
           ),
-        ],
+        ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _observationController.dispose();
-    super.dispose();
   }
 }

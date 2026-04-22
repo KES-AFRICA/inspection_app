@@ -738,12 +738,33 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
                       // Onglet LOCAUX
                       _audit!.moyenneTensionLocaux.isEmpty
                           ? _buildEmptyState('locaux', _ajouterLocal)
-                          : ListView.builder(
-                              padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
-                              itemCount: _audit!.moyenneTensionLocaux.length,
-                              itemBuilder: (context, index) {
-                                final local = _audit!.moyenneTensionLocaux[index];
-                                return _buildLocalCard(local, index);
+                          : Builder(
+                              builder: (context) {
+                                final drafts = HiveService.getLocalDraftsForMoyenneTensionHorsZone(
+                                  missionId: widget.mission.id,
+                                );
+                                final locauxExistants = _audit!.moyenneTensionLocaux;
+                                
+                                // Filtrer les brouillons qui ont déjà un local avec le même nom
+                                final nomsExistants = locauxExistants.map((l) => l.nom).toSet();
+                                final uniqueDrafts = drafts.where((d) => !nomsExistants.contains(d['nomLocal'])).toList();
+                                
+                                if (locauxExistants.isEmpty && uniqueDrafts.isEmpty) {
+                                  return _buildEmptyState('locaux', _ajouterLocal);
+                                }
+                                
+                                return ListView.builder(
+                                  padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
+                                  itemCount: uniqueDrafts.length + locauxExistants.length,
+                                  itemBuilder: (context, index) {
+                                    if (index < uniqueDrafts.length) {
+                                      return _buildLocalDraftCard(uniqueDrafts[index]);
+                                    } else {
+                                      final localIndex = index - uniqueDrafts.length;
+                                      return _buildLocalCard(locauxExistants[localIndex], localIndex);
+                                    }
+                                  },
+                                );
                               },
                             ),
                     ],
@@ -966,13 +987,13 @@ void _ouvrirClassementZone(ClassementZone classement) async {
   }
 
   // MODIFIÉ : _buildLocalCard pour afficher les brouillons
-  Widget _buildLocalCard(MoyenneTensionLocal local, int index) {
+  Widget _buildLocalCard(MoyenneTensionLocal local, int localIndex) {
     final conformiteCount = local.dispositionsConstructives.where((e) => e.conforme!).length;
     final totalCount = local.dispositionsConstructives.length;
     final pourcentage = totalCount > 0 ? (conformiteCount / totalCount * 100).round() : 0;
     
     // Récupérer tous les coffrets (existants + brouillons)
-    final allCoffrets = _getCoffretsForLocal(local, index);
+    final allCoffrets = _getCoffretsForLocal(local, localIndex);
     final hasIncompletCoffrets = allCoffrets.any((c) => !_isCoffretComplet(c));
 
     return Container(
@@ -1036,9 +1057,9 @@ void _ouvrirClassementZone(ClassementZone classement) async {
         ),
         trailing: PopupMenuButton<String>(
           onSelected: (value) {
-            if (value == 'view') _voirLocal(index);
-            if (value == 'edit') _editerLocal(index);
-            if (value == 'delete') _supprimerLocal(index);
+            if (value == 'view') _voirLocal(localIndex);
+            if (value == 'edit') _editerLocal(localIndex);
+            if (value == 'delete') _supprimerLocal(localIndex);
           },
           itemBuilder: (context) => const [
             PopupMenuItem(value: 'view', child: Text('Voir détails')),
@@ -1046,20 +1067,192 @@ void _ouvrirClassementZone(ClassementZone classement) async {
             PopupMenuItem(value: 'delete', child: Text('Supprimer', style: TextStyle(color: Colors.red))),
           ],
         ),
-        onTap: () => _voirLocal(index),
+        onTap: () => _voirLocal(localIndex),
       ),
     );
   }
 
+  Widget _buildLocalDraftCard(Map<String, dynamic> draftData) {
+    final local = draftData['local'];
+    final nomLocal = draftData['nomLocal'] ?? 'Sans nom';
+    final currentStep = draftData['currentStep'] as int? ?? 0;
+    final draftId = draftData['localId'] as String?;
+    
+    // Déterminer le type de local
+    String typeLocal = 'Local';
+    if (local is MoyenneTensionLocal) {
+      final localTypes = HiveService.getLocalTypes();
+      typeLocal = localTypes[local.type] ?? local.type;
+    }
+    
+    // Calculer la progression (MT peut avoir 2 ou 3 étapes selon le type)
+    final totalSteps = (local is MoyenneTensionLocal && local.type == 'LOCAL_TRANSFORMATEUR') ? 3 : 2;
+    final pourcentage = (currentStep / totalSteps * 100).round();
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.orange.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange.shade300),
+      ),
+      child: ListTile(
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: Colors.orange.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.drafts_outlined, color: Colors.orange),
+        ),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                nomLocal,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade100,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.orange.shade300),
+              ),
+              child: Text(
+                'Brouillon',
+                style: TextStyle(
+                  fontSize: 9,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange.shade700,
+                ),
+              ),
+            ),
+          ],
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text('$typeLocal • Étape $currentStep/$totalSteps • $pourcentage%'),
+            const SizedBox(height: 4),
+            LinearProgressIndicator(
+              value: currentStep / totalSteps,
+              backgroundColor: Colors.grey.shade200,
+              color: Colors.orange,
+            ),
+          ],
+        ),
+        trailing: PopupMenuButton<String>(
+          onSelected: (value) {
+            if (value == 'continue') {
+              _ouvrirBrouillonLocal(draftData);
+            } else if (value == 'delete') {
+              _supprimerBrouillonLocal(draftId, nomLocal);
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'continue',
+              child: Row(
+                children: [
+                  Icon(Icons.play_arrow, size: 18, color: Colors.green),
+                  SizedBox(width: 8),
+                  Text('Continuer'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'delete',
+              child: Row(
+                children: [
+                  Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                  SizedBox(width: 8),
+                  Text('Supprimer', style: TextStyle(color: Colors.red)),
+                ],
+              ),
+            ),
+          ],
+        ),
+        onTap: () => _ouvrirBrouillonLocal(draftData),
+      ),
+    );
+  }
+
+  
+
+  
+
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(message), backgroundColor: Colors.green),
+    );
+  }
+
+  void _ouvrirBrouillonLocal(Map<String, dynamic> draftData) async {
+  final draftId = draftData['localId'] as String?;
+  
+  final result = await Navigator.push(
+    context,
+    MaterialPageRoute(
+      builder: (context) => AjouterLocalScreen(
+        mission: widget.mission,
+        isMoyenneTension: true,
+        zoneIndex: draftData['zoneIndex'],
+        isInZone: draftData['isInZone'] ?? false,
+        local: null,
+        draftId: draftId,
+      ),
+    ),
+  );
+  
+  if (result == true) {
+    _loadData();
+  }
+}
+
+void _supprimerBrouillonLocal(String? draftId, String nomLocal) {
+  if (draftId == null) return;
+  
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: const Text('Supprimer le brouillon'),
+      content: Text('Voulez-vous vraiment supprimer le brouillon "$nomLocal" ?'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Annuler'),
+        ),
+        ElevatedButton(
+          onPressed: () async {
+            Navigator.pop(context);
+            await HiveService.deleteLocalDraft(draftId);
+            _loadData();
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Brouillon supprimé'), backgroundColor: Colors.green),
+            );
+          },
+          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+          child: const Text('Supprimer'),
+        ),
+      ],
+    ),
+  );
+}
+
+
   // MODIFIÉ : _buildZoneCard pour afficher les brouillons
-  Widget _buildZoneCard(MoyenneTensionZone zone, int index) {
+  Widget _buildZoneCard(MoyenneTensionZone zone, int localIndex) {
     final totalLocaux = zone.locaux.length;
     
     // Compter tous les coffrets (existants + brouillons)
     int totalCoffrets = zone.coffrets.length;
     for (int i = 0; i < zone.locaux.length; i++) {
       final local = zone.locaux[i];
-      totalCoffrets += _getCoffretsForLocalInZone(local, index, i).length;
+      totalCoffrets += _getCoffretsForLocalInZone(local, localIndex, i).length;
     }
 
     return Container(
@@ -1070,7 +1263,7 @@ void _ouvrirClassementZone(ClassementZone classement) async {
         border: Border.all(color: Colors.grey.shade400),
       ),
       child: InkWell(
-        onTap: () => _voirZone(index),
+        onTap: () => _voirZone(localIndex),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -1112,9 +1305,9 @@ void _ouvrirClassementZone(ClassementZone classement) async {
                   ),
                   PopupMenuButton<String>(
                     onSelected: (value) {
-                      if (value == 'view') _voirZone(index);
-                      if (value == 'edit') _editerZone(index);
-                      if (value == 'delete') _supprimerZone(index);
+                      if (value == 'view') _voirZone(localIndex);
+                      if (value == 'edit') _editerZone(localIndex);
+                      if (value == 'delete') _supprimerZone(localIndex);
                     },
                     itemBuilder: (context) => const [
                       PopupMenuItem(value: 'view', child: Text('Voir détails')),

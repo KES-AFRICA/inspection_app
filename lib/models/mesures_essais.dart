@@ -115,7 +115,7 @@ class TestArretUrgence {
   TestArretUrgence({this.observation});
 }
 
-// SECTION 4: PRISE DE TERRE (tableau avec plusieurs lignes)
+// SECTION 4: PRISE DE TERRE (MODIFIÉ)
 @HiveType(typeId: 20)
 class PriseTerre {
   @HiveField(0)
@@ -124,8 +124,9 @@ class PriseTerre {
   @HiveField(1)
   String identification; // Ex: "PT1", "PT2", "PT3"
 
+  // ✅ RENOMMÉ : conditionMesure → conditionPriseTerre
   @HiveField(2)
-  String conditionMesure; // Ex: "-", "Bonne", "Mauvaise"
+  String conditionPriseTerre; // Ex: "Barette ouverte", "Barette fermée"
 
   @HiveField(3)
   String naturePriseTerre; // Ex: "Boucle en fond de fouille"
@@ -139,11 +140,10 @@ class PriseTerre {
   @HiveField(6)
   String? observation; // Ex: "Satisfaisant", "Non satisfaisant"
 
-
   PriseTerre({
     required this.localisation,
     required this.identification,
-    required this.conditionMesure,
+    required this.conditionPriseTerre,
     required this.naturePriseTerre,
     required this.methodeMesure,
     this.valeurMesure,
@@ -157,7 +157,7 @@ class PriseTerre {
     return PriseTerre(
       localisation: localisation,
       identification: identification,
-      conditionMesure: '-',
+      conditionPriseTerre: 'Barette fermée', // ✅ Valeur par défaut
       naturePriseTerre: 'Boucle en fond de fouille',
       methodeMesure: 'Impédance de boucle',
     );
@@ -189,7 +189,6 @@ class AvisMesuresTerre {
     this.observation,
   })  : satisfaisants = satisfaisants ?? [],
         nonSatisfaisants = nonSatisfaisants ?? [];
-
 }
 
 // SECTION 6: ESSAIS DE DÉCLENCHEMENT DES DISPOSITIFS DIFFÉRENTIELS

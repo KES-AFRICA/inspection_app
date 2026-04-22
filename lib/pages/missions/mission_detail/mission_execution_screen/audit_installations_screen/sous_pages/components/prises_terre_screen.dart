@@ -1,12 +1,9 @@
+// lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/prises_terre_screen.dart
 import 'package:flutter/material.dart';
-import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
+import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
-
-// ================================================================
-// ÉCRAN PRINCIPAL : LISTE DES PRISES DE TERRE
-// ================================================================
 
 class PrisesTerreScreen extends StatefulWidget {
   final Mission mission;
@@ -21,919 +18,525 @@ class _PrisesTerreScreenState extends State<PrisesTerreScreen> {
   List<PriseTerre> _prisesTerre = [];
   bool _isLoading = true;
 
-  // Helpers responsifs
-  double _rw(BuildContext context) => MediaQuery.of(context).size.width;
-  bool _isSmallScreen(BuildContext context) => _rw(context) < 360;
-  
-  double _fontSizeL(BuildContext context) => _isSmallScreen(context) ? 15 : 17;
-  double _fontSizeM(BuildContext context) => _isSmallScreen(context) ? 13 : 14;
-  double _fontSizeS(BuildContext context) => _isSmallScreen(context) ? 11 : 12;
-  double _fontSizeXS(BuildContext context) => _isSmallScreen(context) ? 10 : 11;
-  double _iconSizeM(BuildContext context) => _isSmallScreen(context) ? 18 : 20;
-  double _iconSizeS(BuildContext context) => _isSmallScreen(context) ? 14 : 16;
-  double _spacingL(BuildContext context) => _isSmallScreen(context) ? 12 : 16;
-  double _spacingM(BuildContext context) => _isSmallScreen(context) ? 10 : 12;
-  double _spacingS(BuildContext context) => _isSmallScreen(context) ? 6 : 8;
+  // ✅ Options pour "Condition prise de terre"
+  final List<String> _conditionOptions = ['Barette ouverte', 'Barette fermée'];
 
   @override
   void initState() {
     super.initState();
-    _loadPrisesTerre();
+    _loadData();
   }
 
-  Future<void> _loadPrisesTerre() async {
+  Future<void> _loadData() async {
     setState(() => _isLoading = true);
+    
     try {
       final mesures = await HiveService.getOrCreateMesuresEssais(widget.mission.id);
-      _prisesTerre = mesures.prisesTerre;
+      setState(() {
+        _prisesTerre = List.from(mesures.prisesTerre);
+        _isLoading = false;
+      });
     } catch (e) {
-      print('❌ Erreur chargement prises terre: $e');
-    } finally {
       setState(() => _isLoading = false);
     }
   }
 
-  void _ajouterPriseTerre() async {
+  Future<void> _ajouterPriseTerre() async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AjouterPriseTerreScreen(
-          mission: widget.mission,
+        builder: (context) => _AjouterPriseTerreScreen(
+          conditionOptions: _conditionOptions,
         ),
       ),
     );
 
-    if (result == true) {
-      await _loadPrisesTerre();
+    if (result != null && result is Map<String, dynamic>) {
+      final nouvellePrise = PriseTerre(
+        localisation: result['localisation'] ?? '',
+        identification: result['identification'] ?? '',
+        conditionPriseTerre: result['conditionPriseTerre'] ?? 'Barette fermée', // ✅ Valeur par défaut
+        naturePriseTerre: result['naturePriseTerre'] ?? '',
+        methodeMesure: result['methodeMesure'] ?? '',
+        valeurMesure: double.tryParse(result['valeurMesure']?.toString() ?? ''),
+        observation: result['observation'],
+      );
+      
+      final success = await HiveService.addPriseTerre(
+        missionId: widget.mission.id,
+        priseTerre: nouvellePrise,
+      );
+      
+      if (success) {
+        await _loadData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Prise de terre ajoutée'), backgroundColor: Colors.green),
+          );
+        }
+      }
     }
   }
 
-  void _editerPriseTerre(int index) async {
+  Future<void> _editerPriseTerre(int index) async {
+    final prise = _prisesTerre[index];
+    
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => AjouterPriseTerreScreen(
-          mission: widget.mission,
-          priseTerre: _prisesTerre[index],
-          index: index,
+        builder: (context) => _AjouterPriseTerreScreen(
+          initialData: {
+            'localisation': prise.localisation,
+            'identification': prise.identification,
+            'conditionPriseTerre': prise.conditionPriseTerre,
+            'naturePriseTerre': prise.naturePriseTerre,
+            'methodeMesure': prise.methodeMesure,
+            'valeurMesure': prise.valeurMesure?.toString() ?? '',
+            'observation': prise.observation ?? '',
+          },
+          conditionOptions: _conditionOptions,
         ),
       ),
     );
 
-    if (result == true) {
-      await _loadPrisesTerre();
+    if (result != null && result is Map<String, dynamic>) {
+      final updatedPrise = PriseTerre(
+        localisation: result['localisation'] ?? '',
+        identification: result['identification'] ?? '',
+        conditionPriseTerre: result['conditionPriseTerre'] ?? 'Barette fermée',
+        naturePriseTerre: result['naturePriseTerre'] ?? '',
+        methodeMesure: result['methodeMesure'] ?? '',
+        valeurMesure: double.tryParse(result['valeurMesure']?.toString() ?? ''),
+        observation: result['observation'],
+      );
+      
+      final success = await HiveService.updatePriseTerre(
+        missionId: widget.mission.id,
+        index: index,
+        priseTerre: updatedPrise,
+      );
+      
+      if (success) {
+        await _loadData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Prise de terre modifiée'), backgroundColor: Colors.green),
+          );
+        }
+      }
     }
   }
 
   Future<void> _supprimerPriseTerre(int index) async {
-    showDialog(
+    final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        title: Text('Confirmer la suppression', style: TextStyle(fontSize: _fontSizeM(context) + 2, fontWeight: FontWeight.w600)),
-        content: Text('Voulez-vous vraiment supprimer cette prise de terre ?', style: TextStyle(fontSize: _fontSizeM(context))),
+        title: const Text('Confirmer la suppression'),
+        content: const Text('Voulez-vous vraiment supprimer cette prise de terre ?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Annuler', style: TextStyle(fontSize: _fontSizeM(context), color: Colors.grey.shade600)),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
           ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              final success = await HiveService.deletePriseTerre(
-                missionId: widget.mission.id,
-                index: index,
-              );
-              if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Prise de terre supprimée', style: TextStyle(fontSize: _fontSizeM(context))),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-                await _loadPrisesTerre();
-              }
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-            ),
-            child: Text('Supprimer', style: TextStyle(fontSize: _fontSizeM(context))),
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
           ),
         ],
       ),
     );
-  }
-
-  // Extraire le résultat depuis l'observation
-  String _extraireResultat(String? observation) {
-    if (observation == null || observation.isEmpty) return 'Non défini';
-    if (observation.contains('[Satisfaisant]')) return 'Satisfaisant';
-    if (observation.contains('[Non satisfaisant]')) return 'Non satisfaisant';
-    return 'Non défini';
-  }
-
-  // Extraire le texte libre depuis l'observation
-  String _extraireTexteLibre(String? observation) {
-    if (observation == null || observation.isEmpty) return '';
-    if (observation.contains('[Satisfaisant]')) {
-      return observation.replaceFirst('[Satisfaisant] ', '').replaceFirst('[Satisfaisant]', '');
-    }
-    if (observation.contains('[Non satisfaisant]')) {
-      return observation.replaceFirst('[Non satisfaisant] ', '').replaceFirst('[Non satisfaisant]', '');
-    }
-    return observation;
-  }
-
-  Widget _buildPriseTerreCard(PriseTerre priseTerre, int index) {
-    final context = this.context;
-    final resultat = _extraireResultat(priseTerre.observation);
-    final texteLibre = _extraireTexteLibre(priseTerre.observation);
     
-    // Déterminer la couleur et le statut en fonction du résultat
-    Color cardColor;
-    Color statutColor;
-    String statutText;
-    IconData statutIcon;
-    
-    switch (resultat) {
-      case 'Satisfaisant':
-        cardColor = Colors.green;
-        statutColor = Colors.green;
-        statutText = 'SATISFAISANT';
-        statutIcon = Icons.check_circle;
-        break;
-      case 'Non satisfaisant':
-        cardColor = Colors.red;
-        statutColor = Colors.red;
-        statutText = 'NON SATISFAISANT';
-        statutIcon = Icons.warning_rounded;
-        break;
-      default:
-        cardColor = Colors.orange;
-        statutColor = Colors.orange;
-        statutText = 'NON DÉFINI';
-        statutIcon = Icons.help_outline;
+    if (confirm == true) {
+      final success = await HiveService.deletePriseTerre(
+        missionId: widget.mission.id,
+        index: index,
+      );
+      
+      if (success) {
+        await _loadData();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Prise de terre supprimée'), backgroundColor: Colors.green),
+          );
+        }
+      }
     }
-    
-    return Container(
-      margin: EdgeInsets.symmetric(horizontal: _spacingL(context), vertical: _spacingS(context)),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statutColor.withOpacity(0.2), width: 1),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: () => _editerPriseTerre(index),
-        borderRadius: BorderRadius.circular(16),
-        child: Padding(
-          padding: EdgeInsets.all(_spacingL(context)),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // En-tête avec identification et statut
-              Row(
-                children: [
-                  // Badge d'identification
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: _spacingM(context), vertical: _spacingS(context) * 0.5),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(Icons.electrical_services, size: _iconSizeS(context), color: Colors.blue),
-                        SizedBox(width: _spacingS(context)),
-                        Text(
-                          priseTerre.identification,
-                          style: TextStyle(
-                            fontSize: _fontSizeS(context),
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  // Badge de statut
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: _spacingM(context), vertical: _spacingS(context) * 0.5),
-                    decoration: BoxDecoration(
-                      color: statutColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(statutIcon, size: _iconSizeS(context), color: statutColor),
-                        SizedBox(width: _spacingS(context)),
-                        Text(
-                          statutText,
-                          style: TextStyle(
-                            fontSize: _fontSizeXS(context),
-                            fontWeight: FontWeight.bold,
-                            color: statutColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(width: _spacingS(context)),
-                  PopupMenuButton<String>(
-                    onSelected: (value) {
-                      if (value == 'edit') {
-                        _editerPriseTerre(index);
-                      } else if (value == 'delete') {
-                        _supprimerPriseTerre(index);
-                      }
-                    },
-                    icon: Icon(Icons.more_vert, size: _iconSizeM(context), color: Colors.grey.shade600),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: 'edit',
-                        child: Row(
-                          children: [
-                            Icon(Icons.edit_outlined, size: _iconSizeS(context), color: AppTheme.primaryBlue),
-                            SizedBox(width: _spacingS(context)),
-                            Text('Modifier', style: TextStyle(fontSize: _fontSizeM(context))),
-                          ],
-                        ),
-                      ),
-                      PopupMenuItem(
-                        value: 'delete',
-                        child: Row(
-                          children: [
-                            Icon(Icons.delete_outline, size: _iconSizeS(context), color: Colors.red),
-                            SizedBox(width: _spacingS(context)),
-                            Text('Supprimer', style: TextStyle(fontSize: _fontSizeM(context))),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              
-              SizedBox(height: _spacingM(context)),
-              
-              // Localisation
-              Row(
-                children: [
-                  Icon(Icons.location_on_outlined, size: _iconSizeS(context) * 0.8, color: Colors.grey.shade500),
-                  SizedBox(width: _spacingS(context) * 0.5),
-                  Expanded(
-                    child: Text(
-                      priseTerre.localisation,
-                      style: TextStyle(fontSize: _fontSizeM(context), fontWeight: FontWeight.w600, color: Colors.black87),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ),
-                ],
-              ),
-              
-              SizedBox(height: _spacingM(context)),
-              
-              // Détails
-              Container(
-                padding: EdgeInsets.all(_spacingM(context)),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Column(
-                  children: [
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildInfoChip(
-                            context,
-                            label: 'Nature',
-                            value: priseTerre.naturePriseTerre,
-                            icon: Icons.terrain,
-                          ),
-                        ),
-                        SizedBox(width: _spacingM(context)),
-                        Expanded(
-                          child: _buildInfoChip(
-                            context,
-                            label: 'Méthode',
-                            value: priseTerre.methodeMesure,
-                            icon: Icons.science,
-                          ),
-                        ),
-                      ],
-                    ),
-                    
-                    if (priseTerre.conditionMesure.isNotEmpty && priseTerre.conditionMesure != '-') ...[
-                      SizedBox(height: _spacingS(context)),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildInfoChip(
-                              context,
-                              label: 'Condition',
-                              value: priseTerre.conditionMesure,
-                              icon: Icons.tune,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                    
-                    if (priseTerre.valeurMesure != null) ...[
-                      SizedBox(height: _spacingM(context)),
-                      Container(
-                        padding: EdgeInsets.all(_spacingS(context)),
-                        decoration: BoxDecoration(
-                          color: statutColor.withOpacity(0.05),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: statutColor.withOpacity(0.2)),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Valeur mesurée',
-                              style: TextStyle(fontSize: _fontSizeM(context), fontWeight: FontWeight.w500, color: Colors.grey.shade700),
-                            ),
-                            Text(
-                              '${priseTerre.valeurMesure!.toStringAsFixed(2)} Ω',
-                              style: TextStyle(fontSize: _fontSizeL(context), fontWeight: FontWeight.bold, color: statutColor),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                    
-                    // Affichage du texte libre de l'observation
-                    if (texteLibre.isNotEmpty) ...[
-                      SizedBox(height: _spacingM(context)),
-                      const Divider(height: 1),
-                      SizedBox(height: _spacingM(context)),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.notes, size: _iconSizeS(context) * 0.8, color: Colors.grey.shade500),
-                          SizedBox(width: _spacingS(context)),
-                          Expanded(
-                            child: Text(
-                              texteLibre,
-                              style: TextStyle(fontSize: _fontSizeM(context), color: Colors.grey.shade700),
-                              maxLines: 3,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoChip(BuildContext context, {required String label, required String value, required IconData icon}) {
-    return Container(
-      padding: EdgeInsets.symmetric(horizontal: _spacingS(context), vertical: _spacingS(context) * 0.5),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: _iconSizeS(context) * 0.8, color: AppTheme.primaryBlue.withOpacity(0.7)),
-          SizedBox(width: _spacingS(context) * 0.5),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(fontSize: _fontSizeXS(context), color: Colors.grey.shade500),
-                ),
-                Text(
-                  value,
-                  style: TextStyle(fontSize: _fontSizeS(context), fontWeight: FontWeight.w500, color: Colors.black87),
-                  overflow: TextOverflow.ellipsis,
-                  maxLines: 1,
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
   }
 
   @override
   Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: Text('Prises de terre', style: TextStyle(fontSize: _fontSizeL(context), fontWeight: FontWeight.w600)),
-        backgroundColor: Colors.blue,
+        title: const Text('Prises de terre'),
+        backgroundColor: AppTheme.primaryBlue,
         foregroundColor: Colors.white,
-        elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.add),
+            onPressed: _ajouterPriseTerre,
+            tooltip: 'Ajouter une prise de terre',
+          ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _ajouterPriseTerre,
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        elevation: 4,
-        child: Icon(Icons.add, size: _iconSizeM(context)),
+      body: _prisesTerre.isEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.bolt_outlined, size: isSmallScreen ? 60 : 80, color: Colors.grey.shade400),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Aucune prise de terre',
+                    style: TextStyle(fontSize: isSmallScreen ? 16 : 18, color: Colors.grey.shade600),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Appuyez sur le bouton + pour ajouter',
+                    style: TextStyle(fontSize: isSmallScreen ? 12 : 14, color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+              itemCount: _prisesTerre.length,
+              itemBuilder: (context, index) {
+                final prise = _prisesTerre[index];
+                return Card(
+                  margin: EdgeInsets.only(bottom: isSmallScreen ? 10 : 12),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12)),
+                  child: InkWell(
+                    onTap: () => _editerPriseTerre(index),
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                    child: Padding(
+                      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: isSmallScreen ? 28 : 32,
+                                height: isSmallScreen ? 28 : 32,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryBlue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    '${index + 1}',
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 12 : 14,
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.primaryBlue,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  prise.identification,
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 15 : 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.delete_outline, color: Colors.red, size: isSmallScreen ? 18 : 20),
+                                onPressed: () => _supprimerPriseTerre(index),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          _buildInfoRow('Localisation', prise.localisation, isSmallScreen),
+                          _buildInfoRow('Condition prise de terre', prise.conditionPriseTerre, isSmallScreen),
+                          _buildInfoRow('Nature prise de terre', prise.naturePriseTerre, isSmallScreen),
+                          _buildInfoRow('Méthode de mesure', prise.methodeMesure, isSmallScreen),
+                          _buildInfoRow('Valeur mesurée', prise.valeurMesure?.toString() ?? '-', isSmallScreen),
+                          if (prise.observation != null && prise.observation!.isNotEmpty)
+                            _buildInfoRow('Observation', prise.observation!, isSmallScreen),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              },
+            ),
+    );
+  }
+
+  Widget _buildInfoRow(String label, String value, bool isSmallScreen) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: isSmallScreen ? 100 : 120,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontSize: isSmallScreen ? 12 : 13,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey.shade600,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.black87),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _prisesTerre.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.shade50,
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(Icons.bolt_outlined, size: 48, color: Colors.blue.shade300),
-                      ),
-                      SizedBox(height: _spacingL(context)),
-                      Text(
-                        'Aucune prise de terre',
-                        style: TextStyle(fontSize: _fontSizeL(context), fontWeight: FontWeight.w500, color: Colors.grey.shade600),
-                      ),
-                      SizedBox(height: _spacingS(context)),
-                      Text(
-                        'Cliquez sur le + pour ajouter une prise de terre',
-                        style: TextStyle(fontSize: _fontSizeM(context), color: Colors.grey.shade500),
-                      ),
-                    ],
-                  ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadPrisesTerre,
-                  child: ListView.builder(
-                    padding: EdgeInsets.symmetric(vertical: _spacingS(context)),
-                    itemCount: _prisesTerre.length,
-                    itemBuilder: (context, index) {
-                      return _buildPriseTerreCard(_prisesTerre[index], index);
-                    },
-                  ),
-                ),
     );
   }
 }
 
-// ================================================================
-// ÉCRAN POUR AJOUTER/MODIFIER UNE PRISE DE TERRE
-// ================================================================
+// ============================================================
+// ÉCRAN D'AJOUT/MODIFICATION D'UNE PRISE DE TERRE
+// ============================================================
+class _AjouterPriseTerreScreen extends StatefulWidget {
+  final Map<String, String>? initialData;
+  final List<String> conditionOptions;
 
-class AjouterPriseTerreScreen extends StatefulWidget {
-  final Mission mission;
-  final PriseTerre? priseTerre;
-  final int? index;
-
-  const AjouterPriseTerreScreen({
-    super.key,
-    required this.mission,
-    this.priseTerre,
-    this.index,
+  const _AjouterPriseTerreScreen({
+    this.initialData,
+    required this.conditionOptions,
   });
 
-  bool get isEdition => priseTerre != null;
-
   @override
-  State<AjouterPriseTerreScreen> createState() => _AjouterPriseTerreScreenState();
+  State<_AjouterPriseTerreScreen> createState() => _AjouterPriseTerreScreenState();
 }
 
-class _AjouterPriseTerreScreenState extends State<AjouterPriseTerreScreen> {
-  final _formKey = GlobalKey<FormState>();
+class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
   final _localisationController = TextEditingController();
   final _identificationController = TextEditingController();
-  final _conditionController = TextEditingController();
-  final _natureController = TextEditingController();
-  final _methodeController = TextEditingController();
-  final _valeurController = TextEditingController();
-  final _observationLibreController = TextEditingController();
-  
-  String _selectedResultat = 'Satisfaisant';
-  
-  // Helpers responsifs
-  double _rw() => MediaQuery.of(context).size.width;
-  bool get _isSmallScreen => _rw() < 360;
-  
-  double get _fontSizeL => _isSmallScreen ? 15 : 16;
-  double get _fontSizeM => _isSmallScreen ? 13 : 14;
-  double get _fontSizeS => _isSmallScreen ? 12 : 13;
-  double get _fontSizeXS => _isSmallScreen ? 11 : 12;
-  double get _iconSizeM => _isSmallScreen ? 18 : 20;
-  double get _iconSizeS => _isSmallScreen ? 14 : 16;
-  double get _spacingL => _isSmallScreen ? 12 : 16;
-  double get _spacingM => _isSmallScreen ? 10 : 12;
-  double get _spacingS => _isSmallScreen ? 6 : 8;
+  String? _conditionMesure;
+  String? _naturePriseTerre;
+  String? _methodeMesure;
+  final _valeurMesureController = TextEditingController();
+  final _observationController = TextEditingController();
+
+  final List<String> _natureOptions = [
+    'Piquet de terre',
+    'Fond de fouille interconnecté',
+    'Autre',
+  ];
+
+  final List<String> _methodeOptions = [
+    'Impédance de boucle',
+    'Résistance de terre',
+    'Méthode des 62%',
+    'Méthode de chute de potentiel',
+    'Autre',
+  ];
 
   @override
   void initState() {
     super.initState();
-    if (widget.isEdition) {
-      _chargerDonneesExistantes();
+    if (widget.initialData != null) {
+      _localisationController.text = widget.initialData!['localisation'] ?? '';
+      _identificationController.text = widget.initialData!['identification'] ?? '';
+      _conditionMesure = widget.initialData!['conditionMesure'] ?? 'Barette fermée';
+      _naturePriseTerre = widget.initialData!['naturePriseTerre'];
+      _methodeMesure = widget.initialData!['methodeMesure'];
+      _valeurMesureController.text = widget.initialData!['valeurMesure'] ?? '';
+      _observationController.text = widget.initialData!['observation'] ?? '';
     } else {
-      _natureController.text = 'Boucle en fond de fouille';
-      _methodeController.text = 'Impédance de boucle';
-      _conditionController.text = '-';
+      // ✅ Valeur par défaut pour condition prise de terre
+      _conditionMesure = 'Barette fermée';
     }
-  }
-
-  void _chargerDonneesExistantes() {
-    final pt = widget.priseTerre!;
-    _localisationController.text = pt.localisation;
-    _identificationController.text = pt.identification;
-    _conditionController.text = pt.conditionMesure;
-    _natureController.text = pt.naturePriseTerre;
-    _methodeController.text = pt.methodeMesure;
-    if (pt.valeurMesure != null) {
-      _valeurController.text = pt.valeurMesure!.toString();
-    }
-    
-    // Extraire le résultat et l'observation libre
-    if (pt.observation != null && pt.observation!.isNotEmpty) {
-      final observation = pt.observation!;
-      if (observation.contains('[Satisfaisant]')) {
-        _selectedResultat = 'Satisfaisant';
-        _observationLibreController.text = observation.replaceFirst('[Satisfaisant] ', '');
-      } else if (observation.contains('[Non satisfaisant]')) {
-        _selectedResultat = 'Non satisfaisant';
-        _observationLibreController.text = observation.replaceFirst('[Non satisfaisant] ', '');
-      } else {
-        _selectedResultat = 'Satisfaisant';
-        _observationLibreController.text = observation;
-      }
-    }
-  }
-
-  Future<void> _sauvegarder() async {
-    if (_formKey.currentState!.validate()) {
-      // Construire l'observation complète avec le résultat
-      final observationComplete = _observationLibreController.text.trim().isNotEmpty
-          ? '[$_selectedResultat] ${_observationLibreController.text.trim()}'
-          : '[$_selectedResultat]';
-      
-      final priseTerre = PriseTerre(
-        localisation: _localisationController.text.trim(),
-        identification: _identificationController.text.trim(),
-        conditionMesure: _conditionController.text.trim(),
-        naturePriseTerre: _natureController.text.trim(),
-        methodeMesure: _methodeController.text.trim(),
-        valeurMesure: _valeurController.text.trim().isNotEmpty 
-            ? double.tryParse(_valeurController.text.trim())
-            : null,
-        observation: observationComplete,
-      );
-
-      bool success;
-      if (widget.isEdition) {
-        success = await HiveService.updatePriseTerre(
-          missionId: widget.mission.id,
-          index: widget.index!,
-          priseTerre: priseTerre,
-        );
-      } else {
-        success = await HiveService.addPriseTerre(
-          missionId: widget.mission.id,
-          priseTerre: priseTerre,
-        );
-      }
-
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(widget.isEdition ? 'Prise de terre modifiée' : 'Prise de terre ajoutée', style: TextStyle(fontSize: _fontSizeM)),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context, true);
-      } else {
-        _showError('Erreur lors de la sauvegarde');
-      }
-    }
-  }
-
-  void _annuler() => Navigator.pop(context);
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message, style: TextStyle(fontSize: _fontSizeM)),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
-  Widget _buildTextField(String label, TextEditingController controller, {bool isRequired = true, int maxLines = 1, TextInputType? keyboardType}) {
-    return Container(
-      margin: EdgeInsets.only(bottom: _spacingL),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: keyboardType,
-        style: TextStyle(fontSize: _fontSizeM),
-        decoration: InputDecoration(
-          labelText: '${isRequired ? "$label*" : label}',
-          labelStyle: TextStyle(fontSize: _fontSizeM, color: Colors.grey.shade600),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.blue, width: 2)),
-          filled: true,
-          fillColor: Colors.grey.shade50,
-          contentPadding: EdgeInsets.symmetric(horizontal: _spacingM, vertical: _spacingM * 0.8),
-        ),
-        maxLines: maxLines,
-        validator: isRequired ? (value) {
-          if (value == null || value.trim().isEmpty) {
-            return 'Obligatoire';
-          }
-          return null;
-        } : null,
-      ),
-    );
-  }
-
-  Widget _buildDropdown(String label, List<String> options, String value, Function(String?) onChanged, {bool isRequired = true}) {
-    return Container(
-      margin: EdgeInsets.only(bottom: _spacingL),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            isRequired ? '$label*' : label,
-            style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
-          ),
-          SizedBox(height: _spacingS * 0.5),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: _spacingM),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.grey.shade300),
-            ),
-            child: DropdownButton<String>(
-              value: value.isNotEmpty ? value : null,
-              isExpanded: true,
-              underline: const SizedBox(),
-              icon: Icon(Icons.arrow_drop_down_circle, size: _iconSizeS, color: Colors.grey.shade600),
-              hint: Text('Sélectionner...', style: TextStyle(fontSize: _fontSizeM, color: Colors.grey.shade500)),
-              style: TextStyle(fontSize: _fontSizeM, color: Colors.black87),
-              items: options.map((option) {
-                return DropdownMenuItem<String>(
-                  value: option,
-                  child: Text(option, overflow: TextOverflow.ellipsis),
-                );
-              }).toList(),
-              onChanged: onChanged,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResultatSelector() {
-    return Container(
-      margin: EdgeInsets.only(bottom: _spacingL),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Résultat de l\'essai*', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w500, color: Colors.grey.shade700)),
-          SizedBox(height: _spacingS),
-          Row(
-            children: [
-              Expanded(
-                child: _buildResultatButton(
-                  label: 'Satisfaisant',
-                  isSelected: _selectedResultat == 'Satisfaisant',
-                  onTap: () => setState(() => _selectedResultat = 'Satisfaisant'),
-                  color: Colors.green,
-                ),
-              ),
-              SizedBox(width: _spacingM),
-              Expanded(
-                child: _buildResultatButton(
-                  label: 'Non satisfaisant',
-                  isSelected: _selectedResultat == 'Non satisfaisant',
-                  onTap: () => setState(() => _selectedResultat = 'Non satisfaisant'),
-                  color: Colors.red,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildResultatButton({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required Color color,
-  }) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(10),
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: _spacingM * 0.8),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.1) : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: isSelected ? color : Colors.grey.shade300, width: isSelected ? 2 : 1),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              label == 'Satisfaisant' ? Icons.check_circle : Icons.warning_rounded,
-              size: _iconSizeS,
-              color: isSelected ? color : Colors.grey.shade500,
-            ),
-            SizedBox(width: _spacingS),
-            Flexible(
-              child: Text(
-                label,
-                style: TextStyle(fontSize: _fontSizeS, fontWeight: FontWeight.w600, color: isSelected ? color : Colors.grey.shade700),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        backgroundColor: Colors.grey.shade50,
-        appBar: AppBar(
-          title: Text(widget.isEdition ? 'Modifier prise terre' : 'Ajouter prise terre', style: TextStyle(fontSize: _fontSizeL, fontWeight: FontWeight.w600)),
-          backgroundColor: Colors.blue,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          leading: IconButton(icon: Icon(Icons.arrow_back, size: _iconSizeM), onPressed: _annuler),
-          actions: [
-            IconButton(icon: Icon(Icons.check, size: _iconSizeM), onPressed: _sauvegarder),
-          ],
-        ),
-        body: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            padding: EdgeInsets.all(_spacingL),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: EdgeInsets.all(_spacingM),
-                  margin: EdgeInsets.only(bottom: _spacingL),
-                  decoration: BoxDecoration(
-                    color: Colors.red.shade50,
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: Colors.red.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.warning_amber_rounded, color: Colors.red, size: _iconSizeS),
-                      SizedBox(width: _spacingS),
-                      Expanded(
-                        child: Text(
-                          'TOUS LES CHAMPS MARQUÉS * SONT OBLIGATOIRES',
-                          style: TextStyle(fontSize: _fontSizeS, fontWeight: FontWeight.bold, color: Colors.red.shade800),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                Container(
-                  padding: EdgeInsets.all(_spacingL),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
-                    ],
-                  ),
-                  child: Column(
-                    children: [
-                      _buildTextField('Localisation', _localisationController),
-                      _buildTextField('Identification (PT1, PT2...)', _identificationController),
-                      
-                      if (!_isSmallScreen)
-                        Row(
-                          children: [
-                            Expanded(child: _buildTextField('Condition mesure', _conditionController)),
-                          ],
-                        )
-                      else
-                        _buildTextField('Condition mesure', _conditionController),
-                      
-                      _buildDropdown(
-                        'Nature prise de terre',
-                        HiveService.getNaturesPriseTerre(),
-                        _natureController.text,
-                        (value) {
-                          if (value != null) {
-                            setState(() => _natureController.text = value);
-                          }
-                        },
-                      ),
-                      
-                      _buildDropdown(
-                        'Méthode de mesure',
-                        HiveService.getMethodesMesure(),
-                        _methodeController.text,
-                        (value) {
-                          if (value != null) {
-                            setState(() => _methodeController.text = value);
-                          }
-                        },
-                      ),
-                      
-                      _buildTextField('Valeur mesurée (Ω)', _valeurController, isRequired: false, keyboardType: const TextInputType.numberWithOptions(decimal: true)),
-                      
-                      _buildResultatSelector(),
-                    ],
-                  ),
-                ),
-                
-                SizedBox(height: _spacingL),
-                
-                Row(
-                  children: [
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton(
-                        onPressed: _sauvegarder,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          padding: EdgeInsets.symmetric(vertical: _spacingM),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          elevation: 2,
-                        ),
-                        child: Text(widget.isEdition ? 'MODIFIER' : 'AJOUTER', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                    SizedBox(width: _spacingM),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: _annuler,
-                        style: OutlinedButton.styleFrom(
-                          padding: EdgeInsets.symmetric(vertical: _spacingM),
-                          side: BorderSide(color: Colors.grey.shade400),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        child: Text('ANNULER', style: TextStyle(fontSize: _fontSizeM, color: Colors.grey.shade600)),
-                      ),
-                    ),
-                  ],
-                ),
-                
-                SizedBox(height: _spacingL),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
   }
 
   @override
   void dispose() {
     _localisationController.dispose();
     _identificationController.dispose();
-    _conditionController.dispose();
-    _natureController.dispose();
-    _methodeController.dispose();
-    _valeurController.dispose();
-    _observationLibreController.dispose();
+    _valeurMesureController.dispose();
+    _observationController.dispose();
     super.dispose();
+  }
+
+  bool _isFormValid() {
+    return _localisationController.text.trim().isNotEmpty &&
+           _identificationController.text.trim().isNotEmpty &&
+           _conditionMesure != null &&
+           _naturePriseTerre != null &&
+           _methodeMesure != null;
+  }
+
+  void _save() {
+    if (!_isFormValid()) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez remplir tous les champs obligatoires'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    final result = {
+      'localisation': _localisationController.text.trim(),
+      'identification': _identificationController.text.trim(),
+      'conditionMesure': _conditionMesure,
+      'naturePriseTerre': _naturePriseTerre,
+      'methodeMesure': _methodeMesure,
+      'valeurMesure': _valeurMesureController.text.trim(),
+      'observation': _observationController.text.trim(),
+    };
+
+    Navigator.pop(context, result);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(
+          widget.initialData != null ? 'Modifier la prise de terre' : 'Ajouter une prise de terre',
+          style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
+        ),
+        backgroundColor: AppTheme.primaryBlue,
+        foregroundColor: Colors.white,
+        actions: [
+          TextButton(
+            onPressed: _save,
+            child: const Text('Enregistrer', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+          child: Column(
+            children: [
+              Container(
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withOpacity(0.05),
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: AppTheme.primaryBlue, size: isSmallScreen ? 20 : 24),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Les champs marqués * sont obligatoires',
+                        style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.grey.shade600),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              
+              // Localisation *
+              _buildTextField(_localisationController, 'Localisation *', isSmallScreen),
+              const SizedBox(height: 14),
+              
+              // Identification *
+              _buildTextField(_identificationController, 'Identification *', isSmallScreen),
+              const SizedBox(height: 14),
+              
+              // Condition prise de terre * (Dropdown avec valeur par défaut)
+              _buildDropdown(
+                label: 'Condition prise de terre *',
+                value: _conditionMesure,
+                options: widget.conditionOptions,
+                onChanged: (value) => setState(() => _conditionMesure = value),
+                isSmallScreen: isSmallScreen,
+              ),
+              const SizedBox(height: 14),
+              
+              // Nature prise de terre *
+              _buildDropdown(
+                label: 'Nature prise de terre *',
+                value: _naturePriseTerre,
+                options: _natureOptions,
+                onChanged: (value) => setState(() => _naturePriseTerre = value),
+                isSmallScreen: isSmallScreen,
+              ),
+              const SizedBox(height: 14),
+              
+              // Méthode de mesure *
+              _buildDropdown(
+                label: 'Méthode de mesure *',
+                value: _methodeMesure,
+                options: _methodeOptions,
+                onChanged: (value) => setState(() => _methodeMesure = value),
+                isSmallScreen: isSmallScreen,
+              ),
+              const SizedBox(height: 14),
+              
+              // Valeur mesurée (optionnel)
+              _buildTextField(_valeurMesureController, 'Valeur mesurée (Ω)', isSmallScreen,
+                  keyboardType: TextInputType.number),
+              const SizedBox(height: 14),
+              
+              // Observation (optionnel)
+              _buildTextField(_observationController, 'Observation', isSmallScreen, maxLines: 3),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(TextEditingController controller, String label, bool isSmallScreen,
+      {TextInputType keyboardType = TextInputType.text, int maxLines = 1}) {
+    final isRequired = label.contains('*');
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      maxLines: maxLines,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String label,
+    required String? value,
+    required List<String> options,
+    required Function(String?) onChanged,
+    required bool isSmallScreen,
+  }) {
+    return DropdownButtonFormField<String>(
+      value: value,
+      isExpanded: true,
+      hint: Text('Sélectionnez...', style: TextStyle(color: Colors.grey.shade500)),
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      ),
+      items: options.map((option) {
+        return DropdownMenuItem(
+          value: option,
+          child: Text(option, overflow: TextOverflow.ellipsis),
+        );
+      }).toList(),
+      onChanged: onChanged,
+    );
   }
 }

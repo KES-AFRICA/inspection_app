@@ -10,7 +10,6 @@ import 'models/verificateur.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
   // Toute la logique Hive est dans HiveService.init()
   await HiveService.init();
 

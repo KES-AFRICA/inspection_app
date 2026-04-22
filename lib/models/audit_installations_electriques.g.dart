@@ -282,7 +282,7 @@ class ElementControleAdapter extends TypeAdapter<ElementControle> {
     };
     return ElementControle(
       elementControle: fields[0] as String,
-      conforme: fields[1] as bool,
+      conforme: fields[1] as bool?,
       observation: fields[2] as String?,
       priorite: fields[3] as int?,
       photos: (fields[4] as List?)?.cast<String>(),
@@ -466,13 +466,15 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       statut: fields[18] as String,
       currentStep: fields[19] as int,
       numeroEquipement: fields[17] as String?,
+      photosExternes: (fields[20] as List?)?.cast<String>(),
+      photosInternes: (fields[21] as List?)?.cast<String>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, CoffretArmoire obj) {
     writer
-      ..writeByte(20)
+      ..writeByte(22)
       ..writeByte(0)
       ..write(obj.qrCode)
       ..writeByte(1)
@@ -512,7 +514,11 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       ..writeByte(18)
       ..write(obj.statut)
       ..writeByte(19)
-      ..write(obj.currentStep);
+      ..write(obj.currentStep)
+      ..writeByte(20)
+      ..write(obj.photosExternes)
+      ..writeByte(21)
+      ..write(obj.photosInternes);
   }
 
   @override

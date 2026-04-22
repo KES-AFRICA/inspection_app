@@ -180,7 +180,7 @@ class PriseTerreAdapter extends TypeAdapter<PriseTerre> {
     return PriseTerre(
       localisation: fields[0] as String,
       identification: fields[1] as String,
-      conditionMesure: fields[2] as String,
+      conditionPriseTerre: fields[2] as String,
       naturePriseTerre: fields[3] as String,
       methodeMesure: fields[4] as String,
       valeurMesure: fields[5] as double?,
@@ -197,7 +197,7 @@ class PriseTerreAdapter extends TypeAdapter<PriseTerre> {
       ..writeByte(1)
       ..write(obj.identification)
       ..writeByte(2)
-      ..write(obj.conditionMesure)
+      ..write(obj.conditionPriseTerre)
       ..writeByte(3)
       ..write(obj.naturePriseTerre)
       ..writeByte(4)

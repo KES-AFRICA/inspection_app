@@ -24,49 +24,50 @@ class HiveService {
   static const String _jsaBox = 'jsa';
   static const String _coffretDraftsBox = 'coffret_drafts';
   static const String _classementZoneBox = 'classement_zones';
+  static const String _localDraftsBox = 'local_drafts';
 
   // Initialiser Hive
   static Future<void> init() async {
     await Hive.initFlutter();
 
-  Hive.registerAdapter(VerificateurAdapter());
-  Hive.registerAdapter(MissionAdapter());
-  Hive.registerAdapter(DescriptionInstallationsAdapter());
-  Hive.registerAdapter(AuditInstallationsElectriquesAdapter());
-  Hive.registerAdapter(MoyenneTensionLocalAdapter());
-  Hive.registerAdapter(MoyenneTensionZoneAdapter());
-  Hive.registerAdapter(BasseTensionZoneAdapter());
-  Hive.registerAdapter(BasseTensionLocalAdapter());
-  Hive.registerAdapter(ElementControleAdapter());
-  Hive.registerAdapter(CelluleAdapter());
-  Hive.registerAdapter(TransformateurMTBTAdapter());
-  Hive.registerAdapter(CoffretArmoireAdapter());
-  Hive.registerAdapter(AlimentationAdapter());
-  Hive.registerAdapter(PointVerificationAdapter());
-  Hive.registerAdapter(ClassementEmplacementAdapter());
-  Hive.registerAdapter(FoudreAdapter()); 
-  Hive.registerAdapter(MesuresEssaisAdapter());
-  Hive.registerAdapter(ConditionMesureAdapter());
-  Hive.registerAdapter(EssaiDemarrageAutoAdapter());
-  Hive.registerAdapter(TestArretUrgenceAdapter());
-  Hive.registerAdapter(PriseTerreAdapter());
-  Hive.registerAdapter(AvisMesuresTerreAdapter());
-  Hive.registerAdapter(EssaiDeclenchementDifferentielAdapter());
-  Hive.registerAdapter(ContinuiteResistanceAdapter());
-  Hive.registerAdapter(ObservationLibreAdapter());
-  Hive.registerAdapter(InstallationItemAdapter()); 
-  Hive.registerAdapter(RenseignementsGenerauxAdapter());
-  Hive.registerAdapter(JSAAdapter());
-  Hive.registerAdapter(JSAInspecteurAdapter());
-  Hive.registerAdapter(JSAPlanUrgenceAdapter());
-  Hive.registerAdapter(JSADangersAdapter());
-  Hive.registerAdapter(JSAExigencesGeneralesAdapter());
-  Hive.registerAdapter(JSAEPIAdapter());
-  Hive.registerAdapter(JSAVerificationFinaleAdapter());
-  Hive.registerAdapter(ClassementZoneAdapter());
-  
+    // Enregistrer tous les adaptateurs
+    Hive.registerAdapter(VerificateurAdapter());
+    Hive.registerAdapter(MissionAdapter());
+    Hive.registerAdapter(DescriptionInstallationsAdapter());
+    Hive.registerAdapter(AuditInstallationsElectriquesAdapter());
+    Hive.registerAdapter(MoyenneTensionLocalAdapter());
+    Hive.registerAdapter(MoyenneTensionZoneAdapter());
+    Hive.registerAdapter(BasseTensionZoneAdapter());
+    Hive.registerAdapter(BasseTensionLocalAdapter());
+    Hive.registerAdapter(ElementControleAdapter());
+    Hive.registerAdapter(CelluleAdapter());
+    Hive.registerAdapter(TransformateurMTBTAdapter());
+    Hive.registerAdapter(CoffretArmoireAdapter());
+    Hive.registerAdapter(AlimentationAdapter());
+    Hive.registerAdapter(PointVerificationAdapter());
+    Hive.registerAdapter(ClassementEmplacementAdapter());
+    Hive.registerAdapter(FoudreAdapter()); 
+    Hive.registerAdapter(MesuresEssaisAdapter());
+    Hive.registerAdapter(ConditionMesureAdapter());
+    Hive.registerAdapter(EssaiDemarrageAutoAdapter());
+    Hive.registerAdapter(TestArretUrgenceAdapter());
+    Hive.registerAdapter(PriseTerreAdapter());
+    Hive.registerAdapter(AvisMesuresTerreAdapter());
+    Hive.registerAdapter(EssaiDeclenchementDifferentielAdapter());
+    Hive.registerAdapter(ContinuiteResistanceAdapter());
+    Hive.registerAdapter(ObservationLibreAdapter());
+    Hive.registerAdapter(InstallationItemAdapter()); 
+    Hive.registerAdapter(RenseignementsGenerauxAdapter());
+    Hive.registerAdapter(JSAAdapter());
+    Hive.registerAdapter(JSAInspecteurAdapter());
+    Hive.registerAdapter(JSAPlanUrgenceAdapter());
+    Hive.registerAdapter(JSADangersAdapter());
+    Hive.registerAdapter(JSAExigencesGeneralesAdapter());
+    Hive.registerAdapter(JSAEPIAdapter());
+    Hive.registerAdapter(JSAVerificationFinaleAdapter());
+    Hive.registerAdapter(ClassementZoneAdapter());
 
-    // Ouvrir les boxes
+    // Ouvrir toutes les boxes avec le type correct
     await Hive.openBox<Verificateur>(_verificateurBox);
     await Hive.openBox<Mission>(_missionBox);
     await Hive.openBox<DescriptionInstallations>(_descriptionBox); 
@@ -74,11 +75,15 @@ class HiveService {
     await Hive.openBox<ClassementEmplacement>(_classementBox);
     await Hive.openBox<Foudre>(_foudreBox); 
     await Hive.openBox<MesuresEssais>(_mesuresEssaisBox);
-    await Hive.openBox(_currentUserKey);
+    await Hive.openBox(_currentUserKey);  // Box sans type (dynamic)
     await Hive.openBox<RenseignementsGeneraux>(_renseignementsGenerauxBox);
     await Hive.openBox<JSA>(_jsaBox);
-    await Hive.openBox<Map>(_coffretDraftsBox);
-    await Hive.openBox<ClassementZone>(_classementZoneBox);
+    await Hive.openBox(_coffretDraftsBox);  
+    await Hive.openBox(_localDraftsBox); 
+    await Hive.openBox<ClassementZone>(_classementZoneBox);    
+    
+    // Box pour les préférences MT (type dynamique)
+    await Hive.openBox(_mtPreferenceBox);
   
   }
 
@@ -113,7 +118,7 @@ class HiveService {
       final email = currentBox.get('email');
       final isLoggedIn = currentBox.get('isLoggedIn', defaultValue: false);
 
-      if (email == null || !isLoggedIn) return null;
+      if (email == null || email is! String || !isLoggedIn) return null;
 
       final box = Hive.box<Verificateur>(_verificateurBox);
       final user = box.get(email);
@@ -4106,7 +4111,7 @@ static Future<void> createTestMesuresEssais(String missionId) async {
       PriseTerre(
         localisation: 'Extérieur',
         identification: 'PT1',
-        conditionMesure: '-',
+        conditionPriseTerre: '-',
         naturePriseTerre: 'Boucle en fond de fouille',
         methodeMesure: 'Impédance de boucle',
         valeurMesure: 10.93,
@@ -4115,7 +4120,7 @@ static Future<void> createTestMesuresEssais(String missionId) async {
       PriseTerre(
         localisation: 'Local GE',
         identification: 'PT3',
-        conditionMesure: '-',
+        conditionPriseTerre: '-',
         naturePriseTerre: 'Boucle en fond de fouille',
         methodeMesure: 'Impédance de boucle',
         valeurMesure: 187.5,
@@ -5173,30 +5178,30 @@ static Future<RenseignementsGeneraux> getOrCreateRenseignementsGeneraux(String m
   try {
     // Chercher si des renseignements existent déjà pour cette mission
     final existing = box.values.firstWhere((r) => r.missionId == missionId);
+    if (kDebugMode) {
+      print('✅ Renseignements existants trouvés pour: $missionId');
+    }
     return existing;
   } catch (e) {
-    // Aucun renseignement trouvé, on crée une nouvelle instance
-    final mission = getMissionById(missionId);
-    final newData = RenseignementsGeneraux.create(missionId);
-    
-    // ✅ PRÉREMPLISSAGE AUTOMATIQUE depuis la mission
-    if (mission != null) {
-      // Correspondance : Mission.nomClient → RenseignementsGeneraux.etablissement
-      newData.etablissement = mission.nomClient;
-      
-      // Correspondance : Mission.activiteClient → RenseignementsGeneraux.activite
-      newData.activite = mission.activiteClient ?? '';
-      
-      // Correspondance : Mission.nomSite → RenseignementsGeneraux.nomSite
-      newData.nomSite = mission.nomSite ?? '';
-      
-      // Correspondance : Mission.natureMission → RenseignementsGeneraux.verificationType
-      // On garde la même valeur mais on peut aussi mapper si les noms diffèrent
-      newData.verificationType = mission.natureMission;
-      
-      // Optionnel : préremplir l'installation avec le nom du site aussi
-      newData.installation = mission.nomSite ?? '';
+    if (kDebugMode) {
+      print('🔵 Création de nouveaux renseignements pour: $missionId');
     }
+    
+    final mission = getMissionById(missionId);
+    
+    // ✅ Créer avec des listes vides MODIFIABLES
+    final newData = RenseignementsGeneraux(
+      missionId: missionId,
+      etablissement: mission?.nomClient ?? '',
+      installation: '',
+      activite: mission?.activiteClient ?? '',
+      verificationType: mission?.natureMission,
+      updatedAt: DateTime.now(),
+      nomSite: mission?.nomSite ?? '',
+      compteRendu: [],  // ← Liste vide modifiable
+      accompagnateurs: [],  // ← Liste vide modifiable
+      verificateurs: [],  // ← Liste vide modifiable
+    );
     
     await box.add(newData);
     
@@ -5208,7 +5213,9 @@ static Future<RenseignementsGeneraux> getOrCreateRenseignementsGeneraux(String m
       await missionToUpdate.save();
     }
     
-    print('✅ RenseignementsGeneraux créé et prérempli pour mission: $missionId');
+    if (kDebugMode) {
+      print('✅ RenseignementsGeneraux créé et prérempli pour mission: $missionId');
+    }
     return newData;
   }
 }
@@ -5258,9 +5265,10 @@ static Future<bool> isMoyenneTensionApplicable(String missionId) async {
   final box = await Hive.openBox(_mtPreferenceBox);
   final data = box.get(missionId);
   if (data != null && data is Map) {
-    return data['isApplicable'] ?? true;
+    final isApplicable = data['isApplicable'];
+    if (isApplicable is bool) return isApplicable;
   }
-  return true; // Par défaut applicable
+  return true;
 }
 
 // Méthodes JSA
@@ -5314,7 +5322,7 @@ static Future<void> saveCoffretDraft({
 }) async {
   try {
     // Utiliser Box<Map> comme partout ailleurs
-    final box = Hive.box<Map>(_coffretDraftsBox);
+    final box = Hive.box(_coffretDraftsBox);
     
     String draftKey = coffret.qrCode;
     if (draftKey.isEmpty) {
@@ -5344,16 +5352,20 @@ static Future<void> saveCoffretDraft({
     };
     
     await box.put(draftKey, draftData);
-    print('✅ Brouillon sauvegardé: $draftKey (step $currentStep)');
+    if (kDebugMode) {
+      print('✅ Brouillon sauvegardé: $draftKey (step $currentStep)');
+    }
   } catch (e) {
-    print('❌ Erreur saveCoffretDraft: $e');
+    if (kDebugMode) {
+      print('❌ Erreur saveCoffretDraft: $e');
+    }
     rethrow;
   }
 }
 
   /// Récupérer les données complètes du brouillon
   static Map<String, dynamic>? getCoffretDraftData(String qrCode) {
-    final box = Hive.box<Map>(_coffretDraftsBox);
+    final box = Hive.box(_coffretDraftsBox);
     final data = box.get(qrCode);
     
     if (data != null && data['coffret'] is CoffretArmoire) {
@@ -5378,7 +5390,7 @@ static Future<void> saveCoffretDraft({
 
   /// Récupérer tous les brouillons pour une mission
   static List<CoffretArmoire> getAllCoffretDrafts(String missionId) {
-    final box = Hive.box<Map>(_coffretDraftsBox);
+    final box = Hive.box(_coffretDraftsBox);
     final drafts = <CoffretArmoire>[];
     
     for (var data in box.values) {
@@ -5395,9 +5407,11 @@ static Future<void> saveCoffretDraft({
 
   /// Supprimer un brouillon
   static Future<void> deleteCoffretDraft(String qrCode) async {
-    final box = Hive.box<Map>(_coffretDraftsBox);
+    final box = Hive.box(_coffretDraftsBox);
     await box.delete(qrCode);
-    print('✅ Brouillon supprimé: $qrCode');
+    if (kDebugMode) {
+      print('✅ Brouillon supprimé: $qrCode');
+    }
   }
 
   /// Récupérer les brouillons pour un emplacement spécifique
@@ -5408,7 +5422,7 @@ static Future<void> saveCoffretDraft({
     required bool isMoyenneTension,
     required int? zoneIndex,
   }) {
-    final box = Hive.box<Map>(_coffretDraftsBox);
+    final box = Hive.box(_coffretDraftsBox);
     final drafts = <CoffretArmoire>[];
     
     for (var data in box.values) {
@@ -5592,6 +5606,207 @@ static ClassementZone? getClassementZoneById(String id) {
     return null;
   }
 }
+
+
+/// Sauvegarder un brouillon de local
+static Future<void> saveLocalDraft({
+  required String missionId,
+  required bool isMoyenneTension,
+  required int? zoneIndex,
+  required bool isInZone,
+  required dynamic local, // MoyenneTensionLocal ou BasseTensionLocal
+  required int currentStep,
+  String? localId, // Pour l'édition
+}) async {
+  try {
+    final box = Hive.box(_localDraftsBox);
+    
+    // Générer une clé unique pour ce brouillon
+    String draftKey = localId ?? 'TEMP_${DateTime.now().millisecondsSinceEpoch}';
+    
+    // Déterminer le type de local
+    String localType = isMoyenneTension ? 'MT' : 'BT';
+    if (isMoyenneTension && local is MoyenneTensionLocal && local.type == 'LOCAL_TRANSFORMATEUR') {
+      localType = 'MT_TRANSFO';
+    }
+    
+    final draftData = {
+      'local': local,
+      'currentStep': currentStep,
+      'missionId': missionId,
+      'isMoyenneTension': isMoyenneTension,
+      'zoneIndex': zoneIndex,
+      'isInZone': isInZone,
+      'localType': localType,
+      'nomLocal': local.nom,
+      'savedAt': DateTime.now().toIso8601String(),
+      'localId': draftKey,
+    };
+    
+    await box.put(draftKey, draftData);
+    print('✅ Brouillon local sauvegardé: ${local.nom} (step $currentStep)');
+  } catch (e) {
+    print('❌ Erreur saveLocalDraft: $e');
+    rethrow;
+  }
+}
+
+/// Récupérer les données complètes d'un brouillon de local
+static Map<String, dynamic>? getLocalDraftData(String draftKey) {
+  try {
+    final box = Hive.box(_localDraftsBox);
+    final data = box.get(draftKey);
+    
+    if (data != null) {
+      return {
+        'local': data['local'],
+        'currentStep': data['currentStep'] as int? ?? 0,
+        'missionId': data['missionId'] as String?,
+        'isMoyenneTension': data['isMoyenneTension'] as bool? ?? true,
+        'zoneIndex': data['zoneIndex'] as int?,
+        'isInZone': data['isInZone'] as bool? ?? false,
+        'localType': data['localType'] as String?,
+        'nomLocal': data['nomLocal'] as String?,
+        'localId': data['localId'] as String?,
+      };
+    }
+    return null;
+  } catch (e) {
+    print('❌ Erreur getLocalDraftData: $e');
+    return null;
+  }
+}
+
+/// Supprimer un brouillon de local
+static Future<void> deleteLocalDraft(String draftKey) async {
+  try {
+    final box = Hive.box(_localDraftsBox);
+    await box.delete(draftKey);
+    print('✅ Brouillon local supprimé: $draftKey');
+  } catch (e) {
+    print('❌ Erreur deleteLocalDraft: $e');
+  }
+}
+
+/// Récupérer tous les brouillons de locaux pour une mission
+static List<Map<String, dynamic>> getLocalDraftsForMission(String missionId) {
+  try {
+    final box = Hive.box(_localDraftsBox);
+    final drafts = <Map<String, dynamic>>[];
+    
+    for (var data in box.values) {
+      if (data['missionId'] == missionId) {
+        drafts.add({
+          'local': data['local'],
+          'currentStep': data['currentStep'] as int? ?? 0,
+          'isMoyenneTension': data['isMoyenneTension'] as bool? ?? true,
+          'zoneIndex': data['zoneIndex'] as int?,
+          'isInZone': data['isInZone'] as bool? ?? false,
+          'nomLocal': data['nomLocal'] as String? ?? 'Sans nom',
+          'localId': data['localId'] as String?,
+          'localType': data['localType'] as String?,
+        });
+      }
+    }
+    
+    return drafts;
+  } catch (e) {
+    print('❌ Erreur getLocalDraftsForMission: $e');
+    return [];
+  }
+}
+
+/// Récupérer les brouillons de locaux pour une zone spécifique (MT)
+static List<Map<String, dynamic>> getLocalDraftsForMoyenneTensionZone({
+  required String missionId,
+  required int zoneIndex,
+}) {
+  try {
+    final box = Hive.box(_localDraftsBox);
+    final drafts = <Map<String, dynamic>>[];
+    
+    for (var data in box.values) {
+      if (data['missionId'] == missionId &&
+          data['isMoyenneTension'] == true &&
+          data['isInZone'] == true &&
+          data['zoneIndex'] == zoneIndex) {
+        drafts.add({
+          'local': data['local'],
+          'currentStep': data['currentStep'] as int? ?? 0,
+          'nomLocal': data['nomLocal'] as String? ?? 'Sans nom',
+          'localId': data['localId'] as String?,
+        });
+      }
+    }
+    
+    return drafts;
+  } catch (e) {
+    print('❌ Erreur getLocalDraftsForMoyenneTensionZone: $e');
+    return [];
+  }
+}
+
+/// Récupérer les brouillons de locaux pour une zone spécifique (BT)
+static List<Map<String, dynamic>> getLocalDraftsForBasseTensionZone({
+  required String missionId,
+  required int zoneIndex,
+}) {
+  try {
+    final box = Hive.box(_localDraftsBox);
+    final drafts = <Map<String, dynamic>>[];
+    
+    for (var data in box.values) {
+      if (data['missionId'] == missionId &&
+          data['isMoyenneTension'] == false &&
+          data['zoneIndex'] == zoneIndex) {
+        drafts.add({
+          'local': data['local'],
+          'currentStep': data['currentStep'] as int? ?? 0,
+          'nomLocal': data['nomLocal'] as String? ?? 'Sans nom',
+          'localId': data['localId'] as String?,
+        });
+      }
+    }
+    
+    return drafts;
+  } catch (e) {
+    print('❌ Erreur getLocalDraftsForBasseTensionZone: $e');
+    return [];
+  }
+}
+
+/// Récupérer les brouillons de locaux hors zone (MT uniquement)
+static List<Map<String, dynamic>> getLocalDraftsForMoyenneTensionHorsZone({
+  required String missionId,
+}) {
+  try {
+    final box = Hive.box(_localDraftsBox);
+    final drafts = <Map<String, dynamic>>[];
+    
+    for (var data in box.values) {
+      if (data['missionId'] == missionId &&
+          data['isMoyenneTension'] == true &&
+          data['isInZone'] == false) {
+        drafts.add({
+          'local': data['local'],
+          'currentStep': data['currentStep'] as int? ?? 0,
+          'nomLocal': data['nomLocal'] as String? ?? 'Sans nom',
+          'localId': data['localId'] as String?,
+          'zoneIndex': data['zoneIndex'],
+          'isInZone': data['isInZone'],
+        });
+      }
+    }
+    
+    return drafts;
+  } catch (e) {
+    print('❌ Erreur getLocalDraftsForMoyenneTensionHorsZone: $e');
+    return [];
+  }
+}
+
+
+
 
 }
 

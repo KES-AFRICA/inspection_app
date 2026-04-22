@@ -10,7 +10,7 @@ import 'package:inspec_app/widgets/app_bottom_sheet.dart';
 class JsaStep extends StatefulWidget {
   final Mission mission;
   final Function(Map<String, dynamic>) onDataChanged;
-  final VoidCallback? onNextStep; // Pour aller vers Renseignements
+  final VoidCallback? onNextStep;
 
   const JsaStep({
     super.key,
@@ -23,10 +23,14 @@ class JsaStep extends StatefulWidget {
   State<JsaStep> createState() => JsaStepState();
 }
 
-class JsaStepState extends State<JsaStep> {
+class JsaStepState extends State<JsaStep> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true; // ✅ Préserve l'état entre les navigations
+
   late JSA _jsa;
   bool _isLoading = true;
   bool _isFirstLoad = true;
+  bool _hasAttemptedNext = false; // ✅ Pour contrôler l'affichage des erreurs
 
   // Contrôleurs
   final _operationController = TextEditingController();
@@ -40,26 +44,20 @@ class JsaStepState extends State<JsaStep> {
   final _personneContactClientController = TextEditingController();
   final _personneContactKESController = TextEditingController();
 
+  // ✅ Focus nodes pour meilleure gestion du clavier
+  final _operationFocusNode = FocusNode();
+
   static const _subCategories = [
     'Opération & Équipe',
-    'Plan d\'intervention en cas d\'urgence',
+    "Plan d'intervention en cas d'urgence",
     'Dangers',
     'Exigences Générales (EPC)',
     'EPI',
     'Vérification finale',
   ];
 
-  // Couleurs pour chaque sous-catégorie
-  static const List<Color> _subCategoryColors = [
-    AppTheme.primaryBlue,
-    AppTheme.primaryBlue,
-    AppTheme.primaryBlue,
-    AppTheme.primaryBlue,
-    AppTheme.primaryBlue,
-    AppTheme.primaryBlue,
-  ];
+  static const Color _primaryColor = Color(0xFF1E88E5); // Bleu unique
 
-  // Icônes pour chaque sous-catégorie
   static const List<IconData> _subCategoryIcons = [
     Icons.engineering_outlined,
     Icons.emergency_outlined,
@@ -71,7 +69,7 @@ class JsaStepState extends State<JsaStep> {
 
   int get totalSubCategories => _subCategories.length;
   int get currentSubCategory => _jsa.currentSubCategory;
-  Color get currentColor => _subCategoryColors[currentSubCategory];
+  Color get currentColor => _primaryColor;
   IconData get currentIcon => _subCategoryIcons[currentSubCategory];
 
   @override
@@ -82,25 +80,33 @@ class JsaStepState extends State<JsaStep> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
+    
     try {
       _jsa = await HiveService.getOrCreateJSA(widget.mission.id);
       _loadControllersFromJSA();
       
-      // Récupérer la position sauvegardée
       if (_isFirstLoad) {
         final savedPosition = await SequenceProgressService.getStepData(
           widget.mission.id,
           'jsa_current_subcategory',
         );
-        if (savedPosition != null && savedPosition is int) {
+        if (savedPosition != null && savedPosition is int && savedPosition < totalSubCategories) {
           _jsa.currentSubCategory = savedPosition;
         }
         _isFirstLoad = false;
       }
     } catch (e) {
-      print('❌ Erreur chargement JSA: $e');
+      debugPrint('❌ Erreur chargement JSA: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Erreur lors du chargement des données'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) setState(() => _isLoading = false);
     }
   }
 
@@ -130,7 +136,7 @@ class JsaStepState extends State<JsaStep> {
     _jsa.planUrgence.personneContactKES = _personneContactKESController.text.trim();
     
     await HiveService.saveJSA(_jsa);
-    widget.onDataChanged({'jsa_saved': true});
+    widget.onDataChanged({'jsa_saved': true, 'current_step': currentSubCategory});
   }
 
   Future<void> _saveCurrentPosition() async {
@@ -141,26 +147,186 @@ class JsaStepState extends State<JsaStep> {
     );
   }
 
-  bool _isCurrentSubCategoryValid() {
-    switch (currentSubCategory) {
-      case 0:
-        return _operationController.text.trim().isNotEmpty && _jsa.inspecteurs.isNotEmpty;
-      default:
-        return true;
-    }
-  }
-
+  // ✅ Validation avec messages contextuels
   String? _getCurrentSubCategoryError() {
-    if (currentSubCategory == 0) {
-      if (_operationController.text.trim().isEmpty) return 'L\'opération à effectuer est requise';
-      if (_jsa.inspecteurs.isEmpty) return 'Au moins un inspecteur est requis';
+    if (_hasAttemptedNext) {
+      switch (currentSubCategory) {
+        case 0:
+          if (_operationController.text.trim().isEmpty) {
+            return "L'opération à effectuer est requise";
+          }
+          if (_jsa.inspecteurs.isEmpty) {
+            return "Au moins un inspecteur est requis";
+          }
+          break;
+        case 1:
+          if (!_jsa.planUrgence.voiesIssuesIdentifiees &&
+              !_jsa.planUrgence.zonesRassemblementIdentifiees &&
+              !_jsa.planUrgence.consignesSecuriteInternes &&
+              _personneContactClientController.text.trim().isEmpty &&
+              _personneContactKESController.text.trim().isEmpty) {
+            return "Sélectionnez au moins une option ou renseignez un contact";
+          }
+          break;
+        case 2:
+          if (!_jsa.dangers.chocElectrique &&
+              !_jsa.dangers.bruit &&
+              !_jsa.dangers.stressThermique &&
+              !_jsa.dangers.eclairageInadapte &&
+              !_jsa.dangers.zoneCirculationMalDefinie &&
+              !_jsa.dangers.solAccidente &&
+              !_jsa.dangers.emissionGazPoussiere &&
+              !_jsa.dangers.espaceConfine &&
+              _autreEnvironnementController.text.trim().isEmpty &&
+              !_jsa.dangers.chuteObjets &&
+              !_jsa.dangers.coactivite &&
+              !_jsa.dangers.portCharge &&
+              !_jsa.dangers.expositionProduitsChimiques &&
+              !_jsa.dangers.chuteHauteur &&
+              !_jsa.dangers.electrification &&
+              !_jsa.dangers.incendiesExplosion &&
+              !_jsa.dangers.mauvaisesPostures &&
+              !_jsa.dangers.chutePlainPied &&
+              _autrePhysiqueController.text.trim().isEmpty) {
+            return "Sélectionnez au moins un danger";
+          }
+          break;
+        case 3:
+          if (!_jsa.exigencesGenerales.signaletiqueSecurite &&
+              !_jsa.exigencesGenerales.ficheDonneeSecuriteDisponible &&
+              !_jsa.exigencesGenerales.uneMinuteMaSecurite &&
+              !_jsa.exigencesGenerales.balise &&
+              !_jsa.exigencesGenerales.zoneTravailPropre &&
+              !_jsa.exigencesGenerales.toolboxMeeting &&
+              !_jsa.exigencesGenerales.permisTravail &&
+              !_jsa.exigencesGenerales.extincteurs &&
+              !_jsa.exigencesGenerales.outilsMaterielsIsolants &&
+              !_jsa.exigencesGenerales.boitePharmacie &&
+              _autreExigenceController.text.trim().isEmpty) {
+            return "Sélectionnez au moins une exigence";
+          }
+          break;
+        case 4:
+          if (!_jsa.epi.casqueSecurite &&
+              !_jsa.epi.bouchonsOreille &&
+              !_jsa.epi.lunettesProtection &&
+              !_jsa.epi.harnaisSecurite &&
+              !_jsa.epi.chaussureSecurite &&
+              !_jsa.epi.masqueSecurite &&
+              !_jsa.epi.combinaisonLongueManche &&
+              !_jsa.epi.gantsIsolants &&
+              !_jsa.epi.cacheNez &&
+              !_jsa.epi.gilet &&
+              _autreEPIController.text.trim().isEmpty) {
+            return "Sélectionnez au moins un EPI";
+          }
+          break;
+        case 5:
+          if (!_jsa.verificationFinale.travailTermineNA &&
+              !_jsa.verificationFinale.travailTermineApplicable &&
+              !_jsa.verificationFinale.consignationCadenasRetireNA &&
+              !_jsa.verificationFinale.consignationCadenasRetireApplicable &&
+              !_jsa.verificationFinale.absenceConsignataireProcedureNA &&
+              !_jsa.verificationFinale.absenceConsignataireProcedureApplicable &&
+              !_jsa.verificationFinale.consignataireAbsentProcedureAppliqueeNA &&
+              !_jsa.verificationFinale.consignataireAbsentProcedureAppliqueeApplicable &&
+              !_jsa.verificationFinale.materielEnleveZoneNettoyeeNA &&
+              !_jsa.verificationFinale.materielEnleveZoneNettoyeeApplicable &&
+              !_jsa.verificationFinale.risquesSupprimesEquipementPretNA &&
+              !_jsa.verificationFinale.risquesSupprimesEquipementPretApplicable &&
+              _autresPointsVerifController.text.trim().isEmpty &&
+              _donneurOrdreSignatureController.text.trim().isEmpty &&
+              _chargeAffairesSignatureController.text.trim().isEmpty) {
+            return "Renseignez au moins un point de vérification";
+          }
+          break;
+      }
     }
     return null;
   }
 
+  bool _isCurrentSubCategoryValid() {
+  switch (currentSubCategory) {
+    case 0: // Opération & Équipe
+      return _operationController.text.trim().isNotEmpty && _jsa.inspecteurs.isNotEmpty;
+    case 1: // Plan d'urgence
+      return _jsa.planUrgence.voiesIssuesIdentifiees ||
+             _jsa.planUrgence.zonesRassemblementIdentifiees ||
+             _jsa.planUrgence.consignesSecuriteInternes ||
+             _personneContactClientController.text.trim().isNotEmpty ||
+             _personneContactKESController.text.trim().isNotEmpty;
+    case 2: // Dangers
+      return _jsa.dangers.chocElectrique ||
+             _jsa.dangers.bruit ||
+             _jsa.dangers.stressThermique ||
+             _jsa.dangers.eclairageInadapte ||
+             _jsa.dangers.zoneCirculationMalDefinie ||
+             _jsa.dangers.solAccidente ||
+             _jsa.dangers.emissionGazPoussiere ||
+             _jsa.dangers.espaceConfine ||
+             _autreEnvironnementController.text.trim().isNotEmpty ||
+             _jsa.dangers.chuteObjets ||
+             _jsa.dangers.coactivite ||
+             _jsa.dangers.portCharge ||
+             _jsa.dangers.expositionProduitsChimiques ||
+             _jsa.dangers.chuteHauteur ||
+             _jsa.dangers.electrification ||
+             _jsa.dangers.incendiesExplosion ||
+             _jsa.dangers.mauvaisesPostures ||
+             _jsa.dangers.chutePlainPied ||
+             _autrePhysiqueController.text.trim().isNotEmpty;
+    case 3: // Exigences générales
+      return _jsa.exigencesGenerales.signaletiqueSecurite ||
+             _jsa.exigencesGenerales.ficheDonneeSecuriteDisponible ||
+             _jsa.exigencesGenerales.uneMinuteMaSecurite ||
+             _jsa.exigencesGenerales.balise ||
+             _jsa.exigencesGenerales.zoneTravailPropre ||
+             _jsa.exigencesGenerales.toolboxMeeting ||
+             _jsa.exigencesGenerales.permisTravail ||
+             _jsa.exigencesGenerales.extincteurs ||
+             _jsa.exigencesGenerales.outilsMaterielsIsolants ||
+             _jsa.exigencesGenerales.boitePharmacie ||
+             _autreExigenceController.text.trim().isNotEmpty;
+    case 4: // EPI
+      return _jsa.epi.casqueSecurite ||
+             _jsa.epi.bouchonsOreille ||
+             _jsa.epi.lunettesProtection ||
+             _jsa.epi.harnaisSecurite ||
+             _jsa.epi.chaussureSecurite ||
+             _jsa.epi.masqueSecurite ||
+             _jsa.epi.combinaisonLongueManche ||
+             _jsa.epi.gantsIsolants ||
+             _jsa.epi.cacheNez ||
+             _jsa.epi.gilet ||
+             _autreEPIController.text.trim().isNotEmpty;
+    case 5: // Vérification finale
+      return _jsa.verificationFinale.travailTermineNA ||
+             _jsa.verificationFinale.travailTermineApplicable ||
+             _jsa.verificationFinale.consignationCadenasRetireNA ||
+             _jsa.verificationFinale.consignationCadenasRetireApplicable ||
+             _jsa.verificationFinale.absenceConsignataireProcedureNA ||
+             _jsa.verificationFinale.absenceConsignataireProcedureApplicable ||
+             _jsa.verificationFinale.consignataireAbsentProcedureAppliqueeNA ||
+             _jsa.verificationFinale.consignataireAbsentProcedureAppliqueeApplicable ||
+             _jsa.verificationFinale.materielEnleveZoneNettoyeeNA ||
+             _jsa.verificationFinale.materielEnleveZoneNettoyeeApplicable ||
+             _jsa.verificationFinale.risquesSupprimesEquipementPretNA ||
+             _jsa.verificationFinale.risquesSupprimesEquipementPretApplicable ||
+             _autresPointsVerifController.text.trim().isNotEmpty ||
+             _donneurOrdreSignatureController.text.trim().isNotEmpty ||
+             _chargeAffairesSignatureController.text.trim().isNotEmpty;
+    default:
+      return false;
+  }
+}
+
   void _nextSubCategory() {
-    // Fermer le clavier
     FocusScope.of(context).unfocus();
+    
+    // ✅ Marquer qu'on a tenté d'avancer (active les messages d'erreur)
+    if (!_hasAttemptedNext) {
+      setState(() => _hasAttemptedNext = true);
+    }
     
     if (!_isCurrentSubCategoryValid()) {
       _showError(_getCurrentSubCategoryError() ?? 'Veuillez compléter cette section');
@@ -185,10 +351,16 @@ class JsaStepState extends State<JsaStep> {
   }
 
   void _goToRenseignements() {
+    // ✅ Marquer qu'on a tenté d'avancer
+    if (!_hasAttemptedNext) {
+      setState(() => _hasAttemptedNext = true);
+    }
+    
     if (!_isCurrentSubCategoryValid()) {
       _showError(_getCurrentSubCategoryError() ?? 'Veuillez compléter cette section');
       return;
     }
+    
     _saveJSA();
     _saveCurrentPosition();
     if (widget.onNextStep != null) {
@@ -197,10 +369,17 @@ class JsaStepState extends State<JsaStep> {
   }
 
   void _showError(String message) {
+    ScaffoldMessenger.of(context).clearSnackBars();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: Colors.red,
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.red.shade700,
         duration: const Duration(seconds: 3),
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
@@ -209,9 +388,28 @@ class JsaStepState extends State<JsaStep> {
     );
   }
 
-  // ───────────────────────────────────────────────────
-  // Inspecteurs
-  // ───────────────────────────────────────────────────
+  void _showSuccess(String message) {
+    ScaffoldMessenger.of(context).clearSnackBars();
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white, size: 20),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: Colors.green.shade700,
+        duration: const Duration(seconds: 1),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  // ==================== GESTION DES INSPECTEURS ====================
+  
   void _addInspecteur() {
     final nomController = TextEditingController();
     final prenomController = TextEditingController();
@@ -328,6 +526,12 @@ class JsaStepState extends State<JsaStep> {
       return;
     }
     
+    // ✅ Limite de 6 inspecteurs
+    if (_jsa.inspecteurs.length >= 6) {
+      _showError('Nombre maximum d\'inspecteurs atteint (6)');
+      return;
+    }
+    
     Navigator.pop(context);
     setState(() {
       _jsa.inspecteurs.add(JSAInspecteur(
@@ -337,6 +541,7 @@ class JsaStepState extends State<JsaStep> {
       ));
     });
     _saveJSA();
+    _showSuccess('Inspecteur ajouté');
   }
 
   void _removeInspecteur(int index) {
@@ -360,6 +565,7 @@ class JsaStepState extends State<JsaStep> {
               setState(() => _jsa.inspecteurs.removeAt(index));
               _saveJSA();
               Navigator.pop(context);
+              _showSuccess('Inspecteur retiré');
             },
             child: const Text('Retirer'),
           ),
@@ -368,275 +574,143 @@ class JsaStepState extends State<JsaStep> {
     );
   }
 
-  // ───────────────────────────────────────────────────
-  // Build principal
-  // ───────────────────────────────────────────────────
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+  // ==================== WIDGETS MODERNES ====================
 
-    final isSmallScreen = MediaQuery.of(context).size.width < 360;
-    final error = _getCurrentSubCategoryError();
-    final isLastSubCategory = currentSubCategory == totalSubCategories - 1;
+  Widget _buildStatusBadge(bool isValid, bool isSmallScreen) {
+  // ✅ Ne pas afficher "Complété" si rien n'a été rempli
+  final hasData = _hasAnyDataInCurrentSection();
+  
+  return Container(
+    padding: EdgeInsets.symmetric(
+      horizontal: isSmallScreen ? 12 : 16,
+      vertical: isSmallScreen ? 6 : 8,
+    ),
+    decoration: BoxDecoration(
+      color: hasData && isValid ? Colors.green.withOpacity(0.15) : Colors.grey.withOpacity(0.1),
+      borderRadius: BorderRadius.circular(30),
+      border: Border.all(
+        color: hasData && isValid ? Colors.green.withOpacity(0.5) : Colors.grey.withOpacity(0.3),
+        width: 1,
+      ),
+    ),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(
+          hasData && isValid ? Icons.check_circle : Icons.pending_outlined,
+          color: hasData && isValid ? Colors.green : Colors.grey.shade600,
+          size: isSmallScreen ? 16 : 18,
+        ),
+        SizedBox(width: isSmallScreen ? 8 : 10),
+        Text(
+          hasData && isValid ? 'Complété' : (hasData ? 'En cours' : 'Non commencé'),
+          style: TextStyle(
+            fontSize: isSmallScreen ? 12 : 13,
+            fontWeight: FontWeight.w600,
+            color: hasData && isValid ? Colors.green.shade700 : Colors.grey.shade600,
+          ),
+        ),
+      ],
+    ),
+  );
+}
 
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Column(
+// ✅ Nouvelle méthode pour vérifier si la section courante a des données
+bool _hasAnyDataInCurrentSection() {
+  switch (currentSubCategory) {
+    case 0:
+      return _operationController.text.trim().isNotEmpty || _jsa.inspecteurs.isNotEmpty;
+    case 1:
+      return _jsa.planUrgence.voiesIssuesIdentifiees ||
+             _jsa.planUrgence.zonesRassemblementIdentifiees ||
+             _jsa.planUrgence.consignesSecuriteInternes ||
+             _personneContactClientController.text.trim().isNotEmpty ||
+             _personneContactKESController.text.trim().isNotEmpty;
+    case 2:
+      return _jsa.dangers.chocElectrique ||
+             _jsa.dangers.bruit ||
+             _jsa.dangers.stressThermique ||
+             _jsa.dangers.eclairageInadapte ||
+             _jsa.dangers.zoneCirculationMalDefinie ||
+             _jsa.dangers.solAccidente ||
+             _jsa.dangers.emissionGazPoussiere ||
+             _jsa.dangers.espaceConfine ||
+             _autreEnvironnementController.text.trim().isNotEmpty ||
+             _jsa.dangers.chuteObjets ||
+             _jsa.dangers.coactivite ||
+             _jsa.dangers.portCharge ||
+             _jsa.dangers.expositionProduitsChimiques ||
+             _jsa.dangers.chuteHauteur ||
+             _jsa.dangers.electrification ||
+             _jsa.dangers.incendiesExplosion ||
+             _jsa.dangers.mauvaisesPostures ||
+             _jsa.dangers.chutePlainPied ||
+             _autrePhysiqueController.text.trim().isNotEmpty;
+    case 3:
+      return _jsa.exigencesGenerales.signaletiqueSecurite ||
+             _jsa.exigencesGenerales.ficheDonneeSecuriteDisponible ||
+             _jsa.exigencesGenerales.uneMinuteMaSecurite ||
+             _jsa.exigencesGenerales.balise ||
+             _jsa.exigencesGenerales.zoneTravailPropre ||
+             _jsa.exigencesGenerales.toolboxMeeting ||
+             _jsa.exigencesGenerales.permisTravail ||
+             _jsa.exigencesGenerales.extincteurs ||
+             _jsa.exigencesGenerales.outilsMaterielsIsolants ||
+             _jsa.exigencesGenerales.boitePharmacie ||
+             _autreExigenceController.text.trim().isNotEmpty;
+    case 4:
+      return _jsa.epi.casqueSecurite ||
+             _jsa.epi.bouchonsOreille ||
+             _jsa.epi.lunettesProtection ||
+             _jsa.epi.harnaisSecurite ||
+             _jsa.epi.chaussureSecurite ||
+             _jsa.epi.masqueSecurite ||
+             _jsa.epi.combinaisonLongueManche ||
+             _jsa.epi.gantsIsolants ||
+             _jsa.epi.cacheNez ||
+             _jsa.epi.gilet ||
+             _autreEPIController.text.trim().isNotEmpty;
+    case 5:
+      return _jsa.verificationFinale.travailTermineNA ||
+             _jsa.verificationFinale.travailTermineApplicable ||
+             _jsa.verificationFinale.consignationCadenasRetireNA ||
+             _jsa.verificationFinale.consignationCadenasRetireApplicable ||
+             _jsa.verificationFinale.absenceConsignataireProcedureNA ||
+             _jsa.verificationFinale.absenceConsignataireProcedureApplicable ||
+             _jsa.verificationFinale.consignataireAbsentProcedureAppliqueeNA ||
+             _jsa.verificationFinale.consignataireAbsentProcedureAppliqueeApplicable ||
+             _jsa.verificationFinale.materielEnleveZoneNettoyeeNA ||
+             _jsa.verificationFinale.materielEnleveZoneNettoyeeApplicable ||
+             _jsa.verificationFinale.risquesSupprimesEquipementPretNA ||
+             _jsa.verificationFinale.risquesSupprimesEquipementPretApplicable ||
+             _autresPointsVerifController.text.trim().isNotEmpty ||
+             _donneurOrdreSignatureController.text.trim().isNotEmpty ||
+             _chargeAffairesSignatureController.text.trim().isNotEmpty;
+    default:
+      return false;
+  }
+}
+
+  Widget _buildSectionTitle(String title, Color color, bool isSmallScreen) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16, top: isSmallScreen ? 8 : 12),
+      child: Row(
         children: [
-          // Carte d'en-tête moderne (style Description)
           Container(
-            margin: EdgeInsets.all(isSmallScreen ? 10 : 14),
+            width: 4,
+            height: isSmallScreen ? 16 : 20,
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [currentColor, currentColor.withOpacity(0.8)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-              borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 18),
-              boxShadow: [
-                BoxShadow(
-                  color: currentColor.withOpacity(0.3),
-                  blurRadius: isSmallScreen ? 8 : 10,
-                  offset: const Offset(0, 3),
-                ),
-              ],
-            ),
-            child: Padding(
-              padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
-                        ),
-                        child: Icon(
-                          currentIcon,
-                          color: Colors.white,
-                          size: isSmallScreen ? 22 : 24,
-                        ),
-                      ),
-                      SizedBox(width: isSmallScreen ? 10 : 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _subCategories[currentSubCategory],
-                              style: TextStyle(
-                                fontSize: isSmallScreen ? 14 : 16,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white,
-                                height: 1.3,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            SizedBox(height: isSmallScreen ? 4 : 6),
-                            Text(
-                              'Catégorie ${currentSubCategory + 1}/${totalSubCategories}',
-                              style: TextStyle(
-                                fontSize: isSmallScreen ? 11 : 12,
-                                color: Colors.white.withOpacity(0.9),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      // Badge de validation
-                      if (_isCurrentSubCategoryValid())
-                        Container(
-                          padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            Icons.check,
-                            color: Colors.white,
-                            size: isSmallScreen ? 16 : 18,
-                          ),
-                        ),
-                    ],
-                  ),
-                  
-                  // Message d'erreur (si présent)
-                  if (error != null) ...[
-                    SizedBox(height: isSmallScreen ? 8 : 10),
-                    Container(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: isSmallScreen ? 10 : 12,
-                        vertical: isSmallScreen ? 6 : 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: Colors.red.withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.warning_amber_rounded,
-                            color: Colors.white,
-                            size: isSmallScreen ? 14 : 16,
-                          ),
-                          SizedBox(width: isSmallScreen ? 6 : 8),
-                          Expanded(
-                            child: Text(
-                              error,
-                              style: TextStyle(
-                                fontSize: isSmallScreen ? 11 : 12,
-                                color: Colors.white,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                  
-                  SizedBox(height: isSmallScreen ? 12 : 14),
-                  
-                  // Barre de progression
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Progression JSA',
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 11 : 12,
-                              color: Colors.white.withOpacity(0.9),
-                            ),
-                          ),
-                          Text(
-                            '${((currentSubCategory + 1) / totalSubCategories * 100).round()}%',
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 13 : 14,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(height: isSmallScreen ? 5 : 6),
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(3),
-                        child: LinearProgressIndicator(
-                          value: (currentSubCategory + 1) / totalSubCategories,
-                          backgroundColor: Colors.white.withOpacity(0.3),
-                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
-                          minHeight: isSmallScreen ? 4 : 5,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+              color: color,
+              borderRadius: BorderRadius.circular(2),
             ),
           ),
-          
-          // Contenu de la sous-catégorie
-          Expanded(
-            child: IndexedStack(
-              index: currentSubCategory,
-              children: [
-                _buildSub1Operation(isSmallScreen),
-                _buildSub2PlanUrgence(isSmallScreen),
-                _buildSub3Dangers(isSmallScreen),
-                _buildSub4Exigences(isSmallScreen),
-                _buildSub5EPI(isSmallScreen),
-                _buildSub6Verification(isSmallScreen),
-              ],
-            ),
-          ),
-          
-          // Barre de navigation (style Description)
-          Container(
-            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: currentSubCategory > 0 ? _previousSubCategory : null,
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
-                      side: BorderSide(
-                        color: currentSubCategory > 0 ? AppTheme.primaryBlue : Colors.grey.shade400,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.arrow_back,
-                          size: 18,
-                          color: currentSubCategory > 0 ? AppTheme.primaryBlue : Colors.grey.shade400,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'PRÉCÉDENT',
-                          style: TextStyle(
-                            color: currentSubCategory > 0 ? AppTheme.primaryBlue : Colors.grey.shade400,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: isLastSubCategory ? _goToRenseignements : _nextSubCategory,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: currentColor,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                           'SUIVANT',
-                        ),
-                        if (!isLastSubCategory) ...[
-                          const SizedBox(width: 8),
-                          const Icon(Icons.arrow_forward, size: 18),
-                        ] else ...[
-                          const SizedBox(width: 8),
-                          const Icon(Icons.arrow_forward, size: 18),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
-              ],
+          const SizedBox(width: 12),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: isSmallScreen ? 14 : 16,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
         ],
@@ -644,73 +718,27 @@ class JsaStepState extends State<JsaStep> {
     );
   }
 
-  // ───────────────────────────────────────────────────
-  // Sous-catégorie 1 : Opération & Équipe
-  // ───────────────────────────────────────────────────
+  // ==================== SOUS-CATÉGORIES ====================
+
   Widget _buildSub1Operation(bool isSmallScreen) {
+    final error = _getCurrentSubCategoryError();
+    final isValid = _isCurrentSubCategoryValid();
+    
     return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Badge de statut
-          Row(
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(
-                  horizontal: isSmallScreen ? 12 : 16,
-                  vertical: isSmallScreen ? 3 : 4,
-                ),
-                decoration: BoxDecoration(
-                  color: _isCurrentSubCategoryValid()
-                      ? Colors.green.withOpacity(0.1)
-                      : Colors.orange.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(30),
-                  border: Border.all(
-                    color: _isCurrentSubCategoryValid()
-                        ? Colors.green.withOpacity(0.4)
-                        : Colors.orange.withOpacity(0.4),
-                    width: 1,
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      _isCurrentSubCategoryValid()
-                          ? Icons.check_circle
-                          : Icons.pending_outlined,
-                      color: _isCurrentSubCategoryValid()
-                          ? Colors.green
-                          : Colors.orange,
-                      size: isSmallScreen ? 16 : 18,
-                    ),
-                    SizedBox(width: isSmallScreen ? 8 : 10),
-                    Text(
-                      _isCurrentSubCategoryValid()
-                          ? 'Section complétée'
-                          : 'En attente de saisie',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 12 : 13,
-                        color: _isCurrentSubCategoryValid()
-                            ? Colors.green.shade700
-                            : Colors.orange.shade700,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: isSmallScreen ? 16 : 20),
+          _buildStatusBadge(isValid, isSmallScreen),
+          SizedBox(height: isSmallScreen ? 20 : 24),
           
+          // Champ Opération
           Text(
             'Opération à effectuer *',
             style: TextStyle(
               fontSize: isSmallScreen ? 14 : 15,
               fontWeight: FontWeight.w600,
-              color: AppTheme.darkBlue,
+              color: _hasAttemptedNext && !isValid ? Colors.red : AppTheme.darkBlue,
             ),
           ),
           const SizedBox(height: 8),
@@ -725,17 +753,18 @@ class JsaStepState extends State<JsaStep> {
                   offset: const Offset(0, 2),
                 ),
               ],
+              border: _hasAttemptedNext && !isValid && _operationController.text.trim().isEmpty
+                  ? Border.all(color: Colors.red.shade300, width: 1.5)
+                  : null,
             ),
             child: TextFormField(
               controller: _operationController,
+              focusNode: _operationFocusNode,
               maxLines: 3,
-              style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
+              style: TextStyle(fontSize: isSmallScreen ? 14 : 15),
               decoration: InputDecoration(
                 hintText: 'Décrivez l\'opération à effectuer...',
-                hintStyle: TextStyle(
-                  fontSize: isSmallScreen ? 13 : 14,
-                  color: Colors.grey.shade400,
-                ),
+                hintStyle: TextStyle(fontSize: isSmallScreen ? 14 : 15, color: Colors.grey.shade400),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
@@ -743,12 +772,38 @@ class JsaStepState extends State<JsaStep> {
                 filled: true,
                 fillColor: Colors.white,
                 contentPadding: EdgeInsets.all(isSmallScreen ? 14 : 16),
+                suffixIcon: _operationController.text.trim().isNotEmpty
+                    ? Icon(Icons.check_circle, color: Colors.green, size: isSmallScreen ? 20 : 22)
+                    : null,
               ),
-              onChanged: (_) => _saveJSA(),
+              onChanged: (_) {
+                _saveJSA();
+                if (_hasAttemptedNext && _operationController.text.trim().isNotEmpty) {
+                  setState(() {});
+                }
+              },
             ),
           ),
-          const SizedBox(height: 24),
           
+          // Message d'erreur spécifique
+          if (_hasAttemptedNext && !isValid && _operationController.text.trim().isEmpty)
+            Padding(
+              padding: EdgeInsets.only(top: isSmallScreen ? 6 : 8),
+              child: Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red, size: isSmallScreen ? 14 : 16),
+                  const SizedBox(width: 6),
+                  Text(
+                    error ?? 'Ce champ est requis',
+                    style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.red),
+                  ),
+                ],
+              ),
+            ),
+          
+          SizedBox(height: isSmallScreen ? 24 : 28),
+          
+          // Section Inspecteurs
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -757,36 +812,38 @@ class JsaStepState extends State<JsaStep> {
                 style: TextStyle(
                   fontSize: isSmallScreen ? 14 : 15,
                   fontWeight: FontWeight.w600,
-                  color: _jsa.inspecteurs.isEmpty ? Colors.red : AppTheme.darkBlue,
+                  color: _hasAttemptedNext && _jsa.inspecteurs.isEmpty ? Colors.red : AppTheme.darkBlue,
                 ),
               ),
               if (_jsa.inspecteurs.length < 6)
                 TextButton.icon(
                   onPressed: _addInspecteur,
-                  icon: Icon(Icons.add_circle_outline, color: currentColor, size: 18),
+                  icon: Icon(Icons.add_circle_outline, color: AppTheme.primaryBlue, size: isSmallScreen ? 18 : 20),
                   label: Text(
                     'Ajouter',
-                    style: TextStyle(color: currentColor, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w600, fontSize: isSmallScreen ? 13 : 14),
                   ),
                 ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           
           if (_jsa.inspecteurs.isEmpty)
             Container(
-              padding: const EdgeInsets.all(16),
+              padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
               decoration: BoxDecoration(
-                color: Colors.red.shade50,
+                color: _hasAttemptedNext ? Colors.red.shade50 : Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.red.shade200),
+                border: Border.all(
+                  color: _hasAttemptedNext ? Colors.red.shade200 : Colors.grey.shade200,
+                ),
               ),
               child: Center(
                 child: Text(
-                  'Au moins un inspecteur est requis',
+                  _hasAttemptedNext ? 'Au moins un inspecteur est requis' : 'Ajoutez un inspecteur',
                   style: TextStyle(
                     fontSize: isSmallScreen ? 13 : 14,
-                    color: Colors.red.shade700,
+                    color: _hasAttemptedNext ? Colors.red.shade700 : Colors.grey.shade600,
                   ),
                 ),
               ),
@@ -814,13 +871,13 @@ class JsaStepState extends State<JsaStep> {
                   ),
                   child: ListTile(
                     leading: Container(
-                      width: 40,
-                      height: 40,
+                      width: isSmallScreen ? 36 : 40,
+                      height: isSmallScreen ? 36 : 40,
                       decoration: BoxDecoration(
-                        color: currentColor.withOpacity(0.1),
+                        color: AppTheme.primaryBlue.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(10),
                       ),
-                      child: Icon(Icons.person, color: currentColor, size: 20),
+                      child: Icon(Icons.person, color: AppTheme.primaryBlue, size: isSmallScreen ? 18 : 20),
                     ),
                     title: Text(
                       '${insp.prenom} ${insp.nom}',
@@ -839,7 +896,7 @@ class JsaStepState extends State<JsaStep> {
                           )
                         : null,
                     trailing: IconButton(
-                      icon: Icon(Icons.delete_outline, color: Colors.red.shade400, size: 20),
+                      icon: Icon(Icons.delete_outline, color: Colors.red.shade400, size: isSmallScreen ? 18 : 20),
                       onPressed: () => _removeInspecteur(i),
                     ),
                   ),
@@ -851,40 +908,37 @@ class JsaStepState extends State<JsaStep> {
     );
   }
 
-  // ───────────────────────────────────────────────────
-  // Sous-catégorie 2 : Plan d'urgence
-  // ───────────────────────────────────────────────────
   Widget _buildSub2PlanUrgence(bool isSmallScreen) {
     return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildStatusBadge(isSmallScreen),
-          SizedBox(height: isSmallScreen ? 16 : 20),
+          _buildStatusBadge(true, isSmallScreen),
+          SizedBox(height: isSmallScreen ? 20 : 24),
           
           _buildModernCheckbox(
             'Voies d\'issues de secours identifiées',
             _jsa.planUrgence.voiesIssuesIdentifiees,
             (v) => setState(() => _jsa.planUrgence.voiesIssuesIdentifiees = v!),
-            currentColor,
+            AppTheme.primaryBlue,
             isSmallScreen,
           ),
           _buildModernCheckbox(
             'Zones de rassemblement identifiées',
             _jsa.planUrgence.zonesRassemblementIdentifiees,
             (v) => setState(() => _jsa.planUrgence.zonesRassemblementIdentifiees = v!),
-            currentColor,
+            AppTheme.primaryBlue,
             isSmallScreen,
           ),
           _buildModernCheckbox(
             'Consignes de sécurité internes',
             _jsa.planUrgence.consignesSecuriteInternes,
             (v) => setState(() => _jsa.planUrgence.consignesSecuriteInternes = v!),
-            currentColor,
+            AppTheme.primaryBlue,
             isSmallScreen,
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           
           _buildModernTextField(
             controller: _personneContactClientController,
@@ -892,6 +946,7 @@ class JsaStepState extends State<JsaStep> {
             onChanged: (_) => _saveJSA(),
             isSmallScreen: isSmallScreen,
           ),
+          const SizedBox(height: 12),
           _buildModernTextField(
             controller: _personneContactKESController,
             label: 'Personne à contacter chez KES',
@@ -903,20 +958,17 @@ class JsaStepState extends State<JsaStep> {
     );
   }
 
-  // ───────────────────────────────────────────────────
-  // Sous-catégorie 3 : Dangers
-  // ───────────────────────────────────────────────────
   Widget _buildSub3Dangers(bool isSmallScreen) {
     return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildStatusBadge(isSmallScreen),
-          SizedBox(height: isSmallScreen ? 16 : 20),
+          _buildStatusBadge(true, isSmallScreen),
+          SizedBox(height: isSmallScreen ? 20 : 24),
           
-          _buildSectionTitle('Lié à l\'environnement', currentColor, isSmallScreen),
-          _buildModernCheckbox('Choc électrique', _jsa.dangers.chocElectrique, (v) => setState(() => _jsa.dangers.chocElectrique = v!), currentColor, isSmallScreen),
+          _buildSectionTitle('Lié à l\'environnement', AppTheme.primaryBlue, isSmallScreen),
+          _buildModernCheckbox('Choc électrique', _jsa.dangers.chocElectrique, (v) => setState(() => _jsa.dangers.chocElectrique = v!), AppTheme.primaryBlue, isSmallScreen),
           _buildModernCheckbox('Bruit', _jsa.dangers.bruit, (v) => setState(() => _jsa.dangers.bruit = v!), currentColor, isSmallScreen),
           _buildModernCheckbox('Stress thermique', _jsa.dangers.stressThermique, (v) => setState(() => _jsa.dangers.stressThermique = v!), currentColor, isSmallScreen),
           _buildModernCheckbox('Éclairage inadapté', _jsa.dangers.eclairageInadapte, (v) => setState(() => _jsa.dangers.eclairageInadapte = v!), currentColor, isSmallScreen),
@@ -924,7 +976,7 @@ class JsaStepState extends State<JsaStep> {
           _buildModernCheckbox('Sol accidenté', _jsa.dangers.solAccidente, (v) => setState(() => _jsa.dangers.solAccidente = v!), currentColor, isSmallScreen),
           _buildModernCheckbox('Émission (gaz, poussière)', _jsa.dangers.emissionGazPoussiere, (v) => setState(() => _jsa.dangers.emissionGazPoussiere = v!), currentColor, isSmallScreen),
           _buildModernCheckbox('Espace confiné', _jsa.dangers.espaceConfine, (v) => setState(() => _jsa.dangers.espaceConfine = v!), currentColor, isSmallScreen),
-          _buildModernTextField(controller: _autreEnvironnementController, label: 'Autre', onChanged: (_) => _saveJSA(), isSmallScreen: isSmallScreen),
+          _buildModernTextField(controller: _autreEnvironnementController, label: 'Autre (environnement)', onChanged: (_) => _saveJSA(), isSmallScreen: isSmallScreen),
           
           const SizedBox(height: 16),
           _buildSectionTitle('Physiques', currentColor, isSmallScreen),
@@ -937,23 +989,20 @@ class JsaStepState extends State<JsaStep> {
           _buildModernCheckbox('Incendies/explosion', _jsa.dangers.incendiesExplosion, (v) => setState(() => _jsa.dangers.incendiesExplosion = v!), currentColor, isSmallScreen),
           _buildModernCheckbox('Mauvaises postures', _jsa.dangers.mauvaisesPostures, (v) => setState(() => _jsa.dangers.mauvaisesPostures = v!), currentColor, isSmallScreen),
           _buildModernCheckbox('Chute de plain-pied', _jsa.dangers.chutePlainPied, (v) => setState(() => _jsa.dangers.chutePlainPied = v!), currentColor, isSmallScreen),
-          _buildModernTextField(controller: _autrePhysiqueController, label: 'Autre', onChanged: (_) => _saveJSA(), isSmallScreen: isSmallScreen),
+          _buildModernTextField(controller: _autrePhysiqueController, label: 'Autre (physique)', onChanged: (_) => _saveJSA(), isSmallScreen: isSmallScreen),
         ],
       ),
     );
   }
 
-  // ───────────────────────────────────────────────────
-  // Sous-catégorie 4 : Exigences générales (EPC)
-  // ───────────────────────────────────────────────────
   Widget _buildSub4Exigences(bool isSmallScreen) {
     return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildStatusBadge(isSmallScreen),
-          SizedBox(height: isSmallScreen ? 16 : 20),
+          _buildStatusBadge(true, isSmallScreen),
+          SizedBox(height: isSmallScreen ? 20 : 24),
           
           _buildModernCheckbox('Signalétique sécurité', _jsa.exigencesGenerales.signaletiqueSecurite, (v) => setState(() => _jsa.exigencesGenerales.signaletiqueSecurite = v!), currentColor, isSmallScreen),
           _buildModernCheckbox('Fiche données sécurité', _jsa.exigencesGenerales.ficheDonneeSecuriteDisponible, (v) => setState(() => _jsa.exigencesGenerales.ficheDonneeSecuriteDisponible = v!), currentColor, isSmallScreen),
@@ -965,23 +1014,20 @@ class JsaStepState extends State<JsaStep> {
           _buildModernCheckbox('Extincteurs', _jsa.exigencesGenerales.extincteurs, (v) => setState(() => _jsa.exigencesGenerales.extincteurs = v!), currentColor, isSmallScreen),
           _buildModernCheckbox('Matériels isolants', _jsa.exigencesGenerales.outilsMaterielsIsolants, (v) => setState(() => _jsa.exigencesGenerales.outilsMaterielsIsolants = v!), currentColor, isSmallScreen),
           _buildModernCheckbox('Boite à pharmacie', _jsa.exigencesGenerales.boitePharmacie, (v) => setState(() => _jsa.exigencesGenerales.boitePharmacie = v!), currentColor, isSmallScreen),
-          _buildModernTextField(controller: _autreExigenceController, label: 'Autre', onChanged: (_) => _saveJSA(), isSmallScreen: isSmallScreen),
+          _buildModernTextField(controller: _autreExigenceController, label: 'Autre exigence', onChanged: (_) => _saveJSA(), isSmallScreen: isSmallScreen),
         ],
       ),
     );
   }
 
-  // ───────────────────────────────────────────────────
-  // Sous-catégorie 5 : EPI
-  // ───────────────────────────────────────────────────
   Widget _buildSub5EPI(bool isSmallScreen) {
     return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildStatusBadge(isSmallScreen),
-          SizedBox(height: isSmallScreen ? 16 : 20),
+          _buildStatusBadge(true, isSmallScreen),
+          SizedBox(height: isSmallScreen ? 20 : 24),
           
           _buildModernCheckbox('Casque de sécurité', _jsa.epi.casqueSecurite, (v) => setState(() => _jsa.epi.casqueSecurite = v!), currentColor, isSmallScreen),
           _buildModernCheckbox('Bouchons d\'oreille', _jsa.epi.bouchonsOreille, (v) => setState(() => _jsa.epi.bouchonsOreille = v!), currentColor, isSmallScreen),
@@ -993,23 +1039,20 @@ class JsaStepState extends State<JsaStep> {
           _buildModernCheckbox('Gants isolants', _jsa.epi.gantsIsolants, (v) => setState(() => _jsa.epi.gantsIsolants = v!), currentColor, isSmallScreen),
           _buildModernCheckbox('Cache-nez', _jsa.epi.cacheNez, (v) => setState(() => _jsa.epi.cacheNez = v!), currentColor, isSmallScreen),
           _buildModernCheckbox('Gilet', _jsa.epi.gilet, (v) => setState(() => _jsa.epi.gilet = v!), currentColor, isSmallScreen),
-          _buildModernTextField(controller: _autreEPIController, label: 'Autre', onChanged: (_) => _saveJSA(), isSmallScreen: isSmallScreen),
+          _buildModernTextField(controller: _autreEPIController, label: 'Autre EPI', onChanged: (_) => _saveJSA(), isSmallScreen: isSmallScreen),
         ],
       ),
     );
   }
 
-  // ───────────────────────────────────────────────────
-  // Sous-catégorie 6 : Vérification finale
-  // ───────────────────────────────────────────────────
   Widget _buildSub6Verification(bool isSmallScreen) {
     return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildStatusBadge(isSmallScreen),
-          SizedBox(height: isSmallScreen ? 16 : 20),
+          _buildStatusBadge(true, isSmallScreen),
+          SizedBox(height: isSmallScreen ? 20 : 24),
           
           Container(
             padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
@@ -1105,13 +1148,13 @@ class JsaStepState extends State<JsaStep> {
           
           _buildModernTextField(
             controller: _autresPointsVerifController,
-            label: 'Autres points',
+            label: 'Autres points à vérifier',
             onChanged: (_) => _saveJSA(),
             isSmallScreen: isSmallScreen,
             maxLines: 3,
           ),
           
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           
           Container(
             padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
@@ -1159,88 +1202,7 @@ class JsaStepState extends State<JsaStep> {
     );
   }
 
-  // ───────────────────────────────────────────────────
-  // Widgets utilitaires modernes
-  // ───────────────────────────────────────────────────
-  Widget _buildStatusBadge(bool isSmallScreen) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      children: [
-        Container(
-          padding: EdgeInsets.symmetric(
-            horizontal: isSmallScreen ? 12 : 16,
-            vertical: isSmallScreen ? 3 : 4,
-          ),
-          decoration: BoxDecoration(
-            color: _isCurrentSubCategoryValid()
-                ? Colors.green.withOpacity(0.1)
-                : Colors.orange.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: _isCurrentSubCategoryValid()
-                  ? Colors.green.withOpacity(0.4)
-                  : Colors.orange.withOpacity(0.4),
-              width: 1,
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                _isCurrentSubCategoryValid()
-                    ? Icons.check_circle
-                    : Icons.pending_outlined,
-                color: _isCurrentSubCategoryValid()
-                    ? Colors.green
-                    : Colors.orange,
-                size: isSmallScreen ? 16 : 18,
-              ),
-              SizedBox(width: isSmallScreen ? 8 : 10),
-              Text(
-                _isCurrentSubCategoryValid()
-                    ? 'Section complétée'
-                    : 'En attente de saisie',
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 12 : 13,
-                  color: _isCurrentSubCategoryValid()
-                      ? Colors.green.shade700
-                      : Colors.orange.shade700,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSectionTitle(String title, Color color, bool isSmallScreen) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Container(
-            width: 4,
-            height: 18,
-            decoration: BoxDecoration(
-              color: color,
-              borderRadius: BorderRadius.circular(2),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: isSmallScreen ? 13 : 14,
-              fontWeight: FontWeight.w700,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+  // ==================== WIDGETS UTILITAIRES ====================
 
   Widget _buildModernCheckbox(
     String title,
@@ -1402,6 +1364,282 @@ class JsaStepState extends State<JsaStep> {
   }
 
   @override
+  Widget build(BuildContext context) {
+    super.build(context); // Pour AutomaticKeepAliveClientMixin
+    
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final error = _getCurrentSubCategoryError();
+    final isValid = _isCurrentSubCategoryValid();
+    final isLastSubCategory = currentSubCategory == totalSubCategories - 1;
+
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Column(
+        children: [
+          // Carte d'en-tête moderne
+          Container(
+            margin: EdgeInsets.all(isSmallScreen ? 10 : 14),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [currentColor, currentColor.withOpacity(0.85)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 18),
+              boxShadow: [
+                BoxShadow(
+                  color: currentColor.withOpacity(0.3),
+                  blurRadius: isSmallScreen ? 8 : 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Padding(
+              padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
+                        ),
+                        child: Icon(
+                          currentIcon,
+                          color: Colors.white,
+                          size: isSmallScreen ? 22 : 24,
+                        ),
+                      ),
+                      SizedBox(width: isSmallScreen ? 10 : 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _subCategories[currentSubCategory],
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 14 : 16,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                                height: 1.3,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            SizedBox(height: isSmallScreen ? 4 : 6),
+                            Text(
+                              'Catégorie ${currentSubCategory + 1}/${totalSubCategories}',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 11 : 12,
+                                color: Colors.white.withOpacity(0.9),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Badge de validation
+                      if (isValid)
+                        Container(
+                          padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.check,
+                            color: Colors.white,
+                            size: isSmallScreen ? 16 : 18,
+                          ),
+                        ),
+                    ],
+                  ),
+                  
+                  // Message d'erreur (si présent)
+                  if (error != null) ...[
+                    SizedBox(height: isSmallScreen ? 8 : 10),
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 10 : 12,
+                        vertical: isSmallScreen ? 6 : 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.withOpacity(0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.warning_amber_rounded,
+                            color: Colors.white,
+                            size: isSmallScreen ? 14 : 16,
+                          ),
+                          SizedBox(width: isSmallScreen ? 6 : 8),
+                          Expanded(
+                            child: Text(
+                              error,
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 11 : 12,
+                                color: Colors.white,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  
+                  SizedBox(height: isSmallScreen ? 12 : 14),
+                  
+                  // Barre de progression
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Progression JSA',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 11 : 12,
+                              color: Colors.white.withOpacity(0.9),
+                            ),
+                          ),
+                          Text(
+                            '${((currentSubCategory + 1) / totalSubCategories * 100).round()}%',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 13 : 14,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: isSmallScreen ? 5 : 6),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(3),
+                        child: LinearProgressIndicator(
+                          value: (currentSubCategory + 1) / totalSubCategories,
+                          backgroundColor: Colors.white.withOpacity(0.3),
+                          valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                          minHeight: isSmallScreen ? 4 : 5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+          
+          // Contenu de la sous-catégorie
+          Expanded(
+            child: IndexedStack(
+              index: currentSubCategory,
+              children: [
+                _buildSub1Operation(isSmallScreen),
+                _buildSub2PlanUrgence(isSmallScreen),
+                _buildSub3Dangers(isSmallScreen),
+                _buildSub4Exigences(isSmallScreen),
+                _buildSub5EPI(isSmallScreen),
+                _buildSub6Verification(isSmallScreen),
+              ],
+            ),
+          ),
+          
+          // Barre de navigation
+          Container(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 8,
+                  offset: const Offset(0, -2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: currentSubCategory > 0 ? _previousSubCategory : null,
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+                      side: BorderSide(
+                        color: currentSubCategory > 0 ? AppTheme.primaryBlue : Colors.grey.shade400,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.arrow_back,
+                          size: 18,
+                          color: currentSubCategory > 0 ? AppTheme.primaryBlue : Colors.grey.shade400,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'PRÉCÉDENT',
+                          style: TextStyle(
+                            color: currentSubCategory > 0 ? AppTheme.primaryBlue : Colors.grey.shade400,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: isLastSubCategory ? _goToRenseignements : _nextSubCategory,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: currentColor,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          isLastSubCategory ? 'RENSEIGNEMENTS' : 'SUIVANT',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        if (!isLastSubCategory) ...[
+                          const SizedBox(width: 8),
+                          const Icon(Icons.arrow_forward, size: 18),
+                        ],
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
   void dispose() {
     _operationController.dispose();
     _autreEnvironnementController.dispose();
@@ -1413,6 +1651,7 @@ class JsaStepState extends State<JsaStep> {
     _chargeAffairesSignatureController.dispose();
     _personneContactClientController.dispose();
     _personneContactKESController.dispose();
+    _operationFocusNode.dispose();
     super.dispose();
   }
 }

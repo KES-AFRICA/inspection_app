@@ -1,8 +1,9 @@
+// lib/models/renseignements_generaux.dart
 import 'package:hive/hive.dart';
 
 part 'renseignements_generaux.g.dart';
 
-@HiveType(typeId: 34) // Utiliser un ID non utilisé (après 33)
+@HiveType(typeId: 34)
 class RenseignementsGeneraux extends HiveObject {
   @HiveField(0)
   String missionId;
@@ -56,12 +57,14 @@ class RenseignementsGeneraux extends HiveObject {
     this.dureeJours = 0,
     this.verificationType,
     this.registreControle = '',
-    this.compteRendu = const [],
-    this.accompagnateurs = const [],
-    this.verificateurs = const [],
+    List<String>? compteRendu,
+    List<Map<String, String>>? accompagnateurs,
+    List<Map<String, String>>? verificateurs,
     required this.updatedAt,
     required this.nomSite,
-  });
+  }) : compteRendu = compteRendu ?? [],  
+       accompagnateurs = accompagnateurs ?? [],  
+       verificateurs = verificateurs ?? [];  
 
   factory RenseignementsGeneraux.create(String missionId) {
     return RenseignementsGeneraux(
@@ -71,6 +74,9 @@ class RenseignementsGeneraux extends HiveObject {
       activite: '',
       updatedAt: DateTime.now(),
       nomSite: '',
+      compteRendu: [],  
+      accompagnateurs: [],  
+      verificateurs: [], 
     );
   }
 

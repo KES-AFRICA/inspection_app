@@ -1627,7 +1627,7 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
         ),
       ),
       child: DropdownButtonFormField<bool?>(
-        value: isConformeSelected ? element.conforme : null,
+        initialValue: isConformeSelected ? element.conforme : null,
         hint: Text('Sélectionnez *', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500)),
         onChanged: (bool? newValue) {
           if (newValue != null) {
@@ -1960,7 +1960,7 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
                       ],
                     ),
                   ),
-                )).toList(),
+                )),
               ],
             ),
           ),
@@ -2439,7 +2439,7 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
                 ),
               ),
               Text(
-                '${_currentSlide + 1}/${_totalSlides}',
+                '${_currentSlide + 1}/$_totalSlides',
                 style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
               ),
             ],
@@ -2775,7 +2775,7 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
         border: Border.all(color: isValid ? Colors.transparent : Colors.red.shade300, width: isValid ? 0 : 1.5),
       ),
       child: DropdownButtonFormField<String>(
-        value: value.isNotEmpty ? value : null,
+        initialValue: value.isNotEmpty ? value : null,
         isExpanded: true,
         icon: Icon(Icons.arrow_drop_down_circle, color: color, size: context.iconSizeM),
         dropdownColor: Colors.white,
@@ -3193,7 +3193,7 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
         ),
       ),
       child: DropdownButtonFormField<bool?>(
-        value: isConformeSelected ? element.conforme : null,
+        initialValue: isConformeSelected ? element.conforme : null,
         hint: Text('Sélectionnez *', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500)),
         onChanged: (bool? newValue) {
           if (newValue != null) {
@@ -3633,6 +3633,7 @@ class AjouterLocalScreen extends StatefulWidget {
   final int? localIndex;
   final int? zoneIndex;
   final bool isInZone;
+  final String? draftId;
   
   const AjouterLocalScreen({
     super.key,
@@ -3642,6 +3643,7 @@ class AjouterLocalScreen extends StatefulWidget {
     this.localIndex,
     this.zoneIndex,
     this.isInZone = false,
+    this.draftId,
   });
 
   bool get isEdition => local != null;
@@ -3663,7 +3665,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   bool _isLoadingPhotos = false;
   
   final _observationController = TextEditingController();
-  List<String> _observationPhotos = [];
+  final List<String> _observationPhotos = [];
   final List<ObservationLibre> _observationsExistantes = [];
 
   final _celluleFonctionController = TextEditingController();
@@ -3703,9 +3705,9 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   bool _transfoElementsValid = true;
   
   bool _addObservation = false;
-  Map<int, bool> _hasObservation = {};
+  final Map<int, bool> _hasObservation = {};
   
-  Map<ElementControle, bool> _conformeSelected = {};
+  final Map<ElementControle, bool> _conformeSelected = {};
 
   final PageController _mainPageController = PageController();
   int _currentStep = 0;
@@ -3715,11 +3717,21 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
 
   bool _isLoading = false;
 
+  String? _draftLocalId;
+  Timer? _autoSaveTimer;
+  bool _hasUnsavedChanges = false;
+
   @override
   void initState() {
     super.initState();
     _etapeElementsKey = GlobalKey<_EtapeElementsControleState>();
     _etapeCelluleTransfoKey = GlobalKey<_EtapeCelluleTransformateurState>();
+
+    // Générer un ID pour le brouillon
+    _draftLocalId = widget.draftId ?? 
+      (widget.isEdition && widget.local != null 
+          ? 'EDIT_${widget.local.hashCode}' 
+          : 'TEMP_${DateTime.now().millisecondsSinceEpoch}');
     
     if (widget.isEdition) {
       _chargerDonneesExistantes();
@@ -3736,7 +3748,237 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       }
     } else {
       _initializeElementsControle();
+
+      if (widget.draftId != null) {
+        _loadDraft();
+      }
     }
+  }
+
+  Future<void> _loadDraft() async {
+    final draftData = HiveService.getLocalDraftData(_draftLocalId!);
+    if (draftData == null) return;
+    
+    final local = draftData['local'];
+    final savedStep = draftData['currentStep'] as int? ?? 0;
+    
+    setState(() {
+      // Informations de base
+      _nomController.text = local.nom ?? '';
+      _selectedType = local.type;
+      
+      // Si le type est le type par défaut (utilisé quand pas encore sélectionné)
+      // on ne le considère pas comme valide
+      if (_selectedType == 'LOCAL_ELECTRIQUE' && local.nom == 'Sans nom') {
+        _typeValid = false;
+      } else {
+        _typeValid = true;
+      }
+      
+      _nomValid = (local.nom != null && local.nom!.isNotEmpty && local.nom != 'Sans nom');
+      
+      // Dispositions et conditions
+      _dispositionsConstructives = List.from(local.dispositionsConstructives ?? []);
+      _conditionsExploitation = List.from(local.conditionsExploitation ?? []);
+      
+      // Observations
+      _observationsExistantes.clear();
+      if (local.observationsLibres != null) {
+        _observationsExistantes.addAll(local.observationsLibres);
+      }
+      
+      // Photos
+      _localPhotos.clear();
+      if (local.photos != null && local.photos.isNotEmpty) {
+        _localPhotos = List.from(local.photos);
+      }
+      _localPhotosValid = true;
+      
+      // Cellule et Transformateur (si local MT et type TRANSFORMATEUR)
+      if (local is MoyenneTensionLocal && local.type == 'LOCAL_TRANSFORMATEUR') {
+        if (local.cellule != null) {
+          _celluleFonctionController.text = local.cellule!.fonction ?? '';
+          _celluleTypeController.text = local.cellule!.type ?? '';
+          _celluleMarqueController.text = local.cellule!.marqueModeleAnnee ?? '';
+          _celluleTensionController.text = local.cellule!.tensionAssignee ?? '';
+          _cellulePouvoirController.text = local.cellule!.pouvoirCoupure ?? '';
+          _celluleNumerotationController.text = local.cellule!.numerotation ?? '';
+          _celluleParafoudresController.text = local.cellule!.parafoudres ?? '';
+          _celluleElements = List.from(local.cellule!.elementsVerifies ?? []);
+        }
+        if (local.transformateur != null) {
+          _transfoTypeController.text = local.transformateur!.typeTransformateur ?? '';
+          _transfoMarqueController.text = local.transformateur!.marqueAnnee ?? '';
+          _transfoPuissanceController.text = local.transformateur!.puissanceAssignee ?? '';
+          _transfoTensionController.text = local.transformateur!.tensionPrimaireSecondaire ?? '';
+          _transfoBuchholzController.text = local.transformateur!.relaisBuchholz ?? '';
+          _transfoRefroidissementController.text = local.transformateur!.typeRefroidissement ?? '';
+          _transfoRegimeController.text = local.transformateur!.regimeNeutre ?? '';
+          _transfoElements = List.from(local.transformateur!.elementsVerifies ?? []);
+        }
+      } else {
+        // Réinitialiser les contrôleurs cellule/transfo
+        _celluleFonctionController.clear();
+        _celluleTypeController.clear();
+        _celluleMarqueController.clear();
+        _celluleTensionController.clear();
+        _cellulePouvoirController.clear();
+        _celluleNumerotationController.clear();
+        _celluleParafoudresController.clear();
+        _celluleElements.clear();
+        
+        _transfoTypeController.clear();
+        _transfoMarqueController.clear();
+        _transfoPuissanceController.clear();
+        _transfoTensionController.clear();
+        _transfoBuchholzController.clear();
+        _transfoRefroidissementController.clear();
+        _transfoRegimeController.clear();
+        _transfoElements.clear();
+      }
+      
+      // Étape courante
+      _currentStep = savedStep;
+      
+      // Reconstruire conformeSelected
+      _conformeSelected.clear();
+      for (var element in _dispositionsConstructives) {
+        _conformeSelected[element] = element.conforme != null;
+      }
+      for (var element in _conditionsExploitation) {
+        _conformeSelected[element] = element.conforme != null;
+      }
+      for (var element in _celluleElements) {
+        _conformeSelected[element] = element.conforme != null;
+      }
+      for (var element in _transfoElements) {
+        _conformeSelected[element] = element.conforme != null;
+      }
+      
+      // Reconstruire hasObservation
+      _hasObservation.clear();
+      for (int i = 0; i < _dispositionsConstructives.length; i++) {
+        final obs = _dispositionsConstructives[i].observation;
+        _hasObservation[i] = obs != null && obs.isNotEmpty;
+        // Si conformité = false, forcer hasObservation = true
+        if (_dispositionsConstructives[i].conforme == false) {
+          _hasObservation[i] = true;
+        }
+      }
+      for (int i = 0; i < _conditionsExploitation.length; i++) {
+        final globalIndex = _dispositionsConstructives.length + i;
+        final obs = _conditionsExploitation[i].observation;
+        _hasObservation[globalIndex] = obs != null && obs.isNotEmpty;
+        if (_conditionsExploitation[i].conforme == false) {
+          _hasObservation[globalIndex] = true;
+        }
+      }
+      
+      // Validation des éléments
+      _dispositionsValid = _validateElements(_dispositionsConstructives);
+      _conditionsValid = _validateElements(_conditionsExploitation);
+      if (_selectedType == 'LOCAL_TRANSFORMATEUR') {
+        _celluleDonneesValid = _validateCelluleDonnees();
+        _transfoDonneesValid = _validateTransfoDonnees();
+        _celluleElementsValid = _validateElements(_celluleElements);
+        _transfoElementsValid = _validateElements(_transfoElements);
+      }
+      
+      // Initialiser les suggestions
+      _elementSuggestions.clear();
+      _elementLoading.clear();
+      
+      // Positionner le PageController
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_mainPageController.hasClients) {
+          _mainPageController.jumpToPage(_currentStep);
+        }
+        // Si on est à l'étape 1, reconstruire les slides
+        if (_currentStep == 1) {
+          _etapeElementsKey?.currentState?.rebuildSlides();
+        }
+      });
+    });
+  }
+
+  void _scheduleAutoSave() {
+    _autoSaveTimer?.cancel();
+    _autoSaveTimer = Timer(const Duration(milliseconds: 500), () {
+      _saveDraft();
+    });
+  }
+
+  Future<void> _saveDraft() async {
+    if (!mounted) return;
+    
+    final nom = _nomController.text.trim();
+    if (nom.isEmpty && _selectedType == null) {
+      return; //
+    }
+    final typeToSave = _selectedType ?? 'LOCAL_ELECTRIQUE'; // Type par défaut
+    
+    dynamic local;
+    if (widget.isMoyenneTension) {
+      local = _creerMoyenneTensionLocalAvecType(typeToSave);
+    } else {
+      local = _creerBasseTensionLocalAvecType(typeToSave);
+    }
+    
+    await HiveService.saveLocalDraft(
+      missionId: widget.mission.id,
+      isMoyenneTension: widget.isMoyenneTension,
+      zoneIndex: widget.zoneIndex,
+      isInZone: widget.isInZone,
+      local: local,
+      currentStep: _currentStep,
+      localId: _draftLocalId,
+    );
+    
+    _hasUnsavedChanges = false;
+  }
+
+  // Créer un local MT avec un type spécifié
+  MoyenneTensionLocal _creerMoyenneTensionLocalAvecType(String type) {
+    return MoyenneTensionLocal(
+      nom: _nomController.text.trim().isEmpty ? 'Sans nom' : _nomController.text.trim(),
+      type: type,
+      dispositionsConstructives: _dispositionsConstructives,
+      conditionsExploitation: _conditionsExploitation,
+      cellule: type == 'LOCAL_TRANSFORMATEUR' ? Cellule(
+        fonction: _celluleFonctionController.text.trim(),
+        type: _celluleTypeController.text.trim(),
+        marqueModeleAnnee: _celluleMarqueController.text.trim(),
+        tensionAssignee: _celluleTensionController.text.trim(),
+        pouvoirCoupure: _cellulePouvoirController.text.trim(),
+        numerotation: _celluleNumerotationController.text,
+        parafoudres: _celluleParafoudresController.text,
+        elementsVerifies: _celluleElements,
+      ) : null,
+      transformateur: type == 'LOCAL_TRANSFORMATEUR' ? TransformateurMTBT(
+        typeTransformateur: _transfoTypeController.text.trim(),
+        marqueAnnee: _transfoMarqueController.text.trim(),
+        puissanceAssignee: _transfoPuissanceController.text.trim(),
+        tensionPrimaireSecondaire: _transfoTensionController.text.trim(),
+        relaisBuchholz: _transfoBuchholzController.text.trim(),
+        typeRefroidissement: _transfoRefroidissementController.text.trim(),
+        regimeNeutre: _transfoRegimeController.text.trim(),
+        elementsVerifies: _transfoElements,
+      ) : null,
+      observationsLibres: _observationsExistantes,
+      photos: _localPhotos,
+    );
+  }
+
+  // Créer un local BT avec un type spécifié
+  BasseTensionLocal _creerBasseTensionLocalAvecType(String type) {
+    return BasseTensionLocal(
+      nom: _nomController.text.trim().isEmpty ? 'Sans nom' : _nomController.text.trim(),
+      type: type,
+      dispositionsConstructives: _dispositionsConstructives,
+      conditionsExploitation: _conditionsExploitation,
+      observationsLibres: _observationsExistantes,
+      photos: _localPhotos,
+    );
   }
 
   void _chargerDonneesExistantes() {
@@ -3770,10 +4012,18 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       }
     }
     
-    for (var element in _dispositionsConstructives) _conformeSelected[element] = true;
-    for (var element in _conditionsExploitation) _conformeSelected[element] = true;
-    for (var element in _celluleElements) _conformeSelected[element] = true;
-    for (var element in _transfoElements) _conformeSelected[element] = true;
+    for (var element in _dispositionsConstructives) {
+      _conformeSelected[element] = true;
+    }
+    for (var element in _conditionsExploitation) {
+      _conformeSelected[element] = true;
+    }
+    for (var element in _celluleElements) {
+      _conformeSelected[element] = true;
+    }
+    for (var element in _transfoElements) {
+      _conformeSelected[element] = true;
+    }
     
     for (int i = 0; i < _dispositionsConstructives.length; i++) {
       _hasObservation[i] = _dispositionsConstructives[i].observation?.isNotEmpty == true;
@@ -3792,7 +4042,46 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     _conformeSelected.clear();
   }
 
-  void _validateNom(String value) => setState(() => _nomValid = value.trim().isNotEmpty);
+  void _validateNom(String value) {
+    setState(() => _nomValid = value.trim().isNotEmpty);
+    _scheduleAutoSave();
+  }
+  void _onTypeChanged(String? newType) {
+    setState(() {
+      _selectedType = newType;
+      _validateType(newType);
+      if (!widget.isEdition) _initializeElementsForType(newType);
+    });
+    _scheduleAutoSave();
+  }
+
+  void _onConformeChanged(ElementControle element) {
+    setState(() {
+      _conformeSelected[element] = true;
+      element.priorite ??= 3;
+      
+      int? elementIndex;
+      for (int i = 0; i < _dispositionsConstructives.length; i++) {
+        if (_dispositionsConstructives[i] == element) {
+          elementIndex = i;
+          break;
+        }
+      }
+      if (elementIndex == null) {
+        for (int i = 0; i < _conditionsExploitation.length; i++) {
+          if (_conditionsExploitation[i] == element) {
+            elementIndex = _dispositionsConstructives.length + i;
+            break;
+          }
+        }
+      }
+      if (element.conforme == false && elementIndex != null) {
+        _hasObservation[elementIndex] = true;
+      }
+    });
+    _scheduleAutoSave();
+  }
+
   void _validateType(String? value) => setState(() => _typeValid = value != null && value.isNotEmpty);
   void _validateLocalPhotos() => setState(() => _localPhotosValid = true);
 
@@ -3836,41 +4125,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   bool _canProceedToNextStep() {
     if (_currentStep == 0) return _nomValid && _typeValid && (!_addObservation || _observationsValid);
     return true;
-  }
-
-  void _onConformeChanged(ElementControle element) {
-    setState(() {
-      _conformeSelected[element] = true;
-      
-      // Si priorité n'est pas définie, mettre une valeur par défaut (par exemple 3)
-      element.priorite ??= 3;
-      
-      // Trouver l'index de l'élément pour mettre à jour hasObservation
-      int? elementIndex;
-      
-      // Chercher dans dispositions
-      for (int i = 0; i < _dispositionsConstructives.length; i++) {
-        if (_dispositionsConstructives[i] == element) {
-          elementIndex = i;
-          break;
-        }
-      }
-      
-      // Chercher dans conditions
-      if (elementIndex == null) {
-        for (int i = 0; i < _conditionsExploitation.length; i++) {
-          if (_conditionsExploitation[i] == element) {
-            elementIndex = _dispositionsConstructives.length + i;
-            break;
-          }
-        }
-      }
-      
-      // Si conformité = Non, forcer hasObservation = true
-      if (element.conforme == false && elementIndex != null) {
-        _hasObservation[elementIndex] = true;
-      }
-    });
   }
 
   void _handleNext() {
@@ -3948,6 +4202,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
 
   @override
   void dispose() {
+    _autoSaveTimer?.cancel();
     _elementDebounceTimers.forEach((key, timer) => timer?.cancel());
     _observationControllers.forEach((key, controller) => controller.dispose());
     _nomController.dispose();
@@ -4188,14 +4443,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     );
   }
 
-  void _onTypeChanged(String? newType) {
-    setState(() {
-      _selectedType = newType;
-      _validateType(newType);
-      if (!widget.isEdition) _initializeElementsForType(newType);
-    });
-  }
-
   void _initializeElementsForType(String? type) {
     if (type == null) return;
     final dispositions = HiveService.getDispositionsConstructivesForLocal(type);
@@ -4366,21 +4613,18 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     
     try {
       dynamic nouveauLocal;
-      
+
       if (widget.isMoyenneTension) {
         if (widget.isInZone && widget.zoneIndex != null) {
           if (widget.isEdition && widget.localIndex != null) {
             await HiveService.updateLocalInMoyenneTensionZone(
-              missionId: widget.mission.id, 
-              zoneIndex: widget.zoneIndex!, 
-              localIndex: widget.localIndex!, 
-              local: _creerMoyenneTensionLocal(),
+              missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, 
+              localIndex: widget.localIndex!, local: _creerMoyenneTensionLocal(),
             );
             nouveauLocal = _creerMoyenneTensionLocal();
           } else {
             await HiveService.addLocalToMoyenneTensionZone(
-              missionId: widget.mission.id, 
-              zoneIndex: widget.zoneIndex!, 
+              missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, 
               local: _creerMoyenneTensionLocal(),
             );
             nouveauLocal = _creerMoyenneTensionLocal();
@@ -4388,15 +4632,13 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         } else {
           if (widget.isEdition && widget.localIndex != null) {
             await HiveService.updateMoyenneTensionLocal(
-              missionId: widget.mission.id, 
-              localIndex: widget.localIndex!, 
+              missionId: widget.mission.id, localIndex: widget.localIndex!, 
               local: _creerMoyenneTensionLocal(),
             );
             nouveauLocal = _creerMoyenneTensionLocal();
           } else {
             await HiveService.addMoyenneTensionLocal(
-              missionId: widget.mission.id, 
-              local: _creerMoyenneTensionLocal(),
+              missionId: widget.mission.id, local: _creerMoyenneTensionLocal(),
             );
             nouveauLocal = _creerMoyenneTensionLocal();
           }
@@ -4405,16 +4647,13 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         if (widget.zoneIndex != null) {
           if (widget.isEdition && widget.localIndex != null) {
             await HiveService.updateBasseTensionLocal(
-              missionId: widget.mission.id, 
-              zoneIndex: widget.zoneIndex!, 
-              localIndex: widget.localIndex!, 
-              local: _creerBasseTensionLocal(),
+              missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, 
+              localIndex: widget.localIndex!, local: _creerBasseTensionLocal(),
             );
             nouveauLocal = _creerBasseTensionLocal();
           } else {
             await HiveService.addLocalToBasseTensionZone(
-              missionId: widget.mission.id, 
-              zoneIndex: widget.zoneIndex!, 
+              missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, 
               local: _creerBasseTensionLocal(),
             );
             nouveauLocal = _creerBasseTensionLocal();
@@ -4426,23 +4665,23 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         }
       }
       
+      // SUPPRIMER LE BROUILLON APRÈS SAUVEGARDE RÉUSSIE
+      await HiveService.deleteLocalDraft(_draftLocalId!);
+      
       setState(() => _isLoading = false);
       
       if (widget.isEdition) {
-        // En édition, on ferme directement
         Navigator.pop(context, true);
       } else {
-        // En création, on va vers le classement
-        // Ne pas faire de pop ici, c'est _allerAuClassement qui le fera
         await _allerAuClassement(nouveauLocal);
       }
     } catch (e) {
       setState(() => _isLoading = false);
       print('❌ Erreur sauvegarde: $e');
       _showError('Erreur lors de la sauvegarde: $e');
-      // Ne pas fermer l'écran en cas d'erreur
     }
   }
+
 
   Future<void> _allerAuClassement(dynamic local) async {
     if (local == null) {
@@ -4755,45 +4994,11 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   }
 
   MoyenneTensionLocal _creerMoyenneTensionLocal() {
-    return MoyenneTensionLocal(
-      nom: _nomController.text.trim(),
-      type: _selectedType!,
-      dispositionsConstructives: _dispositionsConstructives,
-      conditionsExploitation: _conditionsExploitation,
-      cellule: _selectedType == 'LOCAL_TRANSFORMATEUR' ? Cellule(
-        fonction: _celluleFonctionController.text.trim(),
-        type: _celluleTypeController.text.trim(),
-        marqueModeleAnnee: _celluleMarqueController.text.trim(),
-        tensionAssignee: _celluleTensionController.text.trim(),
-        pouvoirCoupure: _cellulePouvoirController.text.trim(),
-        numerotation: _celluleNumerotationController.text,
-        parafoudres: _celluleParafoudresController.text,
-        elementsVerifies: _celluleElements,
-      ) : null,
-      transformateur: _selectedType == 'LOCAL_TRANSFORMATEUR' ? TransformateurMTBT(
-        typeTransformateur: _transfoTypeController.text.trim(),
-        marqueAnnee: _transfoMarqueController.text.trim(),
-        puissanceAssignee: _transfoPuissanceController.text.trim(),
-        tensionPrimaireSecondaire: _transfoTensionController.text.trim(),
-        relaisBuchholz: _transfoBuchholzController.text.trim(),
-        typeRefroidissement: _transfoRefroidissementController.text.trim(),
-        regimeNeutre: _transfoRegimeController.text.trim(),
-        elementsVerifies: _transfoElements,
-      ) : null,
-      observationsLibres: _observationsExistantes,
-      photos: _localPhotos,
-    );
+    return _creerMoyenneTensionLocalAvecType(_selectedType!);
   }
 
   BasseTensionLocal _creerBasseTensionLocal() {
-    return BasseTensionLocal(
-      nom: _nomController.text.trim(),
-      type: _selectedType!,
-      dispositionsConstructives: _dispositionsConstructives,
-      conditionsExploitation: _conditionsExploitation,
-      observationsLibres: _observationsExistantes,
-      photos: _localPhotos,
-    );
+    return _creerBasseTensionLocalAvecType(_selectedType!);
   }
 
   void _showError(String message) {
