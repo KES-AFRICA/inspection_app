@@ -415,6 +415,9 @@ class CoffretArmoire {
   @HiveField(21)
   List<String> photosInternes;
 
+  @HiveField(22)
+  List<ObservationLibre> observationsParafoudre;
+
   CoffretArmoire({
     required this.qrCode, // Ajouté dans le constructeur
     required this.nom,
@@ -438,12 +441,14 @@ class CoffretArmoire {
     this.numeroEquipement,
     List<String>? photosExternes,
     List<String>? photosInternes,
+    List<ObservationLibre>? observationsParafoudre,
   })  : alimentations = alimentations ?? [],
         pointsVerification = pointsVerification ?? [],
         observationsLibres = observationsLibres ?? [],
         photos = photos ?? [],
         photosExternes = photosExternes ?? [],
-        photosInternes = photosInternes ?? [];
+        photosInternes = photosInternes ?? [],
+        observationsParafoudre = observationsParafoudre ?? [];
 }
 
 @HiveType(typeId: 12)

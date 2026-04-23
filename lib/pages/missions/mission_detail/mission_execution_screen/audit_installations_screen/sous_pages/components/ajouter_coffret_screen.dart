@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
@@ -302,7 +303,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
   }
 
   Widget _buildModernTypeSelector(BuildContext context) {
-  const types = ['INVERSEUR', 'Armoire', 'Coffret', 'TGBT'];
+  const types = ['INVERSEUR', 'ARMOIRE', 'COFFRET', 'TGBT'];
   
   // S'assurer que la valeur est valide
   final validValue = (widget.selectedType != null && types.contains(widget.selectedType)) 
@@ -675,8 +676,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
 // ================================================================
 // ÉTAPE 2 : INFORMATIONS GÉNÉRALES (inchangée)
 // ================================================================
-class _EtapeInformationsGenerales extends StatelessWidget {
-  // ... (inchangé - garder le code existant)
+class _EtapeInformationsGenerales extends StatefulWidget {
   final bool zoneAtex;
   final Function(bool?) onZoneAtexChanged;
   final bool identificationArmoire;
@@ -692,6 +692,12 @@ class _EtapeInformationsGenerales extends StatelessWidget {
   final String domaineTension;
   final Function(String?) onDomaineTensionChanged;
   final bool domaineTensionValid;
+  
+  // ✅ NOUVEAUX PARAMÈTRES
+  final List<ObservationLibre> observationsParafoudre;
+  final Function(String, List<String>) onAddParafoudreObservation;
+  final Function(int) onDeleteParafoudreObservation;
+  final Function(ObservationLibre) onEditParafoudreObservation;
 
   const _EtapeInformationsGenerales({
     required this.zoneAtex,
@@ -709,7 +715,160 @@ class _EtapeInformationsGenerales extends StatelessWidget {
     required this.domaineTension,
     required this.onDomaineTensionChanged,
     required this.domaineTensionValid,
+    required this.observationsParafoudre,
+    required this.onAddParafoudreObservation,
+    required this.onDeleteParafoudreObservation,
+    required this.onEditParafoudreObservation,
   });
+
+  @override
+  State<_EtapeInformationsGenerales> createState() => _EtapeInformationsGeneralesState();
+}
+
+class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales> {
+  final TextEditingController _observationParafoudreController = TextEditingController();
+  final List<String> _observationParafoudrePhotos = [];
+  bool _addParafoudreObservation = false;
+
+  void _ajouterParafoudreObservation() {
+    final texte = _observationParafoudreController.text.trim();
+    if (texte.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez saisir une observation'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    widget.onAddParafoudreObservation(texte, List.from(_observationParafoudrePhotos));
+    
+    setState(() {
+      _observationParafoudreController.clear();
+      _observationParafoudrePhotos.clear();
+      _addParafoudreObservation = false;
+    });
+  }
+
+  void _voirObservationDetail(ObservationLibre observation) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.visibility, color: AppTheme.primaryBlue),
+            const SizedBox(width: 8),
+            const Text('Détail de l\'observation', style: TextStyle(fontSize: 16)),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                observation.texte,
+                style: const TextStyle(fontSize: 14, height: 1.4),
+              ),
+              const SizedBox(height: 12),
+              if (observation.photos.isNotEmpty) ...[
+                const Text('Photos associées:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: observation.photos.map((path) => 
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.pop(context);
+                        _previsualiserPhoto(observation.photos, observation.photos.indexOf(path));
+                      },
+                      child: Container(
+                        width: 80,
+                        height: 80,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.shade300),
+                          image: DecorationImage(
+                            image: FileImage(File(path)),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      ),
+                    )
+                  ).toList(),
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _previsualiserPhoto(List<String> photos, int index) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10)],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(File(photos[index])),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _prendrePhotoParafoudre() async {
+    final picker = ImagePicker();
+    final XFile? photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
+    if (photo != null) {
+      final appDir = await getApplicationDocumentsDirectory();
+      final photosDir = Directory('${appDir.path}/audit_photos/parafoudre');
+      if (!await photosDir.exists()) await photosDir.create(recursive: true);
+      final fileName = 'parafoudre_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final newPath = '${photosDir.path}/$fileName';
+      await File(photo.path).copy(newPath);
+      setState(() => _observationParafoudrePhotos.add(newPath));
+    }
+  }
+
+  Future<void> _choisirPhotoParafoudre() async {
+    final picker = ImagePicker();
+    final XFile? photo = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (photo != null) {
+      final appDir = await getApplicationDocumentsDirectory();
+      final photosDir = Directory('${appDir.path}/audit_photos/parafoudre');
+      if (!await photosDir.exists()) await photosDir.create(recursive: true);
+      final fileName = 'parafoudre_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final newPath = '${photosDir.path}/$fileName';
+      await File(photo.path).copy(newPath);
+      setState(() => _observationParafoudrePhotos.add(newPath));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -719,44 +878,33 @@ class _EtapeInformationsGenerales extends StatelessWidget {
         _buildModernHeader(context, 'Informations générales', 2, 4),
         SizedBox(height: context.spacingXL),
         
-        _buildModernCheckbox(context, 'Zone ATEX', zoneAtex, onZoneAtexChanged),
-        _buildModernCheckbox(context, 'Identification de l\'armoire', identificationArmoire, onIdentificationArmoireChanged),
-        _buildModernCheckbox(context, 'Signalisation de danger électrique', signalisationDanger, onSignalisationDangerChanged),
-        _buildModernCheckbox(context, 'Présence de schéma électrique', presenceSchema, onPresenceSchemaChanged),
-        _buildModernCheckbox(context, 'Présence de parafoudre', presenceParafoudre, onPresenceParafoudreChanged),
-        _buildModernCheckbox(context, 'Vérification par thermographie', verificationThermographie, onVerificationThermographieChanged),
+        _buildModernCheckbox(context, 'Zone ATEX', widget.zoneAtex, widget.onZoneAtexChanged),
+        _buildModernCheckbox(context, 'Identification de l\'armoire', widget.identificationArmoire, widget.onIdentificationArmoireChanged),
+        _buildModernCheckbox(context, 'Signalisation de danger électrique', widget.signalisationDanger, widget.onSignalisationDangerChanged),
+        _buildModernCheckbox(context, 'Présence de schéma électrique', widget.presenceSchema, widget.onPresenceSchemaChanged),
+        _buildModernCheckbox(context, 'Présence de parafoudre', widget.presenceParafoudre, widget.onPresenceParafoudreChanged),
+        _buildModernCheckbox(context, 'Vérification par thermographie', widget.verificationThermographie, widget.onVerificationThermographieChanged),
         
         SizedBox(height: context.spacingXL),
         
+        // ✅ Domaine de tension avec valeur par défaut "230/400"
         Container(
           decoration: BoxDecoration(
             color: Colors.grey.shade50,
             borderRadius: BorderRadius.circular(context.spacingS),
             border: Border.all(
-              color: !domaineTensionValid ? Colors.red.shade300 : Colors.grey.shade300,
-              width: !domaineTensionValid ? 1.5 : 1,
+              color: !widget.domaineTensionValid ? Colors.red.shade300 : Colors.grey.shade300,
+              width: !widget.domaineTensionValid ? 1.5 : 1,
             ),
           ),
           child: DropdownButtonFormField<String>(
-            value: domaineTension.isNotEmpty ? domaineTension : null,
+            initialValue: widget.domaineTension.isNotEmpty ? widget.domaineTension : '230/400', // ✅ Valeur par défaut
             isExpanded: true,
             icon: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryBlue, size: context.iconSizeM),
             dropdownColor: Colors.white,
             borderRadius: BorderRadius.circular(context.spacingS),
-            hint: Row(
-              children: [
-                Icon(Icons.electrical_services, size: context.iconSizeS, color: Colors.grey.shade500),
-                SizedBox(width: context.spacingS),
-                Flexible(
-                  child: Text(
-                    'Sélectionnez un domaine',
-                    style: TextStyle(fontSize: context.fontSizeM, color: Colors.grey.shade500),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
             decoration: const InputDecoration(
+              labelText: 'Domaine',
               border: InputBorder.none,
               contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
@@ -769,47 +917,26 @@ class _EtapeInformationsGenerales extends StatelessWidget {
                     width: context.spacingS,
                     height: context.spacingS,
                     decoration: BoxDecoration(
-                      color: domaineTension == t ? AppTheme.primaryBlue : Colors.transparent,
+                      color: widget.domaineTension == t ? AppTheme.primaryBlue : Colors.transparent,
                       shape: BoxShape.circle,
-                      border: Border.all(
-                        color: domaineTension == t ? AppTheme.primaryBlue : Colors.grey.shade400,
-                        width: 1.5,
-                      ),
+                      border: Border.all(color: Colors.grey.shade400, width: 1.5),
                     ),
-                    child: domaineTension == t ? Icon(Icons.check, size: context.spacingXS, color: Colors.white) : null,
+                    child: widget.domaineTension == t ? Icon(Icons.check, size: context.spacingXS, color: Colors.white) : null,
                   ),
                   SizedBox(width: context.spacingS),
-                  Expanded(
-                    child: Text(
-                      t,
-                      style: TextStyle(fontSize: context.fontSizeM),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
+                  Expanded(child: Text(t, style: TextStyle(fontSize: context.fontSizeM))),
                 ],
               ),
             )).toList(),
-            onChanged: onDomaineTensionChanged,
-            selectedItemBuilder: (BuildContext context) {
-              return ['230/400', '400/690', 'Autre'].map<Widget>((t) {
-                return Row(
-                  children: [
-                    Icon(Icons.check_circle, color: AppTheme.primaryBlue, size: context.iconSizeS),
-                    SizedBox(width: context.spacingS),
-                    Expanded(
-                      child: Text(
-                        t,
-                        style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w500, color: AppTheme.darkBlue),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                    ),
-                  ],
-                );
-              }).toList();
-            },
+            onChanged: widget.onDomaineTensionChanged,
           ),
         ),
+        
+        SizedBox(height: context.spacingXL),
+        
+        // ✅ NOUVEAU : Observation état du parafoudre
+        _buildParafoudreObservationsSection(context),
+        
         SizedBox(height: context.spacingXXL),
       ],
     );
@@ -831,13 +958,7 @@ class _EtapeInformationsGenerales extends StatelessWidget {
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(context.spacingS),
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.primaryBlue.withOpacity(0.3),
-                    blurRadius: context.spacingS,
-                    offset: Offset(0, context.spacingXS),
-                  ),
-                ],
+                boxShadow: [BoxShadow(color: AppTheme.primaryBlue.withOpacity(0.3), blurRadius: context.spacingS, offset: Offset(0, context.spacingXS))],
               ),
               child: Icon(Icons.info_outline, color: Colors.white, size: context.iconSizeM),
             ),
@@ -846,15 +967,9 @@ class _EtapeInformationsGenerales extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: TextStyle(fontSize: context.fontSizeXXL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
-                  ),
+                  Text(title, style: TextStyle(fontSize: context.fontSizeXXL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
                   SizedBox(height: context.spacingXS),
-                  Text(
-                    'Étape $currentStep sur $totalSteps',
-                    style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
-                  ),
+                  Text('Étape $currentStep sur $totalSteps', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
                 ],
               ),
             ),
@@ -878,9 +993,7 @@ class _EtapeInformationsGenerales extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(context.spacingM),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
-        ],
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2))],
       ),
       child: CheckboxListTile(
         title: Text(label, style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w500)),
@@ -889,6 +1002,234 @@ class _EtapeInformationsGenerales extends StatelessWidget {
         controlAffinity: ListTileControlAffinity.leading,
         activeColor: AppTheme.primaryBlue,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(context.spacingM)),
+      ),
+    );
+  }
+
+  // ✅ NOUVEAU : Section des observations du parafoudre
+  Widget _buildParafoudreObservationsSection(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingM),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: EdgeInsets.all(context.spacingL),
+            child: Row(
+              children: [
+                Icon(Icons.warning_amber_outlined, color: Colors.orange, size: context.iconSizeM),
+                SizedBox(width: context.spacingS),
+                Flexible(
+                  child: Text(
+                    'Observation état du parafoudre',
+                    style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.w600, color: AppTheme.darkBlue),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          
+          // Liste des observations existantes
+          if (widget.observationsParafoudre.isNotEmpty)
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: context.spacingL),
+              child: Column(
+                children: widget.observationsParafoudre.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final obs = entry.value;
+                  return Container(
+                    margin: EdgeInsets.only(bottom: context.spacingS),
+                    padding: EdgeInsets.all(context.spacingM),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(context.spacingS),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                obs.texte,
+                                maxLines: 3,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade800),
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.visibility, size: context.iconSizeS, color: AppTheme.primaryBlue),
+                              onPressed: () => _voirObservationDetail(obs),
+                              tooltip: 'Voir en détail',
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.edit, size: context.iconSizeS, color: AppTheme.primaryBlue),
+                              onPressed: () => widget.onEditParafoudreObservation(obs),
+                              tooltip: 'Modifier',
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.delete_outline, size: context.iconSizeS, color: Colors.red),
+                              onPressed: () => widget.onDeleteParafoudreObservation(index),
+                              tooltip: 'Supprimer',
+                            ),
+                          ],
+                        ),
+                        if (obs.photos.isNotEmpty)
+                          Padding(
+                            padding: EdgeInsets.only(top: context.spacingS),
+                            child: Wrap(
+                              spacing: 4,
+                              children: obs.photos.map((path) => 
+                                GestureDetector(
+                                  onTap: () => _previsualiserPhoto(obs.photos, obs.photos.indexOf(path)),
+                                  child: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(4),
+                                      border: Border.all(color: Colors.grey.shade300),
+                                      image: DecorationImage(image: FileImage(File(path)), fit: BoxFit.cover),
+                                    ),
+                                  ),
+                                ),
+                              ).toList(),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ),
+            ),
+          
+          // Toggle pour ajouter une observation
+          Padding(
+            padding: EdgeInsets.all(context.spacingL),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        'Ajouter une observation ?',
+                        style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () => setState(() => _addParafoudreObservation = true),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
+                        decoration: BoxDecoration(
+                          color: _addParafoudreObservation ? Colors.green.withOpacity(0.15) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: _addParafoudreObservation ? Colors.green : Colors.grey.shade300, width: _addParafoudreObservation ? 2 : 1),
+                        ),
+                        child: Text('Oui', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: _addParafoudreObservation ? Colors.green : Colors.grey.shade600)),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    GestureDetector(
+                      onTap: () => setState(() {
+                        _addParafoudreObservation = false;
+                        _observationParafoudreController.clear();
+                        _observationParafoudrePhotos.clear();
+                      }),
+                      child: Container(
+                        padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
+                        decoration: BoxDecoration(
+                          color: !_addParafoudreObservation ? Colors.red.withOpacity(0.15) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: !_addParafoudreObservation ? Colors.red : Colors.grey.shade300, width: !_addParafoudreObservation ? 2 : 1),
+                        ),
+                        child: Text('Non', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: !_addParafoudreObservation ? Colors.red : Colors.grey.shade600)),
+                      ),
+                    ),
+                  ],
+                ),
+                
+                if (_addParafoudreObservation) ...[
+                  SizedBox(height: context.spacingM),
+                  TextFormField(
+                    controller: _observationParafoudreController,
+                    maxLines: 3,
+                    decoration: InputDecoration(
+                      labelText: 'Observation',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingS)),
+                      hintText: 'Saisissez votre observation...',
+                    ),
+                  ),
+                  SizedBox(height: context.spacingM),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _prendrePhotoParafoudre,
+                          icon: Icon(Icons.camera_alt, size: context.iconSizeS),
+                          label: Text('Prendre', style: TextStyle(fontSize: context.fontSizeXS)),
+                        ),
+                      ),
+                      SizedBox(width: context.spacingS),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _choisirPhotoParafoudre,
+                          icon: Icon(Icons.photo_library, size: context.iconSizeS),
+                          label: Text('Galerie', style: TextStyle(fontSize: context.fontSizeXS)),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_observationParafoudrePhotos.isNotEmpty)
+                    Padding(
+                      padding: EdgeInsets.only(top: context.spacingS),
+                      child: Wrap(
+                        spacing: 8,
+                        children: _observationParafoudrePhotos.map((path) => 
+                          Stack(
+                            children: [
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.grey.shade300),
+                                  image: DecorationImage(image: FileImage(File(path)), fit: BoxFit.cover),
+                                ),
+                              ),
+                              Positioned(
+                                right: 0,
+                                top: 0,
+                                child: GestureDetector(
+                                  onTap: () => setState(() => _observationParafoudrePhotos.remove(path)),
+                                  child: Container(
+                                    decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                                    child: Icon(Icons.close, size: 14, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ).toList(),
+                      ),
+                    ),
+                  SizedBox(height: context.spacingM),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _ajouterParafoudreObservation,
+                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
+                      child: const Text('AJOUTER L\'OBSERVATION'),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1567,10 +1908,10 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
           
           SizedBox(height: context.spacingM),
           
-          // NOUVEAU : Conformité en boutons Oui/Non
+          //Conformité en boutons Oui/Non
           _buildConformiteToggle(context, point, pointIndex),
           
-          // NOUVEAU : Bouton pour afficher/masquer la référence normative
+          //Bouton pour afficher/masquer la référence normative
           SizedBox(height: context.spacingS),
           _buildReferenceNormativeToggle(context, point, pointIndex, showReference),
           
@@ -1619,11 +1960,7 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
                 onTap: () {
                   setState(() {
                     point.conformite = 'oui';
-                    // Si on passe à Oui, on peut garder l'observation ou la désactiver
-                    // mais on ne force rien
                   });
-                  // Notifier le parent du changement
-                  _notifyConformiteChanged(pointIndex, 'oui');
                 },
               ),
             ),
@@ -1637,12 +1974,8 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
                 onTap: () {
                   setState(() {
                     point.conformite = 'non';
-                    // ACTIVER AUTOMATIQUEMENT L'OBSERVATION
                   });
-                  // Forcer l'observation à Oui et la rendre obligatoire
                   widget.onObservationToggleChanged(pointIndex, true);
-                  // Notifier le parent
-                  _notifyConformiteChanged(pointIndex, 'non');
                 },
               ),
             ),
@@ -1663,7 +1996,9 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
   // Nouvelle méthode pour notifier les changements
   void _notifyConformiteChanged(int pointIndex, String value) {
     // Cette méthode peut être utilisée pour d'autres actions si nécessaire
-    print('Point $pointIndex conformité: $value');
+    if (kDebugMode) {
+      print('Point $pointIndex conformité: $value');
+    }
   }
 
   Widget _buildConformiteButton(
@@ -1795,6 +2130,9 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
   }
 
   Widget _buildObservationToggle(BuildContext context, int pointIndex, bool hasObservation) {
+    final point = widget.pointsVerification[pointIndex];
+    final isConformiteNon = point.conformite == 'non';
+    
     return Row(
       children: [
         Flexible(
@@ -1806,7 +2144,19 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
         ),
         SizedBox(width: context.spacingS),
         GestureDetector(
-          onTap: () => widget.onObservationToggleChanged(pointIndex, true),
+          onTap: () {
+            if (isConformiteNon) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('L\'observation est obligatoire quand la conformité est "Non"'),
+                  backgroundColor: Colors.orange,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              return;
+            }
+            widget.onObservationToggleChanged(pointIndex, true);
+          },
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
             decoration: BoxDecoration(
@@ -1822,18 +2172,47 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
         ),
         SizedBox(width: context.spacingS),
         GestureDetector(
-          onTap: () => widget.onObservationToggleChanged(pointIndex, false),
+          onTap: () {
+            if (isConformiteNon) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('L\'observation est obligatoire quand la conformité est "Non"'),
+                  backgroundColor: Colors.orange,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+              return;
+            }
+            widget.onObservationToggleChanged(pointIndex, false);
+          },
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
             decoration: BoxDecoration(
-              color: !hasObservation ? Colors.red.withOpacity(0.15) : Colors.transparent,
+              color: !hasObservation && !isConformiteNon ? Colors.red.withOpacity(0.15) : Colors.transparent,
               borderRadius: BorderRadius.circular(context.spacingL),
               border: Border.all(
-                color: !hasObservation ? Colors.red : Colors.grey.shade300,
-                width: !hasObservation ? 2 : 1,
+                color: (!hasObservation && !isConformiteNon) ? Colors.red : Colors.grey.shade300,
+                width: (!hasObservation && !isConformiteNon) ? 2 : 1,
               ),
             ),
-            child: Text('Non', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: !hasObservation ? Colors.red : Colors.grey.shade600)),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Non',
+                  style: TextStyle(
+                    fontSize: context.fontSizeXS,
+                    fontWeight: FontWeight.w600,
+                    color: isConformiteNon ? Colors.grey.shade400 : (!hasObservation ? Colors.red : Colors.grey.shade600),
+                  ),
+                ),
+                if (isConformiteNon)
+                  Padding(
+                    padding: EdgeInsets.only(left: 4),
+                    child: Icon(Icons.lock_outline, size: context.fontSizeXS, color: Colors.grey.shade400),
+                  ),
+              ],
+            ),
           ),
         ),
       ],
@@ -1978,6 +2357,8 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   List<String> _coffretPhotosInterne = [];
   bool _isLoadingPhotosExterne = false;
   bool _isLoadingPhotosInterne = false;
+  
+  List<ObservationLibre> _observationsParafoudre = [];
 
   final ImagePicker _picker = ImagePicker();
 
@@ -2053,6 +2434,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
         _coffretPhotosExterne = draft.photos.where((p) => p.contains('externe')).toList();
         _coffretPhotosInterne = draft.photos.where((p) => p.contains('interne')).toList();
         _currentStep = draft.currentStep;
+        _observationsParafoudre = List.from(draft.observationsParafoudre ?? []);
         
         // Initialiser hasObservation
         for (int i = 0; i < _pointsVerification.length; i++) {
@@ -2158,6 +2540,66 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     });
   }
 
+  void _addParafoudreObservation(String texte, List<String> photos) {
+    setState(() {
+      _observationsParafoudre.add(ObservationLibre(texte: texte, photos: photos));
+    });
+    _saveDraft();
+  }
+
+  void _deleteParafoudreObservation(int index) {
+    setState(() {
+      _observationsParafoudre.removeAt(index);
+    });
+    _saveDraft();
+  }
+
+  void _editParafoudreObservation(ObservationLibre observation) async {
+    final controller = TextEditingController(text: observation.texte);
+    List<String> tempPhotos = List.from(observation.photos);
+    
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Modifier l\'observation'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: controller,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                labelText: 'Observation',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          ElevatedButton(
+            onPressed: () {
+              final index = _observationsParafoudre.indexOf(observation);
+              if (index != -1) {
+                setState(() {
+                  _observationsParafoudre[index] = ObservationLibre(
+                    texte: controller.text.trim(),
+                    photos: tempPhotos,
+                  );
+                });
+                _saveDraft();
+              }
+              Navigator.pop(context, true);
+            },
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveDraft() async {
     if (!mounted) return;
     
@@ -2185,7 +2627,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
       presenceSchema: _presenceSchema,
       presenceParafoudre: _presenceParafoudre,
       verificationThermographie: _verificationThermographie,
-      alimentations: _alimentations, // ← source est inclus dans chaque Alimentation
+      alimentations: _alimentations,
       protectionTete: _protectionTete,
       pointsVerification: _pointsVerification,
       observationsLibres: [],
@@ -2194,6 +2636,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
       photosInternes: List.from(_coffretPhotosInterne),
       statut: 'incomplet',
       currentStep: _currentStep,
+      observationsParafoudre: _observationsParafoudre,
     );
     
     await HiveService.saveCoffretDraft(
@@ -3068,6 +3511,10 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
                       domaineTension: _domaineTension,
                       onDomaineTensionChanged: (v) { setState(() { _domaineTension = v ?? ''; _validateDomaineTension(v); }); },
                       domaineTensionValid: _domaineTensionValid,
+                      observationsParafoudre: _observationsParafoudre,
+                      onAddParafoudreObservation: _addParafoudreObservation,
+                      onDeleteParafoudreObservation: _deleteParafoudreObservation,
+                      onEditParafoudreObservation: _editParafoudreObservation,
                     ),
                   
                   if (_selectedType != null)
