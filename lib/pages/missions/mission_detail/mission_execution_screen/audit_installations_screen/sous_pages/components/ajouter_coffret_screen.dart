@@ -730,87 +730,6 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
   final List<String> _observationParafoudrePhotos = [];
   bool _addParafoudreObservation = false;
 
-  void _ajouterParafoudreObservation() {
-    final texte = _observationParafoudreController.text.trim();
-    if (texte.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez saisir une observation'), backgroundColor: Colors.red),
-      );
-      return;
-    }
-
-    widget.onAddParafoudreObservation(texte, List.from(_observationParafoudrePhotos));
-    
-    setState(() {
-      _observationParafoudreController.clear();
-      _observationParafoudrePhotos.clear();
-      _addParafoudreObservation = false;
-    });
-  }
-
-  void _voirObservationDetail(ObservationLibre observation) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: Row(
-          children: [
-            Icon(Icons.visibility, color: AppTheme.primaryBlue),
-            const SizedBox(width: 8),
-            const Text('Détail de l\'observation', style: TextStyle(fontSize: 16)),
-          ],
-        ),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                observation.texte,
-                style: const TextStyle(fontSize: 14, height: 1.4),
-              ),
-              const SizedBox(height: 12),
-              if (observation.photos.isNotEmpty) ...[
-                const Text('Photos associées:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: observation.photos.map((path) => 
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.pop(context);
-                        _previsualiserPhoto(observation.photos, observation.photos.indexOf(path));
-                      },
-                      child: Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.grey.shade300),
-                          image: DecorationImage(
-                            image: FileImage(File(path)),
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                    )
-                  ).toList(),
-                ),
-              ],
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _previsualiserPhoto(List<String> photos, int index) {
     showDialog(
       context: context,
@@ -934,7 +853,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
         
         SizedBox(height: context.spacingXL),
         
-        // ✅ NOUVEAU : Observation état du parafoudre
+        //Observation état du parafoudre
         _buildParafoudreObservationsSection(context),
         
         SizedBox(height: context.spacingXXL),
@@ -1006,7 +925,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
     );
   }
 
-  // ✅ NOUVEAU : Section des observations du parafoudre
+  //Section des observations du parafoudre
   Widget _buildParafoudreObservationsSection(BuildContext context) {
     return Container(
       decoration: BoxDecoration(
@@ -1033,7 +952,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
             ),
           ),
           
-          // Liste des observations existantes
+          // Liste des observations existantes (tap = dialogue)
           if (widget.observationsParafoudre.isNotEmpty)
             Padding(
               padding: EdgeInsets.symmetric(horizontal: context.spacingL),
@@ -1041,191 +960,74 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
                 children: widget.observationsParafoudre.asMap().entries.map((entry) {
                   final index = entry.key;
                   final obs = entry.value;
-                  return Container(
-                    margin: EdgeInsets.only(bottom: context.spacingS),
-                    padding: EdgeInsets.all(context.spacingM),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(context.spacingS),
-                      border: Border.all(color: Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Text(
-                                obs.texte,
-                                maxLines: 3,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade800),
-                              ),
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.visibility, size: context.iconSizeS, color: AppTheme.primaryBlue),
-                              onPressed: () => _voirObservationDetail(obs),
-                              tooltip: 'Voir en détail',
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.edit, size: context.iconSizeS, color: AppTheme.primaryBlue),
-                              onPressed: () => widget.onEditParafoudreObservation(obs),
-                              tooltip: 'Modifier',
-                            ),
-                            IconButton(
-                              icon: Icon(Icons.delete_outline, size: context.iconSizeS, color: Colors.red),
-                              onPressed: () => widget.onDeleteParafoudreObservation(index),
-                              tooltip: 'Supprimer',
-                            ),
-                          ],
-                        ),
-                        if (obs.photos.isNotEmpty)
-                          Padding(
-                            padding: EdgeInsets.only(top: context.spacingS),
-                            child: Wrap(
-                              spacing: 4,
-                              children: obs.photos.map((path) => 
-                                GestureDetector(
-                                  onTap: () => _previsualiserPhoto(obs.photos, obs.photos.indexOf(path)),
-                                  child: Container(
-                                    width: 40,
-                                    height: 40,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(4),
-                                      border: Border.all(color: Colors.grey.shade300),
-                                      image: DecorationImage(image: FileImage(File(path)), fit: BoxFit.cover),
-                                    ),
-                                  ),
-                                ),
-                              ).toList(),
+                  return GestureDetector(
+                    onTap: () => _voirObservationDetail(obs),
+                    child: Container(
+                      margin: EdgeInsets.only(bottom: context.spacingS),
+                      padding: EdgeInsets.all(context.spacingM),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(context.spacingS),
+                        border: Border.all(color: Colors.grey.shade200),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              obs.texte,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade800),
                             ),
                           ),
-                      ],
+                          IconButton(
+                            icon: Icon(Icons.edit, size: context.iconSizeS, color: AppTheme.primaryBlue),
+                            onPressed: () => widget.onEditParafoudreObservation(obs),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.delete_outline, size: context.iconSizeS, color: Colors.red),
+                            onPressed: () => widget.onDeleteParafoudreObservation(index),
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }).toList(),
               ),
             ),
           
-          // Toggle pour ajouter une observation
+          // Nouvelle observation avec bouton AJOUTER discret en bas à gauche
           Padding(
             padding: EdgeInsets.all(context.spacingL),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Ajouter une observation ?',
-                        style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
-                      ),
-                    ),
-                    GestureDetector(
-                      onTap: () => setState(() => _addParafoudreObservation = true),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
-                        decoration: BoxDecoration(
-                          color: _addParafoudreObservation ? Colors.green.withOpacity(0.15) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: _addParafoudreObservation ? Colors.green : Colors.grey.shade300, width: _addParafoudreObservation ? 2 : 1),
-                        ),
-                        child: Text('Oui', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: _addParafoudreObservation ? Colors.green : Colors.grey.shade600)),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    GestureDetector(
-                      onTap: () => setState(() {
-                        _addParafoudreObservation = false;
-                        _observationParafoudreController.clear();
-                        _observationParafoudrePhotos.clear();
-                      }),
-                      child: Container(
-                        padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
-                        decoration: BoxDecoration(
-                          color: !_addParafoudreObservation ? Colors.red.withOpacity(0.15) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: !_addParafoudreObservation ? Colors.red : Colors.grey.shade300, width: !_addParafoudreObservation ? 2 : 1),
-                        ),
-                        child: Text('Non', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: !_addParafoudreObservation ? Colors.red : Colors.grey.shade600)),
-                      ),
-                    ),
-                  ],
+                TextFormField(
+                  controller: _observationParafoudreController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Nouvelle observation',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingS)),
+                    hintText: 'Saisissez votre observation...',
+                  ),
                 ),
-                
-                if (_addParafoudreObservation) ...[
-                  SizedBox(height: context.spacingM),
-                  TextFormField(
-                    controller: _observationParafoudreController,
-                    maxLines: 3,
-                    decoration: InputDecoration(
-                      labelText: 'Observation',
-                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingS)),
-                      hintText: 'Saisissez votre observation...',
+                SizedBox(height: context.spacingS),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: TextButton(
+                    onPressed: _ajouterParafoudreObservation,
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppTheme.primaryBlue,
+                      backgroundColor: Colors.blue.shade50,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
+                    child: const Text('Ajouter'),
                   ),
-                  SizedBox(height: context.spacingM),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _prendrePhotoParafoudre,
-                          icon: Icon(Icons.camera_alt, size: context.iconSizeS),
-                          label: Text('Prendre', style: TextStyle(fontSize: context.fontSizeXS)),
-                        ),
-                      ),
-                      SizedBox(width: context.spacingS),
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: _choisirPhotoParafoudre,
-                          icon: Icon(Icons.photo_library, size: context.iconSizeS),
-                          label: Text('Galerie', style: TextStyle(fontSize: context.fontSizeXS)),
-                        ),
-                      ),
-                    ],
-                  ),
-                  if (_observationParafoudrePhotos.isNotEmpty)
-                    Padding(
-                      padding: EdgeInsets.only(top: context.spacingS),
-                      child: Wrap(
-                        spacing: 8,
-                        children: _observationParafoudrePhotos.map((path) => 
-                          Stack(
-                            children: [
-                              Container(
-                                width: 60,
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey.shade300),
-                                  image: DecorationImage(image: FileImage(File(path)), fit: BoxFit.cover),
-                                ),
-                              ),
-                              Positioned(
-                                right: 0,
-                                top: 0,
-                                child: GestureDetector(
-                                  onTap: () => setState(() => _observationParafoudrePhotos.remove(path)),
-                                  child: Container(
-                                    decoration: BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                                    child: Icon(Icons.close, size: 14, color: Colors.white),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ).toList(),
-                      ),
-                    ),
-                  SizedBox(height: context.spacingM),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _ajouterParafoudreObservation,
-                      style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
-                      child: const Text('AJOUTER L\'OBSERVATION'),
-                    ),
-                  ),
-                ],
+                ),
               ],
             ),
           ),
@@ -1233,6 +1035,45 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
       ),
     );
   }
+  
+  void _voirObservationDetail(ObservationLibre observation) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Détail de l\'observation'),
+        content: SingleChildScrollView(
+          child: Text(
+            observation.texte,
+            style: const TextStyle(fontSize: 14, height: 1.4),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _ajouterParafoudreObservation() {
+    final texte = _observationParafoudreController.text.trim();
+    if (texte.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez saisir une observation'), backgroundColor: Colors.red),
+      );
+      return;
+    }
+
+    widget.onAddParafoudreObservation(texte, []);
+    
+    setState(() {
+      _observationParafoudreController.clear();
+    });
+  }
+  
 }
 
 // ================================================================
@@ -1961,6 +1802,8 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
                   setState(() {
                     point.conformite = 'oui';
                   });
+                  // ✅ Si on passe à Oui, on force observation à Non
+                  widget.onObservationToggleChanged(pointIndex, false);
                 },
               ),
             ),
@@ -1975,6 +1818,7 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
                   setState(() {
                     point.conformite = 'non';
                   });
+                  // ✅ Si on passe à Non, on force observation à Oui
                   widget.onObservationToggleChanged(pointIndex, true);
                 },
               ),
@@ -1992,10 +1836,8 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
       ],
     );
   }
-
-  // Nouvelle méthode pour notifier les changements
+  //méthode pour notifier les changements
   void _notifyConformiteChanged(int pointIndex, String value) {
-    // Cette méthode peut être utilisée pour d'autres actions si nécessaire
     if (kDebugMode) {
       print('Point $pointIndex conformité: $value');
     }
@@ -2162,10 +2004,7 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
             decoration: BoxDecoration(
               color: hasObservation ? Colors.green.withOpacity(0.15) : Colors.transparent,
               borderRadius: BorderRadius.circular(context.spacingL),
-              border: Border.all(
-                color: hasObservation ? Colors.green : Colors.grey.shade300,
-                width: hasObservation ? 2 : 1,
-              ),
+              border: Border.all(color: hasObservation ? Colors.green : Colors.grey.shade300, width: hasObservation ? 2 : 1),
             ),
             child: Text('Oui', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: hasObservation ? Colors.green : Colors.grey.shade600)),
           ),
@@ -2190,10 +2029,7 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
             decoration: BoxDecoration(
               color: !hasObservation && !isConformiteNon ? Colors.red.withOpacity(0.15) : Colors.transparent,
               borderRadius: BorderRadius.circular(context.spacingL),
-              border: Border.all(
-                color: (!hasObservation && !isConformiteNon) ? Colors.red : Colors.grey.shade300,
-                width: (!hasObservation && !isConformiteNon) ? 2 : 1,
-              ),
+              border: Border.all(color: (!hasObservation && !isConformiteNon) ? Colors.red : Colors.grey.shade300, width: (!hasObservation && !isConformiteNon) ? 2 : 1),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,
