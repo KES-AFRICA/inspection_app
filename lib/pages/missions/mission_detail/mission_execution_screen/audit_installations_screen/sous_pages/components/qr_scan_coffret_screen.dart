@@ -43,6 +43,7 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
   void initState() {
     super.initState();
     cameraController = MobileScannerController();
+    _scannerReady = true; 
   }
 
   @override
@@ -225,6 +226,11 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
   }
 
   void _reinitializeScanner() async {
+
+    setState(() {
+      _scannerReady = false;
+    });
+
     try {
       await cameraController.stop();
       await cameraController.dispose();
@@ -232,7 +238,9 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
       await Future.delayed(const Duration(milliseconds: 200));
       
       cameraController = MobileScannerController();
+
       await Future.delayed(const Duration(milliseconds: 100));
+
       await cameraController.start();
       
       if (mounted) {
@@ -245,7 +253,6 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
         print('❌ Erreur réinitialisation scanner: $e');
       }
       cameraController = MobileScannerController();
-      await cameraController.start();
       if (mounted) {
         setState(() {
           _scannerReady = true;
@@ -655,12 +662,22 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
               fit: BoxFit.cover,
             )
           else if (!_qrCodeDetected && !_scannerReady)
-            Container(
-              color: Colors.black,
-              child: const Center(
-                child: CircularProgressIndicator(color: Colors.white),
+          Container(
+            color: Colors.black,
+            child: const Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  CircularProgressIndicator(color: Colors.white),
+                  SizedBox(height: 16),
+                  Text(
+                    'Initialisation du scanner...',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ],
               ),
             ),
+          ),
           _buildScannerOverlay(),
           if (!_qrCodeDetected && !_isProcessing && _scannerReady)
             _buildScannerInstructions(),

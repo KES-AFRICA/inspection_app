@@ -2024,7 +2024,7 @@ Widget _buildElementItem(ElementControle element) {
                                       ElevatedButton.icon(
                                         onPressed: _ajouterCoffret,
                                         icon: const Icon(Icons.add),
-                                        label: const Text('AJOUTER UN COFFRET'),
+                                        label: const Text('AJOUTER UN ÉQUIPEMENTS'),
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: AppTheme.primaryBlue,
                                           foregroundColor: Colors.white,

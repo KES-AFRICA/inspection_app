@@ -1815,8 +1815,8 @@ void _supprimerCoffret(int index, bool isMoyenneTension) {
                   Tab(text: 'PHOTOS (${_zonePhotos.length})'),
                   Tab(text: 'LOCAUX (${_zone.locaux.length})'),
                   Tab(text: isMoyenneTension 
-                    ? 'COFFRETS (${_coffretsDirects.length})'
-                    : 'COFFRETS DIRECTS (${_coffretsDirects.length})'
+                    ? 'ÉQUIPEMENTS (${_coffretsDirects.length})'
+                    : 'ÉQUIPEMENTS DIRECTS (${_coffretsDirects.length})'
                   ),
                 ],
               ),
@@ -1894,7 +1894,7 @@ void _supprimerCoffret(int index, bool isMoyenneTension) {
                             : 'Aucun coffret direct dans cette zone',
                           isMoyenneTension ? _ajouterCoffretMT : _ajouterCoffretDirectBT,
                           Icons.electrical_services,
-                          'AJOUTER UN COFFRET',
+                          'AJOUTER UN ÉQUIPEMENTS',
                         )
                       : ListView.builder(
                           padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),

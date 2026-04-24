@@ -40,7 +40,9 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
         _isLoading = false;
       });
     } catch (e) {
-      print('❌ Erreur chargement audit: $e');
+      if (kDebugMode) {
+        print('❌ Erreur chargement audit: $e');
+      }
       setState(() {
         _isLoading = false;
       });
