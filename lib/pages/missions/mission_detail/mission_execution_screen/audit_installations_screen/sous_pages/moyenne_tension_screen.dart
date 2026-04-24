@@ -2,12 +2,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
-import 'package:inspec_app/models/classement_locaux.dart';
 import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/basse_tension_screen.dart';
-import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_zone_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_local_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_zone_screen.dart';
@@ -312,6 +310,7 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
 
     if (result == true) {
       _loadData();
+      await _refreshAllData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Local ajouté avec succès')),
@@ -352,6 +351,7 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
     _loadData();
 
     if (result == true) {
+      await _refreshAllData();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Zone ajoutée avec succès')),
@@ -473,17 +473,35 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirmer la suppression'),
-        content: const Text('Voulez-vous vraiment supprimer ce local ?'),
+        content: const Text('Voulez-vous vraiment supprimer ce local ?\n\nLes brouillons de coffrets liés seront aussi supprimés.'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
+              
+              // Supprimer les brouillons de coffrets liés à ce local
+              await HiveService.deleteCoffretDraftsForLocal(
+                missionId: widget.mission.id,
+                parentIndex: index,
+                isMoyenneTension: true,
+                zoneIndex: null,
+              );
+              
+              // Supprimer tous les coffrets complets du local
+              for (var coffret in _audit!.moyenneTensionLocaux[index].coffrets) {
+                await HiveService.deleteCoffretDraft(coffret.qrCode);
+              }
+              
               setState(() => _audit!.moyenneTensionLocaux.removeAt(index));
               await HiveService.saveAuditInstallations(_audit!);
+              
               _loadData();
+              
               if (mounted) {
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Local supprimé')));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Local supprimé')),
+                );
               }
             },
             child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
@@ -494,70 +512,84 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
   }
 
   void _supprimerZone(int index) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Confirmer la suppression'),
-      content: const Text(
-        'Voulez-vous vraiment supprimer cette zone ?\n\n'
-        'TOUS les locaux et coffrets contenus dans cette zone seront également supprimés définitivement.'
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Annuler'),
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmer la suppression'),
+        content: const Text(
+          'Voulez-vous vraiment supprimer cette zone ?\n\n'
+          'TOUS les locaux et coffrets contenus dans cette zone seront également supprimés définitivement.\n\n'
+          'Les brouillons non finalisés seront aussi supprimés.'
         ),
-        TextButton(
-          onPressed: () async {
-            Navigator.pop(context);
-            
-            final zone = _audit!.moyenneTensionZones[index];
-            final nomZone = zone.nom;
-            
-            // 1. Supprimer tous les coffrets directs de la zone
-            for (var coffret in zone.coffrets) {
-              await HiveService.deleteCoffretDraft(coffret.qrCode);
-            }
-            
-            // 2. Supprimer tous les locaux et leurs coffrets
-            for (var local in zone.locaux) {
-              for (var coffret in local.coffrets) {
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              
+              final zone = _audit!.moyenneTensionZones[index];
+              final nomZone = zone.nom;
+              
+              // 1. Supprimer les brouillons de coffrets de la zone
+              await HiveService.deleteCoffretDraftsForZone(
+                missionId: widget.mission.id,
+                parentIndex: index,
+                isMoyenneTension: true,
+              );
+              
+              // 2. Supprimer les brouillons de locaux de la zone
+              await HiveService.deleteLocalDraftsForZone(
+                missionId: widget.mission.id,
+                zoneIndex: index,
+                isMoyenneTension: true,
+              );
+              
+              // 3. Supprimer tous les coffrets directs de la zone (complets)
+              for (var coffret in zone.coffrets) {
                 await HiveService.deleteCoffretDraft(coffret.qrCode);
               }
-              // Supprimer le classement du local
-              await HiveService.deleteClassementLocal(
+              
+              // 4. Supprimer tous les locaux et leurs coffrets complets
+              for (var local in zone.locaux) {
+                for (var coffret in local.coffrets) {
+                  await HiveService.deleteCoffretDraft(coffret.qrCode);
+                }
+                await HiveService.deleteClassementLocal(
+                  missionId: widget.mission.id,
+                  nomLocal: local.nom,
+                );
+              }
+              
+              // 5. Supprimer la zone de l'audit
+              setState(() {
+                _audit!.moyenneTensionZones.removeAt(index);
+              });
+              await HiveService.saveAuditInstallations(_audit!);
+              
+              // 6. Supprimer le classement de la zone
+              await HiveService.deleteClassementZone(
                 missionId: widget.mission.id,
-                nomLocal: local.nom,
+                nomZone: nomZone,
               );
-            }
-            
-            // 3. Supprimer la zone de l'audit
-            setState(() {
-              _audit!.moyenneTensionZones.removeAt(index);
-            });
-            await HiveService.saveAuditInstallations(_audit!);
-            
-            // 4. Supprimer le classement de la zone
-            await HiveService.deleteClassementZone(
-              missionId: widget.mission.id,
-              nomZone: nomZone,
-            );
-            
-            // 5. Rafraîchir
-            _loadData();
-            
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Zone et tout son contenu supprimés')),
-              );
-            }
-          },
-          child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
-        ),
-      ],
-    ),
-  );
-}
+              
+              // 7. Rafraîchir
+              _loadData();
+              
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Zone et tout son contenu supprimés')),
+                );
+              }
+            },
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+  }
 
   int _getTotalLocaux() {
     if (_audit == null) return 0;
@@ -718,7 +750,9 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
                   child: TabBarView(
                     children: [
                       // Onglet ZONES
-                      _audit!.moyenneTensionZones.isEmpty
+                      RefreshIndicator(
+                      onRefresh: _refreshAllData,
+                      child: _audit!.moyenneTensionZones.isEmpty
                           ? _buildEmptyState('zones', _ajouterZone)
                           : ListView.builder(
                               padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
@@ -728,46 +762,43 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
                                 return _buildZoneCard(zone, index);
                               },
                             ),
+                      ),
                       
                       // Onglet CLASSEMENT
                       _buildClassementTab(),
                       
                       // Onglet LOCAUX
-                      _audit!.moyenneTensionLocaux.isEmpty
-                        ? _buildEmptyState('locaux', _ajouterLocal)
-                        : Builder(
-                            builder: (context) {
-                              // ✅ Récupérer les brouillons à chaque rebuild (pas en cache)
-                              final drafts = HiveService.getLocalDraftsForMoyenneTensionHorsZone(
-                                missionId: widget.mission.id,
-                              );
-                              final locauxExistants = _audit!.moyenneTensionLocaux;
-                              
-                              // Filtrer les brouillons qui ont déjà un local avec le même nom
-                              final nomsExistants = locauxExistants.map((l) => l.nom).toSet();
-                              final uniqueDrafts = drafts.where((d) => !nomsExistants.contains(d['nomLocal'])).toList();
-                              
-                              if (locauxExistants.isEmpty && uniqueDrafts.isEmpty) {
-                                return _buildEmptyState('locaux', _ajouterLocal);
-                              }
-                              
-                              return RefreshIndicator(
-                                onRefresh: _refreshAllData,
-                                child: ListView.builder(
-                                  padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
-                                  itemCount: uniqueDrafts.length + locauxExistants.length,
-                                  itemBuilder: (context, index) {
-                                    if (index < uniqueDrafts.length) {
-                                      return _buildLocalDraftCard(uniqueDrafts[index]);
-                                    } else {
-                                      final localIndex = index - uniqueDrafts.length;
-                                      return _buildLocalCard(locauxExistants[localIndex], localIndex);
-                                    }
-                                  },
-                                ),
-                              );
-                            },
-                          ),
+                      RefreshIndicator(
+                        onRefresh: _refreshAllData,
+                        child: Builder(
+                          builder: (context) {
+                            final drafts = HiveService.getLocalDraftsForMoyenneTensionHorsZone(
+                              missionId: widget.mission.id,
+                            );
+                            final locauxExistants = _audit!.moyenneTensionLocaux;
+                            
+                            final nomsExistants = locauxExistants.map((l) => l.nom).toSet();
+                            final uniqueDrafts = drafts.where((d) => !nomsExistants.contains(d['nomLocal'])).toList();
+                            
+                            if (locauxExistants.isEmpty && uniqueDrafts.isEmpty) {
+                              return _buildEmptyState('locaux', _ajouterLocal);
+                            }
+                            
+                            return ListView.builder(
+                              padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
+                              itemCount: uniqueDrafts.length + locauxExistants.length,
+                              itemBuilder: (context, index) {
+                                if (index < uniqueDrafts.length) {
+                                  return _buildLocalDraftCard(uniqueDrafts[index]);
+                                } else {
+                                  final localIndex = index - uniqueDrafts.length;
+                                  return _buildLocalCard(locauxExistants[localIndex], localIndex);
+                                }
+                              },
+                            );
+                          },
+                        ),
+                      ),
                     ],
                   ),
                 ),

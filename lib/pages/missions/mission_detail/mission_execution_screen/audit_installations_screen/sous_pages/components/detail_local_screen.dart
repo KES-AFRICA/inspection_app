@@ -83,6 +83,37 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
     });
   }
 
+  Future<void> _refreshLocal() async {
+    final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+    
+    setState(() {
+      if (widget.isMoyenneTension) {
+        if (widget.isInZone && widget.zoneIndex != null) {
+          if (widget.zoneIndex! < audit.moyenneTensionZones.length) {
+            final zone = audit.moyenneTensionZones[widget.zoneIndex!];
+            if (widget.localIndex < zone.locaux.length) {
+              _local = zone.locaux[widget.localIndex];
+            }
+          }
+        } else {
+          if (widget.localIndex < audit.moyenneTensionLocaux.length) {
+            _local = audit.moyenneTensionLocaux[widget.localIndex];
+          }
+        }
+      } else {
+        if (widget.zoneIndex != null && widget.zoneIndex! < audit.basseTensionZones.length) {
+          final zone = audit.basseTensionZones[widget.zoneIndex!];
+          if (widget.localIndex < zone.locaux.length) {
+            _local = zone.locaux[widget.localIndex];
+          }
+        }
+      }
+      _chargerPhotosLocal();
+      _loadCoffrets();
+    });
+  }
+  
+
   // ===== Ouvrir un brouillon pour continuer =====
   void _ouvrirBrouillon(CoffretArmoire draft) async {
     final result = await Navigator.push(
@@ -822,10 +853,12 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
     );
 
     if (result == true) {
-      _rechargerLocal();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Coffret ajouté avec succès')),
-      );
+      await _refreshLocal();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Coffret ajouté avec succès')),
+        );
+      }
     }
   }
 
@@ -998,6 +1031,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       ),
     );
   }
+  
 
   Future<void> _sauvegarderLocal() async {
     try {
@@ -1973,37 +2007,40 @@ Widget _buildElementItem(ElementControle element) {
                           const Center(child: Text('Aucune information transformateur')),
 
                         // Tab COFFRETS
-                        _coffrets.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(Icons.electrical_services_outlined, size: 64, color: Colors.grey.shade400),
-                                    SizedBox(height: 16),
-                                    Text(
-                                      'Aucun coffret ajouté',
-                                      style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
-                                    ),
-                                    SizedBox(height: 8),
-                                    ElevatedButton.icon(
-                                      onPressed: _ajouterCoffret,
-                                      icon: Icon(Icons.add),
-                                      label: Text('AJOUTER UN COFFRET'),
-                                      style: ElevatedButton.styleFrom(
-                                        backgroundColor: AppTheme.primaryBlue,
-                                        foregroundColor: Colors.white,
+                        RefreshIndicator(
+                          onRefresh: _refreshLocal,
+                          child: _coffrets.isEmpty
+                              ? Center(
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.electrical_services_outlined, size: 64, color: Colors.grey.shade400),
+                                      const SizedBox(height: 16),
+                                      Text(
+                                        'Aucun coffret ajouté',
+                                        style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
                                       ),
-                                    ),
-                                  ],
+                                      const SizedBox(height: 8),
+                                      ElevatedButton.icon(
+                                        onPressed: _ajouterCoffret,
+                                        icon: const Icon(Icons.add),
+                                        label: const Text('AJOUTER UN COFFRET'),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: AppTheme.primaryBlue,
+                                          foregroundColor: Colors.white,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : ListView.builder(
+                                  padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
+                                  itemCount: _coffrets.length,
+                                  itemBuilder: (context, index) {
+                                    return _buildCoffretCard(_coffrets[index], index);
+                                  },
                                 ),
-                              )
-                            : ListView.builder(
-                                padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),
-                                itemCount: _coffrets.length,
-                                itemBuilder: (context, index) {
-                                  return _buildCoffretCard(_coffrets[index], index);
-                                },
-                              ),
+                        ),
 
                         _buildClassementTab(),
                       ].where((widget) => widget != null).toList(), // Filtrer les nulls

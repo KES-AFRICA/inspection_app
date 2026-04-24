@@ -5949,5 +5949,170 @@ static Future<void> refreshDrafts() async {
 }
 
 
+// ============================================================
+//          SUPPRESSION CASCADE DES BROUILLONS
+// ============================================================
+
+/// Supprimer tous les brouillons de locaux pour une mission
+static Future<void> deleteAllLocalDraftsForMission(String missionId) async {
+  try {
+    final box = Hive.box(_localDraftsBox);
+    final toDelete = <String>[];
+    
+    for (var key in box.keys) {
+      final data = box.get(key);
+      if (data != null && data['missionId'] == missionId) {
+        toDelete.add(key as String);
+      }
+    }
+    
+    for (var key in toDelete) {
+      await box.delete(key);
+    }
+    
+    if (kDebugMode) {
+      print('✅ ${toDelete.length} brouillons de locaux supprimés pour la mission $missionId');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Erreur deleteAllLocalDraftsForMission: $e');
+    }
+  }
+}
+
+/// Supprimer tous les brouillons de coffrets pour une mission
+static Future<void> deleteAllCoffretDraftsForMission(String missionId) async {
+  try {
+    final box = Hive.box(_coffretDraftsBox);
+    final toDelete = <String>[];
+    
+    for (var key in box.keys) {
+      final data = box.get(key);
+      if (data != null && data['missionId'] == missionId) {
+        toDelete.add(key as String);
+      }
+    }
+    
+    for (var key in toDelete) {
+      await box.delete(key);
+    }
+    
+    if (kDebugMode) {
+      print('✅ ${toDelete.length} brouillons de coffrets supprimés pour la mission $missionId');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Erreur deleteAllCoffretDraftsForMission: $e');
+    }
+  }
+}
+
+/// Supprimer les brouillons de locaux liés à une zone spécifique (MT ou BT)
+static Future<void> deleteLocalDraftsForZone({
+  required String missionId,
+  required int zoneIndex,
+  required bool isMoyenneTension,
+}) async {
+  try {
+    final box = Hive.box(_localDraftsBox);
+    final toDelete = <String>[];
+    
+    for (var key in box.keys) {
+      final data = box.get(key);
+      if (data != null &&
+          data['missionId'] == missionId &&
+          data['zoneIndex'] == zoneIndex &&
+          data['isMoyenneTension'] == isMoyenneTension) {
+        toDelete.add(key as String);
+      }
+    }
+    
+    for (var key in toDelete) {
+      await box.delete(key);
+    }
+    
+    if (kDebugMode) {
+      print('✅ ${toDelete.length} brouillons de locaux supprimés pour zone $zoneIndex');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Erreur deleteLocalDraftsForZone: $e');
+    }
+  }
+}
+
+/// Supprimer les brouillons de coffrets liés à un local spécifique
+static Future<void> deleteCoffretDraftsForLocal({
+  required String missionId,
+  required int parentIndex,
+  required bool isMoyenneTension,
+  int? zoneIndex,
+}) async {
+  try {
+    final box = Hive.box(_coffretDraftsBox);
+    final toDelete = <String>[];
+    
+    for (var key in box.keys) {
+      final data = box.get(key);
+      if (data != null &&
+          data['missionId'] == missionId &&
+          data['parentType'] == 'local' &&
+          data['parentIndex'] == parentIndex &&
+          data['isMoyenneTension'] == isMoyenneTension &&
+          data['zoneIndex'] == zoneIndex) {
+        toDelete.add(key as String);
+      }
+    }
+    
+    for (var key in toDelete) {
+      await box.delete(key);
+    }
+    
+    if (kDebugMode) {
+      print('✅ ${toDelete.length} brouillons de coffrets supprimés pour local $parentIndex');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Erreur deleteCoffretDraftsForLocal: $e');
+    }
+  }
+}
+
+/// Supprimer les brouillons de coffrets liés à une zone spécifique
+static Future<void> deleteCoffretDraftsForZone({
+  required String missionId,
+  required int parentIndex,
+  required bool isMoyenneTension,
+}) async {
+  try {
+    final parentType = isMoyenneTension ? 'zone_mt' : 'zone_bt';
+    final box = Hive.box(_coffretDraftsBox);
+    final toDelete = <String>[];
+    
+    for (var key in box.keys) {
+      final data = box.get(key);
+      if (data != null &&
+          data['missionId'] == missionId &&
+          data['parentType'] == parentType &&
+          data['parentIndex'] == parentIndex) {
+        toDelete.add(key as String);
+      }
+    }
+    
+    for (var key in toDelete) {
+      await box.delete(key);
+    }
+    
+    if (kDebugMode) {
+      print('✅ ${toDelete.length} brouillons de coffrets supprimés pour zone $parentIndex');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Erreur deleteCoffretDraftsForZone: $e');
+    }
+  }
+}
+
+
 }
 

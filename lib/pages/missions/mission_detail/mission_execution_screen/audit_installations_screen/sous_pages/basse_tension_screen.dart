@@ -1,4 +1,5 @@
 // basse_tension_screen.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
@@ -57,6 +58,9 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
       });
     } catch (e) {
       setState(() => _isLoading = false);
+      if (kDebugMode) {
+        print('❌ Erreur refresh: $e');
+      }
     }
   }
 
@@ -74,6 +78,7 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
     _loadAudit();
 
     if (result == true) {
+      await _refreshAllData();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Zone ajoutée avec succès')),
       );
@@ -488,7 +493,9 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
                   child: TabBarView(
                     children: [
                       // Onglet ZONES (existantes + contenu)
-                      _audit!.basseTensionZones.isEmpty
+                      RefreshIndicator(
+                        onRefresh: _refreshAllData,
+                        child: _audit!.moyenneTensionZones.isEmpty
                           ? _buildEmptyState()
                           : ListView.builder(
                               padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),
@@ -498,6 +505,7 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
                                 return _buildZoneCard(zone, index);
                               },
                             ),
+                      ),
                       
                       // Onglet CLASSEMENT (NOUVEAU)
                       _buildClassementTab(),

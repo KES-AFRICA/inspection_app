@@ -1867,17 +1867,20 @@ void _supprimerCoffret(int index, bool isMoyenneTension) {
                             );
                           }
                           
-                          return ListView.builder(
-                            padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
-                            itemCount: (uniqueDrafts.length + locauxExistants.length) as int,
-                            itemBuilder: (context, index) {
-                              if (index < uniqueDrafts.length) {
-                                return _buildLocalDraftCard(uniqueDrafts[index], widget.isMoyenneTension);
-                              } else {
-                                final localIndex = index - uniqueDrafts.length;
-                                return _buildLocalCard(locauxExistants[localIndex], localIndex, widget.isMoyenneTension);
-                              }
-                            },
+                          return RefreshIndicator(
+                            onRefresh: _refreshZone,
+                            child: ListView.builder(
+                              padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
+                              itemCount: (uniqueDrafts.length + locauxExistants.length) as int,
+                              itemBuilder: (context, index) {
+                                if (index < uniqueDrafts.length) {
+                                  return _buildLocalDraftCard(uniqueDrafts[index], widget.isMoyenneTension);
+                                } else {
+                                  final localIndex = index - uniqueDrafts.length;
+                                  return _buildLocalCard(locauxExistants[localIndex], localIndex, widget.isMoyenneTension);
+                                }
+                              },
+                            ),
                           );
                         },
                       ),
