@@ -1,7 +1,6 @@
 // lib/pages/missions/create_mission_screen.dart
 import 'package:flutter/material.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:inspec_app/models/create_mission_data.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/services/hive_service.dart';

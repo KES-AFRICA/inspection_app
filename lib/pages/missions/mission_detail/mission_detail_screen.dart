@@ -93,41 +93,55 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
   }
 
   Future<void> _handleMainAction() async {
-    if (_currentMission.isEnAttente) {
-      // Passer de "en_attente" à "en_cours"
-      await _updateMissionStatus('en_cours');
-      
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => SequenceScreen(
-              mission: _currentMission,
-              user: widget.user,
-            ),
-          ),
-        ).then((_) {
-          // Rafraîchir la mission au retour
-          _refreshMission();
-        });
-      }
-    } else if (_currentMission.isEnCours) {
-      // Continuer la mission
+  if (_currentMission.isEnAttente) {
+    await _updateMissionStatus('en_cours');
+    
+    if (mounted) {
       Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => SequenceScreen(
             mission: _currentMission,
             user: widget.user,
+            initialStep: 0,
           ),
         ),
       ).then((_) {
         _refreshMission();
       });
-    } else {
-      // Mission terminée - Voir/Générer le rapport
-      _generateReport();
     }
+  } else if (_currentMission.isEnCours) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SequenceScreen(
+          mission: _currentMission,
+          user: widget.user,
+          initialStep: 0,
+        ),
+      ),
+    ).then((_) {
+      _refreshMission();
+    });
+  } else {
+    // ✅ Mission terminée - Aller au résumé (étape 6)
+    _goToSummaryStep();
+  }
+}
+
+  void _goToSummaryStep() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SequenceScreen(
+          mission: _currentMission,
+          user: widget.user,
+          initialStep: 6,
+        ),
+      ),
+    ).then((_) {
+      _refreshMission();
+    });
   }
 
   void _refreshMission() {

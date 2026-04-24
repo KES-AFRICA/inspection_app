@@ -7,13 +7,11 @@ import 'package:inspec_app/services/sequence_progress_service.dart';
 class SchemaStep extends StatefulWidget {
   final Mission mission;
   final Function(Map<String, dynamic>) onDataChanged;
-  final VoidCallback onComplete;
 
   const SchemaStep({
     super.key,
     required this.mission,
     required this.onDataChanged,
-    required this.onComplete,
   });
 
   @override
@@ -64,25 +62,8 @@ class _SchemaStepState extends State<SchemaStep> {
     setState(() {
       _selectedOption = value;
     });
-    _saveData(); // Sauvegarde immédiate
-  }
-
-  void _handleComplete() {
-    if (_selectedOption == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez sélectionner Oui ou Non'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-    // Sauvegarder une dernière fois avant de passer à l'étape suivante
     _saveData();
-    widget.onComplete();
   }
-
-  bool get _isFormValid => _selectedOption != null;
 
   @override
   Widget build(BuildContext context) {
@@ -174,42 +155,6 @@ class _SchemaStepState extends State<SchemaStep> {
             ),
             
             const SizedBox(height: 50),
-            
-            // Bouton Terminer
-            SizedBox(
-              width: double.infinity,
-              height: 56,
-              child: ElevatedButton(
-                onPressed: _isFormValid ? _handleComplete : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.grey.shade400,
-                  disabledForegroundColor: Colors.grey.shade200,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  elevation: _isFormValid ? 2 : 0,
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    if (_isFormValid) ...[
-                      const Icon(Icons.check_circle, size: 20),
-                      const SizedBox(width: 8),
-                    ],
-                    const Text(
-                      'TERMINER ET VOIR LE RÉSUMÉ',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            
           ],
         ),
       ),

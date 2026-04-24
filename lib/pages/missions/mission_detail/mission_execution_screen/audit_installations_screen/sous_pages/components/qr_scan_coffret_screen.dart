@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_coffret_screen.dart';
@@ -29,15 +30,28 @@ class QrScanCoffretScreen extends StatefulWidget {
 }
 
 class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
-  MobileScannerController cameraController = MobileScannerController();
+  late MobileScannerController cameraController;
   String? _scannedQrCode;
   bool _isProcessing = false;
   bool _qrCodeDetected = false;
-  CoffretArmoire? _existingCoffret;
+  bool _scannerReady = true;
+  dynamic _existingCoffret;
+  bool _isExistingDraft = false;
+  bool _isExistingCompleted = false;
+
+  @override
+  void initState() {
+    super.initState();
+    cameraController = MobileScannerController();
+  }
 
   @override
   void dispose() {
-    cameraController.dispose();
+    cameraController.stop();
+    // Ne pas disposer immédiatement pour éviter les erreurs
+    Future.delayed(const Duration(milliseconds: 200), () {
+      cameraController.dispose();
+    });
     super.dispose();
   }
 
@@ -52,34 +66,63 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
       if (qrCode != null && qrCode.isNotEmpty && qrCode != _scannedQrCode) {
         setState(() {
           _isProcessing = true;
-          _scannedQrCode = qrCode;
         });
 
-        // Arrêter temporairement le scanner
         cameraController.stop();
         
-        Future.delayed(const Duration(milliseconds: 500), () {
+        Future.delayed(const Duration(milliseconds: 100), () {
           _processQrCodeDetection(qrCode);
         });
       }
     }
   }
 
-  void _processQrCodeDetection(String qrCode) async {
+  Future<void> _processQrCodeDetection(String qrCode) async {
     try {
-      // Vérifier si le QR code existe déjà
-      _existingCoffret = HiveService.findCoffretByQrCode(
+      final draft = HiveService.getCoffretDraftByQrCode(qrCode);
+      final completedCoffret = HiveService.findCoffretByQrCode(
         widget.mission.id,
         qrCode,
       );
-
+      
+      if (draft != null && draft.statut == 'incomplet') {
+        setState(() {
+          _existingCoffret = draft;
+          _isExistingDraft = true;
+          _isExistingCompleted = false;
+          _isProcessing = false;
+          _qrCodeDetected = true;
+          _scannedQrCode = qrCode;
+        });
+        return;
+      }
+      
+      if (completedCoffret != null) {
+        setState(() {
+          _existingCoffret = completedCoffret;
+          _isExistingDraft = false;
+          _isExistingCompleted = true;
+          _isProcessing = false;
+          _qrCodeDetected = true;
+          _scannedQrCode = qrCode;
+        });
+        return;
+      }
+      
       setState(() {
+        _existingCoffret = null;
+        _isExistingDraft = false;
+        _isExistingCompleted = false;
         _isProcessing = false;
         _qrCodeDetected = true;
+        _scannedQrCode = qrCode;
       });
+      
     } catch (e) {
-      print('❌ Erreur processQrCodeDetection: $e');
-      _showError('Erreur lors du traitement du QR code: $e');
+      if (kDebugMode) {
+        print('❌ Erreur processQrCodeDetection: $e');
+      }
+      _showError('Erreur lors du traitement du QR code');
       _resetScanner();
     }
   }
@@ -87,29 +130,7 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
   void _continuerAvecQrCode() {
     if (_scannedQrCode == null) return;
 
-    if (_existingCoffret != null) {
-      // Naviguer vers l'édition du coffret existant
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => AjouterCoffretScreen(
-            mission: widget.mission,
-            parentType: widget.parentType,
-            parentIndex: widget.parentIndex,
-            isMoyenneTension: widget.isMoyenneTension,
-            zoneIndex: widget.zoneIndex,
-            coffret: _existingCoffret,
-            isInZone: widget.isInZone,
-          ),
-        ),
-      ).then((value) {
-        // Rafraîchir l'écran précédent quand on revient
-        if (value == true) {
-          Navigator.pop(context, true);
-        }
-      });
-    } else {
-      // Naviguer vers la création d'un nouveau coffret
+    if (_isExistingDraft && _existingCoffret != null) {
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -125,16 +146,68 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
           ),
         ),
       ).then((value) {
-        // Rafraîchir l'écran précédent quand on revient
         if (value == true) {
           Navigator.pop(context, true);
         }
       });
+      return;
     }
+    
+    if (_isExistingCompleted) {
+      _showErrorDialog(
+        'Impossible de modifier cet équipement',
+        'Cet équipement a déjà été finalisé et ne peut plus être modifié.\n\n'
+        'Veuillez scanner un autre QR code.',
+      );
+      return;
+    }
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AjouterCoffretScreen(
+          mission: widget.mission,
+          parentType: widget.parentType,
+          parentIndex: widget.parentIndex,
+          isMoyenneTension: widget.isMoyenneTension,
+          zoneIndex: widget.zoneIndex,
+          coffret: null,
+          isInZone: widget.isInZone,
+          qrCode: _scannedQrCode,
+        ),
+      ),
+    ).then((value) {
+      if (value == true) {
+        Navigator.pop(context, true);
+      }
+    });
   }
 
-  void _recommencerScanner() {
-    _resetScanner();
+  void _showErrorDialog(String title, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+            const SizedBox(width: 12),
+            Expanded(child: Text(title, style: const TextStyle(fontSize: 18))),
+          ],
+        ),
+        content: Text(message, style: const TextStyle(fontSize: 14)),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _resetScanner();
+            },
+            child: const Text('SCANNER AUTRE', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
   }
 
   void _resetScanner() {
@@ -142,10 +215,43 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
       _scannedQrCode = null;
       _qrCodeDetected = false;
       _existingCoffret = null;
+      _isExistingDraft = false;
+      _isExistingCompleted = false;
       _isProcessing = false;
+      _scannerReady = false;
     });
-    // Redémarrer le scanner
-    cameraController.start();
+    
+    _reinitializeScanner();
+  }
+
+  void _reinitializeScanner() async {
+    try {
+      await cameraController.stop();
+      await cameraController.dispose();
+      
+      await Future.delayed(const Duration(milliseconds: 200));
+      
+      cameraController = MobileScannerController();
+      await Future.delayed(const Duration(milliseconds: 100));
+      await cameraController.start();
+      
+      if (mounted) {
+        setState(() {
+          _scannerReady = true;
+        });
+      }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erreur réinitialisation scanner: $e');
+      }
+      cameraController = MobileScannerController();
+      await cameraController.start();
+      if (mounted) {
+        setState(() {
+          _scannerReady = true;
+        });
+      }
+    }
   }
 
   void _enterQrCodeManually() {
@@ -208,19 +314,49 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
     });
 
     try {
-      // Vérifier si le QR code existe déjà
-      _existingCoffret = HiveService.findCoffretByQrCode(
+      final draft = HiveService.getCoffretDraftByQrCode(qrCode);
+      final completedCoffret = HiveService.findCoffretByQrCode(
         widget.mission.id,
         qrCode,
       );
-
+      
+      if (draft != null && draft.statut == 'incomplet') {
+        setState(() {
+          _existingCoffret = draft;
+          _isExistingDraft = true;
+          _isExistingCompleted = false;
+          _isProcessing = false;
+          _qrCodeDetected = true;
+          _scannedQrCode = qrCode;
+        });
+        return;
+      }
+      
+      if (completedCoffret != null) {
+        setState(() {
+          _existingCoffret = completedCoffret;
+          _isExistingDraft = false;
+          _isExistingCompleted = true;
+          _isProcessing = false;
+          _qrCodeDetected = true;
+          _scannedQrCode = qrCode;
+        });
+        return;
+      }
+      
       setState(() {
-        _scannedQrCode = qrCode;
+        _existingCoffret = null;
+        _isExistingDraft = false;
+        _isExistingCompleted = false;
         _isProcessing = false;
         _qrCodeDetected = true;
+        _scannedQrCode = qrCode;
       });
+      
     } catch (e) {
-      print('❌ Erreur processQrCodeManuel: $e');
+      if (kDebugMode) {
+        print('❌ Erreur processQrCodeManuel: $e');
+      }
       _showError('Erreur: $e');
       setState(() {
         _isProcessing = false;
@@ -249,7 +385,6 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
   Widget _buildScannerOverlay() {
     return Stack(
       children: [
-        // Overlay de guidage
         Center(
           child: Container(
             width: 250,
@@ -263,8 +398,6 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
             ),
           ),
         ),
-
-        // Coin supérieur gauche
         Positioned(
           top: 0,
           left: 0,
@@ -285,8 +418,6 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
             ),
           ),
         ),
-
-        // Coin supérieur droit
         Positioned(
           top: 0,
           right: 0,
@@ -307,8 +438,6 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
             ),
           ),
         ),
-
-        // Coin inférieur gauche
         Positioned(
           bottom: 0,
           left: 0,
@@ -329,8 +458,6 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
             ),
           ),
         ),
-
-        // Coin inférieur droit
         Positioned(
           bottom: 0,
           right: 0,
@@ -356,7 +483,31 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
   }
 
   Widget _buildQrCodeDetectedPanel() {
-    final isExisting = _existingCoffret != null;
+    final isDraft = _isExistingDraft;
+    final isCompleted = _isExistingCompleted;
+    final isNew = !isDraft && !isCompleted;
+    
+    String title;
+    String subtitle;
+    IconData icon;
+    Color color;
+    
+    if (isDraft) {
+      title = 'BROUILLON DÉTECTÉ';
+      subtitle = 'Ce QR code correspond à un équipement non finalisé.\nVous pouvez poursuivre la saisie.';
+      icon = Icons.drafts_outlined;
+      color = Colors.orange;
+    } else if (isCompleted) {
+      title = 'ÉQUIPEMENT FINALISÉ';
+      subtitle = 'Cet équipement a déjà été complété et ne peut plus être modifié.\nVeuillez scanner un autre QR code.';
+      icon = Icons.check_circle;
+      color = Colors.red;
+    } else {
+      title = 'NOUVEAU QR CODE';
+      subtitle = 'Ce QR code n\'est pas encore utilisé.\nVous pouvez créer un nouvel équipement.';
+      icon = Icons.qr_code_scanner;
+      color = Colors.green;
+    }
     
     return Container(
       padding: const EdgeInsets.all(20),
@@ -367,24 +518,18 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            isExisting ? Icons.check_circle : Icons.qr_code_scanner,
-            color: isExisting ? Colors.orange : Colors.green,
-            size: 64,
-          ),
+          Icon(icon, color: color, size: 64),
           const SizedBox(height: 16),
-          
           Text(
-            isExisting ? 'COFFRET EXISTANT DÉTECTÉ' : 'NOUVEAU QR CODE',
+            title,
             style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
+            textAlign: TextAlign.center,
           ),
-          
-          const SizedBox(height: 8),
-          
+          const SizedBox(height: 12),
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -401,50 +546,23 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
               textAlign: TextAlign.center,
             ),
           ),
-          
-          const SizedBox(height: 16),
-          
-          if (isExisting && _existingCoffret != null)
-            Column(
-              children: [
-                Text(
-                  'Nom: ${_existingCoffret!.nom}',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Type: ${_existingCoffret!.type}',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Localisation: ${_existingCoffret!.nom}',
-                  style: const TextStyle(color: Colors.white70),
-                ),
-                const SizedBox(height: 16),
-              ],
-            ),
-          
+          const SizedBox(height: 12),
           Text(
-            isExisting 
-              ? 'Ce QR code est déjà associé à un coffret existant.'
-              : 'Ce QR code n\'est pas encore utilisé.',
+            subtitle,
             style: const TextStyle(
               color: Colors.white70,
               fontSize: 14,
             ),
             textAlign: TextAlign.center,
           ),
-          
           const SizedBox(height: 24),
-          
           Row(
             children: [
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: _recommencerScanner,
+                  onPressed: _resetScanner,
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Recommencer'),
+                  label: const Text('Scanner autre'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.grey.shade700,
                     foregroundColor: Colors.white,
@@ -455,11 +573,11 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton.icon(
-                  onPressed: _continuerAvecQrCode,
-                  icon: Icon(isExisting ? Icons.edit : Icons.add),
-                  label: Text(isExisting ? 'Éditer' : 'Continuer'),
+                  onPressed: isCompleted ? null : _continuerAvecQrCode,
+                  icon: Icon(isNew ? Icons.add : Icons.edit),
+                  label: Text(isNew ? 'Créer' : (isDraft ? 'Continuer' : 'Impossible')),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: isExisting ? Colors.orange : AppTheme.primaryBlue,
+                    backgroundColor: isCompleted ? Colors.grey.shade600 : (isDraft ? Colors.orange : AppTheme.primaryBlue),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
@@ -485,11 +603,7 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
         ),
         child: Column(
           children: [
-            Icon(
-              Icons.qr_code_scanner,
-              color: Colors.white,
-              size: 48,
-            ),
+            const Icon(Icons.qr_code_scanner, color: Colors.white, size: 48),
             const SizedBox(height: 16),
             const Text(
               'Scannez le QR code du coffret',
@@ -534,22 +648,22 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
       ),
       body: Stack(
         children: [
-          // Scanner (seulement visible si pas de QR code détecté)
-          if (!_qrCodeDetected)
+          if (!_qrCodeDetected && _scannerReady)
             MobileScanner(
               controller: cameraController,
               onDetect: _onQrCodeDetect,
               fit: BoxFit.cover,
+            )
+          else if (!_qrCodeDetected && !_scannerReady)
+            Container(
+              color: Colors.black,
+              child: const Center(
+                child: CircularProgressIndicator(color: Colors.white),
+              ),
             ),
-
-          // Overlay de guidage
           _buildScannerOverlay(),
-
-          // Instructions (seulement visible si pas de QR code détecté)
-          if (!_qrCodeDetected && !_isProcessing)
+          if (!_qrCodeDetected && !_isProcessing && _scannerReady)
             _buildScannerInstructions(),
-
-          // Indicateur de traitement
           if (_isProcessing)
             Center(
               child: Container(
@@ -571,8 +685,6 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
                 ),
               ),
             ),
-
-          // Panel QR code détecté
           if (_qrCodeDetected && _scannedQrCode != null)
             Center(
               child: Padding(

@@ -10,17 +10,19 @@ import 'package:inspec_app/pages/missions/sequence/steps/documents_step.dart';
 import 'package:inspec_app/pages/missions/sequence/steps/description_step.dart';
 import 'package:inspec_app/pages/missions/sequence/steps/audit_step.dart';
 import 'package:inspec_app/pages/missions/sequence/steps/schema_step.dart';
+import 'package:inspec_app/pages/missions/sequence/steps/summary_step.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:inspec_app/pages/missions/sequence/steps/summary_screen.dart';
 
 class SequenceScreen extends StatefulWidget {
   final Mission mission;
   final Verificateur user;
+  final int initialStep;
 
   const SequenceScreen({
     super.key,
     required this.mission,
     required this.user,
+    this.initialStep = 0,
   });
 
   @override
@@ -34,9 +36,7 @@ class _SequenceScreenState extends State<SequenceScreen> {
   bool _isLoading = true;
   final Map<String, bool> _stepValidation = {};
 
-  // Clé pour accéder à l'état de GeneralInfoStep
   final GlobalKey<GeneralInfoStepState> _generalInfoKey = GlobalKey<GeneralInfoStepState>();
-  Widget? _cachedDescriptionWidget;
 
   @override
   void initState() {
@@ -46,8 +46,9 @@ class _SequenceScreenState extends State<SequenceScreen> {
     _ensureStatusIsEnCours();
   }
 
-  /// S'assure que le statut de la mission est bien "en_cours"
   Future<void> _ensureStatusIsEnCours() async {
+    if (widget.initialStep == 6) return;
+    
     final mission = HiveService.getMissionById(widget.mission.id);
     if (mission != null && mission.isEnAttente) {
       await HiveService.updateMissionStatus(
@@ -65,7 +66,7 @@ class _SequenceScreenState extends State<SequenceScreen> {
         'widget': JsaStep(
           mission: widget.mission,
           onDataChanged: (data) => _saveStepData('jsa', data),
-          onNextStep: _goToNextStep, // ← Pour aller vers Renseignements
+          onNextStep: _goToNextStep,
         ),
       },
       {
@@ -93,7 +94,7 @@ class _SequenceScreenState extends State<SequenceScreen> {
         'widget': DescriptionStep(
           mission: widget.mission,
           onDataChanged: (data) => _saveStepData('description', data),
-          onPreviousStep: _goToPreviousStep,  // Revenir à Documents
+          onPreviousStep: _goToPreviousStep,
           onNextStep: _goToNextStep,
         ),
       },
@@ -109,7 +110,15 @@ class _SequenceScreenState extends State<SequenceScreen> {
         'widget': SchemaStep(
           mission: widget.mission,
           onDataChanged: (data) => _saveStepData('schema', data),
-          onComplete: _onSequenceComplete,
+        ),
+      },
+      {
+        'title': 'Résumé',
+        'widget': SummaryStep(
+          mission: widget.mission,
+          user: widget.user,
+          onDataChanged: (data) => _saveStepData('summary', data),
+          onFinish: _onMissionFinished,  // ✅ Callback pour fermer
         ),
       },
     ];
@@ -121,7 +130,10 @@ class _SequenceScreenState extends State<SequenceScreen> {
     final progress = await SequenceProgressService.getProgress(widget.mission.id);
     var savedStep = progress['currentStep'] ?? 0;
     
-    if (savedStep >= _steps.length) {
+    if (widget.initialStep > 0 && widget.initialStep < _steps.length) {
+      savedStep = widget.initialStep;
+      await SequenceProgressService.saveCurrentStep(widget.mission.id, savedStep);
+    } else if (savedStep >= _steps.length) {
       savedStep = _steps.length - 1;
       await SequenceProgressService.saveCurrentStep(widget.mission.id, savedStep);
     }
@@ -136,26 +148,19 @@ class _SequenceScreenState extends State<SequenceScreen> {
     await SequenceProgressService.saveStepData(widget.mission.id, stepKey, data);
   }
 
-  // NOUVEAU : Méthode pour fermer le clavier avant toute transition
   void _dismissKeyboard() {
     FocusScope.of(context).unfocus();
   }
 
   Future<void> _goToNextStep() async {
-    // Fermer le clavier immédiatement
     _dismissKeyboard();
     
     if (_currentStep == 1) {
-      // Déclencher la validation visuelle
       _generalInfoKey.currentState?.triggerValidation();
-      
-      // Vérifier si le formulaire est valide
       final isValid = _generalInfoKey.currentState?.isFormValid ?? false;
       
       if (!isValid) {
-        // Attendre un peu que l'UI se mette à jour
         await Future.delayed(const Duration(milliseconds: 50));
-        
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -177,7 +182,6 @@ class _SequenceScreenState extends State<SequenceScreen> {
         _currentStep++;
       });
       
-      // Animation de transition
       await _pageController.animateToPage(
         _currentStep,
         duration: const Duration(milliseconds: 300),
@@ -189,7 +193,6 @@ class _SequenceScreenState extends State<SequenceScreen> {
   }
 
   Future<void> _goToPreviousStep() async {
-    // Fermer le clavier immédiatement
     _dismissKeyboard();
     
     if (_currentStep > 0) {
@@ -199,15 +202,11 @@ class _SequenceScreenState extends State<SequenceScreen> {
         _currentStep--;
       });
       
-      // Vérifier si on revient de l'étape "Description des installations" (index 3)
-      // vers "Documents nécessaires" (index 2)
       final bool isComingFromDescriptionToDocuments = (_currentStep + 1) == 3 && _currentStep == 2;
       
       if (isComingFromDescriptionToDocuments) {
-        // Utiliser jumpToPage pour une transition instantanée SANS effet de glissement
         _pageController.jumpToPage(_currentStep);
       } else {
-        // Pour toutes les autres transitions, garder l'animation normale
         await _pageController.animateToPage(
           _currentStep,
           duration: const Duration(milliseconds: 300),
@@ -219,22 +218,10 @@ class _SequenceScreenState extends State<SequenceScreen> {
     }
   }
 
-  void _onSequenceComplete() async {
+  void _onMissionFinished() {
     _dismissKeyboard();
-    
-    await SequenceProgressService.markStepCompleted(widget.mission.id, _steps.length - 1);
-    
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => SummaryScreen(
-            mission: widget.mission,
-            user: widget.user,
-          ),
-        ),
-      );
-    }
+    // Retourner à l'écran précédent (MissionDetailScreen)
+    Navigator.pop(context);
   }
 
   @override
@@ -260,6 +247,7 @@ class _SequenceScreenState extends State<SequenceScreen> {
 
     final currentStepTitle = _steps[_currentStep]['title'] as String;
     final totalSteps = _steps.length;
+    final isLastStep = _currentStep == totalSteps - 1;
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -282,7 +270,6 @@ class _SequenceScreenState extends State<SequenceScreen> {
         ),
         body: Column(
           children: [
-            // Barre de progression
             LinearProgressIndicator(
               value: (_currentStep + 1) / totalSteps,
               backgroundColor: AppTheme.primaryBlue.withOpacity(0.3),
@@ -296,8 +283,6 @@ class _SequenceScreenState extends State<SequenceScreen> {
                 children: _steps.map((step) => step['widget'] as Widget).toList(),
               ),
             ),
-            // Navigation buttons
-            if (_currentStep != 0 && _currentStep != 3)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -332,30 +317,28 @@ class _SequenceScreenState extends State<SequenceScreen> {
                         ),
                       ),
                     ),
-                  if (_currentStep > 0 && _currentStep < _steps.length - 1)
-                    const SizedBox(width: 12),
-                  if (_currentStep < _steps.length - 1)
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: _goToNextStep,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryBlue,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Text('Suivant'),
-                            SizedBox(width: 8),
-                            Icon(Icons.arrow_forward, size: 18),
-                          ],
+                  if (_currentStep > 0) const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: _goToNextStep,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isLastStep ? Colors.green : AppTheme.primaryBlue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
                         ),
                       ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(isLastStep ? 'TERMINER' : 'SUIVANT'),
+                          if (!isLastStep) const SizedBox(width: 8),
+                          if (!isLastStep) const Icon(Icons.arrow_forward, size: 18),
+                        ],
+                      ),
                     ),
+                  ),
                 ],
               ),
             ),

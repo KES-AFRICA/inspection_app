@@ -15,12 +15,14 @@ class SummaryStep extends StatefulWidget {
   final Mission mission;
   final Verificateur user;
   final Function(Map<String, dynamic>) onDataChanged;
+  final VoidCallback onFinish;  // ← REQUIRED
 
   const SummaryStep({
     super.key,
     required this.mission,
     required this.user,
     required this.onDataChanged,
+    required this.onFinish,
   });
 
   @override
@@ -39,12 +41,10 @@ class _SummaryStepState extends State<SummaryStep> {
   void initState() {
     super.initState();
     _loadProgress();
-    // Notifier que cette étape est active
     widget.onDataChanged({'summary_active': true});
     _ensureStatusIsTermine();
   }
 
-  /// S'assure que le statut de la mission est bien "termine"
   Future<void> _ensureStatusIsTermine() async {
     final mission = HiveService.getMissionById(widget.mission.id);
     if (mission != null && !mission.isTermine) {
@@ -52,7 +52,6 @@ class _SummaryStepState extends State<SummaryStep> {
         missionId: widget.mission.id,
         newStatus: 'termine',
       );
-      // Mettre à jour la mission locale
       widget.mission.status = 'termine';
     }
   }
@@ -127,7 +126,7 @@ class _SummaryStepState extends State<SummaryStep> {
     try {
       final directory = await getDownloadsDirectory();
       if (directory != null) {
-        final savedFile = await _generatedFile!.copy('${directory.path}/$_generatedFileName');
+        await _generatedFile!.copy('${directory.path}/$_generatedFileName');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Rapport sauvegardé dans ${directory.path}'),
@@ -136,9 +135,9 @@ class _SummaryStepState extends State<SummaryStep> {
         );
       } else {
         final documentsDir = await getApplicationDocumentsDirectory();
-        final savedFile = await _generatedFile!.copy('${documentsDir.path}/$_generatedFileName');
+        await _generatedFile!.copy('${documentsDir.path}/$_generatedFileName');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text('Rapport sauvegardé dans les documents'),
             backgroundColor: Colors.green,
           ),
@@ -179,12 +178,37 @@ class _SummaryStepState extends State<SummaryStep> {
     );
   }
 
+  void _finishMission() {
+    // Afficher une confirmation avant de quitter
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Terminer la mission'),
+        content: const Text('Voulez-vous vraiment terminer cette mission ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              widget.onFinish();  // ← Appeler le callback pour fermer le séquenceur
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+            child: const Text('Terminer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   int _getCompletedStepsCount() {
     return _progress['completedSteps']?.length ?? 0;
   }
 
   int _getTotalSteps() {
-    return 7; // JSA, Renseignements, Documents, Description, Audit, Schéma, Summary
+    return 7;
   }
 
   @override
@@ -446,6 +470,29 @@ class _SummaryStepState extends State<SummaryStep> {
               ),
             ),
           ],
+
+          const SizedBox(height: 24),
+
+          // ✅ Bouton TERMINER LA MISSION
+          SizedBox(
+            width: double.infinity,
+            height: 56,
+            child: ElevatedButton.icon(
+              onPressed: _finishMission,
+              icon: const Icon(Icons.check_circle, size: 24),
+              label: const Text(
+                'TERMINER LA MISSION',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
 
           const SizedBox(height: 32),
         ],

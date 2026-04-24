@@ -1246,7 +1246,9 @@ static CoffretArmoire? findCoffretByQrCode(String missionId, String qrCode) {
     
     return null;
   } catch (e) {
-    print('❌ Erreur findCoffretByQrCode: $e');
+    if (kDebugMode) {
+      print('❌ Erreur findCoffretByQrCode: $e');
+    }
     return null;
   }
 }
@@ -1337,13 +1339,17 @@ static Future<bool> updateCoffretAfterQrScan({
     
     if (found) {
       await saveAuditInstallations(audit);
-      print('✅ Coffret mis à jour après scan QR code: $qrCode');
+      if (kDebugMode) {
+        print('✅ Coffret mis à jour après scan QR code: $qrCode');
+      }
       return true;
     }
     
     return false;
   } catch (e) {
-    print('❌ Erreur updateCoffretAfterQrScan: $e');
+    if (kDebugMode) {
+      print('❌ Erreur updateCoffretAfterQrScan: $e');
+    }
     return false;
   }
 }
@@ -1373,6 +1379,25 @@ static CoffretArmoire createNewCoffretWithQrCode({
     photos: [],
   );
 }
+
+static CoffretArmoire? getCoffretDraftByQrCode(String qrCode) {
+  try {
+    // ✅ Utiliser Box sans type (dynamic) car la box est ouverte comme Box<dynamic>
+    final box = Hive.box(_coffretDraftsBox);
+    final data = box.get(qrCode);
+    
+    if (data != null && data is Map && data['coffret'] is CoffretArmoire) {
+      return data['coffret'] as CoffretArmoire;
+    }
+    return null;
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Erreur getCoffretDraftByQrCode: $e');
+    }
+    return null;
+  }
+}
+
 /// Ajouter un coffret à un local basse tension
 static Future<bool> addCoffretToBasseTensionLocal({
   required String missionId,
@@ -1734,12 +1759,16 @@ static Future<bool> addLocalToBasseTensionZone({
       
       zone.locaux.add(local);
       await saveAuditInstallations(audit);
-      print('✅ Local basse tension ajouté: ${local.nom}');
+      if (kDebugMode) {
+        print('✅ Local basse tension ajouté: ${local.nom}');
+      }
       return true;
     }
     return false;
   } catch (e) {
-    print('❌ Erreur addLocalToBasseTensionZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur addLocalToBasseTensionZone: $e');
+    }
     return false;
   }
 }
@@ -1759,7 +1788,9 @@ static Future<bool> updateMoyenneTensionLocal({
     }
     return false;
   } catch (e) {
-    print('❌ Erreur updateMoyenneTensionLocal: $e');
+    if (kDebugMode) {
+      print('❌ Erreur updateMoyenneTensionLocal: $e');
+    }
     return false;
   }
 }
@@ -1779,7 +1810,9 @@ static Future<bool> updateMoyenneTensionZone({
     }
     return false;
   } catch (e) {
-    print('❌ Erreur updateMoyenneTensionZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur updateMoyenneTensionZone: $e');
+    }
     return false;
   }
 }
@@ -1799,7 +1832,9 @@ static Future<bool> updateBasseTensionZone({
     }
     return false;
   } catch (e) {
-    print('❌ Erreur updateBasseTensionZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur updateBasseTensionZone: $e');
+    }
     return false;
   }
 }
@@ -1823,7 +1858,9 @@ static Future<bool> updateBasseTensionLocal({
     }
     return false;
   } catch (e) {
-    print('❌ Erreur updateBasseTensionLocal: $e');
+    if (kDebugMode) {
+      print('❌ Erreur updateBasseTensionLocal: $e');
+    }
     return false;
   }
 }
@@ -1851,12 +1888,16 @@ static Future<bool> addLocalToMoyenneTensionZone({
       
       zone.locaux.add(local);
       await saveAuditInstallations(audit);
-      print('✅ Local moyenne tension ajouté dans zone: ${local.nom}');
+      if (kDebugMode) {
+        print('✅ Local moyenne tension ajouté dans zone: ${local.nom}');
+      }
       return true;
     }
     return false;
   } catch (e) {
-    print('❌ Erreur addLocalToMoyenneTensionZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur addLocalToMoyenneTensionZone: $e');
+    }
     return false;
   }
 }
@@ -1880,7 +1921,9 @@ static Future<bool> updateLocalInMoyenneTensionZone({
     }
     return false;
   } catch (e) {
-    print('❌ Erreur updateLocalInMoyenneTensionZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur updateLocalInMoyenneTensionZone: $e');
+    }
     return false;
   }
 }
@@ -1903,7 +1946,9 @@ static Future<bool> deleteLocalFromMoyenneTensionZone({
     }
     return false;
   } catch (e) {
-    print('❌ Erreur deleteLocalFromMoyenneTensionZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur deleteLocalFromMoyenneTensionZone: $e');
+    }
     return false;
   }
 }
@@ -1920,7 +1965,9 @@ static List<MoyenneTensionLocal> getLocauxInMoyenneTensionZone({
     }
     return audit.moyenneTensionZones[zoneIndex].locaux;
   } catch (e) {
-    print('❌ Erreur getLocauxInMoyenneTensionZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getLocauxInMoyenneTensionZone: $e');
+    }
     return [];
   }
 }
@@ -2046,11 +2093,15 @@ static Future<List<ClassementEmplacement>> syncEmplacementsFromAudit(String miss
     // ===========================================
     await _updateMissionClassementReference(missionId, emplacements);
     
-    print('✅ ${emplacements.length} LOCAUX (seulement) synchronisés pour mission $missionId');
+    if (kDebugMode) {
+      print('✅ ${emplacements.length} LOCAUX (seulement) synchronisés pour mission $missionId');
+    }
     return emplacements;
     
   } catch (e) {
-    print('❌ Erreur syncEmplacementsFromAudit: $e');
+    if (kDebugMode) {
+      print('❌ Erreur syncEmplacementsFromAudit: $e');
+    }
     return [];
   }
 }
@@ -2067,7 +2118,9 @@ static Future<void> _updateMissionClassementReference(String missionId, List<Cla
       mission.classementLocauxId = null;
     }
     await mission.save();
-    print('✅ Référence classement mise à jour pour mission $missionId');
+    if (kDebugMode) {
+      print('✅ Référence classement mise à jour pour mission $missionId');
+    }
   }
 }
 
@@ -2077,7 +2130,9 @@ static List<ClassementEmplacement> getEmplacementsByMissionId(String missionId) 
   try {
     return box.values.where((e) => e.missionId == missionId).toList();
   } catch (e) {
-    print('❌ Erreur getEmplacementsByMissionId: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getEmplacementsByMissionId: $e');
+    }
     return [];
   }
 }
@@ -2108,13 +2163,21 @@ static Future<bool> updateEmplacement(ClassementEmplacement emplacement) async {
       await box.add(emplacement);
     }
     
-    print('✅ Emplacement sauvegardé: ${emplacement.localisation} (${emplacement.typeEmplacement})');
-    print('   AF: ${emplacement.af}, BE: ${emplacement.be}, AE: ${emplacement.ae}');
-    print('   AD: ${emplacement.ad}, AG: ${emplacement.ag}');
+    if (kDebugMode) {
+      print('✅ Emplacement sauvegardé: ${emplacement.localisation} (${emplacement.typeEmplacement})');
+    }
+    if (kDebugMode) {
+      print('   AF: ${emplacement.af}, BE: ${emplacement.be}, AE: ${emplacement.ae}');
+    }
+    if (kDebugMode) {
+      print('   AD: ${emplacement.ad}, AG: ${emplacement.ag}');
+    }
     
     return true;
   } catch (e) {
-    print('❌ Erreur updateEmplacement: $e');
+    if (kDebugMode) {
+      print('❌ Erreur updateEmplacement: $e');
+    }
     return false;
   }
 }
@@ -2123,10 +2186,14 @@ static Future<bool> updateEmplacement(ClassementEmplacement emplacement) async {
 static Future<bool> deleteEmplacement(ClassementEmplacement emplacement) async {
   try {
     await emplacement.delete();
-    print('✅ Emplacement supprimé: ${emplacement.localisation}');
+    if (kDebugMode) {
+      print('✅ Emplacement supprimé: ${emplacement.localisation}');
+    }
     return true;
   } catch (e) {
-    print('❌ Erreur deleteEmplacement: $e');
+    if (kDebugMode) {
+      print('❌ Erreur deleteEmplacement: $e');
+    }
     return false;
   }
 }
@@ -2149,10 +2216,14 @@ static Future<bool> clearEmplacementsForMission(String missionId) async {
       await mission.save();
     }
     
-    print('✅ ${emplacements.length} emplacements supprimés pour mission $missionId');
+    if (kDebugMode) {
+      print('✅ ${emplacements.length} emplacements supprimés pour mission $missionId');
+    }
     return true;
   } catch (e) {
-    print('❌ Erreur clearEmplacementsForMission: $e');
+    if (kDebugMode) {
+      print('❌ Erreur clearEmplacementsForMission: $e');
+    }
     return false;
   }
 }
@@ -2226,7 +2297,9 @@ static Future<List<ClassementEmplacement>> syncZonesFromAudit(String missionId) 
         await classementBox.add(classement);
         zone.classementZoneId = classement.key.toString();
         await saveAuditInstallations(audit);
-        print('✅ Nouveau classement zone MT créé: ${zone.nom}');
+        if (kDebugMode) {
+          print('✅ Nouveau classement zone MT créé: ${zone.nom}');
+        }
       }
       
       zones.add(classement);
@@ -2260,16 +2333,22 @@ static Future<List<ClassementEmplacement>> syncZonesFromAudit(String missionId) 
         await classementBox.add(classement);
         zone.classementZoneId = classement.key.toString();
         await saveAuditInstallations(audit);
-        print('✅ Nouveau classement zone BT créé: ${zone.nom}');
+        if (kDebugMode) {
+          print('✅ Nouveau classement zone BT créé: ${zone.nom}');
+        }
       }
       
       zones.add(classement);
     }
     
-    print('✅ ${zones.length} ZONES synchronisées pour mission $missionId');
+    if (kDebugMode) {
+      print('✅ ${zones.length} ZONES synchronisées pour mission $missionId');
+    }
     return zones;
   } catch (e) {
-    print('❌ Erreur syncZonesFromAudit: $e');
+    if (kDebugMode) {
+      print('❌ Erreur syncZonesFromAudit: $e');
+    }
     return [];
   }
 }
@@ -2294,7 +2373,9 @@ static Future<void> ensureZonesHaveClassement(String missionId) async {
         nomZone: zone.nom,
       );
       await classementBox.add(newClassement);
-      print('✅ Classement manquant créé pour zone MT: ${zone.nom}');
+      if (kDebugMode) {
+        print('✅ Classement manquant créé pour zone MT: ${zone.nom}');
+      }
     }
   }
   
@@ -2312,7 +2393,9 @@ static Future<void> ensureZonesHaveClassement(String missionId) async {
         nomZone: zone.nom,
       );
       await classementBox.add(newClassement);
-      print('✅ Classement manquant créé pour zone BT: ${zone.nom}');
+      if (kDebugMode) {
+        print('✅ Classement manquant créé pour zone BT: ${zone.nom}');
+      }
     }
   }
 }
@@ -2429,10 +2512,14 @@ static Future<ClassementEmplacement> getOrCreateClassementForZone({
       nomZone: nomZone,
     );
     await classementBox.add(newClassement);
-    print('✅ Classement zone créé: $nomZone');
+    if (kDebugMode) {
+      print('✅ Classement zone créé: $nomZone');
+    }
     return newClassement;
   } catch (e) {
-    print('❌ Erreur getOrCreateClassementForZone: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getOrCreateClassementForZone: $e');
+    }
     final newClassement = ClassementEmplacement.createZone(
       missionId: missionId,
       nomZone: nomZone,
@@ -2550,7 +2637,7 @@ static String? calculateIP(String? ae, String? ad) {
   
   if (aeNum == null || adNum == null) return null;
   
-  return 'IP${aeNum}${adNum}';
+  return 'IP$aeNum$adNum';
 }
 
 /// Calculer l'indice IK à partir de AG
@@ -2704,11 +2791,15 @@ static Future<bool> importClassementFromCSV(String missionId, String csvData) as
       await emplacement.save();
     }
     
-    print('✅ Données de classement importées pour mission $missionId');
+    if (kDebugMode) {
+      print('✅ Données de classement importées pour mission $missionId');
+    }
     return true;
     
   } catch (e) {
-    print('❌ Erreur importClassementFromCSV: $e');
+    if (kDebugMode) {
+      print('❌ Erreur importClassementFromCSV: $e');
+    }
     return false;
   }
 }
@@ -2803,11 +2894,15 @@ static Future<bool> forceSyncEmplacements(String missionId) async {
     // 2. Synchroniser à nouveau
     await syncEmplacementsFromAudit(missionId);
     
-    print('✅ Synchronisation forcée terminée pour mission $missionId');
+    if (kDebugMode) {
+      print('✅ Synchronisation forcée terminée pour mission $missionId');
+    }
     return true;
     
   } catch (e) {
-    print('❌ Erreur forceSyncEmplacements: $e');
+    if (kDebugMode) {
+      print('❌ Erreur forceSyncEmplacements: $e');
+    }
     return false;
   }
 }
@@ -2971,10 +3066,14 @@ static Future<Foudre> createFoudreObservation({
     // Mettre à jour la référence dans la mission (si nécessaire)
     await _updateFoudreReferenceInMission(missionId, foudre);
     
-    print('✅ Observation foudre créée: ${foudre.key}');
+    if (kDebugMode) {
+      print('✅ Observation foudre créée: ${foudre.key}');
+    }
     return foudre;
   } catch (e) {
-    print('❌ Erreur createFoudreObservation: $e');
+    if (kDebugMode) {
+      print('❌ Erreur createFoudreObservation: $e');
+    }
     rethrow;
   }
 }
@@ -2987,7 +3086,9 @@ static List<Foudre> getFoudreObservationsByMissionId(String missionId) {
         .where((foudre) => foudre.missionId == missionId)
         .toList();
   } catch (e) {
-    print('❌ Erreur getFoudreObservationsByMissionId: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getFoudreObservationsByMissionId: $e');
+    }
     return [];
   }
 }
@@ -2998,7 +3099,9 @@ static Foudre? getFoudreObservationById(dynamic id) {
     final box = Hive.box<Foudre>(_foudreBox);
     return box.get(id);
   } catch (e) {
-    print('❌ Erreur getFoudreObservationById: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getFoudreObservationById: $e');
+    }
     return null;
   }
 }
@@ -3011,7 +3114,9 @@ static List<Foudre> getFoudreObservationsByPriority(String missionId, int niveau
         .where((foudre) => foudre.niveauPriorite == niveauPriorite)
         .toList();
   } catch (e) {
-    print('❌ Erreur getFoudreObservationsByPriority: $e');
+    if (kDebugMode) {
+      print('❌ Erreur getFoudreObservationsByPriority: $e');
+    }
     return [];
   }
 }
@@ -3031,7 +3136,9 @@ static Future<bool> updateFoudreObservation({
     final foudre = box.get(foudreId);
     
     if (foudre == null) {
-      print('❌ Observation foudre non trouvée: $foudreId');
+      if (kDebugMode) {
+        print('❌ Observation foudre non trouvée: $foudreId');
+      }
       return false;
     }
     
@@ -5466,12 +5573,6 @@ static Future<void> saveCoffretDraft({
       };
     }
     return null;
-  }
-
-  /// Récupérer un brouillon par QR code
-  static CoffretArmoire? getCoffretDraftByQrCode(String qrCode) {
-    final data = getCoffretDraftData(qrCode);
-    return data?['coffret'] as CoffretArmoire?;
   }
 
   /// Récupérer tous les brouillons pour une mission
