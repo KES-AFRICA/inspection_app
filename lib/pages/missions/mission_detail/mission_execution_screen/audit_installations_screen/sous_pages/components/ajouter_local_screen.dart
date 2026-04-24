@@ -2935,7 +2935,7 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
           
           SizedBox(height: context.spacingL),
           
-          // Ligne 1 : Conformité (seule, sur toute la largeur)
+          // ✅ Conformité - AUCUNE valeur par défaut
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -3002,7 +3002,7 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
           
           SizedBox(height: context.spacingM),
           
-          // Ligne 2 : Priorité (seule, sur toute la largeur)
+          // Priorité
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -4428,34 +4428,70 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
 
   void _initializeElementsForType(String? type) {
     if (type == null) return;
+    
     final dispositions = HiveService.getDispositionsConstructivesForLocal(type);
     _dispositionsConstructives = dispositions.map((element) {
       final ec = ElementControle(elementControle: element, conforme: null, priorite: 3);
       _conformeSelected[ec] = false;
       return ec;
     }).toList();
+    
     final conditions = HiveService.getConditionsExploitationForLocal(type);
     _conditionsExploitation = conditions.map((element) {
       final ec = ElementControle(elementControle: element, conforme: null, priorite: 3);
       _conformeSelected[ec] = false;
       return ec;
     }).toList();
+    
     for (int i = 0; i < _dispositionsConstructives.length; i++) {
       _hasObservation[i] = false;
     }
     for (int i = 0; i < _conditionsExploitation.length; i++) {
       _hasObservation[_dispositionsConstructives.length + i] = false;
     }
+    
     if (type == 'LOCAL_TRANSFORMATEUR') {
-      final celluleElements = ['Schéma unifilaire affiché dans le local', 'Cellule correctement posée et fixée', 'Jonctions inter-cellules', 'Canalisations et câbles d\'arrivée / départ', 'Respect des distances de sécurité', 'Commande manuelle / motorisée', 'Voyants de position (O / F / T)', 'Verrouillage mécanique', 'Terre de protection (PE) reliée à chaque cellule'];
+      final celluleElements = [
+        'Schéma unifilaire affiché dans le local',
+        'Cellule correctement posée et fixée',
+        'Jonctions inter-cellules',
+        'Canalisations et câbles d\'arrivée / départ',
+        'Respect des distances de sécurité',
+        'Commande manuelle / motorisée',
+        'Voyants de position (O / F / T)',
+        'Verrouillage mécanique',
+        'Terre de protection (PE) reliée à chaque cellule'
+      ];
       _celluleElements = celluleElements.map((element) {
-        final ec = ElementControle(elementControle: element, conforme: false, priorite: 3);
+        final ec = ElementControle(
+          elementControle: element,
+          conforme: null, 
+          priorite: 3,
+        );
         _conformeSelected[ec] = false;
         return ec;
       }).toList();
-      final transfoElements = ['Adapté au local et à la ventilation', 'Plaque signalétique (puissance, tension, couplage)', 'Mise à la terre du neutre et de la carcasse', 'Raccordement des câbles MT et BT', 'Protection contre les contacts directs', 'Bac de rétention (pour transfo à huile)', 'Protection contre les surintensités', 'Essais diélectriques', 'Distance entre transformateur', 'Protection MT', 'Protection BT (disjoncteur général, fusibles, relais thermique)', 'Écran de câble MT relié à la terre'];
+      
+      final transfoElements = [
+        'Adapté au local et à la ventilation',
+        'Plaque signalétique (puissance, tension, couplage)',
+        'Mise à la terre du neutre et de la carcasse',
+        'Raccordement des câbles MT et BT',
+        'Protection contre les contacts directs',
+        'Bac de rétention (pour transfo à huile)',
+        'Protection contre les surintensités',
+        'Essais diélectriques',
+        'Distance entre transformateur',
+        'Protection MT',
+        'Protection BT (disjoncteur général, fusibles, relais thermique)',
+        'Écran de câble MT relié à la terre'
+      ];
       _transfoElements = transfoElements.map((element) {
-        final ec = ElementControle(elementControle: element, conforme: false, priorite: 3);
+        final ec = ElementControle(
+          elementControle: element,
+          conforme: null,  
+          priorite: 3,
+        );
         _conformeSelected[ec] = false;
         return ec;
       }).toList();
@@ -5006,8 +5042,12 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           foregroundColor: Colors.white,
           elevation: 0,
           actions: [
-            if (!widget.isEdition && _currentStep == totalSteps - 1)
-              IconButton(icon: Icon(Icons.check, size: context.iconSizeM), onPressed: _sauvegarder),
+          if (widget.isEdition)
+              IconButton(
+                icon: Icon(Icons.check, size: context.iconSizeM),
+                onPressed: _sauvegarder,
+                tooltip: 'Enregistrer les modifications',
+              ),
           ],
         ),
         body: Column(
