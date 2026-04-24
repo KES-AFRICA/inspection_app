@@ -468,13 +468,14 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       numeroEquipement: fields[17] as String?,
       photosExternes: (fields[20] as List?)?.cast<String>(),
       photosInternes: (fields[21] as List?)?.cast<String>(),
+      observationsParafoudre: (fields[22] as List?)?.cast<ObservationLibre>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, CoffretArmoire obj) {
     writer
-      ..writeByte(22)
+      ..writeByte(23)
       ..writeByte(0)
       ..write(obj.qrCode)
       ..writeByte(1)
@@ -518,7 +519,9 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       ..writeByte(20)
       ..write(obj.photosExternes)
       ..writeByte(21)
-      ..write(obj.photosInternes);
+      ..write(obj.photosInternes)
+      ..writeByte(22)
+      ..write(obj.observationsParafoudre);
   }
 
   @override

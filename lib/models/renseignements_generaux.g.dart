@@ -27,13 +27,13 @@ class RenseignementsGenerauxAdapter
       dureeJours: fields[6] as int,
       verificationType: fields[7] as String?,
       registreControle: fields[8] as String,
-      compteRendu: (fields[9] as List).cast<String>(),
-      accompagnateurs: (fields[10] as List)
-          .map((dynamic e) => (e as Map).cast<String, String>())
-          .toList(),
-      verificateurs: (fields[11] as List)
-          .map((dynamic e) => (e as Map).cast<String, String>())
-          .toList(),
+      compteRendu: (fields[9] as List?)?.cast<String>(),
+      accompagnateurs: (fields[10] as List?)
+          ?.map((dynamic e) => (e as Map).cast<String, String>())
+          ?.toList(),
+      verificateurs: (fields[11] as List?)
+          ?.map((dynamic e) => (e as Map).cast<String, String>())
+          ?.toList(),
       updatedAt: fields[12] as DateTime,
       nomSite: fields[13] as String,
     );
