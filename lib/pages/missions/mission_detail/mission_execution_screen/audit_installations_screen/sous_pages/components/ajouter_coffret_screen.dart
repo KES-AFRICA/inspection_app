@@ -694,7 +694,6 @@ class _EtapeInformationsGenerales extends StatefulWidget {
   final Function(String?) onDomaineTensionChanged;
   final bool domaineTensionValid;
   
-  // ✅ NOUVEAUX PARAMÈTRES
   final List<ObservationLibre> observationsParafoudre;
   final Function(String, List<String>) onAddParafoudreObservation;
   final Function(int) onDeleteParafoudreObservation;
@@ -792,6 +791,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
 
   @override
   Widget build(BuildContext context) {
+    
     return ListView(
       padding: EdgeInsets.all(context.spacingL),
       children: [
@@ -1627,6 +1627,79 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
     return _isLastSlide;
   }
 
+  void _ajouterAutrePoint() async {
+    final controller = TextEditingController();
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Ajouter un point de vérification'),
+        content: TextFormField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 3,
+          decoration: const InputDecoration(
+            hintText: 'Saisissez le libellé du point à ajouter...',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final texte = controller.text.trim();
+              if (texte.isNotEmpty) {
+                Navigator.pop(context, texte);
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
+            child: const Text('Ajouter'),
+          ),
+        ],
+      ),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      // Créer un nouveau point de vérification
+      final newPoint = PointVerification(
+        pointVerification: result,
+        conformite: '',
+        observation: null,
+        referenceNormative: null,
+        priorite: null,
+      );
+      
+      // Ajouter à la liste
+      setState(() {
+        widget.pointsVerification.add(newPoint);
+        _pointObservations[widget.pointsVerification.length - 1] = [];
+        _newObservationControllers[widget.pointsVerification.length - 1] = TextEditingController();
+      });
+      
+      // Reconstruire les slides
+      _buildSlides();
+      
+      // Aller au dernier slide
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_slideController.hasClients) {
+          _slideController.animateToPage(
+            _totalSlides - 1,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+          setState(() => _currentSlide = _totalSlides - 1);
+        }
+      });
+      
+      // Sauvegarder le brouillon
+      final parentState = context.findAncestorStateOfType<_AjouterCoffretScreenState>();
+      parentState?._saveDraft();
+    }
+  }
+
   @override
   void dispose() {
     _slideController.dispose();
@@ -1686,7 +1759,7 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
                       style: TextStyle(fontSize: context.fontSizeXL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
                     ),
                     Text(
-                      '${widget.pointsVerification.length} points - Slide ${_currentSlide + 1}/${_totalSlides}',
+                      '${widget.pointsVerification.length} points - Slide ${_currentSlide + 1}/$_totalSlides',
                       style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
                     ),
                   ],
@@ -1708,25 +1781,58 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
         ),
         
         Expanded(
-          child: PageView.builder(
-            controller: _slideController,
-            physics: const NeverScrollableScrollPhysics(),
-            onPageChanged: (index) => setState(() => _currentSlide = index),
-            itemCount: _totalSlides,
-            itemBuilder: (context, slideIndex) {
-              final slidePoints = _pointsSlides[slideIndex];
-              final startIndex = slideIndex * 3;
-              
-              return ListView(
-                padding: EdgeInsets.all(context.spacingL),
-                children: slidePoints.asMap().entries.map((entry) {
+        child: PageView.builder(
+          controller: _slideController,
+          physics: const NeverScrollableScrollPhysics(),
+          onPageChanged: (index) => setState(() => _currentSlide = index),
+          itemCount: _totalSlides,
+          itemBuilder: (context, slideIndex) {
+            final slidePoints = _pointsSlides[slideIndex];
+            final startIndex = slideIndex * 3;
+            final isLastSlide = slideIndex == _totalSlides - 1;
+            
+            return ListView(
+              padding: EdgeInsets.all(context.spacingL),
+              children: [
+                // Cartes des points
+                ...slidePoints.asMap().entries.map((entry) {
                   final pointIndex = startIndex + entry.key;
                   return _buildModernPointCard(context, entry.value, pointIndex);
-                }).toList(),
-              );
-            },
-          ),
+                }),
+                
+                // Ajouter le bouton seulement si c'est le dernier slide
+                if (isLastSlide) ...[
+                  SizedBox(height: context.spacingM),
+                  Container(
+                    padding: EdgeInsets.all(context.spacingM),
+                    child: OutlinedButton.icon(
+                      onPressed: _ajouterAutrePoint,
+                      icon: Icon(Icons.add_circle_outline, size: context.iconSizeM, color: AppTheme.primaryBlue),
+                      label: Text(
+                        'AUTRE',
+                        style: TextStyle(
+                          fontSize: context.fontSizeM, 
+                          fontWeight: FontWeight.w600, 
+                          color: AppTheme.primaryBlue
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        padding: EdgeInsets.symmetric(vertical: context.spacingM),
+                        side: BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(context.spacingS)
+                        ),
+                      ),
+                    ),
+                  ),
+                  // Espace supplémentaire en bas pour mieux scroller
+                  SizedBox(height: context.spacingL),
+                ],
+              ],
+            );
+          },
         ),
+      ),
       ],
     );
   }
@@ -2726,7 +2832,18 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     _scheduleAutoSave();
   }
   void _validateDomaineTension(String? value){
-    setState(() => _domaineTensionValid = value != null && value.isNotEmpty);
+    // Si la valeur est null ou vide, on garde la valeur par défaut
+    String finalValue = value ?? '';
+    if (finalValue.isEmpty && _domaineTension.isNotEmpty) {
+      finalValue = _domaineTension;
+    }
+    
+    setState(() {
+      _domaineTensionValid = finalValue.isNotEmpty;
+      if (finalValue.isNotEmpty) {
+        _domaineTension = finalValue;
+      }
+    });
     _scheduleAutoSave();
   }
 
@@ -2885,29 +3002,66 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
         maxWidth: 1024,
         maxHeight: 1024,
       );
+      
       if (photo != null) {
-        setState(() => _isLoadingPhotosExterne = true);
+        if (mounted) {
+          setState(() => _isLoadingPhotosExterne = true);
+        }
+        
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_externe');
-        setState(() {
-          _coffretPhotosExterne.add(savedPath);
-          _validatePhotosExterne(); 
-        });
+        
+        if (mounted) {
+          setState(() {
+            _coffretPhotosExterne.add(savedPath);
+            _validatePhotosExterne();
+            _isLoadingPhotosExterne = false;
+          });
+        }
       }
-    } catch (e) { _showError('Erreur photo externe: $e'); } finally { setState(() => _isLoadingPhotosExterne = false); }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erreur photo externe: $e');
+      }
+      if (mounted) {
+        setState(() => _isLoadingPhotosExterne = false);
+        _showError('Erreur lors de la prise de photo: $e');
+      }
+    }
   }
 
   Future<void> _choisirPhotoExterne() async {
     try {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
+      
       if (photo != null) {
-        setState(() => _isLoadingPhotosExterne = true);
+        if (mounted) {
+          setState(() => _isLoadingPhotosExterne = true);
+        }
+        
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_externe');
-        setState(() {
-          _coffretPhotosExterne.add(savedPath);
-          _validatePhotosExterne(); 
-        });
+        
+        if (mounted) {
+          setState(() {
+            _coffretPhotosExterne.add(savedPath);
+            _validatePhotosExterne();
+            _isLoadingPhotosExterne = false;
+          });
+        }
       }
-    } catch (e) { _showError('Erreur sélection photo externe: $e'); } finally { setState(() => _isLoadingPhotosExterne = false); }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erreur sélection photo externe: $e');
+      }
+      if (mounted) {
+        setState(() => _isLoadingPhotosExterne = false);
+        _showError('Erreur lors de la sélection: $e');
+      }
+    }
   }
 
   Future<void> _prendrePhotoInterne() async {
@@ -2919,39 +3073,91 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
         maxWidth: 1024,
         maxHeight: 1024,
       );
+      
       if (photo != null) {
-        setState(() => _isLoadingPhotosInterne = true);
+        if (mounted) {
+          setState(() => _isLoadingPhotosInterne = true);
+        }
+        
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_interne');
-        setState(() {
-          _coffretPhotosInterne.add(savedPath);
-          _validatePhotosInterne();
-        });
+        
+        if (mounted) {
+          setState(() {
+            _coffretPhotosInterne.add(savedPath);
+            _validatePhotosInterne();
+            _isLoadingPhotosInterne = false;
+          });
+        }
       }
-    } catch (e) { _showError('Erreur photo interne: $e'); } finally { setState(() => _isLoadingPhotosInterne = false); }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erreur photo interne: $e');
+      }
+      if (mounted) {
+        setState(() => _isLoadingPhotosInterne = false);
+        _showError('Erreur lors de la prise de photo: $e');
+      }
+    }
   }
 
   Future<void> _choisirPhotoInterne() async {
     try {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 85,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
+      
       if (photo != null) {
-        setState(() => _isLoadingPhotosInterne = true);
+        if (mounted) {
+          setState(() => _isLoadingPhotosInterne = true);
+        }
+        
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_interne');
-        setState(() {
-          _coffretPhotosInterne.add(savedPath);
-          _validatePhotosInterne();
-        });
+        
+        if (mounted) {
+          setState(() {
+            _coffretPhotosInterne.add(savedPath);
+            _validatePhotosInterne();
+            _isLoadingPhotosInterne = false;
+          });
+        }
       }
-    } catch (e) { _showError('Erreur sélection photo interne: $e'); } finally { setState(() => _isLoadingPhotosInterne = false); }
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erreur sélection photo interne: $e');
+      }
+      if (mounted) {
+        setState(() => _isLoadingPhotosInterne = false);
+        _showError('Erreur lors de la sélection: $e');
+      }
+    }
   }
 
   Future<String> _savePhotoToAppDirectory(File photoFile, String subDir) async {
-    final appDir = await getApplicationDocumentsDirectory();
-    final photosDir = Directory('${appDir.path}/audit_photos/$subDir');
-    if (!await photosDir.exists()) await photosDir.create(recursive: true);
-    final fileName = '${subDir}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final newPath = '${photosDir.path}/$fileName';
-    await photoFile.copy(newPath);
-    return newPath;
+    try {
+      final appDir = await getApplicationDocumentsDirectory();
+      final photosDir = Directory('${appDir.path}/audit_photos/$subDir');
+      
+      if (!await photosDir.exists()) {
+        await photosDir.create(recursive: true);
+      }
+      
+      final fileName = '${subDir}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final newPath = '${photosDir.path}/$fileName';
+      
+      await photoFile.copy(newPath);
+      if (kDebugMode) {
+        print('✅ Photo sauvegardée: $newPath');
+      }
+      return newPath;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erreur _savePhotoToAppDirectory: $e');
+      }
+      rethrow;
+    }
   }
 
   void _supprimerPhotoExterne(int index) {
@@ -3015,6 +3221,11 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   void _initializeAlimentations() {
     _alimentations = [];
     _protectionTete = null;
+
+    if (_domaineTension.isEmpty) {
+      _domaineTension = '230/400'; // Valeur par défaut
+      _validateDomaineTension(_domaineTension);
+    }
   }
 
   void _onTypeChanged(String? newType) {

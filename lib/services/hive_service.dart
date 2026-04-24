@@ -1638,12 +1638,6 @@ static List<String> getPointsVerificationForCoffret(String coffretType) {
       return [
         ...pointsBase,
         'Dispositif de connexion',
-        'Autre',
-      ];
-    
-    case 'Tableau urbain réduit (TUR)':
-      return [
-        ...pointsBase.take(20), // Prend les 20 premiers points de base
       ];
     
     default:
