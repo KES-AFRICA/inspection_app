@@ -927,6 +927,11 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
 
   //Section des observations du parafoudre
   Widget _buildParafoudreObservationsSection(BuildContext context) {
+    //Ne pas afficher si la case "Présence de parafoudre" n'est pas cochée
+    if (!widget.presenceParafoudre) {
+      return const SizedBox.shrink();
+    }
+    
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1000,7 +1005,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
               ),
             ),
           
-          // Nouvelle observation avec bouton AJOUTER discret en bas à gauche
+          // Nouvelle observation
           Padding(
             padding: EdgeInsets.all(context.spacingL),
             child: Column(
@@ -1025,7 +1030,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
                       backgroundColor: Colors.blue.shade50,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
-                    child: const Text('Ajouter'),
+                    child: const Text('AJOUTER'),
                   ),
                 ),
               ],
@@ -1042,10 +1047,16 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Détail de l\'observation'),
-        content: SingleChildScrollView(
-          child: Text(
-            observation.texte,
-            style: const TextStyle(fontSize: 14, height: 1.4),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.9,
+            maxHeight: MediaQuery.of(context).size.height * 0.5,
+          ),
+          child: SingleChildScrollView(
+            child: Text(
+              observation.texte,
+              style: const TextStyle(fontSize: 14, height: 1.4),
+            ),
           ),
         ),
         actions: [
@@ -1493,13 +1504,23 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
   
   late List<List<PointVerification>> _pointsSlides;
   
-  // NOUVEAU : Map pour gérer l'affichage de la référence normative
-  final Map<int, bool> _showReferenceNormative = {};
+  // Map pour gérer l'affichage de la référence normative
+  final Map<int, bool> _showReferenceNormative = {};final Map<int, List<ObservationLibre>> _pointObservations = {};
+  final Map<int, TextEditingController> _newObservationControllers = {};
 
   @override
   void initState() {
     super.initState();
     _buildSlides();
+    for (int i = 0; i < widget.pointsVerification.length; i++) {
+      _pointObservations[i] = [];
+      _newObservationControllers[i] = TextEditingController();
+          
+      // Charger les observations existantes depuis le point
+      if (widget.pointsVerification[i].observation != null && widget.pointsVerification[i].observation!.isNotEmpty) {
+         _pointObservations[i]!.add(ObservationLibre(texte: widget.pointsVerification[i].observation!));
+      }
+    }
   }
 
   void _buildSlides() {
@@ -1606,6 +1627,15 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
   }
 
   @override
+  void dispose() {
+    _slideController.dispose();
+    for (var controller in _newObservationControllers.values) {
+      controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (_totalSlides == 0) {
       return Center(
@@ -1700,6 +1730,105 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
     );
   }
 
+
+  void _addPointObservation(int pointIndex) {
+    final text = _newObservationControllers[pointIndex]?.text.trim() ?? '';
+    if (text.isEmpty) {
+      _showError('Veuillez saisir une observation');
+      return;
+    }
+    
+    setState(() {
+      _pointObservations[pointIndex]!.add(ObservationLibre(texte: text));
+      _newObservationControllers[pointIndex]?.clear();
+    });
+    
+    // Mettre à jour le point avec la dernière observation (pour la compatibilité)
+    widget.pointsVerification[pointIndex].observation = text;
+    widget.onObservationChanged(pointIndex, text);
+  }
+
+  void _deletePointObservation(int pointIndex, int obsIndex) {
+    setState(() {
+      _pointObservations[pointIndex]!.removeAt(obsIndex);
+    });
+    
+    // Mettre à jour le point avec la première observation restante ou null
+    if (_pointObservations[pointIndex]!.isNotEmpty) {
+      widget.pointsVerification[pointIndex].observation = _pointObservations[pointIndex]!.first.texte;
+    } else {
+      widget.pointsVerification[pointIndex].observation = null;
+    }
+    widget.onObservationChanged(pointIndex, widget.pointsVerification[pointIndex].observation ?? '');
+  }
+
+  void _editPointObservation(int pointIndex, int obsIndex) {
+    final obs = _pointObservations[pointIndex]![obsIndex];
+    final controller = TextEditingController(text: obs.texte);
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Modifier l\'observation'),
+        content: TextFormField(
+          controller: controller,
+          maxLines: 5,
+          decoration: const InputDecoration(
+            labelText: 'Observation',
+            border: OutlineInputBorder(),
+          ),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Annuler')),
+          ElevatedButton(
+            onPressed: () {
+              final newText = controller.text.trim();
+              if (newText.isNotEmpty) {
+                setState(() {
+                  _pointObservations[pointIndex]![obsIndex] = ObservationLibre(texte: newText);
+                  widget.pointsVerification[pointIndex].observation = newText;
+                });
+                widget.onObservationChanged(pointIndex, newText);
+              }
+              Navigator.pop(context);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue),
+            child: const Text('Enregistrer'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _viewPointObservationDetail(ObservationLibre observation) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Détail de l\'observation'),
+        content: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.9,
+            maxHeight: MediaQuery.of(context).size.height * 0.5,
+          ),
+          child: SingleChildScrollView(
+            child: Text(
+              observation.texte,
+              style: const TextStyle(fontSize: 14, height: 1.4),
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Fermer'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildModernPointCard(BuildContext context, PointVerification point, int pointIndex) {
     final suggestions = widget.pointSuggestions[pointIndex] ?? [];
     final isLoading = widget.pointLoading[pointIndex] ?? false;
@@ -1763,7 +1892,7 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
           // Champ Observation (conditionnel)
           if (hasObservation) ...[
             SizedBox(height: context.spacingS),
-            _buildObservationField(context, point, pointIndex, suggestions, isLoading),
+            _buildObservationField(context, point, pointIndex),
           ],
         ],
       ),
@@ -2055,77 +2184,91 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
     );
   }
 
-  Widget _buildObservationField(BuildContext context, PointVerification point, int pointIndex, List<String> suggestions, bool isLoading) {
+  Widget _buildObservationField(BuildContext context, PointVerification point, int pointIndex) {
+    final observations = _pointObservations[pointIndex] ?? [];
+    final controller = _newObservationControllers[pointIndex]!;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(context.spacingS),
-            border: Border.all(color: Colors.grey.shade200),
-          ),
-          child: TextFormField(
-            initialValue: point.observation ?? '',
-            style: TextStyle(fontSize: context.fontSizeS),
-            onChanged: (value) {
-              point.observation = value;
-              widget.onObservationChanged(pointIndex, value);
-            },
-            decoration: InputDecoration(
-              hintText: 'Saisissez votre observation...',
-              hintStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade400),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(context.spacingM),
-            ),
-            maxLines: 3,
+        // Liste des observations existantes (affichage 2 lignes max)
+        if (observations.isNotEmpty)
+          ...observations.asMap().entries.map((entry) {
+            final obsIndex = entry.key;
+            final obs = entry.value;
+            return GestureDetector(
+              onTap: () => _viewPointObservationDetail(obs),
+              child: Container(
+                margin: EdgeInsets.only(bottom: context.spacingS),
+                padding: EdgeInsets.all(context.spacingM),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(context.spacingS),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        obs.texte,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade800),
+                      ),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.edit, size: context.iconSizeS, color: AppTheme.primaryBlue),
+                      onPressed: () => _editPointObservation(pointIndex, obsIndex),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                    IconButton(
+                      icon: Icon(Icons.delete_outline, size: context.iconSizeS, color: Colors.red),
+                      onPressed: () => _deletePointObservation(pointIndex, obsIndex),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }),
+        
+        // Champ pour nouvelle observation
+        TextFormField(
+          controller: controller,
+          maxLines: 2,
+          decoration: InputDecoration(
+            hintText: 'Nouvelle observation...',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingS)),
+            isDense: true,
+            contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingM),
           ),
         ),
         
-        if (suggestions.isNotEmpty)
-          Container(
-            margin: EdgeInsets.only(top: context.spacingS),
-            padding: EdgeInsets.all(context.spacingS),
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(context.spacingS),
-              border: Border.all(color: Colors.green.withOpacity(0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Icon(Icons.lightbulb_outline, size: context.iconSizeXS, color: Colors.amber),
-                    SizedBox(width: context.spacingXS),
-                    Text('Suggestions', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.bold, color: Colors.green.shade700)),
-                  ],
-                ),
-                SizedBox(height: context.spacingXS),
-                Wrap(
-                  spacing: context.spacingS,
-                  runSpacing: context.spacingXS,
-                  children: suggestions.map((s) => GestureDetector(
-                    onTap: () => widget.onUseSuggestion(pointIndex, s, point),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: context.spacingS, vertical: context.spacingXS),
-                      decoration: BoxDecoration(
-                        color: Colors.green.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(context.spacingL),
-                      ),
-                      child: Text(s, style: TextStyle(fontSize: context.fontSizeXS, color: Colors.green.shade800)),
-                    ),
-                  )).toList(),
-                ),
-              ],
-            ),
-          ),
+        SizedBox(height: context.spacingM),
         
-        if (isLoading)
-          Padding(
-            padding: EdgeInsets.only(top: context.spacingS),
-            child: Center(child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))),
-          ),
+        // Bouton AJOUTER aligné à droite
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: TextButton(
+                onPressed: () => _addPointObservation(pointIndex),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.primaryBlue,
+                  padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingM),
+                  minimumSize: const Size(0, 0),
+                ),
+                child: const Text('AJOUTER'),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
@@ -3210,6 +3353,16 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     return _currentStep == 3 ? 'Terminer' : 'Suivant';
   }
 
+  void _onPresenceParafoudreChanged(bool? value) {
+    setState(() {
+      _presenceParafoudre = value ?? false;
+      if (!_presenceParafoudre) {
+        _observationsParafoudre.clear();
+      }
+    });
+    _saveDraft();
+  }
+
   int _getTotalSteps() => 4;
 
   @override
@@ -3341,7 +3494,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
                       presenceSchema: _presenceSchema,
                       onPresenceSchemaChanged: (v) => setState(() => _presenceSchema = v ?? false),
                       presenceParafoudre: _presenceParafoudre,
-                      onPresenceParafoudreChanged: (v) => setState(() => _presenceParafoudre = v ?? false),
+                      onPresenceParafoudreChanged: _onPresenceParafoudreChanged,
                       verificationThermographie: _verificationThermographie,
                       onVerificationThermographieChanged: (v) => setState(() => _verificationThermographie = v ?? false),
                       domaineTension: _domaineTension,
