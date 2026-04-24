@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
+import 'package:inspec_app/services/normative_reference_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
@@ -1906,17 +1907,13 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Text(
-              'Conformité *',
-              style: TextStyle(
-                fontSize: context.fontSizeS,
-                fontWeight: FontWeight.w600,
-                color: isValid ? Colors.grey.shade700 : Colors.red,
-              ),
-            ),
-          ],
+        Text(
+          'Conformité *',
+          style: TextStyle(
+            fontSize: context.fontSizeS,
+            fontWeight: FontWeight.w600,
+            color: isValid ? Colors.grey.shade700 : Colors.red,
+          ),
         ),
         SizedBox(height: context.spacingS),
         Row(
@@ -1930,8 +1927,9 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
                 onTap: () {
                   setState(() {
                     point.conformite = 'oui';
+                    // Quand on passe à Oui, on vide la référence
+                    point.referenceNormative = null;
                   });
-                  // ✅ Si on passe à Oui, on force observation à Non
                   widget.onObservationToggleChanged(pointIndex, false);
                 },
               ),
@@ -1947,7 +1945,11 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
                   setState(() {
                     point.conformite = 'non';
                   });
-                  // ✅ Si on passe à Non, on force observation à Oui
+                  // UNIQUEMENT ICI : on préremplit la référence
+                  final reference = NormativeReferenceService.getReferenceForPoint(point.pointVerification);
+                  if (reference != null) {
+                    point.referenceNormative = reference;
+                  }
                   widget.onObservationToggleChanged(pointIndex, true);
                 },
               ),
@@ -1965,6 +1967,7 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
       ],
     );
   }
+
   //méthode pour notifier les changements
   void _notifyConformiteChanged(int pointIndex, String value) {
     if (kDebugMode) {
@@ -2017,17 +2020,20 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
     );
   }
 
-  // NOUVEAU : Bouton toggle pour la référence normative
+  // Bouton toggle pour la référence normative
   Widget _buildReferenceNormativeToggle(
     BuildContext context,
     PointVerification point,
     int pointIndex,
     bool showReference,
   ) {
+    //Le point bleu est visible si une référence existe (donc si conformité = "non")
+    final hasReference = point.referenceNormative != null && point.referenceNormative!.isNotEmpty;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Bouton discret pour afficher/masquer
+        // Bouton pour afficher/masquer - LE POINT BLEU EST ICI (visible sans ouvrir)
         GestureDetector(
           onTap: () {
             setState(() {
@@ -2049,28 +2055,39 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
                 Icon(
                   showReference ? Icons.article : Icons.article_outlined,
                   size: context.iconSizeXS,
-                  color: showReference ? AppTheme.primaryBlue : Colors.grey.shade500,
+                  color: hasReference ? Colors.blue : (showReference ? AppTheme.primaryBlue : Colors.grey.shade500),
                 ),
                 SizedBox(width: context.spacingXS),
                 Text(
                   'Référence normative',
                   style: TextStyle(
                     fontSize: context.fontSizeXS,
-                    color: showReference ? AppTheme.primaryBlue : Colors.grey.shade500,
-                    fontWeight: FontWeight.w500,
+                    color: hasReference ? Colors.blue : (showReference ? AppTheme.primaryBlue : Colors.grey.shade500),
+                    fontWeight: hasReference ? FontWeight.bold : FontWeight.w500,
                   ),
                 ),
+                // POINT BLEU ICI - visible SANS ouvrir le champ
+                if (hasReference)
+                  Container(
+                    margin: const EdgeInsets.only(left: 6),
+                    width: 8,
+                    height: 8,
+                    decoration: const BoxDecoration(
+                      color: Colors.blue,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
                 Icon(
                   showReference ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                   size: context.iconSizeXS,
-                  color: showReference ? AppTheme.primaryBlue : Colors.grey.shade500,
+                  color: hasReference ? Colors.blue : (showReference ? AppTheme.primaryBlue : Colors.grey.shade500),
                 ),
               ],
             ),
           ),
         ),
         
-        // Champ de référence (affiché conditionnellement)
+        // Champ de référence (affiché conditionnellement - le contenu n'est visible qu'ici)
         if (showReference)
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
@@ -2079,16 +2096,20 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
               decoration: BoxDecoration(
                 color: Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(context.spacingS),
-                border: Border.all(color: Colors.grey.shade200),
+                border: Border.all(
+                  color: hasReference ? Colors.blue.shade200 : Colors.grey.shade200,
+                  width: hasReference ? 1.5 : 1,
+                ),
               ),
               child: TextFormField(
                 initialValue: point.referenceNormative ?? '',
-                style: TextStyle(fontSize: context.fontSizeS),
-                onChanged: (value) {
-                  point.referenceNormative = value.isEmpty ? null : value;
-                },
+                style: TextStyle(
+                  fontSize: context.fontSizeS,
+                  color: hasReference ? Colors.blue.shade800 : Colors.grey.shade700,
+                ),
+                readOnly: true,  //Lecture seule
                 decoration: InputDecoration(
-                  hintText: 'Ex: NFC 15-100',
+                  hintText: hasReference ? 'Référence préremplie' : 'Aucune référence',
                   hintStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade400),
                   border: InputBorder.none,
                   contentPadding: EdgeInsets.all(context.spacingM),
@@ -2098,6 +2119,21 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
           ),
       ],
     );
+  }
+
+  void _updateReferenceNormative(int pointIndex, String conformite) {
+    final point = widget.pointsVerification[pointIndex];
+    
+    if (conformite == 'non') {
+      //Si conformité = non, préremplir la référence normative
+      final reference = NormativeReferenceService.getReferenceForPoint(point.pointVerification);
+      if (reference != null) {
+        point.referenceNormative = reference;
+      }
+    } else if (conformite == 'oui') {
+      // Si conformité = oui, on laisse vide (l'utilisateur ne peut pas modifier)
+      // On ne supprime pas, on laisse tel quel
+    }
   }
 
   Widget _buildObservationToggle(BuildContext context, int pointIndex, bool hasObservation) {
@@ -2992,9 +3028,18 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   void _initializeForCoffretType(String? type) {
     if (type == null) return;
     if (!widget.isEdition) {
-      _pointsVerification = HiveService.getPointsVerificationForCoffret(type).map((point) => PointVerification(
-        pointVerification: point, conformite: '', observation: null, referenceNormative: null,
-      )).toList();
+      final points = HiveService.getPointsVerificationForCoffret(type);
+      _pointsVerification = points.map((point) {
+        // Récupérer la référence normative si elle existe
+        final reference = NormativeReferenceService.getReferenceForPoint(point);
+        return PointVerification(
+          pointVerification: point,
+          conformite: '',
+          observation: null,
+          referenceNormative: null,
+          priorite: null,
+        );
+      }).toList();
       
       _hasObservation.clear();
       for (int i = 0; i < _pointsVerification.length; i++) {
