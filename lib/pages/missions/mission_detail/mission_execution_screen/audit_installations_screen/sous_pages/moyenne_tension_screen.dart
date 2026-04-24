@@ -727,7 +727,7 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
             children: [
               _buildStatCard('Zones', _audit!.moyenneTensionZones.length, Icons.map_outlined),
               _buildStatCard('Locaux', _getTotalLocaux(), Icons.domain),
-              _buildStatCard('Coffrets', _getTotalCoffrets(), Icons.electrical_services),
+              _buildStatCard('Équipements', _getTotalCoffrets(), Icons.electrical_services),
             ],
           ),
         ),

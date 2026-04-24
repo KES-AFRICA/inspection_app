@@ -283,6 +283,8 @@ class _SequenceScreenState extends State<SequenceScreen> {
                 children: _steps.map((step) => step['widget'] as Widget).toList(),
               ),
             ),
+            
+            if (_currentStep != 0 && _currentStep != 3)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

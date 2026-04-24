@@ -130,7 +130,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
                 SizedBox(width: context.spacingS),
                 Flexible(
                   child: Text(
-                    'Cet équipement sera ajouté dans une zone',
+                    'Cet équipement sera ajouté dans un local',
                     style: TextStyle(fontSize: context.fontSizeXS, color: Colors.blue),
                   ),
                 ),
