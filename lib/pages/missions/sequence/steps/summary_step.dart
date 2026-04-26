@@ -1,18 +1,22 @@
 // lib/pages/missions/sequence/steps/summary_step.dart
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/last_report.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/constants/app_theme.dart';
+import 'package:inspec_app/services/file_storage_service.dart';
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/services/pdf_report_service.dart';
 import 'package:inspec_app/services/word_report_service.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:path/path.dart' as path;
+import 'package:url_launcher/url_launcher.dart';
 
 class SummaryStep extends StatefulWidget {
   final Mission mission;
@@ -50,8 +54,18 @@ class _SummaryStepState extends State<SummaryStep> {
     widget.onDataChanged({'summary_active': true});
     _ensureStatusIsTermine();
     _loadLastReports();
+    _markCurrentStepCompleted();
   }
 
+  /// Marque l'étape Résumé (index 6) comme complétée
+  Future<void> _markCurrentStepCompleted() async {
+    await SequenceProgressService.markStepCompleted(widget.mission.id, 6);
+    if (kDebugMode) {
+      print('✅ Étape 6 (Résumé) marquée comme complétée');
+    }
+  }
+
+  /// S'assure que le statut de la mission est "terminé"
   Future<void> _ensureStatusIsTermine() async {
     final mission = HiveService.getMissionById(widget.mission.id);
     if (mission != null && !mission.isTermine) {
@@ -63,22 +77,24 @@ class _SummaryStepState extends State<SummaryStep> {
     }
   }
 
+  /// Charge la progression et corrige l'étape 6 si nécessaire
   Future<void> _loadProgress() async {
     setState(() => _isLoading = true);
+    
+    // Force l'étape 6 comme complétée
+    await SequenceProgressService.markStepCompleted(widget.mission.id, 6);
+    
     _progress = await SequenceProgressService.getProgress(widget.mission.id);
     
-    // ✅ Vérifier et corriger l'état du schéma si nécessaire
-    final mission = HiveService.getMissionById(widget.mission.id);
     final completedSteps = _progress['completedSteps'] as List<dynamic>? ?? [];
-    
-    if (mission?.schemaOption != null && !completedSteps.contains(5)) {
-      await SequenceProgressService.markStepCompleted(widget.mission.id, 5);
-      _progress = await SequenceProgressService.getProgress(widget.mission.id);
+    if (kDebugMode) {
+      print('📊 Étapes complétées: $completedSteps');
     }
     
     setState(() => _isLoading = false);
   }
 
+  /// Charge les derniers rapports générés depuis Hive
   Future<void> _loadLastReports() async {
     final reports = await HiveService.getAllReportsForMission(widget.mission.id);
     
@@ -102,6 +118,7 @@ class _SummaryStepState extends State<SummaryStep> {
     }
   }
 
+  /// Génère un nouveau rapport (PDF ou Word)
   Future<void> _generateReport(String reportType) async {
     setState(() => _isGenerating = true);
 
@@ -136,9 +153,12 @@ class _SummaryStepState extends State<SummaryStep> {
       }
 
       if (file != null && file.existsSync()) {
+        // Sauvegarde dans le dossier dédié
+        final savedFile = await FileStorageService.saveReport(file, fileName);
+        
         final lastReport = LastReport(
           missionId: widget.mission.id,
-          filePath: file.path,
+          filePath: savedFile.path,
           fileName: fileName,
           generatedAt: DateTime.now(),
           reportType: reportType,
@@ -147,11 +167,11 @@ class _SummaryStepState extends State<SummaryStep> {
         
         setState(() {
           if (reportType == 'pdf') {
-            _pdfFile = file;
+            _pdfFile = savedFile;
             _pdfFileName = fileName;
             _showPdfPreview = true;
           } else {
-            _wordFile = file;
+            _wordFile = savedFile;
             _wordFileName = fileName;
             _showWordPreview = true;
           }
@@ -177,6 +197,7 @@ class _SummaryStepState extends State<SummaryStep> {
     }
   }
 
+  /// Affiche le dialogue de choix du type de rapport (PDF ou Word)
   void _showReportTypeDialog() {
     showModalBottomSheet(
       context: context,
@@ -192,6 +213,7 @@ class _SummaryStepState extends State<SummaryStep> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Handle
             Container(
               margin: const EdgeInsets.only(top: 12),
               width: 40,
@@ -209,6 +231,7 @@ class _SummaryStepState extends State<SummaryStep> {
               ),
             ),
             const Divider(height: 0),
+            // Option PDF
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
@@ -227,6 +250,7 @@ class _SummaryStepState extends State<SummaryStep> {
               },
             ),
             const Divider(height: 0),
+            // Option Word
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
@@ -251,7 +275,14 @@ class _SummaryStepState extends State<SummaryStep> {
     );
   }
 
-  Future<void> _previewReport(File file) async {
+  /// Prévisualise un rapport (PDF uniquement)
+  Future<void> _previewReport(File file, String reportType) async {
+    // Word non prévisualisable - afficher un dialogue design
+    if (reportType == 'docx') {
+      _showWordPreviewUnavailableDialog();
+      return;
+    }
+
     try {
       if (!await file.exists()) {
         _showError('Fichier PDF non trouvé');
@@ -268,36 +299,133 @@ class _SummaryStepState extends State<SummaryStep> {
     }
   }
 
+  /// Affiche un dialogue design pour informer que la prévisualisation Word n'est pas disponible
+  void _showWordPreviewUnavailableDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        elevation: 0,
+        backgroundColor: Colors.white,
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.info_outline, color: Colors.orange.shade700, size: 28),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Information',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 8),
+            Text(
+              'La prévisualisation des documents Word n\'est pas disponible dans l\'application.',
+              style: TextStyle(fontSize: 15, color: Colors.grey.shade700, height: 1.4),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue.shade100),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lightbulb_outline, color: Colors.blue.shade700, size: 20),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Vous pouvez télécharger le fichier Word pour l\'ouvrir avec une application externe (Microsoft Word, Google Docs, etc.).',
+                      style: TextStyle(fontSize: 13, color: Colors.blue.shade800, height: 1.3),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.primaryBlue,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            child: const Text('COMPRIS', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Télécharge le rapport dans le dossier /Downloads/Verif Elec/
   Future<void> _downloadReport(File file, String fileName) async {
+    // Demander la permission avant de télécharger
+    final hasPermission = await _checkAndRequestStoragePermission();
+    if (!hasPermission) {
+      _showError('Permission de stockage refusée. Impossible de sauvegarder le fichier.');
+      return;
+    }
+    
     try {
-      final directory = await getDownloadsDirectory();
-      if (directory != null) {
-        final verifDir = Directory('${directory.path}/Verif Elec');
-        if (!await verifDir.exists()) {
-          await verifDir.create(recursive: true);
-        }
-        await file.copy('${verifDir.path}/$fileName');
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Rapport sauvegardé dans ${verifDir.path}'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      } else {
-        final documentsDir = await getApplicationDocumentsDirectory();
-        await file.copy('${documentsDir.path}/$fileName');
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Rapport sauvegardé dans les documents'),
-            backgroundColor: Colors.green,
-          ),
-        );
-      }
+      final savedFile = await FileStorageService.saveReport(file, fileName);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Rapport sauvegardé dans ${savedFile.parent.path}'),
+          backgroundColor: Colors.green,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     } catch (e) {
       _showError('Erreur lors de la sauvegarde: $e');
     }
   }
 
+  /// Vérifier et demander la permission de stockage
+  Future<bool> _checkAndRequestStoragePermission() async {
+    if (!Platform.isAndroid) return true;
+    
+    try {
+      // Pour Android 11+ (API 30+)
+      if (await Permission.manageExternalStorage.isDenied) {
+        final status = await Permission.manageExternalStorage.request();
+        return status.isGranted;
+      }
+      
+      // Pour les versions antérieures
+      if (await Permission.storage.isDenied) {
+        final status = await Permission.storage.request();
+        return status.isGranted;
+      }
+      
+      return true;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erreur permission: $e');
+      }
+      return false;
+    }
+  }
+
+  /// Partage le rapport via l'application de partage native
   Future<void> _shareReport(File file) async {
     await Share.shareXFiles(
       [XFile(file.path)],
@@ -306,18 +434,22 @@ class _SummaryStepState extends State<SummaryStep> {
     );
   }
 
+  /// Envoie un email avec le rapport aux vérificateurs
   Future<void> _sendEmailWithAttachment() async {
-    // Récupérer les emails des vérificateurs
+    // Récupère les emails des vérificateurs
     final renseignements = await HiveService.getRenseignementsGenerauxByMissionId(widget.mission.id);
     final verificateurs = renseignements?.verificateurs ?? [];
-    final emails = verificateurs.map((v) => v['email']).where((e) => e != null && e.isNotEmpty).toList();
+    
+    final emails = verificateurs
+        .map((v) => v['email'])
+        .where((e) => e != null && e.toString().isNotEmpty)
+        .toList();
     
     if (emails.isEmpty) {
       _showError('Aucun email de vérificateur trouvé');
       return;
     }
     
-    final recipients = emails.join(',');
     final subject = Uri.encodeComponent('Rapport d\'audit électrique - ${widget.mission.nomClient}');
     final body = Uri.encodeComponent(
       'Bonjour,\n\n'
@@ -327,22 +459,25 @@ class _SummaryStepState extends State<SummaryStep> {
       '${widget.user.prenom} ${widget.user.nom}'
     );
     
-    // Pour l'email avec pièce jointe, on utilise share_plus
-    // L'utilisateur choisira son application email préférée
-    if (_pdfFile != null) {
-      await Share.shareXFiles(
-        [XFile(_pdfFile!.path)],
-        subject: Uri.decodeComponent(subject),
-        text: Uri.decodeComponent(body),
-      );
-    } else if (_wordFile != null) {
-      await Share.shareXFiles(
-        [XFile(_wordFile!.path)],
-        subject: Uri.decodeComponent(subject),
-        text: Uri.decodeComponent(body),
-      );
-    } else {
-      _showError('Aucun rapport à envoyer');
+    final recipients = emails.join(',');
+    final mailtoUri = Uri.parse('mailto:$recipients?subject=$subject&body=$body');
+    
+    try {
+      if (await canLaunchUrl(mailtoUri)) {
+        await launchUrl(mailtoUri);
+      } else {
+        // Fallback avec share_plus
+        final fileToSend = _pdfFile ?? _wordFile;
+        if (fileToSend != null) {
+          await Share.shareXFiles(
+            [XFile(fileToSend.path)],
+            subject: Uri.decodeComponent(subject),
+            text: Uri.decodeComponent(body),
+          );
+        }
+      }
+    } catch (e) {
+      _showError('Erreur: $e');
     }
   }
 
@@ -359,7 +494,8 @@ class _SummaryStepState extends State<SummaryStep> {
     widget.onPrevious();
   }
 
-  void _finishMission() async {
+  /// Termine la mission et retourne à l'écran des détails
+  Future<void> _finishMission() async {
     await HiveService.updateMissionStatus(
       missionId: widget.mission.id,
       newStatus: 'termine',
@@ -383,6 +519,7 @@ class _SummaryStepState extends State<SummaryStep> {
   bool get hasPdf => _showPdfPreview && _pdfFile != null;
   bool get hasWord => _showWordPreview && _wordFile != null;
 
+  /// Carte d'affichage d'un rapport avec ses actions
   Widget _buildReportCard({
     required File file,
     required String? fileName,
@@ -399,8 +536,9 @@ class _SummaryStepState extends State<SummaryStep> {
       ),
       child: Column(
         children: [
+          // Zone cliquable pour la prévisualisation
           GestureDetector(
-            onTap: () => _previewReport(file),
+            onTap: () => _previewReport(file, reportType),  // ✅ CORRECTION ICI
             child: Container(
               height: 100,
               decoration: BoxDecoration(
@@ -440,6 +578,7 @@ class _SummaryStepState extends State<SummaryStep> {
               ),
             ),
           ),
+          // Actions du rapport
           Padding(
             padding: const EdgeInsets.all(12),
             child: Row(
@@ -487,150 +626,19 @@ class _SummaryStepState extends State<SummaryStep> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // En-tête de succès
-                Container(
-                  padding: const EdgeInsets.all(24),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.green.shade200),
-                  ),
-                  child: Column(
-                    children: [
-                      const Icon(Icons.check_circle, size: 64, color: Colors.green),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Mission terminée !',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green.shade800,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Vous avez complété $completedSteps/$totalSteps étapes',
-                        style: TextStyle(fontSize: 14, color: Colors.green.shade700),
-                      ),
-                      const SizedBox(height: 8),
-                      LinearProgressIndicator(
-                        value: percentage / 100,
-                        backgroundColor: Colors.green.shade100,
-                        color: Colors.green,
-                        minHeight: 8,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '$percentage% complété',
-                        style: TextStyle(fontSize: 12, color: Colors.green.shade600),
-                      ),
-                    ],
-                  ),
-                ),
+                _buildSuccessHeader(completedSteps, totalSteps, percentage),
                 const SizedBox(height: 24),
 
                 // Informations de la mission
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Informations de la mission', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 12),
-                      _buildSummaryRow('Client', widget.mission.nomClient),
-                      if (widget.mission.activiteClient != null)
-                        _buildSummaryRow('Activité', widget.mission.activiteClient!),
-                      if (widget.mission.adresseClient != null)
-                        _buildSummaryRow('Adresse', widget.mission.adresseClient!),
-                      _buildSummaryRow('Statut', widget.mission.status),
-                    ],
-                  ),
-                ),
+                _buildMissionInfoCard(),
                 const SizedBox(height: 24),
 
-                // Étapes complétées avec icônes différenciées
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Étapes complétées', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 12),
-                      _buildStepTile(
-                        0,
-                        'JSA',
-                        _progress['completedSteps']?.contains(0) ?? false,
-                        Icons.engineering_outlined,
-                      ),
-                      _buildStepTile(
-                        1,
-                        'Renseignements généraux',
-                        _progress['completedSteps']?.contains(1) ?? false,
-                        Icons.info_outline,
-                      ),
-                      _buildStepTile(
-                        2,
-                        'Documents nécessaires',
-                        _progress['completedSteps']?.contains(2) ?? false,
-                        Icons.folder_outlined,
-                      ),
-                      _buildStepTile(
-                        3,
-                        'Description des installations',
-                        _progress['completedSteps']?.contains(3) ?? false,
-                        Icons.description_outlined,
-                      ),
-                      _buildStepTile(
-                        4,
-                        'Audit des installations',
-                        _progress['completedSteps']?.contains(4) ?? false,
-                        Icons.electrical_services_outlined,
-                      ),
-                      _buildStepTile(
-                        5,
-                        'Schéma des installations',
-                        _progress['completedSteps']?.contains(5) ?? false,
-                        Icons.timeline_outlined,
-                      ),
-                      _buildStepTile(
-                        6,
-                        'Résumé',
-                        true,
-                        Icons.summarize_outlined,
-                      ),
-                    ],
-                  ),
-                ),
+                // Étapes complétées
+                _buildStepsCompletionCard(),
                 const SizedBox(height: 24),
 
                 // Bouton Générer/Régénérer
-                SizedBox(
-                  width: double.infinity,
-                  height: 56,
-                  child: ElevatedButton.icon(
-                    onPressed: _isGenerating ? null : _showReportTypeDialog,
-                    icon: _isGenerating
-                        ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                        : Icon(hasAnyReport ? Icons.refresh : Icons.add),
-                    label: Text(hasAnyReport ? 'RÉGÉNÉRER' : 'GÉNÉRER'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-                ),
+                _buildGenerateButton(),
                 const SizedBox(height: 16),
 
                 // Zone des rapports (visible uniquement si des rapports existent)
@@ -663,6 +671,123 @@ class _SummaryStepState extends State<SummaryStep> {
     );
   }
 
+  /// Widget d'en-tête de succès
+  Widget _buildSuccessHeader(int completedSteps, int totalSteps, int percentage) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.green.shade50,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.green.shade200),
+      ),
+      child: Column(
+        children: [
+          const Icon(Icons.check_circle, size: 64, color: Colors.green),
+          const SizedBox(height: 12),
+          Text(
+            'Mission terminée !',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.green.shade800,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Vous avez complété $completedSteps/$totalSteps étapes',
+            style: TextStyle(fontSize: 14, color: Colors.green.shade700),
+          ),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: percentage / 100,
+            backgroundColor: Colors.green.shade100,
+            color: Colors.green,
+            minHeight: 8,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '$percentage% complété',
+            style: TextStyle(fontSize: 12, color: Colors.green.shade600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Widget des informations de la mission
+  Widget _buildMissionInfoCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Informations de la mission', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          _buildSummaryRow('Client', widget.mission.nomClient),
+          if (widget.mission.activiteClient != null)
+            _buildSummaryRow('Activité', widget.mission.activiteClient!),
+          if (widget.mission.adresseClient != null)
+            _buildSummaryRow('Adresse', widget.mission.adresseClient!),
+          _buildSummaryRow('Statut', widget.mission.status),
+        ],
+      ),
+    );
+  }
+
+  /// Widget du résumé des étapes complétées
+  Widget _buildStepsCompletionCard() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text('Étapes complétées', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 12),
+          _buildStepTile(0, 'JSA', _progress['completedSteps']?.contains(0) ?? false, Icons.engineering_outlined),
+          _buildStepTile(1, 'Renseignements généraux', _progress['completedSteps']?.contains(1) ?? false, Icons.info_outline),
+          _buildStepTile(2, 'Documents nécessaires', _progress['completedSteps']?.contains(2) ?? false, Icons.folder_outlined),
+          _buildStepTile(3, 'Description des installations', _progress['completedSteps']?.contains(3) ?? false, Icons.description_outlined),
+          _buildStepTile(4, 'Audit des installations', _progress['completedSteps']?.contains(4) ?? false, Icons.electrical_services_outlined),
+          _buildStepTile(5, 'Schéma des installations', _progress['completedSteps']?.contains(5) ?? false, Icons.timeline_outlined),
+          _buildStepTile(6, 'Résumé', true, Icons.summarize_outlined),
+        ],
+      ),
+    );
+  }
+
+  /// Widget du bouton de génération de rapport
+  Widget _buildGenerateButton() {
+    return SizedBox(
+      width: double.infinity,
+      height: 56,
+      child: ElevatedButton.icon(
+        onPressed: _isGenerating ? null : _showReportTypeDialog,
+        icon: _isGenerating
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+            : Icon(hasAnyReport ? Icons.refresh : Icons.add),
+        label: Text(hasAnyReport ? 'RÉGÉNÉRER' : 'GÉNÉRER'),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.red,
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      ),
+    );
+  }
+
+  /// Widget de la barre de navigation inférieure
   Widget _buildBottomNavigation() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -684,9 +809,7 @@ class _SummaryStepState extends State<SummaryStep> {
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 side: const BorderSide(color: AppTheme.primaryBlue),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -706,9 +829,7 @@ class _SummaryStepState extends State<SummaryStep> {
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               child: const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -725,6 +846,7 @@ class _SummaryStepState extends State<SummaryStep> {
     );
   }
 
+  /// Ligne d'information (label + valeur)
   Widget _buildSummaryRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -750,6 +872,7 @@ class _SummaryStepState extends State<SummaryStep> {
     );
   }
 
+  /// Ligne d'étape avec icône différenciée selon l'état de complétion
   Widget _buildStepTile(int index, String title, bool isCompleted, IconData icon) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
