@@ -56,13 +56,14 @@ class MissionAdapter extends TypeAdapter<Mission> {
       nomSite: fields[35] as String?,
     )
       ..renseignementsGenerauxId = fields[34] as String?
-      ..jsaId = fields[36] as String?;
+      ..jsaId = fields[36] as String?
+      ..schemaOption = fields[37] as String?;
   }
 
   @override
   void write(BinaryWriter writer, Mission obj) {
     writer
-      ..writeByte(37)
+      ..writeByte(38)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -136,7 +137,9 @@ class MissionAdapter extends TypeAdapter<Mission> {
       ..writeByte(35)
       ..write(obj.nomSite)
       ..writeByte(36)
-      ..write(obj.jsaId);
+      ..write(obj.jsaId)
+      ..writeByte(37)
+      ..write(obj.schemaOption);
   }
 
   @override

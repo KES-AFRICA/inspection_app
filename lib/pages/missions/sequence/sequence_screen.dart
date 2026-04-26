@@ -118,7 +118,7 @@ class _SequenceScreenState extends State<SequenceScreen> {
           mission: widget.mission,
           user: widget.user,
           onDataChanged: (data) => _saveStepData('summary', data),
-          onFinish: _onMissionFinished,  // ✅ Callback pour fermer
+          onPrevious: _goToPreviousStep, 
         ),
       },
     ];
@@ -155,6 +155,7 @@ class _SequenceScreenState extends State<SequenceScreen> {
   Future<void> _goToNextStep() async {
     _dismissKeyboard();
     
+    // Validation pour Renseignements généraux (index 1)
     if (_currentStep == 1) {
       _generalInfoKey.currentState?.triggerValidation();
       final isValid = _generalInfoKey.currentState?.isFormValid ?? false;
@@ -165,6 +166,25 @@ class _SequenceScreenState extends State<SequenceScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('Veuillez remplir tous les champs obligatoires (marqués en rouge)'),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+    }
+    
+    // Validation pour Schéma (index 5)
+    if (_currentStep == 5) {
+      final mission = HiveService.getMissionById(widget.mission.id);
+      final hasSchema = mission?.schemaOption != null;
+      
+      if (!hasSchema) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Veuillez sélectionner Oui ou Non pour le schéma des installations'),
               backgroundColor: Colors.red,
               duration: Duration(seconds: 3),
             ),
@@ -260,12 +280,14 @@ class _SequenceScreenState extends State<SequenceScreen> {
           backgroundColor: AppTheme.primaryBlue,
           elevation: 0,
           iconTheme: const IconThemeData(color: Colors.white),
-          leading: IconButton(
-            icon: const Icon(Icons.arrow_back),
-            onPressed: () {
-              _dismissKeyboard();
-              _showExitDialog();
-            },
+          leading: _currentStep == 6 
+            ? null
+            : IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () {
+                  _dismissKeyboard();
+                  _showExitDialog();
+                },
           ),
         ),
         body: Column(
@@ -284,7 +306,7 @@ class _SequenceScreenState extends State<SequenceScreen> {
               ),
             ),
             
-            if (_currentStep != 0 && _currentStep != 3)
+            if (_currentStep != 0 && _currentStep != 3 && _currentStep != 6)
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

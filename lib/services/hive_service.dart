@@ -7,6 +7,7 @@ import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/models/foudre.dart';
 import 'package:inspec_app/models/jsa.dart';
+import 'package:inspec_app/models/last_report.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import '../models/verificateur.dart';
 import '../models/mission.dart';
@@ -66,6 +67,7 @@ class HiveService {
     Hive.registerAdapter(JSAEPIAdapter());
     Hive.registerAdapter(JSAVerificationFinaleAdapter());
     Hive.registerAdapter(ClassementZoneAdapter());
+    Hive.registerAdapter(LastReportAdapter());
 
     // Ouvrir toutes les boxes avec le type correct
     await Hive.openBox<Verificateur>(_verificateurBox);
@@ -80,7 +82,8 @@ class HiveService {
     await Hive.openBox<JSA>(_jsaBox);
     await Hive.openBox(_coffretDraftsBox);  
     await Hive.openBox(_localDraftsBox); 
-    await Hive.openBox<ClassementZone>(_classementZoneBox);    
+    await Hive.openBox<ClassementZone>(_classementZoneBox);  
+    await Hive.openBox<LastReport>('last_reports');  
     
     // Box pour les préférences MT (type dynamique)
     await Hive.openBox(_mtPreferenceBox);
@@ -6206,6 +6209,57 @@ static Future<void> deleteCoffretDraftsForZone({
       print('❌ Erreur deleteCoffretDraftsForZone: $e');
     }
   }
+}
+
+
+// ============================================================
+//          GESTION DERNIER RAPPORT GÉNÉRÉ
+// ============================================================
+
+static const String _lastReportBox = 'last_reports';
+
+static Future<void> saveLastReport(LastReport report) async {
+  final box = await Hive.openBox<LastReport>(_lastReportBox);
+  
+  // Ne pas supprimer l'ancien, on garde les deux types
+  await box.add(report);
+  if (kDebugMode) {
+    print('✅ Rapport ${report.reportType} sauvegardé pour mission ${report.missionId}');
+  }
+}
+
+static Future<LastReport?> getLastReport(String missionId) async {
+  final box = await Hive.openBox<LastReport>(_lastReportBox);
+  try {
+    return box.values.firstWhere((r) => r.missionId == missionId);
+  } catch (e) {
+    return null;
+  }
+}
+
+static Future<void> deleteLastReport(String missionId) async {
+  final box = await Hive.openBox<LastReport>(_lastReportBox);
+  final toDelete = box.values.where((r) => r.missionId == missionId).toList();
+  for (var report in toDelete) {
+    await report.delete();
+  }
+}
+
+
+static Future<LastReport?> getLastReportByType(String missionId, String reportType) async {
+  final box = await Hive.openBox<LastReport>(_lastReportBox);
+  try {
+    return box.values.firstWhere(
+      (r) => r.missionId == missionId && r.reportType == reportType,
+    );
+  } catch (e) {
+    return null;
+  }
+}
+
+static Future<List<LastReport>> getAllReportsForMission(String missionId) async {
+  final box = await Hive.openBox<LastReport>(_lastReportBox);
+  return box.values.where((r) => r.missionId == missionId).toList();
 }
 
 

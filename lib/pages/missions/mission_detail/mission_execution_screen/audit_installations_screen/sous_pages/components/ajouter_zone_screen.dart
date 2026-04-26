@@ -11,8 +11,9 @@ import 'dart:io';
 class AjouterZoneScreen extends StatefulWidget {
   final Mission mission;
   final bool isMoyenneTension;
-  final dynamic zone;
-  final int? zoneIndex;
+  final dynamic zone; // Pour l'édition
+  final int? zoneIndex; // Pour l'édition
+  final VoidCallback? onZoneCreated; // Callback après création d'une zone
 
   const AjouterZoneScreen({
     super.key,
@@ -20,6 +21,7 @@ class AjouterZoneScreen extends StatefulWidget {
     required this.isMoyenneTension,
     this.zone,
     this.zoneIndex,
+    this.onZoneCreated,
   });
 
   bool get isEdition => zone != null;
@@ -33,10 +35,12 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
   final _nomController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   
+  // Photos de la zone
   List<String> _zonePhotos = [];
   bool _isLoadingPhotos = false;
   
-  bool _addObservation = false;
+  // Observations libres - Toggle Oui/Non
+  bool _addObservation = false; // Par défaut Non
   final _observationController = TextEditingController();
   List<String> _observationPhotos = [];
   final List<ObservationLibre> _observationsExistantes = [];
@@ -52,11 +56,17 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
   void _chargerDonneesExistantes() {
     final zone = widget.zone!;
     _nomController.text = zone.nom;
+    
+    // Charger les observations existantes
     _observationsExistantes.addAll(zone.observationsLibres);
+    
+    // Charger les photos de la zone
     if (zone.photos.isNotEmpty) {
       _zonePhotos = List.from(zone.photos);
     }
   }
+
+  // ===== MÉTHODES POUR GESTION DES PHOTOS DE LA ZONE =====
 
   Future<void> _prendrePhotoZone() async {
     try {
@@ -103,6 +113,8 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
       setState(() => _isLoadingPhotos = false);
     }
   }
+
+  // ===== MÉTHODES POUR GESTION DES PHOTOS D'OBSERVATION =====
 
   Future<void> _prendrePhotoObservation() async {
     try {
@@ -404,7 +416,6 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                   backgroundColor: AppTheme.primaryBlue,
                   foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               ),
             ),
@@ -421,7 +432,6 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                   backgroundColor: Colors.grey.shade800,
                   foregroundColor: Colors.white,
                   padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                 ),
               ),
             ),
@@ -433,184 +443,165 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
     );
   }
 
+  // ===== GESTION DES OBSERVATIONS AVEC TOGGLE OUI/NON =====
+
   Widget _buildObservationsSection() {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 10 : 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppTheme.primaryBlue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Text(
-            'OBSERVATIONS',
-            style: TextStyle(
-              fontSize: isSmallScreen ? 11 : 12,
-              fontWeight: FontWeight.w700,
-              color: AppTheme.primaryBlue,
-              letterSpacing: 0.8,
-            ),
+        Text(
+          'OBSERVATIONS SUR LA ZONE',
+          style: TextStyle(
+            fontSize: isSmallScreen ? 13 : 14,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.primaryBlue,
           ),
         ),
-        SizedBox(height: isSmallScreen ? 12 : 16),
+        SizedBox(height: isSmallScreen ? 8 : 10),
 
+        // Observations existantes
         if (_observationsExistantes.isNotEmpty)
           ..._observationsExistantes.asMap().entries.map((entry) {
             final index = entry.key;
             final observation = entry.value;
-            return Container(
+            return Card(
               margin: EdgeInsets.only(bottom: isSmallScreen ? 10 : 12),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.grey.shade200),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.04),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
-                  ),
-                ],
-              ),
+              elevation: 1,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               child: Padding(
-                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Container(
-                          margin: EdgeInsets.only(top: 2),
-                          width: 3,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            color: Colors.amber,
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
                         Expanded(
                           child: Text(
                             observation.texte,
                             style: TextStyle(
-                              fontSize: isSmallScreen ? 14 : 15,
-                              height: 1.4,
-                              color: AppTheme.darkBlue,
+                              fontWeight: FontWeight.w500,
+                              fontSize: isSmallScreen ? 13 : 14,
                             ),
                           ),
                         ),
                         IconButton(
-                          icon: Icon(Icons.delete_outline, color: Colors.red.shade400, size: isSmallScreen ? 20 : 22),
+                          icon: Icon(Icons.delete_outline, color: Colors.red, size: isSmallScreen ? 18 : 20),
                           onPressed: () => _supprimerObservationExistante(index),
                           constraints: BoxConstraints(
-                            minWidth: isSmallScreen ? 36 : 40,
-                            minHeight: isSmallScreen ? 36 : 40,
+                            minWidth: isSmallScreen ? 32 : 40,
+                            minHeight: isSmallScreen ? 32 : 40,
                           ),
                         ),
                       ],
                     ),
-                    if (observation.photos.isNotEmpty) ...[
-                      SizedBox(height: isSmallScreen ? 12 : 14),
-                      Text(
-                        '📸 ${observation.photos.length} photo${observation.photos.length > 1 ? 's' : ''}',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 11 : 12,
-                          color: Colors.grey.shade600,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(height: isSmallScreen ? 8 : 10),
-                      GridView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 3,
-                          crossAxisSpacing: 8,
-                          mainAxisSpacing: 8,
-                          childAspectRatio: 1,
-                        ),
-                        itemCount: observation.photos.length,
-                        itemBuilder: (context, photoIndex) {
-                          return GestureDetector(
-                            onTap: () => _previsualiserPhoto(observation.photos, photoIndex),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.08),
-                                    blurRadius: 4,
-                                    offset: const Offset(0, 2),
-                                  ),
-                                ],
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.file(
-                                  File(observation.photos[photoIndex]),
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
+                    if (observation.photos.isNotEmpty)
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(height: isSmallScreen ? 6 : 8),
+                          Text(
+                            'Photos associées (${observation.photos.length})',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 11 : 12,
+                              color: Colors.grey.shade600,
                             ),
-                          );
-                        },
+                          ),
+                          SizedBox(height: isSmallScreen ? 4 : 6),
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics: const NeverScrollableScrollPhysics(),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 3,
+                              crossAxisSpacing: 4,
+                              mainAxisSpacing: 4,
+                              childAspectRatio: 0.8,
+                            ),
+                            itemCount: observation.photos.length,
+                            itemBuilder: (context, photoIndex) {
+                              return GestureDetector(
+                                onTap: () => _previsualiserPhoto(observation.photos, photoIndex),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.grey.shade300),
+                                  ),
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: Image.file(
+                                      File(observation.photos[photoIndex]),
+                                      fit: BoxFit.cover,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ],
                       ),
-                    ],
                   ],
                 ),
               ),
             );
           }),
 
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.shade200),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
+        // Toggle Oui/Non pour ajouter une nouvelle observation
+        Card(
+          elevation: 1,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           child: Padding(
-            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Ajouter une observation',
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 14 : 15,
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.darkBlue,
-                  ),
-                ),
-                SizedBox(height: isSmallScreen ? 12 : 14),
-                
+                // Toggle Oui/Non
                 Row(
                   children: [
-                    _buildToggleButton(
-                      label: 'Oui',
-                      isSelected: _addObservation,
-                      selectedColor: Colors.green,
+                    Expanded(
+                      child: Text(
+                        'Ajouter une observation ?',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 14 : 16,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.darkBlue,
+                        ),
+                      ),
+                    ),
+                    // Bouton Oui
+                    GestureDetector(
                       onTap: () {
                         setState(() {
                           _addObservation = true;
                         });
                       },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 14 : 18,
+                          vertical: isSmallScreen ? 6 : 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: _addObservation ? Colors.green.withOpacity(0.15) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: _addObservation ? Colors.green : Colors.grey.shade300,
+                            width: _addObservation ? 2 : 1,
+                          ),
+                        ),
+                        child: Text(
+                          'Oui',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 13 : 14,
+                            fontWeight: FontWeight.w600,
+                            color: _addObservation ? Colors.green : Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
                     ),
-                    const SizedBox(width: 10),
-                    _buildToggleButton(
-                      label: 'Non',
-                      isSelected: !_addObservation,
-                      selectedColor: Colors.red,
+                    const SizedBox(width: 8),
+                    // Bouton Non
+                    GestureDetector(
                       onTap: () {
                         setState(() {
                           _addObservation = false;
@@ -618,39 +609,59 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                           _observationPhotos.clear();
                         });
                       },
+                      child: Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 14 : 18,
+                          vertical: isSmallScreen ? 6 : 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: !_addObservation ? Colors.red.withOpacity(0.15) : Colors.transparent,
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: !_addObservation ? Colors.red : Colors.grey.shade300,
+                            width: !_addObservation ? 2 : 1,
+                          ),
+                        ),
+                        child: Text(
+                          'Non',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 13 : 14,
+                            fontWeight: FontWeight.w600,
+                            color: !_addObservation ? Colors.red : Colors.grey.shade600,
+                          ),
+                        ),
+                      ),
                     ),
                   ],
                 ),
 
+                // Champs d'observation (affichés uniquement si Oui)
                 if (_addObservation) ...[
-                  SizedBox(height: isSmallScreen ? 18 : 22),
+                  SizedBox(height: isSmallScreen ? 14 : 18),
                   
                   TextFormField(
                     controller: _observationController,
                     decoration: InputDecoration(
                       labelText: 'Observation',
+                      border: const OutlineInputBorder(),
                       hintText: 'Saisissez votre observation...',
-                      prefixIcon: Icon(Icons.edit_note, color: AppTheme.primaryBlue),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
                       filled: true,
                       fillColor: Colors.grey.shade50,
                     ),
-                    maxLines: 4,
-                    style: TextStyle(fontSize: isSmallScreen ? 14 : 15),
+                    maxLines: 3,
                   ),
 
-                  SizedBox(height: isSmallScreen ? 16 : 20),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
 
+                  // Photos pour la nouvelle observation
                   _buildPhotosSection(
-                    'Photos associées',
+                    'Photos pour cette observation',
                     _observationPhotos,
                     _prendrePhotoObservation,
                     _choisirPhotoObservationDepuisGalerie,
                   ),
 
-                  SizedBox(height: isSmallScreen ? 16 : 20),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
 
                   ElevatedButton(
                     onPressed: _ajouterObservation,
@@ -659,17 +670,12 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                       foregroundColor: Colors.white,
                       minimumSize: const Size(double.infinity, 48),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      elevation: 2,
                     ),
                     child: Text(
-                      'Ajouter l\'observation',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 14 : 15,
-                        fontWeight: FontWeight.w600,
-                        letterSpacing: 0.5,
-                      ),
+                      'Ajouter cette observation',
+                      style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
                     ),
                   ),
                 ],
@@ -678,56 +684,6 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildToggleButton({
-    required String label,
-    required bool isSelected,
-    required Color selectedColor,
-    required VoidCallback onTap,
-  }) {
-    final isSmallScreen = MediaQuery.of(context).size.width < 360;
-    
-    return Expanded(
-      child: GestureDetector(
-        onTap: onTap,
-        child: Container(
-          padding: EdgeInsets.symmetric(
-            vertical: isSmallScreen ? 10 : 12,
-          ),
-          decoration: BoxDecoration(
-            color: isSelected ? selectedColor.withOpacity(0.1) : Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(
-              color: isSelected ? selectedColor : Colors.grey.shade300,
-              width: isSelected ? 2 : 1,
-            ),
-          ),
-          child: Center(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                if (isSelected)
-                  Icon(
-                    label == 'Oui' ? Icons.check_circle : Icons.cancel,
-                    color: selectedColor,
-                    size: isSmallScreen ? 18 : 20,
-                  ),
-                if (isSelected) SizedBox(width: 8),
-                Text(
-                  label,
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 15 : 16,
-                    fontWeight: FontWeight.w600,
-                    color: isSelected ? selectedColor : Colors.grey.shade600,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 
@@ -745,7 +701,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
       ));
       _observationController.clear();
       _observationPhotos.clear();
-      _addObservation = false;
+      _addObservation = false; // Réinitialiser le toggle à Non après ajout
     });
     
     _showSuccess('Observation ajoutée');
@@ -755,9 +711,8 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Supprimer l\'observation'),
+        title: const Text('Supprimer l\'observation', style: TextStyle(fontSize: 16)),
         content: const Text('Êtes-vous sûr de vouloir supprimer cette observation ?'),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -771,10 +726,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
               });
               _showSuccess('Observation supprimée');
             },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Supprimer'),
           ),
         ],
@@ -785,23 +737,32 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
   void _showSuccess(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.check_circle, color: Colors.white, size: 20),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message)),
-          ],
-        ),
+        content: Text(message),
         backgroundColor: Colors.green,
         duration: const Duration(seconds: 2),
         behavior: SnackBarBehavior.floating,
         margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   }
 
-  Future<void> _sauvegarder() async {
+  void _showError(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.all(16),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
+    );
+  }
+
+  // ===== FIN GESTION OBSERVATIONS =====
+
+  void _sauvegarder() async {
     if (_formKey.currentState!.validate()) {
       try {
         dynamic zone;
@@ -843,29 +804,43 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
 
         if (success) {
           if (mounted) {
-            _showSuccess(widget.isEdition ? 'Zone modifiée avec succès' : 'Zone ajoutée avec succès');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(widget.isEdition ? 'Zone modifiée' : 'Zone ajoutée'),
+                backgroundColor: Colors.green,
+              ),
+            );
             
             if (!widget.isEdition) {
+              // Appeler le callback si fourni
+              if (widget.onZoneCreated != null) {
+                widget.onZoneCreated!();
+              }
+              
+              // Synchroniser les classements
               await HiveService.syncClassementsZonesFromAudit(widget.mission.id);
               
+              // Récupérer le classement créé
               final classement = await HiveService.getOrCreateClassementZone(
                 missionId: widget.mission.id,
                 nomZone: _nomController.text.trim(),
                 typeZone: widget.isMoyenneTension ? 'MT' : 'BT',
               );
               
-              final result = await Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ClassementZoneScreen(
-                    mission: widget.mission,
-                    classement: classement,
-                  ),
-                ),
-              );
+              // Fermer cette page d'abord
+              Navigator.pop(context, true);
               
-              if (result == true) {
-                Navigator.pop(context, true);
+              // Puis naviguer vers l'écran de classement
+              if (mounted) {
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => ClassementZoneScreen(
+                      mission: widget.mission,
+                      classement: classement,
+                    ),
+                  ),
+                );
               }
             } else {
               Navigator.pop(context, true);
@@ -902,25 +877,6 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
     }
   }
 
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Row(
-          children: [
-            Icon(Icons.error_outline, color: Colors.white, size: 20),
-            const SizedBox(width: 10),
-            Expanded(child: Text(message)),
-          ],
-        ),
-        backgroundColor: Colors.red,
-        duration: const Duration(seconds: 3),
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
   Widget _buildTextField(TextEditingController controller, String label, {bool isMultiline = false, bool isRequired = false}) {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
     
@@ -930,26 +886,13 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
         controller: controller,
         decoration: InputDecoration(
           labelText: label,
-          hintText: label.contains('Nom') ? 'Ex: Sous-sol 1, RDC, Étage 2...' : null,
-          prefixIcon: label.contains('Nom') ? Icon(Icons.location_on_outlined, color: AppTheme.primaryBlue) : null,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
           ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
-          ),
+          hintText: label.contains('Nom') ? 'Ex: Sous-sol 1, RDC, Étage 2...' : null,
+          prefixIcon: label.contains('Nom') ? const Icon(Icons.place) : null,
           filled: true,
           fillColor: Colors.grey.shade50,
-          contentPadding: EdgeInsets.symmetric(
-            horizontal: isSmallScreen ? 12 : 16,
-            vertical: isSmallScreen ? 14 : 16,
-          ),
         ),
         style: TextStyle(fontSize: isSmallScreen ? 14 : 15),
         maxLines: isMultiline ? 4 : 1,
@@ -973,46 +916,38 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
         backgroundColor: Colors.grey.shade50,
         appBar: AppBar(
           title: Text(
-            widget.isEdition ? 'Modifier la Zone' : 'Nouvelle Zone',
-            style: TextStyle(
-              fontSize: isSmallScreen ? 18 : 20,
-              fontWeight: FontWeight.w600,
-            ),
+            widget.isEdition ? 'Modifier la Zone' : 'Ajouter une Zone',
+            style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
           ),
           backgroundColor: Colors.blue,
           foregroundColor: Colors.white,
           elevation: 0,
-          centerTitle: false,
           actions: [
-            Container(
-              margin: const EdgeInsets.only(right: 8),
-              child: TextButton.icon(
-                onPressed: _sauvegarder,
-                icon: const Icon(Icons.check, color: Colors.white, size: 22),
-                label: const Text(
-                  'Enregistrer',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
-                ),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                ),
-              ),
+            IconButton(
+              icon: const Icon(Icons.check),
+              onPressed: _sauvegarder,
+              tooltip: 'Enregistrer',
             ),
           ],
         ),
         body: Form(
           key: _formKey,
           child: SingleChildScrollView(
-            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Section information de base
+                SizedBox(height: isSmallScreen ? 8 : 12),
+                
+                // Nom de la zone
+                _buildTextField(_nomController, 'Nom de la zone*', isRequired: true),
+                SizedBox(height: isSmallScreen ? 8 : 12),
+      
+                // Photos de la zone
                 Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.04),
@@ -1022,99 +957,23 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                     ],
                   ),
                   child: Padding(
-                    padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryBlue.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(Icons.place, color: AppTheme.primaryBlue, size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Informations',
-                              style: TextStyle(
-                                fontSize: isSmallScreen ? 16 : 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.darkBlue,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        _buildTextField(_nomController, 'Nom de la zone', isRequired: true),
-                      ],
+                    padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                    child: _buildPhotosSection(
+                      'Photos de la zone',
+                      _zonePhotos,
+                      _prendrePhotoZone,
+                      _choisirPhotoZoneDepuisGalerie,
                     ),
                   ),
                 ),
-                
-                const SizedBox(height: 20),
-                
-                // Section photos de la zone
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 8,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryBlue.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Icon(Icons.photo_library, color: AppTheme.primaryBlue, size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              'Photos',
-                              style: TextStyle(
-                                fontSize: isSmallScreen ? 16 : 18,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.darkBlue,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 20),
-                        _buildPhotosSection(
-                          'Photos de la zone',
-                          _zonePhotos,
-                          _prendrePhotoZone,
-                          _choisirPhotoZoneDepuisGalerie,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                
+                SizedBox(height: isSmallScreen ? 8 : 12),
+      
+                // Observations libres
                 if (!widget.isEdition) ...[
-                  const SizedBox(height: 20),
-                  
-                  // Section observations
                   Container(
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(20),
+                      borderRadius: BorderRadius.circular(16),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(0.04),
@@ -1124,43 +983,41 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                       ],
                     ),
                     child: Padding(
-                      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
                       child: _buildObservationsSection(),
                     ),
                   ),
+                  SizedBox(height: isSmallScreen ? 24 : 32),
                 ],
                 
-                const SizedBox(height: 24),
-                
-                // Bouton principal
+                // Bouton d'enregistrement
                 ElevatedButton(
                   onPressed: _sauvegarder,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,
                     foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 16 : 18),
+                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 14 : 16),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    elevation: 2,
-                    minimumSize: Size(double.infinity, isSmallScreen ? 50 : 56),
+                    minimumSize: Size(double.infinity, isSmallScreen ? 48 : 56),
                   ),
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(widget.isEdition ? Icons.edit : Icons.add_circle_outline, size: isSmallScreen ? 22 : 24),
-                      const SizedBox(width: 12),
+                      Icon(Icons.save, size: isSmallScreen ? 18 : 20),
+                      const SizedBox(width: 8),
                       Text(
-                        widget.isEdition ? 'MODIFIER LA ZONE' : 'CRÉER LA ZONE',
+                        widget.isEdition ? 'MODIFIER LA ZONE' : 'AJOUTER LA ZONE',
                         style: TextStyle(
-                          fontSize: isSmallScreen ? 15 : 16,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.8,
+                          fontSize: isSmallScreen ? 14 : 16,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ],
                   ),
                 ),
+                SizedBox(height: isSmallScreen ? 12 : 16),
               ],
             ),
           ),

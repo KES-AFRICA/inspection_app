@@ -115,6 +115,9 @@ class Mission extends HiveObject {
   @HiveField(36)
   String? jsaId;
 
+  @HiveField(37)
+  String? schemaOption;
+
   Mission({
     required this.id,
     required this.nomClient,
