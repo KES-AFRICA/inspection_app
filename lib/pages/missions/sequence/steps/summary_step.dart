@@ -277,8 +277,8 @@ class _SummaryStepState extends State<SummaryStep> {
 
   /// Prévisualise un rapport (PDF uniquement)
   Future<void> _previewReport(File file, String reportType) async {
-    // Word non prévisualisable - afficher un dialogue design
-    if (reportType == 'docx') {
+    // Word non prévisualisable - afficher un dialogue design 
+    if (reportType != 'pdf') {
       _showWordPreviewUnavailableDialog();
       return;
     }
