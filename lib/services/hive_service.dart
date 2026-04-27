@@ -9,6 +9,7 @@ import 'package:inspec_app/models/foudre.dart';
 import 'package:inspec_app/models/jsa.dart';
 import 'package:inspec_app/models/last_report.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
+import 'package:inspec_app/services/secure_password_service.dart';
 import '../models/verificateur.dart';
 import '../models/mission.dart';
 import '../models/renseignements_generaux.dart';
@@ -110,6 +111,7 @@ class HiveService {
     try {
       return box.values.any((user) => user.matricule.toUpperCase() == matricule.toUpperCase());
     } catch (e) {
+      if (kDebugMode) print('Erreur matriculeExists: $e');
       return false;
     }
   }
@@ -133,7 +135,7 @@ class HiveService {
 
       return user;
     } catch (e) {
-      print('❌ Erreur getCurrentUser: $e');
+      if (kDebugMode) print('❌ Erreur getCurrentUser: $e');
       return null;
     }
   }
@@ -180,6 +182,7 @@ class HiveService {
         (user) => user.matricule.toUpperCase() == matricule.toUpperCase(),
       );
     } catch (e) {
+      if (kDebugMode) print('Erreur getUserByMatricule: $e');
       return null;
     }
   }
@@ -195,9 +198,9 @@ class HiveService {
     try {
       final currentBox = Hive.box(_currentUserKey);
       await currentBox.put('isLoggedIn', false);
-      print('🟡 Utilisateur déconnecté proprement.');
+      if (kDebugMode) print('🟡 Utilisateur déconnecté proprement.');
     } catch (e) {
-      print('❌ Erreur lors de logout: $e');
+      if (kDebugMode) print('❌ Erreur lors de logout: $e');
       throw Exception('Erreur lors de la déconnexion');
     }
   }
@@ -207,30 +210,43 @@ class HiveService {
     try {
       final currentBox = Hive.box(_currentUserKey);
       await currentBox.clear();
-      print('🔴 Déconnexion complète : session effacée.');
+      if (kDebugMode) print('🔴 Déconnexion complète : session effacée.');
     } catch (e) {
-      print('❌ Erreur logoutCompletely: $e');
+      if (kDebugMode) print('❌ Erreur logoutCompletely: $e');
       throw Exception('Erreur lors de la déconnexion complète');
     }
   }
 
   /// Debug de l’état des utilisateurs
   static void debugUserState() {
+    if (!kDebugMode) return;
     final currentBox = Hive.box(_currentUserKey);
     final matricule = currentBox.get('matricule');
     final isLoggedIn = currentBox.get('isLoggedIn', defaultValue: false);
     final userBox = Hive.box<Verificateur>(_verificateurBox);
 
-    print('====== DEBUG USER STATE ======');
-    print('Matricule current_user : $matricule');
-    print('isLoggedIn : $isLoggedIn');
-    print('Liste users locaux : ${userBox.keys.toList()}');
+    if (kDebugMode) {
+      print('====== DEBUG USER STATE ======');
+    }
+    if (kDebugMode) {
+      print('Matricule current_user : $matricule');
+    }
+    if (kDebugMode) {
+      print('isLoggedIn : $isLoggedIn');
+    }
+    if (kDebugMode) {
+      print('Liste users locaux : ${userBox.keys.toList()}');
+    }
 
     if (matricule != null) {
       final user = userBox.get(matricule);
-      print('User actuel : ${user?.nom}');
+      if (kDebugMode) {
+        print('User actuel : ${user?.nom}');
+      }
     }
-    print('==============================');
+    if (kDebugMode) {
+      print('==============================');
+    }
   }
 
   static Verificateur? getUserByMatriculeAndPassword(String matricule, String password) {
@@ -243,7 +259,6 @@ class HiveService {
   }
 
   
-
   // ============================================================
   //                      GESTION MISSIONS
   // ============================================================
@@ -293,7 +308,7 @@ class HiveService {
       final box = Hive.box<Verificateur>(_verificateurBox);
       return box.values.toList();
     } catch (e) {
-      print('❌ Erreur getAllUsers: $e');
+      if (kDebugMode) print('❌ Erreur getAllUsers: $e');
       return [];
     }
   }
@@ -322,7 +337,7 @@ static Future<bool> addAccompagnateur({
     final mission = box.get(missionId);
 
     if (mission == null) {
-      print('❌ Mission non trouvée: $missionId');
+      if (kDebugMode) print('❌ Mission non trouvée: $missionId');
       return false;
     }
 
@@ -334,14 +349,14 @@ static Future<bool> addAccompagnateur({
       mission.accompagnateurs!.add(accompagnateur);
       mission.updatedAt = DateTime.now();
       await mission.save();
-      print('✅ Accompagnateur ajouté: $accompagnateur');
+      if (kDebugMode) print('✅ Accompagnateur ajouté: $accompagnateur');
       return true;
     } else {
-      print('⚠️ Accompagnateur déjà présent: $accompagnateur');
+      if (kDebugMode) print('⚠️ Accompagnateur déjà présent: $accompagnateur');
       return false;
     }
   } catch (e) {
-    print('❌ Erreur addAccompagnateur: $e');
+    if (kDebugMode) print('❌ Erreur addAccompagnateur: $e');
     return false;
   }
 }
@@ -356,7 +371,7 @@ static Future<bool> removeAccompagnateur({
     final mission = box.get(missionId);
 
     if (mission == null || mission.accompagnateurs == null) {
-      print('❌ Mission non trouvée ou liste vide: $missionId');
+      if (kDebugMode) print('❌ Mission non trouvée ou liste vide: $missionId');
       return false;
     }
 
@@ -366,14 +381,14 @@ static Future<bool> removeAccompagnateur({
     if (removed) {
       mission.updatedAt = DateTime.now();
       await mission.save();
-      print('✅ Accompagnateur supprimé: $accompagnateur');
+      if (kDebugMode) print('✅ Accompagnateur supprimé: $accompagnateur');
       return true;
     } else {
-      print('⚠️ Accompagnateur non trouvé: $accompagnateur');
+      if (kDebugMode) print('⚠️ Accompagnateur non trouvé: $accompagnateur');
       return false;
     }
   } catch (e) {
-    print('❌ Erreur removeAccompagnateur: $e');
+    if (kDebugMode) print('❌ Erreur removeAccompagnateur: $e');
     return false;
   }
 }
@@ -389,19 +404,19 @@ static Future<bool> updateAccompagnateur({
     final mission = box.get(missionId);
 
     if (mission == null || mission.accompagnateurs == null) {
-      print('❌ Mission non trouvée ou liste vide: $missionId');
+      if (kDebugMode) print('❌ Mission non trouvée ou liste vide: $missionId');
       return false;
     }
 
     final index = mission.accompagnateurs!.indexOf(oldAccompagnateur);
     if (index == -1) {
-      print('❌ Ancien accompagnateur non trouvé: $oldAccompagnateur');
+      if (kDebugMode) print('❌ Ancien accompagnateur non trouvé: $oldAccompagnateur');
       return false;
     }
 
     // Vérifier si le nouveau nom n'existe pas déjà
     if (mission.accompagnateurs!.contains(newAccompagnateur)) {
-      print('⚠️ Nouvel accompagnateur déjà présent: $newAccompagnateur');
+      if (kDebugMode) print('⚠️ Nouvel accompagnateur déjà présent: $newAccompagnateur');
       return false;
     }
 
@@ -410,10 +425,10 @@ static Future<bool> updateAccompagnateur({
     mission.updatedAt = DateTime.now();
     await mission.save();
     
-    print('✅ Accompagnateur modifié: $oldAccompagnateur -> $newAccompagnateur');
+    if (kDebugMode) print('✅ Accompagnateur modifié: $oldAccompagnateur -> $newAccompagnateur');
     return true;
   } catch (e) {
-    print('❌ Erreur updateAccompagnateur: $e');
+    if (kDebugMode) print('❌ Erreur updateAccompagnateur: $e');
     return false;
   }
 }
@@ -424,7 +439,7 @@ static List<String>? getAccompagnateurs(String missionId) {
     final mission = getMissionById(missionId);
     return mission?.accompagnateurs;
   } catch (e) {
-    print('❌ Erreur getAccompagnateurs: $e');
+    if (kDebugMode) print('❌ Erreur getAccompagnateurs: $e');
     return null;
   }
 }
@@ -438,7 +453,7 @@ static bool hasAccompagnateur({
     final mission = getMissionById(missionId);
     return mission?.accompagnateurs?.contains(accompagnateur) ?? false;
   } catch (e) {
-    print('❌ Erreur hasAccompagnateur: $e');
+    if (kDebugMode) print('❌ Erreur hasAccompagnateur: $e');
     return false;
   }
 }
@@ -456,7 +471,7 @@ static bool hasAccompagnateur({
       final mission = box.get(missionId);
 
       if (mission == null) {
-        print('❌ Mission non trouvée: $missionId');
+        if (kDebugMode) print('❌ Mission non trouvée: $missionId');
         return false;
       }
 
@@ -470,11 +485,11 @@ static bool hasAccompagnateur({
       mission.updatedAt = DateTime.now();
       await mission.save();
       
-      print('✅ Statut mis à jour: $missionId -> $normalizedStatus');
+      if (kDebugMode) print('✅ Statut mis à jour: $missionId -> $normalizedStatus');
       return true;
 
     } catch (e) {
-      print('❌ Erreur mise à jour statut: $e');
+      if (kDebugMode) print('❌ Erreur mise à jour statut: $e');
       return false;
     }
   }
@@ -485,7 +500,7 @@ static bool hasAccompagnateur({
       final box = Hive.box<Mission>(_missionBox);
       return box.get(missionId);
     } catch (e) {
-      print('❌ Erreur getMissionById: $e');
+      if (kDebugMode) print('❌ Erreur getMissionById: $e');
       return null;
     }
   }
@@ -505,7 +520,7 @@ static Future<bool> updateDocumentStatus({
     final mission = box.get(missionId);
 
     if (mission == null) {
-      print('❌ Mission non trouvée: $missionId');
+      if (kDebugMode) print('❌ Mission non trouvée: $missionId');
       return false;
     }
 
@@ -551,7 +566,7 @@ static Future<bool> updateDocumentStatus({
         mission.docAutre = value;
         break;
       default:
-        print('❌ Champ document inconnu: $documentField');
+        if (kDebugMode) print('❌ Champ document inconnu: $documentField');
         return false;
     }
 
@@ -561,11 +576,11 @@ static Future<bool> updateDocumentStatus({
     // Sauvegarder la mission modifiée
     await mission.save();
     
-    print('✅ Document mis à jour: $documentField -> $value pour mission $missionId');
+    if (kDebugMode) print('✅ Document mis à jour: $documentField -> $value pour mission $missionId');
     return true;
 
   } catch (e) {
-    print('❌ Erreur mise à jour document local: $e');
+    if (kDebugMode) print('❌ Erreur mise à jour document local: $e');
     return false;
   }
 }
@@ -580,7 +595,7 @@ static Future<bool> updateMultipleDocuments({
     final mission = box.get(missionId);
 
     if (mission == null) {
-      print('❌ Mission non trouvée: $missionId');
+      if (kDebugMode) print('❌ Mission non trouvée: $missionId');
       return false;
     }
 
@@ -627,7 +642,7 @@ static Future<bool> updateMultipleDocuments({
           mission.docAutre = value;
           break;
         default:
-          print('❌ Champ document inconnu: $documentField');
+          if (kDebugMode) print('❌ Champ document inconnu: $documentField');
       }
     });
 
@@ -637,11 +652,11 @@ static Future<bool> updateMultipleDocuments({
     // Sauvegarder la mission modifiée
     await mission.save();
     
-    print('✅ ${documentUpdates.length} documents mis à jour pour mission $missionId');
+    if (kDebugMode) print('✅ ${documentUpdates.length} documents mis à jour pour mission $missionId');
     return true;
 
   } catch (e) {
-    print('❌ Erreur mise à jour multiples documents: $e');
+    if (kDebugMode) print('❌ Erreur mise à jour multiples documents: $e');
     return false;
   }
 }
@@ -670,7 +685,7 @@ static Map<String, bool> getMissionDocumentsStatus(String missionId) {
       'doc_autre': mission.docAutre,
     };
   } catch (e) {
-    print('❌ Erreur getMissionDocumentsStatus: $e');
+    if (kDebugMode) print('❌ Erreur getMissionDocumentsStatus: $e');
     return {};
   }
 }
@@ -682,7 +697,7 @@ static Future<bool> resetAllDocuments(String missionId) async {
     final mission = box.get(missionId);
 
     if (mission == null) {
-      print('❌ Mission non trouvée: $missionId');
+      if (kDebugMode) print('❌ Mission non trouvée: $missionId');
       return false;
     }
 
@@ -707,11 +722,11 @@ static Future<bool> resetAllDocuments(String missionId) async {
     // Sauvegarder la mission modifiée
     await mission.save();
     
-    print('✅ Tous les documents réinitialisés pour mission $missionId');
+    if (kDebugMode) print('✅ Tous les documents réinitialisés pour mission $missionId');
     return true;
 
   } catch (e) {
-    print('❌ Erreur réinitialisation documents: $e');
+    if (kDebugMode) print('❌ Erreur réinitialisation documents: $e');
     return false;
   }
 }
@@ -732,7 +747,7 @@ static Future<DescriptionInstallations> getOrCreateDescriptionInstallations(Stri
       }
     }
   } catch (e) {
-    print('❌ Erreur lors de la recherche: $e');
+    if (kDebugMode) print('❌ Erreur lors de la recherche: $e');
   }
   
   // Créer une nouvelle instance si non trouvée
@@ -757,7 +772,7 @@ static Future<void> saveDescriptionInstallations(DescriptionInstallations desc) 
     await box.put(desc.key, desc);
     await box.close();
   } catch (e) {
-    print('❌ Erreur saveDescriptionInstallations: $e');
+    if (kDebugMode) print('❌ Erreur saveDescriptionInstallations: $e');
   }
 }
 
@@ -810,7 +825,7 @@ static Future<bool> addInstallationItemToSection({
         desc.onduleurs.add(item);
         break;
       default:
-        print('❌ Section inconnue: $section');
+        if (kDebugMode) print('❌ Section inconnue: $section');
         return false;
     }
 
@@ -818,10 +833,10 @@ static Future<bool> addInstallationItemToSection({
     await box.put(desc.key, desc); // SAUVEGARDER CORRECTEMENT
     await box.close(); // FERMER LA BOX
     
-    print('✅ InstallationItem ajouté à la section: $section');
+    if (kDebugMode) print('✅ InstallationItem ajouté à la section: $section');
     return true;
   } catch (e) {
-    print('❌ Erreur addInstallationItemToSection: $e');
+    if (kDebugMode) print('❌ Erreur addInstallationItemToSection: $e');
     return false;
   }
 }
@@ -872,15 +887,15 @@ static Future<bool> updateInstallationItemInSection({
         }
         break;
       default:
-        print('❌ Section inconnue: $section');
+        if (kDebugMode) print('❌ Section inconnue: $section');
         return false;
     }
 
     await saveDescriptionInstallations(desc);
-    print('✅ InstallationItem mis à jour dans la section: $section');
+    if (kDebugMode) print('✅ InstallationItem mis à jour dans la section: $section');
     return true;
   } catch (e) {
-    print('❌ Erreur updateInstallationItemInSection: $e');
+    if (kDebugMode) print('❌ Erreur updateInstallationItemInSection: $e');
     return false;
   }
 }
@@ -909,11 +924,11 @@ static Future<List<InstallationItem>> getInstallationItemsFromSection({
       case 'onduleurs':
         return desc.onduleurs;
       default:
-        print('❌ Section inconnue: $section');
+        if (kDebugMode) print('❌ Section inconnue: $section');
         return [];
     }
   } catch (e) {
-    print('❌ Erreur getInstallationItemsFromSection: $e');
+    if (kDebugMode) print('❌ Erreur getInstallationItemsFromSection: $e');
     return [];
   }
 }
@@ -964,15 +979,15 @@ static Future<bool> removeInstallationItemFromSection({
         }
         break;
       default:
-        print('❌ Section inconnue: $section');
+        if (kDebugMode) print('❌ Section inconnue: $section');
         return false;
     }
 
     await saveDescriptionInstallations(desc);
-    print('✅ InstallationItem supprimé de la section: $section');
+    if (kDebugMode) print('✅ InstallationItem supprimé de la section: $section');
     return true;
   } catch (e) {
-    print('❌ Erreur removeInstallationItemFromSection: $e');
+    if (kDebugMode) print('❌ Erreur removeInstallationItemFromSection: $e');
     return false;
   }
 }
@@ -996,7 +1011,7 @@ static Future<Map<String, bool>> getMissionProgress(String missionId) async {
     final desc = await getOrCreateDescriptionInstallations(missionId);
     return desc.getProgress();
   } catch (e) {
-    print('❌ Erreur getMissionProgress: $e');
+    if (kDebugMode) print('❌ Erreur getMissionProgress: $e');
     return {};
   }
 }
@@ -1023,7 +1038,7 @@ static Future<List<Map<String, String>>> getCartesFromSection({
     );
     return items.map((item) => item.data).toList();
   } catch (e) {
-    print('❌ Erreur getCartesFromSection: $e');
+    if (kDebugMode) print('❌ Erreur getCartesFromSection: $e');
     return [];
   }
 }
@@ -1110,15 +1125,15 @@ static Future<bool> removeCarteFromSection({
           desc.etudeTechniqueFoudre = value;
           break;
         default:
-          print('❌ Champ inconnu: $field');
+          if (kDebugMode) print('❌ Champ inconnu: $field');
           return false;
       }
 
       await saveDescriptionInstallations(desc);
-      print('✅ Sélection mise à jour: $field -> $value');
+      if (kDebugMode) print('✅ Sélection mise à jour: $field -> $value');
       return true;
     } catch (e) {
-      print('❌ Erreur updateSelection: $e');
+      if (kDebugMode) print('❌ Erreur updateSelection: $e');
       return false;
     }
   }
@@ -1191,7 +1206,7 @@ static Future<bool> addCoffretToMoyenneTensionLocal({
     }
     return false;
   } catch (e) {
-    print('❌ Erreur addCoffretToMoyenneTensionLocal: $e');
+    if (kDebugMode) print('❌ Erreur addCoffretToMoyenneTensionLocal: $e');
     return false;
   }
 }
@@ -1418,7 +1433,7 @@ static Future<bool> addCoffretToBasseTensionLocal({
     }
     return false;
   } catch (e) {
-    print('❌ Erreur addCoffretToBasseTensionLocal: $e');
+    if (kDebugMode) print('❌ Erreur addCoffretToBasseTensionLocal: $e');
     return false;
   }
 }
@@ -1438,7 +1453,7 @@ static Future<bool> addCoffretToMoyenneTensionZone({
     }
     return false;
   } catch (e) {
-    print('❌ Erreur addCoffretToMoyenneTensionZone: $e');
+    if (kDebugMode) print('❌ Erreur addCoffretToMoyenneTensionZone: $e');
     return false;
   }
 }
@@ -1458,7 +1473,7 @@ static Future<bool> addCoffretToBasseTensionZone({
     }
     return false;
   } catch (e) {
-    print('❌ Erreur addCoffretToBasseTensionZone: $e');
+    if (kDebugMode) print('❌ Erreur addCoffretToBasseTensionZone: $e');
     return false;
   }
 }
@@ -1667,10 +1682,10 @@ static Future<bool> addMoyenneTensionLocal({
     
     audit.moyenneTensionLocaux.add(local);
     await saveAuditInstallations(audit);
-    print('✅ Local moyenne tension ajouté: ${local.nom}');
+    if (kDebugMode) print('✅ Local moyenne tension ajouté: ${local.nom}');
     return true;
   } catch (e) {
-    print('❌ Erreur addMoyenneTensionLocal: $e');
+    if (kDebugMode) print('❌ Erreur addMoyenneTensionLocal: $e');
     return false;
   }
 }
@@ -1698,10 +1713,10 @@ static Future<bool> addMoyenneTensionZone({
     
     audit.moyenneTensionZones.add(zone);
     await saveAuditInstallations(audit);
-    print('✅ Zone moyenne tension ajoutée: ${zone.nom} avec classement ${zone.classementZoneId}');
+    if (kDebugMode) print('✅ Zone moyenne tension ajoutée: ${zone.nom} avec classement ${zone.classementZoneId}');
     return true;
   } catch (e) {
-    print('❌ Erreur addMoyenneTensionZone: $e');
+    if (kDebugMode) print('❌ Erreur addMoyenneTensionZone: $e');
     return false;
   }
 }
@@ -1729,10 +1744,10 @@ static Future<bool> addBasseTensionZone({
     
     audit.basseTensionZones.add(zone);
     await saveAuditInstallations(audit);
-    print('✅ Zone basse tension ajoutée: ${zone.nom} avec classement ${zone.classementZoneId}');
+    if (kDebugMode) print('✅ Zone basse tension ajoutée: ${zone.nom} avec classement ${zone.classementZoneId}');
     return true;
   } catch (e) {
-    print('❌ Erreur addBasseTensionZone: $e');
+    if (kDebugMode) print('❌ Erreur addBasseTensionZone: $e');
     return false;
   }
 }
@@ -2110,7 +2125,7 @@ static Future<void> _updateMissionClassementReference(String missionId, List<Cla
   if (mission != null) {
     if (emplacements.isNotEmpty) {
       // Créer un ID de référence unique pour cette mission
-      mission.classementLocauxId = 'classement_${missionId}';
+      mission.classementLocauxId = 'classement_$missionId';
     } else {
       mission.classementLocauxId = null;
     }
@@ -2162,11 +2177,7 @@ static Future<bool> updateEmplacement(ClassementEmplacement emplacement) async {
     
     if (kDebugMode) {
       print('✅ Emplacement sauvegardé: ${emplacement.localisation} (${emplacement.typeEmplacement})');
-    }
-    if (kDebugMode) {
       print('   AF: ${emplacement.af}, BE: ${emplacement.be}, AE: ${emplacement.ae}');
-    }
-    if (kDebugMode) {
       print('   AD: ${emplacement.ad}, AG: ${emplacement.ag}');
     }
     
@@ -2698,7 +2709,7 @@ static bool isEmplacementComplet(ClassementEmplacement emplacement) {
 //   if (emplacement.ae != null) filled++;
 //   if (emplacement.ad != null) filled++;
 //   if (emplacement.ag != null) filled++;
-  
+//   
 //   return (filled / 5 * 100).round();
 // }
 
@@ -3141,7 +3152,7 @@ static Future<bool> updateFoudreObservation({
     
     // Valider le niveau de priorité
     if (niveauPriorite < 1 || niveauPriorite > 3) {
-      print('❌ Niveau de priorité invalide: $niveauPriorite');
+      if (kDebugMode) print('❌ Niveau de priorité invalide: $niveauPriorite');
       return false;
     }
     
@@ -3153,10 +3164,10 @@ static Future<bool> updateFoudreObservation({
     // Sauvegarder les modifications
     await foudre.save();
     
-    print('✅ Observation foudre mise à jour: $foudreId');
+    if (kDebugMode) print('✅ Observation foudre mise à jour: $foudreId');
     return true;
   } catch (e) {
-    print('❌ Erreur updateFoudreObservation: $e');
+    if (kDebugMode) print('❌ Erreur updateFoudreObservation: $e');
     return false;
   }
 }
@@ -3171,7 +3182,7 @@ static Future<bool> updateFoudreObservationText({
     final foudre = box.get(foudreId);
     
     if (foudre == null) {
-      print('❌ Observation foudre non trouvée: $foudreId');
+      if (kDebugMode) print('❌ Observation foudre non trouvée: $foudreId');
       return false;
     }
     
@@ -3180,10 +3191,10 @@ static Future<bool> updateFoudreObservationText({
     
     await foudre.save();
     
-    print('✅ Texte observation foudre mis à jour: $foudreId');
+    if (kDebugMode) print('✅ Texte observation foudre mis à jour: $foudreId');
     return true;
   } catch (e) {
-    print('❌ Erreur updateFoudreObservationText: $e');
+    if (kDebugMode) print('❌ Erreur updateFoudreObservationText: $e');
     return false;
   }
 }
@@ -3198,13 +3209,13 @@ static Future<bool> updateFoudreObservationPriority({
     final foudre = box.get(foudreId);
     
     if (foudre == null) {
-      print('❌ Observation foudre non trouvée: $foudreId');
+      if (kDebugMode) print('❌ Observation foudre non trouvée: $foudreId');
       return false;
     }
     
     // Valider le niveau de priorité
     if (niveauPriorite < 1 || niveauPriorite > 3) {
-      print('❌ Niveau de priorité invalide: $niveauPriorite');
+      if (kDebugMode) print('❌ Niveau de priorité invalide: $niveauPriorite');
       return false;
     }
     
@@ -3213,10 +3224,10 @@ static Future<bool> updateFoudreObservationPriority({
     
     await foudre.save();
     
-    print('✅ Priorité observation foudre mise à jour: $foudreId -> $niveauPriorite');
+    if (kDebugMode) print('✅ Priorité observation foudre mise à jour: $foudreId -> $niveauPriorite');
     return true;
   } catch (e) {
-    print('❌ Erreur updateFoudreObservationPriority: $e');
+    if (kDebugMode) print('❌ Erreur updateFoudreObservationPriority: $e');
     return false;
   }
 }
@@ -3232,7 +3243,7 @@ static Future<bool> deleteFoudreObservation(dynamic foudreId) async {
     final foudre = box.get(foudreId);
     
     if (foudre == null) {
-      print('❌ Observation foudre non trouvée: $foudreId');
+      if (kDebugMode) print('❌ Observation foudre non trouvée: $foudreId');
       return false;
     }
     
@@ -3242,10 +3253,10 @@ static Future<bool> deleteFoudreObservation(dynamic foudreId) async {
     // Supprimer l'observation
     await foudre.delete();
     
-    print('✅ Observation foudre supprimée: $foudreId');
+    if (kDebugMode) print('✅ Observation foudre supprimée: $foudreId');
     return true;
   } catch (e) {
-    print('❌ Erreur deleteFoudreObservation: $e');
+    if (kDebugMode) print('❌ Erreur deleteFoudreObservation: $e');
     return false;
   }
 }
@@ -3262,10 +3273,10 @@ static Future<bool> deleteAllFoudreObservationsForMission(String missionId) asyn
     // Supprimer les références dans la mission (si nécessaire)
     await _clearFoudreReferencesFromMission(missionId);
     
-    print('✅ ${observations.length} observations foudre supprimées pour mission $missionId');
+    if (kDebugMode) print('✅ ${observations.length} observations foudre supprimées pour mission $missionId');
     return true;
   } catch (e) {
-    print('❌ Erreur deleteAllFoudreObservationsForMission: $e');
+    if (kDebugMode) print('❌ Erreur deleteAllFoudreObservationsForMission: $e');
     return false;
   }
 }
@@ -3291,11 +3302,11 @@ static Future<void> _updateFoudreReferenceInMission(String missionId, Foudre fou
         mission.updatedAt = DateTime.now();
         await mission.save();
         
-        print('✅ Référence foudre ajoutée à la mission $missionId: $foudreId');
+        if (kDebugMode) print('✅ Référence foudre ajoutée à la mission $missionId: $foudreId');
       }
     }
   } catch (e) {
-    print('❌ Erreur _updateFoudreReferenceInMission: $e');
+    if (kDebugMode) print('❌ Erreur _updateFoudreReferenceInMission: $e');
   }
 }
 
@@ -3311,10 +3322,10 @@ static Future<void> _removeFoudreReferenceFromMission(String missionId, dynamic 
       mission.updatedAt = DateTime.now();
       await mission.save();
       
-      print('✅ Référence foudre supprimée de la mission $missionId: $foudreIdStr');
+      if (kDebugMode) print('✅ Référence foudre supprimée de la mission $missionId: $foudreIdStr');
     }
   } catch (e) {
-    print('❌ Erreur _removeFoudreReferenceFromMission: $e');
+    if (kDebugMode) print('❌ Erreur _removeFoudreReferenceFromMission: $e');
   }
 }
 
@@ -3329,10 +3340,10 @@ static Future<void> _clearFoudreReferencesFromMission(String missionId) async {
       mission.updatedAt = DateTime.now();
       await mission.save();
       
-      print('✅ Toutes les références foudre supprimées de la mission $missionId');
+      if (kDebugMode) print('✅ Toutes les références foudre supprimées de la mission $missionId');
     }
   } catch (e) {
-    print('❌ Erreur _clearFoudreReferencesFromMission: $e');
+    if (kDebugMode) print('❌ Erreur _clearFoudreReferencesFromMission: $e');
   }
 }
 
@@ -3375,7 +3386,7 @@ static Map<String, dynamic> getFoudreStatsForMission(String missionId) {
       'pourcentage_priorite_3': total > 0 ? ((byPriority[3] ?? 0) / total * 100).round() : 0,
     };
   } catch (e) {
-    print('❌ Erreur getFoudreStatsForMission: $e');
+    if (kDebugMode) print('❌ Erreur getFoudreStatsForMission: $e');
     return {
       'total': 0,
       'priorite_1': 0,
@@ -3505,7 +3516,7 @@ static String exportFoudreToCSV(String missionId) {
     
     return csv.toString();
   } catch (e) {
-    print('❌ Erreur exportFoudreToCSV: $e');
+    if (kDebugMode) print('❌ Erreur exportFoudreToCSV: $e');
     return '';
   }
 }
@@ -3529,15 +3540,15 @@ static Future<bool> importFoudreFromJson(String missionId, List<Map<String, dyna
         
         imported++;
       } catch (e) {
-        print('❌ Erreur lors de l\'import d\'une observation: $e');
+        if (kDebugMode) print('❌ Erreur lors de l\'import d\'une observation: $e');
       }
     }
     
-    print('✅ $imported observations foudre importées pour mission $missionId');
+    if (kDebugMode) print('✅ $imported observations foudre importées pour mission $missionId');
     return true;
     
   } catch (e) {
-    print('❌ Erreur importFoudreFromJson: $e');
+    if (kDebugMode) print('❌ Erreur importFoudreFromJson: $e');
     return false;
   }
 }
@@ -3577,7 +3588,7 @@ static bool foudreObservationExists(dynamic foudreId) {
     final box = Hive.box<Foudre>(_foudreBox);
     return box.containsKey(foudreId);
   } catch (e) {
-    print('❌ Erreur foudreObservationExists: $e');
+    if (kDebugMode) print('❌ Erreur foudreObservationExists: $e');
     return false;
   }
 }
@@ -3588,7 +3599,7 @@ static List<Foudre> getAllFoudreObservations() {
     final box = Hive.box<Foudre>(_foudreBox);
     return box.values.toList();
   } catch (e) {
-    print('❌ Erreur getAllFoudreObservations: $e');
+    if (kDebugMode) print('❌ Erreur getAllFoudreObservations: $e');
     return [];
   }
 }
@@ -3606,10 +3617,10 @@ static Future<bool> clearAllFoudreObservations() async {
       await mission.save();
     }
     
-    print('✅ Toutes les observations foudre supprimées');
+    if (kDebugMode) print('✅ Toutes les observations foudre supprimées');
     return true;
   } catch (e) {
-    print('❌ Erreur clearAllFoudreObservations: $e');
+    if (kDebugMode) print('❌ Erreur clearAllFoudreObservations: $e');
     return false;
   }
 }
@@ -3631,10 +3642,10 @@ static Future<bool> copyFoudreObservations({
       );
     }
     
-    print('✅ ${sourceObservations.length} observations foudre copiées de $sourceMissionId vers $targetMissionId');
+    if (kDebugMode) print('✅ ${sourceObservations.length} observations foudre copiées de $sourceMissionId vers $targetMissionId');
     return true;
   } catch (e) {
-    print('❌ Erreur copyFoudreObservations: $e');
+    if (kDebugMode) print('❌ Erreur copyFoudreObservations: $e');
     return false;
   }
 }
@@ -3663,7 +3674,7 @@ static Future<MesuresEssais> getOrCreateMesuresEssais(String missionId) async {
       await mission.save();
     }
     
-    print('✅ MesuresEssais créé pour mission: $missionId');
+    if (kDebugMode) print('✅ MesuresEssais créé pour mission: $missionId');
     return newMesures;
   }
 }
@@ -3673,7 +3684,7 @@ static Future<void> saveMesuresEssais(MesuresEssais mesures) async {
   final box = Hive.box<MesuresEssais>(_mesuresEssaisBox);
   mesures.updatedAt = DateTime.now();
   await mesures.save();
-  print('✅ MesuresEssais sauvegardé pour mission: ${mesures.missionId}');
+  if (kDebugMode) print('✅ MesuresEssais sauvegardé pour mission: ${mesures.missionId}');
 }
 
 /// Récupérer les données de mesures et essais par missionId
@@ -3722,10 +3733,10 @@ static Future<bool> updateConditionMesure({
     final mesures = await getOrCreateMesuresEssais(missionId);
     mesures.conditionMesure.observation = observation;
     await saveMesuresEssais(mesures);
-    print('✅ Conditions de mesure mises à jour');
+    if (kDebugMode) print('✅ Conditions de mesure mises à jour');
     return true;
   } catch (e) {
-    print('❌ Erreur updateConditionMesure: $e');
+    if (kDebugMode) print('❌ Erreur updateConditionMesure: $e');
     return false;
   }
 }
@@ -3743,10 +3754,10 @@ static Future<bool> updateEssaiDemarrageAuto({
     final mesures = await getOrCreateMesuresEssais(missionId);
     mesures.essaiDemarrageAuto.observation = observation;
     await saveMesuresEssais(mesures);
-    print('✅ Essais démarrage auto mis à jour');
+    if (kDebugMode) print('✅ Essais démarrage auto mis à jour');
     return true;
   } catch (e) {
-    print('❌ Erreur updateEssaiDemarrageAuto: $e');
+    if (kDebugMode) print('❌ Erreur updateEssaiDemarrageAuto: $e');
     return false;
   }
 }
@@ -3764,10 +3775,10 @@ static Future<bool> updateTestArretUrgence({
     final mesures = await getOrCreateMesuresEssais(missionId);
     mesures.testArretUrgence.observation = observation;
     await saveMesuresEssais(mesures);
-    print('✅ Tests arrêt urgence mis à jour');
+    if (kDebugMode) print('✅ Tests arrêt urgence mis à jour');
     return true;
   } catch (e) {
-    print('❌ Erreur updateTestArretUrgence: $e');
+    if (kDebugMode) print('❌ Erreur updateTestArretUrgence: $e');
     return false;
   }
 }
@@ -3785,10 +3796,10 @@ static Future<bool> addPriseTerre({
     final mesures = await getOrCreateMesuresEssais(missionId);
     mesures.prisesTerre.add(priseTerre);
     await saveMesuresEssais(mesures);
-    print('✅ Prise de terre ajoutée: ${priseTerre.identification}');
+    if (kDebugMode) print('✅ Prise de terre ajoutée: ${priseTerre.identification}');
     return true;
   } catch (e) {
-    print('❌ Erreur addPriseTerre: $e');
+    if (kDebugMode) print('❌ Erreur addPriseTerre: $e');
     return false;
   }
 }
@@ -3804,12 +3815,12 @@ static Future<bool> updatePriseTerre({
     if (index < mesures.prisesTerre.length) {
       mesures.prisesTerre[index] = priseTerre;
       await saveMesuresEssais(mesures);
-      print('✅ Prise de terre mise à jour: ${priseTerre.identification}');
+      if (kDebugMode) print('✅ Prise de terre mise à jour: ${priseTerre.identification}');
       return true;
     }
     return false;
   } catch (e) {
-    print('❌ Erreur updatePriseTerre: $e');
+    if (kDebugMode) print('❌ Erreur updatePriseTerre: $e');
     return false;
   }
 }
@@ -3824,12 +3835,12 @@ static Future<bool> deletePriseTerre({
     if (index < mesures.prisesTerre.length) {
       final pt = mesures.prisesTerre.removeAt(index);
       await saveMesuresEssais(mesures);
-      print('✅ Prise de terre supprimée: ${pt.identification}');
+      if (kDebugMode) print('✅ Prise de terre supprimée: ${pt.identification}');
       return true;
     }
     return false;
   } catch (e) {
-    print('❌ Erreur deletePriseTerre: $e');
+    if (kDebugMode) print('❌ Erreur deletePriseTerre: $e');
     return false;
   }
 }
@@ -3867,10 +3878,10 @@ static Future<bool> updateAvisMesuresTerre({
     }
     
     await saveMesuresEssais(mesures);
-    print('✅ Avis sur les mesures mis à jour');
+    if (kDebugMode) print('✅ Avis sur les mesures mis à jour');
     return true;
   } catch (e) {
-    print('❌ Erreur updateAvisMesuresTerre: $e');
+    if (kDebugMode) print('❌ Erreur updateAvisMesuresTerre: $e');
     return false;
   }
 }
@@ -3888,10 +3899,10 @@ static Future<bool> addEssaiDeclenchement({
     final mesures = await getOrCreateMesuresEssais(missionId);
     mesures.essaisDeclenchement.add(essai);
     await saveMesuresEssais(mesures);
-    print('✅ Essai déclenchement ajouté: ${essai.designationCircuit}');
+    if (kDebugMode) print('✅ Essai déclenchement ajouté: ${essai.designationCircuit}');
     return true;
   } catch (e) {
-    print('❌ Erreur addEssaiDeclenchement: $e');
+    if (kDebugMode) print('❌ Erreur addEssaiDeclenchement: $e');
     return false;
   }
 }
@@ -3907,12 +3918,12 @@ static Future<bool> updateEssaiDeclenchement({
     if (index < mesures.essaisDeclenchement.length) {
       mesures.essaisDeclenchement[index] = essai;
       await saveMesuresEssais(mesures);
-      print('✅ Essai déclenchement mis à jour: ${essai.designationCircuit}');
+      if (kDebugMode) print('✅ Essai déclenchement mis à jour: ${essai.designationCircuit}');
       return true;
     }
     return false;
   } catch (e) {
-    print('❌ Erreur updateEssaiDeclenchement: $e');
+    if (kDebugMode) print('❌ Erreur updateEssaiDeclenchement: $e');
     return false;
   }
 }
@@ -3927,12 +3938,12 @@ static Future<bool> deleteEssaiDeclenchement({
     if (index < mesures.essaisDeclenchement.length) {
       final essai = mesures.essaisDeclenchement.removeAt(index);
       await saveMesuresEssais(mesures);
-      print('✅ Essai déclenchement supprimé: ${essai.designationCircuit}');
+      if (kDebugMode) print('✅ Essai déclenchement supprimé: ${essai.designationCircuit}');
       return true;
     }
     return false;
   } catch (e) {
-    print('❌ Erreur deleteEssaiDeclenchement: $e');
+    if (kDebugMode) print('❌ Erreur deleteEssaiDeclenchement: $e');
     return false;
   }
 }
@@ -4036,10 +4047,10 @@ static Future<bool> addContinuiteResistance({
     final mesures = await getOrCreateMesuresEssais(missionId);
     mesures.continuiteResistances.add(mesure);
     await saveMesuresEssais(mesures);
-    print('✅ Continuité/résistance ajoutée: ${mesure.designationTableau}');
+    if (kDebugMode) print('✅ Continuité/résistance ajoutée: ${mesure.designationTableau}');
     return true;
   } catch (e) {
-    print('❌ Erreur addContinuiteResistance: $e');
+    if (kDebugMode) print('❌ Erreur addContinuiteResistance: $e');
     return false;
   }
 }
@@ -4055,12 +4066,12 @@ static Future<bool> updateContinuiteResistance({
     if (index < mesures.continuiteResistances.length) {
       mesures.continuiteResistances[index] = mesure;
       await saveMesuresEssais(mesures);
-      print('✅ Continuité/résistance mise à jour: ${mesure.designationTableau}');
+      if (kDebugMode) print('✅ Continuité/résistance mise à jour: ${mesure.designationTableau}');
       return true;
     }
     return false;
   } catch (e) {
-    print('❌ Erreur updateContinuiteResistance: $e');
+    if (kDebugMode) print('❌ Erreur updateContinuiteResistance: $e');
     return false;
   }
 }
@@ -5683,8 +5694,6 @@ static Future<bool> saveClassementZone(ClassementZone classement) async {
     
     if (kDebugMode) {
       print('✅ ClassementZone sauvegardé: ${classement.nomZone}');
-    }
-    if (kDebugMode) {
       print('   AF: ${classement.af}, BE: ${classement.be}, AE: ${classement.ae}');
     }
     return true;
@@ -5789,7 +5798,7 @@ static Future<void> deleteClassementZone({
     
     if (toDelete != null) {
       await toDelete.delete();
-      print('✅ ClassementZone supprimé: $nomZone');
+      if (kDebugMode) print('✅ ClassementZone supprimé: $nomZone');
     }
   } catch (e) {
     if (kDebugMode) {
@@ -6295,7 +6304,145 @@ static Future<bool> updateUserPassword({
   }
 }
 
+// ═══════════════════════════════════════════════════════════════
+  // MÉTHODES D'AUTHENTIFICATION SÉCURISÉES (NOUVELLES)
+  // ═══════════════════════════════════════════════════════════════
+  
+  static Future<bool> createUserWithSecurePassword({
+    required String email,
+    required String password,
+    required String nom,
+    required String prenom,
+    required String matricule,
+  }) async {
+    try {
+      if (emailExists(email)) return false;
+      if (matriculeExists(matricule)) return false;
+      
+      final passwordResult = await SecurePasswordService.createPassword(
+        email: email.toLowerCase(),
+        plainPassword: password,
+      );
+      
+      if (!passwordResult.success) {
+        if (kDebugMode) print('❌ Création password échouée: ${passwordResult.errorMessage}');
+        return false;
+      }
+      
+      final newUser = Verificateur(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        nom: nom.trim(),
+        prenom: prenom.trim(),
+        email: email.toLowerCase(),
+        password: '', // Plus de mot de passe en clair !
+        matricule: matricule.toUpperCase(),
+        createdAt: DateTime.now(),
+      );
+      
+      await saveCurrentUser(newUser);
+      return true;
+    } catch (e) {
+      if (kDebugMode) print('❌ Erreur createUserWithSecurePassword: $e');
+      return false;
+    }
+  }
 
-
+  
+  static Future<SecureLoginResult> authenticateUserSecure({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      // 1. Vérifier si l'utilisateur existe
+      final user = getUserByEmail(email.toLowerCase());
+      if (user == null) {
+        return SecureLoginResult(
+          success: false,
+          errorMessage: 'Aucun compte trouvé avec cet email.',
+        );
+      }
+      
+      // 2. Vérifier le mot de passe avec Argon2id
+      final verification = await SecurePasswordService.verifyPassword(
+        email: email.toLowerCase(),
+        plainPassword: password,
+      );
+      
+      if (!verification.success) {
+        // Ne pas révéler si c'est le mot de passe ou le verrouillage pour éviter le fingerprinting
+        String errorMessage = verification.errorMessage ?? 'Email ou mot de passe incorrect';
+        
+        // Messages personnalisés pour le verrouillage
+        if (verification.isLocked) {
+          final minutes = verification.lockoutRemainingSeconds ~/ 60;
+          errorMessage = 'Compte temporairement verrouillé. Réessayez dans $minutes minutes.';
+        } else if (verification.remainingAttempts < 5) {
+          errorMessage = 'Mot de passe incorrect. Plus que ${verification.remainingAttempts} tentative(s).';
+        }
+        
+        return SecureLoginResult(
+          success: false,
+          errorMessage: errorMessage,
+          isLocked: verification.isLocked,
+          remainingAttempts: verification.remainingAttempts,
+        );
+      }
+      
+      // 3. Connecter l'utilisateur
+      await saveCurrentUser(user);
+      
+      return SecureLoginResult(
+        success: true,
+        user: user,
+        errorMessage: null,
+      );
+    } catch (e) {
+      if (kDebugMode) print('❌ Erreur authenticateUserSecure: $e');
+      return SecureLoginResult(
+        success: false,
+        errorMessage: 'Erreur lors de l\'authentification. Veuillez réessayer.',
+      );
+    }
+  }
+  
+  static Future<SecureLoginResult> updateUserPasswordSecure({
+    required String email,
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    final result = await SecurePasswordService.updatePassword(
+      email: email.toLowerCase(),
+      oldPassword: oldPassword,
+      newPassword: newPassword,
+    );
+    
+    return SecureLoginResult(
+      success: result.success,
+      errorMessage: result.errorMessage,
+    );
+  }
+  
+  static Future<void> resetSecurityCounters(String email) async {
+  await SecurePasswordService.resetSecurityCounters(email.toLowerCase());
+}
 }
 
+// ═══════════════════════════════════════════════════════════════
+// CLASSES DE RÉSULTATS
+// ═══════════════════════════════════════════════════════════════
+
+class SecureLoginResult {
+  final bool success;
+  final Verificateur? user;
+  final String? errorMessage;
+  final bool isLocked;
+  final int remainingAttempts;
+  
+  SecureLoginResult({
+    required this.success,
+    this.user,
+    this.errorMessage,
+    this.isLocked = false,
+    this.remainingAttempts = 5,
+  });
+}

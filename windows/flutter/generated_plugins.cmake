@@ -3,6 +3,8 @@
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
+  connectivity_plus
+  dargon2_flutter_desktop
   file_selector_windows
   permission_handler_windows
   printing
