@@ -6263,5 +6263,39 @@ static Future<List<LastReport>> getAllReportsForMission(String missionId) async 
 }
 
 
+
+/// Mettre à jour le mot de passe d'un utilisateur par email
+static Future<bool> updateUserPassword({
+  required String email,
+  required String newPassword,
+}) async {
+  try {
+    final box = Hive.box<Verificateur>(_verificateurBox);
+    final user = box.get(email.toLowerCase());
+    
+    if (user == null) {
+      if (kDebugMode) {
+        print('❌ Utilisateur non trouvé: $email');
+      }
+      return false;
+    }
+    
+    user.password = newPassword;
+    await user.save();
+    
+    if (kDebugMode) {
+      print('✅ Mot de passe mis à jour pour: $email');
+    }
+    return true;
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Erreur updateUserPassword: $e');
+    }
+    return false;
+  }
+}
+
+
+
 }
 
