@@ -128,7 +128,7 @@ class _DocumentsStepState extends State<DocumentsStep> {
         children: [
           // En-tête
           Container(
-            width: double.infinity, // Ajoutez cette ligne
+            width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: AppTheme.primaryBlue,
@@ -159,73 +159,96 @@ class _DocumentsStepState extends State<DocumentsStep> {
           
           const SizedBox(height: 24),
           
-          // Liste des documents
+          // === DOCUMENT 1 ===
           _buildDocumentTile(
             title: 'Cahier des prescriptions techniques ayant permis la réalisation des installations',
             value: _mission.docCahierPrescriptions,
             onChanged: (bool? val) => _handleDocumentChanged('doc_cahier_prescriptions', val ?? false),
           ),
           
+          // === DOCUMENT 2 ===
           _buildDocumentTile(
             title: 'Notes de calculs justifiant le dimensionnement des canalisations électriques et des dispositifs de protection',
             value: _mission.docNotesCalculs,
             onChanged: (bool? val) => _handleDocumentChanged('doc_notes_calculs', val ?? false),
           ),
           
+          // === DOCUMENT 3 ===
           _buildDocumentTile(
-            title: 'Schémas unifilaires des installations electriques',
+            title: 'Schémas unifilaires des installations électriques',
             value: _mission.docSchemasUnifilaires,
             onChanged: (bool? val) => _handleDocumentChanged('doc_schemas_unifilaires', val ?? false),
           ),
           
+          // === DOCUMENT 4 ===
           _buildDocumentTile(
-            title: 'Plan de masse à l\'échelle des  installations avec implantations des prises de terre et électriques enterrés',
+            title: 'Plan de masse à l\'échelle des installations avec implantations des prises de terre et électriques enterrés',
             value: _mission.docPlanMasse,
             onChanged: (bool? val) => _handleDocumentChanged('doc_plan_masse', val ?? false),
           ),
           
+          // === DOCUMENT 5 ===
           _buildDocumentTile(
-            title: 'Plans architecturaux d\’implantation des différents circuits',
+            title: 'Plans architecturaux d\'implantation des différents circuits',
             value: _mission.docPlansArchitecturaux,
             onChanged: (bool? val) => _handleDocumentChanged('doc_plans_architecturaux', val ?? false),
           ),
           
+          // === DOCUMENT 6 ===
           _buildDocumentTile(
             title: 'Déclaration CE de conformité et notices des appareillages et câbles installés',
             value: _mission.docDeclarationsCe,
             onChanged: (bool? val) => _handleDocumentChanged('doc_declarations_ce', val ?? false),
           ),
           
+          // === DOCUMENT 7 ===
           _buildDocumentTile(
-            title: 'Liste des installations de sécurité et effectif maximal des différents locaux ou bâtiments ',
+            title: 'Liste des installations de sécurité et effectif maximal des différents locaux ou bâtiments',
             value: _mission.docListeInstallations,
             onChanged: (bool? val) => _handleDocumentChanged('doc_liste_installations', val ?? false),
           ),
 
+          // === DOCUMENT 8 === (CORRIGÉ : utilise doc_rapport_derniere_verif)
           _buildDocumentTile(
-            title: 'Rapport de dernière vérification ',
-            value: _mission.docListeInstallations,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_liste_installations', val ?? false),
+            title: 'Rapport de dernière vérification',
+            value: _mission.docRapportDerniereVerif,
+            onChanged: (bool? val) => _handleDocumentChanged('doc_rapport_derniere_verif', val ?? false),
           ),
           
+          // === DOCUMENT 9 ===
           _buildDocumentTile(
-            title: 'Plan des locaux, avec indications des locaux à risques particuliers d\'influences externes (risque d\'incendie et risque d\'explosion) ',
+            title: 'Plan des locaux, avec indications des locaux à risques particuliers d\'influences externes',
             value: _mission.docPlanLocauxRisques,
             onChanged: (bool? val) => _handleDocumentChanged('doc_plan_locaux_risques', val ?? false),
           ),
           
+          // === DOCUMENT 10 ===
           _buildDocumentTile(
             title: 'Rapport d\'analyse risque foudre',
             value: _mission.docRapportAnalyseFoudre,
             onChanged: (bool? val) => _handleDocumentChanged('doc_rapport_analyse_foudre', val ?? false),
           ),
           
+          // === DOCUMENT 11 ===
           _buildDocumentTile(
             title: 'Rapport d\'étude technique foudre',
             value: _mission.docRapportEtudeFoudre,
             onChanged: (bool? val) => _handleDocumentChanged('doc_rapport_etude_foudre', val ?? false),
           ),
-        
+          
+          // === DOCUMENT 12 ===
+          _buildDocumentTile(
+            title: 'Registre de sécurité (si applicable)',
+            value: _mission.docRegistreSecurite,
+            onChanged: (bool? val) => _handleDocumentChanged('doc_registre_securite', val ?? false),
+          ),
+          
+          // === DOCUMENT 13 ===
+          _buildDocumentTile(
+            title: 'Autre document pertinent',
+            value: _mission.docAutre,
+            onChanged: (bool? val) => _handleDocumentChanged('doc_autre', val ?? false),
+          ),
         ],
       ),
     );
