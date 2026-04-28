@@ -57,7 +57,6 @@ class _SummaryStepState extends State<SummaryStep> {
     _markCurrentStepCompleted();
   }
 
-  /// Marque l'étape Résumé (index 6) comme complétée
   Future<void> _markCurrentStepCompleted() async {
     await SequenceProgressService.markStepCompleted(widget.mission.id, 6);
     if (kDebugMode) {
@@ -65,7 +64,6 @@ class _SummaryStepState extends State<SummaryStep> {
     }
   }
 
-  /// S'assure que le statut de la mission est "terminé"
   Future<void> _ensureStatusIsTermine() async {
     final mission = HiveService.getMissionById(widget.mission.id);
     if (mission != null && !mission.isTermine) {
@@ -77,11 +75,9 @@ class _SummaryStepState extends State<SummaryStep> {
     }
   }
 
-  /// Charge la progression et corrige l'étape 6 si nécessaire
   Future<void> _loadProgress() async {
     setState(() => _isLoading = true);
     
-    // Force l'étape 6 comme complétée
     await SequenceProgressService.markStepCompleted(widget.mission.id, 6);
     
     _progress = await SequenceProgressService.getProgress(widget.mission.id);
@@ -94,7 +90,6 @@ class _SummaryStepState extends State<SummaryStep> {
     setState(() => _isLoading = false);
   }
 
-  /// Charge les derniers rapports générés depuis Hive
   Future<void> _loadLastReports() async {
     final reports = await HiveService.getAllReportsForMission(widget.mission.id);
     
@@ -118,7 +113,6 @@ class _SummaryStepState extends State<SummaryStep> {
     }
   }
 
-  /// Génère un nouveau rapport (PDF ou Word)
   Future<void> _generateReport(String reportType) async {
     setState(() => _isGenerating = true);
 
@@ -153,7 +147,6 @@ class _SummaryStepState extends State<SummaryStep> {
       }
 
       if (file != null && file.existsSync()) {
-        // Sauvegarde dans le dossier dédié
         final savedFile = await FileStorageService.saveReport(file, fileName);
         
         final lastReport = LastReport(
@@ -197,7 +190,6 @@ class _SummaryStepState extends State<SummaryStep> {
     }
   }
 
-  /// Affiche le dialogue de choix du type de rapport (PDF ou Word)
   void _showReportTypeDialog() {
     showModalBottomSheet(
       context: context,
@@ -213,7 +205,6 @@ class _SummaryStepState extends State<SummaryStep> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Handle
             Container(
               margin: const EdgeInsets.only(top: 12),
               width: 40,
@@ -231,7 +222,6 @@ class _SummaryStepState extends State<SummaryStep> {
               ),
             ),
             const Divider(height: 0),
-            // Option PDF
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
@@ -250,7 +240,6 @@ class _SummaryStepState extends State<SummaryStep> {
               },
             ),
             const Divider(height: 0),
-            // Option Word
             ListTile(
               leading: Container(
                 padding: const EdgeInsets.all(8),
@@ -275,9 +264,7 @@ class _SummaryStepState extends State<SummaryStep> {
     );
   }
 
-  /// Prévisualise un rapport (PDF uniquement)
   Future<void> _previewReport(File file, String reportType) async {
-    // Word non prévisualisable - afficher un dialogue design 
     if (reportType != 'pdf') {
       _showWordPreviewUnavailableDialog();
       return;
@@ -299,7 +286,6 @@ class _SummaryStepState extends State<SummaryStep> {
     }
   }
 
-  /// Affiche un dialogue design pour informer que la prévisualisation Word n'est pas disponible
   void _showWordPreviewUnavailableDialog() {
     showDialog(
       context: context,
@@ -375,9 +361,7 @@ class _SummaryStepState extends State<SummaryStep> {
     );
   }
 
-  /// Télécharge le rapport dans le dossier /Downloads/Verif Elec/
   Future<void> _downloadReport(File file, String fileName) async {
-    // Demander la permission avant de télécharger
     final hasPermission = await _checkAndRequestStoragePermission();
     if (!hasPermission) {
       _showError('Permission de stockage refusée. Impossible de sauvegarder le fichier.');
@@ -399,18 +383,15 @@ class _SummaryStepState extends State<SummaryStep> {
     }
   }
 
-  /// Vérifier et demander la permission de stockage
   Future<bool> _checkAndRequestStoragePermission() async {
     if (!Platform.isAndroid) return true;
     
     try {
-      // Pour Android 11+ (API 30+)
       if (await Permission.manageExternalStorage.isDenied) {
         final status = await Permission.manageExternalStorage.request();
         return status.isGranted;
       }
       
-      // Pour les versions antérieures
       if (await Permission.storage.isDenied) {
         final status = await Permission.storage.request();
         return status.isGranted;
@@ -425,7 +406,6 @@ class _SummaryStepState extends State<SummaryStep> {
     }
   }
 
-  /// Partage le rapport via l'application de partage native
   Future<void> _shareReport(File file) async {
     await Share.shareXFiles(
       [XFile(file.path)],
@@ -434,9 +414,7 @@ class _SummaryStepState extends State<SummaryStep> {
     );
   }
 
-  /// Envoie un email avec le rapport aux vérificateurs
   Future<void> _sendEmailWithAttachment() async {
-    // Récupère les emails des vérificateurs
     final renseignements = await HiveService.getRenseignementsGenerauxByMissionId(widget.mission.id);
     final verificateurs = renseignements?.verificateurs ?? [];
     
@@ -466,7 +444,6 @@ class _SummaryStepState extends State<SummaryStep> {
       if (await canLaunchUrl(mailtoUri)) {
         await launchUrl(mailtoUri);
       } else {
-        // Fallback avec share_plus
         final fileToSend = _pdfFile ?? _wordFile;
         if (fileToSend != null) {
           await Share.shareXFiles(
@@ -494,7 +471,6 @@ class _SummaryStepState extends State<SummaryStep> {
     widget.onPrevious();
   }
 
-  /// Termine la mission et retourne à l'écran des détails
   Future<void> _finishMission() async {
     await HiveService.updateMissionStatus(
       missionId: widget.mission.id,
@@ -519,7 +495,10 @@ class _SummaryStepState extends State<SummaryStep> {
   bool get hasPdf => _showPdfPreview && _pdfFile != null;
   bool get hasWord => _showWordPreview && _wordFile != null;
 
-  /// Carte d'affichage d'un rapport avec ses actions
+  // ============================================================
+  // VERSION OPTIMISÉE DE LA CARTE RAPPORT (COMPACTE)
+  // ============================================================
+  
   Widget _buildReportCard({
     required File file,
     required String? fileName,
@@ -528,150 +507,127 @@ class _SummaryStepState extends State<SummaryStep> {
     required Color color,
   }) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Column(
-        children: [
-          // Zone cliquable pour la prévisualisation
-          GestureDetector(
-            onTap: () => _previewReport(file, reportType),  // ✅ CORRECTION ICI
-            child: Container(
-              height: 100,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(12),
-                  topRight: Radius.circular(12),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: () => _previewReport(file, reportType),
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              children: [
+                // Icône
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(icon, size: 24, color: color),
                 ),
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(icon, size: 48, color: color),
-                    const SizedBox(height: 8),
-                    Text(
-                      fileName?.split('/').last ?? 'Rapport généré',
-                      style: const TextStyle(fontSize: 12),
-                      textAlign: TextAlign.center,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade100,
-                        borderRadius: BorderRadius.circular(4),
+                const SizedBox(width: 12),
+                
+                // Informations du fichier
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        fileName?.split('/').last ?? 'Rapport généré',
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      child: const Text(
+                      const SizedBox(height: 2),
+                      Text(
                         'Cliquez pour visualiser',
-                        style: TextStyle(fontSize: 10, color: Colors.green),
+                        style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
                       ),
+                    ],
+                  ),
+                ),
+                
+                // Actions
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      onPressed: () => _downloadReport(file, fileName!),
+                      icon: Icon(Icons.download, size: 18, color: Colors.grey.shade600),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32),
+                      tooltip: 'Télécharger',
+                    ),
+                    IconButton(
+                      onPressed: () => _shareReport(file),
+                      icon: Icon(Icons.share, size: 18, color: Colors.grey.shade600),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32),
+                      tooltip: 'Partager',
+                    ),
+                    IconButton(
+                      onPressed: _sendEmailWithAttachment,
+                      icon: Icon(Icons.email, size: 18, color: Colors.grey.shade600),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(minWidth: 32),
+                      tooltip: 'Envoyer par email',
                     ),
                   ],
                 ),
-              ),
-            ),
-          ),
-          // Actions du rapport
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                IconButton(
-                  onPressed: () => _downloadReport(file, fileName!),
-                  icon: Icon(Icons.download, color: color),
-                  tooltip: 'Télécharger',
-                ),
-                IconButton(
-                  onPressed: () => _shareReport(file),
-                  icon: Icon(Icons.share, color: color),
-                  tooltip: 'Partager',
-                ),
-                IconButton(
-                  onPressed: _sendEmailWithAttachment,
-                  icon: Icon(Icons.email, color: color),
-                  tooltip: 'Envoyer par email',
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    final completedSteps = _getCompletedStepsCount();
-    final totalSteps = _getTotalSteps();
-    final percentage = (completedSteps / totalSteps * 100).round();
-
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // En-tête de succès
-                _buildSuccessHeader(completedSteps, totalSteps, percentage),
-                const SizedBox(height: 24),
-
-                // Informations de la mission
-                _buildMissionInfoCard(),
-                const SizedBox(height: 24),
-
-                // Étapes complétées
-                _buildStepsCompletionCard(),
-                const SizedBox(height: 24),
-
-                // Bouton Générer/Régénérer
-                _buildGenerateButton(),
-                const SizedBox(height: 16),
-
-                // Zone des rapports (visible uniquement si des rapports existent)
-                if (hasAnyReport) ...[
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  if (hasPdf)
-                    _buildReportCard(
-                      file: _pdfFile!,
-                      fileName: _pdfFileName,
-                      reportType: 'pdf',
-                      icon: Icons.picture_as_pdf,
-                      color: Colors.red,
-                    ),
-                  if (hasWord)
-                    _buildReportCard(
-                      file: _wordFile!,
-                      fileName: _wordFileName,
-                      reportType: 'word',
-                      icon: Icons.description,
-                      color: Colors.blue,
-                    ),
-                ],
               ],
             ),
           ),
         ),
-        _buildBottomNavigation(),
-      ],
+      ),
     );
   }
 
-  /// Widget d'en-tête de succès
+  // ============================================================
+  // CONSTRUCTION DE LA LISTE DES RAPPORTS
+  // ============================================================
+  
+  List<Widget> _buildReportsList() {
+    final List<Widget> reports = [];
+    
+    if (hasPdf) {
+      reports.add(_buildReportCard(
+        file: _pdfFile!,
+        fileName: _pdfFileName,
+        reportType: 'pdf',
+        icon: Icons.picture_as_pdf,
+        color: Colors.red,
+      ));
+    }
+    
+    if (hasWord) {
+      reports.add(_buildReportCard(
+        file: _wordFile!,
+        fileName: _wordFileName,
+        reportType: 'word',
+        icon: Icons.description,
+        color: Colors.blue,
+      ));
+    }
+    
+    return reports;
+  }
+
+  // ============================================================
+  // WIDGETS DE L'INTERFACE
+  // ============================================================
+  
   Widget _buildSuccessHeader(int completedSteps, int totalSteps, int percentage) {
     return Container(
       padding: const EdgeInsets.all(24),
@@ -715,7 +671,6 @@ class _SummaryStepState extends State<SummaryStep> {
     );
   }
 
-  /// Widget des informations de la mission
   Widget _buildMissionInfoCard() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -740,7 +695,6 @@ class _SummaryStepState extends State<SummaryStep> {
     );
   }
 
-  /// Widget du résumé des étapes complétées
   Widget _buildStepsCompletionCard() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -766,11 +720,10 @@ class _SummaryStepState extends State<SummaryStep> {
     );
   }
 
-  /// Widget du bouton de génération de rapport
   Widget _buildGenerateButton() {
     return SizedBox(
       width: double.infinity,
-      height: 56,
+      height: 48,
       child: ElevatedButton.icon(
         onPressed: _isGenerating ? null : _showReportTypeDialog,
         icon: _isGenerating
@@ -780,14 +733,13 @@ class _SummaryStepState extends State<SummaryStep> {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.red,
           foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 14),
+          padding: const EdgeInsets.symmetric(vertical: 12),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
   }
 
-  /// Widget de la barre de navigation inférieure
   Widget _buildBottomNavigation() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -807,7 +759,7 @@ class _SummaryStepState extends State<SummaryStep> {
             child: OutlinedButton(
               onPressed: _goToPreviousStep,
               style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 side: const BorderSide(color: AppTheme.primaryBlue),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
@@ -828,7 +780,7 @@ class _SummaryStepState extends State<SummaryStep> {
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.green,
                 foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
               ),
               child: const Row(
@@ -846,7 +798,6 @@ class _SummaryStepState extends State<SummaryStep> {
     );
   }
 
-  /// Ligne d'information (label + valeur)
   Widget _buildSummaryRow(String label, String value) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
@@ -872,7 +823,6 @@ class _SummaryStepState extends State<SummaryStep> {
     );
   }
 
-  /// Ligne d'étape avec icône différenciée selon l'état de complétion
   Widget _buildStepTile(int index, String title, bool isCompleted, IconData icon) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
@@ -904,6 +854,63 @@ class _SummaryStepState extends State<SummaryStep> {
           ),
         ],
       ),
+    );
+  }
+
+  // ============================================================
+  // BUILD PRINCIPAL (VERSION CORRIGÉE SANS BOTTOM OVERFLOW)
+  // ============================================================
+  
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    final completedSteps = _getCompletedStepsCount();
+    final totalSteps = _getTotalSteps();
+    final percentage = (completedSteps / totalSteps * 100).round();
+
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,  // ← Permet au Column de s'adapter au contenu
+              children: [
+                // En-tête de succès
+                _buildSuccessHeader(completedSteps, totalSteps, percentage),
+                const SizedBox(height: 24),
+
+                // Informations de la mission
+                _buildMissionInfoCard(),
+                const SizedBox(height: 24),
+
+                // Étapes complétées
+                _buildStepsCompletionCard(),
+                const SizedBox(height: 24),
+
+                // Bouton Générer/Régénérer
+                _buildGenerateButton(),
+                const SizedBox(height: 16),
+
+                // Zone des rapports (format compact pour éviter le débordement)
+                if (hasAnyReport) ...[
+                  const Divider(),
+                  const SizedBox(height: 8),
+                  ..._buildReportsList(),
+                ],
+                
+                // Espace final pour éviter que le contenu ne touche le bord
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        ),
+        _buildBottomNavigation(),
+      ],
     );
   }
 }

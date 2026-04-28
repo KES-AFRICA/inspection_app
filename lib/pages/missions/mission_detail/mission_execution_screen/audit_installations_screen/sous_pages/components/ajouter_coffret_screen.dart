@@ -818,7 +818,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
             ),
           ),
           child: DropdownButtonFormField<String>(
-            initialValue: widget.domaineTension.isNotEmpty ? widget.domaineTension : '230/400', // ✅ Valeur par défaut
+            initialValue: widget.domaineTension.isNotEmpty ? widget.domaineTension : '230/400',
             isExpanded: true,
             icon: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryBlue, size: context.iconSizeM),
             dropdownColor: Colors.white,
@@ -829,26 +829,26 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
               contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             ),
             style: TextStyle(fontSize: context.fontSizeM, color: AppTheme.darkBlue, fontWeight: FontWeight.w500),
-            items: ['230/400', '400/690', 'Autre'].map((t) => DropdownMenuItem<String>(
-              value: t,
-              child: Row(
-                children: [
-                  Container(
-                    width: context.spacingS,
-                    height: context.spacingS,
-                    decoration: BoxDecoration(
-                      color: widget.domaineTension == t ? AppTheme.primaryBlue : Colors.transparent,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.grey.shade400, width: 1.5),
-                    ),
-                    child: widget.domaineTension == t ? Icon(Icons.check, size: context.spacingXS, color: Colors.white) : null,
-                  ),
-                  SizedBox(width: context.spacingS),
-                  Expanded(child: Text(t, style: TextStyle(fontSize: context.fontSizeM))),
-                ],
+            items: const [
+              DropdownMenuItem<String>(
+                value: '230/400',
+                child: Text('230/400'),
               ),
-            )).toList(),
-            onChanged: widget.onDomaineTensionChanged,
+              DropdownMenuItem<String>(
+                value: '400/690',
+                child: Text('400/690'),
+              ),
+              DropdownMenuItem<String>(
+                value: 'Autre',
+                child: Text('Autre'),
+              ),
+            ],
+            onChanged: (String? newValue) {
+              if (newValue != null) {
+                // Mettre à jour via le callback parent
+                widget.onDomaineTensionChanged(newValue);
+              }
+            },
           ),
         ),
         
@@ -2831,18 +2831,21 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     setState(() => _repereValid = value.trim().isNotEmpty);
     _scheduleAutoSave();
   }
-  void _validateDomaineTension(String? value){
+  void _validateDomaineTension(String? value) {
     // Si la valeur est null ou vide, on garde la valeur par défaut
     String finalValue = value ?? '';
     if (finalValue.isEmpty && _domaineTension.isNotEmpty) {
       finalValue = _domaineTension;
     }
     
+    // Si finalValue est encore vide, mettre la valeur par défaut
+    if (finalValue.isEmpty && _domaineTensionValid == false) {
+      finalValue = '230/400';
+    }
+    
     setState(() {
+      _domaineTension = finalValue;
       _domaineTensionValid = finalValue.isNotEmpty;
-      if (finalValue.isNotEmpty) {
-        _domaineTension = finalValue;
-      }
     });
     _scheduleAutoSave();
   }
@@ -2927,7 +2930,8 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     _selectedType = coffret.type;
     _repereController.text = coffret.repere ?? '';
     _zoneAtex = coffret.zoneAtex;
-    _domaineTension = coffret.domaineTension;
+    _domaineTension = coffret.domaineTension.isNotEmpty ? coffret.domaineTension : '230/400';
+    _domaineTensionValid = _domaineTension.isNotEmpty;
     _identificationArmoire = coffret.identificationArmoire;
     _signalisationDanger = coffret.signalisationDanger;
     _presenceSchema = coffret.presenceSchema;
@@ -3222,9 +3226,9 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     _alimentations = [];
     _protectionTete = null;
 
-    if (_domaineTension.isEmpty) {
+    if (_domaineTension.isEmpty && !widget.isEdition) {
       _domaineTension = '230/400'; // Valeur par défaut
-      _validateDomaineTension(_domaineTension);
+      _domaineTensionValid = true;
     }
   }
 
@@ -3754,7 +3758,14 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
                       verificationThermographie: _verificationThermographie,
                       onVerificationThermographieChanged: (v) => setState(() => _verificationThermographie = v ?? false),
                       domaineTension: _domaineTension,
-                      onDomaineTensionChanged: (v) { setState(() { _domaineTension = v ?? ''; _validateDomaineTension(v); }); },
+                      onDomaineTensionChanged: (v) { 
+                        if (v != null && mounted) {
+                          setState(() { 
+                            _domaineTension = v; 
+                            _validateDomaineTension(v);
+                          });
+                        }
+                      },
                       domaineTensionValid: _domaineTensionValid,
                       observationsParafoudre: _observationsParafoudre,
                       onAddParafoudreObservation: _addParafoudreObservation,

@@ -1666,8 +1666,9 @@ class PdfReportService {
               ...foudres.asMap().entries.map((e) {
                 final f = e.value;
                 PdfColor rowColor = e.key.isOdd ? tableRowAlt : PdfColors.white;
-                if (f.niveauPriorite == 3) rowColor = PdfColor.fromInt(0xFFFFEBEB);
-                else if (f.niveauPriorite == 2) rowColor = PdfColor.fromInt(0xFFFFF8E8);
+                if (f.niveauPriorite == 3) {
+                  rowColor = PdfColor.fromInt(0xFFFFEBEB);
+                } else if (f.niveauPriorite == 2) rowColor = PdfColor.fromInt(0xFFFFF8E8);
                 return pw.TableRow(
                   decoration: pw.BoxDecoration(color: rowColor),
                   children: [
@@ -1928,22 +1929,32 @@ class PdfReportService {
         _addPhotosFromList(allPhotos, local.photos, local.nom);
         if (local.cellule != null) _addPhotosFromList(allPhotos, local.cellule!.photos, '${local.nom} - Cellule');
         if (local.transformateur != null) _addPhotosFromList(allPhotos, local.transformateur!.photos, '${local.nom} - Transformateur');
-        for (var c in local.coffrets) _addPhotosFromList(allPhotos, c.photos, '${local.nom} - ${c.nom}');
+        for (var c in local.coffrets) {
+          _addPhotosFromList(allPhotos, c.photos, '${local.nom} - ${c.nom}');
+        }
       }
       for (var zone in audit.moyenneTensionZones) {
         _addPhotosFromList(allPhotos, zone.photos, zone.nom);
-        for (var c in zone.coffrets) _addPhotosFromList(allPhotos, c.photos, '${zone.nom} - ${c.nom}');
+        for (var c in zone.coffrets) {
+          _addPhotosFromList(allPhotos, c.photos, '${zone.nom} - ${c.nom}');
+        }
         for (var local in zone.locaux) {
           _addPhotosFromList(allPhotos, local.photos, '${zone.nom} - ${local.nom}');
-          for (var c in local.coffrets) _addPhotosFromList(allPhotos, c.photos, '${zone.nom} - ${local.nom} - ${c.nom}');
+          for (var c in local.coffrets) {
+            _addPhotosFromList(allPhotos, c.photos, '${zone.nom} - ${local.nom} - ${c.nom}');
+          }
         }
       }
       for (var zone in audit.basseTensionZones) {
         _addPhotosFromList(allPhotos, zone.photos, zone.nom);
-        for (var c in zone.coffretsDirects) _addPhotosFromList(allPhotos, c.photos, '${zone.nom} - ${c.nom}');
+        for (var c in zone.coffretsDirects) {
+          _addPhotosFromList(allPhotos, c.photos, '${zone.nom} - ${c.nom}');
+        }
         for (var local in zone.locaux) {
           _addPhotosFromList(allPhotos, local.photos, '${zone.nom} - ${local.nom}');
-          for (var c in local.coffrets) _addPhotosFromList(allPhotos, c.photos, '${zone.nom} - ${local.nom} - ${c.nom}');
+          for (var c in local.coffrets) {
+            _addPhotosFromList(allPhotos, c.photos, '${zone.nom} - ${local.nom} - ${c.nom}');
+          }
         }
       }
     }
