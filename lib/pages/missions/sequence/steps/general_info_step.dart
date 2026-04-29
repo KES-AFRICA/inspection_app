@@ -1,4 +1,5 @@
 // lib/pages/missions/sequence/steps/general_info_step.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:inspec_app/models/mission.dart';
@@ -239,7 +240,9 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
 
       _notifyValidation();
     } catch (e) {
-      print('❌ Erreur chargement: $e');
+      if (kDebugMode) {
+        print('❌ Erreur chargement: $e');
+      }
     } finally {
       setState(() => _isLoading = false);
     }
@@ -270,7 +273,9 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
 
     widget.onDataChanged(_data!.toMap());
     _notifyValidation();
-    print('✅ Renseignements généraux sauvegardés');
+    if (kDebugMode) {
+      print('✅ Renseignements généraux sauvegardés');
+    }
   }
 
   void _calculateDuree() {
