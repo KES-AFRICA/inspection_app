@@ -88,13 +88,14 @@ class _ClassementZoneScreenState extends State<ClassementZoneScreen> {
     
     if (success) {
       _showSnackBar('Classement sauvegardé', Colors.green);
-      await Future.delayed(const Duration(milliseconds: 100));
+      await Future.delayed(const Duration(milliseconds: 300));
       if (mounted) {
-        // Retourner directement à MoyenneTensionScreen (3 écrans en arrière)
-        // ou utiliser popUntil
-        Navigator.of(context).pop(true); // Pour ClassementZoneScreen
-        Navigator.of(context).pop(true); // Pour AjouterZoneScreen
-        // Le troisième pop est fait par AjouterZoneScreen lui-même
+        // BUG #2 + #3 FIX: un seul pop suffit.
+        // AjouterZoneScreen a utilisé pushReplacement, donc la pile est :
+        //   [MoyenneTensionScreen] → [ClassementZoneScreen]
+        // Un seul pop nous ramène directement à MoyenneTensionScreen.
+        // Le double pop précédent remontait trop haut (dépilait MoyenneTensionScreen).
+        Navigator.of(context).pop(true);
       }
     } else {
       _showSnackBar('Erreur lors de la sauvegarde', Colors.red);

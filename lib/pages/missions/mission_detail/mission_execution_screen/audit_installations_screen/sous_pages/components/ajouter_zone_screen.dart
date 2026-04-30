@@ -76,18 +76,27 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
         maxWidth: 1024,
         maxHeight: 1024,
       );
-      
+      // BUG #1 FIX: vérifier mounted après tout await (le widget peut être disposé)
+      if (!mounted) return;
       if (photo != null) {
         setState(() => _isLoadingPhotos = true);
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'zones');
-        setState(() {
-          _zonePhotos.add(savedPath);
-        });
+        try {
+          final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'zones');
+          if (!mounted) return;
+          setState(() {
+            _zonePhotos.add(savedPath);
+            _isLoadingPhotos = false;
+          });
+        } catch (saveError) {
+          if (!mounted) return;
+          setState(() => _isLoadingPhotos = false);
+          _showError('Erreur lors de la sauvegarde de la photo: $saveError');
+        }
       }
     } catch (e) {
-      _showError('Erreur lors de la prise de photo: $e');
-    } finally {
+      if (!mounted) return;
       setState(() => _isLoadingPhotos = false);
+      _showError('Erreur lors de la prise de photo: $e');
     }
   }
 
@@ -99,18 +108,26 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
         maxWidth: 1024,
         maxHeight: 1024,
       );
-      
+      if (!mounted) return;
       if (photo != null) {
         setState(() => _isLoadingPhotos = true);
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'zones');
-        setState(() {
-          _zonePhotos.add(savedPath);
-        });
+        try {
+          final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'zones');
+          if (!mounted) return;
+          setState(() {
+            _zonePhotos.add(savedPath);
+            _isLoadingPhotos = false;
+          });
+        } catch (saveError) {
+          if (!mounted) return;
+          setState(() => _isLoadingPhotos = false);
+          _showError('Erreur: $saveError');
+        }
       }
     } catch (e) {
-      _showError('Erreur lors de la sélection: $e');
-    } finally {
+      if (!mounted) return;
       setState(() => _isLoadingPhotos = false);
+      _showError('Erreur lors de la sélection: $e');
     }
   }
 
@@ -124,14 +141,16 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
         maxWidth: 1024,
         maxHeight: 1024,
       );
-      
+      if (!mounted) return;
       if (photo != null) {
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations');
+        if (!mounted) return;
         setState(() {
           _observationPhotos.add(savedPath);
         });
       }
     } catch (e) {
+      if (!mounted) return;
       _showError('Erreur lors de la prise de photo: $e');
     }
   }
@@ -144,14 +163,16 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
         maxWidth: 1024,
         maxHeight: 1024,
       );
-      
+      if (!mounted) return;
       if (photo != null) {
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations');
+        if (!mounted) return;
         setState(() {
           _observationPhotos.add(savedPath);
         });
       }
     } catch (e) {
+      if (!mounted) return;
       _showError('Erreur lors de la sélection: $e');
     }
   }
@@ -820,6 +841,8 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
               // Synchroniser les classements
               await HiveService.syncClassementsZonesFromAudit(widget.mission.id);
               
+              if (!mounted) return; // BUG #1 FIX: vérifier mounted
+              
               // Récupérer le classement créé
               final classement = await HiveService.getOrCreateClassementZone(
                 missionId: widget.mission.id,
@@ -827,21 +850,21 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                 typeZone: widget.isMoyenneTension ? 'MT' : 'BT',
               );
               
-              // Fermer cette page d'abord
-              Navigator.pop(context, true);
+              if (!mounted) return; // BUG #1 FIX: vérifier mounted
               
-              // Puis naviguer vers l'écran de classement
-              if (mounted) {
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ClassementZoneScreen(
-                      mission: widget.mission,
-                      classement: classement,
-                    ),
+              // BUG #2 + #3 FIX: utiliser pushReplacement au lieu de pop+push
+              // Cela remplace AjouterZoneScreen par ClassementZoneScreen dans la pile.
+              // MoyenneTensionScreen reprendra la main UNIQUEMENT quand
+              // ClassementZoneScreen fera son propre pop → navigation cohérente.
+              await Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ClassementZoneScreen(
+                    mission: widget.mission,
+                    classement: classement,
                   ),
-                );
-              }
+                ),
+              );
             } else {
               Navigator.pop(context, true);
             }

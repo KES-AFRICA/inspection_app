@@ -3,6 +3,7 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
+import 'package:inspec_app/models/classement_zone.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path/path.dart' as path;
@@ -235,11 +236,70 @@ class PdfReportService {
     );
   }
 
+  // Méthode footer à ajouter dans PdfReportService
+  static pw.Widget _buildMultiPageFooter(pw.Context ctx) {
+    final footerImg = _otherPageFooterImage;
+    if (ctx.pageNumber == 1 && ctx.pagesCount > 1) {
+      // Gestion du cas où c'est la première page d'une section MultiPage
+    }
+    return pw.Stack(
+      children: [
+        pw.Positioned(
+          bottom: 0,
+          left: -kLeftMargin,
+          right: -kRightMargin,
+          child: pw.Column(
+            mainAxisSize: pw.MainAxisSize.min,
+            children: [
+              if (footerImg != null)
+                pw.Image(footerImg, fit: pw.BoxFit.fitWidth, width: PdfPageFormat.a4.width)
+              else
+                pw.Container(height: 35, color: PdfColors.grey400),
+              pw.Container(
+                width: PdfPageFormat.a4.width,
+                padding: pw.EdgeInsets.only(left: kLeftMargin, right: kRightMargin, bottom: 4),
+                child: pw.Align(
+                  alignment: pw.Alignment.centerLeft,
+                  child: pw.Text(
+                    'Page ${ctx.pageNumber} / ${ctx.pagesCount}',
+                    style: pw.TextStyle(
+                      font: _fontRegular,
+                      fontSize: 7.5,
+                      color: PdfColors.white,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
 
   // ──────────────────────────────────────────────────────────────
   //  POINT D'ENTREE PRINCIPAL
   // ──────────────────────────────────────────────────────────────
   static Future<File?> generateMissionReport(String missionId) async {
+
+    // DEBUG TEMPORAIRE — À RETIRER APRÈS CORRECTION
+    final descDebug = HiveService.getDescriptionInstallationsByMissionId(missionId);
+    print('=== DEBUG DESCRIPTION ===');
+    print('desc null: ${descDebug == null}');
+    if (descDebug != null) {
+      print('MT items: ${descDebug.alimentationMoyenneTension.length}');
+      print('BT items: ${descDebug.alimentationBasseTension.length}');
+      print('Groupe elec: ${descDebug.groupeElectrogene.length}');
+      print('Regime neutre: ${descDebug.regimeNeutre}');
+      print('Eclairage: ${descDebug.eclairageSecurite}');
+      if (descDebug.alimentationMoyenneTension.isNotEmpty) {
+        print('Premier item MT data: ${descDebug.alimentationMoyenneTension.first.data}');
+      }
+    }
+    print('=== FIN DEBUG ===');
+
     try {
       // Charger les images
       await _loadImages();
@@ -252,10 +312,39 @@ class PdfReportService {
       final description = HiveService.getDescriptionInstallationsByMissionId(missionId);
       final audit = HiveService.getAuditInstallationsByMissionId(missionId);
       final classements = HiveService.getEmplacementsByMissionId(missionId);
+      final classementsZones = HiveService.getClassementsZonesByMissionId(missionId);
       final mesures = HiveService.getMesuresEssaisByMissionId(missionId);
       final foudres = HiveService.getFoudreObservationsByMissionId(missionId);
       final renseignements = HiveService.getRenseignementsGenerauxByMissionId(missionId);
       final currentUser = HiveService.getCurrentUser();
+
+
+      // Calcul simple mais correct :
+      int pageCounter = 1; // Couverture
+      final Map<String, int> pages = {};
+
+      pageCounter++; // Sommaire
+      pages['rappel'] = ++pageCounter;
+      pages['mesures_securite'] = ++pageCounter;
+      pages['objet'] = ++pageCounter;
+      pages['renseignements'] = ++pageCounter;
+      pages['description'] = ++pageCounter;
+      if (audit != null) {
+        pages['liste_recap'] = ++pageCounter;
+        pages['audit'] = ++pageCounter;
+        // +1 par zone MT, +1 par zone BT (approximatif)
+        pageCounter += audit.moyenneTensionZones.length;
+        pageCounter += audit.moyenneTensionLocaux.length;
+        pageCounter += audit.basseTensionZones.length;
+      }
+      pages['classement'] = ++pageCounter;
+      pages['foudre'] = ++pageCounter;
+      if (mesures != null) {
+        pages['mesures'] = ++pageCounter;
+        pageCounter += 6;
+        pages['signature'] = ++pageCounter;
+      }
+      pages['photos'] = ++pageCounter;
 
       // Creer le document
       final pdf = pw.Document(
@@ -277,7 +366,7 @@ class PdfReportService {
       // Page Sommaire avec numeros de page
       pdf.addPage(pw.Page(
         pageTheme: _buildPageTheme(isFirstPage: false),
-        build: (ctx) => _buildSommaire(audit, mesures),
+        build: (ctx) => _buildSommaire(audit, mesures, pages),
       ));
 
       // ────────────────────────────────────────────────────────────
@@ -287,7 +376,7 @@ class PdfReportService {
       // 2. Rappel des responsabilites
       pdf.addPage(
         pw.Page(
-          pageTheme: _buildPageTheme(isFirstPage: false),  // ← Appel direct
+          pageTheme: _buildPageTheme(isFirstPage: false), 
           build: (ctx) => _buildRappelResponsabilites(),
         ),
       );
@@ -315,40 +404,40 @@ class PdfReportService {
     );
 
     // 5. Description des installations
-    pdf.addPage(
-      pw.Page(
-        pageTheme: _buildPageTheme(isFirstPage: false),
-        build: (ctx) => _buildDescriptionInstallations(description),
-      ),
-    );
+    pdf.addPage(pw.MultiPage(
+      pageTheme: _buildPageTheme(isFirstPage: false),
+      header: (ctx) => _buildPageHeaderWidget(),
+      //footer: (ctx) => _buildMultiPageFooter(ctx),
+      build: (ctx) => _buildDescriptionInstallationsMulti(description),
+    ));
 
     // 6. Liste recapitulative des observations
     if (audit != null) {
-      pdf.addPage(
-        pw.Page(
-          pageTheme: _buildPageTheme(isFirstPage: false),
-          build: (ctx) => _buildListeRecapitulative(audit),
-        ),
-      );
+      pdf.addPage(pw.MultiPage(
+        pageTheme: _buildPageTheme(isFirstPage: false),
+        header: (ctx) => _buildPageHeaderWidget(),
+        //footer: (ctx) => _buildMultiPageFooter(ctx),
+        build: (ctx) => _buildListeRecapitulativeMulti(audit),
+      ));
     }
 
     // 7. Audit des installations electriques
     if (audit != null) {
-      pdf.addPage(
-        pw.Page(
-          pageTheme: _buildPageTheme(isFirstPage: false),
-          build: (ctx) => _buildAuditInstallations(audit),
-        ),
-      );
+      pdf.addPage(pw.MultiPage(
+        pageTheme: _buildPageTheme(isFirstPage: false),
+        header: (ctx) => _buildPageHeaderWidget(nomClient: mission.nomClient),
+        //footer: (ctx) => _buildMultiPageFooter(ctx),
+        build: (ctx) => _buildAuditInstallationsMulti(audit),
+      ));
     }
 
     // 8. Classement des emplacements
-    pdf.addPage(
-      pw.Page(
-        pageTheme: _buildPageTheme(isFirstPage: false),
-        build: (ctx) => _buildClassementEmplacements(classements),
-      ),
-    );
+    pdf.addPage(pw.MultiPage(
+      pageTheme: _buildPageTheme(isFirstPage: false),
+      header: (ctx) => _buildPageHeaderWidget(),
+      //footer: (ctx) => _buildMultiPageFooter(ctx),
+      build: (ctx) => _buildClassementEmplacementsMulti(classements, classementsZones),
+    ));
 
     // 9. Foudre
     pdf.addPage(
@@ -446,28 +535,31 @@ class PdfReportService {
   // ──────────────────────────────────────────────────────────────
   //  PAGE DE COUVERTURE
   // ──────────────────────────────────────────────────────────────
-  static pw.Widget _buildSommaire(AuditInstallationsElectriques? audit, MesuresEssais? mesures) {
+  static pw.Widget _buildSommaire(
+    AuditInstallationsElectriques? audit,
+    MesuresEssais? mesures,
+    Map<String, int> pages, // NOUVEAU PARAMÈTRE
+  ) {
     final sections = <_SommaireEntry>[
-      _SommaireEntry('Sommaire', 2),
-      _SommaireEntry('Rappel des responsabilites de l\'employeur', 3),
-      _SommaireEntry('Mésures de sécurité autours des installations', 4),
-      _SommaireEntry('Objet de la verification', 5),
-      _SommaireEntry('Renseignements generaux de l\'etablissement', 6),
-      _SommaireEntry('Description des installations', 7),
-      if (audit != null) _SommaireEntry('Liste recapitulative des observations', 7),
-      if (audit != null) _SommaireEntry('Audit des installations electriques', 8),
-      _SommaireEntry('Classement des locaux et influences externes', 10),
-      _SommaireEntry('Foudre', 11),
+      _SommaireEntry('Rappel des responsabilites de l\'employeur', pages['rappel'] ?? 3),
+      _SommaireEntry('Mesures de securite autours des installations', pages['mesures_securite'] ?? 4),
+      _SommaireEntry('Objet de la verification', pages['objet'] ?? 5),
+      _SommaireEntry('Renseignements generaux de l\'etablissement', pages['renseignements'] ?? 6),
+      _SommaireEntry('Description des installations', pages['description'] ?? 7),
+      if (audit != null) _SommaireEntry('Liste recapitulative des observations', pages['liste_recap'] ?? 8),
+      if (audit != null) _SommaireEntry('Audit des installations electriques', pages['audit'] ?? 9),
+      _SommaireEntry('Classement des locaux/zones et emplacements', pages['classement'] ?? 10),
+      _SommaireEntry('Foudre', pages['foudre'] ?? 11),
       if (mesures != null) ...[
-        _SommaireEntry('Resultats des mesures et essais', 12),
-        _SommaireEntry('  Essais de demarrage automatique', 13),
-        _SommaireEntry('  Test d\'arret d\'urgence', 14),
-        _SommaireEntry('  Prise de terre', 15),
-        _SommaireEntry('  Mesures d\'isolement des circuits BT', 16),
-        _SommaireEntry('  Essais de declenchement des DDR', 17),
-        _SommaireEntry('  Continuite et resistance des conducteurs', 18),
+        _SommaireEntry('Resultats des mesures et essais', pages['mesures'] ?? 12),
+        _SommaireEntry('  Essais de demarrage automatique', (pages['mesures'] ?? 12) + 1),
+        _SommaireEntry('  Test d\'arret d\'urgence', (pages['mesures'] ?? 12) + 2),
+        _SommaireEntry('  Prise de terre', (pages['mesures'] ?? 12) + 3),
+        _SommaireEntry('  Mesures d\'isolement des circuits BT', (pages['mesures'] ?? 12) + 4),
+        _SommaireEntry('  Essais de declenchement des DDR', (pages['mesures'] ?? 12) + 5),
+        _SommaireEntry('  Continuite et resistance des conducteurs', (pages['mesures'] ?? 12) + 6),
       ],
-      _SommaireEntry('Photos', 19),
+      _SommaireEntry('Photos', pages['photos'] ?? 19),
     ];
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -498,129 +590,200 @@ class PdfReportService {
       ],
     );
   }
-  static pw.Widget _buildListeRecapitulative(AuditInstallationsElectriques audit) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _buildPageHeaderWidget(),
-        pw.SizedBox(height: 10),
-        _sectionBox('LISTE RECAPITULATIVE DES OBSERVATIONS'),
-        pw.SizedBox(height: 8),
-        _subTitle('Niveau de priorite des observations constatees'),
-        pw.SizedBox(height: 5),
-        pw.Row(
-          children: [
-            _badgePriorite('1', priorite1Color), pw.SizedBox(width: 4),
-            _bodyText('Niveau 1 : A surveiller'),
-            pw.SizedBox(width: 16),
-            _badgePriorite('2', priorite2Color), pw.SizedBox(width: 4),
-            _bodyText('Niveau 2 : Mise en conformite a planifier'),
-            pw.SizedBox(width: 16),
-            _badgePriorite('3', priorite3Color), pw.SizedBox(width: 4),
-            _bodyText('Niveau 3 : Critique, Action immediate'),
-          ],
-        ),
-        pw.SizedBox(height: 16),
-        _subTitle('Moyenne tension'),
-        pw.SizedBox(height: 5),
-        _buildObsRecapTable(_collectObservationsMT(audit)),
-        pw.SizedBox(height: 16),
-        _subTitle('Basse tension'),
-        pw.SizedBox(height: 5),
-        _buildObsRecapTable(_collectObservationsBT(audit)),
-      ],
-    );
+  static List<pw.Widget> _buildListeRecapitulativeMulti(
+      AuditInstallationsElectriques audit) {
+    final widgets = <pw.Widget>[];
+    widgets.add(_sectionBox('LISTE RECAPITULATIVE DES OBSERVATIONS'));
+    widgets.add(pw.SizedBox(height: 8));
+    widgets.add(_subTitle('Niveau de priorite des observations constatees'));
+    widgets.add(pw.SizedBox(height: 5));
+    widgets.add(pw.Row(children: [
+      _badgePriorite('1', priorite1Color), pw.SizedBox(width: 4),
+      _bodyText('Niveau 1 : A surveiller'),
+      pw.SizedBox(width: 12),
+      _badgePriorite('2', priorite2Color), pw.SizedBox(width: 4),
+      _bodyText('Niveau 2 : Mise en conformite a planifier'),
+      pw.SizedBox(width: 12),
+      _badgePriorite('3', priorite3Color), pw.SizedBox(width: 4),
+      _bodyText('Niveau 3 : Critique, Action immediate'),
+    ]));
+    widgets.add(pw.SizedBox(height: 16));
+    widgets.add(_subTitle('Moyenne tension'));
+    widgets.add(pw.SizedBox(height: 5));
+    widgets.add(_buildObsRecapTable(_collectObservationsMT(audit)));
+    widgets.add(pw.SizedBox(height: 16));
+    widgets.add(_subTitle('Basse tension'));
+    widgets.add(pw.SizedBox(height: 5));
+    widgets.add(_buildObsRecapTable(_collectObservationsBT(audit)));
+    return widgets;
   }
-  static pw.Widget _buildAuditInstallations(AuditInstallationsElectriques audit) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _buildPageHeaderWidget(),
-        pw.SizedBox(height: 10),
-        _sectionBox('AUDIT DES INSTALLATIONS ELECTRIQUES'),
-        pw.SizedBox(height: 8),
-        ..._buildAuditContent(audit),
-      ],
-    );
+  static List<pw.Widget> _buildAuditInstallationsMulti(
+      AuditInstallationsElectriques audit) {
+    final widgets = <pw.Widget>[];
+    widgets.add(_sectionBox('AUDIT DES INSTALLATIONS ELECTRIQUES'));
+    widgets.add(pw.SizedBox(height: 8));
+    widgets.addAll(_buildAuditContent(audit));
+    return widgets;
   }
-  static pw.Widget _buildDescriptionInstallations(DescriptionInstallations? desc) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _buildPageHeaderWidget(),
-        pw.SizedBox(height: 10),
-        _sectionBox('DESCRIPTION DES INSTALLATIONS'),
-        pw.SizedBox(height: 8),
-        if (desc == null)
-          _bodyText('Aucune donnee disponible.')
-        else
-          pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              if (desc.alimentationMoyenneTension.isNotEmpty) ...[
-                _subTitle('Caracteristiques de l\'alimentation moyenne tension'),
-                _buildInstallationTable(desc.alimentationMoyenneTension),
-                pw.SizedBox(height: 8),
-              ],
-              if (desc.alimentationBasseTension.isNotEmpty) ...[
-                _subTitle('Caracteristiques de l\'alimentation basse tension sortie transformateur'),
-                _buildInstallationTable(desc.alimentationBasseTension),
-                pw.SizedBox(height: 8),
-              ],
-              if (desc.groupeElectrogene.isNotEmpty) ...[
-                _subTitle('Caracteristiques du groupe electrogene'),
-                _buildInstallationTable(desc.groupeElectrogene),
-                pw.SizedBox(height: 8),
-              ],
-              if (desc.alimentationCarburant.isNotEmpty) ...[
-                _subTitle('Alimentation du groupe electrogene en carburant'),
-                _buildInstallationTable(desc.alimentationCarburant),
-                pw.SizedBox(height: 8),
-              ],
-              if (desc.inverseur.isNotEmpty) ...[
-                _subTitle('Caracteristiques de l\'inverseur'),
-                _buildInstallationTable(desc.inverseur),
-                pw.SizedBox(height: 8),
-              ],
-              _subTitle('Caracteristiques du stabilisateur'),
-              if (desc.stabilisateur.isNotEmpty)
-                _buildInstallationTable(desc.stabilisateur)
-              else
-                _bodyText('- Pas de stabilisateur'),
-              pw.SizedBox(height: 8),
-              if (desc.onduleurs.isNotEmpty) ...[
-                _subTitle('Caracteristiques des onduleurs'),
-                _buildInstallationTable(desc.onduleurs),
-                pw.SizedBox(height: 8),
-              ],
-              _subTitle('Regime de neutre'),
-              _bodyText('- ${desc.regimeNeutre ?? 'TT'}'),
-              pw.SizedBox(height: 5),
-              _subTitle('Eclairage de securite'),
-              _bodyText('- ${desc.eclairageSecurite ?? 'Present'}'),
-              pw.SizedBox(height: 5),
-              _subTitle('Modifications apportees aux installations'),
-              _bodyText('Modifications apportees aux installations : ${desc.modificationsInstallations ?? 'Sans Objet'}'),
-              pw.SizedBox(height: 5),
-              _subTitle('Note de calcul des installations electriques'),
-              _bodyText('- ${desc.noteCalcul ?? 'Non transmis'}'),
-              pw.SizedBox(height: 5),
-              _subTitle('Presence de paratonnerre'),
-              _bodyText('Presence de paratonnerre : ${desc.presenceParatonnerre ?? 'NON'}'),
-              _bodyText('Analyse risque foudre : ${desc.analyseRisqueFoudre ?? ''}'),
-              _bodyText('Etude technique foudre : ${desc.etudeTechniqueFoudre ?? ''}'),
-              pw.SizedBox(height: 5),
-              _subTitle('Registre de securite'),
-              _bodyText('- ${desc.registreSecurite ?? 'Non transmis'}'),
-            ],
-          ),
-      ],
-    );
+  static List<pw.Widget> _buildDescriptionInstallationsMulti(
+    DescriptionInstallations? desc) {
+    final widgets = <pw.Widget>[];
+    widgets.add(_sectionBox('DESCRIPTION DES INSTALLATIONS'));
+    widgets.add(pw.SizedBox(height: 8));
+
+    if (desc == null) {
+      widgets.add(_bodyText('Aucune donnee disponible.'));
+      return widgets;
+    }
+
+    widgets.add(_subTitle('Caracteristiques de l\'alimentation moyenne tension'));
+    if (desc.alimentationMoyenneTension.isNotEmpty) {
+      widgets.add(_buildInstallationTable(desc.alimentationMoyenneTension));
+    } else {
+      widgets.add(_bodyText('- Non renseignee'));
+    }
+    widgets.add(_subTitle('Caracteristiques de l\'alimentation basse tension'));
+    if (desc.alimentationBasseTension.isNotEmpty) {
+      widgets.add(_buildInstallationTable(desc.alimentationBasseTension));
+    } else {
+      widgets.add(_bodyText('- Non renseignee'));
+    }
+    widgets.add(_subTitle('Caracteristiques du groupe electrogene'));
+    if (desc.groupeElectrogene.isNotEmpty) {
+      widgets.add(_buildInstallationTable(desc.groupeElectrogene));
+    } else {
+      widgets.add(_bodyText('- Absent'));
+    }
+    widgets.add(pw.SizedBox(height: 8));
+
+    // Alimentation carburant
+    widgets.add(_subTitle('Alimentation du groupe electrogene en carburant'));
+    if (desc.alimentationCarburant.isNotEmpty) {
+      widgets.add(_buildInstallationTable(desc.alimentationCarburant));
+    } else {
+      widgets.add(_bodyText('- Non applicable'));
+    }
+    widgets.add(pw.SizedBox(height: 8));
+
+    // Inverseur
+    widgets.add(_subTitle('Caracteristiques de l\'inverseur'));
+    if (desc.inverseur.isNotEmpty) {
+      widgets.add(_buildInstallationTable(desc.inverseur));
+    } else {
+      widgets.add(_bodyText('- Absent'));
+    }
+    widgets.add(pw.SizedBox(height: 8));
+
+    // Stabilisateur
+    widgets.add(_subTitle('Caracteristiques du stabilisateur'));
+    if (desc.stabilisateur.isNotEmpty) {
+      widgets.add(_buildInstallationTable(desc.stabilisateur));
+    } else {
+      widgets.add(_bodyText('- Absent'));
+    }
+    widgets.add(pw.SizedBox(height: 8));
+
+    // Onduleurs
+    widgets.add(_subTitle('Caracteristiques des onduleurs'));
+    if (desc.onduleurs.isNotEmpty) {
+      widgets.add(_buildInstallationTable(desc.onduleurs));
+    } else {
+      widgets.add(_bodyText('- Absent'));
+    }
+    widgets.add(pw.SizedBox(height: 8));
+
+    // Champs texte (toujours affichés)
+    widgets.add(_subTitle('Regime de neutre'));
+    widgets.add(_bodyText('- ${desc.regimeNeutre ?? 'Non renseigne'}'));
+    widgets.add(pw.SizedBox(height: 5));
+
+    widgets.add(_subTitle('Eclairage de securite'));
+    widgets.add(_bodyText('- ${desc.eclairageSecurite ?? 'Non renseigne'}'));
+    widgets.add(pw.SizedBox(height: 5));
+
+    widgets.add(_subTitle('Modifications apportees aux installations'));
+    widgets.add(_bodyText(desc.modificationsInstallations ?? 'Sans Objet'));
+    widgets.add(pw.SizedBox(height: 5));
+
+    widgets.add(_subTitle('Note de calcul des installations electriques'));
+    widgets.add(_bodyText('- ${desc.noteCalcul ?? 'Non transmis'}'));
+    widgets.add(pw.SizedBox(height: 5));
+
+    widgets.add(_subTitle('Presence de paratonnerre'));
+    widgets.add(_bodyText('Presence : ${desc.presenceParatonnerre ?? 'NON'}'));
+    if (desc.analyseRisqueFoudre != null && desc.analyseRisqueFoudre!.isNotEmpty) {
+      widgets.add(_bodyText('Analyse risque foudre : ${desc.analyseRisqueFoudre}'));
+    }
+    if (desc.etudeTechniqueFoudre != null && desc.etudeTechniqueFoudre!.isNotEmpty) {
+      widgets.add(_bodyText('Etude technique foudre : ${desc.etudeTechniqueFoudre}'));
+    }
+    widgets.add(pw.SizedBox(height: 5));
+
+    widgets.add(_subTitle('Registre de securite'));
+    widgets.add(_bodyText('- ${desc.registreSecurite ?? 'Non transmis'}'));
+
+    return widgets;
   }
 
-  static List<_ObsRecap> _collectObservationsMT(AuditInstallationsElectriques audit) {
+  static List<_ObsRecap> _collectObservationsMT(
+      AuditInstallationsElectriques audit) {
     final list = <_ObsRecap>[];
+
+    // === LOCAUX MT DIRECTS (hors zone) ===
     for (var local in audit.moyenneTensionLocaux) {
+      // ElementControle — dispositions constructives
+      for (var el in local.dispositionsConstructives) {
+        if (el.conforme == false) {
+          list.add(_ObsRecap(
+            localisation: local.nom,
+            coffret: 'Dispositions constructives',
+            observation: el.observation ?? el.elementControle,
+            refNorm: el.referenceNormative ?? '',
+            priorite: el.priorite?.toString() ?? '',    // ← ElementControle.priorite
+          ));
+        }
+      }
+      // ElementControle — conditions d'exploitation
+      for (var el in local.conditionsExploitation) {
+        if (el.conforme == false) {
+          list.add(_ObsRecap(
+            localisation: local.nom,
+            coffret: 'Conditions d\'exploitation',
+            observation: el.observation ?? el.elementControle,
+            refNorm: el.referenceNormative ?? '',
+            priorite: el.priorite?.toString() ?? '',
+          ));
+        }
+      }
+      // Cellule — elementsVerifies
+      if (local.cellule != null) {
+        for (var el in local.cellule!.elementsVerifies) {
+          if (el.conforme == false) {
+            list.add(_ObsRecap(
+              localisation: local.nom,
+              coffret: 'Cellule',
+              observation: el.observation ?? el.elementControle,
+              refNorm: el.referenceNormative ?? '',
+              priorite: el.priorite?.toString() ?? '',
+            ));
+          }
+        }
+      }
+      // Transformateur — elementsVerifies
+      if (local.transformateur != null) {
+        for (var el in local.transformateur!.elementsVerifies) {
+          if (el.conforme == false) {
+            list.add(_ObsRecap(
+              localisation: local.nom,
+              coffret: 'Transformateur',
+              observation: el.observation ?? el.elementControle,
+              refNorm: el.referenceNormative ?? '',
+              priorite: el.priorite?.toString() ?? '',
+            ));
+          }
+        }
+      }
+      // Coffrets du local
       for (var coffret in local.coffrets) {
         for (var pv in coffret.pointsVerification) {
           if (pv.conformite == 'non' || pv.conformite == 'Non' || pv.conformite == 'Non conforme') {
@@ -629,7 +792,7 @@ class PdfReportService {
               coffret: coffret.nom,
               observation: pv.observation ?? pv.pointVerification,
               refNorm: pv.referenceNormative ?? '',
-              priorite: pv.priorite?.toString() ?? '',
+              priorite: pv.priorite?.toString() ?? '',  // ← PointVerification.priorite
             ));
           }
         }
@@ -643,29 +806,22 @@ class PdfReportService {
           ));
         }
       }
+      // Observations libres du local
       for (var obs in local.observationsLibres) {
-        list.add(_ObsRecap(localisation: local.nom, coffret: '', observation: obs.texte, refNorm: '', priorite: ''));
+        list.add(_ObsRecap(
+          localisation: local.nom,
+          coffret: '',
+          observation: obs.texte,
+          refNorm: '',
+          priorite: '',
+        ));
       }
     }
-    for (var zone in audit.moyenneTensionZones) {
-      for (var local in zone.locaux) {
-        for (var coffret in local.coffrets) {
-          for (var obs in coffret.observationsLibres) {
-            list.add(_ObsRecap(localisation: '${zone.nom} / ${local.nom}', coffret: coffret.nom, observation: obs.texte, refNorm: '', priorite: ''));
-          }
-        }
-      }
-      for (var obs in zone.observationsLibres) {
-        list.add(_ObsRecap(localisation: zone.nom, coffret: '', observation: obs.texte, refNorm: '', priorite: ''));
-      }
-    }
-    return list;
-  }
 
-  static List<_ObsRecap> _collectObservationsBT(AuditInstallationsElectriques audit) {
-    final list = <_ObsRecap>[];
-    for (var zone in audit.basseTensionZones) {
-      for (var coffret in zone.coffretsDirects) {
+    // === ZONES MT ===
+    for (var zone in audit.moyenneTensionZones) {
+      // Coffrets directs de la zone
+      for (var coffret in zone.coffrets) {
         for (var pv in coffret.pointsVerification) {
           if (pv.conformite == 'non' || pv.conformite == 'Non' || pv.conformite == 'Non conforme') {
             list.add(_ObsRecap(
@@ -678,20 +834,159 @@ class PdfReportService {
           }
         }
         for (var obs in coffret.observationsLibres) {
-          list.add(_ObsRecap(localisation: zone.nom, coffret: coffret.nom, observation: obs.texte, refNorm: '', priorite: ''));
+          list.add(_ObsRecap(
+            localisation: zone.nom, coffret: coffret.nom,
+            observation: obs.texte, refNorm: '', priorite: '',
+          ));
         }
       }
+      // Locaux dans la zone MT
       for (var local in zone.locaux) {
-        for (var coffret in local.coffrets) {
-          for (var obs in coffret.observationsLibres) {
-            list.add(_ObsRecap(localisation: '${zone.nom} / ${local.nom}', coffret: coffret.nom, observation: obs.texte, refNorm: '', priorite: ''));
+        // ElementControle
+        for (var el in local.dispositionsConstructives) {
+          if (el.conforme == false) {
+            list.add(_ObsRecap(
+              localisation: '${zone.nom} / ${local.nom}',
+              coffret: 'Dispositions constructives',
+              observation: el.observation ?? el.elementControle,
+              refNorm: el.referenceNormative ?? '',
+              priorite: el.priorite?.toString() ?? '',
+            ));
           }
         }
+        // Coffrets du local dans la zone
+        for (var coffret in local.coffrets) {
+          for (var pv in coffret.pointsVerification) {
+            if (pv.conformite == 'non' || pv.conformite == 'Non' || pv.conformite == 'Non conforme') {
+              list.add(_ObsRecap(
+                localisation: '${zone.nom} / ${local.nom}',
+                coffret: coffret.nom,
+                observation: pv.observation ?? pv.pointVerification,
+                refNorm: pv.referenceNormative ?? '',
+                priorite: pv.priorite?.toString() ?? '',
+              ));
+            }
+          }
+          for (var obs in coffret.observationsLibres) {
+            list.add(_ObsRecap(
+              localisation: '${zone.nom} / ${local.nom}',
+              coffret: coffret.nom,
+              observation: obs.texte, refNorm: '', priorite: '',
+            ));
+          }
+        }
+        for (var obs in local.observationsLibres) {
+          list.add(_ObsRecap(
+            localisation: '${zone.nom} / ${local.nom}',
+            coffret: '', observation: obs.texte, refNorm: '', priorite: '',
+          ));
+        }
       }
+      // Observations libres de la zone
       for (var obs in zone.observationsLibres) {
-        list.add(_ObsRecap(localisation: zone.nom, coffret: '', observation: obs.texte, refNorm: '', priorite: ''));
+        list.add(_ObsRecap(
+          localisation: zone.nom, coffret: '',
+          observation: obs.texte, refNorm: '', priorite: '',
+        ));
       }
     }
+
+    return list;
+  }
+
+  static List<_ObsRecap> _collectObservationsBT(
+      AuditInstallationsElectriques audit) {
+    final list = <_ObsRecap>[];
+
+    for (var zone in audit.basseTensionZones) {
+      // Coffrets directs de la zone BT
+      for (var coffret in zone.coffretsDirects) {
+        for (var pv in coffret.pointsVerification) {
+          if (pv.conformite == 'non' || pv.conformite == 'Non' || pv.conformite == 'Non conforme') {
+            list.add(_ObsRecap(
+              localisation: zone.nom,
+              coffret: coffret.nom,
+              observation: pv.observation ?? pv.pointVerification,
+              refNorm: pv.referenceNormative ?? '',
+              priorite: pv.priorite?.toString() ?? '',   // ← PointVerification.priorite
+            ));
+          }
+        }
+        for (var obs in coffret.observationsLibres) {
+          list.add(_ObsRecap(
+            localisation: zone.nom, coffret: coffret.nom,
+            observation: obs.texte, refNorm: '', priorite: '',
+          ));
+        }
+      }
+
+      // Locaux BT
+      for (var local in zone.locaux) {
+        // ElementControle — dispositions constructives
+        if (local.dispositionsConstructives != null) {
+          for (var el in local.dispositionsConstructives!) {
+            if (el.conforme == false) {
+              list.add(_ObsRecap(
+                localisation: '${zone.nom} / ${local.nom}',
+                coffret: 'Dispositions constructives',
+                observation: el.observation ?? el.elementControle,
+                refNorm: el.referenceNormative ?? '',
+                priorite: el.priorite?.toString() ?? '',  // ← ElementControle.priorite
+              ));
+            }
+          }
+        }
+        // ElementControle — conditions d'exploitation
+        if (local.conditionsExploitation != null) {
+          for (var el in local.conditionsExploitation!) {
+            if (el.conforme == false) {
+              list.add(_ObsRecap(
+                localisation: '${zone.nom} / ${local.nom}',
+                coffret: 'Conditions d\'exploitation',
+                observation: el.observation ?? el.elementControle,
+                refNorm: el.referenceNormative ?? '',
+                priorite: el.priorite?.toString() ?? '',
+              ));
+            }
+          }
+        }
+        // Coffrets du local BT
+        for (var coffret in local.coffrets) {
+          for (var pv in coffret.pointsVerification) {
+            if (pv.conformite == 'non' || pv.conformite == 'Non' || pv.conformite == 'Non conforme') {
+              list.add(_ObsRecap(
+                localisation: '${zone.nom} / ${local.nom}',
+                coffret: coffret.nom,
+                observation: pv.observation ?? pv.pointVerification,
+                refNorm: pv.referenceNormative ?? '',
+                priorite: pv.priorite?.toString() ?? '',
+              ));
+            }
+          }
+          for (var obs in coffret.observationsLibres) {
+            list.add(_ObsRecap(
+              localisation: '${zone.nom} / ${local.nom}',
+              coffret: coffret.nom,
+              observation: obs.texte, refNorm: '', priorite: '',
+            ));
+          }
+        }
+        for (var obs in local.observationsLibres) {
+          list.add(_ObsRecap(
+            localisation: '${zone.nom} / ${local.nom}',
+            coffret: '', observation: obs.texte, refNorm: '', priorite: '',
+          ));
+        }
+      }
+      // Observations libres de la zone BT
+      for (var obs in zone.observationsLibres) {
+        list.add(_ObsRecap(
+          localisation: zone.nom, coffret: '',
+          observation: obs.texte, refNorm: '', priorite: '',
+        ));
+      }
+    }
+
     return list;
   }
 
@@ -700,39 +995,77 @@ class PdfReportService {
       return pw.Container(
         decoration: pw.BoxDecoration(border: pw.Border.all(color: borderColor, width: 0.4)),
         padding: const pw.EdgeInsets.all(4),
-        child: pw.Text('Aucune observation', style: pw.TextStyle(fontSize: fsSmall, fontStyle: pw.FontStyle.italic)),
+        child: pw.Text('Aucune observation',
+            style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall, fontStyle: pw.FontStyle.italic)),
       );
     }
-
-    final headers = ['LOCALISATION', 'COFFRET / ARMOIRE', 'NON-CONFORMITE - PRECONISATION', 'REF. NORMATIVE', 'PRIORITE'];
 
     return pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.4),
       columnWidths: {
-        0: const pw.FlexColumnWidth(2),
-        1: const pw.FlexColumnWidth(1.5),
-        2: const pw.FlexColumnWidth(3),
-        3: const pw.FlexColumnWidth(1.5),
-        4: const pw.FlexColumnWidth(0.8),
+        0: const pw.FlexColumnWidth(0.4),   // N°
+        1: const pw.FlexColumnWidth(2),      // Localisation
+        2: const pw.FlexColumnWidth(1.5),    // Coffret
+        3: const pw.FlexColumnWidth(3),      // Non-conformité
+        4: const pw.FlexColumnWidth(1.5),    // Référence normative
+        5: const pw.FlexColumnWidth(0.7),    // Priorité
       },
       children: [
-        _tableHeaderRow(headers),
+        _tableHeaderRow(['N°', 'LOCALISATION', 'COFFRET / ARMOIRE',
+            'NON-CONFORMITE - PRECONISATION', 'REF. NORMATIVE', 'PRIORITE']),
         ...obs.asMap().entries.map((e) {
           final o = e.value;
+
+          // Couleur de ligne selon priorité
           PdfColor? rowColor;
           if (o.priorite == '3') {
             rowColor = PdfColor.fromInt(0xFFFFEEEE);
           } else if (o.priorite == '2') {
             rowColor = PdfColor.fromInt(0xFFFFF8EE);
           }
+          else if (o.priorite == '1') {
+            rowColor = priorite1Color;
+          }
           else if (e.key.isOdd) {
             rowColor = tableRowAlt;
           }
+
+          // Couleur du badge priorité
+          PdfColor badgeColor = PdfColors.grey300;
+          if (o.priorite == '1') badgeColor = priorite1Color;
+          if (o.priorite == '2') badgeColor = priorite2Color;
+          if (o.priorite == '3') badgeColor = priorite3Color;
+
           return pw.TableRow(
             decoration: rowColor != null ? pw.BoxDecoration(color: rowColor) : null,
-            children: [o.localisation, o.coffret, o.observation, o.refNorm, o.priorite]
-                .map((t) => _cell(t, isHeader: false))
-                .toList(),
+            children: [
+              // N°
+              pw.Container(
+                padding: const pw.EdgeInsets.all(3),
+                alignment: pw.Alignment.center,
+                child: pw.Text('${e.key + 1}',
+                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+              ),
+              _cell(o.localisation, isHeader: false),
+              _cell(o.coffret, isHeader: false),
+              _cell(o.observation, isHeader: false),
+              _cell(o.refNorm, isHeader: false),
+              // Badge priorité coloré
+              pw.Container(
+                color: o.priorite.isNotEmpty ? badgeColor : null,
+                padding: const pw.EdgeInsets.all(3),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  o.priorite,
+                  style: pw.TextStyle(
+                    font: _fontBold,
+                    fontSize: fsSmall,
+                    fontWeight: pw.FontWeight.bold,
+                    color: o.priorite == '3' ? PdfColors.red900 : PdfColors.black,
+                  ),
+                ),
+              ),
+            ],
           );
         }),
       ],
@@ -879,8 +1212,18 @@ class PdfReportService {
         _tableHeaderRow(['Elements controles', 'Conformite', 'Observations / Anomalies constatees']),
         ...elements.asMap().entries.map((e) {
           final el = e.value;
-          final conf = el.conforme != null ? 'Oui' : 'Non';
-          final confColor = el.conforme != null ? conformeColor : nonConformeColor;
+          String conf;
+          PdfColor confColor;
+          if (el.conforme == null) {
+            conf = 'N/A';
+            confColor = tableRowAlt;
+          } else if (el.conforme == true) {
+            conf = 'Oui';
+            confColor = conformeColor;
+          } else {
+            conf = 'Non';
+            confColor = nonConformeColor;
+          }
           return pw.TableRow(
             decoration: pw.BoxDecoration(color: e.key.isEven ? PdfColors.white : tableRowAlt),
             children: [
@@ -899,9 +1242,11 @@ class PdfReportService {
     );
   }
 
-  static List<pw.Widget> _buildAuditContent(AuditInstallationsElectriques audit) {
+  static List<pw.Widget> _buildAuditContent(
+      AuditInstallationsElectriques audit) {
     final widgets = <pw.Widget>[];
-    
+
+    // 1. Zones MT avec leurs locaux
     for (var zone in audit.moyenneTensionZones) {
       widgets.addAll(_buildZone(zone.nom, zone.observationsLibres));
       for (var local in zone.locaux) {
@@ -911,37 +1256,67 @@ class PdfReportService {
         widgets.addAll(_buildCoffret(coffret));
       }
     }
-    
-    for (var local in audit.moyenneTensionLocaux) {
-      widgets.addAll(_buildLocalMT(local));
+
+    // 2. Locaux MT directs (sans zone parente)
+    if (audit.moyenneTensionLocaux.isNotEmpty) {
+      widgets.add(_subSectionBar('MOYENNE TENSION — LOCAUX'));
+      for (var local in audit.moyenneTensionLocaux) {
+        widgets.addAll(_buildLocalMT(local));
+      }
     }
-    
+
+    // 3. Zones BT avec leurs locaux et coffrets directs
     for (var zone in audit.basseTensionZones) {
       widgets.addAll(_buildZone(zone.nom, zone.observationsLibres));
+      // Coffrets directs de la zone (hors locaux)
       for (var coffret in zone.coffretsDirects) {
         widgets.addAll(_buildCoffret(coffret));
       }
+      // Locaux BT
       for (var local in zone.locaux) {
         widgets.addAll(_buildLocalBT(local));
       }
     }
-    
+
+    // Message si aucune donnée
+    if (widgets.isEmpty) {
+      widgets.add(_bodyText('Aucune installation enregistree.'));
+    }
+
     return widgets;
   }
 
   static pw.Widget _buildInstallationTable(List<InstallationItem> items) {
     if (items.isEmpty) return pw.Container();
+    
+    // Collecter tous les champs non vides
     final fields = <String>{};
     for (var it in items) {
-      fields.addAll(it.data.keys);
+      // Filtrer les clés avec des valeurs non vides
+      fields.addAll(it.data.entries
+          .where((e) => e.value.isNotEmpty)
+          .map((e) => e.key));
     }
+    
+    // Si aucun champ, afficher un message
+    if (fields.isEmpty) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.all(4),
+        decoration: pw.BoxDecoration(border: pw.Border.all(color: borderColor, width: 0.4)),
+        child: _bodyText('Donnees non renseignees'),
+      );
+    }
+    
     final cols = fields.toList()..sort();
     return pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.4),
       children: [
         _tableHeaderRow(cols),
         ...items.asMap().entries.map((e) =>
-          _tableDataRow(cols.map((c) => e.value.data[c]?.toString() ?? '-').toList(), alt: e.key.isOdd)),
+          _tableDataRow(
+            cols.map((c) => e.value.data[c]?.toString() ?? '-').toList(),
+            alt: e.key.isOdd,
+          )),
       ],
     );
   }
@@ -1708,56 +2083,135 @@ class PdfReportService {
   // ──────────────────────────────────────────────────────────────
   //  CLASSEMENT DES EMPLACEMENTS
   // ──────────────────────────────────────────────────────────────
-  static pw.Widget _buildClassementEmplacements(List<ClassementEmplacement> classements) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
+  static List<pw.Widget> _buildClassementEmplacementsMulti(
+    List<ClassementEmplacement> emplacements,
+    List<ClassementZone> zonesClassement,
+  ) {
+    final widgets = <pw.Widget>[];
+
+    widgets.add(_sectionBox(
+      'CLASSEMENT DES LOCAUX/ZONES ET EMPLACEMENTS EN FONCTION DES INFLUENCES EXTERNES'
+    ));
+    widgets.add(pw.SizedBox(height: 8));
+    widgets.add(_bodyText(
+      'Dans le cas d\'absence de fourniture d\'une liste exhaustive des risques '
+      'particuliers, le classement eventuel ci-apres est propose par le verificateur '
+      'et, sauf avis contraire, considere comme valide par le chef d\'etablissement.',
+    ));
+    widgets.add(pw.SizedBox(height: 12));
+
+    // ─── Construire les lignes fusionnées ───────────────────────────────
+    final rows = <_ClassementRow>[];
+
+    // 1. Zones depuis ClassementZone (source principale pour les zones)
+    for (var zone in zonesClassement) {
+      rows.add(_ClassementRow(
+        localisation: zone.nomZone,
+        zone: '—',
+        type: 'Zone ${zone.typeZone}',
+        origineClassement: zone.origineClassement,
+        af: zone.af,
+        be: zone.be,
+        ae: zone.ae,
+        ad: zone.ad,
+        ag: zone.ag,
+        ip: zone.ip,
+        ik: zone.ik,
+        isZone: true,
+      ));
+    }
+
+    // 2. Emplacements (locaux + zones éventuellement dans ClassementEmplacement)
+    for (var emp in emplacements) {
+      // Éviter les doublons si la zone est déjà dans ClassementZone
+      final dejaPresent = zonesClassement.any(
+        (z) => z.nomZone == emp.localisation && emp.typeEmplacement == 'zone'
+      );
+      if (dejaPresent) continue;
+
+      rows.add(_ClassementRow(
+        localisation: emp.localisation,
+        zone: emp.zone ?? '—',
+        type: emp.typeEmplacement == 'zone' ? 'Zone' : 'Local',
+        origineClassement: emp.origineClassement,
+        af: emp.af,
+        be: emp.be,
+        ae: emp.ae,
+        ad: emp.ad,
+        ag: emp.ag,
+        ip: emp.ip,
+        ik: emp.ik,
+        isZone: emp.typeEmplacement == 'zone',
+      ));
+    }
+
+    // ─── Trier : zones avant locaux ─────────────────────────────────────
+    rows.sort((a, b) {
+      if (a.isZone && !b.isZone) return -1;
+      if (!a.isZone && b.isZone) return 1;
+      return a.localisation.compareTo(b.localisation);
+    });
+
+    // ─── Tableau ─────────────────────────────────────────────────────────
+    widgets.add(pw.Table(
+      border: pw.TableBorder.all(color: borderColor, width: 0.4),
+      columnWidths: {
+        0: const pw.FlexColumnWidth(2.5),  // Localisation
+        1: const pw.FlexColumnWidth(0.8),  // Type
+        2: const pw.FlexColumnWidth(1),    // Zone parente
+        3: const pw.FlexColumnWidth(1.5),  // Origine classement
+        4: const pw.FlexColumnWidth(0.5),  // AF
+        5: const pw.FlexColumnWidth(0.5),  // BE
+        6: const pw.FlexColumnWidth(0.5),  // AE
+        7: const pw.FlexColumnWidth(0.5),  // AD
+        8: const pw.FlexColumnWidth(0.5),  // AG
+        9: const pw.FlexColumnWidth(1),    // IP
+        10: const pw.FlexColumnWidth(0.7), // IK
+      },
       children: [
-        _buildPageHeaderWidget(),
-        pw.SizedBox(height: 10),
-        _sectionBox('CLASSEMENT DES LOCAUX ET EMPLACEMENTS EN FONCTION DES INFLUENCES EXTERNES'),
-        pw.SizedBox(height: 8),
-        _bodyText(
-          'Dans le cas d\'absence de fourniture d\'une liste exhaustive des risques particuliers, le classement eventuel ci-apres est propose par le verificateur et, sauf avis contraire, considere comme valide par le chef d\'etablissement.',
-        ),
-        pw.SizedBox(height: 12),
-        pw.Table(
-          border: pw.TableBorder.all(color: borderColor, width: 0.4),
-          columnWidths: {
-            0: const pw.FlexColumnWidth(2.5),
-            1: const pw.FlexColumnWidth(1),
-            2: const pw.FlexColumnWidth(1.5),
-            3: const pw.FlexColumnWidth(1),
-            4: const pw.FlexColumnWidth(0.5),
-            5: const pw.FlexColumnWidth(0.5),
-            6: const pw.FlexColumnWidth(0.5),
-            7: const pw.FlexColumnWidth(0.5),
-            8: const pw.FlexColumnWidth(0.5),
-            9: const pw.FlexColumnWidth(1),
-            10: const pw.FlexColumnWidth(0.7),
-          },
-          children: [
-            _tableHeaderRow([
-              'Localisation', 'Zone', 'Origine classement',
-              'Influences externes', 'AF', 'BE', 'AE', 'AD', 'AG',
-              'Indice mini de protection', 'IK'
-            ]),
-            if (classements.isEmpty)
-              pw.TableRow(children: List.generate(11, (_) => _cell('', isHeader: false)))
-            else
-              ...classements.asMap().entries.map((e) {
-                final c = e.value;
-                return _tableDataRow([
-                  c.localisation, c.zone ?? '-', '',
-                  '', c.af ?? '-', c.be ?? '-', c.ae ?? '-',
-                  c.ad ?? '-', c.ag ?? '-', c.ip ?? '-', c.ik ?? '-',
-                ], alt: e.key.isOdd);
-              }),
-          ],
-        ),
-        pw.SizedBox(height: 16),
-        _buildCodificationInfluences(),
+        _tableHeaderRow([
+          'Localisation', 'Type', 'Zone',
+          'Origine classement',
+          'AF', 'BE', 'AE', 'AD', 'AG',
+          'Indice IP', 'IK',
+        ]),
+        if (rows.isEmpty)
+          pw.TableRow(children: List.generate(11, (_) => _cell('', isHeader: false)))
+        else
+          ...rows.asMap().entries.map((e) {
+            final r = e.value;
+            // Fond légèrement différent pour les zones
+            final rowColor = r.isZone
+                ? PdfColor.fromInt(0xFFE8F0FA)
+                : (e.key.isOdd ? tableRowAlt : PdfColors.white);
+            return pw.TableRow(
+              decoration: pw.BoxDecoration(color: rowColor),
+              children: [
+                _cell(r.localisation, isHeader: r.isZone),
+                _cell(r.type, isHeader: false),
+                _cell(r.zone, isHeader: false),
+                _cell(r.origineClassement, isHeader: false),
+                _cell(r.af ?? '—', isHeader: false),
+                _cell(r.be ?? '—', isHeader: false),
+                _cell(r.ae ?? '—', isHeader: false),
+                _cell(r.ad ?? '—', isHeader: false),
+                _cell(r.ag ?? '—', isHeader: false),
+                _cell(r.ip ?? '—', isHeader: false),
+                _cell(r.ik ?? '—', isHeader: false),
+              ],
+            );
+          }),
       ],
-    );
+    ));
+
+    widgets.add(pw.SizedBox(height: 16));
+    widgets.addAll(_buildCodificationInfluencesMulti());
+
+    return widgets;
+  }
+
+  static List<pw.Widget> _buildCodificationInfluencesMulti() {
+    return [_buildCodificationInfluences()];
   }
 
   static pw.Widget _buildCodificationInfluences() {
@@ -2520,4 +2974,33 @@ class _SommaireEntry {
   final String titre;
   final int page;
   _SommaireEntry(this.titre, this.page);
+}
+class _ClassementRow {
+  final String localisation;
+  final String zone;
+  final String type;
+  final String origineClassement;
+  final String? af;
+  final String? be;
+  final String? ae;
+  final String? ad;
+  final String? ag;
+  final String? ip;
+  final String? ik;
+  final bool isZone;
+
+  _ClassementRow({
+    required this.localisation,
+    required this.zone,
+    required this.type,
+    required this.origineClassement,
+    this.af,
+    this.be,
+    this.ae,
+    this.ad,
+    this.ag,
+    this.ip,
+    this.ik,
+    required this.isZone,
+  });
 }

@@ -338,7 +338,10 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
   }
 
   void _ajouterZone() async {
-    final result = await Navigator.push(
+    // BUG #2 FIX: ne pas stocker 'result', attendre la fin complète du flux
+    // (AjouterZoneScreen → ClassementZoneScreen via pushReplacement → pop)
+    // MoyenneTensionScreen reprend la main seulement quand tout est terminé.
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AjouterZoneScreen(
@@ -348,15 +351,9 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
       ),
     );
 
-    _loadData();
-
-    if (result == true) {
+    // Recharger une seule fois, après la fin complète du flux
+    if (mounted) {
       await _refreshAllData();
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Zone ajoutée avec succès')),
-        );
-      }
     }
   }
 

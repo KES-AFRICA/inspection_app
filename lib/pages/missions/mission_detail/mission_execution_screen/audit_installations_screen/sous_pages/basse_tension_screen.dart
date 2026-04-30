@@ -3,10 +3,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
-import 'package:inspec_app/models/classement_locaux.dart';
 import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/models/mission.dart';
-import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_zone_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_local_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_zone_screen.dart';
@@ -67,7 +65,8 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
   }
 
   void _ajouterZone() async {
-    final result = await Navigator.push(
+    // BUG #2 FIX: attendre la fin complète du flux de navigation
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AjouterZoneScreen(
@@ -77,13 +76,8 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
       ),
     );
 
-    _loadAudit();
-
-    if (result == true) {
+    if (mounted) {
       await _refreshAllData();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Zone ajoutée avec succès')),
-      );
     }
   }
 
