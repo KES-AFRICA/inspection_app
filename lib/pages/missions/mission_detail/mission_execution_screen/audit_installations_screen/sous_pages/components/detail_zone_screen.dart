@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/mixins/photo_safe_state_mixin.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/observation_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/qr_scan_coffret_screen.dart';
+import 'package:inspec_app/services/safe_image_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
@@ -32,7 +34,8 @@ class DetailZoneScreen extends StatefulWidget {
   State<DetailZoneScreen> createState() => _DetailZoneScreenState();
 }
 
-class _DetailZoneScreenState extends State<DetailZoneScreen> {
+class _DetailZoneScreenState extends State<DetailZoneScreen>
+    with PhotoSafeStateMixin<DetailZoneScreen> {
   late dynamic _zone;
   final ImagePicker _picker = ImagePicker();
   List<String> _zonePhotos = [];
@@ -53,6 +56,12 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     _zone = widget.zone;
     _chargerPhotosZone();
     _loadCoffrets();
+  }
+
+  
+  void _setLoadingZonePhotos(bool v) {
+    if (!mounted) return;
+    setState(() => _isLoadingZonePhotos = v);
   }
 
   // Charger les coffrets (existants + brouillons)
@@ -105,61 +114,71 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   // ===== MÉTHODES POUR GESTION DES PHOTOS DE LA ZONE =====
 
   Future<void> _prendrePhotoZone() async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        setState(() => _isLoadingZonePhotos = true);
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'zones');
-        
+    await runPhotoAction(() async {
+      try {
+        _setLoadingZonePhotos(true);
+
+        final File? photoFile = await SafeImageService.takePhoto(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'zones');
+        if (!mounted) return;
+
         setState(() {
           _zonePhotos.add(savedPath);
           _zone.photos = _zonePhotos;
         });
-        
+
         await _sauvegarderZone();
+        if (!mounted) return;
+
         _showSuccess('Photo ajoutée à la zone');
+      } catch (e) {
+        _showError('Erreur lors de la prise de photo: $e');
+      } finally {
+        _setLoadingZonePhotos(false);
       }
-    } catch (e) {
-      _showError('Erreur lors de la prise de photo: $e');
-    } finally {
-      setState(() => _isLoadingZonePhotos = false);
-    }
+    });
   }
 
   Future<void> _choisirPhotoZoneDepuisGalerie() async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        setState(() => _isLoadingZonePhotos = true);
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'zones');
-        
+    await runPhotoAction(() async {
+      try {
+        _setLoadingZonePhotos(true);
+
+        final File? photoFile = await SafeImageService.pickFromGallery(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'zones');
+        if (!mounted) return;
+
         setState(() {
           _zonePhotos.add(savedPath);
           _zone.photos = _zonePhotos;
         });
-        
+
         await _sauvegarderZone();
+        if (!mounted) return;
+
         _showSuccess('Photo ajoutée depuis la galerie');
+      } catch (e) {
+        _showError('Erreur lors de la sélection: $e');
+      } finally {
+        _setLoadingZonePhotos(false);
       }
-    } catch (e) {
-      _showError('Erreur lors de la sélection: $e');
-    } finally {
-      setState(() => _isLoadingZonePhotos = false);
-    }
+    });
   }
 
   Future<String> _savePhotoToAppDirectory(File photoFile, String subDir) async {
@@ -201,6 +220,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                 child: Image.file(
                   File(photos[index]),
                   fit: BoxFit.contain,
+                  cacheWidth: 1024, 
                 ),
               ),
             ),
@@ -256,29 +276,25 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              
               try {
-                // Supprimer le fichier physique
                 final file = File(photos[index]);
                 if (await file.exists()) {
                   await file.delete();
                 }
-                
-                // Mettre à jour la liste
+
+                if (!mounted) return;
                 setState(() {
                   photos.removeAt(index);
-                  
-                  // Si c'est une photo de la zone, mettre à jour la zone
                   if (photos == _zonePhotos) {
                     _zone.photos = _zonePhotos;
                   }
                 });
-                
-                // Sauvegarder si c'est une photo de la zone
+
                 if (photos == _zonePhotos) {
                   await _sauvegarderZone();
+                  if (!mounted) return;
                 }
-                
+
                 _showSuccess('Photo supprimée');
               } catch (e) {
                 _showError('Erreur lors de la suppression: $e');
@@ -371,6 +387,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
+                          cacheWidth: 600,
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
                               color: Colors.grey.shade200,
@@ -465,43 +482,51 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
 
   // Méthode pour ajouter une photo à une observation
   Future<void> _ajouterPhotoAObservation(List<String> photosList) async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations_zones');
+    await runPhotoAction(() async {
+      try {
+        final File? photoFile = await SafeImageService.takePhoto(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'observations_zones');
+        if (!mounted) return;
+
         setState(() {
           photosList.add(savedPath);
         });
+      } catch (e) {
+        _showError('Erreur lors de la prise de photo: $e');
       }
-    } catch (e) {
-      _showError('Erreur lors de la prise de photo: $e');
-    }
+    });
   }
 
   Future<void> _choisirPhotoObservationDepuisGalerie(List<String> photosList) async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations_zones');
+    await runPhotoAction(() async {
+      try {
+        final File? photoFile = await SafeImageService.pickFromGallery(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'observations_zones');
+        if (!mounted) return;
+
         setState(() {
           photosList.add(savedPath);
         });
+      } catch (e) {
+        _showError('Erreur lors de la sélection: $e');
       }
-    } catch (e) {
-      _showError('Erreur lors de la sélection: $e');
-    }
+    });
   }
 
   void _ajouterObservation() async {
@@ -658,6 +683,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                           child: Image.file(
                             File(observation.photos[photoIndex]),
                             fit: BoxFit.cover,
+                            cacheWidth: 600,
                             errorBuilder: (context, error, stackTrace) {
                               return Container(
                                 color: Colors.grey.shade200,
@@ -1258,6 +1284,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   }
 
   void _showSuccess(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -1268,6 +1295,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   }
 
   void _showError(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),

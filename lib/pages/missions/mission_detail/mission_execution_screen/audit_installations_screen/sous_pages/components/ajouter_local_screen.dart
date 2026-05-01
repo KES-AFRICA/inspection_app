@@ -2,9 +2,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/mixins/photo_safe_state_mixin.dart';
 import 'package:inspec_app/models/classement_locaux.dart';
 import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
+import 'package:inspec_app/services/safe_image_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
@@ -502,7 +504,11 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
                             child: Stack(
                               fit: StackFit.expand,
                               children: [
-                                Image.file(File(widget.localPhotos[index]), fit: BoxFit.cover),
+                                Image.file(
+                                  File(widget.localPhotos[index]), 
+                                  fit: BoxFit.cover,
+                                  cacheWidth: 900,
+                                ),
                                 Positioned(
                                   top: context.spacingS,
                                   right: context.spacingS,
@@ -767,7 +773,11 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
                             decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(context.spacingS),
-                              child: Image.file(File(widget.observationPhotos[index]), fit: BoxFit.cover),
+                              child: Image.file(
+                                File(widget.observationPhotos[index]), 
+                                fit: BoxFit.cover,
+                                cacheWidth: 600,
+                              ),
                             ),
                           );
                         },
@@ -872,7 +882,11 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
                     decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(context.spacingS),
-                      child: Image.file(File(observation.photos[photoIndex]), fit: BoxFit.cover),
+                      child: Image.file(
+                        File(observation.photos[photoIndex]), 
+                        fit: BoxFit.cover,
+                        cacheWidth: 600,
+                      ),
                     ),
                   );
                 },
@@ -895,7 +909,10 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
               decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.file(File(photos[index])),
+                child: Image.file(
+                  File(photos[index]),
+                  cacheWidth: 1000,
+                ),
               ),
             ),
             Positioned(
@@ -927,6 +944,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
+              if (!mounted) return;
               widget.onSupprimerPhoto();
               setState(() {
                 if (_currentPhotoIndex >= widget.localPhotos.length) {
@@ -2010,7 +2028,12 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
                       decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(context.spacingS),
-                        child: Image.file(File(element.photos[photoIndex]), fit: BoxFit.cover),
+                        child: Image.file(
+                          File(element.photos[photoIndex]), 
+                          fit: BoxFit.cover,
+                          cacheWidth: 600,
+                        ),
+                          
                       ),
                     ),
                     Positioned(
@@ -3533,7 +3556,11 @@ class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur
                       decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(context.spacingS),
-                        child: Image.file(File(element.photos[photoIndex]), fit: BoxFit.cover),
+                        child: Image.file(
+                          File(element.photos[photoIndex]), 
+                          fit: BoxFit.cover,
+                          cacheWidth: 600,
+                        ),
                       ),
                     ),
                     Positioned(
@@ -3653,7 +3680,8 @@ class AjouterLocalScreen extends StatefulWidget {
   State<AjouterLocalScreen> createState() => _AjouterLocalScreenState();
 }
 
-class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
+class _AjouterLocalScreenState extends State<AjouterLocalScreen>
+    with PhotoSafeStateMixin<AjouterLocalScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nomController = TextEditingController();
   String? _selectedType;
@@ -3754,6 +3782,11 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         _loadDraft();
       }
     }
+  }
+
+  void _setLoadingPhotos(bool v) {
+    if (!mounted) return;
+    setState(() => _isLoadingPhotos = v);
   }
 
   Future<void> _loadDraft() async {
@@ -4247,69 +4280,112 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   }
 
   void _showSnackBar(String message, Color color) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text(message), backgroundColor: color, duration: const Duration(seconds: 2)),
     );
   }
 
   Future<void> _prendrePhotoLocal() async {
-    try {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
-      if (photo != null) {
-        setState(() => _isLoadingPhotos = true);
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'locaux');
+    await runPhotoAction(() async {
+      try {
+        _setLoadingPhotos(true);
+
+        final File? photoFile = await SafeImageService.takePhoto(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'locaux');
+        if (!mounted) return;
+
         setState(() {
           _localPhotos.add(savedPath);
           _validateLocalPhotos();
         });
+      } catch (e) {
+        _showError('Erreur lors de la prise de photo: $e');
+      } finally {
+        _setLoadingPhotos(false);
       }
-    } catch (e) {
-      _showError('Erreur lors de la prise de photo: $e');
-    } finally {
-      setState(() => _isLoadingPhotos = false);
-    }
+    });
   }
 
   Future<void> _choisirPhotoLocalDepuisGalerie() async {
-    try {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
-      if (photo != null) {
-        setState(() => _isLoadingPhotos = true);
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'locaux');
+    await runPhotoAction(() async {
+      try {
+        _setLoadingPhotos(true);
+
+        final File? photoFile = await SafeImageService.pickFromGallery(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'locaux');
+        if (!mounted) return;
+
         setState(() {
           _localPhotos.add(savedPath);
           _validateLocalPhotos();
         });
+      } catch (e) {
+        _showError('Erreur lors de la sélection: $e');
+      } finally {
+        _setLoadingPhotos(false);
       }
-    } catch (e) {
-      _showError('Erreur lors de la sélection: $e');
-    } finally {
-      setState(() => _isLoadingPhotos = false);
-    }
+    });
   }
 
   Future<void> _prendrePhotoObservation() async {
-    try {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
-      if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations');
+    await runPhotoAction(() async {
+      try {
+        final File? photoFile = await SafeImageService.takePhoto(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'observations');
+        if (!mounted) return;
+
         setState(() => _observationPhotos.add(savedPath));
+      } catch (e) {
+        _showError('Erreur lors de la prise de photo: $e');
       }
-    } catch (e) {
-      _showError('Erreur lors de la prise de photo: $e');
-    }
+    });
   }
 
   Future<void> _choisirPhotoObservationDepuisGalerie() async {
-    try {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
-      if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations');
+    await runPhotoAction(() async {
+      try {
+        final File? photoFile = await SafeImageService.pickFromGallery(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'observations');
+        if (!mounted) return;
+
         setState(() => _observationPhotos.add(savedPath));
+      } catch (e) {
+        _showError('Erreur lors de la sélection: $e');
       }
-    } catch (e) {
-      _showError('Erreur lors de la sélection: $e');
-    }
+    });
   }
 
   Future<String> _savePhotoToAppDirectory(File photoFile, String subDir) async {
@@ -4331,8 +4407,18 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         child: Stack(
           children: [
             Container(
-              decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, spreadRadius: 2)]),
-              child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(photos[index]), fit: BoxFit.contain)),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, spreadRadius: 2)],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  File(photos[index]),
+                  fit: BoxFit.contain,
+                  cacheWidth: 1024, 
+                ),
+              ),
             ),
             Positioned(
               top: 10,
@@ -4352,7 +4438,10 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                   const SizedBox(width: 8),
                   Container(
                     decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                    child: IconButton(icon: const Icon(Icons.close, color: Colors.white), onPressed: () => Navigator.pop(context)),
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white),
+                      onPressed: () => Navigator.pop(context),
+                    ),
                   ),
                 ],
               ),
@@ -4374,6 +4463,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
+              if (!mounted) return;
               setState(() {
                 photos.removeAt(index);
                 _validateLocalPhotos();
@@ -4574,29 +4664,63 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   }
 
   Future<void> _prendrePhotoPourElement(ElementControle element, int elementIndex, String sectionType) async {
-    try {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
-      if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'element_photos');
+    await runPhotoAction(() async {
+      try {
+        final File? photoFile = await SafeImageService.takePhoto(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'element_photos');
+        if (!mounted) return;
+
         setState(() => element.photos.add(savedPath));
-        await HiveService.addPhotoToElementControle(missionId: widget.mission.id, localisation: _nomController.text.trim(), elementIndex: elementIndex, cheminPhoto: savedPath, sectionType: sectionType);
+
+        await HiveService.addPhotoToElementControle(
+          missionId: widget.mission.id,
+          localisation: _nomController.text.trim(),
+          elementIndex: elementIndex,
+          cheminPhoto: savedPath,
+          sectionType: sectionType,
+        );
+      } catch (e) {
+        _showError('Erreur lors de la prise de photo: $e');
       }
-    } catch (e) {
-      _showError('Erreur lors de la prise de photo: $e');
-    }
+    });
   }
 
   Future<void> _choisirPhotoPourElement(ElementControle element, int elementIndex, String sectionType) async {
-    try {
-      final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
-      if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'element_photos');
+    await runPhotoAction(() async {
+      try {
+        final File? photoFile = await SafeImageService.pickFromGallery(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'element_photos');
+        if (!mounted) return;
+
         setState(() => element.photos.add(savedPath));
-        await HiveService.addPhotoToElementControle(missionId: widget.mission.id, localisation: _nomController.text.trim(), elementIndex: elementIndex, cheminPhoto: savedPath, sectionType: sectionType);
+
+        await HiveService.addPhotoToElementControle(
+          missionId: widget.mission.id,
+          localisation: _nomController.text.trim(),
+          elementIndex: elementIndex,
+          cheminPhoto: savedPath,
+          sectionType: sectionType,
+        );
+      } catch (e) {
+        _showError('Erreur lors de la sélection: $e');
       }
-    } catch (e) {
-      _showError('Erreur lors de la sélection: $e');
-    }
+    });
   }
 
   void _supprimerPhotoElement(ElementControle element, int elementIndex, int photoIndex, String sectionType) async {
@@ -4610,8 +4734,17 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
+
+              if (!mounted) return;
               setState(() => element.photos.removeAt(photoIndex));
-              await HiveService.removePhotoFromElementControle(missionId: widget.mission.id, localisation: _nomController.text.trim(), elementIndex: elementIndex, photoIndex: photoIndex, sectionType: sectionType);
+
+              await HiveService.removePhotoFromElementControle(
+                missionId: widget.mission.id,
+                localisation: _nomController.text.trim(),
+                elementIndex: elementIndex,
+                photoIndex: photoIndex,
+                sectionType: sectionType,
+              );
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: const Text('Supprimer'),
@@ -5024,6 +5157,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   }
 
   void _showError(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red, duration: const Duration(seconds: 3)));
   }
 

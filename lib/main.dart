@@ -20,6 +20,12 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
+  
+  FlutterError.onError = (details) {
+      FlutterError.presentError(details);
+      debugPrint(details.toString());
+  };
+
   runApp(const MyApp());
 }
 

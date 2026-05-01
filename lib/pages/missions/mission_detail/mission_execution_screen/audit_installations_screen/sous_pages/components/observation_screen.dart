@@ -1,13 +1,15 @@
 // observation_screen.dart
 import 'package:flutter/material.dart';
-import 'package:image_picker/image_picker.dart';
+
 import 'package:path_provider/path_provider.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'dart:io';
+import 'package:inspec_app/services/safe_image_service.dart';
+import 'package:inspec_app/mixins/photo_safe_state_mixin.dart';
 
 class ObservationScreen extends StatefulWidget {
-  final ObservationLibre? observation; // null pour création, non-null pour édition
+  final ObservationLibre? observation;
   final String title;
   final Function(ObservationLibre) onSave;
   final bool canAddPhotos;
@@ -24,16 +26,16 @@ class ObservationScreen extends StatefulWidget {
   State<ObservationScreen> createState() => _ObservationScreenState();
 }
 
-class _ObservationScreenState extends State<ObservationScreen> {
+class _ObservationScreenState extends State<ObservationScreen>
+    with PhotoSafeStateMixin<ObservationScreen> {
   final _texteController = TextEditingController();
-  final _picker = ImagePicker();
+
   List<String> _photos = [];
   bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
-    
     if (widget.observation != null) {
       _texteController.text = widget.observation!.texte;
       _photos = List.from(widget.observation!.photos);
@@ -49,70 +51,81 @@ class _ObservationScreenState extends State<ObservationScreen> {
   Future<String> _savePhotoToAppDirectory(File photoFile) async {
     final appDir = await getApplicationDocumentsDirectory();
     final photosDir = Directory('${appDir.path}/audit_photos/observations');
-    
     if (!await photosDir.exists()) {
       await photosDir.create(recursive: true);
     }
-    
     final fileName = 'obs_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final newPath = '${photosDir.path}/$fileName';
-    
     await photoFile.copy(newPath);
     return newPath;
   }
 
+  // ✅ Sécurisation loading + mounted
+  void _setLoading(bool v) {
+    if (!mounted) return;
+    setState(() => _isLoading = v);
+  }
+
   Future<void> _prendrePhoto() async {
     if (!widget.canAddPhotos) return;
-    
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        setState(() => _isLoading = true);
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path));
-        
+
+    await runPhotoAction(() async {
+      try {
+        _setLoading(true);
+
+        final File? photoFile = await SafeImageService.takePhoto(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        // Annulé ou écran déjà détruit
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile);
+        if (!mounted) return;
+
         setState(() {
           _photos.add(savedPath);
         });
+      } catch (e) {
+        _showError('Erreur lors de la prise de photo: $e');
+      } finally {
+        _setLoading(false);
       }
-    } catch (e) {
-      _showError('Erreur lors de la prise de photo: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
+    });
   }
 
   Future<void> _choisirPhotoDepuisGalerie() async {
     if (!widget.canAddPhotos) return;
-    
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        setState(() => _isLoading = true);
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path));
-        
+
+    await runPhotoAction(() async {
+      try {
+        _setLoading(true);
+
+        final File? photoFile = await SafeImageService.pickFromGallery(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        // Annulé ou écran déjà détruit
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile);
+        if (!mounted) return;
+
         setState(() {
           _photos.add(savedPath);
         });
+      } catch (e) {
+        _showError('Erreur lors de la sélection: $e');
+      } finally {
+        _setLoading(false);
       }
-    } catch (e) {
-      _showError('Erreur lors de la sélection: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
+    });
   }
 
   void _supprimerPhoto(int index) {
@@ -129,6 +142,7 @@ class _ObservationScreenState extends State<ObservationScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
+              if (!mounted) return;
               setState(() {
                 _photos.removeAt(index);
               });
@@ -164,6 +178,8 @@ class _ObservationScreenState extends State<ObservationScreen> {
                 child: Image.file(
                   File(_photos[index]),
                   fit: BoxFit.contain,
+                  // ✅ Limite mémoire (préview)
+                  cacheWidth: 1024,
                 ),
               ),
             ),
@@ -189,7 +205,6 @@ class _ObservationScreenState extends State<ObservationScreen> {
 
   Widget _buildPhotosSection() {
     if (!widget.canAddPhotos) return SizedBox.shrink();
-    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -202,7 +217,6 @@ class _ObservationScreenState extends State<ObservationScreen> {
           ),
         ),
         SizedBox(height: 8),
-
         if (_isLoading)
           Center(child: CircularProgressIndicator())
         else if (_photos.isEmpty)
@@ -258,6 +272,8 @@ class _ObservationScreenState extends State<ObservationScreen> {
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
+                          // ✅ Limite mémoire (miniatures)
+                          cacheWidth: 600,
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
                               color: Colors.grey.shade200,
@@ -296,9 +312,7 @@ class _ObservationScreenState extends State<ObservationScreen> {
               );
             },
           ),
-
         SizedBox(height: 16),
-
         if (widget.canAddPhotos)
           Column(
             children: [
@@ -336,6 +350,7 @@ class _ObservationScreenState extends State<ObservationScreen> {
   }
 
   void _showError(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -359,14 +374,12 @@ class _ObservationScreenState extends State<ObservationScreen> {
                 _showError('Veuillez saisir une observation');
                 return;
               }
-              
               final observation = ObservationLibre(
                 texte: texte,
                 photos: List.from(_photos),
                 dateCreation: widget.observation?.dateCreation ?? DateTime.now(),
                 dateModification: DateTime.now(),
               );
-              
               widget.onSave(observation);
               Navigator.pop(context);
             },

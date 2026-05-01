@@ -1,8 +1,11 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/mixins/photo_safe_state_mixin.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/observation_screen.dart';
+import 'package:inspec_app/services/safe_image_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
@@ -37,7 +40,9 @@ class DetailCoffretScreen extends StatefulWidget {
   State<DetailCoffretScreen> createState() => _DetailCoffretScreenState();
 }
 
-class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
+class _DetailCoffretScreenState extends State<DetailCoffretScreen>
+    with PhotoSafeStateMixin<DetailCoffretScreen> {
+
   late CoffretArmoire _coffret;
   final ImagePicker _picker = ImagePicker();
   List<String> _coffretPhotos = [];
@@ -55,6 +60,11 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
     _chargerPhotosCoffret();
   }
 
+  void _setLoadingPhotos(bool v) {
+    if (!mounted) return;
+    setState(() => _isLoadingPhotos = v);
+  }
+
   void _chargerPhotosCoffret() {
     if (_coffret.photos.isNotEmpty) {
       setState(() {
@@ -66,61 +76,71 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
   // ===== MÉTHODES POUR GESTION DES PHOTOS DU COFFRET =====
 
   Future<void> _prendrePhotoCoffret() async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        setState(() => _isLoadingPhotos = true);
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets');
-        
+    await runPhotoAction(() async {
+      try {
+        _setLoadingPhotos(true);
+
+        final File? photoFile = await SafeImageService.takePhoto(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'coffrets');
+        if (!mounted) return;
+
         setState(() {
           _coffretPhotos.add(savedPath);
           _coffret.photos = _coffretPhotos;
         });
-        
+
         await _sauvegarderCoffret();
-        _showSuccess('Photo ajoutée à l\' équipement');
+        if (!mounted) return;
+
+        _showSuccess("Photo ajoutée à l' équipement");
+      } catch (e) {
+        _showError('Erreur lors de la prise de photo: $e');
+      } finally {
+        _setLoadingPhotos(false);
       }
-    } catch (e) {
-      _showError('Erreur lors de la prise de photo: $e');
-    } finally {
-      setState(() => _isLoadingPhotos = false);
-    }
+    });
   }
 
   Future<void> _choisirPhotoCoffretDepuisGalerie() async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        setState(() => _isLoadingPhotos = true);
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets');
-        
+    await runPhotoAction(() async {
+      try {
+        _setLoadingPhotos(true);
+
+        final File? photoFile = await SafeImageService.pickFromGallery(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'coffrets');
+        if (!mounted) return;
+
         setState(() {
           _coffretPhotos.add(savedPath);
           _coffret.photos = _coffretPhotos;
         });
-        
+
         await _sauvegarderCoffret();
+        if (!mounted) return;
+
         _showSuccess('Photo ajoutée depuis la galerie');
+      } catch (e) {
+        _showError('Erreur lors de la sélection: $e');
+      } finally {
+        _setLoadingPhotos(false);
       }
-    } catch (e) {
-      _showError('Erreur lors de la sélection: $e');
-    } finally {
-      setState(() => _isLoadingPhotos = false);
-    }
+    });
   }
 
   Future<String> _savePhotoToAppDirectory(File photoFile, String subDir) async {
@@ -162,6 +182,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
                 child: Image.file(
                   File(photos[index]),
                   fit: BoxFit.contain,
+                  cacheWidth: 1024,
                 ),
               ),
             ),
@@ -217,29 +238,25 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              
               try {
-                // Supprimer le fichier physique
                 final file = File(photos[index]);
                 if (await file.exists()) {
                   await file.delete();
                 }
-                
-                // Mettre à jour la liste
+
+                if (!mounted) return;
                 setState(() {
                   photos.removeAt(index);
-                  
-                  // Si c'est une photo du coffret, mettre à jour le coffret
                   if (photos == _coffretPhotos) {
                     _coffret.photos = _coffretPhotos;
                   }
                 });
-                
-                // Sauvegarder si c'est une photo du coffret
+
                 if (photos == _coffretPhotos) {
                   await _sauvegarderCoffret();
+                  if (!mounted) return;
                 }
-                
+
                 _showSuccess('Photo supprimée');
               } catch (e) {
                 _showError('Erreur lors de la suppression: $e');
@@ -332,6 +349,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
+                          cacheWidth: 600,
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
                               color: Colors.grey.shade200,
@@ -426,43 +444,51 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
 
   // Méthode pour ajouter une photo à une observation
   Future<void> _ajouterPhotoAObservation(List<String> photosList) async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations');
+    await runPhotoAction(() async {
+      try {
+        final File? photoFile = await SafeImageService.takePhoto(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'observations');
+        if (!mounted) return;
+
         setState(() {
           photosList.add(savedPath);
         });
+      } catch (e) {
+        _showError('Erreur lors de la prise de photo: $e');
       }
-    } catch (e) {
-      _showError('Erreur lors de la prise de photo: $e');
-    }
+    });
   }
 
   Future<void> _choisirPhotoObservationDepuisGalerie(List<String> photosList) async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations');
+    await runPhotoAction(() async {
+      try {
+        final File? photoFile = await SafeImageService.pickFromGallery(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'observations');
+        if (!mounted) return;
+
         setState(() {
           photosList.add(savedPath);
         });
+      } catch (e) {
+        _showError('Erreur lors de la sélection: $e');
       }
-    } catch (e) {
-      _showError('Erreur lors de la sélection: $e');
-    }
+    });
   }
 
   void _ajouterObservation() async {
@@ -534,7 +560,9 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
                     await file.delete();
                   }
                 } catch (e) {
-                  print('Erreur suppression photo: $e');
+                  if (kDebugMode) {
+                    print('Erreur suppression photo: $e');
+                  }
                 }
               }
               
@@ -588,7 +616,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
             
             SizedBox(height: 4),
             Text(
-              '${_formatDate(observation.dateCreation)}',
+              _formatDate(observation.dateCreation),
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
             
@@ -619,6 +647,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
                           child: Image.file(
                             File(observation.photos[photoIndex]),
                             fit: BoxFit.cover,
+                            cacheWidth: 600,
                             errorBuilder: (context, error, stackTrace) {
                               return Container(
                                 color: Colors.grey.shade200,
@@ -863,6 +892,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
   }
 
   void _showSuccess(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -873,6 +903,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
   }
 
   void _showError(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -975,7 +1006,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
+          SizedBox(
             width: 120,
             child: Text(
               '$label:',
@@ -1100,7 +1131,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
                 ),
               ),
               SizedBox(height: 4),
-              Container(
+              SizedBox(
                 height: 60,
                 child: ListView.builder(
                   scrollDirection: Axis.horizontal,
@@ -1123,6 +1154,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
                           child: Image.file(
                             File(point.photos[photoIndex]),
                             fit: BoxFit.cover,
+                            cacheWidth: 600,
                             errorBuilder: (context, error, stackTrace) {
                               return Container(
                                 color: Colors.grey.shade200,
@@ -1180,7 +1212,9 @@ Future<List<EssaiDeclenchementDifferentiel>> _getEssaisPourCoffret() async {
     
     return essaisPourCoffret;
   } catch (e) {
-    print('❌ Erreur chargement essais pour coffret "${_coffret.nom}": $e');
+    if (kDebugMode) {
+      print('❌ Erreur chargement essais pour coffret "${_coffret.nom}": $e');
+    }
     return [];
   }
 }
@@ -1559,7 +1593,9 @@ void _editerEssai(EssaiDeclenchementDifferentiel essai) async {
       _showError('Essai non trouvé pour la modification');
     }
   } catch (e) {
-    print('❌ Erreur éditer essai: $e');
+    if (kDebugMode) {
+      print('❌ Erreur éditer essai: $e');
+    }
     _showError('Erreur lors de la modification de l\'essai');
   }
 }
@@ -1635,7 +1671,9 @@ void _ajouterEssai() async {
       _showSuccess('Essai ajouté');
     }
   } catch (e) {
-    print('❌ Erreur ajouter essai: $e');
+    if (kDebugMode) {
+      print('❌ Erreur ajouter essai: $e');
+    }
     _showError('Erreur lors de l\'ajout de l\'essai: $e');
   }
 }
@@ -1695,7 +1733,9 @@ Future<void> _supprimerEssai(EssaiDeclenchementDifferentiel essai) async {
       _showError('Essai non trouvé pour la suppression');
     }
   } catch (e) {
-    print('❌ Erreur supprimer essai: $e');
+    if (kDebugMode) {
+      print('❌ Erreur supprimer essai: $e');
+    }
     _showError('Erreur lors de la suppression de l\'essai');
   }
 }

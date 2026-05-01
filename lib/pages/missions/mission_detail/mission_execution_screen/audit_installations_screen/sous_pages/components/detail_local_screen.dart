@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/mixins/photo_safe_state_mixin.dart';
 import 'package:inspec_app/models/classement_locaux.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/observation_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/qr_scan_coffret_screen.dart';
+import 'package:inspec_app/services/safe_image_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
@@ -37,7 +39,9 @@ class DetailLocalScreen extends StatefulWidget {
   State<DetailLocalScreen> createState() => _DetailLocalScreenState();
 }
 
-class _DetailLocalScreenState extends State<DetailLocalScreen> {
+class _DetailLocalScreenState extends State<DetailLocalScreen>
+    with PhotoSafeStateMixin<DetailLocalScreen> {
+
   late dynamic _local;
   List<CoffretArmoire> _coffrets = [];
   final ImagePicker _picker = ImagePicker();
@@ -58,6 +62,11 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
         _chargerPhotosLocal();
       }
     });
+  }
+
+  void _setLoadingLocalPhotos(bool v) {
+    if (!mounted) return;
+    setState(() => _isLoadingLocalPhotos = v);
   }
 
   // Charger les coffrets (existants + brouillons)
@@ -179,61 +188,71 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   // ===== MÉTHODES POUR GESTION DES PHOTOS DU LOCAL =====
 
   Future<void> _prendrePhotoLocal() async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        setState(() => _isLoadingLocalPhotos = true);
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'locaux');
-        
+    await runPhotoAction(() async {
+      try {
+        _setLoadingLocalPhotos(true);
+
+        final File? photoFile = await SafeImageService.takePhoto(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'locaux');
+        if (!mounted) return;
+
         setState(() {
           _localPhotos.add(savedPath);
           _local.photos = _localPhotos;
         });
-        
+
         await _sauvegarderLocal();
+        if (!mounted) return;
+
         _showSuccess('Photo ajoutée au local');
+      } catch (e) {
+        _showError('Erreur lors de la prise de photo: $e');
+      } finally {
+        _setLoadingLocalPhotos(false);
       }
-    } catch (e) {
-      _showError('Erreur lors de la prise de photo: $e');
-    } finally {
-      setState(() => _isLoadingLocalPhotos = false);
-    }
+    });
   }
 
   Future<void> _choisirPhotoLocalDepuisGalerie() async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        setState(() => _isLoadingLocalPhotos = true);
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'locaux');
-        
+    await runPhotoAction(() async {
+      try {
+        _setLoadingLocalPhotos(true);
+
+        final File? photoFile = await SafeImageService.pickFromGallery(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'locaux');
+        if (!mounted) return;
+
         setState(() {
           _localPhotos.add(savedPath);
           _local.photos = _localPhotos;
         });
-        
+
         await _sauvegarderLocal();
+        if (!mounted) return;
+
         _showSuccess('Photo ajoutée depuis la galerie');
+      } catch (e) {
+        _showError('Erreur lors de la sélection: $e');
+      } finally {
+        _setLoadingLocalPhotos(false);
       }
-    } catch (e) {
-      _showError('Erreur lors de la sélection: $e');
-    } finally {
-      setState(() => _isLoadingLocalPhotos = false);
-    }
+    });
   }
 
   Future<String> _savePhotoToAppDirectory(File photoFile, String subDir) async {
@@ -275,6 +294,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                 child: Image.file(
                   File(photos[index]),
                   fit: BoxFit.contain,
+                  cacheWidth: 1024, 
                 ),
               ),
             ),
@@ -330,29 +350,25 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              
               try {
-                // Supprimer le fichier physique
                 final file = File(photos[index]);
                 if (await file.exists()) {
                   await file.delete();
                 }
-                
-                // Mettre à jour la liste
+
+                if (!mounted) return;
                 setState(() {
                   photos.removeAt(index);
-                  
-                  // Si c'est une photo du local, mettre à jour le local
                   if (photos == _localPhotos) {
                     _local.photos = _localPhotos;
                   }
                 });
-                
-                // Sauvegarder si c'est une photo du local
+
                 if (photos == _localPhotos) {
                   await _sauvegarderLocal();
+                  if (!mounted) return;
                 }
-                
+
                 _showSuccess('Photo supprimée');
               } catch (e) {
                 _showError('Erreur lors de la suppression: $e');
@@ -445,6 +461,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
+                          cacheWidth: 600,
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
                               color: Colors.grey.shade200,
@@ -539,43 +556,51 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
 
   // Méthode pour ajouter une photo à une observation
   Future<void> _ajouterPhotoAObservation(List<String> photosList) async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations_locaux');
+    await runPhotoAction(() async {
+      try {
+        final File? photoFile = await SafeImageService.takePhoto(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'observations_locaux');
+        if (!mounted) return;
+
         setState(() {
           photosList.add(savedPath);
         });
+      } catch (e) {
+        _showError('Erreur lors de la prise de photo: $e');
       }
-    } catch (e) {
-      _showError('Erreur lors de la prise de photo: $e');
-    }
+    });
   }
 
   Future<void> _choisirPhotoObservationDepuisGalerie(List<String> photosList) async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations_locaux');
+    await runPhotoAction(() async {
+      try {
+        final File? photoFile = await SafeImageService.pickFromGallery(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'observations_locaux');
+        if (!mounted) return;
+
         setState(() {
           photosList.add(savedPath);
         });
+      } catch (e) {
+        _showError('Erreur lors de la sélection: $e');
       }
-    } catch (e) {
-      _showError('Erreur lors de la sélection: $e');
-    }
+    });
   }
 
   void _ajouterObservation() async {
@@ -655,7 +680,9 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                     await file.delete();
                   }
                 } catch (e) {
-                  print('Erreur suppression photo: $e');
+                  if (kDebugMode) {
+                    print('Erreur suppression photo: $e');
+                  }
                 }
               }
               
@@ -709,7 +736,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
             
             SizedBox(height: 4),
             Text(
-              '${_formatDate(observation.dateCreation)}',
+              _formatDate(observation.dateCreation),
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
             
@@ -740,6 +767,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                           child: Image.file(
                             File(observation.photos[photoIndex]),
                             fit: BoxFit.cover,
+                            cacheWidth: 600,
                             errorBuilder: (context, error, stackTrace) {
                               return Container(
                                 color: Colors.grey.shade200,
@@ -946,6 +974,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   }
 
   void _showSuccess(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -1064,13 +1093,16 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       
       await HiveService.saveAuditInstallations(audit);
     } catch (e) {
-      print('❌ Erreur sauvegarderLocal: $e');
-      throw e;
+      if (kDebugMode) {
+        print('❌ Erreur sauvegarderLocal: $e');
+      }
+      rethrow;
     }
   }
 
 
   void _showError(String message) {
+    if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
@@ -1123,7 +1155,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
               ],
             ),
             SizedBox(height: 12),
-            ...elements.map((element) => _buildElementItem(element)).toList(),
+            ...elements.map((element) => _buildElementItem(element)),
           ],
         ),
       ),
@@ -1586,6 +1618,7 @@ Widget _buildElementItem(ElementControle element) {
                       child: Image.file(
                         File(element.photos[photoIndex]),
                         fit: BoxFit.cover,
+                        cacheWidth: 600,
                         errorBuilder: (context, error, stackTrace) {
                           return Container(
                             color: Colors.grey.shade200,

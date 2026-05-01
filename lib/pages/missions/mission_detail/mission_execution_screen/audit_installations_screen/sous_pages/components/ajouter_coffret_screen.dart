@@ -1,8 +1,10 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/mixins/photo_safe_state_mixin.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
 import 'package:inspec_app/services/normative_reference_service.dart';
+import 'package:inspec_app/services/safe_image_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
@@ -536,7 +538,11 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(context.spacingS),
-                              child: Image.file(File(photos[index]), fit: BoxFit.cover),
+                              child: Image.file(
+                                File(photos[index]), 
+                                fit: BoxFit.cover,
+                                cacheWidth: 800,
+                              ),
                             ),
                           ),
                           Positioned(
@@ -744,7 +750,10 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.file(File(photos[index])),
+                child: Image.file(
+                  File(photos[index]),
+                  cacheWidth: 1024, 
+                ),
               ),
             ),
             Positioned(
@@ -762,30 +771,54 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
   }
 
   Future<void> _prendrePhotoParafoudre() async {
-    final picker = ImagePicker();
-    final XFile? photo = await picker.pickImage(source: ImageSource.camera, imageQuality: 85);
-    if (photo != null) {
+    try {
+      final File? photoFile = await SafeImageService.takePhoto(
+        mounted: mounted,
+        imageQuality: 85,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
+
+      if (photoFile == null || !mounted) return;
+
       final appDir = await getApplicationDocumentsDirectory();
       final photosDir = Directory('${appDir.path}/audit_photos/parafoudre');
       if (!await photosDir.exists()) await photosDir.create(recursive: true);
+
       final fileName = 'parafoudre_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final newPath = '${photosDir.path}/$fileName';
-      await File(photo.path).copy(newPath);
+      await photoFile.copy(newPath);
+
+      if (!mounted) return;
       setState(() => _observationParafoudrePhotos.add(newPath));
+    } catch (_) {
+      // pas de changement UI demandé ici
     }
   }
 
   Future<void> _choisirPhotoParafoudre() async {
-    final picker = ImagePicker();
-    final XFile? photo = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
-    if (photo != null) {
+    try {
+      final File? photoFile = await SafeImageService.pickFromGallery(
+        mounted: mounted,
+        imageQuality: 85,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
+
+      if (photoFile == null || !mounted) return;
+
       final appDir = await getApplicationDocumentsDirectory();
       final photosDir = Directory('${appDir.path}/audit_photos/parafoudre');
       if (!await photosDir.exists()) await photosDir.create(recursive: true);
+
       final fileName = 'parafoudre_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final newPath = '${photosDir.path}/$fileName';
-      await File(photo.path).copy(newPath);
+      await photoFile.copy(newPath);
+
+      if (!mounted) return;
       setState(() => _observationParafoudrePhotos.add(newPath));
+    } catch (_) {
+      // idem
     }
   }
 
@@ -1072,7 +1105,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
 
   void _ajouterParafoudreObservation() {
     final texte = _observationParafoudreController.text.trim();
-    if (texte.isEmpty) {
+    if (texte.isEmpty && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Veuillez saisir une observation'), backgroundColor: Colors.red),
       );
@@ -2450,7 +2483,8 @@ class AjouterCoffretScreen extends StatefulWidget {
   State<AjouterCoffretScreen> createState() => _AjouterCoffretScreenState();
 }
 
-class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
+class _AjouterCoffretScreenState extends State<AjouterCoffretScreen>
+    with PhotoSafeStateMixin<AjouterCoffretScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nomController = TextEditingController();
   final _numeroEquipementController = TextEditingController();
@@ -2531,6 +2565,16 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
         _loadDraftByQrCode(_draftQrCode!);
       }
     }
+  }
+
+  void _setLoadingExterne(bool v) {
+    if (!mounted) return;
+    setState(() => _isLoadingPhotosExterne = v);
+  }
+
+  void _setLoadingInterne(bool v) {
+    if (!mounted) return;
+    setState(() => _isLoadingPhotosInterne = v);
   }
 
   // Charger un brouillon par QR code
@@ -2998,145 +3042,131 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   }
 
   Future<void> _prendrePhotoExterne() async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.rear,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        if (mounted) {
-          setState(() => _isLoadingPhotosExterne = true);
+    await runPhotoAction(() async {
+      try {
+        _setLoadingExterne(true);
+
+        final File? photoFile = await SafeImageService.takePhoto(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'coffrets_externe');
+        if (!mounted) return;
+
+        setState(() {
+          _coffretPhotosExterne.add(savedPath);
+          _validatePhotosExterne();
+        });
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erreur photo externe: $e');
         }
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_externe');
-        
-        if (mounted) {
-          setState(() {
-            _coffretPhotosExterne.add(savedPath);
-            _validatePhotosExterne();
-            _isLoadingPhotosExterne = false;
-          });
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Erreur photo externe: $e');
-      }
-      if (mounted) {
-        setState(() => _isLoadingPhotosExterne = false);
         _showError('Erreur lors de la prise de photo: $e');
+      } finally {
+        _setLoadingExterne(false);
       }
-    }
+    });
   }
 
   Future<void> _choisirPhotoExterne() async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        if (mounted) {
-          setState(() => _isLoadingPhotosExterne = true);
+    await runPhotoAction(() async {
+      try {
+        _setLoadingExterne(true);
+
+        final File? photoFile = await SafeImageService.pickFromGallery(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'coffrets_externe');
+        if (!mounted) return;
+
+        setState(() {
+          _coffretPhotosExterne.add(savedPath);
+          _validatePhotosExterne();
+        });
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erreur sélection photo externe: $e');
         }
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_externe');
-        
-        if (mounted) {
-          setState(() {
-            _coffretPhotosExterne.add(savedPath);
-            _validatePhotosExterne();
-            _isLoadingPhotosExterne = false;
-          });
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Erreur sélection photo externe: $e');
-      }
-      if (mounted) {
-        setState(() => _isLoadingPhotosExterne = false);
         _showError('Erreur lors de la sélection: $e');
+      } finally {
+        _setLoadingExterne(false);
       }
-    }
+    });
   }
 
   Future<void> _prendrePhotoInterne() async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.rear,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        if (mounted) {
-          setState(() => _isLoadingPhotosInterne = true);
+    await runPhotoAction(() async {
+      try {
+        _setLoadingInterne(true);
+
+        final File? photoFile = await SafeImageService.takePhoto(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'coffrets_interne');
+        if (!mounted) return;
+
+        setState(() {
+          _coffretPhotosInterne.add(savedPath);
+          _validatePhotosInterne();
+        });
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erreur photo interne: $e');
         }
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_interne');
-        
-        if (mounted) {
-          setState(() {
-            _coffretPhotosInterne.add(savedPath);
-            _validatePhotosInterne();
-            _isLoadingPhotosInterne = false;
-          });
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Erreur photo interne: $e');
-      }
-      if (mounted) {
-        setState(() => _isLoadingPhotosInterne = false);
         _showError('Erreur lors de la prise de photo: $e');
+      } finally {
+        _setLoadingInterne(false);
       }
-    }
+    });
   }
 
   Future<void> _choisirPhotoInterne() async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-      
-      if (photo != null) {
-        if (mounted) {
-          setState(() => _isLoadingPhotosInterne = true);
+    await runPhotoAction(() async {
+      try {
+        _setLoadingInterne(true);
+
+        final File? photoFile = await SafeImageService.pickFromGallery(
+          mounted: mounted,
+          imageQuality: 85,
+          maxWidth: 1024,
+          maxHeight: 1024,
+        );
+
+        if (photoFile == null || !mounted) return;
+
+        final savedPath = await _savePhotoToAppDirectory(photoFile, 'coffrets_interne');
+        if (!mounted) return;
+
+        setState(() {
+          _coffretPhotosInterne.add(savedPath);
+          _validatePhotosInterne();
+        });
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erreur sélection photo interne: $e');
         }
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_interne');
-        
-        if (mounted) {
-          setState(() {
-            _coffretPhotosInterne.add(savedPath);
-            _validatePhotosInterne();
-            _isLoadingPhotosInterne = false;
-          });
-        }
-      }
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Erreur sélection photo interne: $e');
-      }
-      if (mounted) {
-        setState(() => _isLoadingPhotosInterne = false);
         _showError('Erreur lors de la sélection: $e');
+      } finally {
+        _setLoadingInterne(false);
       }
-    }
+    });
   }
 
   Future<String> _savePhotoToAppDirectory(File photoFile, String subDir) async {
@@ -3178,6 +3208,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
+              if (!mounted) return;
               setState(() {
                 _coffretPhotosExterne.removeAt(index);
                 _validatePhotosExterne();
@@ -3205,6 +3236,7 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
+              if (!mounted) return;
               setState(() {
                 _coffretPhotosInterne.removeAt(index);
                 _validatePhotosInterne();
@@ -3218,9 +3250,16 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     );
   }
 
-  void _showError(String message) => ScaffoldMessenger.of(context).showSnackBar(
-    SnackBar(content: Text(message), backgroundColor: Colors.red, duration: const Duration(seconds: 3))
-  );
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
 
   void _initializeAlimentations() {
     _alimentations = [];
