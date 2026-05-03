@@ -491,7 +491,7 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
                       // Onglet ZONES (existantes + contenu)
                       RefreshIndicator(
                         onRefresh: _refreshAllData,
-                        child: _audit!.moyenneTensionZones.isEmpty
+                        child: _audit!.basseTensionZones.isEmpty
                           ? _buildEmptyState()
                           : ListView.builder(
                               padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),
