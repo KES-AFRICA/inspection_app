@@ -236,7 +236,7 @@ class PdfReportService {
     required pw.Context ctx,
   }) {
     final footerImg = isFirstPage ? _firstPageFooterImage : _otherPageFooterImage;
-    const double footerImgHeight = 38.0;
+    final double footerImgHeight = isFirstPage ? 80.0 : 50.0;
     const double descente = kBottomMargin + 40;
 
     return pw.Stack(
@@ -262,7 +262,7 @@ class PdfReportService {
         ),
         if (!isFirstPage)
           pw.Positioned(
-            bottom: -descente + 4,
+            bottom: -descente + 20,
             left:   -kLeftMargin + kLeftMargin,
             child: pw.Text(
               'Page ${ctx.pageNumber} / ${ctx.pagesCount}',
@@ -555,7 +555,7 @@ class PdfReportService {
               font: _fontBold,
               fontSize: 14,
               fontWeight: pw.FontWeight.bold,
-              color: headerColor,
+              color: accentColor,
             ),
           ),
         ),
@@ -581,7 +581,7 @@ class PdfReportService {
   static pw.Widget _buildSommaireEntryLine(_SommaireEntry entry) {
     final double fontSize = entry.isSub ? 7.5 : 8.5;
     final pw.Font font    = entry.isSub ? _fontRegular : _fontBold;
-    final PdfColor color  = entry.isSub ? darkGrey : headerColor;
+    final PdfColor color  = entry.isSub ? darkGrey : accentColor;
 
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.end,
@@ -592,7 +592,7 @@ class PdfReportService {
         ),
         pw.Expanded(
           child: pw.Text(
-            ' ' + ('.' * 120),
+            ' ${'.' * 120}',
             style: pw.TextStyle(
               font: _fontRegular,
               fontSize: fontSize - 1,
@@ -1069,14 +1069,20 @@ class PdfReportService {
   static pw.Widget _buildInstallationTable(List<InstallationItem> items, {String? sectionKey}) {
     if (items.isEmpty) return pw.Container();
 
-    final fields = <String>{};
+    // Collecter tous les champs dans l'ORDRE D'APPARITION (pas de sort !)
+    final fieldOrder = <String>[];
+    final seen = <String>{};
+    
     for (var it in items) {
-      fields.addAll(it.data.entries
-          .where((e) => e.value.isNotEmpty)
-          .map((e) => e.key));
+      for (var key in it.data.keys) {
+        if (it.data[key]!.isNotEmpty && !seen.contains(key)) {
+          seen.add(key);
+          fieldOrder.add(key);
+        }
+      }
     }
 
-    if (fields.isEmpty) {
+    if (fieldOrder.isEmpty) {
       return pw.Container(
         padding: const pw.EdgeInsets.all(4),
         decoration: pw.BoxDecoration(border: pw.Border.all(color: borderColor, width: 0.4)),
@@ -1084,28 +1090,37 @@ class PdfReportService {
       );
     }
 
-    List<String> cols;
+    // Si on a un ordre imposé, on réorganise
+    List<String> finalOrder = fieldOrder;
     if (sectionKey != null && _columnOrderBySection.containsKey(sectionKey)) {
-      final orderedKeys = _columnOrderBySection[sectionKey]!;
-      final ordered = orderedKeys.where(fields.contains).toList();
-      final remaining = fields.where((f) => !orderedKeys.contains(f)).toList()..sort();
-      cols = [...ordered, ...remaining];
-    } else {
-      cols = fields.toList();
+      finalOrder = [];
+      final imposedOrder = _columnOrderBySection[sectionKey]!;
+      // D'abord les colonnes imposées qui existent
+      for (var imposed in imposedOrder) {
+        if (fieldOrder.contains(imposed)) {
+          finalOrder.add(imposed);
+        }
+      }
+      // Puis les colonnes restantes (dans l'ordre d'apparition original)
+      for (var field in fieldOrder) {
+        if (!finalOrder.contains(field)) {
+          finalOrder.add(field);
+        }
+      }
     }
 
     return pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.4),
       columnWidths: {
         0: const pw.FixedColumnWidth(18),
-        ...{for (var i = 1; i <= cols.length; i++) i: const pw.FlexColumnWidth(1)},
+        ...{for (var i = 1; i <= finalOrder.length; i++) i: const pw.FlexColumnWidth(1)},
       },
       children: [
         pw.TableRow(
           decoration: pw.BoxDecoration(color: lightBlue),
           children: [
             _cell('N\u00B0', isHeader: true),
-            ...cols.map((c) => _cell(c, isHeader: true)),
+            ...finalOrder.map((c) => _cell(c, isHeader: true)),
           ],
         ),
         ...items.asMap().entries.map((e) => pw.TableRow(
@@ -1119,7 +1134,7 @@ class PdfReportService {
                 style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
               ),
             ),
-            ...cols.map((c) => _cell(e.value.data[c]?.toString() ?? '-', isHeader: false)),
+            ...finalOrder.map((key) => _cell(e.value.data[key]?.toString() ?? '-', isHeader: false)),
           ],
         )),
       ],
@@ -1499,37 +1514,55 @@ class PdfReportService {
   static List<pw.Widget> _buildAuditContentOrdered(AuditInstallationsElectriques audit) {
     final widgets = <pw.Widget>[];
 
+    // 1. Locaux MT directs (hors zone) — PREMIER local sur la même page que le titre
     if (audit.moyenneTensionLocaux.isNotEmpty) {
       if (widgets.isNotEmpty) widgets.add(pw.NewPage());
       widgets.add(_subSectionBar('MOYENNE TENSION — LOCAUX DIRECTS'));
-      for (var local in audit.moyenneTensionLocaux) {
-        widgets.add(pw.NewPage());
+      
+      for (int i = 0; i < audit.moyenneTensionLocaux.length; i++) {
+        final local = audit.moyenneTensionLocaux[i];
+        // Pas de NewPage pour le premier local (i == 0)
+        if (i > 0) widgets.add(pw.NewPage());
         widgets.addAll(_buildLocalMT(local));
       }
     }
 
+    // 2. Zones MT
     for (var zone in audit.moyenneTensionZones) {
       widgets.add(pw.NewPage());
       widgets.addAll(_buildZone(zone.nom, zone.observationsLibres));
-      for (var local in zone.locaux) {
-        widgets.add(pw.NewPage());
+      
+      // Locaux dans la zone : premier sur la même page que la zone
+      for (int i = 0; i < zone.locaux.length; i++) {
+        final local = zone.locaux[i];
+        if (i > 0) widgets.add(pw.NewPage());
         widgets.addAll(_buildLocalMT(local));
       }
-      for (var coffret in zone.coffrets) {
-        widgets.add(pw.NewPage());
+      
+      // Coffrets de la zone
+      for (int i = 0; i < zone.coffrets.length; i++) {
+        final coffret = zone.coffrets[i];
+        if (i > 0) widgets.add(pw.NewPage());
         widgets.addAll(_buildCoffret(coffret));
       }
     }
 
+    // 3. Zones BT
     for (var zone in audit.basseTensionZones) {
       widgets.add(pw.NewPage());
       widgets.addAll(_buildZone(zone.nom, zone.observationsLibres));
-      for (var coffret in zone.coffretsDirects) {
-        widgets.add(pw.NewPage());
+      
+      // Coffrets directs de la zone
+      for (int i = 0; i < zone.coffretsDirects.length; i++) {
+        final coffret = zone.coffretsDirects[i];
+        if (i > 0) widgets.add(pw.NewPage());
         widgets.addAll(_buildCoffret(coffret));
       }
-      for (var local in zone.locaux) {
-        widgets.add(pw.NewPage());
+      
+      // Locaux BT
+      for (int i = 0; i < zone.locaux.length; i++) {
+        final local = zone.locaux[i];
+        if (i > 0) widgets.add(pw.NewPage());
         widgets.addAll(_buildLocalBT(local));
       }
     }
@@ -1546,7 +1579,7 @@ class PdfReportService {
       pw.SizedBox(height: 8),
       pw.Container(
         width: double.infinity,
-        color: headerColor,
+        color: accentColor,
         padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         child: pw.Text(nom.toUpperCase(),
             style: pw.TextStyle(fontSize: fsH2, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
@@ -2140,144 +2173,151 @@ class PdfReportService {
   // ──────────────────────────────────────────────────────────────
   
   static void _addMesuresEssaisPages(pw.Document pdf, MesuresEssais mesures) {
-    pdf.addPage(pw.Page(
-      pageTheme: _buildInnerPageTheme(),
-      build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+  // Page intro avec conditions ET les deux essais
+  pdf.addPage(pw.Page(
+    pageTheme: _buildInnerPageTheme(),
+    build: (ctx) => pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
         _buildPageHeaderWidget(),
         pw.SizedBox(height: 10),
         _sectionBox('RESULTATS DES MESURES ET ESSAIS'),
         pw.SizedBox(height: 8),
+        
+        // Conditions générales
         _bodyBold("MESURES D'ISOLEMENT"),
         _bodyText("Les mesures d'isolement par rapport a la terre sont effectuees sous 500 V continu sur les canalisations en aval des DDR defectueux. La valeur est satisfaisante si superieure a 0,5 M.ohms."),
         pw.SizedBox(height: 5),
+        
         _bodyBold('VERIFICATION DE LA CONTINUITE ET RESISTANCE DES CONDUCTEURS DE PROTECTION'),
         _bodyText('Correcte si la valeur mesuree satisfait aux prescriptions du guide UTE C 15-105 \u00A7 D6.'),
         pw.SizedBox(height: 5),
+        
         _bodyBold('ESSAIS DE DECLENCHEMENT DES DISPOSITIFS DIFFERENTIELS RESIDUELS'),
         _bodyText('La valeur du seuil de declenchement est correcte si elle est comprise entre 0,5 IAn et IAn.'),
         pw.SizedBox(height: 5),
+        
         _bodyBold('MESURE DES IMPEDANCES DE BOUCLE (PROTECTION \u00AB CONTACTS INDIRECTS \u00BB)'),
         _bodyText('Correcte si le temps de coupure, pour le courant de defaut determine, satisfait aux prescriptions du guide UTE C 15-105.'),
-      ]),
-    ));
-    
-    pdf.addPage(pw.Page(
-      pageTheme: _buildInnerPageTheme(),
-      build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        _buildPageHeaderWidget(), pw.SizedBox(height: 10),
+        
+        pw.SizedBox(height: 16),
+        
+        // Essais de demarrage automatique (sur la même page)
         _subSectionBar('Essais de demarrage automatique du groupe electrogene'),
-        pw.SizedBox(height: 8),
+        pw.SizedBox(height: 5),
         _resultBox(mesures.essaiDemarrageAuto.observation ?? 'Non satisfaisant'),
-      ]),
-    ));
-    
-    pdf.addPage(pw.Page(
-      pageTheme: _buildInnerPageTheme(),
-      build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        _buildPageHeaderWidget(), pw.SizedBox(height: 10),
+        
+        pw.SizedBox(height: 16),
+        
+        // Test de l'arret d'urgence (sur la même page)
         _subSectionBar("Test de fonctionnement de l'arret d'urgence"),
-        pw.SizedBox(height: 8),
+        pw.SizedBox(height: 5),
         _resultBox(mesures.testArretUrgence.observation ?? 'Satisfaisant'),
-      ]),
-    ));
-    
-    pdf.addPage(pw.Page(
-      pageTheme: _buildInnerPageTheme(),
-      build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        _buildPageHeaderWidget(), pw.SizedBox(height: 10),
-        _subSectionBar('Prise de terre'),
-        pw.SizedBox(height: 8),
-        pw.Table(
-          border: pw.TableBorder.all(color: borderColor, width: 0.4),
-          columnWidths: {0: const pw.FlexColumnWidth(1.5), 1: const pw.FlexColumnWidth(1.5), 2: const pw.FlexColumnWidth(1.2), 3: const pw.FlexColumnWidth(1), 4: const pw.FlexColumnWidth(1), 5: const pw.FlexColumnWidth(1), 6: const pw.FlexColumnWidth(1.5)},
-          children: [
-            _tableHeaderRow(['Localisation', 'Identification', 'Condition mesure', 'Nature', 'Methode', 'Valeur', 'Observation']),
-            if (mesures.prisesTerre.isEmpty)
-              pw.TableRow(children: List.generate(7, (_) => _cell('', isHeader: false)))
-            else
-              ...mesures.prisesTerre.asMap().entries.map((e) {
-                final pt = e.value;
-                return _tableDataRow([pt.localisation, pt.identification, pt.conditionPriseTerre, pt.naturePriseTerre, pt.methodeMesure, pt.valeurMesure?.toStringAsFixed(2) ?? '-', pt.observation ?? ''], alt: e.key.isOdd);
-              }),
-          ],
-        ),
-        if (mesures.avisMesuresTerre.observation != null && mesures.avisMesuresTerre.observation!.isNotEmpty) ...[
-          pw.SizedBox(height: 5),
-          _bodyText(mesures.avisMesuresTerre.observation!),
+      ],
+    ),
+  ));
+  
+  // Prise de terre (nouvelle page)
+  pdf.addPage(pw.Page(
+    pageTheme: _buildInnerPageTheme(),
+    build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+      _buildPageHeaderWidget(), pw.SizedBox(height: 10),
+      _subSectionBar('Prise de terre'),
+      pw.SizedBox(height: 8),
+      pw.Table(
+        border: pw.TableBorder.all(color: borderColor, width: 0.4),
+        columnWidths: {0: const pw.FlexColumnWidth(1.5), 1: const pw.FlexColumnWidth(1.5), 2: const pw.FlexColumnWidth(1.2), 3: const pw.FlexColumnWidth(1), 4: const pw.FlexColumnWidth(1), 5: const pw.FlexColumnWidth(1), 6: const pw.FlexColumnWidth(1.5)},
+        children: [
+          _tableHeaderRow(['Localisation', 'Identification', 'Condition mesure', 'Nature', 'Methode', 'Valeur', 'Observation']),
+          if (mesures.prisesTerre.isEmpty)
+            pw.TableRow(children: List.generate(7, (_) => _cell('', isHeader: false)))
+          else
+            ...mesures.prisesTerre.asMap().entries.map((e) {
+              final pt = e.value;
+              return _tableDataRow([pt.localisation, pt.identification, pt.conditionPriseTerre, pt.naturePriseTerre, pt.methodeMesure, pt.valeurMesure?.toStringAsFixed(2) ?? '-', pt.observation ?? ''], alt: e.key.isOdd);
+            }),
         ],
-      ]),
-    ));
-    
-    pdf.addPage(pw.Page(
-      pageTheme: _buildInnerPageTheme(),
-      build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        _buildPageHeaderWidget(), pw.SizedBox(height: 10),
-        _subSectionBar("Mesures d'isolement des circuits BT"),
-        pw.SizedBox(height: 8),
-        _bodyText('Sans observation'),
-      ]),
-    ));
-    
-    pdf.addPage(pw.Page(
-      pageTheme: _buildInnerPageTheme(),
-      build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        _buildPageHeaderWidget(), pw.SizedBox(height: 10),
-        _subSectionBar('Essais de declenchement des dispositifs differentiels'),
-        pw.SizedBox(height: 8),
-        pw.Table(
-          border: pw.TableBorder.all(color: borderColor, width: 0.4),
-          columnWidths: {0: const pw.FlexColumnWidth(1), 1: const pw.FlexColumnWidth(1.5), 2: const pw.FlexColumnWidth(1.2), 3: const pw.FlexColumnWidth(0.8), 4: const pw.FlexColumnWidth(0.8), 5: const pw.FlexColumnWidth(0.8), 6: const pw.FlexColumnWidth(1)},
-          children: [
-            _tableHeaderRow(['Quantite', 'Designation circuit', 'Type dispositif', 'Reglage In (mA)', 'Tempo (s)', 'Essai', 'Isolement (M ohms)']),
-            if (mesures.essaisDeclenchement.isEmpty)
-              pw.TableRow(children: List.generate(7, (_) => _cell('', isHeader: false)))
-            else
-              ...mesures.essaisDeclenchement.asMap().entries.map((e) {
-                final es = e.value;
-                final essaiColor = es.essai == 'B' || es.essai == 'OK' ? conformeColor : (es.essai == 'M' || es.essai == 'NON OK' ? nonConformeColor : null);
-                return pw.TableRow(
-                  decoration: pw.BoxDecoration(color: e.key.isOdd ? tableRowAlt : PdfColors.white),
-                  children: [
-                    _cell(es.localisation, isHeader: false),
-                    _cell('${es.coffret ?? ''} / ${es.designationCircuit ?? ''}', isHeader: false),
-                    _cell(es.typeDispositif, isHeader: false),
-                    _cell(es.reglageIAn?.toString() ?? '-', isHeader: false),
-                    _cell(es.tempo?.toString() ?? '-', isHeader: false),
-                    pw.Container(color: essaiColor, padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3), alignment: pw.Alignment.center, child: pw.Text(es.essai, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall))),
-                    _cell(es.isolement?.toString() ?? '-', isHeader: false),
-                  ],
-                );
-              }),
-          ],
-        ),
-        pw.SizedBox(height: 12),
-        _buildAbreviationsTable(),
-      ]),
-    ));
-    
-    pdf.addPage(pw.Page(
-      pageTheme: _buildInnerPageTheme(),
-      build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        _buildPageHeaderWidget(), pw.SizedBox(height: 10),
-        _subSectionBar('Continuite et resistance des conducteurs de protection et liaisons equipotentielles'),
-        pw.SizedBox(height: 8),
-        pw.Table(
-          border: pw.TableBorder.all(color: borderColor, width: 0.4),
-          columnWidths: {0: const pw.FlexColumnWidth(2), 1: const pw.FlexColumnWidth(2.5), 2: const pw.FlexColumnWidth(1.5), 3: const pw.FlexColumnWidth(2)},
-          children: [
-            _tableHeaderRow(['Localisation', 'Designation Tableau / Equipement', 'Origine Mesure', 'Observation']),
-            if (mesures.continuiteResistances.isEmpty)
-              pw.TableRow(children: List.generate(4, (_) => _cell('', isHeader: false)))
-            else
-              ...mesures.continuiteResistances.asMap().entries.map((e) {
-                final c = e.value;
-                return _tableDataRow([c.localisation, c.designationTableau, c.origineMesure, c.observation ?? ''], alt: e.key.isOdd);
-              }),
-          ],
-        ),
-      ]),
-    ));
-  }
+      ),
+      if (mesures.avisMesuresTerre.observation != null && mesures.avisMesuresTerre.observation!.isNotEmpty) ...[
+        pw.SizedBox(height: 5),
+        _bodyText(mesures.avisMesuresTerre.observation!),
+      ],
+    ]),
+  ));
+  
+  // Mesures d'isolement des circuits BT (nouvelle page)
+  pdf.addPage(pw.Page(
+    pageTheme: _buildInnerPageTheme(),
+    build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+      _buildPageHeaderWidget(), pw.SizedBox(height: 10),
+      _subSectionBar("Mesures d'isolement des circuits BT"),
+      pw.SizedBox(height: 8),
+      _bodyText('Sans observation'),
+    ]),
+  ));
+  
+  // Essais de declenchement des DDR (nouvelle page)
+  pdf.addPage(pw.Page(
+    pageTheme: _buildInnerPageTheme(),
+    build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+      _buildPageHeaderWidget(), pw.SizedBox(height: 10),
+      _subSectionBar('Essais de declenchement des dispositifs differentiels'),
+      pw.SizedBox(height: 8),
+      pw.Table(
+        border: pw.TableBorder.all(color: borderColor, width: 0.4),
+        columnWidths: {0: const pw.FlexColumnWidth(1), 1: const pw.FlexColumnWidth(1.5), 2: const pw.FlexColumnWidth(1.2), 3: const pw.FlexColumnWidth(0.8), 4: const pw.FlexColumnWidth(0.8), 5: const pw.FlexColumnWidth(0.8), 6: const pw.FlexColumnWidth(1)},
+        children: [
+          _tableHeaderRow(['Quantite', 'Designation circuit', 'Type dispositif', 'Reglage In (mA)', 'Tempo (s)', 'Essai', 'Isolement (M ohms)']),
+          if (mesures.essaisDeclenchement.isEmpty)
+            pw.TableRow(children: List.generate(7, (_) => _cell('', isHeader: false)))
+          else
+            ...mesures.essaisDeclenchement.asMap().entries.map((e) {
+              final es = e.value;
+              final essaiColor = es.essai == 'B' || es.essai == 'OK' ? conformeColor : (es.essai == 'M' || es.essai == 'NON OK' ? nonConformeColor : null);
+              return pw.TableRow(
+                decoration: pw.BoxDecoration(color: e.key.isOdd ? tableRowAlt : PdfColors.white),
+                children: [
+                  _cell(es.localisation, isHeader: false),
+                  _cell('${es.coffret ?? ''} / ${es.designationCircuit ?? ''}', isHeader: false),
+                  _cell(es.typeDispositif, isHeader: false),
+                  _cell(es.reglageIAn?.toString() ?? '-', isHeader: false),
+                  _cell(es.tempo?.toString() ?? '-', isHeader: false),
+                  pw.Container(color: essaiColor, padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3), alignment: pw.Alignment.center, child: pw.Text(es.essai, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall))),
+                  _cell(es.isolement?.toString() ?? '-', isHeader: false),
+                ],
+              );
+            }),
+        ],
+      ),
+      pw.SizedBox(height: 12),
+      _buildAbreviationsTable(),
+    ]),
+  ));
+  
+  // Continuite (nouvelle page)
+  pdf.addPage(pw.Page(
+    pageTheme: _buildInnerPageTheme(),
+    build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+      _buildPageHeaderWidget(), pw.SizedBox(height: 10),
+      _subSectionBar('Continuite et resistance des conducteurs de protection et liaisons equipotentielles'),
+      pw.SizedBox(height: 8),
+      pw.Table(
+        border: pw.TableBorder.all(color: borderColor, width: 0.4),
+        columnWidths: {0: const pw.FlexColumnWidth(2), 1: const pw.FlexColumnWidth(2.5), 2: const pw.FlexColumnWidth(1.5), 3: const pw.FlexColumnWidth(2)},
+        children: [
+          _tableHeaderRow(['Localisation', 'Designation Tableau / Equipement', 'Origine Mesure', 'Observation']),
+          if (mesures.continuiteResistances.isEmpty)
+            pw.TableRow(children: List.generate(4, (_) => _cell('', isHeader: false)))
+          else
+            ...mesures.continuiteResistances.asMap().entries.map((e) {
+              final c = e.value;
+              return _tableDataRow([c.localisation, c.designationTableau, c.origineMesure, c.observation ?? ''], alt: e.key.isOdd);
+            }),
+        ],
+      ),
+    ]),
+  ));
+}
 
   // Page signature "LA DIRECTION"
   static pw.Widget _buildSignaturePage(RenseignementsGeneraux? rg, String? nomInspecteur) {
@@ -2386,10 +2426,12 @@ class PdfReportService {
     if (audit != null) {
       for (var local in audit.moyenneTensionLocaux) {
         _addPhotosFromList(allPhotos, local.photos, local.nom);
-        if (local.cellule != null)
+        if (local.cellule != null) {
           _addPhotosFromList(allPhotos, local.cellule!.photos, '${local.nom} - Cellule');
-        if (local.transformateur != null)
+        }
+        if (local.transformateur != null) {
           _addPhotosFromList(allPhotos, local.transformateur!.photos, '${local.nom} - Transformateur');
+        }
         for (var c in local.coffrets) {
           _addPhotosFromList(allPhotos, c.photos, '${local.nom} - ${c.nom}', repere: c.repere);
         }
@@ -2604,14 +2646,94 @@ class PdfReportService {
   // ──────────────────────────────────────────────────────────────
   //  UTILITAIRES PDF (cellules, lignes, titres...)
   // ──────────────────────────────────────────────────────────────
+
+  /// Convertit les caractères spéciaux en versions compatibles avec les polices standard
+  static String _normalizeText(String text) {
+    if (text.isEmpty) return text;
+    
+    // Mappings des caractères problématiques
+    final replacements = {
+      // Indices et exposants
+      '₂': '2',      // indice 2
+      '₃': '3',      // indice 3
+      '₄': '4',      // indice 4
+      '²': '2',      // exposant 2 (CO2 → CO2)
+      '³': '3',      // exposant 3
+      '¹': '1',      // exposant 1
+      
+      // Signes mathématiques
+      '≥': '>=',
+      '≤': '<=',
+      '≠': '!=',
+      '±': '+/-',
+      '∞': 'infini',
+      '∑': 'Somme',
+      '√': 'racine',
+      '∝': '~',
+      '°': '°',      // degré - garder (ASCII compatible)
+      '→': '->',
+      '←': '<-',
+      '↔': '<->',
+      
+      // Symboles monétaires
+      '€': 'EUR',
+      '£': 'GBP',
+      '¥': 'JPY',
+      
+      // Guillemets et ponctuation spéciale
+      '«': '"',
+      '»': '"',
+      '“': '"',
+      '”': '"',
+      '‘': "'",
+      '’': "'",
+      '…': '...',
+      '—': '-',
+      '–': '-',
+      
+      // Lettres accentuées (déjà supportées normalement)
+      // Mais au cas où...
+      'é': 'e',
+      'è': 'e',
+      'ê': 'e',
+      'ë': 'e',
+      'à': 'a',
+      'â': 'a',
+      'ä': 'a',
+      'î': 'i',
+      'ï': 'i',
+      'ô': 'o',
+      'ö': 'o',
+      'ù': 'u',
+      'û': 'u',
+      'ü': 'u',
+      'ç': 'c',
+      'œ': 'oe',
+      'æ': 'ae',
+      
+      // Symboles électriques
+      'Ω': 'Ohm',
+      'μ': 'u',      // micro → u
+      '∆': 'Delta',
+      'Φ': 'Phi',
+      'θ': 'theta',
+    };
+    
+    var result = text;
+    replacements.forEach((original, replacement) {
+      result = result.replaceAll(original, replacement);
+    });
+    
+    return result;
+  }
   
   static pw.Widget _sectionBox(String title) {
     return pw.Container(
       width: double.infinity,
-      color: headerColor,
+      color: accentColor,
       padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
       child: pw.Text(
-        title,
+        _normalizeText(title),
         style: pw.TextStyle(fontSize: fsH1, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
       ),
     );
@@ -2621,7 +2743,7 @@ class PdfReportService {
     return pw.Padding(
       padding: const pw.EdgeInsets.only(top: 5, bottom: 3),
       child: pw.Text(
-        title,
+        _normalizeText(title),
         style: pw.TextStyle(
           fontSize: fsH3,
           fontWeight: pw.FontWeight.bold,
@@ -2635,15 +2757,16 @@ class PdfReportService {
   static pw.Widget _bodyText(String text) {
     return pw.Padding(
       padding: const pw.EdgeInsets.only(bottom: 2),
-      child: pw.Text(text,
-          style: pw.TextStyle(fontSize: fsBody, color: darkGrey, lineSpacing: 1.4)),
+      child: pw.Text(
+        _normalizeText(text),
+        style: pw.TextStyle(fontSize: fsBody, color: darkGrey, lineSpacing: 1.4)),
     );
   }
 
   static pw.Widget _bodyBold(String text) {
     return pw.Padding(
       padding: const pw.EdgeInsets.only(bottom: 2),
-      child: pw.Text(text,
+      child: pw.Text(_normalizeText(text),
           style: pw.TextStyle(fontSize: fsBody, fontWeight: pw.FontWeight.bold, color: darkGrey)),
     );
   }
@@ -2654,7 +2777,7 @@ class PdfReportService {
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text('-  ', style: pw.TextStyle(fontSize: fsBody, color: accentColor)),
+          pw.Text(_normalizeText('-  '), style: pw.TextStyle(fontSize: fsBody, color: accentColor)),
           pw.Expanded(
             child: pw.Text(text,
                 style: pw.TextStyle(fontSize: fsBody, color: darkGrey, lineSpacing: 1.3)),
@@ -2669,7 +2792,7 @@ class PdfReportService {
       color: color,
       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
       child: pw.Text(
-        text,
+        _normalizeText(text),
         style: pw.TextStyle(
           fontSize: isHeader ? fsSmall : fsSmall,
           fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
