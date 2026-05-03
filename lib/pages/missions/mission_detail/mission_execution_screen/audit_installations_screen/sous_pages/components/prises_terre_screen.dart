@@ -171,108 +171,111 @@ class _PrisesTerreScreenState extends State<PrisesTerreScreen> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Prises de terre'),
-        backgroundColor: AppTheme.primaryBlue,
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: _ajouterPriseTerre,
-            tooltip: 'Ajouter une prise de terre',
-          ),
-        ],
-      ),
-      body: _prisesTerre.isEmpty
-          ? Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.bolt_outlined, size: isSmallScreen ? 60 : 80, color: Colors.grey.shade400),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Aucune prise de terre',
-                    style: TextStyle(fontSize: isSmallScreen ? 16 : 18, color: Colors.grey.shade600),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Appuyez sur le bouton + pour ajouter',
-                    style: TextStyle(fontSize: isSmallScreen ? 12 : 14, color: Colors.grey.shade500),
-                  ),
-                ],
-              ),
-            )
-          : ListView.builder(
-              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-              itemCount: _prisesTerre.length,
-              itemBuilder: (context, index) {
-                final prise = _prisesTerre[index];
-                return Card(
-                  margin: EdgeInsets.only(bottom: isSmallScreen ? 10 : 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12)),
-                  child: InkWell(
-                    onTap: () => _editerPriseTerre(index),
-                    borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-                    child: Padding(
-                      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Container(
-                                width: isSmallScreen ? 28 : 32,
-                                height: isSmallScreen ? 28 : 32,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryBlue.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    '${index + 1}',
-                                    style: TextStyle(
-                                      fontSize: isSmallScreen ? 12 : 14,
-                                      fontWeight: FontWeight.bold,
-                                      color: AppTheme.primaryBlue,
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Prises de terre'),
+          backgroundColor: AppTheme.primaryBlue,
+          foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.add),
+              onPressed: _ajouterPriseTerre,
+              tooltip: 'Ajouter une prise de terre',
+            ),
+          ],
+        ),
+        body: _prisesTerre.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.bolt_outlined, size: isSmallScreen ? 60 : 80, color: Colors.grey.shade400),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Aucune prise de terre',
+                      style: TextStyle(fontSize: isSmallScreen ? 16 : 18, color: Colors.grey.shade600),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Appuyez sur le bouton + pour ajouter',
+                      style: TextStyle(fontSize: isSmallScreen ? 12 : 14, color: Colors.grey.shade500),
+                    ),
+                  ],
+                ),
+              )
+            : ListView.builder(
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                itemCount: _prisesTerre.length,
+                itemBuilder: (context, index) {
+                  final prise = _prisesTerre[index];
+                  return Card(
+                    margin: EdgeInsets.only(bottom: isSmallScreen ? 10 : 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12)),
+                    child: InkWell(
+                      onTap: () => _editerPriseTerre(index),
+                      borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                      child: Padding(
+                        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Container(
+                                  width: isSmallScreen ? 28 : 32,
+                                  height: isSmallScreen ? 28 : 32,
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.primaryBlue.withOpacity(0.1),
+                                    borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      '${index + 1}',
+                                      style: TextStyle(
+                                        fontSize: isSmallScreen ? 12 : 14,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.primaryBlue,
+                                      ),
                                     ),
                                   ),
                                 ),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  prise.identification,
-                                  style: TextStyle(
-                                    fontSize: isSmallScreen ? 15 : 16,
-                                    fontWeight: FontWeight.w600,
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    prise.identification,
+                                    style: TextStyle(
+                                      fontSize: isSmallScreen ? 15 : 16,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
                                 ),
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.delete_outline, color: Colors.red, size: isSmallScreen ? 18 : 20),
-                                onPressed: () => _supprimerPriseTerre(index),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          _buildInfoRow('Localisation', prise.localisation, isSmallScreen),
-                          _buildInfoRow('Condition prise de terre', prise.conditionPriseTerre, isSmallScreen),
-                          _buildInfoRow('Nature prise de terre', prise.naturePriseTerre, isSmallScreen),
-                          _buildInfoRow('Méthode de mesure', prise.methodeMesure, isSmallScreen),
-                          _buildInfoRow('Valeur mesurée', prise.valeurMesure?.toString() ?? '-', isSmallScreen),
-                          if (prise.observation != null && prise.observation!.isNotEmpty)
-                            _buildInfoRow('Observation', prise.observation!, isSmallScreen),
-                        ],
+                                IconButton(
+                                  icon: Icon(Icons.delete_outline, color: Colors.red, size: isSmallScreen ? 18 : 20),
+                                  onPressed: () => _supprimerPriseTerre(index),
+                                  padding: EdgeInsets.zero,
+                                  constraints: const BoxConstraints(),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 12),
+                            _buildInfoRow('Localisation', prise.localisation, isSmallScreen),
+                            _buildInfoRow('Condition prise de terre', prise.conditionPriseTerre, isSmallScreen),
+                            _buildInfoRow('Nature prise de terre', prise.naturePriseTerre, isSmallScreen),
+                            _buildInfoRow('Méthode de mesure', prise.methodeMesure, isSmallScreen),
+                            _buildInfoRow('Valeur mesurée', prise.valeurMesure?.toString() ?? '-', isSmallScreen),
+                            if (prise.observation != null && prise.observation!.isNotEmpty)
+                              _buildInfoRow('Observation', prise.observation!, isSmallScreen),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
-            ),
+                  );
+                },
+              ),
+      ),
     );
   }
 

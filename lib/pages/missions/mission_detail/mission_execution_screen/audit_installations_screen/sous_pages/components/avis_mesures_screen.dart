@@ -185,129 +185,132 @@ class _AvisMesuresScreenState extends State<AvisMesuresScreen> {
         ? ((_satisfaisants.length / _totalPrisesTerre) * 100).round()
         : 0;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Avis sur les mesures'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back),
-          onPressed: _annuler,
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.check),
-            onPressed: _sauvegarder,
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Avis sur les mesures'),
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+          leading: IconButton(
+            icon: Icon(Icons.arrow_back),
+            onPressed: _annuler,
           ),
-        ],
-      ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              padding: EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  
-                  // Formulaire d'avis
-                  Container(
-                    padding: EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Avis et recommandations',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                            color: AppTheme.darkBlue,
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Formulez votre avis global sur les mesures et proposez des actions correctives si nécessaire.',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                        SizedBox(height: 16),
-                        TextFormField(
-                          controller: _observationController,
-                          decoration: InputDecoration(
-                            labelText: 'Avis et recommandations*',
-                            border: OutlineInputBorder(),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                          ),
-                          maxLines: 10,
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Veuillez saisir un avis';
-                            }
-                            return null;
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                  
-                  SizedBox(height: 20),
-                  
-                  // Boutons d'action
-                  Column(
-                    children: [
-                      Container(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _sauvegarder,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(
-                            'SAUVEGARDER L\'AVIS',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
+          actions: [
+            IconButton(
+              icon: Icon(Icons.check),
+              onPressed: _sauvegarder,
+            ),
+          ],
+        ),
+        body: _isLoading
+            ? Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                padding: EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    
+                    // Formulaire d'avis
+                    Container(
+                      padding: EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey.shade300),
                       ),
-                      SizedBox(height: 10),
-                      Container(
-                        width: double.infinity,
-                        height: 50,
-                        child: OutlinedButton(
-                          onPressed: _annuler,
-                          style: OutlinedButton.styleFrom(
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: Text(
-                            'ANNULER',
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Avis et recommandations',
                             style: TextStyle(
                               fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.darkBlue,
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Text(
+                            'Formulez votre avis global sur les mesures et proposez des actions correctives si nécessaire.',
+                            style: TextStyle(
+                              fontSize: 14,
                               color: Colors.grey.shade600,
                             ),
                           ),
-                        ),
+                          SizedBox(height: 16),
+                          TextFormField(
+                            controller: _observationController,
+                            decoration: InputDecoration(
+                              labelText: 'Avis et recommandations*',
+                              border: OutlineInputBorder(),
+                              filled: true,
+                              fillColor: Colors.grey.shade50,
+                            ),
+                            maxLines: 10,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'Veuillez saisir un avis';
+                              }
+                              return null;
+                            },
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                ],
+                    ),
+                    
+                    SizedBox(height: 20),
+                    
+                    // Boutons d'action
+                    Column(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          height: 50,
+                          child: ElevatedButton(
+                            onPressed: _sauvegarder,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text(
+                              'SAUVEGARDER L\'AVIS',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 10),
+                        Container(
+                          width: double.infinity,
+                          height: 50,
+                          child: OutlinedButton(
+                            onPressed: _annuler,
+                            style: OutlinedButton.styleFrom(
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                            child: Text(
+                              'ANNULER',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
+      ),
     );
   }
 

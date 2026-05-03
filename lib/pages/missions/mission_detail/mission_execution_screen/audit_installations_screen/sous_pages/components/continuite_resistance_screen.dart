@@ -325,68 +325,71 @@ class _ContinuiteResistanceScreenState extends State<ContinuiteResistanceScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Continuité et résistance'),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _ajouterMesure,
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        child: Icon(Icons.add),
-      ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                
-                if (_mesures.isEmpty)
-                  Expanded(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.cable_outlined,
-                            size: 64,
-                            color: Colors.grey.shade400,
-                          ),
-                          SizedBox(height: 16),
-                          Text(
-                            'Aucune mesure de continuité',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey.shade600,
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Continuité et résistance'),
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+        ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _ajouterMesure,
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+          child: Icon(Icons.add),
+        ),
+        body: _isLoading
+            ? Center(child: CircularProgressIndicator())
+            : Column(
+                children: [
+                  
+                  if (_mesures.isEmpty)
+                    Expanded(
+                      child: Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.cable_outlined,
+                              size: 64,
+                              color: Colors.grey.shade400,
                             ),
-                          ),
-                          SizedBox(height: 8),
-                          Text(
-                            'Cliquez sur le bouton + pour ajouter une mesure',
-                            style: TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey.shade500,
+                            SizedBox(height: 16),
+                            Text(
+                              'Aucune mesure de continuité',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey.shade600,
+                              ),
                             ),
-                          ),
-                        ],
+                            SizedBox(height: 8),
+                            Text(
+                              'Cliquez sur le bouton + pour ajouter une mesure',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: _loadMesures,
+                        child: ListView.builder(
+                          itemCount: _mesures.length,
+                          itemBuilder: (context, index) {
+                            return _buildMesureCard(_mesures[index], index);
+                          },
+                        ),
                       ),
                     ),
-                  )
-                else
-                  Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: _loadMesures,
-                      child: ListView.builder(
-                        itemCount: _mesures.length,
-                        itemBuilder: (context, index) {
-                          return _buildMesureCard(_mesures[index], index);
-                        },
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+                ],
+              ),
+      ),
     );
   }
 }

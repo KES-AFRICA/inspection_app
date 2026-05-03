@@ -1887,26 +1887,31 @@ void _supprimerCoffret(int index, bool isMoyenneTension) {
                   
                   // Tab COFFRETS
                   !hasCoffrets
-                      ? _buildEmptyState(
-                          'coffrets', 
-                          isMoyenneTension 
-                            ? 'Aucun coffret dans cette zone' 
-                            : 'Aucun coffret direct dans cette zone',
-                          isMoyenneTension ? _ajouterCoffretMT : _ajouterCoffretDirectBT,
-                          Icons.electrical_services,
-                          'AJOUTER UN ÉQUIPEMENTS',
-                        )
-                      : ListView.builder(
-                          padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),
-                          itemCount: _coffretsDirects.length,
-                          itemBuilder: (context, index) {
-                            return _buildCoffretCard(
-                              _coffretsDirects[index],
-                              index,
-                              isMoyenneTension,
-                            );
-                          },
-                        ),
+                  ? _buildEmptyState(
+                      'coffrets', 
+                      isMoyenneTension 
+                        ? 'Aucun coffret dans cette zone' 
+                        : 'Aucun coffret direct dans cette zone',
+                      isMoyenneTension ? _ajouterCoffretMT : _ajouterCoffretDirectBT,
+                      Icons.electrical_services,
+                      'AJOUTER UN ÉQUIPEMENTS',
+                    )
+                  : RefreshIndicator(
+                      onRefresh: _refreshZone,
+                      color: AppTheme.primaryBlue,
+                      backgroundColor: Colors.white,
+                      child: ListView.builder(
+                        padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
+                        itemCount: _coffretsDirects.length,
+                        itemBuilder: (context, index) {
+                          return _buildCoffretCard(
+                            _coffretsDirects[index],
+                            index,
+                            isMoyenneTension,
+                          );
+                        },
+                      ),
+                    ),
                 ],
               ),
             ),

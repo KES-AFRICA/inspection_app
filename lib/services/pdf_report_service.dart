@@ -581,7 +581,7 @@ class PdfReportService {
   static pw.Widget _buildSommaireEntryLine(_SommaireEntry entry) {
     final double fontSize = entry.isSub ? 7.5 : 8.5;
     final pw.Font font    = entry.isSub ? _fontRegular : _fontBold;
-    final PdfColor color  = entry.isSub ? darkGrey : accentColor;
+    final PdfColor color  = entry.isSub ? accentColor : accentColor;
 
     return pw.Row(
       crossAxisAlignment: pw.CrossAxisAlignment.end,
