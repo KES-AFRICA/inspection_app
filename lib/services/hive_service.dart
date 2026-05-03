@@ -6304,7 +6304,7 @@ static Future<bool> updateUserPassword({
   }
 }
 
-// ═══════════════════════════════════════════════════════════════
+  // ═══════════════════════════════════════════════════════════════
   // MÉTHODES D'AUTHENTIFICATION SÉCURISÉES (NOUVELLES)
   // ═══════════════════════════════════════════════════════════════
   
@@ -6316,33 +6316,50 @@ static Future<bool> updateUserPassword({
     required String matricule,
   }) async {
     try {
-      if (emailExists(email)) return false;
-      if (matriculeExists(matricule)) return false;
+      // 1. Vérifier si l'email existe déjà
+      if (emailExists(email)) {
+        return false;
+      }
       
+      // 2. Vérifier si le matricule existe déjà
+      if (matriculeExists(matricule)) {
+        return false;
+      }
+      
+      // 3. Créer le mot de passe sécurisé
       final passwordResult = await SecurePasswordService.createPassword(
         email: email.toLowerCase(),
         plainPassword: password,
       );
       
       if (!passwordResult.success) {
-        if (kDebugMode) print('❌ Création password échouée: ${passwordResult.errorMessage}');
+        if (kDebugMode) {
+          print('❌ Création password échouée: ${passwordResult.errorMessage}');
+        }
         return false;
       }
       
+      // 4. Créer l'utilisateur
       final newUser = Verificateur(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         nom: nom.trim(),
         prenom: prenom.trim(),
         email: email.toLowerCase(),
-        password: '', // Plus de mot de passe en clair !
+        password: '', // Le mot de passe n'est plus stocké ici !
         matricule: matricule.toUpperCase(),
         createdAt: DateTime.now(),
       );
       
-      await saveCurrentUser(newUser);
+      // Sauvegarder l'utilisateur dans la box
+      final box = Hive.box<Verificateur>(_verificateurBox);
+      await box.put(email.toLowerCase(), newUser);
+      
+      
       return true;
     } catch (e) {
-      if (kDebugMode) print('❌ Erreur createUserWithSecurePassword: $e');
+      if (kDebugMode) {
+        print('❌ Erreur createUserWithSecurePassword: $e');
+      }
       return false;
     }
   }

@@ -37,6 +37,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   bool _canResend = true;
   String? _generatedOtp;
   String? _userEmail;
+  String? _userName;  // ✅ AJOUTÉ : stocker le nom de l'utilisateur
 
   // Gestion erreurs
   String? _errorMessage;
@@ -91,6 +92,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         return;
       }
 
+      // Stocker le nom de l'utilisateur pour le renvoi
+      _userName = '${user.prenom} ${user.nom}';
+
       // Générer OTP à 6 chiffres
       _generatedOtp = _generateOtp();
       _userEmail = email;
@@ -98,7 +102,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       // Envoyer OTP par email
       final emailSent = await EmailService.sendOtpEmail(
         toEmail: email,
-        userName: '${user.prenom} ${user.nom}',
+        userName: _userName!,
         otpCode: _generatedOtp!,
       );
 
@@ -157,20 +161,26 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
   }
 
   void _startResendTimer() {
+    // ✅ ANNULER L'ANCIEN TIMER S'IL EXISTE
+    _resendTimer?.cancel();
+    
     _canResend = false;
     _resendSeconds = 60;
-    _resendTimer?.cancel();
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (_resendSeconds <= 1) {
         timer.cancel();
-        setState(() {
-          _canResend = true;
-          _resendSeconds = 0;
-        });
+        if (mounted) {
+          setState(() {
+            _canResend = true;
+            _resendSeconds = 0;
+          });
+        }
       } else {
-        setState(() {
-          _resendSeconds--;
-        });
+        if (mounted) {
+          setState(() {
+            _resendSeconds--;
+          });
+        }
       }
     });
   }
@@ -184,8 +194,18 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     return '$masked@${parts[1]}';
   }
 
+  // ✅ MÉTHODE RENVOYER OTP CORRIGÉE
   Future<void> _resendOtp() async {
-    if (!_canResend) return;
+    if (!_canResend) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez patienter avant de renvoyer un code'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
+      return;
+    }
 
     setState(() {
       _isLoading = true;
@@ -193,6 +213,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
     });
 
     try {
+      // Vérifier que l'utilisateur existe toujours
+      if (_userEmail == null) {
+        setState(() {
+          _errorMessage = 'Session expirée. Veuillez recommencer.';
+          _isLoading = false;
+        });
+        return;
+      }
+
       final user = HiveService.getUserByEmail(_userEmail!);
       if (user == null) {
         setState(() {
@@ -202,16 +231,28 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         return;
       }
 
+      // Mettre à jour le nom de l'utilisateur
+      _userName = '${user.prenom} ${user.nom}';
+
+      // Générer un NOUVEAU code OTP
       _generatedOtp = _generateOtp();
 
+      // Réinitialiser le contrôleur OTP pour éviter l'ancien code
+      _otpController.clear();
+
+      // Envoyer le nouveau code
       final emailSent = await EmailService.sendOtpEmail(
         toEmail: _userEmail!,
-        userName: '${user.prenom} ${user.nom}',
+        userName: _userName!,
         otpCode: _generatedOtp!,
       );
 
+      if (!mounted) return;
+
       if (emailSent) {
+        // ✅ REDÉMARRER LE TIMER (CORRECTION IMPORTANTE)
         _startResendTimer();
+        
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Nouveau code envoyé à ${_maskEmail(_userEmail!)}'),
@@ -224,17 +265,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
             ),
           ),
         );
+        setState(() => _isLoading = false);
       } else {
         setState(() {
-          _errorMessage = 'Erreur lors de l\'envoi';
+          _errorMessage = 'Erreur lors de l\'envoi. Veuillez réessayer.';
+          _isLoading = false;
         });
       }
     } catch (e) {
+      print('❌ Erreur _resendOtp: $e');
       setState(() {
-        _errorMessage = 'Une erreur est survenue';
+        _errorMessage = 'Une erreur est survenue. Veuillez réessayer.';
+        _isLoading = false;
       });
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
 
@@ -275,8 +318,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
       return;
     }
 
-    if (password.length < 4) {
-      setState(() => _errorMessage = 'Le mot de passe doit contenir au moins 4 caractères');
+    if (password.length < 8) {
+      setState(() => _errorMessage = 'Le mot de passe doit contenir au moins 8 caractères');
       return;
     }
 
@@ -306,7 +349,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
         newPassword: password,
       );
 
-      if (success) {
+      if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -332,13 +375,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
           '/login',
           (route) => false,
         );
-      } else {
+      } else if (mounted) {
         setState(() {
           _errorMessage = 'Erreur lors de la réinitialisation';
           _isLoading = false;
         });
       }
     } catch (e) {
+      print('❌ Erreur _resetPassword: $e');
       setState(() {
         _errorMessage = 'Une erreur est survenue';
         _isLoading = false;
@@ -525,7 +569,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                                         ),
                                       ),
                                     ),
-                                  if (_canResend)
+                                  if (_canResend && _resendSeconds == 0)
                                     TextButton(
                                       onPressed: _resendOtp,
                                       style: TextButton.styleFrom(
@@ -641,8 +685,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
                               if (value == null || value.isEmpty) {
                                 return 'Veuillez saisir un mot de passe';
                               }
-                              if (value.length < 4) {
-                                return 'Minimum 4 caractères';
+                              if (value.length < 8) {
+                                return 'Minimum 8 caractères';
                               }
                               return null;
                             },
@@ -830,7 +874,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen>
 
                       const SizedBox(height: 16),
 
-                      // Indicateur d'étape (étapes 1-3)
+                      // Indicateur d'étape
                       if (_currentStep >= 0)
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
