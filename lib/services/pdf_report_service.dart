@@ -1745,22 +1745,28 @@ class PdfReportService {
         columnWidths: {
           0: const pw.FlexColumnWidth(2),
           1: const pw.FlexColumnWidth(3),
-          2: const pw.FlexColumnWidth(2),
-          3: const pw.FlexColumnWidth(3),
         },
         children: [
           pw.TableRow(
             decoration: pw.BoxDecoration(color: lightBlue),
-            children: [_cell('CELLULE', isHeader: true, colspan: 4)],
+            children: [
+              _cell('CELLULE', isHeader: true, colspan: 2),
+            ],
           ),
-          _tableDataRow(['Fonction de la cellule', safe(cellule.fonction),
-              'Type de cellule', safe(cellule.type)], alt: false),
-          _tableDataRow(['Marque / modele / annee', safe(cellule.marqueModeleAnnee),
-              'Tension assignee (kV)', safe(cellule.tensionAssignee)], alt: true),
-          _tableDataRow(['Pouvoir de coupure assigne (kA)', safe(cellule.pouvoirCoupure),
-              'Numerotation / reperage', safe(cellule.numerotation)], alt: false),
-          _tableDataRow(['Parafoudres installes sur l\'arrivee', safe(cellule.parafoudres),
-              '', ''], alt: true),
+          // Ligne 1: Fonction
+          _tableDataRow(['Fonction de la cellule', safe(cellule.fonction)], alt: false),
+          // Ligne 2: Type
+          _tableDataRow(['Type de cellule', safe(cellule.type)], alt: true),
+          // Ligne 3: Marque / modèle / année
+          _tableDataRow(['Marque / modele / annee', safe(cellule.marqueModeleAnnee)], alt: false),
+          // Ligne 4: Tension assignée
+          _tableDataRow(['Tension assignee (kV)', safe(cellule.tensionAssignee)], alt: true),
+          // Ligne 5: Pouvoir de coupure
+          _tableDataRow(['Pouvoir de coupure assigne (kA)', safe(cellule.pouvoirCoupure)], alt: false),
+          // Ligne 6: Numérotation / repérage
+          _tableDataRow(['Numerotation / reperage', safe(cellule.numerotation)], alt: true),
+          // Ligne 7: Parafoudres
+          _tableDataRow(['Parafoudres installes sur l\'arrivee', safe(cellule.parafoudres)], alt: false),
         ],
       ),
       if (cellule.elementsVerifies.isNotEmpty) ...[
@@ -1781,22 +1787,28 @@ class PdfReportService {
         columnWidths: {
           0: const pw.FlexColumnWidth(2),
           1: const pw.FlexColumnWidth(3),
-          2: const pw.FlexColumnWidth(2),
-          3: const pw.FlexColumnWidth(3),
         },
         children: [
           pw.TableRow(
             decoration: pw.BoxDecoration(color: lightBlue),
-            children: [_cell('TRANSFORMATEUR MT/BT', isHeader: true, colspan: 4)],
+            children: [
+              _cell('TRANSFORMATEUR MT/BT', isHeader: true, colspan: 2),
+            ],
           ),
-          _tableDataRow(['Type de transformateur', safe(transfo.typeTransformateur),
-              'Marque / Annee de fabrication', safe(transfo.marqueAnnee)], alt: false),
-          _tableDataRow(['Puissance assignee (kVA)', safe(transfo.puissanceAssignee),
-              'Tension primaire / secondaire', safe(transfo.tensionPrimaireSecondaire)], alt: true),
-          _tableDataRow(['Presence du relais Buchholz', safe(transfo.relaisBuchholz),
-              'Type de refroidissement', safe(transfo.typeRefroidissement)], alt: false),
-          _tableDataRow(['Regime du neutre', safe(transfo.regimeNeutre),
-              '', ''], alt: true),
+          // Ligne 1: Type
+          _tableDataRow(['Type de transformateur', safe(transfo.typeTransformateur)], alt: false),
+          // Ligne 2: Marque / Année
+          _tableDataRow(['Marque / Annee de fabrication', safe(transfo.marqueAnnee)], alt: true),
+          // Ligne 3: Puissance assignée
+          _tableDataRow(['Puissance assignee (kVA)', safe(transfo.puissanceAssignee)], alt: false),
+          // Ligne 4: Tension primaire/secondaire
+          _tableDataRow(['Tension primaire / secondaire', safe(transfo.tensionPrimaireSecondaire)], alt: true),
+          // Ligne 5: Relais Buchholz
+          _tableDataRow(['Presence du relais Buchholz', safe(transfo.relaisBuchholz)], alt: false),
+          // Ligne 6: Type de refroidissement
+          _tableDataRow(['Type de refroidissement', safe(transfo.typeRefroidissement)], alt: true),
+          // Ligne 7: Régime du neutre
+          _tableDataRow(['Regime du neutre', safe(transfo.regimeNeutre)], alt: false),
         ],
       ),
       if (transfo.elementsVerifies.isNotEmpty) ...[
@@ -2173,151 +2185,151 @@ class PdfReportService {
   // ──────────────────────────────────────────────────────────────
   
   static void _addMesuresEssaisPages(pw.Document pdf, MesuresEssais mesures) {
-  // Page intro avec conditions ET les deux essais
-  pdf.addPage(pw.Page(
-    pageTheme: _buildInnerPageTheme(),
-    build: (ctx) => pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _buildPageHeaderWidget(),
-        pw.SizedBox(height: 10),
-        _sectionBox('RESULTATS DES MESURES ET ESSAIS'),
+    // Page intro avec conditions ET les deux essais
+    pdf.addPage(pw.Page(
+      pageTheme: _buildInnerPageTheme(),
+      build: (ctx) => pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _buildPageHeaderWidget(),
+          pw.SizedBox(height: 10),
+          _sectionBox('RESULTATS DES MESURES ET ESSAIS'),
+          pw.SizedBox(height: 8),
+          
+          // Conditions générales
+          _bodyBold("MESURES D'ISOLEMENT"),
+          _bodyText("Les mesures d'isolement par rapport a la terre sont effectuees sous 500 V continu sur les canalisations en aval des DDR defectueux. La valeur est satisfaisante si superieure a 0,5 M.ohms."),
+          pw.SizedBox(height: 5),
+          
+          _bodyBold('VERIFICATION DE LA CONTINUITE ET RESISTANCE DES CONDUCTEURS DE PROTECTION'),
+          _bodyText('Correcte si la valeur mesuree satisfait aux prescriptions du guide UTE C 15-105 \u00A7 D6.'),
+          pw.SizedBox(height: 5),
+          
+          _bodyBold('ESSAIS DE DECLENCHEMENT DES DISPOSITIFS DIFFERENTIELS RESIDUELS'),
+          _bodyText('La valeur du seuil de declenchement est correcte si elle est comprise entre 0,5 IAn et IAn.'),
+          pw.SizedBox(height: 5),
+          
+          _bodyBold('MESURE DES IMPEDANCES DE BOUCLE (PROTECTION \u00AB CONTACTS INDIRECTS \u00BB)'),
+          _bodyText('Correcte si le temps de coupure, pour le courant de defaut determine, satisfait aux prescriptions du guide UTE C 15-105.'),
+          
+          pw.SizedBox(height: 16),
+          
+          // Essais de demarrage automatique (sur la même page)
+          _subSectionBar('Essais de demarrage automatique du groupe electrogene'),
+          pw.SizedBox(height: 5),
+          _resultBox(mesures.essaiDemarrageAuto.observation ?? 'Non satisfaisant'),
+          
+          pw.SizedBox(height: 16),
+          
+          // Test de l'arret d'urgence (sur la même page)
+          _subSectionBar("Test de fonctionnement de l'arret d'urgence"),
+          pw.SizedBox(height: 5),
+          _resultBox(mesures.testArretUrgence.observation ?? 'Satisfaisant'),
+        ],
+      ),
+    ));
+    
+    // Prise de terre (nouvelle page)
+    pdf.addPage(pw.Page(
+      pageTheme: _buildInnerPageTheme(),
+      build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+        _buildPageHeaderWidget(), pw.SizedBox(height: 10),
+        _subSectionBar('Prise de terre'),
         pw.SizedBox(height: 8),
-        
-        // Conditions générales
-        _bodyBold("MESURES D'ISOLEMENT"),
-        _bodyText("Les mesures d'isolement par rapport a la terre sont effectuees sous 500 V continu sur les canalisations en aval des DDR defectueux. La valeur est satisfaisante si superieure a 0,5 M.ohms."),
-        pw.SizedBox(height: 5),
-        
-        _bodyBold('VERIFICATION DE LA CONTINUITE ET RESISTANCE DES CONDUCTEURS DE PROTECTION'),
-        _bodyText('Correcte si la valeur mesuree satisfait aux prescriptions du guide UTE C 15-105 \u00A7 D6.'),
-        pw.SizedBox(height: 5),
-        
-        _bodyBold('ESSAIS DE DECLENCHEMENT DES DISPOSITIFS DIFFERENTIELS RESIDUELS'),
-        _bodyText('La valeur du seuil de declenchement est correcte si elle est comprise entre 0,5 IAn et IAn.'),
-        pw.SizedBox(height: 5),
-        
-        _bodyBold('MESURE DES IMPEDANCES DE BOUCLE (PROTECTION \u00AB CONTACTS INDIRECTS \u00BB)'),
-        _bodyText('Correcte si le temps de coupure, pour le courant de defaut determine, satisfait aux prescriptions du guide UTE C 15-105.'),
-        
-        pw.SizedBox(height: 16),
-        
-        // Essais de demarrage automatique (sur la même page)
-        _subSectionBar('Essais de demarrage automatique du groupe electrogene'),
-        pw.SizedBox(height: 5),
-        _resultBox(mesures.essaiDemarrageAuto.observation ?? 'Non satisfaisant'),
-        
-        pw.SizedBox(height: 16),
-        
-        // Test de l'arret d'urgence (sur la même page)
-        _subSectionBar("Test de fonctionnement de l'arret d'urgence"),
-        pw.SizedBox(height: 5),
-        _resultBox(mesures.testArretUrgence.observation ?? 'Satisfaisant'),
-      ],
-    ),
-  ));
-  
-  // Prise de terre (nouvelle page)
-  pdf.addPage(pw.Page(
-    pageTheme: _buildInnerPageTheme(),
-    build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-      _buildPageHeaderWidget(), pw.SizedBox(height: 10),
-      _subSectionBar('Prise de terre'),
-      pw.SizedBox(height: 8),
-      pw.Table(
-        border: pw.TableBorder.all(color: borderColor, width: 0.4),
-        columnWidths: {0: const pw.FlexColumnWidth(1.5), 1: const pw.FlexColumnWidth(1.5), 2: const pw.FlexColumnWidth(1.2), 3: const pw.FlexColumnWidth(1), 4: const pw.FlexColumnWidth(1), 5: const pw.FlexColumnWidth(1), 6: const pw.FlexColumnWidth(1.5)},
-        children: [
-          _tableHeaderRow(['Localisation', 'Identification', 'Condition mesure', 'Nature', 'Methode', 'Valeur', 'Observation']),
-          if (mesures.prisesTerre.isEmpty)
-            pw.TableRow(children: List.generate(7, (_) => _cell('', isHeader: false)))
-          else
-            ...mesures.prisesTerre.asMap().entries.map((e) {
-              final pt = e.value;
-              return _tableDataRow([pt.localisation, pt.identification, pt.conditionPriseTerre, pt.naturePriseTerre, pt.methodeMesure, pt.valeurMesure?.toStringAsFixed(2) ?? '-', pt.observation ?? ''], alt: e.key.isOdd);
-            }),
+        pw.Table(
+          border: pw.TableBorder.all(color: borderColor, width: 0.4),
+          columnWidths: {0: const pw.FlexColumnWidth(1.5), 1: const pw.FlexColumnWidth(1.5), 2: const pw.FlexColumnWidth(1.2), 3: const pw.FlexColumnWidth(1), 4: const pw.FlexColumnWidth(1), 5: const pw.FlexColumnWidth(1), 6: const pw.FlexColumnWidth(1.5)},
+          children: [
+            _tableHeaderRow(['Localisation', 'Identification', 'Condition mesure', 'Nature', 'Methode', 'Valeur', 'Observation']),
+            if (mesures.prisesTerre.isEmpty)
+              pw.TableRow(children: List.generate(7, (_) => _cell('', isHeader: false)))
+            else
+              ...mesures.prisesTerre.asMap().entries.map((e) {
+                final pt = e.value;
+                return _tableDataRow([pt.localisation, pt.identification, pt.conditionPriseTerre, pt.naturePriseTerre, pt.methodeMesure, pt.valeurMesure?.toStringAsFixed(2) ?? '-', pt.observation ?? ''], alt: e.key.isOdd);
+              }),
+          ],
+        ),
+        if (mesures.avisMesuresTerre.observation != null && mesures.avisMesuresTerre.observation!.isNotEmpty) ...[
+          pw.SizedBox(height: 5),
+          _bodyText(mesures.avisMesuresTerre.observation!),
         ],
-      ),
-      if (mesures.avisMesuresTerre.observation != null && mesures.avisMesuresTerre.observation!.isNotEmpty) ...[
-        pw.SizedBox(height: 5),
-        _bodyText(mesures.avisMesuresTerre.observation!),
-      ],
-    ]),
-  ));
-  
-  // Mesures d'isolement des circuits BT (nouvelle page)
-  pdf.addPage(pw.Page(
-    pageTheme: _buildInnerPageTheme(),
-    build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-      _buildPageHeaderWidget(), pw.SizedBox(height: 10),
-      _subSectionBar("Mesures d'isolement des circuits BT"),
-      pw.SizedBox(height: 8),
-      _bodyText('Sans observation'),
-    ]),
-  ));
-  
-  // Essais de declenchement des DDR (nouvelle page)
-  pdf.addPage(pw.Page(
-    pageTheme: _buildInnerPageTheme(),
-    build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-      _buildPageHeaderWidget(), pw.SizedBox(height: 10),
-      _subSectionBar('Essais de declenchement des dispositifs differentiels'),
-      pw.SizedBox(height: 8),
-      pw.Table(
-        border: pw.TableBorder.all(color: borderColor, width: 0.4),
-        columnWidths: {0: const pw.FlexColumnWidth(1), 1: const pw.FlexColumnWidth(1.5), 2: const pw.FlexColumnWidth(1.2), 3: const pw.FlexColumnWidth(0.8), 4: const pw.FlexColumnWidth(0.8), 5: const pw.FlexColumnWidth(0.8), 6: const pw.FlexColumnWidth(1)},
-        children: [
-          _tableHeaderRow(['Quantite', 'Designation circuit', 'Type dispositif', 'Reglage In (mA)', 'Tempo (s)', 'Essai', 'Isolement (M ohms)']),
-          if (mesures.essaisDeclenchement.isEmpty)
-            pw.TableRow(children: List.generate(7, (_) => _cell('', isHeader: false)))
-          else
-            ...mesures.essaisDeclenchement.asMap().entries.map((e) {
-              final es = e.value;
-              final essaiColor = es.essai == 'B' || es.essai == 'OK' ? conformeColor : (es.essai == 'M' || es.essai == 'NON OK' ? nonConformeColor : null);
-              return pw.TableRow(
-                decoration: pw.BoxDecoration(color: e.key.isOdd ? tableRowAlt : PdfColors.white),
-                children: [
-                  _cell(es.localisation, isHeader: false),
-                  _cell('${es.coffret ?? ''} / ${es.designationCircuit ?? ''}', isHeader: false),
-                  _cell(es.typeDispositif, isHeader: false),
-                  _cell(es.reglageIAn?.toString() ?? '-', isHeader: false),
-                  _cell(es.tempo?.toString() ?? '-', isHeader: false),
-                  pw.Container(color: essaiColor, padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3), alignment: pw.Alignment.center, child: pw.Text(es.essai, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall))),
-                  _cell(es.isolement?.toString() ?? '-', isHeader: false),
-                ],
-              );
-            }),
-        ],
-      ),
-      pw.SizedBox(height: 12),
-      _buildAbreviationsTable(),
-    ]),
-  ));
-  
-  // Continuite (nouvelle page)
-  pdf.addPage(pw.Page(
-    pageTheme: _buildInnerPageTheme(),
-    build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-      _buildPageHeaderWidget(), pw.SizedBox(height: 10),
-      _subSectionBar('Continuite et resistance des conducteurs de protection et liaisons equipotentielles'),
-      pw.SizedBox(height: 8),
-      pw.Table(
-        border: pw.TableBorder.all(color: borderColor, width: 0.4),
-        columnWidths: {0: const pw.FlexColumnWidth(2), 1: const pw.FlexColumnWidth(2.5), 2: const pw.FlexColumnWidth(1.5), 3: const pw.FlexColumnWidth(2)},
-        children: [
-          _tableHeaderRow(['Localisation', 'Designation Tableau / Equipement', 'Origine Mesure', 'Observation']),
-          if (mesures.continuiteResistances.isEmpty)
-            pw.TableRow(children: List.generate(4, (_) => _cell('', isHeader: false)))
-          else
-            ...mesures.continuiteResistances.asMap().entries.map((e) {
-              final c = e.value;
-              return _tableDataRow([c.localisation, c.designationTableau, c.origineMesure, c.observation ?? ''], alt: e.key.isOdd);
-            }),
-        ],
-      ),
-    ]),
-  ));
-}
+      ]),
+    ));
+    
+    // Mesures d'isolement des circuits BT (nouvelle page)
+    pdf.addPage(pw.Page(
+      pageTheme: _buildInnerPageTheme(),
+      build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+        _buildPageHeaderWidget(), pw.SizedBox(height: 10),
+        _subSectionBar("Mesures d'isolement des circuits BT"),
+        pw.SizedBox(height: 8),
+        _bodyText('Sans observation'),
+      ]),
+    ));
+    
+    // Essais de declenchement des DDR (nouvelle page)
+    pdf.addPage(pw.Page(
+      pageTheme: _buildInnerPageTheme(),
+      build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+        _buildPageHeaderWidget(), pw.SizedBox(height: 10),
+        _subSectionBar('Essais de declenchement des dispositifs differentiels'),
+        pw.SizedBox(height: 8),
+        pw.Table(
+          border: pw.TableBorder.all(color: borderColor, width: 0.4),
+          columnWidths: {0: const pw.FlexColumnWidth(1), 1: const pw.FlexColumnWidth(1.5), 2: const pw.FlexColumnWidth(1.2), 3: const pw.FlexColumnWidth(0.8), 4: const pw.FlexColumnWidth(0.8), 5: const pw.FlexColumnWidth(0.8), 6: const pw.FlexColumnWidth(1)},
+          children: [
+            _tableHeaderRow(['Quantite', 'Designation circuit', 'Type dispositif', 'Reglage In (mA)', 'Tempo (s)', 'Essai', 'Isolement (M ohms)']),
+            if (mesures.essaisDeclenchement.isEmpty)
+              pw.TableRow(children: List.generate(7, (_) => _cell('', isHeader: false)))
+            else
+              ...mesures.essaisDeclenchement.asMap().entries.map((e) {
+                final es = e.value;
+                final essaiColor = es.essai == 'B' || es.essai == 'OK' ? conformeColor : (es.essai == 'M' || es.essai == 'NON OK' ? nonConformeColor : null);
+                return pw.TableRow(
+                  decoration: pw.BoxDecoration(color: e.key.isOdd ? tableRowAlt : PdfColors.white),
+                  children: [
+                    _cell(es.localisation, isHeader: false),
+                    _cell('${es.coffret ?? ''} / ${es.designationCircuit ?? ''}', isHeader: false),
+                    _cell(es.typeDispositif, isHeader: false),
+                    _cell(es.reglageIAn?.toString() ?? '-', isHeader: false),
+                    _cell(es.tempo?.toString() ?? '-', isHeader: false),
+                    pw.Container(color: essaiColor, padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3), alignment: pw.Alignment.center, child: pw.Text(es.essai, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall))),
+                    _cell(es.isolement?.toString() ?? '-', isHeader: false),
+                  ],
+                );
+              }),
+          ],
+        ),
+        pw.SizedBox(height: 12),
+        _buildAbreviationsTable(),
+      ]),
+    ));
+    
+    // Continuite (nouvelle page)
+    pdf.addPage(pw.Page(
+      pageTheme: _buildInnerPageTheme(),
+      build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
+        _buildPageHeaderWidget(), pw.SizedBox(height: 10),
+        _subSectionBar('Continuite et resistance des conducteurs de protection et liaisons equipotentielles'),
+        pw.SizedBox(height: 8),
+        pw.Table(
+          border: pw.TableBorder.all(color: borderColor, width: 0.4),
+          columnWidths: {0: const pw.FlexColumnWidth(2), 1: const pw.FlexColumnWidth(2.5), 2: const pw.FlexColumnWidth(1.5), 3: const pw.FlexColumnWidth(2)},
+          children: [
+            _tableHeaderRow(['Localisation', 'Designation Tableau / Equipement', 'Origine Mesure', 'Observation']),
+            if (mesures.continuiteResistances.isEmpty)
+              pw.TableRow(children: List.generate(4, (_) => _cell('', isHeader: false)))
+            else
+              ...mesures.continuiteResistances.asMap().entries.map((e) {
+                final c = e.value;
+                return _tableDataRow([c.localisation, c.designationTableau, c.origineMesure, c.observation ?? ''], alt: e.key.isOdd);
+              }),
+          ],
+        ),
+      ]),
+    ));
+  }
 
   // Page signature "LA DIRECTION"
   static pw.Widget _buildSignaturePage(RenseignementsGeneraux? rg, String? nomInspecteur) {
