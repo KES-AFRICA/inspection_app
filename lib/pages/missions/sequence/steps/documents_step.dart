@@ -1,3 +1,4 @@
+// lib/pages/missions/sequence/steps/documents_step.dart
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
@@ -21,10 +22,33 @@ class _DocumentsStepState extends State<DocumentsStep> {
   late Mission _mission;
   bool _isLoading = true;
 
+  final TextEditingController _nouveauDocumentController = TextEditingController();
+
+  final List<Map<String, dynamic>> _documentsStandards = [
+    {'field': 'doc_cahier_prescriptions', 'title': 'Cahier des prescriptions techniques ayant permis la réalisation des installations'},
+    {'field': 'doc_notes_calculs', 'title': 'Notes de calculs justifiant le dimensionnement des canalisations électriques et des dispositifs de protection'},
+    {'field': 'doc_schemas_unifilaires', 'title': 'Schémas unifilaires des installations électriques'},
+    {'field': 'doc_plan_masse', 'title': 'Plan de masse à l\'échelle des installations avec implantations des prises de terre et électriques enterrés'},
+    {'field': 'doc_plans_architecturaux', 'title': 'Plans architecturaux d\'implantation des différents circuits'},
+    {'field': 'doc_declarations_ce', 'title': 'Déclaration CE de conformité et notices des appareillages et câbles installés'},
+    {'field': 'doc_liste_installations', 'title': 'Liste des installations de sécurité et effectif maximal des différents locaux ou bâtiments'},
+    {'field': 'doc_rapport_derniere_verif', 'title': 'Rapport de dernière vérification'},
+    {'field': 'doc_plan_locaux_risques', 'title': 'Plan des locaux, avec indications des locaux à risques particuliers d\'influences externes'},
+    {'field': 'doc_rapport_analyse_foudre', 'title': 'Rapport d\'analyse risque foudre'},
+    {'field': 'doc_rapport_etude_foudre', 'title': 'Rapport d\'étude technique foudre'},
+    {'field': 'doc_registre_securite', 'title': 'Registre de sécurité (si applicable)'},
+  ];
+
   @override
   void initState() {
     super.initState();
     _loadMission();
+  }
+
+  @override
+  void dispose() {
+    _nouveauDocumentController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadMission() async {
@@ -95,6 +119,110 @@ class _DocumentsStepState extends State<DocumentsStep> {
     _notifyDataChanged();
   }
 
+  Future<void> _ajouterDocumentPersonnalise() async {
+    _nouveauDocumentController.clear();
+    
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Ajouter un document'),
+        content: TextField(
+          controller: _nouveauDocumentController,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Nom du document',
+            border: OutlineInputBorder(),
+          ),
+          onSubmitted: (_) {
+            if (_nouveauDocumentController.text.trim().isNotEmpty) {
+              Navigator.pop(context, true);
+            }
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Ajouter'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      final nouveauNom = _nouveauDocumentController.text.trim();
+      if (nouveauNom.isNotEmpty) {
+        final success = await HiveService.addDocumentPersonnalise(
+          missionId: _mission.id,
+          documentNom: nouveauNom,
+        );
+        
+        if (success) {
+          setState(() {});
+          _notifyDataChanged();
+          
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Document "$nouveauNom" ajouté'),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Ce document existe déjà'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+      }
+    }
+  }
+
+  Future<void> _supprimerDocumentPersonnalise(String documentNom) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer le document'),
+        content: Text('Voulez-vous vraiment supprimer "$documentNom" ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      final success = await HiveService.removeDocumentPersonnalise(
+        missionId: _mission.id,
+        documentNom: documentNom,
+      );
+      
+      if (success) {
+        setState(() {});
+        _notifyDataChanged();
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Document "$documentNom" supprimé'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  }
+
   void _notifyDataChanged() {
     widget.onDataChanged({
       'documents': {
@@ -113,6 +241,49 @@ class _DocumentsStepState extends State<DocumentsStep> {
         'doc_autre': _mission.docAutre,
       }
     });
+  }
+
+  Widget _buildDocumentTile({
+    required String title,
+    required bool value,
+    required Function(bool?) onChanged,
+    VoidCallback? onDelete,
+  }) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Container(
+        decoration: BoxDecoration(
+          color: value ? Colors.green.shade50 : null,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: CheckboxListTile(
+                title: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: value ? Colors.green.shade800 : null,
+                  ),
+                ),
+                value: value,
+                onChanged: onChanged,
+                activeColor: Colors.green,
+                controlAffinity: ListTileControlAffinity.leading,
+                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              ),
+            ),
+            if (onDelete != null)
+              IconButton(
+                icon: Icon(Icons.delete_outline, color: Colors.red.shade400, size: 20),
+                onPressed: onDelete,
+              ),
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -159,119 +330,53 @@ class _DocumentsStepState extends State<DocumentsStep> {
           
           const SizedBox(height: 24),
           
-          // === DOCUMENT 1 ===
-          _buildDocumentTile(
-            title: 'Cahier des prescriptions techniques ayant permis la réalisation des installations',
-            value: _mission.docCahierPrescriptions,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_cahier_prescriptions', val ?? false),
-          ),
+          // Documents standards
+          ..._documentsStandards.map((doc) => _buildDocumentTile(
+            title: doc['title'] as String,
+            value: _getDocumentValue(doc['field'] as String),
+            onChanged: (val) => _handleDocumentChanged(doc['field'] as String, val ?? false),
+          )),
           
-          // === DOCUMENT 2 ===
-          _buildDocumentTile(
-            title: 'Notes de calculs justifiant le dimensionnement des canalisations électriques et des dispositifs de protection',
-            value: _mission.docNotesCalculs,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_notes_calculs', val ?? false),
-          ),
+          // Documents personnalisés
+          ..._mission.autresDocuments.map((doc) => _buildDocumentTile(
+            title: doc,
+            value: true,
+            onChanged: (_) {},
+            onDelete: () => _supprimerDocumentPersonnalise(doc),
+          )),
           
-          // === DOCUMENT 3 ===
-          _buildDocumentTile(
-            title: 'Schémas unifilaires des installations électriques',
-            value: _mission.docSchemasUnifilaires,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_schemas_unifilaires', val ?? false),
-          ),
+          const SizedBox(height: 16),
           
-          // === DOCUMENT 4 ===
-          _buildDocumentTile(
-            title: 'Plan de masse à l\'échelle des installations avec implantations des prises de terre et électriques enterrés',
-            value: _mission.docPlanMasse,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_plan_masse', val ?? false),
-          ),
-          
-          // === DOCUMENT 5 ===
-          _buildDocumentTile(
-            title: 'Plans architecturaux d\'implantation des différents circuits',
-            value: _mission.docPlansArchitecturaux,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_plans_architecturaux', val ?? false),
-          ),
-          
-          // === DOCUMENT 6 ===
-          _buildDocumentTile(
-            title: 'Déclaration CE de conformité et notices des appareillages et câbles installés',
-            value: _mission.docDeclarationsCe,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_declarations_ce', val ?? false),
-          ),
-          
-          // === DOCUMENT 7 ===
-          _buildDocumentTile(
-            title: 'Liste des installations de sécurité et effectif maximal des différents locaux ou bâtiments',
-            value: _mission.docListeInstallations,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_liste_installations', val ?? false),
-          ),
-
-          // === DOCUMENT 8 === (CORRIGÉ : utilise doc_rapport_derniere_verif)
-          _buildDocumentTile(
-            title: 'Rapport de dernière vérification',
-            value: _mission.docRapportDerniereVerif,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_rapport_derniere_verif', val ?? false),
-          ),
-          
-          // === DOCUMENT 9 ===
-          _buildDocumentTile(
-            title: 'Plan des locaux, avec indications des locaux à risques particuliers d\'influences externes',
-            value: _mission.docPlanLocauxRisques,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_plan_locaux_risques', val ?? false),
-          ),
-          
-          // === DOCUMENT 10 ===
-          _buildDocumentTile(
-            title: 'Rapport d\'analyse risque foudre',
-            value: _mission.docRapportAnalyseFoudre,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_rapport_analyse_foudre', val ?? false),
-          ),
-          
-          // === DOCUMENT 11 ===
-          _buildDocumentTile(
-            title: 'Rapport d\'étude technique foudre',
-            value: _mission.docRapportEtudeFoudre,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_rapport_etude_foudre', val ?? false),
-          ),
-          
-          // === DOCUMENT 12 ===
-          _buildDocumentTile(
-            title: 'Registre de sécurité (si applicable)',
-            value: _mission.docRegistreSecurite,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_registre_securite', val ?? false),
-          ),
-          
-          // === DOCUMENT 13 ===
-          _buildDocumentTile(
-            title: 'Autre document pertinent',
-            value: _mission.docAutre,
-            onChanged: (bool? val) => _handleDocumentChanged('doc_autre', val ?? false),
+          // Bouton "Autre"
+          TextButton.icon(
+            onPressed: _ajouterDocumentPersonnalise,
+            icon: const Icon(Icons.add),
+            label: const Text('Autre'),
+            style: TextButton.styleFrom(
+              foregroundColor: AppTheme.primaryBlue,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildDocumentTile({
-    required String title,
-    required bool value,
-    required Function(bool?) onChanged,
-  }) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 8),
-      child: CheckboxListTile(
-        title: Text(
-          title,
-          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-        ),
-        value: value,
-        onChanged: onChanged,
-        activeColor: AppTheme.primaryBlue,
-        controlAffinity: ListTileControlAffinity.leading,
-        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-      ),
-    );
+  bool _getDocumentValue(String field) {
+    switch (field) {
+      case 'doc_cahier_prescriptions': return _mission.docCahierPrescriptions;
+      case 'doc_notes_calculs': return _mission.docNotesCalculs;
+      case 'doc_schemas_unifilaires': return _mission.docSchemasUnifilaires;
+      case 'doc_plan_masse': return _mission.docPlanMasse;
+      case 'doc_plans_architecturaux': return _mission.docPlansArchitecturaux;
+      case 'doc_declarations_ce': return _mission.docDeclarationsCe;
+      case 'doc_liste_installations': return _mission.docListeInstallations;
+      case 'doc_plan_locaux_risques': return _mission.docPlanLocauxRisques;
+      case 'doc_rapport_analyse_foudre': return _mission.docRapportAnalyseFoudre;
+      case 'doc_rapport_etude_foudre': return _mission.docRapportEtudeFoudre;
+      case 'doc_registre_securite': return _mission.docRegistreSecurite;
+      case 'doc_rapport_derniere_verif': return _mission.docRapportDerniereVerif;
+      case 'doc_autre': return _mission.docAutre;
+      default: return false;
+    }
   }
 }

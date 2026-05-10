@@ -867,7 +867,10 @@ class PdfReportService {
   //  RENSEIGNEMENTS GENERAUX
   // ──────────────────────────────────────────────────────────────
   
-  static pw.Widget _buildRenseignementsGeneraux(Mission mission, RenseignementsGeneraux? rg) {
+  static pw.Widget _buildRenseignementsGeneraux(
+    Mission mission,
+    RenseignementsGeneraux? rg,
+  ) {
     final verificateursNoms = rg != null && rg.verificateurs.isNotEmpty
         ? rg.verificateurs
             .map((v) => '${v['prenom'] ?? ''} ${v['nom'] ?? ''}'.trim())
@@ -881,91 +884,267 @@ class PdfReportService {
             : '');
 
     final dateDebut = rg?.dateDebut ?? mission.dateIntervention;
-    final dateFin   = rg?.dateFin;
+    final dateFin = rg?.dateFin;
+
     String dateIntervTxt;
-    if (dateDebut != null && dateFin != null && !dateDebut.isAtSameMomentAs(dateFin)) {
-      dateIntervTxt = 'Du ${_formatDate(dateDebut)} au ${_formatDate(dateFin)}';
+
+    if (dateDebut != null &&
+        dateFin != null &&
+        !dateDebut.isAtSameMomentAs(dateFin)) {
+      dateIntervTxt =
+          'Du ${_formatDate(dateDebut)} au ${_formatDate(dateFin)}';
     } else if (dateDebut != null) {
       dateIntervTxt = _formatDate(dateDebut);
     } else {
       dateIntervTxt = '';
     }
 
+    // Construire la liste des lignes du tableau
+    final rows = <pw.TableRow>[
+      _tableHeaderRow(['LISTE DES DOCUMENTS', 'OBSERVATIONS']),
+    ];
+
+    // Documents standards
+    final docsStandards = [
+      {
+        'label':
+            'Cahier des prescriptions techniques ayant permis la réalisation des installations',
+        'value': mission.docCahierPrescriptions,
+      },
+      {
+        'label':
+            'Notes de calculs justifiant le dimensionnement des canalisations électriques et des dispositifs de protection',
+        'value': mission.docNotesCalculs,
+      },
+      {
+        'label': 'Schémas unifilaires des installations électriques',
+        'value': mission.docSchemasUnifilaires,
+      },
+      {
+        'label':
+            'Plan de masse à l\'échelle des installations avec implantations des prises de terre et électriques enterrés',
+        'value': mission.docPlanMasse,
+      },
+      {
+        'label':
+            'Plans architecturaux d\'implantation des différents circuits',
+        'value': mission.docPlansArchitecturaux,
+      },
+      {
+        'label':
+            'Déclaration CE de conformité et notices des appareillages et câbles installés',
+        'value': mission.docDeclarationsCe,
+      },
+      {
+        'label':
+            'Liste des installations de sécurité et effectif maximal des différents locaux ou bâtiments',
+        'value': mission.docListeInstallations,
+      },
+      {
+        'label': 'Rapport de dernière vérification',
+        'value': mission.docRapportDerniereVerif,
+      },
+      {
+        'label':
+            'Plan des locaux, avec indications des locaux à risques particuliers d\'influences externes',
+        'value': mission.docPlanLocauxRisques,
+      },
+      {
+        'label': 'Rapport d\'analyse risque foudre',
+        'value': mission.docRapportAnalyseFoudre,
+      },
+      {
+        'label': 'Rapport d\'étude technique foudre',
+        'value': mission.docRapportEtudeFoudre,
+      },
+      {
+        'label': 'Registre de sécurité',
+        'value': mission.docRegistreSecurite,
+      },
+    ];
+
+    for (var doc in docsStandards) {
+      rows.add(
+        _tableDataRow(
+          [
+            doc['label'] as String,
+            _docStatus(doc['value'] as bool),
+          ],
+          alt: rows.length.isOdd,
+        ),
+      );
+    }
+
+    // Documents personnalisés
+    final autresDocs = mission.autresDocuments ?? [];
+
+    for (var doc in autresDocs) {
+      rows.add(
+        _tableDataRow(
+          [doc, 'Présent'],
+          alt: rows.length.isOdd,
+        ),
+      );
+    }
+
+    // Option "Autre"
+    if (mission.docAutre &&
+        !autresDocs.contains('Autre document pertinent')) {
+      rows.add(
+        _tableDataRow(
+          ['Autre document pertinent', 'Présent'],
+          alt: rows.length.isOdd,
+        ),
+      );
+    }
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         _buildPageHeaderWidget(nomClient: mission.nomClient),
+
         pw.SizedBox(height: 10),
+
         _sectionBox('RENSEIGNEMENTS GENERAUX DE L\'ETABLISSEMENT'),
+
         pw.SizedBox(height: 8),
+
         _subTitle('RENSEIGNEMENTS PRINCIPAUX'),
+
         pw.SizedBox(height: 5),
+
         pw.Table(
-          border: pw.TableBorder.all(color: borderColor, width: 0.4),
+          border: pw.TableBorder.all(
+            color: borderColor,
+            width: 0.4,
+          ),
           columnWidths: {
             0: const pw.FlexColumnWidth(2),
             1: const pw.FlexColumnWidth(3),
           },
           children: [
-            _tableDataRow(['Etablissement verifie', mission.nomClient], alt: false),
+            _tableDataRow(
+              ['Etablissement verifie', mission.nomClient],
+              alt: false,
+            ),
+
             if (rg != null) ...[
-              _tableDataRow(['Installation verifiee', rg.installation], alt: true),
-              _tableDataRow(['Activite principale', rg.activite], alt: false),
+              _tableDataRow(
+                ['Installation verifiee', rg.installation],
+                alt: true,
+              ),
+              _tableDataRow(
+                ['Activite principale', rg.activite],
+                alt: false,
+              ),
             ] else if (mission.activiteClient != null)
-              _tableDataRow(['Activite principale', mission.activiteClient!], alt: false),
+              _tableDataRow(
+                ['Activite principale', mission.activiteClient!],
+                alt: false,
+              ),
+
             if (mission.adresseClient != null)
-              _tableDataRow(['Adresse', mission.adresseClient!], alt: true),
+              _tableDataRow(
+                ['Adresse', mission.adresseClient!],
+                alt: true,
+              ),
+
             if (rg != null && rg.nomSite.isNotEmpty)
-              _tableDataRow(['Nom du site', rg.nomSite], alt: false)
-            else if (mission.nomSite != null && mission.nomSite!.isNotEmpty)
-              _tableDataRow(['Nom du site', mission.nomSite!], alt: false),
-            _tableDataRow(['Nature', mission.natureMission ?? rg?.verificationType ?? ''], alt: true),
+              _tableDataRow(
+                ['Nom du site', rg.nomSite],
+                alt: false,
+              )
+            else if (mission.nomSite != null &&
+                mission.nomSite!.isNotEmpty)
+              _tableDataRow(
+                ['Nom du site', mission.nomSite!],
+                alt: false,
+              ),
+
+            _tableDataRow(
+              [
+                'Nature',
+                mission.natureMission ??
+                    rg?.verificationType ??
+                    '',
+              ],
+              alt: true,
+            ),
+
             if (dateIntervTxt.isNotEmpty)
-              _tableDataRow(['Dates d\'intervention', dateIntervTxt], alt: false),
+              _tableDataRow(
+                ['Dates d\'intervention', dateIntervTxt],
+                alt: false,
+              ),
+
             if (rg != null && rg.dureeJours > 0)
-              _tableDataRow(['Duree', '${rg.dureeJours} jour(s)'], alt: true)
+              _tableDataRow(
+                ['Duree', '${rg.dureeJours} jour(s)'],
+                alt: true,
+              )
             else if (mission.dureeMissionJours != null)
-              _tableDataRow(['Duree', '${mission.dureeMissionJours} jour(s)'], alt: true),
+              _tableDataRow(
+                [
+                  'Duree',
+                  '${mission.dureeMissionJours} jour(s)',
+                ],
+                alt: true,
+              ),
+
             if (rg != null) ...[
               if (rg.accompagnateurs.isNotEmpty)
-                _tableDataRow(['Accompagnateur / Responsable', rg.accompagnateurs.join(', ')], alt: false),
+                _tableDataRow(
+                  [
+                    'Accompagnateur / Responsable',
+                    rg.accompagnateurs.join(', '),
+                  ],
+                  alt: false,
+                ),
+
               if (rg.registreControle.isNotEmpty)
-                _tableDataRow(['Registre de controle', rg.registreControle], alt: true),
+                _tableDataRow(
+                  ['Registre de controle', rg.registreControle],
+                  alt: true,
+                ),
+
               if (rg.compteRendu.isNotEmpty)
-                _tableDataRow(['Compte rendu de fin de visite fait a', rg.compteRendu.join(', ')], alt: false),
+                _tableDataRow(
+                  [
+                    'Compte rendu de fin de visite fait a',
+                    rg.compteRendu.join(', '),
+                  ],
+                  alt: false,
+                ),
+
               if (verificateursNoms.isNotEmpty)
-                _tableDataRow(['Verificateur(s)', verificateursNoms], alt: true),
+                _tableDataRow(
+                  ['Verificateur(s)', verificateursNoms],
+                  alt: true,
+                ),
             ],
           ],
         ),
+
         pw.SizedBox(height: 16),
+
         _subTitle('DOCUMENTS NECESSAIRES A LA VERIFICATION'),
+
         pw.SizedBox(height: 5),
+
         pw.Table(
-          border: pw.TableBorder.all(color: borderColor, width: 0.4),
+          border: pw.TableBorder.all(
+            color: borderColor,
+            width: 0.4,
+          ),
           columnWidths: {
             0: const pw.FlexColumnWidth(4),
             1: const pw.FlexColumnWidth(2),
           },
-          children: [
-            _tableHeaderRow(['LISTE DES DOCUMENTS', 'OBSERVATIONS']),
-            _tableDataRow(['Cahier des prescriptions techniques ayant permis la realisation des installations', _docStatus(mission.docCahierPrescriptions)], alt: false),
-            _tableDataRow(['Notes de calculs justifiant le dimensionnement des canalisations electriques et des dispositifs de protection', _docStatus(mission.docNotesCalculs)], alt: true),
-            _tableDataRow(['Schemas unifilaires des installations electriques', _docStatus(mission.docSchemasUnifilaires)], alt: false),
-            _tableDataRow(['Plan de masse a l\'echelle des installations avec implantations des prises de terre et electriques enterres', _docStatus(mission.docPlanMasse)], alt: true),
-            _tableDataRow(['Plans architecturaux d\'implantation des differents circuits', _docStatus(mission.docPlansArchitecturaux)], alt: false),
-            _tableDataRow(['Declaration CE de conformite et notices des appareillages et cables installes', _docStatus(mission.docDeclarationsCe)], alt: true),
-            _tableDataRow(['Liste des installations de securite et effectif maximal des differents locaux ou batiments', _docStatus(mission.docListeInstallations)], alt: false),
-            _tableDataRow(['Rapport de derniere verification', _docStatus(mission.docRapportDerniereVerif)], alt: true),
-            _tableDataRow(['Plan des locaux, avec indications des locaux a risques particuliers d\'influences externes', _docStatus(mission.docPlanLocauxRisques)], alt: false),
-            _tableDataRow(['Rapport d\'analyse risque foudre', _docStatus(mission.docRapportAnalyseFoudre)], alt: true),
-            _tableDataRow(['Rapport d\'etude technique foudre', _docStatus(mission.docRapportEtudeFoudre)], alt: false),
-          ],
+          children: rows,
         ),
       ],
     );
   }
-
   // ──────────────────────────────────────────────────────────────
   //  DESCRIPTION DES INSTALLATIONS (avec ordre des colonnes)
   // ──────────────────────────────────────────────────────────────

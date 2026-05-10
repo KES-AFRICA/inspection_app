@@ -6442,6 +6442,114 @@ static Future<bool> updateUserPassword({
   static Future<void> resetSecurityCounters(String email) async {
   await SecurePasswordService.resetSecurityCounters(email.toLowerCase());
 }
+
+// ============================================================
+//          GESTION DES DOCUMENTS PERSONNALISÉS
+// ============================================================
+
+/// Ajouter un document personnalisé à une mission
+static Future<bool> addDocumentPersonnalise({
+  required String missionId,
+  required String documentNom,
+}) async {
+  try {
+    final box = Hive.box<Mission>(_missionBox);
+    final mission = box.get(missionId);
+
+    if (mission == null) {
+      if (kDebugMode) print('❌ Mission non trouvée: $missionId');
+      return false;
+    }
+
+    // Nettoyer le nom
+    final nomClean = documentNom.trim();
+    if (nomClean.isEmpty) return false;
+
+    // Initialiser la liste si nécessaire
+    if (mission.autresDocuments == null) {
+      mission.autresDocuments = [];
+    }
+
+    // Ajouter si pas déjà présent
+    if (!mission.autresDocuments.contains(nomClean)) {
+      mission.autresDocuments.add(nomClean);
+      mission.updatedAt = DateTime.now();
+      await mission.save();
+      if (kDebugMode) print('✅ Document personnalisé ajouté: $nomClean');
+      return true;
+    }
+
+    return false;
+  } catch (e) {
+    if (kDebugMode) print('❌ Erreur addDocumentPersonnalise: $e');
+    return false;
+  }
+}
+
+/// Supprimer un document personnalisé d'une mission
+static Future<bool> removeDocumentPersonnalise({
+  required String missionId,
+  required String documentNom,
+}) async {
+  try {
+    final box = Hive.box<Mission>(_missionBox);
+    final mission = box.get(missionId);
+
+    if (mission == null || mission.autresDocuments == null) {
+      if (kDebugMode) print('❌ Mission non trouvée ou liste vide: $missionId');
+      return false;
+    }
+
+    final removed = mission.autresDocuments.remove(documentNom);
+    
+    if (removed) {
+      mission.updatedAt = DateTime.now();
+      await mission.save();
+      if (kDebugMode) print('✅ Document personnalisé supprimé: $documentNom');
+      return true;
+    }
+
+    return false;
+  } catch (e) {
+    if (kDebugMode) print('❌ Erreur removeDocumentPersonnalise: $e');
+    return false;
+  }
+}
+
+/// Récupérer tous les documents personnalisés d'une mission
+static List<String> getDocumentsPersonnalises(String missionId) {
+  try {
+    final mission = getMissionById(missionId);
+    return mission?.autresDocuments ?? [];
+  } catch (e) {
+    if (kDebugMode) print('❌ Erreur getDocumentsPersonnalises: $e');
+    return [];
+  }
+}
+
+/// Mettre à jour l'état d'un document personnalisé (cochen/décochen)
+/// Note: Pour les documents personnalisés, on considère que présence = coché
+static Future<bool> updateDocumentPersonnaliseStatus({
+  required String missionId,
+  required String documentNom,
+  required bool value,
+}) async {
+  if (value) {
+    return await addDocumentPersonnalise(missionId: missionId, documentNom: documentNom);
+  } else {
+    return await removeDocumentPersonnalise(missionId: missionId, documentNom: documentNom);
+  }
+}
+
+/// Vérifier si un document personnalisé est présent (coché)
+static bool hasDocumentPersonnalise(String missionId, String documentNom) {
+  try {
+    final mission = getMissionById(missionId);
+    return mission?.autresDocuments.contains(documentNom) ?? false;
+  } catch (e) {
+    return false;
+  }
+}
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -6462,4 +6570,5 @@ class SecureLoginResult {
     this.isLocked = false,
     this.remainingAttempts = 5,
   });
+  
 }

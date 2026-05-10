@@ -1,3 +1,4 @@
+// lib/models/mission.dart
 import 'package:hive/hive.dart';
 
 part 'mission.g.dart';
@@ -104,7 +105,7 @@ class Mission extends HiveObject {
   List<String>? foudreIds;
 
   @HiveField(33)
-  String? mesuresEssaisId; 
+  String? mesuresEssaisId;
 
   @HiveField(34)
   String? renseignementsGenerauxId;
@@ -117,6 +118,10 @@ class Mission extends HiveObject {
 
   @HiveField(37)
   String? schemaOption;
+
+  // ✅ NOUVEAU : Liste des documents personnalisés ajoutés par l'utilisateur
+  @HiveField(38)
+  List<String> autresDocuments;
 
   Mission({
     required this.id,
@@ -151,10 +156,13 @@ class Mission extends HiveObject {
     this.auditInstallationsElectriquesId,
     this.docAutre = false,
     this.classementLocauxId,
-    this.foudreIds, 
+    this.foudreIds,
     this.mesuresEssaisId,
     this.nomSite,
-  });
+    this.jsaId,
+    this.schemaOption,
+    List<String>? autresDocuments,
+  }) : autresDocuments = autresDocuments ?? [];
 
   factory Mission.fromJson(Map<String, dynamic> json) {
     return Mission(
@@ -208,6 +216,11 @@ class Mission extends HiveObject {
           : null,
       mesuresEssaisId: json['mesures_essais_id'],
       nomSite: json['nom_site'],
+      jsaId: json['jsa_id'],
+      schemaOption: json['schema_option'],
+      autresDocuments: json['autres_documents'] != null
+          ? List<String>.from(json['autres_documents'])
+          : [],
     );
   }
 
@@ -248,6 +261,9 @@ class Mission extends HiveObject {
       'foudre_ids': foudreIds,
       'mesures_essais_id': mesuresEssaisId,
       'nom_site': nomSite,
+      'jsa_id': jsaId,
+      'schema_option': schemaOption,
+      'autres_documents': autresDocuments,
     };
   }
 
@@ -255,4 +271,19 @@ class Mission extends HiveObject {
   bool get isEnAttente => status.toLowerCase() == 'en_attente';
   bool get isEnCours => status.toLowerCase() == 'en_cours' || status.toLowerCase() == 'en cours';
   bool get isTermine => status.toLowerCase() == 'termine' || status.toLowerCase() == 'terminé';
+
+  // ✅ NOUVEAU : Méthodes utilitaires pour les documents personnalisés
+  bool hasDocumentPersonnalise(String documentNom) {
+    return autresDocuments.contains(documentNom);
+  }
+
+  void ajouterDocumentPersonnalise(String documentNom) {
+    if (!autresDocuments.contains(documentNom)) {
+      autresDocuments.add(documentNom);
+    }
+  }
+
+  void supprimerDocumentPersonnalise(String documentNom) {
+    autresDocuments.remove(documentNom);
+  }
 }
