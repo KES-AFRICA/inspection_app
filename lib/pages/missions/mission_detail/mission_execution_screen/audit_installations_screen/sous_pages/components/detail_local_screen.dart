@@ -2010,31 +2010,37 @@ Widget _buildElementItem(ElementControle element) {
                         RefreshIndicator(
                           onRefresh: _refreshLocal,
                           child: _coffrets.isEmpty
-                              ? Center(
-                                  child: Column(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Icon(Icons.electrical_services_outlined, size: 64, color: Colors.grey.shade400),
-                                      const SizedBox(height: 16),
-                                      Text(
-                                        'Aucun coffret ajouté',
-                                        style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
+                              ? SingleChildScrollView(
+                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  child: SizedBox(
+                                    height: MediaQuery.of(context).size.height - 200,
+                                    child: Center(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.electrical_services_outlined, size: 64, color: Colors.grey.shade400),
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            'Aucun équipement ajouté',
+                                            style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          ElevatedButton.icon(
+                                            onPressed: _ajouterCoffret,
+                                            icon: const Icon(Icons.add),
+                                            label: const Text('AJOUTER UN ÉQUIPEMENT'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: AppTheme.primaryBlue,
+                                              foregroundColor: Colors.white,
+                                            ),
+                                          ),
+                                        ],
                                       ),
-                                      const SizedBox(height: 8),
-                                      ElevatedButton.icon(
-                                        onPressed: _ajouterCoffret,
-                                        icon: const Icon(Icons.add),
-                                        label: const Text('AJOUTER UN ÉQUIPEMENTS'),
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: AppTheme.primaryBlue,
-                                          foregroundColor: Colors.white,
-                                        ),
-                                      ),
-                                    ],
+                                    ),
                                   ),
                                 )
                               : ListView.builder(
-                                  padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
+                                  padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
                                   itemCount: _coffrets.length,
                                   itemBuilder: (context, index) {
                                     return _buildCoffretCard(_coffrets[index], index);

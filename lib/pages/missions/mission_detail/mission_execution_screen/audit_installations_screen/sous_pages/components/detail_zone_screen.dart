@@ -1833,13 +1833,22 @@ void _supprimerCoffret(int index, bool isMoyenneTension) {
 
                   // Tab LOCAUX
                   !hasLocaux
-                      ? _buildEmptyState(
-                          'locaux', 
-                          'Aucun local dans cette zone',
-                          isMoyenneTension ? _ajouterLocalMT : _ajouterLocalBT,
-                          Icons.domain,
-                          'AJOUTER UN LOCAL',
-                        )
+                      ? RefreshIndicator(
+                        onRefresh: _refreshZone,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: SizedBox(
+                            height: MediaQuery.of(context).size.height - 200,
+                            child: _buildEmptyState(
+                              'locaux', 
+                              'Aucun local dans cette zone',
+                              widget.isMoyenneTension ? _ajouterLocalMT : _ajouterLocalBT,
+                              Icons.domain,
+                              'AJOUTER UN LOCAL',
+                            ),
+                          ),
+                        ),
+                      )
                       : Builder(
                         builder: (context) {
                           final drafts = widget.isMoyenneTension 
@@ -1887,15 +1896,25 @@ void _supprimerCoffret(int index, bool isMoyenneTension) {
                   
                   // Tab COFFRETS
                   !hasCoffrets
-                  ? _buildEmptyState(
-                      'coffrets', 
-                      isMoyenneTension 
-                        ? 'Aucun coffret dans cette zone' 
-                        : 'Aucun coffret direct dans cette zone',
-                      isMoyenneTension ? _ajouterCoffretMT : _ajouterCoffretDirectBT,
-                      Icons.electrical_services,
-                      'AJOUTER UN ÉQUIPEMENTS',
-                    )
+                  ? RefreshIndicator(
+                        onRefresh: _refreshZone,
+                        child: SingleChildScrollView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          child: SizedBox(
+                            height: MediaQuery.of(context).size.height - 200,
+                            child: _buildEmptyState(
+                              'coffrets', 
+                              isMoyenneTension 
+                                ? 'Aucun coffret dans cette zone' 
+                                : 'Aucun coffret direct dans cette zone',
+                              isMoyenneTension ? _ajouterCoffretMT : _ajouterCoffretDirectBT,
+                              Icons.electrical_services,
+                              'AJOUTER UN ÉQUIPEMENTS',
+                            )
+                          ),
+                        ),
+                      )
+                  
                   : RefreshIndicator(
                       onRefresh: _refreshZone,
                       color: AppTheme.primaryBlue,
