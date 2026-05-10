@@ -10,9 +10,9 @@ class DescriptionInstallationsForm extends StatefulWidget {
   final String title;
   final String sectionKey;
   final List<String> champs;
-  final List<String> requiredFields;
   final Function(String) onComplete;
   final bool isComplete;
+  final VoidCallback onTerminate; // ✅ NOUVEAU
 
   const DescriptionInstallationsForm({
     super.key,
@@ -20,9 +20,9 @@ class DescriptionInstallationsForm extends StatefulWidget {
     required this.title,
     required this.sectionKey,
     required this.champs,
-    required this.requiredFields,
     required this.onComplete,
     required this.isComplete,
+    required this.onTerminate,
   });
 
   @override
@@ -34,7 +34,23 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
   bool _isLoading = true;
   bool _isSaving = false;
 
-  // ✅ OPTIONS POUR TYPE DE CELLULE
+  // ✅ Liste des champs numériques avec leur unité
+  static const Map<String, String> _numericFieldsWithUnit = {
+    'Calibre Du Disjoncteur': 'A',
+    'Section Du Cable': 'mm²',
+    'Puissance Transformateur': 'kVA',
+    'Calibre Du Disjoncteur Sortie Transformateur': 'A',
+    'Tension': 'V',
+    'Puissance (Kva)': 'kVA',
+    'Intensite': 'A',
+    'Capacite': 'L',
+    'Intensite (A)': 'A',
+    'Entree': 'V',
+    'Sortie': 'V',
+    'Nombre De Phase': '',
+  };
+
+  // ✅ Types de cellule (dropdown)
   static const List<String> _typeCelluleOptions = [
     'I : Interrupteur-sectionneur (arrivée / départ boucle)',
     'IM : Interrupteur-sectionneur avec mise à la terre',
@@ -64,7 +80,10 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     'Bus Riser (BR) : Liaison tableau',
   ];
 
-  // ✅ Liste des sections de câble disponibles
+  // ✅ Options pour Nature du réseau
+  static const List<String> _natureReseauOptions = ['Aérien', 'Souterrain', 'Mixte'];
+
+  // ✅ Sections de câble (dropdown)
   static const List<String> _sectionCableOptions = [
     '0,5 mm²', '0,75 mm²', '1 mm²', '1,5 mm²', '2,5 mm²', '4 mm²', '6 mm²',
     '10 mm²', '16 mm²', '25 mm²', '35 mm²', '50 mm²', '70 mm²', '95 mm²',
@@ -72,22 +91,11 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     '500 mm²', '630 mm²',
   ];
 
-  // ✅ Options pour les différents champs dropdown
-  final Map<String, List<String>> _dropdownOptions = {
-    'Type De Cellule': _typeCelluleOptions,
-    'Nature Du Reseau': ['Aérien', 'Souterrain', 'Mixte'],
-    'Mode': ['Pompe électrique', 'Gravitaire', 'Manuel', 'Autre'],
-    'Cuve De Retention': ['Oui', 'Non'],
-    'Indicateur De Niveau': ['Oui', 'Non'],
-    'Mise A La Terre': ['Oui', 'Non'],
-    'Section Du Cable': _sectionCableOptions,
-  };
+  // ✅ Options pour Mode (carburant)
+  static const List<String> _modeOptions = ['Pompe électrique', 'Gravitaire', 'Manuel', 'Autre'];
 
-  // ✅ Générer les années (1900 à année actuelle)
-  List<String> _getAnneeOptions() {
-    final currentYear = DateTime.now().year;
-    return List.generate(currentYear - 1900 + 1, (i) => (currentYear - i).toString());
-  }
+  // ✅ Options Oui/Non
+  static const List<String> _ouiNonOptions = ['Oui', 'Non'];
 
   @override
   void initState() {
@@ -122,9 +130,12 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
         builder: (context) => _AddEditItemScreen(
           title: widget.title,
           champs: widget.champs,
-          requiredFields: widget.requiredFields,
-          dropdownOptions: _dropdownOptions,
-          anneeOptions: _getAnneeOptions(),
+          numericFieldsWithUnit: _numericFieldsWithUnit,
+          typeCelluleOptions: _typeCelluleOptions,
+          natureReseauOptions: _natureReseauOptions,
+          sectionCableOptions: _sectionCableOptions,
+          modeOptions: _modeOptions,
+          ouiNonOptions: _ouiNonOptions,
         ),
       ),
     );
@@ -144,7 +155,7 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
         _checkAndNotifyComplete();
         
         if (mounted) {
-          // ✅ AFFICHER LE DIALOGUE APRÈS L'ENREGISTREMENT
+          // ✅ Dialogue avec CONTINUER / TERMINER
           final shouldContinue = await showDialog<bool>(
             context: context,
             barrierDismissible: false,
@@ -159,7 +170,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                     child: Text(
                       'Enregistrement réussi',
                       style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
@@ -188,8 +198,10 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
           if (shouldContinue == true) {
             // CONTINUER : rouvrir l'écran d'ajout
             _addItem();
+          } else {
+            // TERMINER : passer à la section suivante
+            widget.onTerminate();
           }
-          // TERMINER : ne rien faire, rester sur la liste
         }
       }
       
@@ -206,10 +218,13 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
         builder: (context) => _AddEditItemScreen(
           title: widget.title,
           champs: widget.champs,
-          requiredFields: widget.requiredFields,
           initialData: item.data,
-          dropdownOptions: _dropdownOptions,
-          anneeOptions: _getAnneeOptions(),
+          numericFieldsWithUnit: _numericFieldsWithUnit,
+          typeCelluleOptions: _typeCelluleOptions,
+          natureReseauOptions: _natureReseauOptions,
+          sectionCableOptions: _sectionCableOptions,
+          modeOptions: _modeOptions,
+          ouiNonOptions: _ouiNonOptions,
         ),
       ),
     );
@@ -231,7 +246,7 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Modifié avec succès'), backgroundColor: Colors.green, duration: Duration(seconds: 1)),
+            const SnackBar(content: Text('Modifié avec succès'), backgroundColor: Colors.green, duration: Duration(milliseconds: 700)),
           );
         }
       }
@@ -272,7 +287,7 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Supprimé avec succès'), backgroundColor: Colors.green, duration: Duration(seconds: 1)),
+            const SnackBar(content: Text('Supprimé avec succès'), backgroundColor: Colors.green, duration: Duration(milliseconds: 500)),
           );
         }
       }
@@ -385,7 +400,7 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '${widget.title}',
+                      widget.title,
                       style: TextStyle(
                         fontSize: isSmallScreen ? 13 : 14,
                         fontWeight: FontWeight.w600,
@@ -474,23 +489,29 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
 }
 
 // ============================================================
-// ÉCRAN D'AJOUT/MODIFICATION D'UN ÉLÉMENT
+// ÉCRAN D'AJOUT/MODIFICATION D'UN ÉLÉMENT (MODIFIÉ)
 // ============================================================
 class _AddEditItemScreen extends StatefulWidget {
   final String title;
   final List<String> champs;
-  final List<String> requiredFields;
   final Map<String, String>? initialData;
-  final Map<String, List<String>> dropdownOptions;
-  final List<String> anneeOptions;
+  final Map<String, String> numericFieldsWithUnit;
+  final List<String> typeCelluleOptions;
+  final List<String> natureReseauOptions;
+  final List<String> sectionCableOptions;
+  final List<String> modeOptions;
+  final List<String> ouiNonOptions;
 
   const _AddEditItemScreen({
     required this.title,
     required this.champs,
-    required this.requiredFields,
     this.initialData,
-    required this.dropdownOptions,
-    required this.anneeOptions,
+    required this.numericFieldsWithUnit,
+    required this.typeCelluleOptions,
+    required this.natureReseauOptions,
+    required this.sectionCableOptions,
+    required this.modeOptions,
+    required this.ouiNonOptions,
   });
 
   @override
@@ -500,15 +521,31 @@ class _AddEditItemScreen extends StatefulWidget {
 class _AddEditItemScreenState extends State<_AddEditItemScreen> {
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, String?> _selectedValues = {};
+  
+  // Pour les années
   final Map<String, String?> _anneeFabrication = {};
   final Map<String, String?> _anneeInstallation = {};
+  
+  // Pour la sélection de section de câble (dropdown)
+  String? _selectedSectionCable;
 
   @override
   void initState() {
     super.initState();
     for (var champ in widget.champs) {
-      _controllers[champ] = TextEditingController(text: widget.initialData?[champ] ?? '');
-      _selectedValues[champ] = widget.initialData?[champ] ?? '';
+      // Pour les champs avec dropdown spécifiques
+      if (_isSectionCableField(champ)) {
+        _selectedSectionCable = widget.initialData?[champ] ?? '';
+        _selectedValues[champ] = widget.initialData?[champ] ?? '';
+      }
+      // Pour les champs avec dropdown généraux
+      else if (_isDropdownField(champ)) {
+        _selectedValues[champ] = widget.initialData?[champ] ?? '';
+      }
+      // Pour les champs texte
+      else {
+        _controllers[champ] = TextEditingController(text: widget.initialData?[champ] ?? '');
+      }
       
       if (champ == 'Annee De Fabrication') {
         _anneeFabrication[champ] = widget.initialData?[champ] ?? '';
@@ -527,183 +564,282 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
     super.dispose();
   }
 
-  bool _isYearValid(String year) {
-    if (year.isEmpty) return true;
-    final yearInt = int.tryParse(year);
-    if (yearInt == null) return false;
-    return yearInt <= DateTime.now().year;
+  // Détection des champs dropdown
+  bool _isSectionCableField(String champ) {
+    return champ == 'Section Du Cable';
   }
 
-  bool _isInstallationYearValid(String fabricationYear, String installationYear) {
-    if (fabricationYear.isEmpty || installationYear.isEmpty) return true;
-    final fabInt = int.tryParse(fabricationYear);
-    final instInt = int.tryParse(installationYear);
-    if (fabInt == null || instInt == null) return true;
-    return instInt >= fabInt;
+  bool _isTypeCelluleField(String champ) {
+    return champ == 'Type De Cellule';
   }
 
-  void _validateInstallationYear() {
-    final fabYear = _anneeFabrication['Annee De Fabrication'] ?? '';
-    final instYear = _anneeInstallation['Annee D\'Installation'] ?? '';
-    
-    if (fabYear.isNotEmpty && instYear.isNotEmpty) {
-      final fabInt = int.tryParse(fabYear);
-      final instInt = int.tryParse(instYear);
-      if (fabInt != null && instInt != null && instInt < fabInt) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("L'année d'installation ne peut pas être antérieure à l'année de fabrication"),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        _anneeInstallation['Annee D\'Installation'] = fabYear;
-        setState(() {});
-      }
-    }
+  bool _isNatureReseauField(String champ) {
+    return champ == 'Nature Du Reseau';
   }
 
-  bool _isFormValid() {
-    for (var champ in widget.requiredFields) {
-      String value;
-      if (widget.dropdownOptions.containsKey(champ)) {
-        value = _selectedValues[champ] ?? '';
+  bool _isModeField(String champ) {
+    return champ == 'Mode';
+  }
+
+  bool _isOuiNonField(String champ) {
+    return champ == 'Cuve De Retention' || 
+           champ == 'Indicateur De Niveau' || 
+           champ == 'Mise A La Terre';
+  }
+
+  bool _isDropdownField(String champ) {
+    return _isSectionCableField(champ) ||
+           _isTypeCelluleField(champ) ||
+           _isNatureReseauField(champ) ||
+           _isModeField(champ) ||
+           _isOuiNonField(champ);
+  }
+
+  // Vérification qu'AU MOINS un champ est rempli
+  bool _hasAtLeastOneFieldFilled() {
+    for (var champ in widget.champs) {
+      if (_isSectionCableField(champ)) {
+        if (_selectedSectionCable != null && _selectedSectionCable!.isNotEmpty) {
+          return true;
+        }
+      } else if (_isTypeCelluleField(champ)) {
+        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
+          return true;
+        }
+      } else if (_isNatureReseauField(champ)) {
+        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
+          return true;
+        }
+      } else if (_isModeField(champ)) {
+        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
+          return true;
+        }
+      } else if (_isOuiNonField(champ)) {
+        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
+          return true;
+        }
       } else if (champ == 'Annee De Fabrication' || champ == 'Annee D\'Installation') {
-        value = champ == 'Annee De Fabrication' 
-            ? (_anneeFabrication[champ] ?? '')
-            : (_anneeInstallation[champ] ?? '');
+        final value = champ == 'Annee De Fabrication' 
+            ? _anneeFabrication[champ]
+            : _anneeInstallation[champ];
+        if (value != null && value.isNotEmpty) {
+          return true;
+        }
       } else {
-        value = _controllers[champ]?.text.trim() ?? '';
+        final value = _controllers[champ]?.text.trim() ?? '';
+        if (value.isNotEmpty) {
+          return true;
+        }
       }
-      if (value.isEmpty) return false;
-      if (champ == 'Annee De Fabrication' && !_isYearValid(value)) return false;
     }
-    return true;
+    return false;
   }
 
-  void _save() async {
-    if (!_isFormValid()) {
+  void _save() {
+    if (!_hasAtLeastOneFieldFilled()) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veuillez remplir tous les champs obligatoires correctement'), backgroundColor: Colors.red),
+        const SnackBar(
+          content: Text('Veuillez remplir au moins un champ'),
+          backgroundColor: Colors.orange,
+        ),
       );
       return;
     }
 
     final result = <String, String>{};
     for (var champ in widget.champs) {
-      String value;
-      if (widget.dropdownOptions.containsKey(champ)) {
-        value = _selectedValues[champ] ?? '';
+      if (_isSectionCableField(champ)) {
+        if (_selectedSectionCable != null && _selectedSectionCable!.isNotEmpty) {
+          result[champ] = _selectedSectionCable!;
+        }
+      } else if (_isTypeCelluleField(champ)) {
+        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
+          result[champ] = _selectedValues[champ]!;
+        }
+      } else if (_isNatureReseauField(champ)) {
+        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
+          result[champ] = _selectedValues[champ]!;
+        }
+      } else if (_isModeField(champ)) {
+        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
+          result[champ] = _selectedValues[champ]!;
+        }
+      } else if (_isOuiNonField(champ)) {
+        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
+          result[champ] = _selectedValues[champ]!;
+        }
       } else if (champ == 'Annee De Fabrication') {
-        value = _anneeFabrication[champ] ?? '';
+        if (_anneeFabrication[champ] != null && _anneeFabrication[champ]!.isNotEmpty) {
+          result[champ] = _anneeFabrication[champ]!;
+        }
       } else if (champ == 'Annee D\'Installation') {
-        value = _anneeInstallation[champ] ?? '';
+        if (_anneeInstallation[champ] != null && _anneeInstallation[champ]!.isNotEmpty) {
+          result[champ] = _anneeInstallation[champ]!;
+        }
       } else {
-        value = _controllers[champ]?.text.trim() ?? '';
-      }
-      if (value.isNotEmpty) {
-        result[champ] = value;
+        final value = _controllers[champ]?.text.trim() ?? '';
+        if (value.isNotEmpty) {
+          result[champ] = value;
+        }
       }
     }
 
-    // ✅ Retourner le résultat pour fermer l'écran d'ajout
     Navigator.pop(context, result);
   }
 
-  // ✅ Méthode appelée APRÈS l'enregistrement (dans le parent)
-  // Le dialogue sera affiché dans _AddEditItemScreenState après le pop
-  // Mais on va plutôt afficher le dialogue dans le parent après le retour
+  // Widget pour champ numérique avec unité
+  Widget _buildNumericField(String champ, TextEditingController controller, String unit) {
+    final isRequired = false; // Plus aucun champ obligatoire
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: TextInputType.number,
+        decoration: InputDecoration(
+          labelText: isRequired ? '$champ *' : champ,
+          suffixText: unit.isNotEmpty ? unit : null,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+        ),
+      ),
+    );
+  }
 
-  Widget _buildField(String champ) {
-    final isRequired = widget.requiredFields.contains(champ);
-    final hasOptions = widget.dropdownOptions.containsKey(champ);
-    final isAnneeFabrication = champ == 'Annee De Fabrication';
-    final isAnneeInstallation = champ == 'Annee D\'Installation';
+  Widget _buildTextField(String champ, TextEditingController controller) {
+    final isNumeric = widget.numericFieldsWithUnit.containsKey(champ);
+    final unit = widget.numericFieldsWithUnit[champ] ?? '';
     
-    if (isAnneeFabrication || isAnneeInstallation) {
-      final currentValue = isAnneeFabrication 
-          ? _anneeFabrication[champ] 
-          : _anneeInstallation[champ];
-      
-      return Container(
-        margin: EdgeInsets.only(bottom: 14),
-        child: DropdownButtonFormField<String>(
-          value: currentValue?.isNotEmpty == true ? currentValue : null,
-          isExpanded: true,
-          hint: Text(
-            'Sélectionnez $champ',
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-          ),
-          decoration: InputDecoration(
-            labelText: isRequired ? '$champ *' : champ,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-          items: widget.anneeOptions.map((year) {
-            return DropdownMenuItem(
-              value: year,
-              child: Text(year),
-            );
-          }).toList(),
-          onChanged: (value) {
-            setState(() {
-              if (isAnneeFabrication) {
-                _anneeFabrication[champ] = value;
-              } else {
-                _anneeInstallation[champ] = value;
-                _validateInstallationYear();
-              }
-            });
-          },
-        ),
-      );
-    }
-    
-    if (hasOptions) {
-      final options = widget.dropdownOptions[champ]!;
-      return Container(
-        margin: EdgeInsets.only(bottom: 14),
-        child: DropdownButtonFormField<String>(
-          value: _selectedValues[champ]?.isNotEmpty == true ? _selectedValues[champ] : null,
-          isExpanded: true,
-          hint: Text(
-            'Sélectionnez $champ',
-            style: TextStyle(color: Colors.grey.shade500, fontSize: 13),
-            overflow: TextOverflow.ellipsis,
-          ),
-          decoration: InputDecoration(
-            labelText: isRequired ? '$champ *' : champ,
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-          items: options.map((option) {
-            return DropdownMenuItem(
-              value: option,
-              child: Text(
-                option,
-                overflow: TextOverflow.ellipsis,
-                maxLines: 2,
-                softWrap: true,
-              ),
-            );
-          }).toList(),
-          onChanged: (value) {
-            setState(() {
-              _selectedValues[champ] = value;
-            });
-          },
-        ),
-      );
+    if (isNumeric) {
+      return _buildNumericField(champ, controller, unit);
     }
     
     return Container(
-      margin: EdgeInsets.only(bottom: 14),
+      margin: const EdgeInsets.only(bottom: 14),
       child: TextFormField(
-        controller: _controllers[champ],
+        controller: controller,
         decoration: InputDecoration(
           labelText: champ,
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         ),
         maxLines: champ == 'Observations' ? 3 : 1,
+      ),
+    );
+  }
+
+  // Widget pour Section de câble (dropdown avec unité à gauche)
+  Widget _buildSectionCableField(String champ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      child: DropdownButtonFormField<String>(
+        value: _selectedSectionCable?.isNotEmpty == true ? _selectedSectionCable : null,
+        isExpanded: true,
+        hint: Row(
+          children: [
+            Text(
+              'mm²',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(width: 4),
+            Text(
+              'Sélectionnez',
+              style: TextStyle(color: Colors.grey.shade500),
+            ),
+          ],
+        ),
+        decoration: InputDecoration(
+          labelText: champ,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+        items: widget.sectionCableOptions.map((option) {
+          return DropdownMenuItem(
+            value: option,
+            child: Row(
+              children: [
+                Text(
+                  'mm²',
+                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+                ),
+                const SizedBox(width: 4),
+                Text(option),
+              ],
+            ),
+          );
+        }).toList(),
+        onChanged: (value) {
+          setState(() {
+            _selectedSectionCable = value;
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildDropdownField(String champ, List<String> options) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      child: DropdownButtonFormField<String>(
+        value: _selectedValues[champ]?.isNotEmpty == true ? _selectedValues[champ] : null,
+        isExpanded: true,
+        hint: Text('Sélectionnez $champ', style: TextStyle(color: Colors.grey.shade500)),
+        decoration: InputDecoration(
+          labelText: champ,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+        items: options.map((option) {
+          return DropdownMenuItem(
+            value: option,
+            child: Text(option, overflow: TextOverflow.ellipsis),
+          );
+        }).toList(),
+        onChanged: (value) {
+          setState(() {
+            _selectedValues[champ] = value;
+          });
+        },
+      ),
+    );
+  }
+
+  // Générer les années (1900 à année actuelle)
+  List<String> _getAnneeOptions() {
+    final currentYear = DateTime.now().year;
+    return List.generate(currentYear - 1900 + 1, (i) => (currentYear - i).toString());
+  }
+
+  Widget _buildAnneeField(String champ, bool isFabrication) {
+    final currentValue = isFabrication 
+        ? _anneeFabrication[champ] 
+        : _anneeInstallation[champ];
+    final options = _getAnneeOptions();
+    
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      child: DropdownButtonFormField<String>(
+        value: currentValue?.isNotEmpty == true ? currentValue : null,
+        isExpanded: true,
+        hint: Text('Sélectionnez $champ', style: TextStyle(color: Colors.grey.shade500)),
+        decoration: InputDecoration(
+          labelText: champ,
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+        items: options.map((year) {
+          return DropdownMenuItem(
+            value: year,
+            child: Text(year),
+          );
+        }).toList(),
+        onChanged: (value) {
+          setState(() {
+            if (isFabrication) {
+              _anneeFabrication[champ] = value;
+            } else {
+              _anneeInstallation[champ] = value;
+            }
+          });
+        },
       ),
     );
   }
@@ -745,7 +881,7 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Les champs marqués * sont obligatoires',
+                        'Au moins un champ doit être rempli (aucun champ n\'est obligatoire)',
                         style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.grey.shade600),
                       ),
                     ),
@@ -754,7 +890,40 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
               ),
               const SizedBox(height: 20),
               
-              ...widget.champs.map((champ) => _buildField(champ)),
+              ...widget.champs.map((champ) {
+                // Section de câble (dropdown avec mm²)
+                if (_isSectionCableField(champ)) {
+                  return _buildSectionCableField(champ);
+                }
+                // Type de cellule (dropdown)
+                else if (_isTypeCelluleField(champ)) {
+                  return _buildDropdownField(champ, widget.typeCelluleOptions);
+                }
+                // Nature du réseau (dropdown)
+                else if (_isNatureReseauField(champ)) {
+                  return _buildDropdownField(champ, widget.natureReseauOptions);
+                }
+                // Mode (dropdown)
+                else if (_isModeField(champ)) {
+                  return _buildDropdownField(champ, widget.modeOptions);
+                }
+                // Cuve de rétention, Indicateur de niveau, Mise à la terre (Oui/Non)
+                else if (_isOuiNonField(champ)) {
+                  return _buildDropdownField(champ, widget.ouiNonOptions);
+                }
+                // Année de fabrication
+                else if (champ == 'Annee De Fabrication') {
+                  return _buildAnneeField(champ, true);
+                }
+                // Année d'installation
+                else if (champ == 'Annee D\'Installation') {
+                  return _buildAnneeField(champ, false);
+                }
+                // Champ texte standard (avec support numérique si nécessaire)
+                else {
+                  return _buildTextField(champ, _controllers[champ]!);
+                }
+              }),
             ],
           ),
         ),

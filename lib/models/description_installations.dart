@@ -39,8 +39,8 @@ class DescriptionInstallations extends HiveObject {
   @HiveField(8)
   String? regimeNeutre;
 
-  @HiveField(39)
-  String? typeTN;
+  @HiveField(17)
+  String? regimeNeutreDetail;
 
   @HiveField(9)
   String? eclairageSecurite;
@@ -77,7 +77,7 @@ class DescriptionInstallations extends HiveObject {
     List<InstallationItem>? stabilisateur,
     List<InstallationItem>? onduleurs,
     this.regimeNeutre,
-    this.typeTN,
+    this.regimeNeutreDetail,
     this.eclairageSecurite,
     this.modificationsInstallations,
     this.noteCalcul,
@@ -106,13 +106,6 @@ class DescriptionInstallations extends HiveObject {
       stabilisateur: [],
       onduleurs: [],
     );
-  }
-
-  String get regimeNeutreComplet {
-    if (regimeNeutre == 'TN' && typeTN != null && typeTN!.isNotEmpty) {
-      return 'TN-$typeTN';
-    }
-    return regimeNeutre ?? '';
   }
 
   // Ajouter un élément à une section (SAFE)

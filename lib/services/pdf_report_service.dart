@@ -1213,8 +1213,14 @@ class PdfReportService {
     }
     widgets.add(pw.SizedBox(height: 8));
 
-    widgets.add(_subTitle('Regime de neutre'));
-    widgets.add(_bodyText('- ${desc.regimeNeutre ?? 'Non renseigne'}'));
+    widgets.add(_subTitle('Régime de neutre'));
+  
+    String regimeAffichage = desc.regimeNeutre ?? 'Non renseigné';
+    if (desc.regimeNeutre == 'TN' && desc.regimeNeutreDetail != null) {
+      regimeAffichage = 'TN (TN-${desc.regimeNeutreDetail})';
+    }
+    
+    widgets.add(_bodyText('- $regimeAffichage'));
     widgets.add(pw.SizedBox(height: 5));
 
     widgets.add(_subTitle('Eclairage de securite'));

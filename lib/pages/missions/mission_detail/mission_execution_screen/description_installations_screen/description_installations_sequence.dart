@@ -41,7 +41,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'icon': Icons.bolt_outlined,
       'color': const Color(0xFFE67E22),
       'champs': ['Type De Cellule', 'Calibre Du Disjoncteur', 'Section Du Cable', 'Nature Du Reseau', 'Observations'],
-      'requiredFields': ['Type De Cellule', ],
+      'requiredFields': ['', ],
       'isList': true,
     },
     {
@@ -51,7 +51,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'icon': Icons.bolt_outlined,
       'color': const Color(0xFF2980B9),
       'champs': ['Puissance Transformateur', 'Calibre Du Disjoncteur Sortie Transformateur', 'Section Du Cable', 'Tension', 'Observations'],
-      'requiredFields': ['Puissance Transformateur',],
+      'requiredFields': ['',],
       'isList': true,
     },
     {
@@ -61,7 +61,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'icon': Icons.electrical_services_outlined,
       'color': const Color(0xFF27AE60),
       'champs': ['Marque', 'Type', 'N° Serie', 'Puissance (Kva)', 'Intensite', 'Annee De Fabrication', 'Calibre Du Disjoncteur', 'Section Du Cable'],
-      'requiredFields': ['Marque', 'Type', ],
+      'requiredFields': ['', ],
       'isList': true,
     },
     {
@@ -71,7 +71,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'icon': Icons.local_gas_station_outlined,
       'color': const Color(0xFF8E44AD),
       'champs': ['Mode', 'Capacite', 'Cuve De Retention', 'Indicateur De Niveau', 'Mise A La Terre', 'Annee De Fabrication'],
-      'requiredFields': ['Mode', ],
+      'requiredFields': ['', ],
       'isList': true,
     },
     {
@@ -81,7 +81,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'icon': Icons.swap_horiz_outlined,
       'color': const Color(0xFFC0392B),
       'champs': ['Marque', 'Type', 'N° Serie', 'Intensite (A)', 'Reglages'],
-      'requiredFields': ['Marque', 'Type',],
+      'requiredFields': ['',],
       'isList': true,
     },
     {
@@ -91,7 +91,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'icon': Icons.tune_outlined,
       'color': const Color(0xFFD35400),
       'champs': ['Marque', 'Type', 'N° Serie', 'Annee De Fabrication', 'Annee D\'Installation', 'Puissance (Kva)', 'Intensite (A)', 'Entree', 'Sortie'],
-      'requiredFields': ['Marque', 'Type', ],
+      'requiredFields': ['', ],
       'isList': true,
     },
     {
@@ -101,7 +101,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'icon': Icons.power_outlined,
       'color': const Color(0xFF16A085),
       'champs': ['Marque', 'Type', 'N° De Serie', 'Puissance (Kva)', 'Intensite (A)', 'Nombre De Phase'],
-      'requiredFields': ['Marque', 'Type', ],
+      'requiredFields': ['', ],
       'isList': true,
     },
     {
@@ -449,22 +449,20 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
   }
 
   Widget _buildSectionWidget(Map<String, dynamic> section, bool isComplete) {
-    final stableKey = ValueKey('section_${section['key']}');
-    
     if (section['isList'] == true) {
       return DescriptionInstallationsForm(
-        key: stableKey,
+        key: ValueKey('section_${section['key']}'),
         mission: widget.mission,
         title: section['title'],
         sectionKey: section['key'],
         champs: List<String>.from(section['champs']),
-        requiredFields: List<String>.from(section['requiredFields']),
         onComplete: _onSectionComplete,
         isComplete: isComplete,
+        onTerminate: _onFormTerminate,
       );
     } else if (section['isRadio'] == true) {
       return RadioSequenceScreen(
-        key: stableKey,
+        key: ValueKey('section_${section['key']}'),
         mission: widget.mission,
         title: section['title'],
         field: section['key'],
@@ -474,7 +472,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       );
     } else if (section['isParatonnerre'] == true) {
       return ParatonnerreSequenceScreen(
-        key: stableKey,
+        key: ValueKey('section_${section['key']}'),
         mission: widget.mission,
         onComplete: _onSectionComplete,
         isComplete: isComplete,
@@ -482,6 +480,15 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
     }
     
     return const Center(child: Text('Type de section non supporté'));
+  }
+
+  void _onFormTerminate() {
+    if (_currentStep < _sections.length - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   Widget _buildBottomNavigation() {

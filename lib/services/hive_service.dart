@@ -6550,6 +6550,43 @@ static bool hasDocumentPersonnalise(String missionId, String documentNom) {
     return false;
   }
 }
+
+
+// ============================================================
+//          GESTION DU DÉTAIL TN POUR LE RÉGIME DE NEUTRE
+// ============================================================
+
+/// Mettre à jour le détail TN pour le régime de neutre
+static Future<bool> updateRegimeNeutreDetail({
+  required String missionId,
+  required String? detail, // 'C', 'S' ou null
+}) async {
+  try {
+    final desc = await getOrCreateDescriptionInstallations(missionId);
+    desc.regimeNeutreDetail = detail;
+    await saveDescriptionInstallations(desc);
+    if (kDebugMode) {
+      print('✅ Détail TN mis à jour: ${desc.regimeNeutre}${detail != null ? '-$detail' : ''}');
+    }
+    return true;
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Erreur updateRegimeNeutreDetail: $e');
+    }
+    return false;
+  }
+}
+
+/// Récupérer le détail TN
+static String? getRegimeNeutreDetail(String missionId) {
+  try {
+    final desc = getDescriptionInstallationsByMissionId(missionId);
+    return desc?.regimeNeutreDetail;
+  } catch (e) {
+    return null;
+  }
+}
+
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -6570,5 +6607,6 @@ class SecureLoginResult {
     this.isLocked = false,
     this.remainingAttempts = 5,
   });
+
   
 }
