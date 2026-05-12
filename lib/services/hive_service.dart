@@ -1524,7 +1524,7 @@ static List<String> getCoffretTypes() {
 /// Obtenir tous les types de locaux disponibles
 static Map<String, String> getLocalTypes() {
   return {
-    'LOCAL_TRANSFORMATEUR': 'Local HTA/HTB',
+    'LOCAL_TRANSFORMATEUR': 'Local Moyenne Tension',
     'LOCAL_GROUPE_ELECTROGENE': 'Local Groupe Électrogène',
     'LOCAL_TGBT': 'Local TGBT',
     'LOCAL_ONDULEUR': 'Local Onduleur',

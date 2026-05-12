@@ -237,7 +237,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
     final localTypes = HiveService.getLocalTypes();
     final modifiedTypes = localTypes.map((key, value) {
       if (key == 'LOCAL_TRANSFORMATEUR') {
-        return MapEntry(key, 'Local Poste/Transformateur');
+        return MapEntry(key, 'Local Moyenne Tension');
       }
       return MapEntry(key, value);
     });
