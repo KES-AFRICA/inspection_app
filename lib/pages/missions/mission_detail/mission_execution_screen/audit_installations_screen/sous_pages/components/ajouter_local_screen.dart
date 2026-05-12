@@ -2488,174 +2488,174 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   // ============================================================
   
   Widget _buildModeSelector(bool isSmallScreen) {
-  final screenWidth = MediaQuery.of(context).size.width;
-  final isVerySmallScreen = screenWidth < 380;
-  
-  return Container(
-    margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 8 : 12),
-    decoration: BoxDecoration(
-      color: Colors.grey.shade100,
-      borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
-    ),
-    child: Row(
-      children: [
-        // Onglet CELLULES
-        Expanded(
-          child: GestureDetector(
-            onTap: () => setState(() => _currentMode = 0),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              padding: EdgeInsets.symmetric(
-                vertical: isSmallScreen ? (isVerySmallScreen ? 10 : 12) : 14,
-                horizontal: isSmallScreen ? 8 : 12,
-              ),
-              decoration: BoxDecoration(
-                color: _currentMode == 0 ? AppTheme.primaryBlue : Colors.transparent,
-                borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-                boxShadow: _currentMode == 0
-                    ? [
-                        BoxShadow(
-                          color: AppTheme.primaryBlue.withOpacity(0.3),
-                          blurRadius: isSmallScreen ? 4 : 6,
-                          offset: const Offset(0, 2),
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isVerySmallScreen = screenWidth < 380;
+    
+    return Container(
+      margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 8 : 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
+      ),
+      child: Row(
+        children: [
+          // Onglet CELLULES
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _currentMode = 0),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                padding: EdgeInsets.symmetric(
+                  vertical: isSmallScreen ? (isVerySmallScreen ? 10 : 12) : 14,
+                  horizontal: isSmallScreen ? 8 : 12,
+                ),
+                decoration: BoxDecoration(
+                  color: _currentMode == 0 ? AppTheme.primaryBlue : Colors.transparent,
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                  boxShadow: _currentMode == 0
+                      ? [
+                          BoxShadow(
+                            color: AppTheme.primaryBlue.withOpacity(0.3),
+                            blurRadius: isSmallScreen ? 4 : 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Texte avec gestion du débordement
+                    Flexible(
+                      child: Text(
+                        'CELLULES',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? (isVerySmallScreen ? 11 : 13) : 14,
+                          fontWeight: FontWeight.w600,
+                          color: _currentMode == 0 ? Colors.white : Colors.grey.shade700,
+                          letterSpacing: 0.5,
                         ),
-                      ]
-                    : null,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                    ),
+                    SizedBox(width: isSmallScreen ? 4 : 6),
+                    // Badge compteur
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 6 : 8,
+                        vertical: isSmallScreen ? 2 : 3,
+                      ),
+                      decoration: BoxDecoration(
+                        color: _currentMode == 0
+                            ? Colors.white.withOpacity(0.2)
+                            : Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
+                      ),
+                      child: Text(
+                        '${widget.cellules.length}',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? (isVerySmallScreen ? 10 : 11) : 12,
+                          fontWeight: FontWeight.bold,
+                          color: _currentMode == 0 ? Colors.white : Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
+            ),
+          ),
+          
+          // Séparateur visuel entre les deux onglets
+          Container(
+            width: 1,
+            height: isSmallScreen ? 24 : 28,
+            color: Colors.grey.shade300,
+          ),
+          
+          // Onglet TRANSFORMATEURS
+          Expanded(
+            child: GestureDetector(
+              onTap: () => setState(() => _currentMode = 1),
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 200),
+                curve: Curves.easeInOut,
+                padding: EdgeInsets.symmetric(
+                  vertical: isSmallScreen ? (isVerySmallScreen ? 10 : 12) : 14,
+                  horizontal: isSmallScreen ? 8 : 12,
+                ),
+                decoration: BoxDecoration(
+                  color: _currentMode == 1 ? Colors.orange : Colors.transparent,
+                  borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                  boxShadow: _currentMode == 1
+                      ? [
+                          BoxShadow(
+                            color: Colors.orange.withOpacity(0.3),
+                            blurRadius: isSmallScreen ? 4 : 6,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : null,
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
 
-                  // Texte avec gestion du débordement
-                  Flexible(
-                    child: Text(
-                      'CELLULES',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? (isVerySmallScreen ? 11 : 13) : 14,
-                        fontWeight: FontWeight.w600,
-                        color: _currentMode == 0 ? Colors.white : Colors.grey.shade700,
-                        letterSpacing: 0.5,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ),
-                  SizedBox(width: isSmallScreen ? 4 : 6),
-                  // Badge compteur
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 6 : 8,
-                      vertical: isSmallScreen ? 2 : 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _currentMode == 0
-                          ? Colors.white.withOpacity(0.2)
-                          : Colors.blue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
-                    ),
-                    child: Text(
-                      '${widget.cellules.length}',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? (isVerySmallScreen ? 10 : 11) : 12,
-                        fontWeight: FontWeight.bold,
-                        color: _currentMode == 0 ? Colors.white : Colors.blue.shade700,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-        
-        // Séparateur visuel entre les deux onglets
-        Container(
-          width: 1,
-          height: isSmallScreen ? 24 : 28,
-          color: Colors.grey.shade300,
-        ),
-        
-        // Onglet TRANSFORMATEURS
-        Expanded(
-          child: GestureDetector(
-            onTap: () => setState(() => _currentMode = 1),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeInOut,
-              padding: EdgeInsets.symmetric(
-                vertical: isSmallScreen ? (isVerySmallScreen ? 10 : 12) : 14,
-                horizontal: isSmallScreen ? 8 : 12,
-              ),
-              decoration: BoxDecoration(
-                color: _currentMode == 1 ? Colors.orange : Colors.transparent,
-                borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-                boxShadow: _currentMode == 1
-                    ? [
-                        BoxShadow(
-                          color: Colors.orange.withOpacity(0.3),
-                          blurRadius: isSmallScreen ? 4 : 6,
-                          offset: const Offset(0, 2),
+                    // Texte avec gestion du débordement
+                    Flexible(
+                      child: Text(
+                        'TRANSFORMATEURS',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? (isVerySmallScreen ? 11 : 13) : 14,
+                          fontWeight: FontWeight.w600,
+                          color: _currentMode == 1 ? Colors.white : Colors.grey.shade700,
+                          letterSpacing: 0.5,
                         ),
-                      ]
-                    : null,
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Texte avec gestion du débordement
-                  Flexible(
-                    child: Text(
-                      'TRANSFORMATEURS',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? (isVerySmallScreen ? 11 : 13) : 14,
-                        fontWeight: FontWeight.w600,
-                        color: _currentMode == 1 ? Colors.white : Colors.grey.shade700,
-                        letterSpacing: 0.5,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
                       ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
                     ),
-                  ),
-                  SizedBox(width: isSmallScreen ? 4 : 6),
-                  // Badge compteur (rouge si vide pour attirer l'attention)
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 6 : 8,
-                      vertical: isSmallScreen ? 2 : 3,
-                    ),
-                    decoration: BoxDecoration(
-                      color: _currentMode == 1
-                          ? Colors.white.withOpacity(0.2)
-                          : (widget.transformateurs.isEmpty
-                              ? Colors.red.withOpacity(0.1)
-                              : Colors.orange.withOpacity(0.1)),
-                      borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
-                    ),
-                    child: Text(
-                      '${widget.transformateurs.length}',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? (isVerySmallScreen ? 10 : 11) : 12,
-                        fontWeight: FontWeight.bold,
+                    SizedBox(width: isSmallScreen ? 4 : 6),
+                    // Badge compteur (rouge si vide pour attirer l'attention)
+                    Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 6 : 8,
+                        vertical: isSmallScreen ? 2 : 3,
+                      ),
+                      decoration: BoxDecoration(
                         color: _currentMode == 1
-                            ? Colors.white
+                            ? Colors.white.withOpacity(0.2)
                             : (widget.transformateurs.isEmpty
-                                ? Colors.red.shade700
-                                : Colors.orange.shade700),
+                                ? Colors.red.withOpacity(0.1)
+                                : Colors.orange.withOpacity(0.1)),
+                        borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
+                      ),
+                      child: Text(
+                        '${widget.transformateurs.length}',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? (isVerySmallScreen ? 10 : 11) : 12,
+                          fontWeight: FontWeight.bold,
+                          color: _currentMode == 1
+                              ? Colors.white
+                              : (widget.transformateurs.isEmpty
+                                  ? Colors.red.shade700
+                                  : Colors.orange.shade700),
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
+        ],
+      ),
+    );
+  }
   
   // ============================================================
   // LISTE DES CELLULES
@@ -3159,118 +3159,270 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   }
   
   Widget _buildElementCard(ElementControle element, int slideIndex, int globalIndex, bool isCellule, Color color, bool isSmallScreen) {
-    return Container(
-      margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
-      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2))],
+  return Container(
+    margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
+    padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2))],
+      // ✅ Bordure rouge si non conforme
+      border: Border.all(
+        color: element.conforme == null ? Colors.red.shade300 : Colors.grey.shade200,
+        width: element.conforme == null ? 1.5 : 1,
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                width: isSmallScreen ? 24 : 28,
-                height: isSmallScreen ? 24 : 28,
-                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
-                child: Center(
-                  child: Text('${slideIndex + 1}', style: TextStyle(fontSize: isSmallScreen ? 11 : 12, fontWeight: FontWeight.bold, color: color)),
-                ),
-              ),
-              SizedBox(width: isSmallScreen ? 10 : 12),
-              Expanded(
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // En-tête avec numéro et titre
+        Row(
+          children: [
+            Container(
+              width: isSmallScreen ? 24 : 28,
+              height: isSmallScreen ? 24 : 28,
+              decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
+              child: Center(
                 child: Text(
-                  element.elementControle,
-                  style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.w500),
-                  overflow: TextOverflow.visible,
+                  '${slideIndex + 1}',
+                  style: TextStyle(fontSize: isSmallScreen ? 11 : 12, fontWeight: FontWeight.bold, color: color),
                 ),
               ),
-            ],
-          ),
-          SizedBox(height: isSmallScreen ? 10 : 12),
-          
-          // Conformité (boutons Oui/Non)
-          Row(
-            children: [
-              Expanded(
-                child: _buildConformiteButton(
-                  label: 'Oui',
-                  isSelected: element.conforme == true,
-                  color: Colors.green,
-                  onTap: () => setState(() => element.conforme = true),
-                  isSmallScreen: isSmallScreen,
-                ),
+            ),
+            SizedBox(width: isSmallScreen ? 10 : 12),
+            Expanded(
+              child: Text(
+                element.elementControle,
+                style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.w500),
+                overflow: TextOverflow.visible,
               ),
-              SizedBox(width: isSmallScreen ? 8 : 10),
-              Expanded(
-                child: _buildConformiteButton(
-                  label: 'Non',
-                  isSelected: element.conforme == false,
-                  color: Colors.red,
-                  onTap: () => setState(() => element.conforme = false),
-                  isSmallScreen: isSmallScreen,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: isSmallScreen ? 10 : 12),
-          
-          // Priorité
-          Row(
-            children: [
-              Expanded(
-                child: _buildPrioriteButton(
-                  niveau: 1,
-                  isSelected: element.priorite == 1,
-                  color: Colors.blue,
-                  onTap: () => setState(() => element.priorite = 1),
-                  isSmallScreen: isSmallScreen,
-                ),
-              ),
-              SizedBox(width: isSmallScreen ? 8 : 10),
-              Expanded(
-                child: _buildPrioriteButton(
-                  niveau: 2,
-                  isSelected: element.priorite == 2,
-                  color: Colors.orange,
-                  onTap: () => setState(() => element.priorite = 2),
-                  isSmallScreen: isSmallScreen,
-                ),
-              ),
-              SizedBox(width: isSmallScreen ? 8 : 10),
-              Expanded(
-                child: _buildPrioriteButton(
-                  niveau: 3,
-                  isSelected: element.priorite == 3,
-                  color: Colors.red,
-                  onTap: () => setState(() => element.priorite = 3),
-                  isSmallScreen: isSmallScreen,
-                ),
-              ),
-            ],
-          ),
-          
-          // Observation (obligatoire si Non)
-          if (element.conforme == false) ...[
-            SizedBox(height: isSmallScreen ? 10 : 12),
-            TextField(
-              onChanged: (value) => element.observation = value,
-              decoration: InputDecoration(
-                hintText: 'Observation *',
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                contentPadding: EdgeInsets.all(isSmallScreen ? 8 : 10),
-              ),
-              maxLines: 2,
             ),
           ],
+        ),
+        SizedBox(height: isSmallScreen ? 12 : 16),
+        
+        // ✅ CONFORMITÉ - OBLIGATOIRE (pas de valeur par défaut)
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Conformité *',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 13,
+                    fontWeight: FontWeight.w600,
+                    color: element.conforme == null ? Colors.red : Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: isSmallScreen ? 8 : 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildConformiteButton(
+                    label: 'Oui',
+                    isSelected: element.conforme == true,
+                    color: Colors.green,
+                    onTap: () => setState(() {
+                      element.conforme = true;
+                      // Si on passe à Oui, on efface l'observation (non obligatoire)
+                      if (element.observation != null && element.observation!.isEmpty) {
+                        element.observation = null;
+                      }
+                    }),
+                    isSmallScreen: isSmallScreen,
+                  ),
+                ),
+                SizedBox(width: isSmallScreen ? 8 : 10),
+                Expanded(
+                  child: _buildConformiteButton(
+                    label: 'Non',
+                    isSelected: element.conforme == false,
+                    color: Colors.red,
+                    onTap: () => setState(() {
+                      element.conforme = false;
+                    }),
+                    isSmallScreen: isSmallScreen,
+                  ),
+                ),
+              ],
+            ),
+            if (element.conforme == null)
+              Padding(
+                padding: EdgeInsets.only(top: isSmallScreen ? 6 : 8),
+                child: Text(
+                  'Veuillez sélectionner Oui ou Non',
+                  style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.red),
+                ),
+              ),
+          ],
+        ),
+        
+        SizedBox(height: isSmallScreen ? 12 : 16),
+        
+        // ✅ PRIORITÉ (obligatoire)
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(
+                  'Priorité',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 13,
+                    fontWeight: FontWeight.w600,
+                    color: element.priorite == null ? Colors.red : Colors.grey.shade700,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: isSmallScreen ? 8 : 10),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildPrioriteButton(
+                    niveau: 1,
+                    label: 'N1 (Haute)',
+                    isSelected: element.priorite == 1,
+                    color: Colors.red,
+                    onTap: () => setState(() => element.priorite = 1),
+                    isSmallScreen: isSmallScreen,
+                  ),
+                ),
+                SizedBox(width: isSmallScreen ? 8 : 10),
+                Expanded(
+                  child: _buildPrioriteButton(
+                    niveau: 2,
+                    label: 'N2 (Moyenne)',
+                    isSelected: element.priorite == 2,
+                    color: Colors.orange,
+                    onTap: () => setState(() => element.priorite = 2),
+                    isSmallScreen: isSmallScreen,
+                  ),
+                ),
+                SizedBox(width: isSmallScreen ? 8 : 10),
+                Expanded(
+                  child: _buildPrioriteButton(
+                    niveau: 3,
+                    label: 'N3 (Basse)',
+                    isSelected: element.priorite == 3,
+                    color: Colors.blue,
+                    onTap: () => setState(() => element.priorite = 3),
+                    isSmallScreen: isSmallScreen,
+                  ),
+                ),
+              ],
+            ),
+            if (element.priorite == null)
+              Padding(
+                padding: EdgeInsets.only(top: isSmallScreen ? 6 : 8),
+                child: Text(
+                  'Veuillez sélectionner un niveau de priorité',
+                  style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.red),
+                ),
+              ),
+          ],
+        ),
+        
+        // ✅ OBSERVATION (obligatoire si Non)
+        if (element.conforme == false) ...[
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    'Observation *',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 12 : 13,
+                      fontWeight: FontWeight.w600,
+                      color: (element.observation == null || element.observation!.isEmpty) ? Colors.red : Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: isSmallScreen ? 6 : 8),
+              Container(
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: (element.observation == null || element.observation!.isEmpty) ? Colors.red.shade300 : Colors.grey.shade300,
+                    width: (element.observation == null || element.observation!.isEmpty) ? 1.5 : 1,
+                  ),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: TextField(
+                  onChanged: (value) => setState(() => element.observation = value),
+                  decoration: InputDecoration(
+                    hintText: 'Saisissez votre observation...',
+                    hintStyle: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.grey.shade400),
+                    border: InputBorder.none,
+                    contentPadding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+                  ),
+                  maxLines: 3,
+                ),
+              ),
+              if (element.observation == null || element.observation!.isEmpty)
+                Padding(
+                  padding: EdgeInsets.only(top: isSmallScreen ? 4 : 6),
+                  child: Text(
+                    'L\'observation est obligatoire quand la conformité est "Non"',
+                    style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.red),
+                  ),
+                ),
+            ],
+          ),
         ],
+      ],
+    ),
+  );
+}
+
+// ✅ Version corrigée de _buildPrioriteButton avec label
+Widget _buildPrioriteButton({
+  required int niveau,
+  required String label,
+  required bool isSelected,
+  required Color color,
+  required VoidCallback onTap,
+  required bool isSmallScreen,
+}) {
+  return GestureDetector(
+    onTap: onTap,
+    child: Container(
+      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
+      decoration: BoxDecoration(
+        color: isSelected ? color.withOpacity(0.1) : Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+        border: Border.all(color: isSelected ? color : Colors.grey.shade300, width: isSelected ? 2 : 1),
       ),
-    );
-  }
-  
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected ? Icons.flag : Icons.flag_outlined,
+              size: isSmallScreen ? 16 : 18,
+              color: isSelected ? color : Colors.grey.shade500,
+            ),
+            SizedBox(height: isSmallScreen ? 4 : 6),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 9 : 10,
+                fontWeight: FontWeight.w500,
+                color: isSelected ? color : Colors.grey.shade600,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
   // ============================================================
   // WIDGETS UTILITAIRES
   // ============================================================
@@ -3362,31 +3514,6 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     );
   }
   
-  Widget _buildPrioriteButton({
-    required int niveau,
-    required bool isSelected,
-    required Color color,
-    required VoidCallback onTap,
-    required bool isSmallScreen,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 8 : 10),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.1) : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
-          border: Border.all(color: isSelected ? color : Colors.grey.shade300, width: isSelected ? 2 : 1),
-        ),
-        child: Center(
-          child: Text(
-            'N$niveau',
-            style: TextStyle(fontSize: isSmallScreen ? 12 : 13, fontWeight: FontWeight.bold, color: isSelected ? color : Colors.grey.shade600),
-          ),
-        ),
-      ),
-    );
-  }
   
   // ============================================================
   // VALIDATION (au moins 1 transformateur)
