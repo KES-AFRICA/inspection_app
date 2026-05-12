@@ -83,6 +83,12 @@ class MoyenneTensionLocal {
   @HiveField(8)
   List<String> photos; // Chemins des photos spécifiques à ce local
 
+  @HiveField(30)
+  List<Cellule> cellules = [];
+  
+  @HiveField(31)
+  List<TransformateurMTBT> transformateurs = [];
+
   MoyenneTensionLocal({
     required this.nom,
     required this.type,
@@ -93,11 +99,32 @@ class MoyenneTensionLocal {
     List<CoffretArmoire>? coffrets,
     List<ObservationLibre>? observationsLibres,
     List<String>? photos,
+    List<Cellule>? cellules,
+    List<TransformateurMTBT>? transformateurs,
   })  : dispositionsConstructives = dispositionsConstructives ?? [],
         conditionsExploitation = conditionsExploitation ?? [],
         coffrets = coffrets ?? [],
         observationsLibres = observationsLibres ?? [],
-        photos = photos ?? [];
+        photos = photos ?? [],
+        cellules = cellules ?? [],
+        transformateurs = transformateurs ?? [];
+
+  // MÉTHODE DE MIGRATION (préserve les données existantes)
+  void migrateFromOldFields() {
+    // Migrer l'ancienne cellule unique vers la liste
+    if (cellule != null && cellules.isEmpty) {
+      cellules.add(cellule!);
+    }
+    // Migrer l'ancien transformateur unique vers la liste
+    if (transformateur != null && transformateurs.isEmpty) {
+      transformateurs.add(transformateur!);
+    }
+  }
+  
+  // GETTER POUR COMPATIBILITÉ (optionnel, peut être supprimé plus tard)
+  Cellule? get primaryCellule => cellules.isNotEmpty ? cellules.first : cellule;
+  TransformateurMTBT? get primaryTransformateur => transformateurs.isNotEmpty ? transformateurs.first : transformateur;
+
 }
 
 @HiveType(typeId: 5)

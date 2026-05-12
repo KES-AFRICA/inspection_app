@@ -2104,1524 +2104,2886 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
 // ÉTAPE 3 : CELLULE ET TRANSFORMATEUR
 // ================================================================
 
-class _EtapeCelluleTransformateur extends StatefulWidget {
-  final TextEditingController celluleFonctionController;
-  final TextEditingController celluleTypeController;
-  final TextEditingController celluleMarqueController;
-  final TextEditingController celluleTensionController;
-  final TextEditingController cellulePouvoirController;
-  final TextEditingController celluleNumerotationController;
-  final TextEditingController celluleParafoudresController;
-  final List<ElementControle> celluleElements;
-  final TextEditingController transfoTypeController;
-  final TextEditingController transfoMarqueController;
-  final TextEditingController transfoPuissanceController;
-  final TextEditingController transfoTensionController;
-  final TextEditingController transfoBuchholzController;
-  final TextEditingController transfoRefroidissementController;
-  final TextEditingController transfoRegimeController;
-  final List<ElementControle> transfoElements;
-  final Map<int, bool> hasObservation;
-  final Map<int, List<String>> elementSuggestions;
-  final Map<ElementControle, bool> conformeSelected;
-  final Function(ElementControle, int, String) onElementChanged;
-  final Function(ElementControle) onConformeChanged;
-  final Function(int, bool, String) onObservationToggleChanged;
-  final Function(ElementControle, int, String) onPrendrePhotoElement;
-  final Function(ElementControle, int, String) onChoisirPhotoElement;
-  final Function(ElementControle, int, int, String) onSupprimerPhotoElement;
-  final Function(int, String, String) onObservationChanged;
-  final Function(int, String, ElementControle, String) onUseSuggestion;
+// ================================================================
+// NOUVEAU WIDGET : CELLULES & TRANSFORMATEURS MULTIPLES
+// ================================================================
 
-  const _EtapeCelluleTransformateur({
+class _EtapeCelluleTransformateurMulti extends StatefulWidget {
+  final List<Cellule> cellules;
+  final List<TransformateurMTBT> transformateurs;
+  final Function(List<Cellule>) onCellulesChanged;
+  final Function(List<TransformateurMTBT>) onTransformateursChanged;
+  final VoidCallback onDataChanged;
+
+  const _EtapeCelluleTransformateurMulti({
     super.key,
-    required this.celluleFonctionController,
-    required this.celluleTypeController,
-    required this.celluleMarqueController,
-    required this.celluleTensionController,
-    required this.cellulePouvoirController,
-    required this.celluleNumerotationController,
-    required this.celluleParafoudresController,
-    required this.celluleElements,
-    required this.transfoTypeController,
-    required this.transfoMarqueController,
-    required this.transfoPuissanceController,
-    required this.transfoTensionController,
-    required this.transfoBuchholzController,
-    required this.transfoRefroidissementController,
-    required this.transfoRegimeController,
-    required this.transfoElements,
-    required this.hasObservation,
-    required this.elementSuggestions,
-    required this.conformeSelected,
-    required this.onElementChanged,
-    required this.onConformeChanged,
-    required this.onObservationToggleChanged,
-    required this.onPrendrePhotoElement,
-    required this.onChoisirPhotoElement,
-    required this.onSupprimerPhotoElement,
-    required this.onObservationChanged,
-    required this.onUseSuggestion,
+    required this.cellules,
+    required this.transformateurs,
+    required this.onCellulesChanged,
+    required this.onTransformateursChanged,
+    required this.onDataChanged,
   });
 
   @override
-  State<_EtapeCelluleTransformateur> createState() => _EtapeCelluleTransformateurState();
+  State<_EtapeCelluleTransformateurMulti> createState() => _EtapeCelluleTransformateurMultiState();
 }
 
-class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur> {
-  final PageController _slideController = PageController();
+class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransformateurMulti> {
+  // ============================================================
+  // ÉTAT LOCAL
+  // ============================================================
+  int _currentMode = 0; // 0 = Cellules, 1 = Transformateurs
   
-  // 0 = Cellule données, 1 = Cellule éléments, 2 = Transfo données, 3 = Transfo éléments
-  int _currentSection = 0;
+  // Pour les formulaires d'édition (mode édition actif)
+  bool _isEditing = false;
+  bool _isEditingCellule = true; // true = cellule, false = transformateur
+  int? _editingIndex;
+  
+  // Contrôleurs pour le formulaire cellule (réutilisés depuis l'existant)
+  final _celluleFonctionController = TextEditingController();
+  final _celluleTypeController = TextEditingController();
+  final _celluleMarqueController = TextEditingController();
+  final _celluleTensionController = TextEditingController();
+  final _cellulePouvoirController = TextEditingController();
+  final _celluleNumerotationController = TextEditingController();
+  final _celluleParafoudresController = TextEditingController();
+  List<ElementControle> _celluleElements = [];
+  
+  // Contrôleurs pour le formulaire transformateur
+  final _transfoTypeController = TextEditingController();
+  final _transfoMarqueController = TextEditingController();
+  final _transfoPuissanceController = TextEditingController();
+  final _transfoTensionController = TextEditingController();
+  final _transfoBuchholzController = TextEditingController();
+  final _transfoRefroidissementController = TextEditingController();
+  final _transfoRegimeController = TextEditingController();
+  List<ElementControle> _transfoElements = [];
+  
+  // Navigation slides pour le formulaire
+  final PageController _slideController = PageController();
   int _currentSlide = 0;
   
-  late List<List<ElementControle>> _celluleElementsSlides;
-  late List<List<ElementControle>> _transfoElementsSlides;
+  // Éléments vérifiés par défaut
+  static const List<String> _celluleElementsParDefaut = [
+    'Schéma unifilaire affiché dans le local',
+    'Cellule correctement posée et fixée',
+    'Jonctions inter-cellules',
+    'Canalisations et câbles d\'arrivée / départ',
+    'Respect des distances de sécurité',
+    'Commande manuelle / motorisée',
+    'Voyants de position (O / F / T)',
+    'Verrouillage mécanique',
+    'Terre de protection (PE) reliée à chaque cellule'
+  ];
   
-  // Options pour les dropdowns
+  static const List<String> _transfoElementsParDefaut = [
+    'Adapté au local et à la ventilation',
+    'Plaque signalétique (puissance, tension, couplage)',
+    'Mise à la terre du neutre et de la carcasse',
+    'Raccordement des câbles MT et BT',
+    'Protection contre les contacts directs',
+    'Bac de rétention (pour transfo à huile)',
+    'Protection contre les surintensités',
+    'Essais diélectriques',
+    'Distance entre transformateur',
+    'Protection MT',
+    'Protection BT (disjoncteur général, fusibles, relais thermique)',
+    'Écran de câble MT relié à la terre'
+  ];
+  
   static const List<String> _presentAbsentOptions = ['Présent', 'Absent'];
-
+  
+  // Options pour les dropdowns du transformateur (certains champs)
+  static const List<String> _ouiNonOptions = ['Oui', 'Non'];
+  
+  // ============================================================
+  // INITIALISATION
+  // ============================================================
+  
   @override
   void initState() {
     super.initState();
-    _buildSlides();
+    _resetCelluleForm();
+    _resetTransformateurForm();
   }
-
-  void _buildSlides() {
-    _celluleElementsSlides = [];
-    for (int i = 0; i < widget.celluleElements.length; i += 3) {
-      _celluleElementsSlides.add(widget.celluleElements.sublist(
-        i, 
-        (i + 3).clamp(0, widget.celluleElements.length)
-      ));
+  
+  void _resetCelluleForm() {
+    _celluleFonctionController.clear();
+    _celluleTypeController.clear();
+    _celluleMarqueController.clear();
+    _celluleTensionController.clear();
+    _cellulePouvoirController.clear();
+    _celluleNumerotationController.text = '';
+    _celluleParafoudresController.text = '';
+    _celluleElements = _celluleElementsParDefaut.map((element) => ElementControle(
+      elementControle: element,
+      conforme: null,
+      priorite: 3,
+    )).toList();
+  }
+  
+  void _resetTransformateurForm() {
+    _transfoTypeController.clear();
+    _transfoMarqueController.clear();
+    _transfoPuissanceController.clear();
+    _transfoTensionController.clear();
+    _transfoBuchholzController.text = '';
+    _transfoRefroidissementController.text = '';
+    _transfoRegimeController.text = '';
+    _transfoElements = _transfoElementsParDefaut.map((element) => ElementControle(
+      elementControle: element,
+      conforme: null,
+      priorite: 3,
+    )).toList();
+  }
+  
+  void _chargerCellulePourEdition(Cellule cellule) {
+    _celluleFonctionController.text = cellule.fonction;
+    _celluleTypeController.text = cellule.type;
+    _celluleMarqueController.text = cellule.marqueModeleAnnee;
+    _celluleTensionController.text = cellule.tensionAssignee;
+    _cellulePouvoirController.text = cellule.pouvoirCoupure;
+    _celluleNumerotationController.text = cellule.numerotation;
+    _celluleParafoudresController.text = cellule.parafoudres;
+    _celluleElements = List.from(cellule.elementsVerifies);
+  }
+  
+  void _chargerTransformateurPourEdition(TransformateurMTBT transfo) {
+    _transfoTypeController.text = transfo.typeTransformateur;
+    _transfoMarqueController.text = transfo.marqueAnnee;
+    _transfoPuissanceController.text = transfo.puissanceAssignee;
+    _transfoTensionController.text = transfo.tensionPrimaireSecondaire;
+    _transfoBuchholzController.text = transfo.relaisBuchholz;
+    _transfoRefroidissementController.text = transfo.typeRefroidissement;
+    _transfoRegimeController.text = transfo.regimeNeutre;
+    _transfoElements = List.from(transfo.elementsVerifies);
+  }
+  
+  // ============================================================
+  // GESTION DES SLIDES POUR FORMULAIRE
+  // ============================================================
+  
+  List<List<ElementControle>> get _currentElementsSlides {
+    final elements = _isEditingCellule ? _celluleElements : _transfoElements;
+    final slides = <List<ElementControle>>[];
+    for (int i = 0; i < elements.length; i += 3) {
+      slides.add(elements.sublist(i, (i + 3).clamp(0, elements.length)));
     }
-    
-    _transfoElementsSlides = [];
-    for (int i = 0; i < widget.transfoElements.length; i += 3) {
-      _transfoElementsSlides.add(widget.transfoElements.sublist(
-        i, 
-        (i + 3).clamp(0, widget.transfoElements.length)
-      ));
-    }
+    return slides;
   }
-
-  List<Map<String, dynamic>> get _sections {
-    final sections = <Map<String, dynamic>>[];
-    
-    sections.add({
-      'title': 'CELLULE',
-      'type': 'cellule',
-      'color': const Color(0xFFE67E22),
-    });
-    
-    sections.add({
-      'title': 'TRANSFORMATEUR',
-      'type': 'transfo',
-      'color': const Color(0xFF2980B9),
-    });
-    
-    return sections;
-  }
-
-  Map<String, dynamic> get _currentSectionData => _sections[_currentSection];
-  String get _currentSectionType => _currentSectionData['type'];
-  Color get _currentColor => _currentSectionData['color'];
-  bool get _isLastSection => _currentSection == _sections.length - 1;
-
-  int _getTotalSlidesForCurrentSection() {
-    if (_currentSection == 0) {
-      return 1 + _celluleElementsSlides.length;
-    } else {
-      return 1 + _transfoElementsSlides.length;
-    }
-  }
-
-  int get _totalSlides => _getTotalSlidesForCurrentSection();
+  
+  int get _totalSlides => 1 + _currentElementsSlides.length;
   bool get _isLastSlide => _currentSlide == _totalSlides - 1;
-  bool get _isFirstSlide => _currentSlide == 0;
-
-  bool _isCurrentSlideValid() {
-    if (_currentSection == 0) {
-      if (_currentSlide == 0) {
-        return _validateCelluleDonnees();
-      } else {
-        final elementSlideIndex = _currentSlide - 1;
-        if (elementSlideIndex < _celluleElementsSlides.length) {
-          return _validateElementsSlide(_celluleElementsSlides[elementSlideIndex], 1000);
-        }
-      }
+  
+  void _nextSlide() {
+    if (_slideController.hasClients && !_isLastSlide) {
+      _slideController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+  
+  void _previousSlide() {
+    if (_slideController.hasClients && _currentSlide > 0) {
+      _slideController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+  
+  // ============================================================
+  // MÉTHODES CRUD - CELLULES
+  // ============================================================
+  
+  void _ajouterCellule() {
+    _resetCelluleForm();
+    setState(() {
+      _isEditing = true;
+      _isEditingCellule = true;
+      _editingIndex = null;
+      _currentSlide = 0;
+    });
+  }
+  
+  void _modifierCellule(int index) {
+    _chargerCellulePourEdition(widget.cellules[index]);
+    setState(() {
+      _isEditing = true;
+      _isEditingCellule = true;
+      _editingIndex = index;
+      _currentSlide = 0;
+    });
+  }
+  
+  void _sauvegarderCellule() {
+    final nouvelleCellule = Cellule(
+      fonction: _celluleFonctionController.text.trim(),
+      type: _celluleTypeController.text.trim(),
+      marqueModeleAnnee: _celluleMarqueController.text.trim(),
+      tensionAssignee: _celluleTensionController.text.trim(),
+      pouvoirCoupure: _cellulePouvoirController.text.trim(),
+      numerotation: _celluleNumerotationController.text,
+      parafoudres: _celluleParafoudresController.text,
+      elementsVerifies: _celluleElements,
+    );
+    
+    final nouvellesCellules = List<Cellule>.from(widget.cellules);
+    if (_editingIndex != null) {
+      nouvellesCellules[_editingIndex!] = nouvelleCellule;
     } else {
-      if (_currentSlide == 0) {
-        return _validateTransfoDonnees();
-      } else {
-        final elementSlideIndex = _currentSlide - 1;
-        if (elementSlideIndex < _transfoElementsSlides.length) {
-          return _validateElementsSlide(_transfoElementsSlides[elementSlideIndex], 2000);
-        }
-      }
+      nouvellesCellules.add(nouvelleCellule);
     }
-    return true;
+    
+    widget.onCellulesChanged(nouvellesCellules);
+    widget.onDataChanged();
+    
+    setState(() {
+      _isEditing = false;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_editingIndex != null ? 'Cellule modifiée' : 'Cellule ajoutée'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 1),
+      ),
+    );
   }
-
-  bool _validateCelluleDonnees() {
-    return widget.celluleFonctionController.text.trim().isNotEmpty &&
-           widget.celluleTypeController.text.trim().isNotEmpty &&
-           widget.celluleMarqueController.text.trim().isNotEmpty &&
-           widget.celluleTensionController.text.trim().isNotEmpty &&
-           widget.cellulePouvoirController.text.trim().isNotEmpty &&
-           widget.celluleNumerotationController.text.isNotEmpty &&
-           widget.celluleParafoudresController.text.isNotEmpty;
-  }
-
-  bool _validateTransfoDonnees() {
-    return widget.transfoTypeController.text.trim().isNotEmpty &&
-           widget.transfoMarqueController.text.trim().isNotEmpty &&
-           widget.transfoPuissanceController.text.trim().isNotEmpty &&
-           widget.transfoTensionController.text.trim().isNotEmpty &&
-           widget.transfoBuchholzController.text.trim().isNotEmpty &&
-           widget.transfoRefroidissementController.text.trim().isNotEmpty &&
-           widget.transfoRegimeController.text.trim().isNotEmpty;
-  }
-
-  bool _validateElementsSlide(List<ElementControle> elements, int baseIndex) {
-    for (var element in elements) {
-      if (!(widget.conformeSelected[element] ?? false)) return false;
-      if (element.priorite == null) return false;
-      
-      final elementIndex = _currentSection == 0
-          ? baseIndex + widget.celluleElements.indexOf(element)
-          : baseIndex + widget.transfoElements.indexOf(element);
-      
-      // Si conformité = Non, l'observation est OBLIGATOIRE
-      if (element.conforme == false) {
-        if (widget.hasObservation[elementIndex] != true) return false;
-        if (element.observation == null || element.observation!.trim().isEmpty) return false;
-      } else {
-        if (widget.hasObservation[elementIndex] == true) {
-          if (element.observation == null || element.observation!.trim().isEmpty) return false;
-        }
-      }
+  
+  void _supprimerCellule(int index) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer la cellule'),
+        content: const Text('Voulez-vous vraiment supprimer cette cellule ?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirm == true) {
+      final nouvellesCellules = List<Cellule>.from(widget.cellules)..removeAt(index);
+      widget.onCellulesChanged(nouvellesCellules);
+      widget.onDataChanged();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Cellule supprimée'), backgroundColor: Colors.green, duration: Duration(seconds: 1)),
+      );
     }
-    return true;
   }
-
-  void nextSlide() {
-    if (!_isCurrentSlideValid()) {
-      _showError('Veuillez remplir tous les champs obligatoires');
+  
+  // ============================================================
+  // MÉTHODES CRUD - TRANSFORMATEURS
+  // ============================================================
+  
+  void _ajouterTransformateur() {
+    _resetTransformateurForm();
+    setState(() {
+      _isEditing = true;
+      _isEditingCellule = false;
+      _editingIndex = null;
+      _currentSlide = 0;
+    });
+  }
+  
+  void _modifierTransformateur(int index) {
+    _chargerTransformateurPourEdition(widget.transformateurs[index]);
+    setState(() {
+      _isEditing = true;
+      _isEditingCellule = false;
+      _editingIndex = index;
+      _currentSlide = 0;
+    });
+  }
+  
+  void _sauvegarderTransformateur() {
+    final nouveauTransformateur = TransformateurMTBT(
+      typeTransformateur: _transfoTypeController.text.trim(),
+      marqueAnnee: _transfoMarqueController.text.trim(),
+      puissanceAssignee: _transfoPuissanceController.text.trim(),
+      tensionPrimaireSecondaire: _transfoTensionController.text.trim(),
+      relaisBuchholz: _transfoBuchholzController.text,
+      typeRefroidissement: _transfoRefroidissementController.text,
+      regimeNeutre: _transfoRegimeController.text,
+      elementsVerifies: _transfoElements,
+    );
+    
+    final nouveauxTransformateurs = List<TransformateurMTBT>.from(widget.transformateurs);
+    if (_editingIndex != null) {
+      nouveauxTransformateurs[_editingIndex!] = nouveauTransformateur;
+    } else {
+      nouveauxTransformateurs.add(nouveauTransformateur);
+    }
+    
+    widget.onTransformateursChanged(nouveauxTransformateurs);
+    widget.onDataChanged();
+    
+    setState(() {
+      _isEditing = false;
+    });
+    
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(_editingIndex != null ? 'Transformateur modifié' : 'Transformateur ajouté'),
+        backgroundColor: Colors.green,
+        duration: const Duration(seconds: 1),
+      ),
+    );
+  }
+  
+  void _supprimerTransformateur(int index) async {
+    // Empêcher suppression du dernier transformateur
+    if (widget.transformateurs.length <= 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Au moins un transformateur est requis'),
+          backgroundColor: Colors.orange,
+          duration: Duration(seconds: 2),
+        ),
+      );
       return;
     }
     
-    if (_isLastSlide) {
-      if (!_isLastSection) {
-        setState(() {
-          _currentSection++;
-          _currentSlide = 0;
-        });
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_slideController.hasClients) {
-            _slideController.jumpToPage(0);
-          }
-        });
-      }
-    } else {
-      if (_slideController.hasClients) {
-        _slideController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-      }
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer le transformateur'),
+        content: const Text('Voulez-vous vraiment supprimer ce transformateur ?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+    
+    if (confirm == true) {
+      final nouveauxTransformateurs = List<TransformateurMTBT>.from(widget.transformateurs)..removeAt(index);
+      widget.onTransformateursChanged(nouveauxTransformateurs);
+      widget.onDataChanged();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Transformateur supprimé'), backgroundColor: Colors.green, duration: Duration(seconds: 1)),
+      );
     }
   }
-
-  void previousSlide() {
-    if (_isFirstSlide) {
-      if (_currentSection > 0) {
-        setState(() {
-          _currentSection--;
-          _currentSlide = _getTotalSlidesForPreviousSection() - 1;
-        });
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_slideController.hasClients) {
-            _slideController.jumpToPage(_currentSlide);
-          }
-        });
-      }
-    } else {
-      if (_slideController.hasClients) {
-        _slideController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-      }
-    }
+  
+  void _annulerEdition() {
+    setState(() {
+      _isEditing = false;
+    });
   }
+  
+  // ============================================================
+  // CONSTRUCTEURS DE WIDGETS
+  // ============================================================
+  
+  Widget _buildModeSelector(bool isSmallScreen) {
+  final screenWidth = MediaQuery.of(context).size.width;
+  final isVerySmallScreen = screenWidth < 380;
+  
+  return Container(
+    margin: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 8 : 12),
+    decoration: BoxDecoration(
+      color: Colors.grey.shade100,
+      borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
+    ),
+    child: Row(
+      children: [
+        // Onglet CELLULES
+        Expanded(
+          child: GestureDetector(
+            onTap: () => setState(() => _currentMode = 0),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              padding: EdgeInsets.symmetric(
+                vertical: isSmallScreen ? (isVerySmallScreen ? 10 : 12) : 14,
+                horizontal: isSmallScreen ? 8 : 12,
+              ),
+              decoration: BoxDecoration(
+                color: _currentMode == 0 ? AppTheme.primaryBlue : Colors.transparent,
+                borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                boxShadow: _currentMode == 0
+                    ? [
+                        BoxShadow(
+                          color: AppTheme.primaryBlue.withOpacity(0.3),
+                          blurRadius: isSmallScreen ? 4 : 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
 
-  int _getTotalSlidesForPreviousSection() {
-    if (_currentSection == 1) {
-      return 1 + _celluleElementsSlides.length;
+                  // Texte avec gestion du débordement
+                  Flexible(
+                    child: Text(
+                      'CELLULES',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? (isVerySmallScreen ? 11 : 13) : 14,
+                        fontWeight: FontWeight.w600,
+                        color: _currentMode == 0 ? Colors.white : Colors.grey.shade700,
+                        letterSpacing: 0.5,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                  SizedBox(width: isSmallScreen ? 4 : 6),
+                  // Badge compteur
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 6 : 8,
+                      vertical: isSmallScreen ? 2 : 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _currentMode == 0
+                          ? Colors.white.withOpacity(0.2)
+                          : Colors.blue.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
+                    ),
+                    child: Text(
+                      '${widget.cellules.length}',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? (isVerySmallScreen ? 10 : 11) : 12,
+                        fontWeight: FontWeight.bold,
+                        color: _currentMode == 0 ? Colors.white : Colors.blue.shade700,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+        
+        // Séparateur visuel entre les deux onglets
+        Container(
+          width: 1,
+          height: isSmallScreen ? 24 : 28,
+          color: Colors.grey.shade300,
+        ),
+        
+        // Onglet TRANSFORMATEURS
+        Expanded(
+          child: GestureDetector(
+            onTap: () => setState(() => _currentMode = 1),
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeInOut,
+              padding: EdgeInsets.symmetric(
+                vertical: isSmallScreen ? (isVerySmallScreen ? 10 : 12) : 14,
+                horizontal: isSmallScreen ? 8 : 12,
+              ),
+              decoration: BoxDecoration(
+                color: _currentMode == 1 ? Colors.orange : Colors.transparent,
+                borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                boxShadow: _currentMode == 1
+                    ? [
+                        BoxShadow(
+                          color: Colors.orange.withOpacity(0.3),
+                          blurRadius: isSmallScreen ? 4 : 6,
+                          offset: const Offset(0, 2),
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Texte avec gestion du débordement
+                  Flexible(
+                    child: Text(
+                      'TRANSFORMATEURS',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? (isVerySmallScreen ? 11 : 13) : 14,
+                        fontWeight: FontWeight.w600,
+                        color: _currentMode == 1 ? Colors.white : Colors.grey.shade700,
+                        letterSpacing: 0.5,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                      maxLines: 1,
+                    ),
+                  ),
+                  SizedBox(width: isSmallScreen ? 4 : 6),
+                  // Badge compteur (rouge si vide pour attirer l'attention)
+                  Container(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: isSmallScreen ? 6 : 8,
+                      vertical: isSmallScreen ? 2 : 3,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _currentMode == 1
+                          ? Colors.white.withOpacity(0.2)
+                          : (widget.transformateurs.isEmpty
+                              ? Colors.red.withOpacity(0.1)
+                              : Colors.orange.withOpacity(0.1)),
+                      borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
+                    ),
+                    child: Text(
+                      '${widget.transformateurs.length}',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? (isVerySmallScreen ? 10 : 11) : 12,
+                        fontWeight: FontWeight.bold,
+                        color: _currentMode == 1
+                            ? Colors.white
+                            : (widget.transformateurs.isEmpty
+                                ? Colors.red.shade700
+                                : Colors.orange.shade700),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+  
+  // ============================================================
+  // LISTE DES CELLULES
+  // ============================================================
+  
+  Widget _buildCellulesList(bool isSmallScreen) {
+    if (widget.cellules.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.cell_tower, size: isSmallScreen ? 60 : 80, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text('Aucune cellule', style: TextStyle(fontSize: isSmallScreen ? 16 : 18, color: Colors.grey.shade600)),
+            const SizedBox(height: 8),
+            Text('Ajoutez une cellule pour ce local', style: TextStyle(fontSize: isSmallScreen ? 12 : 14, color: Colors.grey.shade500)),
+          ],
+        ),
+      );
     }
-    return 1;
-  }
-
-  void _showError(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red, duration: const Duration(seconds: 2)),
+    
+    return ListView.builder(
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+      itemCount: widget.cellules.length,
+      itemBuilder: (context, index) {
+        final cellule = widget.cellules[index];
+        return _buildCelluleCard(cellule, index, isSmallScreen);
+      },
     );
   }
-
-  bool canGoNext() {
-    if (!_isCurrentSlideValid()) return false;
-    return _isLastSection && _isLastSlide;
+  
+  Widget _buildCelluleCard(Cellule cellule, int index, bool isSmallScreen) {
+    return Container(
+      margin: EdgeInsets.only(bottom: isSmallScreen ? 10 : 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: isSmallScreen ? 28 : 32,
+                  height: isSmallScreen ? 28 : 32,
+                  decoration: BoxDecoration(color: Colors.blue, borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8)),
+                  child: Center(
+                    child: Text('${index + 1}', style: TextStyle(fontSize: isSmallScreen ? 11 : 13, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
+                ),
+                SizedBox(width: isSmallScreen ? 10 : 12),
+                Expanded(
+                  child: Text(
+                    cellule.type.isNotEmpty ? cellule.type : 'Cellule',
+                    style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.w600, color: Colors.blue.shade800),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.edit, size: isSmallScreen ? 18 : 20, color: Colors.blue),
+                  onPressed: () => _modifierCellule(index),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete_outline, size: isSmallScreen ? 18 : 20, color: Colors.red),
+                  onPressed: () => _supprimerCellule(index),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            child: Column(
+              children: [
+                if (cellule.fonction.isNotEmpty)
+                  _buildInfoRow('Fonction', cellule.fonction, isSmallScreen),
+                if (cellule.marqueModeleAnnee.isNotEmpty)
+                  _buildInfoRow('Marque/Modèle', cellule.marqueModeleAnnee, isSmallScreen),
+                if (cellule.tensionAssignee.isNotEmpty)
+                  _buildInfoRow('Tension assignée', cellule.tensionAssignee, isSmallScreen),
+                if (cellule.elementsVerifies.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.only(top: isSmallScreen ? 8 : 10),
+                    child: Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 4 : 6),
+                      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8)),
+                      child: Center(
+                        child: Text(
+                          '${cellule.elementsVerifies.length} élément(s) vérifié(s)',
+                          style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.grey.shade700),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
-
-  bool canGoPrevious() {
-    return _isFirstSlide && _currentSection == 0;
+  
+  // ============================================================
+  // LISTE DES TRANSFORMATEURS
+  // ============================================================
+  
+  Widget _buildTransformateursList(bool isSmallScreen) {
+    if (widget.transformateurs.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.transform, size: isSmallScreen ? 60 : 80, color: Colors.grey.shade400),
+            const SizedBox(height: 16),
+            Text('Aucun transformateur', style: TextStyle(fontSize: isSmallScreen ? 16 : 18, color: Colors.grey.shade600)),
+            const SizedBox(height: 8),
+            Text('Au moins un transformateur est requis', style: TextStyle(fontSize: isSmallScreen ? 12 : 14, color: Colors.orange.shade700)),
+          ],
+        ),
+      );
+    }
+    
+    return ListView.builder(
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+      itemCount: widget.transformateurs.length,
+      itemBuilder: (context, index) {
+        final transfo = widget.transformateurs[index];
+        return _buildTransformateurCard(transfo, index, isSmallScreen);
+      },
+    );
   }
-
-  @override
-  Widget build(BuildContext context) {
+  
+  Widget _buildTransformateurCard(TransformateurMTBT transfo, int index, bool isSmallScreen) {
+    return Container(
+      margin: EdgeInsets.only(bottom: isSmallScreen ? 10 : 12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 4, offset: const Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: const BorderRadius.only(topLeft: Radius.circular(10), topRight: Radius.circular(10)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: isSmallScreen ? 28 : 32,
+                  height: isSmallScreen ? 28 : 32,
+                  decoration: BoxDecoration(color: Colors.orange, borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8)),
+                  child: Center(
+                    child: Text('${index + 1}', style: TextStyle(fontSize: isSmallScreen ? 11 : 13, fontWeight: FontWeight.bold, color: Colors.white)),
+                  ),
+                ),
+                SizedBox(width: isSmallScreen ? 10 : 12),
+                Expanded(
+                  child: Text(
+                    transfo.typeTransformateur.isNotEmpty ? transfo.typeTransformateur : 'Transformateur',
+                    style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.w600, color: Colors.orange.shade800),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.edit, size: isSmallScreen ? 18 : 20, color: Colors.orange),
+                  onPressed: () => _modifierTransformateur(index),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete_outline, size: isSmallScreen ? 18 : 20, color: Colors.red),
+                  onPressed: () => _supprimerTransformateur(index),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            child: Column(
+              children: [
+                if (transfo.marqueAnnee.isNotEmpty)
+                  _buildInfoRow('Marque/Année', transfo.marqueAnnee, isSmallScreen),
+                if (transfo.puissanceAssignee.isNotEmpty)
+                  _buildInfoRow('Puissance', transfo.puissanceAssignee, isSmallScreen),
+                if (transfo.regimeNeutre.isNotEmpty)
+                  _buildInfoRow('Régime neutre', transfo.regimeNeutre, isSmallScreen),
+                if (transfo.elementsVerifies.isNotEmpty)
+                  Padding(
+                    padding: EdgeInsets.only(top: isSmallScreen ? 8 : 10),
+                    child: Container(
+                      width: double.infinity,
+                      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 4 : 6),
+                      decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8)),
+                      child: Center(
+                        child: Text(
+                          '${transfo.elementsVerifies.length} élément(s) vérifié(s)',
+                          style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.grey.shade700),
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // ============================================================
+  // FORMULAIRE SLIDES (CELLULE)
+  // ============================================================
+  
+  Widget _buildCelluleFormulaireSlides(bool isSmallScreen) {
+    final elementsSlides = _currentElementsSlides;
+    
     return Column(
       children: [
-        // En-tête
         Container(
-          padding: EdgeInsets.all(context.spacingL),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            boxShadow: [
-              BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: context.spacingS, offset: const Offset(0, 2)),
-            ],
-          ),
+          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+          color: Colors.blue.shade50,
           child: Row(
             children: [
-              Container(
-                width: context.iconSizeXL * 1.2,
-                height: context.iconSizeXL * 1.2,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [Color(0xFFE67E22), Color(0xFF2980B9)]),
-                  borderRadius: BorderRadius.circular(context.spacingS),
-                ),
-                child: Icon(Icons.electric_bolt, color: Colors.white, size: context.iconSizeM),
-              ),
-              SizedBox(width: context.spacingM),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Cellule & Transformateur',
-                      style: TextStyle(fontSize: context.fontSizeXXL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
-                    ),
-                    Text(
-                      'Données techniques et vérifications',
-                      style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-        
-        // Titre de section avec compteur
-        Container(
-          padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
-          child: Row(
-            children: [
-              Container(
-                width: 4,
-                height: context.iconSizeL,
-                decoration: BoxDecoration(
-                  color: _currentColor,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              SizedBox(width: context.spacingS),
+              Icon(Icons.edit, color: Colors.blue, size: isSmallScreen ? 18 : 20),
+              SizedBox(width: isSmallScreen ? 8 : 10),
               Expanded(
                 child: Text(
-                  _currentSection == 0 
-                      ? (_currentSlide == 0 ? 'CELLULE - Données techniques' : 'CELLULE - Éléments vérifiés')
-                      : (_currentSlide == 0 ? 'TRANSFORMATEUR - Données techniques' : 'TRANSFORMATEUR - Éléments vérifiés'),
-                  style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.bold, color: _currentColor),
-                  overflow: TextOverflow.ellipsis,
+                  _editingIndex != null ? 'MODIFIER LA CELLULE' : 'NOUVELLE CELLULE',
+                  style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.bold, color: Colors.blue.shade800),
                 ),
               ),
-              Text(
-                '${_currentSlide + 1}/$_totalSlides',
-                style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
-              ),
+              Text('${_currentSlide + 1}/$_totalSlides', style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.blue.shade600)),
             ],
           ),
         ),
         
-        // Barre de progression
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: context.spacingL),
+          padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 8 : 10),
           child: LinearProgressIndicator(
             value: (_currentSlide + 1) / _totalSlides,
             backgroundColor: Colors.grey.shade200,
-            valueColor: AlwaysStoppedAnimation<Color>(_currentColor),
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
             minHeight: 3,
-            borderRadius: BorderRadius.circular(2),
           ),
         ),
         
-        // Contenu
         Expanded(
           child: PageView.builder(
             controller: _slideController,
             physics: const NeverScrollableScrollPhysics(),
             onPageChanged: (index) => setState(() => _currentSlide = index),
             itemCount: _totalSlides,
-            itemBuilder: (context, slideIndex) => _buildSectionContent(context, slideIndex),
+            itemBuilder: (context, slideIndex) {
+              if (slideIndex == 0) {
+                return _buildCelluleDonneesSlide(isSmallScreen);
+              } else {
+                final elementSlideIndex = slideIndex - 1;
+                if (elementSlideIndex < elementsSlides.length) {
+                  return _buildElementsSlide(
+                    elements: elementsSlides[elementSlideIndex],
+                    isCellule: true,
+                    isSmallScreen: isSmallScreen,
+                  );
+                }
+                return const SizedBox.shrink();
+              }
+            },
           ),
         ),
-      ],
-    );
-  }
-
-  Widget _buildSectionContent(BuildContext context, int slideIndex) {
-    if (_currentSection == 0) {
-      if (slideIndex == 0) {
-        return _buildCelluleDonnees(context);
-      } else {
-        final elementSlideIndex = slideIndex - 1;
-        if (elementSlideIndex < _celluleElementsSlides.length) {
-          return _buildElementsSlide(
-            context,
-            elements: _celluleElementsSlides[elementSlideIndex],
-            sectionType: 'cellule',
-            color: _currentColor,
-            baseIndex: 1000,
-          );
-        }
-      }
-    } else {
-      if (slideIndex == 0) {
-        return _buildTransfoDonnees(context);
-      } else {
-        final elementSlideIndex = slideIndex - 1;
-        if (elementSlideIndex < _transfoElementsSlides.length) {
-          return _buildElementsSlide(
-            context,
-            elements: _transfoElementsSlides[elementSlideIndex],
-            sectionType: 'transformateur',
-            color: _currentColor,
-            baseIndex: 2000,
-          );
-        }
-      }
-    }
-    return const SizedBox.shrink();
-  }
-
-  Widget _buildCelluleDonnees(BuildContext context) {
-    return ListView(
-      padding: EdgeInsets.all(context.spacingL),
-      children: [
+        
         Container(
-          padding: EdgeInsets.all(context.spacingL),
+          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
           decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [_currentColor, _currentColor.withOpacity(0.8)]),
-            borderRadius: BorderRadius.circular(context.spacingL),
+            color: Colors.white,
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, -2))],
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          child: Row(
             children: [
-              Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.white, size: context.iconSizeM),
-                  SizedBox(width: context.spacingS),
-                  Flexible(
-                    child: Text(
-                      'Caractéristiques de la cellule',
-                      style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: context.spacingS),
-              Text(
-                'Renseignez toutes les informations techniques',
-                style: TextStyle(fontSize: context.fontSizeS, color: Colors.white.withOpacity(0.9)),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: context.spacingL),
-        
-        _buildModernInputField(
-          context,
-          controller: widget.celluleFonctionController,
-          label: 'Fonction de la cellule *',
-          icon: Icons.power,
-          color: _currentColor,
-          onChanged: () => setState(() {}),
-        ),
-        _buildModernInputField(
-          context,
-          controller: widget.celluleTypeController,
-          label: 'Type de cellule *',
-          icon: Icons.category,
-          color: _currentColor,
-          onChanged: () => setState(() {}),
-        ),
-        _buildModernInputField(
-          context,
-          controller: widget.celluleMarqueController,
-          label: 'Marque / modèle / année *',
-          icon: Icons.branding_watermark,
-          color: _currentColor,
-          onChanged: () => setState(() {}),
-        ),
-        _buildModernInputField(
-          context,
-          controller: widget.celluleTensionController,
-          label: 'Tension assignée *',
-          icon: Icons.electrical_services,
-          color: _currentColor,
-          onChanged: () => setState(() {}),
-        ),
-        _buildModernInputField(
-          context,
-          controller: widget.cellulePouvoirController,
-          label: 'Pouvoir de coupure assigné (kA) *',
-          icon: Icons.offline_bolt,
-          color: _currentColor,
-          onChanged: () => setState(() {}),
-        ),
-        
-        // Dropdown pour Numérotation / repérage
-        _buildModernDropdown(
-          context,
-          label: 'Numérotation / repérage *',
-          value: widget.celluleNumerotationController.text,
-          items: _presentAbsentOptions,
-          icon: Icons.numbers,
-          color: _currentColor,
-          onChanged: (value) {
-            setState(() {
-              widget.celluleNumerotationController.text = value;
-            });
-          },
-        ),
-        
-        // Dropdown pour Parafoudres installés sur l'arrivée
-        _buildModernDropdown(
-          context,
-          label: 'Parafoudres installés sur l\'arrivée *',
-          value: widget.celluleParafoudresController.text,
-          items: _presentAbsentOptions,
-          icon: Icons.shield,
-          color: _currentColor,
-          onChanged: (value) {
-            setState(() {
-              widget.celluleParafoudresController.text = value;
-            });
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildTransfoDonnees(BuildContext context) {
-    return ListView(
-      padding: EdgeInsets.all(context.spacingL),
-      children: [
-        Container(
-          padding: EdgeInsets.all(context.spacingL),
-          decoration: BoxDecoration(
-            gradient: LinearGradient(colors: [_currentColor, _currentColor.withOpacity(0.8)]),
-            borderRadius: BorderRadius.circular(context.spacingL),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.info_outline, color: Colors.white, size: context.iconSizeM),
-                  SizedBox(width: context.spacingS),
-                  Flexible(
-                    child: Text(
-                      'Caractéristiques du transformateur',
-                      style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.bold, color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: context.spacingS),
-              Text(
-                'Renseignez toutes les informations techniques',
-                style: TextStyle(fontSize: context.fontSizeS, color: Colors.white.withOpacity(0.9)),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: context.spacingL),
-        
-        _buildModernInputField(
-          context,
-          controller: widget.transfoTypeController,
-          label: 'Type de transformateur *',
-          icon: Icons.transform,
-          color: _currentColor,
-          onChanged: () => setState(() {}),
-        ),
-        _buildModernInputField(
-          context,
-          controller: widget.transfoMarqueController,
-          label: 'Marque/ Année de fabrication *',
-          icon: Icons.branding_watermark,
-          color: _currentColor,
-          onChanged: () => setState(() {}),
-        ),
-        _buildModernInputField(
-          context,
-          controller: widget.transfoPuissanceController,
-          label: 'Puissance assignée (kVA) *',
-          icon: Icons.speed,
-          color: _currentColor,
-          onChanged: () => setState(() {}),
-        ),
-        _buildModernInputField(
-          context,
-          controller: widget.transfoTensionController,
-          label: 'Tension primaire / secondaire *',
-          icon: Icons.electrical_services,
-          color: _currentColor,
-          onChanged: () => setState(() {}),
-        ),
-        _buildModernInputField(
-          context,
-          controller: widget.transfoBuchholzController,
-          label: 'Présence du relais Buchholz *',
-          icon: Icons.sensors,
-          color: _currentColor,
-          onChanged: () => setState(() {}),
-        ),
-        _buildModernInputField(
-          context,
-          controller: widget.transfoRefroidissementController,
-          label: 'Type de refroidissement *',
-          icon: Icons.ac_unit,
-          color: _currentColor,
-          onChanged: () => setState(() {}),
-        ),
-        _buildModernInputField(
-          context,
-          controller: widget.transfoRegimeController,
-          label: 'Régime du neutre *',
-          icon: Icons.settings_input_antenna,
-          color: _currentColor,
-          onChanged: () => setState(() {}),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildModernInputField(
-    BuildContext context, {
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required Color color,
-    required VoidCallback onChanged,
-  }) {
-    final isValid = controller.text.trim().isNotEmpty;
-    
-    return Container(
-      margin: EdgeInsets.only(bottom: context.spacingM),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(context.spacingM),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
-        ],
-        border: Border.all(color: isValid ? Colors.transparent : Colors.red.shade300, width: isValid ? 0 : 1.5),
-      ),
-      child: TextFormField(
-        controller: controller,
-        style: TextStyle(fontSize: context.fontSizeS),
-        onChanged: (_) => onChanged(),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: context.fontSizeS),
-          prefixIcon: Icon(icon, color: color, size: context.iconSizeS),
-          suffixIcon: isValid 
-              ? Icon(Icons.check_circle, color: Colors.green, size: context.iconSizeS)
-              : Icon(Icons.error_outline, color: Colors.red, size: context.iconSizeS),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingM), borderSide: BorderSide.none),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingM), borderSide: BorderSide(color: Colors.grey.shade200)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingM), borderSide: BorderSide(color: color, width: 2)),
-          filled: true,
-          fillColor: Colors.white,
-          contentPadding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingM),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildModernDropdown(
-    BuildContext context, {
-    required String label,
-    required String value,
-    required List<String> items,
-    required IconData icon,
-    required Color color,
-    required Function(String) onChanged,
-  }) {
-    final isValid = value.isNotEmpty;
-    
-    return Container(
-      margin: EdgeInsets.only(bottom: context.spacingM),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(context.spacingM),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
-        ],
-        border: Border.all(color: isValid ? Colors.transparent : Colors.red.shade300, width: isValid ? 0 : 1.5),
-      ),
-      child: DropdownButtonFormField<String>(
-        initialValue: value.isNotEmpty ? value : null,
-        isExpanded: true,
-        icon: Icon(Icons.arrow_drop_down_circle, color: color, size: context.iconSizeM),
-        dropdownColor: Colors.white,
-        borderRadius: BorderRadius.circular(context.spacingM),
-        hint: Text(
-          'Sélectionnez...',
-          style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500),
-        ),
-        decoration: InputDecoration(
-          labelText: label,
-          labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: context.fontSizeS),
-          prefixIcon: Icon(icon, color: color, size: context.iconSizeS),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingM),
-        ),
-        style: TextStyle(fontSize: context.fontSizeS, color: AppTheme.darkBlue),
-        items: items.map((item) {
-          return DropdownMenuItem<String>(
-            value: item,
-            child: Row(
-              children: [
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: item == 'Présent' ? Colors.green : Colors.red,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                SizedBox(width: context.spacingS),
-                Text(
-                  item,
-                  style: TextStyle(
-                    color: item == 'Présent' ? Colors.green.shade700 : Colors.red.shade700,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
-        onChanged: (value) {
-          if (value != null) {
-            onChanged(value);
-          }
-        },
-        selectedItemBuilder: (BuildContext context) {
-          return items.map<Widget>((item) {
-            return Row(
-              children: [
-                Icon(
-                  Icons.check_circle,
-                  color: item == 'Présent' ? Colors.green : Colors.red,
-                  size: context.iconSizeS,
-                ),
-                SizedBox(width: context.spacingS),
+              if (_currentSlide > 0)
                 Expanded(
-                  child: Text(
-                    item,
-                    style: TextStyle(
-                      fontSize: context.fontSizeS,
-                      color: item == 'Présent' ? Colors.green.shade700 : Colors.red.shade700,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    overflow: TextOverflow.ellipsis,
+                  child: OutlinedButton(
+                    onPressed: _previousSlide,
+                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Icon(Icons.arrow_back, size: isSmallScreen ? 16 : 18),
+                      SizedBox(width: 8),
+                      Text('PRÉCÉDENT', style: TextStyle(fontSize: isSmallScreen ? 12 : 13)),
+                    ]),
                   ),
                 ),
-              ],
-            );
-          }).toList();
-        },
+              if (_currentSlide > 0) SizedBox(width: isSmallScreen ? 12 : 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _isLastSlide ? _sauvegarderCellule : _nextSlide,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
+                  ),
+                  child: Text(
+                    _isLastSlide ? 'VALIDER' : 'SUIVANT',
+                    style: TextStyle(fontSize: isSmallScreen ? 12 : 13, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildCelluleDonneesSlide(bool isSmallScreen) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+      child: Column(
+        children: [
+          _buildTextField(_celluleFonctionController, 'Fonction de la cellule', isSmallScreen, icon: Icons.power, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildTextField(_celluleTypeController, 'Type de cellule', isSmallScreen, icon: Icons.category, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildTextField(_celluleMarqueController, 'Marque / modèle / année', isSmallScreen, icon: Icons.branding_watermark, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildTextField(_celluleTensionController, 'Tension assignée', isSmallScreen, icon: Icons.electrical_services, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildTextField(_cellulePouvoirController, 'Pouvoir de coupure (kA)', isSmallScreen, icon: Icons.offline_bolt, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildDropdown(_celluleNumerotationController, 'Numérotation / repérage', _presentAbsentOptions, isSmallScreen, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildDropdown(_celluleParafoudresController, 'Parafoudres installés sur l\'arrivée', _presentAbsentOptions, isSmallScreen, optional: true),
+        ],
       ),
     );
   }
-
-  Widget _buildElementsSlide(
-    BuildContext context, {
-    required List<ElementControle> elements,
-    required String sectionType,
-    required Color color,
-    required int baseIndex,
-  }) {
-    return ListView(
-      padding: EdgeInsets.all(context.spacingL),
-      children: elements.map((element) {
-        final originalIndex = sectionType == 'cellule'
-            ? widget.celluleElements.indexOf(element)
-            : widget.transfoElements.indexOf(element);
-        final globalIndex = baseIndex + originalIndex;
+  
+  // ============================================================
+  // FORMULAIRE SLIDES (TRANSFORMATEUR)
+  // ============================================================
+  
+  Widget _buildTransformateurFormulaireSlides(bool isSmallScreen) {
+    final elementsSlides = _currentElementsSlides;
+    
+    return Column(
+      children: [
+        Container(
+          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+          color: Colors.orange.shade50,
+          child: Row(
+            children: [
+              Icon(Icons.edit, color: Colors.orange, size: isSmallScreen ? 18 : 20),
+              SizedBox(width: isSmallScreen ? 8 : 10),
+              Expanded(
+                child: Text(
+                  _editingIndex != null ? 'MODIFIER LE TRANSFORMATEUR' : 'NOUVEAU TRANSFORMATEUR',
+                  style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
+                ),
+              ),
+              Text('${_currentSlide + 1}/$_totalSlides', style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.orange.shade600)),
+            ],
+          ),
+        ),
         
-        return _buildElementCardSimple(
-          context,
-          element: element,
-          index: originalIndex,
-          globalIndex: globalIndex,
-          sectionType: sectionType,
-          color: color,
-        );
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 8 : 10),
+          child: LinearProgressIndicator(
+            value: (_currentSlide + 1) / _totalSlides,
+            backgroundColor: Colors.grey.shade200,
+            valueColor: const AlwaysStoppedAnimation<Color>(Colors.orange),
+            minHeight: 3,
+          ),
+        ),
+        
+        Expanded(
+          child: PageView.builder(
+            controller: _slideController,
+            physics: const NeverScrollableScrollPhysics(),
+            onPageChanged: (index) => setState(() => _currentSlide = index),
+            itemCount: _totalSlides,
+            itemBuilder: (context, slideIndex) {
+              if (slideIndex == 0) {
+                return _buildTransformateurDonneesSlide(isSmallScreen);
+              } else {
+                final elementSlideIndex = slideIndex - 1;
+                if (elementSlideIndex < elementsSlides.length) {
+                  return _buildElementsSlide(
+                    elements: elementsSlides[elementSlideIndex],
+                    isCellule: false,
+                    isSmallScreen: isSmallScreen,
+                  );
+                }
+                return const SizedBox.shrink();
+              }
+            },
+          ),
+        ),
+        
+        Container(
+          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8, offset: const Offset(0, -2))],
+          ),
+          child: Row(
+            children: [
+              if (_currentSlide > 0)
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: _previousSlide,
+                    child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                      Icon(Icons.arrow_back, size: isSmallScreen ? 16 : 18),
+                      SizedBox(width: 8),
+                      Text('PRÉCÉDENT', style: TextStyle(fontSize: isSmallScreen ? 12 : 13)),
+                    ]),
+                  ),
+                ),
+              if (_currentSlide > 0) SizedBox(width: isSmallScreen ? 12 : 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: _isLastSlide ? _sauvegarderTransformateur : _nextSlide,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
+                  ),
+                  child: Text(
+                    _isLastSlide ? 'VALIDER' : 'SUIVANT',
+                    style: TextStyle(fontSize: isSmallScreen ? 12 : 13, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+  
+  Widget _buildTransformateurDonneesSlide(bool isSmallScreen) {
+    return SingleChildScrollView(
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+      child: Column(
+        children: [
+          _buildTextField(_transfoTypeController, 'Type de transformateur', isSmallScreen, icon: Icons.transform, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildTextField(_transfoMarqueController, 'Marque / Année de fabrication', isSmallScreen, icon: Icons.branding_watermark, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildTextField(_transfoPuissanceController, 'Puissance assignée (kVA)', isSmallScreen, icon: Icons.speed, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildTextField(_transfoTensionController, 'Tension primaire / secondaire', isSmallScreen, icon: Icons.electrical_services, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildDropdown(_transfoBuchholzController, 'Présence du relais Buchholz', _ouiNonOptions, isSmallScreen, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildTextField(_transfoRefroidissementController, 'Type de refroidissement', isSmallScreen, icon: Icons.ac_unit, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildTextField(_transfoRegimeController, 'Régime du neutre', isSmallScreen, icon: Icons.settings_input_antenna, optional: true),
+        ],
+      ),
+    );
+  }
+  
+  // ============================================================
+  // ÉLÉMENTS VÉRIFIÉS (SLIDES COMMUN)
+  // ============================================================
+  
+  Widget _buildElementsSlide({
+    required List<ElementControle> elements,
+    required bool isCellule,
+    required bool isSmallScreen,
+  }) {
+    final color = isCellule ? Colors.blue : Colors.orange;
+    
+    return ListView(
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+      children: elements.asMap().entries.map((entry) {
+        final elementIndex = entry.key;
+        final element = entry.value;
+        final globalIndex = isCellule 
+            ? _celluleElements.indexOf(element) 
+            : _transfoElements.indexOf(element);
+        
+        return _buildElementCard(element, elementIndex, globalIndex, isCellule, color, isSmallScreen);
       }).toList(),
     );
   }
-
-  Widget _buildElementCardSimple(
-    BuildContext context, {
-    required ElementControle element,
-    required int index,
-    required int globalIndex,
-    required String sectionType,
-    required Color color,
-  }) {
-    final hasObservation = widget.hasObservation[globalIndex] ?? false;
-    final suggestions = widget.elementSuggestions[index] ?? [];
-    final isConformiteNon = element.conforme == false;
-    
+  
+  Widget _buildElementCard(ElementControle element, int slideIndex, int globalIndex, bool isCellule, Color color, bool isSmallScreen) {
     return Container(
-      margin: EdgeInsets.only(bottom: context.spacingL),
-      padding: EdgeInsets.all(context.spacingL),
+      margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(context.spacingL),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
-        ],
+        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 4, offset: const Offset(0, 2))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // En-tête avec numéro et titre
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Container(
-                width: context.iconSizeL,
-                height: context.iconSizeL,
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(context.spacingS),
-                ),
+                width: isSmallScreen ? 24 : 28,
+                height: isSmallScreen ? 24 : 28,
+                decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(6)),
                 child: Center(
-                  child: Text(
-                    '${index + 1}',
-                    style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.bold, color: color),
-                  ),
+                  child: Text('${slideIndex + 1}', style: TextStyle(fontSize: isSmallScreen ? 11 : 12, fontWeight: FontWeight.bold, color: color)),
                 ),
               ),
-              SizedBox(width: context.spacingS),
+              SizedBox(width: isSmallScreen ? 10 : 12),
               Expanded(
                 child: Text(
                   element.elementControle,
-                  style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w600, color: AppTheme.darkBlue),
+                  style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.w500),
                   overflow: TextOverflow.visible,
                 ),
               ),
             ],
           ),
+          SizedBox(height: isSmallScreen ? 10 : 12),
           
-          SizedBox(height: context.spacingL),
-          
-          // ✅ Conformité - AUCUNE valeur par défaut
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          // Conformité (boutons Oui/Non)
+          Row(
             children: [
-              Row(
-                children: [
-                  Text(
-                    'Conformité *',
-                    style: TextStyle(
-                      fontSize: context.fontSizeS,
-                      fontWeight: FontWeight.w600,
-                      color: element.conforme != null ? Colors.grey.shade700 : Colors.red,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: context.spacingS),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildConformiteButtonSimple(
-                      context,
-                      label: 'Oui',
-                      isSelected: element.conforme == true,
-                      color: Colors.green,
-                      onTap: () {
-                        setState(() {
-                          element.conforme = true;
-                          widget.onConformeChanged(element);
-                          // Forcer l'observation à Non
-                          widget.onObservationToggleChanged(globalIndex, false, sectionType);
-                        });
-                      },
-                    ),
-                  ),
-                  SizedBox(width: context.spacingS),
-                  Expanded(
-                    child: _buildConformiteButtonSimple(
-                      context,
-                      label: 'Non',
-                      isSelected: element.conforme == false,
-                      color: Colors.red,
-                      onTap: () {
-                        setState(() {
-                          element.conforme = false;
-                          widget.onConformeChanged(element);
-                          // Forcer l'observation à Oui
-                          widget.onObservationToggleChanged(globalIndex, true, sectionType);
-                        });
-                      },
-                    ),
-                  ),
-                ],
-              ),
-              if (element.conforme == null)
-                Padding(
-                  padding: EdgeInsets.only(top: context.spacingXS),
-                  child: Text(
-                    'Veuillez sélectionner Oui ou Non',
-                    style: TextStyle(fontSize: context.fontSizeXS, color: Colors.red),
-                  ),
+              Expanded(
+                child: _buildConformiteButton(
+                  label: 'Oui',
+                  isSelected: element.conforme == true,
+                  color: Colors.green,
+                  onTap: () => setState(() => element.conforme = true),
+                  isSmallScreen: isSmallScreen,
                 ),
+              ),
+              SizedBox(width: isSmallScreen ? 8 : 10),
+              Expanded(
+                child: _buildConformiteButton(
+                  label: 'Non',
+                  isSelected: element.conforme == false,
+                  color: Colors.red,
+                  onTap: () => setState(() => element.conforme = false),
+                  isSmallScreen: isSmallScreen,
+                ),
+              ),
             ],
           ),
-          
-          SizedBox(height: context.spacingM),
+          SizedBox(height: isSmallScreen ? 10 : 12),
           
           // Priorité
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          Row(
             children: [
-              Row(
-                children: [
-                  Text(
-                    'Priorité',
-                    style: TextStyle(
-                      fontSize: context.fontSizeS,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade700,
-                    ),
-                  ),
-                ],
+              Expanded(
+                child: _buildPrioriteButton(
+                  niveau: 1,
+                  isSelected: element.priorite == 1,
+                  color: Colors.blue,
+                  onTap: () => setState(() => element.priorite = 1),
+                  isSmallScreen: isSmallScreen,
+                ),
               ),
-              SizedBox(height: context.spacingS),
-              _buildPrioriteSelectorSimple(context, element, color),
+              SizedBox(width: isSmallScreen ? 8 : 10),
+              Expanded(
+                child: _buildPrioriteButton(
+                  niveau: 2,
+                  isSelected: element.priorite == 2,
+                  color: Colors.orange,
+                  onTap: () => setState(() => element.priorite = 2),
+                  isSmallScreen: isSmallScreen,
+                ),
+              ),
+              SizedBox(width: isSmallScreen ? 8 : 10),
+              Expanded(
+                child: _buildPrioriteButton(
+                  niveau: 3,
+                  isSelected: element.priorite == 3,
+                  color: Colors.red,
+                  onTap: () => setState(() => element.priorite = 3),
+                  isSmallScreen: isSmallScreen,
+                ),
+              ),
             ],
           ),
           
-          SizedBox(height: context.spacingM),
-          
-          // Toggle Observation
-          _buildObservationToggleSimple(
-            context, globalIndex, hasObservation, color, sectionType, isConformiteNon,
-          ),
-          
-          if (hasObservation) ...[
-            SizedBox(height: context.spacingS),
-            _buildObservationFieldSimple(
-              context: context,
-              element: element,
-              index: index,
-              sectionType: sectionType,
-              suggestions: suggestions,
-              color: color,
+          // Observation (obligatoire si Non)
+          if (element.conforme == false) ...[
+            SizedBox(height: isSmallScreen ? 10 : 12),
+            TextField(
+              onChanged: (value) => element.observation = value,
+              decoration: InputDecoration(
+                hintText: 'Observation *',
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                contentPadding: EdgeInsets.all(isSmallScreen ? 8 : 10),
+              ),
+              maxLines: 2,
             ),
           ],
-          
-          SizedBox(height: context.spacingM),
-          
-          // Photos
-          _buildElementPhotosSimple(
-            context: context,
-            element: element,
-            index: index,
-            sectionType: sectionType,
-            color: color,
+        ],
+      ),
+    );
+  }
+  
+  // ============================================================
+  // WIDGETS UTILITAIRES
+  // ============================================================
+  
+  Widget _buildInfoRow(String label, String value, bool isSmallScreen) {
+    if (value.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: isSmallScreen ? 90 : 100,
+            child: Text('$label:', style: TextStyle(fontSize: isSmallScreen ? 11 : 12, fontWeight: FontWeight.w500, color: Colors.grey.shade600)),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(value, style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.black87), overflow: TextOverflow.ellipsis),
           ),
         ],
       ),
     );
   }
-
-  // Toggle de conformité pour cellule/transformateur
-  Widget _buildConformiteToggleSimple(
-    BuildContext context,
-    ElementControle element,
-    Color color,
-    int index,
-    int globalIndex,
-    String sectionType,
-  ) {
-    final isValid = widget.conformeSelected[element] ?? false;
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Text(
-              'Conformité *',
-              style: TextStyle(
-                fontSize: context.fontSizeS,
-                fontWeight: FontWeight.w600,
-                color: isValid ? Colors.grey.shade700 : Colors.red,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: context.spacingS),
-        Row(
-          children: [
-            Expanded(
-              child: _buildConformiteButtonSimple(
-                context,
-                label: 'Oui',
-                isSelected: element.conforme == true,
-                color: Colors.green,
-                onTap: () {
-                  setState(() {
-                    element.conforme = true;
-                    widget.onConformeChanged(element);
-                  });
-                },
-              ),
-            ),
-            SizedBox(width: context.spacingS),
-            Expanded(
-              child: _buildConformiteButtonSimple(
-                context,
-                label: 'Non',
-                isSelected: element.conforme == false,
-                color: Colors.red,
-                onTap: () {
-                  setState(() {
-                    element.conforme = false;
-                    widget.onConformeChanged(element);
-                    // Forcer l'observation à Oui
-                    widget.onObservationToggleChanged(globalIndex, true, sectionType);
-                  });
-                },
-              ),
-            ),
-          ],
-        ),
-        if (element.conforme == null)
-          Padding(
-            padding: EdgeInsets.only(top: context.spacingXS),
-            child: Text(
-              'Veuillez sélectionner Oui ou Non',
-              style: TextStyle(fontSize: context.fontSizeXS, color: Colors.red),
-            ),
-          ),
-      ],
+  
+  Widget _buildTextField(TextEditingController controller, String label, bool isSmallScreen, {IconData? icon, bool optional = false}) {
+    final labelText = optional ? label : '$label *';
+    return TextFormField(
+      controller: controller,
+      style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
+      decoration: InputDecoration(
+        labelText: labelText,
+        labelStyle: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.grey.shade600),
+        prefixIcon: icon != null ? Icon(icon, size: isSmallScreen ? 18 : 20) : null,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10)),
+        contentPadding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 12 : 14),
+      ),
     );
   }
-
-  Widget _buildConformiteButtonSimple(
-    BuildContext context, {
+  
+  Widget _buildDropdown(TextEditingController controller, String label, List<String> options, bool isSmallScreen, {bool optional = false}) {
+    final labelText = optional ? label : '$label *';
+    return DropdownButtonFormField<String>(
+      value: controller.text.isNotEmpty ? controller.text : null,
+      isExpanded: true,
+      hint: Text('Sélectionnez...', style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.grey.shade500)),
+      decoration: InputDecoration(
+        labelText: labelText,
+        labelStyle: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.grey.shade600),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10)),
+        contentPadding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 12 : 14),
+      ),
+      items: options.map((option) => DropdownMenuItem(value: option, child: Text(option, style: TextStyle(fontSize: isSmallScreen ? 13 : 14)))).toList(),
+      onChanged: (value) => controller.text = value ?? '',
+    );
+  }
+  
+  Widget _buildConformiteButton({
     required String label,
     required bool isSelected,
     required Color color,
     required VoidCallback onTap,
+    required bool isSmallScreen,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: EdgeInsets.symmetric(vertical: context.spacingM),
+        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 6 : 8),
         decoration: BoxDecoration(
           color: isSelected ? color.withOpacity(0.1) : Colors.grey.shade50,
-          borderRadius: BorderRadius.circular(context.spacingS),
-          border: Border.all(
-            color: isSelected ? color : Colors.grey.shade300,
-            width: isSelected ? 2 : 1,
-          ),
+          borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
+          border: Border.all(color: isSelected ? color : Colors.grey.shade300, width: isSelected ? 2 : 1),
         ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              isSelected 
-                  ? (label == 'Oui' ? Icons.check_circle : Icons.cancel)
-                  : (label == 'Oui' ? Icons.check_circle_outline : Icons.cancel_outlined),
-              size: context.iconSizeS,
-              color: isSelected ? color : Colors.grey.shade500,
-            ),
-            SizedBox(width: context.spacingS),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: context.fontSizeM,
-                fontWeight: FontWeight.w600,
-                color: isSelected ? color : Colors.grey.shade600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildConformiteSelectorSimple(
-    BuildContext context, 
-    ElementControle element, 
-    Color color, 
-    bool isConformeSelected,
-    int globalIndex,
-    String sectionType,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(context.spacingS),
-        border: Border.all(
-          color: !isConformeSelected ? Colors.red.shade300 : Colors.transparent,
-          width: !isConformeSelected ? 1.5 : 0,
-        ),
-      ),
-      child: DropdownButtonFormField<bool?>(
-        initialValue: isConformeSelected ? element.conforme : null,
-        hint: Text('Sélectionnez *', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500)),
-        onChanged: (bool? newValue) {
-          if (newValue != null) {
-            setState(() {
-              element.conforme = newValue;
-              widget.onConformeChanged(element);
-              
-              if (newValue == false) {
-                widget.onObservationToggleChanged(globalIndex, true, sectionType);
-              } else {
-                widget.onObservationToggleChanged(globalIndex, false, sectionType);
-              }
-            });
-          }
-        },
-        decoration: InputDecoration(
-          labelText: 'Conformité *',
-          labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
-          border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
-        ),
-        items: [
-          DropdownMenuItem(
-            value: true,
-            child: Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green, size: context.iconSizeXS),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text('Oui', style: TextStyle(fontSize: context.fontSizeS))),
-              ],
-            ),
-          ),
-          DropdownMenuItem(
-            value: false,
-            child: Row(
-              children: [
-                Icon(Icons.cancel, color: Colors.red, size: context.iconSizeXS),
-                SizedBox(width: context.spacingS),
-                Flexible(child: Text('Non', style: TextStyle(fontSize: context.fontSizeS))),
-              ],
-            ),
-          ),
-        ],
-        isExpanded: true,
-      ),
-    );
-  }
-
-  Widget _buildPrioriteSelectorSimple(BuildContext context, ElementControle element, Color color) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(context.spacingS),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildPrioriteButtonSimple(
-              context,
-              label: 'N1',
-              tooltip: 'Basse priorité',
-              isSelected: element.priorite == 1,
-              color: Colors.blue,
-              onTap: () => setState(() => element.priorite = 1),
-            ),
-          ),
-          SizedBox(width: context.spacingXS),
-          Expanded(
-            child: _buildPrioriteButtonSimple(
-              context,
-              label: 'N2',
-              tooltip: 'Moyenne priorité',
-              isSelected: element.priorite == 2,
-              color: Colors.orange,
-              onTap: () => setState(() => element.priorite = 2),
-            ),
-          ),
-          SizedBox(width: context.spacingXS),
-          Expanded(
-            child: _buildPrioriteButtonSimple(
-              context,
-              label: 'N3',
-              tooltip: 'Haute priorité',
-              isSelected: element.priorite == 3,
-              color: Colors.red,
-              onTap: () => setState(() => element.priorite = 3),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPrioriteButtonSimple(
-    BuildContext context, {
-    required String label,
-    required String tooltip,
-    required bool isSelected,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Tooltip(
-        message: tooltip,
-        child: Container(
-          padding: EdgeInsets.symmetric(vertical: context.spacingM),
-          decoration: BoxDecoration(
-            color: isSelected ? color.withOpacity(0.1) : Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(context.spacingS),
-            border: Border.all(
-              color: isSelected ? color : Colors.grey.shade300,
-              width: isSelected ? 2 : 1,
-            ),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(
-                isSelected ? Icons.flag : Icons.flag_outlined,
-                size: context.iconSizeS,
-                color: isSelected ? color : Colors.grey.shade500,
-              ),
-              SizedBox(height: context.spacingXS),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: context.fontSizeXS,
-                  fontWeight: FontWeight.w600,
-                  color: isSelected ? color : Colors.grey.shade600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildObservationToggleSimple(
-    BuildContext context,
-    int globalIndex,
-    bool hasObservation,
-    Color color,
-    String sectionType,
-    bool isConformiteNon, // ← NOUVEAU
-  ) {
-    return Row(
-      children: [
-        Flexible(
-          child: Text(
-            'Ajouter une observation ?',
-            style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-        SizedBox(width: context.spacingS),
-        GestureDetector(
-          onTap: () => widget.onObservationToggleChanged(globalIndex, true, sectionType),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
-            decoration: BoxDecoration(
-              color: hasObservation ? Colors.green.withOpacity(0.15) : Colors.transparent,
-              borderRadius: BorderRadius.circular(context.spacingL),
-              border: Border.all(
-                color: hasObservation ? Colors.green : Colors.grey.shade300,
-                width: hasObservation ? 2 : 1,
-              ),
-            ),
-            child: Text('Oui', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: hasObservation ? Colors.green : Colors.grey.shade600)),
-          ),
-        ),
-        SizedBox(width: context.spacingS),
-        GestureDetector(
-          onTap: isConformiteNon 
-              ? null 
-              : () => widget.onObservationToggleChanged(globalIndex, false, sectionType),
-          child: Container(
-            padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
-            decoration: BoxDecoration(
-              color: !hasObservation && !isConformiteNon ? Colors.red.withOpacity(0.15) : Colors.transparent,
-              borderRadius: BorderRadius.circular(context.spacingL),
-              border: Border.all(
-                color: !hasObservation && !isConformiteNon ? Colors.red : Colors.grey.shade300,
-                width: !hasObservation && !isConformiteNon ? 2 : 1,
-              ),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Non',
-                  style: TextStyle(
-                    fontSize: context.fontSizeXS,
-                    fontWeight: FontWeight.w600,
-                    color: isConformiteNon
-                        ? Colors.grey.shade400
-                        : (!hasObservation ? Colors.red : Colors.grey.shade600),
-                  ),
-                ),
-                if (isConformiteNon)
-                  Padding(
-                    padding: EdgeInsets.only(left: 4),
-                    child: Icon(
-                      Icons.lock_outline,
-                      size: context.fontSizeXS,
-                      color: Colors.grey.shade400,
-                    ),
-                  ),
-              ],
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildObservationFieldSimple({
-    required BuildContext context,
-    required ElementControle element,
-    required int index,
-    required String sectionType,
-    required List<String> suggestions,
-    required Color color,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.grey.shade50,
-            borderRadius: BorderRadius.circular(context.spacingS),
-            border: Border.all(
-              color: element.observation == null || element.observation!.trim().isEmpty ? Colors.red.shade300 : Colors.transparent,
-              width: element.observation == null || element.observation!.trim().isEmpty ? 1.5 : 0,
-            ),
-          ),
-          child: TextFormField(
-            initialValue: element.observation,
-            style: TextStyle(fontSize: context.fontSizeS),
-            onChanged: (value) {
-              element.observation = value;
-              widget.onObservationChanged(index, value, sectionType);
-              setState(() {});
-            },
-            decoration: InputDecoration(
-              hintText: 'Saisissez votre observation... *',
-              hintStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade400),
-              border: InputBorder.none,
-              contentPadding: EdgeInsets.all(context.spacingM),
-            ),
-            maxLines: 3,
-          ),
-        ),
-        
-        if (suggestions.isNotEmpty)
-          Container(
-            margin: EdgeInsets.only(top: context.spacingS),
-            padding: EdgeInsets.all(context.spacingS),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(context.spacingS),
-              border: Border.all(color: color.withOpacity(0.2)),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Suggestions',
-                  style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.bold, color: color),
-                ),
-                SizedBox(height: context.spacingXS),
-                Wrap(
-                  spacing: context.spacingS,
-                  runSpacing: context.spacingXS,
-                  children: suggestions.map((s) => GestureDetector(
-                    onTap: () => widget.onUseSuggestion(index, s, element, sectionType),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: context.spacingS, vertical: context.spacingXS),
-                      decoration: BoxDecoration(
-                        color: color.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(context.spacingL),
-                      ),
-                      child: Text(
-                        s,
-                        style: TextStyle(fontSize: context.fontSizeXS, color: color.withOpacity(0.7)),
-                      ),
-                    ),
-                  )).toList(),
-                ),
-              ],
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildElementPhotosSimple({
-    required BuildContext context,
-    required ElementControle element,
-    required int index,
-    required String sectionType,
-    required Color color,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Icon(Icons.photo_camera_outlined, size: context.iconSizeXS, color: color),
-            SizedBox(width: context.spacingS),
-            Flexible(
-              child: Text(
-                'Photos (${element.photos.length})',
-                style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-        SizedBox(height: context.spacingS),
-        
-        if (element.photos.isNotEmpty)
-          Container(
-            height: context.screenHeight * 0.1,
-            margin: EdgeInsets.only(bottom: context.spacingS),
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: element.photos.length,
-              itemBuilder: (context, photoIndex) {
-                return Stack(
-                  children: [
-                    Container(
-                      width: context.screenWidth * 0.2,
-                      margin: EdgeInsets.only(right: context.spacingS),
-                      decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(context.spacingS),
-                        child: Image.file(File(element.photos[photoIndex]), fit: BoxFit.cover),
-                      ),
-                    ),
-                    Positioned(
-                      top: context.spacingXS,
-                      right: context.spacingS + context.spacingXS,
-                      child: GestureDetector(
-                        onTap: () => widget.onSupprimerPhotoElement(element, index, photoIndex, sectionType),
-                        child: Container(
-                          padding: EdgeInsets.all(context.spacingXS),
-                          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                          child: Icon(Icons.close, size: context.iconSizeXS - 2, color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
-          ),
-        
-        Row(
-          children: [
-            Expanded(
-              child: _buildSmallIconButtonSimple(
-                context,
-                icon: Icons.camera_alt,
-                label: 'Prendre',
-                onTap: () => widget.onPrendrePhotoElement(element, index, sectionType),
-                color: color,
-              ),
-            ),
-            SizedBox(width: context.spacingS),
-            Expanded(
-              child: _buildSmallIconButtonSimple(
-                context,
-                icon: Icons.photo_library,
-                label: 'Galerie',
-                onTap: () => widget.onChoisirPhotoElement(element, index, sectionType),
-                color: color,
-                isSecondary: true,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSmallIconButtonSimple(
-    BuildContext context, {
-    required IconData icon,
-    required String label,
-    required VoidCallback onTap,
-    required Color color,
-    bool isSecondary = false,
-  }) {
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(context.spacingS),
-        child: Container(
-          padding: EdgeInsets.symmetric(vertical: context.spacingS),
-          decoration: BoxDecoration(
-            color: isSecondary ? Colors.grey.shade100 : color.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(context.spacingS),
-            border: Border.all(color: isSecondary ? Colors.grey.shade300 : color.withOpacity(0.3)),
-          ),
+        child: Center(
           child: Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(icon, size: context.iconSizeXS, color: isSecondary ? Colors.grey.shade700 : color),
-              SizedBox(width: context.spacingXS),
-              Flexible(
-                child: Text(
-                  label,
-                  style: TextStyle(fontSize: context.fontSizeXS - 1, fontWeight: FontWeight.w600, color: isSecondary ? Colors.grey.shade700 : color),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
+              Icon(
+                isSelected ? (label == 'Oui' ? Icons.check_circle : Icons.cancel) : Icons.circle_outlined,
+                size: isSmallScreen ? 16 : 18,
+                color: isSelected ? color : Colors.grey.shade500,
               ),
+              SizedBox(width: isSmallScreen ? 4 : 6),
+              Text(label, style: TextStyle(fontSize: isSmallScreen ? 12 : 13, fontWeight: FontWeight.w600, color: isSelected ? color : Colors.grey.shade600)),
             ],
           ),
         ),
       ),
     );
   }
+  
+  Widget _buildPrioriteButton({
+    required int niveau,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+    required bool isSmallScreen,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 8 : 10),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.1) : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
+          border: Border.all(color: isSelected ? color : Colors.grey.shade300, width: isSelected ? 2 : 1),
+        ),
+        child: Center(
+          child: Text(
+            'N$niveau',
+            style: TextStyle(fontSize: isSmallScreen ? 12 : 13, fontWeight: FontWeight.bold, color: isSelected ? color : Colors.grey.shade600),
+          ),
+        ),
+      ),
+    );
+  }
+  
+  // ============================================================
+  // VALIDATION (au moins 1 transformateur)
+  // ============================================================
+  
+  bool canGoNext() {
+    return widget.transformateurs.isNotEmpty;
+  }
+  
+  // ============================================================
+  // BUILD PRINCIPAL
+  // ============================================================
+  
+  @override
+  Widget build(BuildContext context) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    
+    // Si en mode édition, afficher le formulaire approprié
+    if (_isEditing) {
+      return _isEditingCellule
+          ? _buildCelluleFormulaireSlides(isSmallScreen)
+          : _buildTransformateurFormulaireSlides(isSmallScreen);
+    }
+    
+    // Sinon, afficher le sélecteur de mode + la liste
+    return Column(
+      children: [
+        _buildModeSelector(isSmallScreen),
+        Expanded(
+          child: _currentMode == 0
+              ? _buildCellulesList(isSmallScreen)
+              : _buildTransformateursList(isSmallScreen),
+        ),
+        // Bouton d'ajout flottant en bas à droite
+        Container(
+          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _currentMode == 0 ? _ajouterCellule : _ajouterTransformateur,
+              icon: Icon(Icons.add, size: isSmallScreen ? 18 : 20),
+              label: Text(
+                _currentMode == 0 ? 'AJOUTER UNE CELLULE' : 'AJOUTER UN TRANSFORMATEUR',
+                style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.bold),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: _currentMode == 0 ? Colors.blue : Colors.orange,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+  
+  @override
+  void dispose() {
+    _slideController.dispose();
+    _celluleFonctionController.dispose();
+    _celluleTypeController.dispose();
+    _celluleMarqueController.dispose();
+    _celluleTensionController.dispose();
+    _cellulePouvoirController.dispose();
+    _celluleNumerotationController.dispose();
+    _celluleParafoudresController.dispose();
+    _transfoTypeController.dispose();
+    _transfoMarqueController.dispose();
+    _transfoPuissanceController.dispose();
+    _transfoTensionController.dispose();
+    _transfoBuchholzController.dispose();
+    _transfoRefroidissementController.dispose();
+    _transfoRegimeController.dispose();
+    super.dispose();
+  }
 }
+
+// class _EtapeCelluleTransformateur extends StatefulWidget {
+//   final TextEditingController celluleFonctionController;
+//   final TextEditingController celluleTypeController;
+//   final TextEditingController celluleMarqueController;
+//   final TextEditingController celluleTensionController;
+//   final TextEditingController cellulePouvoirController;
+//   final TextEditingController celluleNumerotationController;
+//   final TextEditingController celluleParafoudresController;
+//   final List<ElementControle> celluleElements;
+//   final TextEditingController transfoTypeController;
+//   final TextEditingController transfoMarqueController;
+//   final TextEditingController transfoPuissanceController;
+//   final TextEditingController transfoTensionController;
+//   final TextEditingController transfoBuchholzController;
+//   final TextEditingController transfoRefroidissementController;
+//   final TextEditingController transfoRegimeController;
+//   final List<ElementControle> transfoElements;
+//   final Map<int, bool> hasObservation;
+//   final Map<int, List<String>> elementSuggestions;
+//   final Map<ElementControle, bool> conformeSelected;
+//   final Function(ElementControle, int, String) onElementChanged;
+//   final Function(ElementControle) onConformeChanged;
+//   final Function(int, bool, String) onObservationToggleChanged;
+//   final Function(ElementControle, int, String) onPrendrePhotoElement;
+//   final Function(ElementControle, int, String) onChoisirPhotoElement;
+//   final Function(ElementControle, int, int, String) onSupprimerPhotoElement;
+//   final Function(int, String, String) onObservationChanged;
+//   final Function(int, String, ElementControle, String) onUseSuggestion;
+
+//   const _EtapeCelluleTransformateur({
+//     super.key,
+//     required this.celluleFonctionController,
+//     required this.celluleTypeController,
+//     required this.celluleMarqueController,
+//     required this.celluleTensionController,
+//     required this.cellulePouvoirController,
+//     required this.celluleNumerotationController,
+//     required this.celluleParafoudresController,
+//     required this.celluleElements,
+//     required this.transfoTypeController,
+//     required this.transfoMarqueController,
+//     required this.transfoPuissanceController,
+//     required this.transfoTensionController,
+//     required this.transfoBuchholzController,
+//     required this.transfoRefroidissementController,
+//     required this.transfoRegimeController,
+//     required this.transfoElements,
+//     required this.hasObservation,
+//     required this.elementSuggestions,
+//     required this.conformeSelected,
+//     required this.onElementChanged,
+//     required this.onConformeChanged,
+//     required this.onObservationToggleChanged,
+//     required this.onPrendrePhotoElement,
+//     required this.onChoisirPhotoElement,
+//     required this.onSupprimerPhotoElement,
+//     required this.onObservationChanged,
+//     required this.onUseSuggestion,
+//   });
+
+//   @override
+//   State<_EtapeCelluleTransformateur> createState() => _EtapeCelluleTransformateurState();
+// }
+
+// class _EtapeCelluleTransformateurState extends State<_EtapeCelluleTransformateur> {
+//   final PageController _slideController = PageController();
+  
+//   // 0 = Cellule données, 1 = Cellule éléments, 2 = Transfo données, 3 = Transfo éléments
+//   int _currentSection = 0;
+//   int _currentSlide = 0;
+  
+//   late List<List<ElementControle>> _celluleElementsSlides;
+//   late List<List<ElementControle>> _transfoElementsSlides;
+  
+//   // Options pour les dropdowns
+//   static const List<String> _presentAbsentOptions = ['Présent', 'Absent'];
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _buildSlides();
+//   }
+
+//   void _buildSlides() {
+//     _celluleElementsSlides = [];
+//     for (int i = 0; i < widget.celluleElements.length; i += 3) {
+//       _celluleElementsSlides.add(widget.celluleElements.sublist(
+//         i, 
+//         (i + 3).clamp(0, widget.celluleElements.length)
+//       ));
+//     }
+    
+//     _transfoElementsSlides = [];
+//     for (int i = 0; i < widget.transfoElements.length; i += 3) {
+//       _transfoElementsSlides.add(widget.transfoElements.sublist(
+//         i, 
+//         (i + 3).clamp(0, widget.transfoElements.length)
+//       ));
+//     }
+//   }
+
+//   List<Map<String, dynamic>> get _sections {
+//     final sections = <Map<String, dynamic>>[];
+    
+//     sections.add({
+//       'title': 'CELLULE',
+//       'type': 'cellule',
+//       'color': const Color(0xFFE67E22),
+//     });
+    
+//     sections.add({
+//       'title': 'TRANSFORMATEUR',
+//       'type': 'transfo',
+//       'color': const Color(0xFF2980B9),
+//     });
+    
+//     return sections;
+//   }
+
+//   Map<String, dynamic> get _currentSectionData => _sections[_currentSection];
+//   String get _currentSectionType => _currentSectionData['type'];
+//   Color get _currentColor => _currentSectionData['color'];
+//   bool get _isLastSection => _currentSection == _sections.length - 1;
+
+//   int _getTotalSlidesForCurrentSection() {
+//     if (_currentSection == 0) {
+//       return 1 + _celluleElementsSlides.length;
+//     } else {
+//       return 1 + _transfoElementsSlides.length;
+//     }
+//   }
+
+//   int get _totalSlides => _getTotalSlidesForCurrentSection();
+//   bool get _isLastSlide => _currentSlide == _totalSlides - 1;
+//   bool get _isFirstSlide => _currentSlide == 0;
+
+//   bool _isCurrentSlideValid() {
+//     if (_currentSection == 0) {
+//       if (_currentSlide == 0) {
+//         return _validateCelluleDonnees();
+//       } else {
+//         final elementSlideIndex = _currentSlide - 1;
+//         if (elementSlideIndex < _celluleElementsSlides.length) {
+//           return _validateElementsSlide(_celluleElementsSlides[elementSlideIndex], 1000);
+//         }
+//       }
+//     } else {
+//       if (_currentSlide == 0) {
+//         return _validateTransfoDonnees();
+//       } else {
+//         final elementSlideIndex = _currentSlide - 1;
+//         if (elementSlideIndex < _transfoElementsSlides.length) {
+//           return _validateElementsSlide(_transfoElementsSlides[elementSlideIndex], 2000);
+//         }
+//       }
+//     }
+//     return true;
+//   }
+
+//   bool _validateCelluleDonnees() {
+//     return widget.celluleFonctionController.text.trim().isNotEmpty &&
+//            widget.celluleTypeController.text.trim().isNotEmpty &&
+//            widget.celluleMarqueController.text.trim().isNotEmpty &&
+//            widget.celluleTensionController.text.trim().isNotEmpty &&
+//            widget.cellulePouvoirController.text.trim().isNotEmpty &&
+//            widget.celluleNumerotationController.text.isNotEmpty &&
+//            widget.celluleParafoudresController.text.isNotEmpty;
+//   }
+
+//   bool _validateTransfoDonnees() {
+//     return widget.transfoTypeController.text.trim().isNotEmpty &&
+//            widget.transfoMarqueController.text.trim().isNotEmpty &&
+//            widget.transfoPuissanceController.text.trim().isNotEmpty &&
+//            widget.transfoTensionController.text.trim().isNotEmpty &&
+//            widget.transfoBuchholzController.text.trim().isNotEmpty &&
+//            widget.transfoRefroidissementController.text.trim().isNotEmpty &&
+//            widget.transfoRegimeController.text.trim().isNotEmpty;
+//   }
+
+//   bool _validateElementsSlide(List<ElementControle> elements, int baseIndex) {
+//     for (var element in elements) {
+//       if (!(widget.conformeSelected[element] ?? false)) return false;
+//       if (element.priorite == null) return false;
+      
+//       final elementIndex = _currentSection == 0
+//           ? baseIndex + widget.celluleElements.indexOf(element)
+//           : baseIndex + widget.transfoElements.indexOf(element);
+      
+//       // Si conformité = Non, l'observation est OBLIGATOIRE
+//       if (element.conforme == false) {
+//         if (widget.hasObservation[elementIndex] != true) return false;
+//         if (element.observation == null || element.observation!.trim().isEmpty) return false;
+//       } else {
+//         if (widget.hasObservation[elementIndex] == true) {
+//           if (element.observation == null || element.observation!.trim().isEmpty) return false;
+//         }
+//       }
+//     }
+//     return true;
+//   }
+
+//   void nextSlide() {
+//     if (!_isCurrentSlideValid()) {
+//       _showError('Veuillez remplir tous les champs obligatoires');
+//       return;
+//     }
+    
+//     if (_isLastSlide) {
+//       if (!_isLastSection) {
+//         setState(() {
+//           _currentSection++;
+//           _currentSlide = 0;
+//         });
+//         WidgetsBinding.instance.addPostFrameCallback((_) {
+//           if (_slideController.hasClients) {
+//             _slideController.jumpToPage(0);
+//           }
+//         });
+//       }
+//     } else {
+//       if (_slideController.hasClients) {
+//         _slideController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+//       }
+//     }
+//   }
+
+//   void previousSlide() {
+//     if (_isFirstSlide) {
+//       if (_currentSection > 0) {
+//         setState(() {
+//           _currentSection--;
+//           _currentSlide = _getTotalSlidesForPreviousSection() - 1;
+//         });
+//         WidgetsBinding.instance.addPostFrameCallback((_) {
+//           if (_slideController.hasClients) {
+//             _slideController.jumpToPage(_currentSlide);
+//           }
+//         });
+//       }
+//     } else {
+//       if (_slideController.hasClients) {
+//         _slideController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+//       }
+//     }
+//   }
+
+//   int _getTotalSlidesForPreviousSection() {
+//     if (_currentSection == 1) {
+//       return 1 + _celluleElementsSlides.length;
+//     }
+//     return 1;
+//   }
+
+//   void _showError(String message) {
+//     ScaffoldMessenger.of(context).showSnackBar(
+//       SnackBar(content: Text(message), backgroundColor: Colors.red, duration: const Duration(seconds: 2)),
+//     );
+//   }
+
+//   bool canGoNext() {
+//     if (!_isCurrentSlideValid()) return false;
+//     return _isLastSection && _isLastSlide;
+//   }
+
+//   bool canGoPrevious() {
+//     return _isFirstSlide && _currentSection == 0;
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Column(
+//       children: [
+//         // En-tête
+//         Container(
+//           padding: EdgeInsets.all(context.spacingL),
+//           decoration: BoxDecoration(
+//             color: Colors.white,
+//             boxShadow: [
+//               BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: context.spacingS, offset: const Offset(0, 2)),
+//             ],
+//           ),
+//           child: Row(
+//             children: [
+//               Container(
+//                 width: context.iconSizeXL * 1.2,
+//                 height: context.iconSizeXL * 1.2,
+//                 decoration: BoxDecoration(
+//                   gradient: const LinearGradient(colors: [Color(0xFFE67E22), Color(0xFF2980B9)]),
+//                   borderRadius: BorderRadius.circular(context.spacingS),
+//                 ),
+//                 child: Icon(Icons.electric_bolt, color: Colors.white, size: context.iconSizeM),
+//               ),
+//               SizedBox(width: context.spacingM),
+//               Expanded(
+//                 child: Column(
+//                   crossAxisAlignment: CrossAxisAlignment.start,
+//                   children: [
+//                     Text(
+//                       'Cellule & Transformateur',
+//                       style: TextStyle(fontSize: context.fontSizeXXL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+//                     ),
+//                     Text(
+//                       'Données techniques et vérifications',
+//                       style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
+//                     ),
+//                   ],
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+        
+//         // Titre de section avec compteur
+//         Container(
+//           padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingS),
+//           child: Row(
+//             children: [
+//               Container(
+//                 width: 4,
+//                 height: context.iconSizeL,
+//                 decoration: BoxDecoration(
+//                   color: _currentColor,
+//                   borderRadius: BorderRadius.circular(2),
+//                 ),
+//               ),
+//               SizedBox(width: context.spacingS),
+//               Expanded(
+//                 child: Text(
+//                   _currentSection == 0 
+//                       ? (_currentSlide == 0 ? 'CELLULE - Données techniques' : 'CELLULE - Éléments vérifiés')
+//                       : (_currentSlide == 0 ? 'TRANSFORMATEUR - Données techniques' : 'TRANSFORMATEUR - Éléments vérifiés'),
+//                   style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.bold, color: _currentColor),
+//                   overflow: TextOverflow.ellipsis,
+//                 ),
+//               ),
+//               Text(
+//                 '${_currentSlide + 1}/$_totalSlides',
+//                 style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
+//               ),
+//             ],
+//           ),
+//         ),
+        
+//         // Barre de progression
+//         Padding(
+//           padding: EdgeInsets.symmetric(horizontal: context.spacingL),
+//           child: LinearProgressIndicator(
+//             value: (_currentSlide + 1) / _totalSlides,
+//             backgroundColor: Colors.grey.shade200,
+//             valueColor: AlwaysStoppedAnimation<Color>(_currentColor),
+//             minHeight: 3,
+//             borderRadius: BorderRadius.circular(2),
+//           ),
+//         ),
+        
+//         // Contenu
+//         Expanded(
+//           child: PageView.builder(
+//             controller: _slideController,
+//             physics: const NeverScrollableScrollPhysics(),
+//             onPageChanged: (index) => setState(() => _currentSlide = index),
+//             itemCount: _totalSlides,
+//             itemBuilder: (context, slideIndex) => _buildSectionContent(context, slideIndex),
+//           ),
+//         ),
+//       ],
+//     );
+//   }
+
+//   Widget _buildSectionContent(BuildContext context, int slideIndex) {
+//     if (_currentSection == 0) {
+//       if (slideIndex == 0) {
+//         return _buildCelluleDonnees(context);
+//       } else {
+//         final elementSlideIndex = slideIndex - 1;
+//         if (elementSlideIndex < _celluleElementsSlides.length) {
+//           return _buildElementsSlide(
+//             context,
+//             elements: _celluleElementsSlides[elementSlideIndex],
+//             sectionType: 'cellule',
+//             color: _currentColor,
+//             baseIndex: 1000,
+//           );
+//         }
+//       }
+//     } else {
+//       if (slideIndex == 0) {
+//         return _buildTransfoDonnees(context);
+//       } else {
+//         final elementSlideIndex = slideIndex - 1;
+//         if (elementSlideIndex < _transfoElementsSlides.length) {
+//           return _buildElementsSlide(
+//             context,
+//             elements: _transfoElementsSlides[elementSlideIndex],
+//             sectionType: 'transformateur',
+//             color: _currentColor,
+//             baseIndex: 2000,
+//           );
+//         }
+//       }
+//     }
+//     return const SizedBox.shrink();
+//   }
+
+//   Widget _buildCelluleDonnees(BuildContext context) {
+//     return ListView(
+//       padding: EdgeInsets.all(context.spacingL),
+//       children: [
+//         Container(
+//           padding: EdgeInsets.all(context.spacingL),
+//           decoration: BoxDecoration(
+//             gradient: LinearGradient(colors: [_currentColor, _currentColor.withOpacity(0.8)]),
+//             borderRadius: BorderRadius.circular(context.spacingL),
+//           ),
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               Row(
+//                 children: [
+//                   Icon(Icons.info_outline, color: Colors.white, size: context.iconSizeM),
+//                   SizedBox(width: context.spacingS),
+//                   Flexible(
+//                     child: Text(
+//                       'Caractéristiques de la cellule',
+//                       style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.bold, color: Colors.white),
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//               SizedBox(height: context.spacingS),
+//               Text(
+//                 'Renseignez toutes les informations techniques',
+//                 style: TextStyle(fontSize: context.fontSizeS, color: Colors.white.withOpacity(0.9)),
+//               ),
+//             ],
+//           ),
+//         ),
+//         SizedBox(height: context.spacingL),
+        
+//         _buildModernInputField(
+//           context,
+//           controller: widget.celluleFonctionController,
+//           label: 'Fonction de la cellule *',
+//           icon: Icons.power,
+//           color: _currentColor,
+//           onChanged: () => setState(() {}),
+//         ),
+//         _buildModernInputField(
+//           context,
+//           controller: widget.celluleTypeController,
+//           label: 'Type de cellule *',
+//           icon: Icons.category,
+//           color: _currentColor,
+//           onChanged: () => setState(() {}),
+//         ),
+//         _buildModernInputField(
+//           context,
+//           controller: widget.celluleMarqueController,
+//           label: 'Marque / modèle / année *',
+//           icon: Icons.branding_watermark,
+//           color: _currentColor,
+//           onChanged: () => setState(() {}),
+//         ),
+//         _buildModernInputField(
+//           context,
+//           controller: widget.celluleTensionController,
+//           label: 'Tension assignée *',
+//           icon: Icons.electrical_services,
+//           color: _currentColor,
+//           onChanged: () => setState(() {}),
+//         ),
+//         _buildModernInputField(
+//           context,
+//           controller: widget.cellulePouvoirController,
+//           label: 'Pouvoir de coupure assigné (kA) *',
+//           icon: Icons.offline_bolt,
+//           color: _currentColor,
+//           onChanged: () => setState(() {}),
+//         ),
+        
+//         // Dropdown pour Numérotation / repérage
+//         _buildModernDropdown(
+//           context,
+//           label: 'Numérotation / repérage *',
+//           value: widget.celluleNumerotationController.text,
+//           items: _presentAbsentOptions,
+//           icon: Icons.numbers,
+//           color: _currentColor,
+//           onChanged: (value) {
+//             setState(() {
+//               widget.celluleNumerotationController.text = value;
+//             });
+//           },
+//         ),
+        
+//         // Dropdown pour Parafoudres installés sur l'arrivée
+//         _buildModernDropdown(
+//           context,
+//           label: 'Parafoudres installés sur l\'arrivée *',
+//           value: widget.celluleParafoudresController.text,
+//           items: _presentAbsentOptions,
+//           icon: Icons.shield,
+//           color: _currentColor,
+//           onChanged: (value) {
+//             setState(() {
+//               widget.celluleParafoudresController.text = value;
+//             });
+//           },
+//         ),
+//       ],
+//     );
+//   }
+
+//   Widget _buildTransfoDonnees(BuildContext context) {
+//     return ListView(
+//       padding: EdgeInsets.all(context.spacingL),
+//       children: [
+//         Container(
+//           padding: EdgeInsets.all(context.spacingL),
+//           decoration: BoxDecoration(
+//             gradient: LinearGradient(colors: [_currentColor, _currentColor.withOpacity(0.8)]),
+//             borderRadius: BorderRadius.circular(context.spacingL),
+//           ),
+//           child: Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               Row(
+//                 children: [
+//                   Icon(Icons.info_outline, color: Colors.white, size: context.iconSizeM),
+//                   SizedBox(width: context.spacingS),
+//                   Flexible(
+//                     child: Text(
+//                       'Caractéristiques du transformateur',
+//                       style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.bold, color: Colors.white),
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//               SizedBox(height: context.spacingS),
+//               Text(
+//                 'Renseignez toutes les informations techniques',
+//                 style: TextStyle(fontSize: context.fontSizeS, color: Colors.white.withOpacity(0.9)),
+//               ),
+//             ],
+//           ),
+//         ),
+//         SizedBox(height: context.spacingL),
+        
+//         _buildModernInputField(
+//           context,
+//           controller: widget.transfoTypeController,
+//           label: 'Type de transformateur *',
+//           icon: Icons.transform,
+//           color: _currentColor,
+//           onChanged: () => setState(() {}),
+//         ),
+//         _buildModernInputField(
+//           context,
+//           controller: widget.transfoMarqueController,
+//           label: 'Marque/ Année de fabrication *',
+//           icon: Icons.branding_watermark,
+//           color: _currentColor,
+//           onChanged: () => setState(() {}),
+//         ),
+//         _buildModernInputField(
+//           context,
+//           controller: widget.transfoPuissanceController,
+//           label: 'Puissance assignée (kVA) *',
+//           icon: Icons.speed,
+//           color: _currentColor,
+//           onChanged: () => setState(() {}),
+//         ),
+//         _buildModernInputField(
+//           context,
+//           controller: widget.transfoTensionController,
+//           label: 'Tension primaire / secondaire *',
+//           icon: Icons.electrical_services,
+//           color: _currentColor,
+//           onChanged: () => setState(() {}),
+//         ),
+//         _buildModernInputField(
+//           context,
+//           controller: widget.transfoBuchholzController,
+//           label: 'Présence du relais Buchholz *',
+//           icon: Icons.sensors,
+//           color: _currentColor,
+//           onChanged: () => setState(() {}),
+//         ),
+//         _buildModernInputField(
+//           context,
+//           controller: widget.transfoRefroidissementController,
+//           label: 'Type de refroidissement *',
+//           icon: Icons.ac_unit,
+//           color: _currentColor,
+//           onChanged: () => setState(() {}),
+//         ),
+//         _buildModernInputField(
+//           context,
+//           controller: widget.transfoRegimeController,
+//           label: 'Régime du neutre *',
+//           icon: Icons.settings_input_antenna,
+//           color: _currentColor,
+//           onChanged: () => setState(() {}),
+//         ),
+//       ],
+//     );
+//   }
+
+//   Widget _buildModernInputField(
+//     BuildContext context, {
+//     required TextEditingController controller,
+//     required String label,
+//     required IconData icon,
+//     required Color color,
+//     required VoidCallback onChanged,
+//   }) {
+//     final isValid = controller.text.trim().isNotEmpty;
+    
+//     return Container(
+//       margin: EdgeInsets.only(bottom: context.spacingM),
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(context.spacingM),
+//         boxShadow: [
+//           BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
+//         ],
+//         border: Border.all(color: isValid ? Colors.transparent : Colors.red.shade300, width: isValid ? 0 : 1.5),
+//       ),
+//       child: TextFormField(
+//         controller: controller,
+//         style: TextStyle(fontSize: context.fontSizeS),
+//         onChanged: (_) => onChanged(),
+//         decoration: InputDecoration(
+//           labelText: label,
+//           labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: context.fontSizeS),
+//           prefixIcon: Icon(icon, color: color, size: context.iconSizeS),
+//           suffixIcon: isValid 
+//               ? Icon(Icons.check_circle, color: Colors.green, size: context.iconSizeS)
+//               : Icon(Icons.error_outline, color: Colors.red, size: context.iconSizeS),
+//           border: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingM), borderSide: BorderSide.none),
+//           enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingM), borderSide: BorderSide(color: Colors.grey.shade200)),
+//           focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingM), borderSide: BorderSide(color: color, width: 2)),
+//           filled: true,
+//           fillColor: Colors.white,
+//           contentPadding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingM),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget _buildModernDropdown(
+//     BuildContext context, {
+//     required String label,
+//     required String value,
+//     required List<String> items,
+//     required IconData icon,
+//     required Color color,
+//     required Function(String) onChanged,
+//   }) {
+//     final isValid = value.isNotEmpty;
+    
+//     return Container(
+//       margin: EdgeInsets.only(bottom: context.spacingM),
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(context.spacingM),
+//         boxShadow: [
+//           BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
+//         ],
+//         border: Border.all(color: isValid ? Colors.transparent : Colors.red.shade300, width: isValid ? 0 : 1.5),
+//       ),
+//       child: DropdownButtonFormField<String>(
+//         initialValue: value.isNotEmpty ? value : null,
+//         isExpanded: true,
+//         icon: Icon(Icons.arrow_drop_down_circle, color: color, size: context.iconSizeM),
+//         dropdownColor: Colors.white,
+//         borderRadius: BorderRadius.circular(context.spacingM),
+//         hint: Text(
+//           'Sélectionnez...',
+//           style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500),
+//         ),
+//         decoration: InputDecoration(
+//           labelText: label,
+//           labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: context.fontSizeS),
+//           prefixIcon: Icon(icon, color: color, size: context.iconSizeS),
+//           border: InputBorder.none,
+//           contentPadding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingM),
+//         ),
+//         style: TextStyle(fontSize: context.fontSizeS, color: AppTheme.darkBlue),
+//         items: items.map((item) {
+//           return DropdownMenuItem<String>(
+//             value: item,
+//             child: Row(
+//               children: [
+//                 Container(
+//                   width: 8,
+//                   height: 8,
+//                   decoration: BoxDecoration(
+//                     color: item == 'Présent' ? Colors.green : Colors.red,
+//                     shape: BoxShape.circle,
+//                   ),
+//                 ),
+//                 SizedBox(width: context.spacingS),
+//                 Text(
+//                   item,
+//                   style: TextStyle(
+//                     color: item == 'Présent' ? Colors.green.shade700 : Colors.red.shade700,
+//                     fontWeight: FontWeight.w500,
+//                   ),
+//                 ),
+//               ],
+//             ),
+//           );
+//         }).toList(),
+//         onChanged: (value) {
+//           if (value != null) {
+//             onChanged(value);
+//           }
+//         },
+//         selectedItemBuilder: (BuildContext context) {
+//           return items.map<Widget>((item) {
+//             return Row(
+//               children: [
+//                 Icon(
+//                   Icons.check_circle,
+//                   color: item == 'Présent' ? Colors.green : Colors.red,
+//                   size: context.iconSizeS,
+//                 ),
+//                 SizedBox(width: context.spacingS),
+//                 Expanded(
+//                   child: Text(
+//                     item,
+//                     style: TextStyle(
+//                       fontSize: context.fontSizeS,
+//                       color: item == 'Présent' ? Colors.green.shade700 : Colors.red.shade700,
+//                       fontWeight: FontWeight.w500,
+//                     ),
+//                     overflow: TextOverflow.ellipsis,
+//                   ),
+//                 ),
+//               ],
+//             );
+//           }).toList();
+//         },
+//       ),
+//     );
+//   }
+
+//   Widget _buildElementsSlide(
+//     BuildContext context, {
+//     required List<ElementControle> elements,
+//     required String sectionType,
+//     required Color color,
+//     required int baseIndex,
+//   }) {
+//     return ListView(
+//       padding: EdgeInsets.all(context.spacingL),
+//       children: elements.map((element) {
+//         final originalIndex = sectionType == 'cellule'
+//             ? widget.celluleElements.indexOf(element)
+//             : widget.transfoElements.indexOf(element);
+//         final globalIndex = baseIndex + originalIndex;
+        
+//         return _buildElementCardSimple(
+//           context,
+//           element: element,
+//           index: originalIndex,
+//           globalIndex: globalIndex,
+//           sectionType: sectionType,
+//           color: color,
+//         );
+//       }).toList(),
+//     );
+//   }
+
+//   Widget _buildElementCardSimple(
+//     BuildContext context, {
+//     required ElementControle element,
+//     required int index,
+//     required int globalIndex,
+//     required String sectionType,
+//     required Color color,
+//   }) {
+//     final hasObservation = widget.hasObservation[globalIndex] ?? false;
+//     final suggestions = widget.elementSuggestions[index] ?? [];
+//     final isConformiteNon = element.conforme == false;
+    
+//     return Container(
+//       margin: EdgeInsets.only(bottom: context.spacingL),
+//       padding: EdgeInsets.all(context.spacingL),
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(context.spacingL),
+//         boxShadow: [
+//           BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
+//         ],
+//       ),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           // En-tête avec numéro et titre
+//           Row(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               Container(
+//                 width: context.iconSizeL,
+//                 height: context.iconSizeL,
+//                 decoration: BoxDecoration(
+//                   color: color.withOpacity(0.1),
+//                   borderRadius: BorderRadius.circular(context.spacingS),
+//                 ),
+//                 child: Center(
+//                   child: Text(
+//                     '${index + 1}',
+//                     style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.bold, color: color),
+//                   ),
+//                 ),
+//               ),
+//               SizedBox(width: context.spacingS),
+//               Expanded(
+//                 child: Text(
+//                   element.elementControle,
+//                   style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.w600, color: AppTheme.darkBlue),
+//                   overflow: TextOverflow.visible,
+//                 ),
+//               ),
+//             ],
+//           ),
+          
+//           SizedBox(height: context.spacingL),
+          
+//           // ✅ Conformité - AUCUNE valeur par défaut
+//           Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               Row(
+//                 children: [
+//                   Text(
+//                     'Conformité *',
+//                     style: TextStyle(
+//                       fontSize: context.fontSizeS,
+//                       fontWeight: FontWeight.w600,
+//                       color: element.conforme != null ? Colors.grey.shade700 : Colors.red,
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//               SizedBox(height: context.spacingS),
+//               Row(
+//                 children: [
+//                   Expanded(
+//                     child: _buildConformiteButtonSimple(
+//                       context,
+//                       label: 'Oui',
+//                       isSelected: element.conforme == true,
+//                       color: Colors.green,
+//                       onTap: () {
+//                         setState(() {
+//                           element.conforme = true;
+//                           widget.onConformeChanged(element);
+//                           // Forcer l'observation à Non
+//                           widget.onObservationToggleChanged(globalIndex, false, sectionType);
+//                         });
+//                       },
+//                     ),
+//                   ),
+//                   SizedBox(width: context.spacingS),
+//                   Expanded(
+//                     child: _buildConformiteButtonSimple(
+//                       context,
+//                       label: 'Non',
+//                       isSelected: element.conforme == false,
+//                       color: Colors.red,
+//                       onTap: () {
+//                         setState(() {
+//                           element.conforme = false;
+//                           widget.onConformeChanged(element);
+//                           // Forcer l'observation à Oui
+//                           widget.onObservationToggleChanged(globalIndex, true, sectionType);
+//                         });
+//                       },
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//               if (element.conforme == null)
+//                 Padding(
+//                   padding: EdgeInsets.only(top: context.spacingXS),
+//                   child: Text(
+//                     'Veuillez sélectionner Oui ou Non',
+//                     style: TextStyle(fontSize: context.fontSizeXS, color: Colors.red),
+//                   ),
+//                 ),
+//             ],
+//           ),
+          
+//           SizedBox(height: context.spacingM),
+          
+//           // Priorité
+//           Column(
+//             crossAxisAlignment: CrossAxisAlignment.start,
+//             children: [
+//               Row(
+//                 children: [
+//                   Text(
+//                     'Priorité',
+//                     style: TextStyle(
+//                       fontSize: context.fontSizeS,
+//                       fontWeight: FontWeight.w600,
+//                       color: Colors.grey.shade700,
+//                     ),
+//                   ),
+//                 ],
+//               ),
+//               SizedBox(height: context.spacingS),
+//               _buildPrioriteSelectorSimple(context, element, color),
+//             ],
+//           ),
+          
+//           SizedBox(height: context.spacingM),
+          
+//           // Toggle Observation
+//           _buildObservationToggleSimple(
+//             context, globalIndex, hasObservation, color, sectionType, isConformiteNon,
+//           ),
+          
+//           if (hasObservation) ...[
+//             SizedBox(height: context.spacingS),
+//             _buildObservationFieldSimple(
+//               context: context,
+//               element: element,
+//               index: index,
+//               sectionType: sectionType,
+//               suggestions: suggestions,
+//               color: color,
+//             ),
+//           ],
+          
+//           SizedBox(height: context.spacingM),
+          
+//           // Photos
+//           _buildElementPhotosSimple(
+//             context: context,
+//             element: element,
+//             index: index,
+//             sectionType: sectionType,
+//             color: color,
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+
+//   // Toggle de conformité pour cellule/transformateur
+//   Widget _buildConformiteToggleSimple(
+//     BuildContext context,
+//     ElementControle element,
+//     Color color,
+//     int index,
+//     int globalIndex,
+//     String sectionType,
+//   ) {
+//     final isValid = widget.conformeSelected[element] ?? false;
+    
+//     return Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: [
+//         Row(
+//           children: [
+//             Text(
+//               'Conformité *',
+//               style: TextStyle(
+//                 fontSize: context.fontSizeS,
+//                 fontWeight: FontWeight.w600,
+//                 color: isValid ? Colors.grey.shade700 : Colors.red,
+//               ),
+//             ),
+//           ],
+//         ),
+//         SizedBox(height: context.spacingS),
+//         Row(
+//           children: [
+//             Expanded(
+//               child: _buildConformiteButtonSimple(
+//                 context,
+//                 label: 'Oui',
+//                 isSelected: element.conforme == true,
+//                 color: Colors.green,
+//                 onTap: () {
+//                   setState(() {
+//                     element.conforme = true;
+//                     widget.onConformeChanged(element);
+//                   });
+//                 },
+//               ),
+//             ),
+//             SizedBox(width: context.spacingS),
+//             Expanded(
+//               child: _buildConformiteButtonSimple(
+//                 context,
+//                 label: 'Non',
+//                 isSelected: element.conforme == false,
+//                 color: Colors.red,
+//                 onTap: () {
+//                   setState(() {
+//                     element.conforme = false;
+//                     widget.onConformeChanged(element);
+//                     // Forcer l'observation à Oui
+//                     widget.onObservationToggleChanged(globalIndex, true, sectionType);
+//                   });
+//                 },
+//               ),
+//             ),
+//           ],
+//         ),
+//         if (element.conforme == null)
+//           Padding(
+//             padding: EdgeInsets.only(top: context.spacingXS),
+//             child: Text(
+//               'Veuillez sélectionner Oui ou Non',
+//               style: TextStyle(fontSize: context.fontSizeXS, color: Colors.red),
+//             ),
+//           ),
+//       ],
+//     );
+//   }
+
+//   Widget _buildConformiteButtonSimple(
+//     BuildContext context, {
+//     required String label,
+//     required bool isSelected,
+//     required Color color,
+//     required VoidCallback onTap,
+//   }) {
+//     return GestureDetector(
+//       onTap: onTap,
+//       child: AnimatedContainer(
+//         duration: const Duration(milliseconds: 200),
+//         padding: EdgeInsets.symmetric(vertical: context.spacingM),
+//         decoration: BoxDecoration(
+//           color: isSelected ? color.withOpacity(0.1) : Colors.grey.shade50,
+//           borderRadius: BorderRadius.circular(context.spacingS),
+//           border: Border.all(
+//             color: isSelected ? color : Colors.grey.shade300,
+//             width: isSelected ? 2 : 1,
+//           ),
+//         ),
+//         child: Row(
+//           mainAxisAlignment: MainAxisAlignment.center,
+//           children: [
+//             Icon(
+//               isSelected 
+//                   ? (label == 'Oui' ? Icons.check_circle : Icons.cancel)
+//                   : (label == 'Oui' ? Icons.check_circle_outline : Icons.cancel_outlined),
+//               size: context.iconSizeS,
+//               color: isSelected ? color : Colors.grey.shade500,
+//             ),
+//             SizedBox(width: context.spacingS),
+//             Text(
+//               label,
+//               style: TextStyle(
+//                 fontSize: context.fontSizeM,
+//                 fontWeight: FontWeight.w600,
+//                 color: isSelected ? color : Colors.grey.shade600,
+//               ),
+//             ),
+//           ],
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget _buildConformiteSelectorSimple(
+//     BuildContext context, 
+//     ElementControle element, 
+//     Color color, 
+//     bool isConformeSelected,
+//     int globalIndex,
+//     String sectionType,
+//   ) {
+//     return Container(
+//       decoration: BoxDecoration(
+//         color: Colors.grey.shade50,
+//         borderRadius: BorderRadius.circular(context.spacingS),
+//         border: Border.all(
+//           color: !isConformeSelected ? Colors.red.shade300 : Colors.transparent,
+//           width: !isConformeSelected ? 1.5 : 0,
+//         ),
+//       ),
+//       child: DropdownButtonFormField<bool?>(
+//         initialValue: isConformeSelected ? element.conforme : null,
+//         hint: Text('Sélectionnez *', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500)),
+//         onChanged: (bool? newValue) {
+//           if (newValue != null) {
+//             setState(() {
+//               element.conforme = newValue;
+//               widget.onConformeChanged(element);
+              
+//               if (newValue == false) {
+//                 widget.onObservationToggleChanged(globalIndex, true, sectionType);
+//               } else {
+//                 widget.onObservationToggleChanged(globalIndex, false, sectionType);
+//               }
+//             });
+//           }
+//         },
+//         decoration: InputDecoration(
+//           labelText: 'Conformité *',
+//           labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
+//           border: InputBorder.none,
+//           contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
+//         ),
+//         items: [
+//           DropdownMenuItem(
+//             value: true,
+//             child: Row(
+//               children: [
+//                 Icon(Icons.check_circle, color: Colors.green, size: context.iconSizeXS),
+//                 SizedBox(width: context.spacingS),
+//                 Flexible(child: Text('Oui', style: TextStyle(fontSize: context.fontSizeS))),
+//               ],
+//             ),
+//           ),
+//           DropdownMenuItem(
+//             value: false,
+//             child: Row(
+//               children: [
+//                 Icon(Icons.cancel, color: Colors.red, size: context.iconSizeXS),
+//                 SizedBox(width: context.spacingS),
+//                 Flexible(child: Text('Non', style: TextStyle(fontSize: context.fontSizeS))),
+//               ],
+//             ),
+//           ),
+//         ],
+//         isExpanded: true,
+//       ),
+//     );
+//   }
+
+//   Widget _buildPrioriteSelectorSimple(BuildContext context, ElementControle element, Color color) {
+//     return Container(
+//       decoration: BoxDecoration(
+//         color: Colors.white,
+//         borderRadius: BorderRadius.circular(context.spacingS),
+//       ),
+//       child: Row(
+//         children: [
+//           Expanded(
+//             child: _buildPrioriteButtonSimple(
+//               context,
+//               label: 'N1',
+//               tooltip: 'Basse priorité',
+//               isSelected: element.priorite == 1,
+//               color: Colors.blue,
+//               onTap: () => setState(() => element.priorite = 1),
+//             ),
+//           ),
+//           SizedBox(width: context.spacingXS),
+//           Expanded(
+//             child: _buildPrioriteButtonSimple(
+//               context,
+//               label: 'N2',
+//               tooltip: 'Moyenne priorité',
+//               isSelected: element.priorite == 2,
+//               color: Colors.orange,
+//               onTap: () => setState(() => element.priorite = 2),
+//             ),
+//           ),
+//           SizedBox(width: context.spacingXS),
+//           Expanded(
+//             child: _buildPrioriteButtonSimple(
+//               context,
+//               label: 'N3',
+//               tooltip: 'Haute priorité',
+//               isSelected: element.priorite == 3,
+//               color: Colors.red,
+//               onTap: () => setState(() => element.priorite = 3),
+//             ),
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+
+//   Widget _buildPrioriteButtonSimple(
+//     BuildContext context, {
+//     required String label,
+//     required String tooltip,
+//     required bool isSelected,
+//     required Color color,
+//     required VoidCallback onTap,
+//   }) {
+//     return GestureDetector(
+//       onTap: onTap,
+//       child: Tooltip(
+//         message: tooltip,
+//         child: Container(
+//           padding: EdgeInsets.symmetric(vertical: context.spacingM),
+//           decoration: BoxDecoration(
+//             color: isSelected ? color.withOpacity(0.1) : Colors.grey.shade50,
+//             borderRadius: BorderRadius.circular(context.spacingS),
+//             border: Border.all(
+//               color: isSelected ? color : Colors.grey.shade300,
+//               width: isSelected ? 2 : 1,
+//             ),
+//           ),
+//           child: Column(
+//             mainAxisSize: MainAxisSize.min,
+//             children: [
+//               Icon(
+//                 isSelected ? Icons.flag : Icons.flag_outlined,
+//                 size: context.iconSizeS,
+//                 color: isSelected ? color : Colors.grey.shade500,
+//               ),
+//               SizedBox(height: context.spacingXS),
+//               Text(
+//                 label,
+//                 style: TextStyle(
+//                   fontSize: context.fontSizeXS,
+//                   fontWeight: FontWeight.w600,
+//                   color: isSelected ? color : Colors.grey.shade600,
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Widget _buildObservationToggleSimple(
+//     BuildContext context,
+//     int globalIndex,
+//     bool hasObservation,
+//     Color color,
+//     String sectionType,
+//     bool isConformiteNon, // ← NOUVEAU
+//   ) {
+//     return Row(
+//       children: [
+//         Flexible(
+//           child: Text(
+//             'Ajouter une observation ?',
+//             style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
+//             overflow: TextOverflow.ellipsis,
+//           ),
+//         ),
+//         SizedBox(width: context.spacingS),
+//         GestureDetector(
+//           onTap: () => widget.onObservationToggleChanged(globalIndex, true, sectionType),
+//           child: Container(
+//             padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
+//             decoration: BoxDecoration(
+//               color: hasObservation ? Colors.green.withOpacity(0.15) : Colors.transparent,
+//               borderRadius: BorderRadius.circular(context.spacingL),
+//               border: Border.all(
+//                 color: hasObservation ? Colors.green : Colors.grey.shade300,
+//                 width: hasObservation ? 2 : 1,
+//               ),
+//             ),
+//             child: Text('Oui', style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.w600, color: hasObservation ? Colors.green : Colors.grey.shade600)),
+//           ),
+//         ),
+//         SizedBox(width: context.spacingS),
+//         GestureDetector(
+//           onTap: isConformiteNon 
+//               ? null 
+//               : () => widget.onObservationToggleChanged(globalIndex, false, sectionType),
+//           child: Container(
+//             padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingXS),
+//             decoration: BoxDecoration(
+//               color: !hasObservation && !isConformiteNon ? Colors.red.withOpacity(0.15) : Colors.transparent,
+//               borderRadius: BorderRadius.circular(context.spacingL),
+//               border: Border.all(
+//                 color: !hasObservation && !isConformiteNon ? Colors.red : Colors.grey.shade300,
+//                 width: !hasObservation && !isConformiteNon ? 2 : 1,
+//               ),
+//             ),
+//             child: Row(
+//               mainAxisSize: MainAxisSize.min,
+//               children: [
+//                 Text(
+//                   'Non',
+//                   style: TextStyle(
+//                     fontSize: context.fontSizeXS,
+//                     fontWeight: FontWeight.w600,
+//                     color: isConformiteNon
+//                         ? Colors.grey.shade400
+//                         : (!hasObservation ? Colors.red : Colors.grey.shade600),
+//                   ),
+//                 ),
+//                 if (isConformiteNon)
+//                   Padding(
+//                     padding: EdgeInsets.only(left: 4),
+//                     child: Icon(
+//                       Icons.lock_outline,
+//                       size: context.fontSizeXS,
+//                       color: Colors.grey.shade400,
+//                     ),
+//                   ),
+//               ],
+//             ),
+//           ),
+//         ),
+//       ],
+//     );
+//   }
+
+//   Widget _buildObservationFieldSimple({
+//     required BuildContext context,
+//     required ElementControle element,
+//     required int index,
+//     required String sectionType,
+//     required List<String> suggestions,
+//     required Color color,
+//   }) {
+//     return Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: [
+//         Container(
+//           decoration: BoxDecoration(
+//             color: Colors.grey.shade50,
+//             borderRadius: BorderRadius.circular(context.spacingS),
+//             border: Border.all(
+//               color: element.observation == null || element.observation!.trim().isEmpty ? Colors.red.shade300 : Colors.transparent,
+//               width: element.observation == null || element.observation!.trim().isEmpty ? 1.5 : 0,
+//             ),
+//           ),
+//           child: TextFormField(
+//             initialValue: element.observation,
+//             style: TextStyle(fontSize: context.fontSizeS),
+//             onChanged: (value) {
+//               element.observation = value;
+//               widget.onObservationChanged(index, value, sectionType);
+//               setState(() {});
+//             },
+//             decoration: InputDecoration(
+//               hintText: 'Saisissez votre observation... *',
+//               hintStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade400),
+//               border: InputBorder.none,
+//               contentPadding: EdgeInsets.all(context.spacingM),
+//             ),
+//             maxLines: 3,
+//           ),
+//         ),
+        
+//         if (suggestions.isNotEmpty)
+//           Container(
+//             margin: EdgeInsets.only(top: context.spacingS),
+//             padding: EdgeInsets.all(context.spacingS),
+//             decoration: BoxDecoration(
+//               color: color.withOpacity(0.05),
+//               borderRadius: BorderRadius.circular(context.spacingS),
+//               border: Border.all(color: color.withOpacity(0.2)),
+//             ),
+//             child: Column(
+//               crossAxisAlignment: CrossAxisAlignment.start,
+//               children: [
+//                 Text(
+//                   'Suggestions',
+//                   style: TextStyle(fontSize: context.fontSizeXS, fontWeight: FontWeight.bold, color: color),
+//                 ),
+//                 SizedBox(height: context.spacingXS),
+//                 Wrap(
+//                   spacing: context.spacingS,
+//                   runSpacing: context.spacingXS,
+//                   children: suggestions.map((s) => GestureDetector(
+//                     onTap: () => widget.onUseSuggestion(index, s, element, sectionType),
+//                     child: Container(
+//                       padding: EdgeInsets.symmetric(horizontal: context.spacingS, vertical: context.spacingXS),
+//                       decoration: BoxDecoration(
+//                         color: color.withOpacity(0.1),
+//                         borderRadius: BorderRadius.circular(context.spacingL),
+//                       ),
+//                       child: Text(
+//                         s,
+//                         style: TextStyle(fontSize: context.fontSizeXS, color: color.withOpacity(0.7)),
+//                       ),
+//                     ),
+//                   )).toList(),
+//                 ),
+//               ],
+//             ),
+//           ),
+//       ],
+//     );
+//   }
+
+//   Widget _buildElementPhotosSimple({
+//     required BuildContext context,
+//     required ElementControle element,
+//     required int index,
+//     required String sectionType,
+//     required Color color,
+//   }) {
+//     return Column(
+//       crossAxisAlignment: CrossAxisAlignment.start,
+//       children: [
+//         Row(
+//           children: [
+//             Icon(Icons.photo_camera_outlined, size: context.iconSizeXS, color: color),
+//             SizedBox(width: context.spacingS),
+//             Flexible(
+//               child: Text(
+//                 'Photos (${element.photos.length})',
+//                 style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w500, color: Colors.grey.shade700),
+//                 overflow: TextOverflow.ellipsis,
+//               ),
+//             ),
+//           ],
+//         ),
+//         SizedBox(height: context.spacingS),
+        
+//         if (element.photos.isNotEmpty)
+//           Container(
+//             height: context.screenHeight * 0.1,
+//             margin: EdgeInsets.only(bottom: context.spacingS),
+//             child: ListView.builder(
+//               scrollDirection: Axis.horizontal,
+//               itemCount: element.photos.length,
+//               itemBuilder: (context, photoIndex) {
+//                 return Stack(
+//                   children: [
+//                     Container(
+//                       width: context.screenWidth * 0.2,
+//                       margin: EdgeInsets.only(right: context.spacingS),
+//                       decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
+//                       child: ClipRRect(
+//                         borderRadius: BorderRadius.circular(context.spacingS),
+//                         child: Image.file(File(element.photos[photoIndex]), fit: BoxFit.cover),
+//                       ),
+//                     ),
+//                     Positioned(
+//                       top: context.spacingXS,
+//                       right: context.spacingS + context.spacingXS,
+//                       child: GestureDetector(
+//                         onTap: () => widget.onSupprimerPhotoElement(element, index, photoIndex, sectionType),
+//                         child: Container(
+//                           padding: EdgeInsets.all(context.spacingXS),
+//                           decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+//                           child: Icon(Icons.close, size: context.iconSizeXS - 2, color: Colors.white),
+//                         ),
+//                       ),
+//                     ),
+//                   ],
+//                 );
+//               },
+//             ),
+//           ),
+        
+//         Row(
+//           children: [
+//             Expanded(
+//               child: _buildSmallIconButtonSimple(
+//                 context,
+//                 icon: Icons.camera_alt,
+//                 label: 'Prendre',
+//                 onTap: () => widget.onPrendrePhotoElement(element, index, sectionType),
+//                 color: color,
+//               ),
+//             ),
+//             SizedBox(width: context.spacingS),
+//             Expanded(
+//               child: _buildSmallIconButtonSimple(
+//                 context,
+//                 icon: Icons.photo_library,
+//                 label: 'Galerie',
+//                 onTap: () => widget.onChoisirPhotoElement(element, index, sectionType),
+//                 color: color,
+//                 isSecondary: true,
+//               ),
+//             ),
+//           ],
+//         ),
+//       ],
+//     );
+//   }
+
+//   Widget _buildSmallIconButtonSimple(
+//     BuildContext context, {
+//     required IconData icon,
+//     required String label,
+//     required VoidCallback onTap,
+//     required Color color,
+//     bool isSecondary = false,
+//   }) {
+//     return Material(
+//       color: Colors.transparent,
+//       child: InkWell(
+//         onTap: onTap,
+//         borderRadius: BorderRadius.circular(context.spacingS),
+//         child: Container(
+//           padding: EdgeInsets.symmetric(vertical: context.spacingS),
+//           decoration: BoxDecoration(
+//             color: isSecondary ? Colors.grey.shade100 : color.withOpacity(0.1),
+//             borderRadius: BorderRadius.circular(context.spacingS),
+//             border: Border.all(color: isSecondary ? Colors.grey.shade300 : color.withOpacity(0.3)),
+//           ),
+//           child: Row(
+//             mainAxisAlignment: MainAxisAlignment.center,
+//             children: [
+//               Icon(icon, size: context.iconSizeXS, color: isSecondary ? Colors.grey.shade700 : color),
+//               SizedBox(width: context.spacingXS),
+//               Flexible(
+//                 child: Text(
+//                   label,
+//                   style: TextStyle(fontSize: context.fontSizeXS - 1, fontWeight: FontWeight.w600, color: isSecondary ? Colors.grey.shade700 : color),
+//                   maxLines: 1,
+//                   overflow: TextOverflow.ellipsis,
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// }
 
 // ================================================================
 // WIDGET PRINCIPAL : AjouterLocalScreen
@@ -3669,23 +5031,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   final List<String> _observationPhotos = [];
   final List<ObservationLibre> _observationsExistantes = [];
 
-  final _celluleFonctionController = TextEditingController();
-  final _celluleTypeController = TextEditingController();
-  final _celluleMarqueController = TextEditingController();
-  final _celluleTensionController = TextEditingController();
-  final _cellulePouvoirController = TextEditingController();
-  final _celluleNumerotationController = TextEditingController();
-  final _celluleParafoudresController = TextEditingController();
-  List<ElementControle> _celluleElements = [];
-
-  final _transfoTypeController = TextEditingController();
-  final _transfoMarqueController = TextEditingController();
-  final _transfoPuissanceController = TextEditingController();
-  final _transfoTensionController = TextEditingController();
-  final _transfoBuchholzController = TextEditingController();
-  final _transfoRefroidissementController = TextEditingController();
-  final _transfoRegimeController = TextEditingController();
-  List<ElementControle> _transfoElements = [];
+  List<Cellule> _cellules = [];
+  List<TransformateurMTBT> _transformateurs = [];
 
   static const String _baseUrl = "http://192.168.0.217:8000";
   Map<int, List<String>> _elementSuggestions = {};
@@ -3714,7 +5061,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   int _currentStep = 0;
   
   GlobalKey<_EtapeElementsControleState>? _etapeElementsKey;
-  GlobalKey<_EtapeCelluleTransformateurState>? _etapeCelluleTransfoKey;
 
   bool _isLoading = false;
 
@@ -3726,7 +5072,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   void initState() {
     super.initState();
     _etapeElementsKey = GlobalKey<_EtapeElementsControleState>();
-    _etapeCelluleTransfoKey = GlobalKey<_EtapeCelluleTransformateurState>();
 
     // Générer un ID pour le brouillon
     _draftLocalId = widget.draftId ?? 
@@ -3741,12 +5086,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       _localPhotosValid = true;
       _dispositionsValid = _validateElements(_dispositionsConstructives);
       _conditionsValid = _validateElements(_conditionsExploitation);
-      if (_selectedType == 'LOCAL_TRANSFORMATEUR') {
-        _celluleDonneesValid = _validateCelluleDonnees();
-        _transfoDonneesValid = _validateTransfoDonnees();
-        _celluleElementsValid = _validateElements(_celluleElements);
-        _transfoElementsValid = _validateElements(_transfoElements);
-      }
     } else {
       _initializeElementsControle();
 
@@ -3767,13 +5106,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       // Informations de base
       _nomController.text = local.nom ?? '';
       _selectedType = local.type;
-      
-      if (_selectedType == 'LOCAL_ELECTRIQUE' && local.nom == 'Sans nom') {
-        _typeValid = false;
-      } else {
-        _typeValid = true;
-      }
-      
+      _typeValid = true;
       _nomValid = (local.nom != null && local.nom!.isNotEmpty && local.nom != 'Sans nom');
       
       // Dispositions et conditions
@@ -3793,90 +5126,27 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       }
       _localPhotosValid = true;
       
-      // Pour les locaux MT de type TRANSFORMATEUR - charger cellule et transformateur
+      // CHARGEMENT DES CELLULES ET TRANSFORMATEURS
       if (widget.isMoyenneTension && local.type == 'LOCAL_TRANSFORMATEUR') {
-        if (local.cellule != null) {
-          _celluleFonctionController.text = local.cellule!.fonction ?? '';
-          _celluleTypeController.text = local.cellule!.type ?? '';
-          _celluleMarqueController.text = local.cellule!.marqueModeleAnnee ?? '';
-          _celluleTensionController.text = local.cellule!.tensionAssignee ?? '';
-          _cellulePouvoirController.text = local.cellule!.pouvoirCoupure ?? '';
-          _celluleNumerotationController.text = local.cellule!.numerotation ?? '';
-          _celluleParafoudresController.text = local.cellule!.parafoudres ?? '';
-          _celluleElements = List.from(local.cellule!.elementsVerifies ?? []);
-        }
-        if (local.transformateur != null) {
-          _transfoTypeController.text = local.transformateur!.typeTransformateur ?? '';
-          _transfoMarqueController.text = local.transformateur!.marqueAnnee ?? '';
-          _transfoPuissanceController.text = local.transformateur!.puissanceAssignee ?? '';
-          _transfoTensionController.text = local.transformateur!.tensionPrimaireSecondaire ?? '';
-          _transfoBuchholzController.text = local.transformateur!.relaisBuchholz ?? '';
-          _transfoRefroidissementController.text = local.transformateur!.typeRefroidissement ?? '';
-          _transfoRegimeController.text = local.transformateur!.regimeNeutre ?? '';
-          _transfoElements = List.from(local.transformateur!.elementsVerifies ?? []);
-        }
+        local.migrateFromOldFields(); // Migration si nécessaire
+        _cellules = List.from(local.cellules ?? []);
+        _transformateurs = List.from(local.transformateurs ?? []);
       } else {
-        // Réinitialiser pour les autres types
-        _celluleElements.clear();
-        _transfoElements.clear();
+        _cellules.clear();
+        _transformateurs.clear();
       }
       
       // RESTAURER L'ÉTAPE COURANTE
       _currentStep = savedStep;
       
-      // Reconstruire conformeSelected
-      _conformeSelected.clear();
-      for (var element in _dispositionsConstructives) {
-        _conformeSelected[element] = element.conforme != null;
-      }
-      for (var element in _conditionsExploitation) {
-        _conformeSelected[element] = element.conforme != null;
-      }
-      for (var element in _celluleElements) {
-        _conformeSelected[element] = element.conforme != null;
-      }
-      for (var element in _transfoElements) {
-        _conformeSelected[element] = element.conforme != null;
-      }
+      // Reconstruire conformeSelected et hasObservation
+      _reconstructMaps();
       
-      // Reconstruire hasObservation
-      _hasObservation.clear();
-      for (int i = 0; i < _dispositionsConstructives.length; i++) {
-        final obs = _dispositionsConstructives[i].observation;
-        _hasObservation[i] = obs != null && obs.isNotEmpty;
-        if (_dispositionsConstructives[i].conforme == false) {
-          _hasObservation[i] = true;
-        }
-      }
-      for (int i = 0; i < _conditionsExploitation.length; i++) {
-        final globalIndex = _dispositionsConstructives.length + i;
-        final obs = _conditionsExploitation[i].observation;
-        _hasObservation[globalIndex] = obs != null && obs.isNotEmpty;
-        if (_conditionsExploitation[i].conforme == false) {
-          _hasObservation[globalIndex] = true;
-        }
-      }
-      
-      // Validation des éléments
-      _dispositionsValid = _validateElements(_dispositionsConstructives);
-      _conditionsValid = _validateElements(_conditionsExploitation);
-      if (widget.isMoyenneTension && _selectedType == 'LOCAL_TRANSFORMATEUR') {
-        _celluleDonneesValid = _validateCelluleDonnees();
-        _transfoDonneesValid = _validateTransfoDonnees();
-        _celluleElementsValid = _validateElements(_celluleElements);
-        _transfoElementsValid = _validateElements(_transfoElements);
-      }
-      
-      // Initialiser les suggestions
-      _elementSuggestions.clear();
-      _elementLoading.clear();
-      
-      // POSITIONNER LE PAGE CONTROLLER À L'ÉTAPE SAUVEGARDÉE
+      // POSITIONNER LE PAGE CONTROLLER
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (_mainPageController.hasClients) {
           _mainPageController.jumpToPage(_currentStep);
         }
-        // Si on est à l'étape 1 (éléments de contrôle), reconstruire les slides
         if (_currentStep == 1) {
           _etapeElementsKey?.currentState?.rebuildSlides();
         }
@@ -3893,7 +5163,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
 
   Future<void> _saveDraft() async {
     if (!mounted) return;
-    
+  
     final nom = _nomController.text.trim();
     if (nom.isEmpty && _selectedType == null) {
       return;
@@ -3905,6 +5175,12 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       local = _creerMoyenneTensionLocalAvecType(typeToSave);
     } else {
       local = _creerBasseTensionLocalAvecType(typeToSave);
+    }
+    
+    // ✅ Pour les locaux transformateur, s'assurer que les listes sont sauvegardées
+    if (widget.isMoyenneTension && typeToSave == 'LOCAL_TRANSFORMATEUR' && local is MoyenneTensionLocal) {
+      local.cellules = _cellules;
+      local.transformateurs = _transformateurs;
     }
     
     await HiveService.saveLocalDraft(
@@ -3922,34 +5198,54 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
 
   // Créer un local MT avec un type spécifié
   MoyenneTensionLocal _creerMoyenneTensionLocalAvecType(String type) {
+    if (type != 'LOCAL_TRANSFORMATEUR') {
+      return MoyenneTensionLocal(
+        nom: _nomController.text.trim().isEmpty ? 'Sans nom' : _nomController.text.trim(),
+        type: type,
+        dispositionsConstructives: _dispositionsConstructives,
+        conditionsExploitation: _conditionsExploitation,
+        observationsLibres: _observationsExistantes,
+        photos: _localPhotos,
+      );
+    }
+    
     return MoyenneTensionLocal(
       nom: _nomController.text.trim().isEmpty ? 'Sans nom' : _nomController.text.trim(),
       type: type,
       dispositionsConstructives: _dispositionsConstructives,
       conditionsExploitation: _conditionsExploitation,
-      cellule: type == 'LOCAL_TRANSFORMATEUR' ? Cellule(
-        fonction: _celluleFonctionController.text.trim(),
-        type: _celluleTypeController.text.trim(),
-        marqueModeleAnnee: _celluleMarqueController.text.trim(),
-        tensionAssignee: _celluleTensionController.text.trim(),
-        pouvoirCoupure: _cellulePouvoirController.text.trim(),
-        numerotation: _celluleNumerotationController.text,
-        parafoudres: _celluleParafoudresController.text,
-        elementsVerifies: _celluleElements,
-      ) : null,
-      transformateur: type == 'LOCAL_TRANSFORMATEUR' ? TransformateurMTBT(
-        typeTransformateur: _transfoTypeController.text.trim(),
-        marqueAnnee: _transfoMarqueController.text.trim(),
-        puissanceAssignee: _transfoPuissanceController.text.trim(),
-        tensionPrimaireSecondaire: _transfoTensionController.text.trim(),
-        relaisBuchholz: _transfoBuchholzController.text.trim(),
-        typeRefroidissement: _transfoRefroidissementController.text.trim(),
-        regimeNeutre: _transfoRegimeController.text.trim(),
-        elementsVerifies: _transfoElements,
-      ) : null,
       observationsLibres: _observationsExistantes,
       photos: _localPhotos,
+      cellules: _cellules,
+      transformateurs: _transformateurs,
     );
+  }
+
+  void _reconstructMaps() {
+    _conformeSelected.clear();
+    for (var element in _dispositionsConstructives) {
+      _conformeSelected[element] = element.conforme != null;
+    }
+    for (var element in _conditionsExploitation) {
+      _conformeSelected[element] = element.conforme != null;
+    }
+    
+    _hasObservation.clear();
+    for (int i = 0; i < _dispositionsConstructives.length; i++) {
+      final obs = _dispositionsConstructives[i].observation;
+      _hasObservation[i] = obs != null && obs.isNotEmpty;
+      if (_dispositionsConstructives[i].conforme == false) {
+        _hasObservation[i] = true;
+      }
+    }
+    for (int i = 0; i < _conditionsExploitation.length; i++) {
+      final globalIndex = _dispositionsConstructives.length + i;
+      final obs = _conditionsExploitation[i].observation;
+      _hasObservation[globalIndex] = obs != null && obs.isNotEmpty;
+      if (_conditionsExploitation[i].conforme == false) {
+        _hasObservation[globalIndex] = true;
+      }
+    }
   }
 
   // Créer un local BT avec un type spécifié
@@ -3972,42 +5268,25 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     _conditionsExploitation = List.from(local.conditionsExploitation);
     _observationsExistantes.addAll(local.observationsLibres);
     if (local.photos.isNotEmpty) _localPhotos = List.from(local.photos);
+    
+    // ✅ CHARGEMENT DES CELLULES ET TRANSFORMATEURS (multiples)
     if (local is MoyenneTensionLocal && local.type == 'LOCAL_TRANSFORMATEUR') {
-      if (local.cellule != null) {
-        _celluleFonctionController.text = local.cellule!.fonction;
-        _celluleTypeController.text = local.cellule!.type;
-        _celluleMarqueController.text = local.cellule!.marqueModeleAnnee;
-        _celluleTensionController.text = local.cellule!.tensionAssignee;
-        _cellulePouvoirController.text = local.cellule!.pouvoirCoupure;
-        _celluleNumerotationController.text = local.cellule!.numerotation;
-        _celluleParafoudresController.text = local.cellule!.parafoudres;
-        _celluleElements = List.from(local.cellule!.elementsVerifies);
-      }
-      if (local.transformateur != null) {
-        _transfoTypeController.text = local.transformateur!.typeTransformateur;
-        _transfoMarqueController.text = local.transformateur!.marqueAnnee;
-        _transfoPuissanceController.text = local.transformateur!.puissanceAssignee;
-        _transfoTensionController.text = local.transformateur!.tensionPrimaireSecondaire;
-        _transfoBuchholzController.text = local.transformateur!.relaisBuchholz;
-        _transfoRefroidissementController.text = local.transformateur!.typeRefroidissement;
-        _transfoRegimeController.text = local.transformateur!.regimeNeutre;
-        _transfoElements = List.from(local.transformateur!.elementsVerifies);
-      }
+      // Migration si nécessaire (ancienne structure)
+      local.migrateFromOldFields();
+      
+      _cellules = List.from(local.cellules);
+      _transformateurs = List.from(local.transformateurs);
     }
     
+    // Initialiser conformeSelected pour les éléments existants
     for (var element in _dispositionsConstructives) {
       _conformeSelected[element] = true;
     }
     for (var element in _conditionsExploitation) {
       _conformeSelected[element] = true;
     }
-    for (var element in _celluleElements) {
-      _conformeSelected[element] = true;
-    }
-    for (var element in _transfoElements) {
-      _conformeSelected[element] = true;
-    }
     
+    // Initialiser hasObservation
     for (int i = 0; i < _dispositionsConstructives.length; i++) {
       _hasObservation[i] = _dispositionsConstructives[i].observation?.isNotEmpty == true;
     }
@@ -4019,8 +5298,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   void _initializeElementsControle() {
     _dispositionsConstructives = [];
     _conditionsExploitation = [];
-    _celluleElements = [];
-    _transfoElements = [];
     _hasObservation.clear();
     _conformeSelected.clear();
   }
@@ -4085,29 +5362,23 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     return true;
   }
 
-  bool _validateCelluleDonnees() {
-    return _celluleFonctionController.text.trim().isNotEmpty &&
-           _celluleTypeController.text.trim().isNotEmpty &&
-           _celluleMarqueController.text.trim().isNotEmpty &&
-           _celluleTensionController.text.trim().isNotEmpty &&
-           _cellulePouvoirController.text.trim().isNotEmpty &&
-           _celluleNumerotationController.text.isNotEmpty &&
-           _celluleParafoudresController.text.isNotEmpty;
-  }
-
-  bool _validateTransfoDonnees() {
-    return _transfoTypeController.text.trim().isNotEmpty &&
-           _transfoMarqueController.text.trim().isNotEmpty &&
-           _transfoPuissanceController.text.trim().isNotEmpty &&
-           _transfoTensionController.text.trim().isNotEmpty &&
-           _transfoBuchholzController.text.trim().isNotEmpty &&
-           _transfoRefroidissementController.text.trim().isNotEmpty &&
-           _transfoRegimeController.text.trim().isNotEmpty;
-  }
+  
 
   bool _canProceedToNextStep() {
-    if (_currentStep == 0) return _nomValid && _typeValid && (!_addObservation || _observationsValid);
-    return true;
+    switch (_currentStep) {
+      case 0:
+        return _nomValid && _typeValid && (!_addObservation || _observationsValid);
+      case 1:
+        return true; // La navigation interne du widget gère la validation
+      case 2:
+        // Au moins un transformateur requis pour LOCAL_TRANSFORMATEUR
+        if (_selectedType == 'LOCAL_TRANSFORMATEUR') {
+          return _transformateurs.isNotEmpty;
+        }
+        return true;
+      default:
+        return true;
+    }
   }
 
   void _handleNext() {
@@ -4131,14 +5402,12 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         }
       }
     } else if (_currentStep == 2) {
-      final celluleTransfoState = _etapeCelluleTransfoKey?.currentState;
-      if (celluleTransfoState != null) {
-        if (celluleTransfoState.canGoNext()) {
-          _sauvegarder();
-        } else {
-          celluleTransfoState.nextSlide();
-        }
+      // Vérifier qu'il y a au moins un transformateur
+      if (_selectedType == 'LOCAL_TRANSFORMATEUR' && _transformateurs.isEmpty) {
+        _showError('Au moins un transformateur est requis');
+        return;
       }
+      _sauvegarder();
     }
   }
 
@@ -4152,16 +5421,11 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           elementsState.previousSlide();
         }
       }
-    } else if (_currentStep == 2) {
-      final celluleTransfoState = _etapeCelluleTransfoKey?.currentState;
-      if (celluleTransfoState != null) {
-        if (celluleTransfoState.canGoPrevious()) {
-          _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-        } else {
-          celluleTransfoState.previousSlide();
-        }
-      }
-    } else if (_currentStep > 0) {
+    } 
+    else if (_currentStep == 2) {
+      _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    } 
+    else if (_currentStep > 0) {
       _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     }
   }
@@ -4176,9 +5440,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       return 'Suivant';
     }
     if (_currentStep == 2) {
-      final celluleTransfoState = _etapeCelluleTransfoKey?.currentState;
-      if (celluleTransfoState != null && celluleTransfoState.canGoNext()) return 'Terminer';
-      return 'Suivant';
+      return 'Terminer';
     }
     return 'Suivant';
   }
@@ -4190,20 +5452,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     _observationControllers.forEach((key, controller) => controller.dispose());
     _nomController.dispose();
     _observationController.dispose();
-    _celluleFonctionController.dispose();
-    _celluleTypeController.dispose();
-    _celluleMarqueController.dispose();
-    _celluleTensionController.dispose();
-    _cellulePouvoirController.dispose();
-    _celluleNumerotationController.dispose();
-    _celluleParafoudresController.dispose();
-    _transfoTypeController.dispose();
-    _transfoMarqueController.dispose();
-    _transfoPuissanceController.dispose();
-    _transfoTensionController.dispose();
-    _transfoBuchholzController.dispose();
-    _transfoRefroidissementController.dispose();
-    _transfoRegimeController.dispose();
     _mainPageController.dispose();
     super.dispose();
   }
@@ -4429,20 +5677,23 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   void _initializeElementsForType(String? type) {
     if (type == null) return;
     
-    final dispositions = HiveService.getDispositionsConstructivesForLocal(type);
-    _dispositionsConstructives = dispositions.map((element) {
+    // Récupérer les dispositions constructives pour ce type de local
+    final dispositionsList = HiveService.getDispositionsConstructivesForLocal(type);
+    _dispositionsConstructives = dispositionsList.map((element) {
       final ec = ElementControle(elementControle: element, conforme: null, priorite: 3);
       _conformeSelected[ec] = false;
       return ec;
     }).toList();
     
-    final conditions = HiveService.getConditionsExploitationForLocal(type);
-    _conditionsExploitation = conditions.map((element) {
+    //  CORRIGÉ : utiliser la variable correcte
+    final conditionsList = HiveService.getConditionsExploitationForLocal(type);
+    _conditionsExploitation = conditionsList.map((element) {
       final ec = ElementControle(elementControle: element, conforme: null, priorite: 3);
       _conformeSelected[ec] = false;
       return ec;
     }).toList();
     
+    // Initialiser _hasObservation
     for (int i = 0; i < _dispositionsConstructives.length; i++) {
       _hasObservation[i] = false;
     }
@@ -4450,51 +5701,10 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       _hasObservation[_dispositionsConstructives.length + i] = false;
     }
     
+    // Pour LOCAL_TRANSFORMATEUR, initialiser les listes vides
     if (type == 'LOCAL_TRANSFORMATEUR') {
-      final celluleElements = [
-        'Schéma unifilaire affiché dans le local',
-        'Cellule correctement posée et fixée',
-        'Jonctions inter-cellules',
-        'Canalisations et câbles d\'arrivée / départ',
-        'Respect des distances de sécurité',
-        'Commande manuelle / motorisée',
-        'Voyants de position (O / F / T)',
-        'Verrouillage mécanique',
-        'Terre de protection (PE) reliée à chaque cellule'
-      ];
-      _celluleElements = celluleElements.map((element) {
-        final ec = ElementControle(
-          elementControle: element,
-          conforme: null, 
-          priorite: 3,
-        );
-        _conformeSelected[ec] = false;
-        return ec;
-      }).toList();
-      
-      final transfoElements = [
-        'Adapté au local et à la ventilation',
-        'Plaque signalétique (puissance, tension, couplage)',
-        'Mise à la terre du neutre et de la carcasse',
-        'Raccordement des câbles MT et BT',
-        'Protection contre les contacts directs',
-        'Bac de rétention (pour transfo à huile)',
-        'Protection contre les surintensités',
-        'Essais diélectriques',
-        'Distance entre transformateur',
-        'Protection MT',
-        'Protection BT (disjoncteur général, fusibles, relais thermique)',
-        'Écran de câble MT relié à la terre'
-      ];
-      _transfoElements = transfoElements.map((element) {
-        final ec = ElementControle(
-          elementControle: element,
-          conforme: null,  
-          priorite: 3,
-        );
-        _conformeSelected[ec] = false;
-        return ec;
-      }).toList();
+      _cellules = [];
+      _transformateurs = [];
     }
   }
 
@@ -4619,6 +5829,19 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         ],
       ),
     );
+  }
+
+  void _validateCelluleTransfoDonnees() {
+    setState(() {
+      //  Au moins un transformateur est requis
+      if (_selectedType == 'LOCAL_TRANSFORMATEUR') {
+        _transfoElementsValid = _transformateurs.isNotEmpty;
+      } else {
+        _transfoElementsValid = true;
+      }
+      _celluleElementsValid = true; // Cellules optionnelles
+    });
+    _saveDraft();
   }
 
   void _sauvegarder() async {
@@ -5016,7 +6239,30 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   }
 
   MoyenneTensionLocal _creerMoyenneTensionLocal() {
-    return _creerMoyenneTensionLocalAvecType(_selectedType!);
+    // Si le type n'est pas TRANSFORMATEUR, ne pas inclure cellules/transformateurs
+    if (_selectedType != 'LOCAL_TRANSFORMATEUR') {
+      return MoyenneTensionLocal(
+        nom: _nomController.text.trim().isEmpty ? 'Sans nom' : _nomController.text.trim(),
+        type: _selectedType!,
+        dispositionsConstructives: _dispositionsConstructives,
+        conditionsExploitation: _conditionsExploitation,
+        observationsLibres: _observationsExistantes,
+        photos: _localPhotos,
+      );
+    }
+    
+    // Pour LOCAL_TRANSFORMATEUR, inclure les listes multiples
+    return MoyenneTensionLocal(
+      nom: _nomController.text.trim().isEmpty ? 'Sans nom' : _nomController.text.trim(),
+      type: _selectedType!,
+      dispositionsConstructives: _dispositionsConstructives,
+      conditionsExploitation: _conditionsExploitation,
+      observationsLibres: _observationsExistantes,
+      photos: _localPhotos,
+      // NOUVEAUX CHAMPS
+      cellules: _cellules,
+      transformateurs: _transformateurs,
+    );
   }
 
   BasseTensionLocal _creerBasseTensionLocal() {
@@ -5152,39 +6398,32 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                     },
                   ),
                   if (_selectedType == 'LOCAL_TRANSFORMATEUR')
-                    _EtapeCelluleTransformateur(
-                      key: _etapeCelluleTransfoKey,
-                      celluleFonctionController: _celluleFonctionController,
-                      celluleTypeController: _celluleTypeController,
-                      celluleMarqueController: _celluleMarqueController,
-                      celluleTensionController: _celluleTensionController,
-                      cellulePouvoirController: _cellulePouvoirController,
-                      celluleNumerotationController: _celluleNumerotationController,
-                      celluleParafoudresController: _celluleParafoudresController,
-                      celluleElements: _celluleElements,
-                      transfoTypeController: _transfoTypeController,
-                      transfoMarqueController: _transfoMarqueController,
-                      transfoPuissanceController: _transfoPuissanceController,
-                      transfoTensionController: _transfoTensionController,
-                      transfoBuchholzController: _transfoBuchholzController,
-                      transfoRefroidissementController: _transfoRefroidissementController,
-                      transfoRegimeController: _transfoRegimeController,
-                      transfoElements: _transfoElements,
-                      hasObservation: _hasObservation,
-                      elementSuggestions: _elementSuggestions,
-                      conformeSelected: _conformeSelected,
-                      onElementChanged: (element, index, action) => setState(() {}),
-                      onConformeChanged: _onConformeChanged,
-                      onObservationToggleChanged: (index, value, section) => setState(() => _hasObservation[index] = value),
-                      onPrendrePhotoElement: _prendrePhotoPourElement,
-                      onChoisirPhotoElement: _choisirPhotoPourElement,
-                      onSupprimerPhotoElement: _supprimerPhotoElement,
-                      onObservationChanged: _onElementObservationChanged,
-                      onUseSuggestion: _useElementSuggestion,
-                    ),
-                ].whereType<Widget>().toList(),
-              ),
+                  _EtapeCelluleTransformateurMulti(
+                    cellules: _cellules,
+                    transformateurs: _transformateurs,
+                    onCellulesChanged: (nouvellesCellules) {
+                      setState(() {
+                        _cellules = nouvellesCellules;
+                      });
+                      _saveDraft();
+                      _validateCelluleTransfoDonnees();
+                    },
+                    onTransformateursChanged: (nouveauxTransformateurs) {
+                      setState(() {
+                        _transformateurs = nouveauxTransformateurs;
+                      });
+                      _saveDraft();
+                      _validateCelluleTransfoDonnees();
+                    },
+                    onDataChanged: () {
+                      _saveDraft();
+                      _validateCelluleTransfoDonnees();
+                    },
+                  ),
+              ].whereType<Widget>().toList(),
             ),
+          ),
+
             Container(
               padding: EdgeInsets.all(context.spacingL),
               decoration: BoxDecoration(

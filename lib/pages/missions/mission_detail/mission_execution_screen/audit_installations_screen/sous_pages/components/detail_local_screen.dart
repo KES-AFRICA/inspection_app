@@ -1921,86 +1921,29 @@ Widget _buildElementItem(ElementControle element) {
                         // Tab CELLULE (seulement pour MT transformateur)
                         if (isTransformateur && _local.cellule != null)
                           ListView(
-                            padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),
+                            padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
                             children: [
-                              Container(
-                                padding: EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey),
-                                ),
-                                child: Padding(
-                                  padding: EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'INFORMATIONS CELLULE',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppTheme.primaryBlue,
-                                        ),
-                                      ),
-                                      SizedBox(height: 12),
-                                      _buildInfoRow('Fonction', _local.cellule!.fonction),
-                                      _buildInfoRow('Type', _local.cellule!.type),
-                                      _buildInfoRow('Marque/Modèle/Année', _local.cellule!.marqueModeleAnnee),
-                                      _buildInfoRow('Tension assignée', _local.cellule!.tensionAssignee),
-                                      _buildInfoRow('Pouvoir de coupure', _local.cellule!.pouvoirCoupure),
-                                      _buildInfoRow('Numérotation', _local.cellule!.numerotation),
-                                      _buildInfoRow('Parafoudres', _local.cellule!.parafoudres),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 16),
-                              _buildSection('ÉLÉMENTS VÉRIFIÉS - CELLULE', _local.cellule!.elementsVerifies),
+                              ..._local.cellules.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final cellule = entry.value;
+                                return _buildCelluleDetailCard(cellule, index);
+                              }).toList(),
                             ],
                           )
-                        else if (isTransformateur && _local.cellule == null)
-                          const Center(child: Text('Aucune information cellule')),
+                        else if (isTransformateur && _local.cellules.isEmpty)
+                          const Center(child: Text('Aucune cellule')),
+                            
 
                         // Tab TRANSFORMATEUR (seulement pour MT transformateur)
                         if (isTransformateur && _local.transformateur != null)
                           ListView(
-                            padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),
+                            padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
                             children: [
-                              Container(
-                                padding: EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.grey.shade50,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.grey),
-                                ),
-                                child: Padding(
-                                  padding: EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'INFORMATIONS TRANSFORMATEUR',
-                                        style: TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
-                                          color: AppTheme.primaryBlue,
-                                        ),
-                                      ),
-                                      SizedBox(height: 12),
-                                      _buildInfoRow('Type', _local.transformateur!.typeTransformateur),
-                                      _buildInfoRow('Marque/Année', _local.transformateur!.marqueAnnee),
-                                      _buildInfoRow('Puissance assignée', _local.transformateur!.puissanceAssignee),
-                                      _buildInfoRow('Tension primaire/secondaire', _local.transformateur!.tensionPrimaireSecondaire),
-                                      _buildInfoRow('Relais Buchholz', _local.transformateur!.relaisBuchholz),
-                                      _buildInfoRow('Type refroidissement', _local.transformateur!.typeRefroidissement),
-                                      _buildInfoRow('Régime neutre', _local.transformateur!.regimeNeutre),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              SizedBox(height: 16),
-                              _buildSection('ÉLÉMENTS VÉRIFIÉS - TRANSFORMATEUR', _local.transformateur!.elementsVerifies),
+                              ..._local.transformateurs.asMap().entries.map((entry) {
+                                final index = entry.key;
+                                final transfo = entry.value;
+                                return _buildTransformateurDetailCard(transfo, index);
+                              }).toList(),
                             ],
                           )
                         else if (isTransformateur && _local.transformateur == null)
@@ -2073,4 +2016,156 @@ Widget _buildElementItem(ElementControle element) {
     _nouvelleObservationController.dispose();
     super.dispose();
   }
+
+  Widget _buildCelluleDetailCard(Cellule cellule, int index) {
+  return Container(
+    margin: EdgeInsets.only(bottom: 12),
+    padding: EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.grey.shade50,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.grey),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: Colors.blue,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Center(
+                child: Text(
+                  '${index + 1}',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                cellule.type.isNotEmpty ? cellule.type : 'Cellule',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+        if (cellule.fonction.isNotEmpty) _buildInfoRow('Fonction', cellule.fonction),
+        if (cellule.marqueModeleAnnee.isNotEmpty) _buildInfoRow('Marque/Modèle', cellule.marqueModeleAnnee),
+        if (cellule.tensionAssignee.isNotEmpty) _buildInfoRow('Tension assignée', cellule.tensionAssignee),
+        if (cellule.pouvoirCoupure.isNotEmpty) _buildInfoRow('Pouvoir de coupure', cellule.pouvoirCoupure),
+        if (cellule.numerotation.isNotEmpty) _buildInfoRow('Numérotation', cellule.numerotation),
+        if (cellule.parafoudres.isNotEmpty) _buildInfoRow('Parafoudres', cellule.parafoudres),
+        if (cellule.elementsVerifies.isNotEmpty) ...[
+          SizedBox(height: 8),
+          Text(
+            'Éléments vérifiés (${cellule.elementsVerifies.length})',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
+          ),
+          SizedBox(height: 4),
+          ...cellule.elementsVerifies.map((e) => Padding(
+            padding: EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                Icon(
+                  e.conforme == true ? Icons.check_circle : Icons.cancel,
+                  size: 14,
+                  color: e.conforme == true ? Colors.green : Colors.red,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    e.elementControle,
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                  ),
+                ),
+              ],
+            ),
+          )),
+        ],
+      ],
+    ),
+  );
+}
+
+Widget _buildTransformateurDetailCard(TransformateurMTBT transfo, int index) {
+  return Container(
+    margin: EdgeInsets.only(bottom: 12),
+    padding: EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.grey.shade50,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: Colors.grey),
+    ),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 28,
+              height: 28,
+              decoration: BoxDecoration(
+                color: Colors.orange,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Center(
+                child: Text(
+                  '${index + 1}',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+                ),
+              ),
+            ),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                transfo.typeTransformateur.isNotEmpty ? transfo.typeTransformateur : 'Transformateur',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 12),
+        if (transfo.marqueAnnee.isNotEmpty) _buildInfoRow('Marque/Année', transfo.marqueAnnee),
+        if (transfo.puissanceAssignee.isNotEmpty) _buildInfoRow('Puissance', transfo.puissanceAssignee),
+        if (transfo.tensionPrimaireSecondaire.isNotEmpty) _buildInfoRow('Tension', transfo.tensionPrimaireSecondaire),
+        if (transfo.relaisBuchholz.isNotEmpty) _buildInfoRow('Relais Buchholz', transfo.relaisBuchholz),
+        if (transfo.typeRefroidissement.isNotEmpty) _buildInfoRow('Refroidissement', transfo.typeRefroidissement),
+        if (transfo.regimeNeutre.isNotEmpty) _buildInfoRow('Régime neutre', transfo.regimeNeutre),
+        if (transfo.elementsVerifies.isNotEmpty) ...[
+          SizedBox(height: 8),
+          Text(
+            'Éléments vérifiés (${transfo.elementsVerifies.length})',
+            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
+          ),
+          SizedBox(height: 4),
+          ...transfo.elementsVerifies.map((e) => Padding(
+            padding: EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                Icon(
+                  e.conforme == true ? Icons.check_circle : Icons.cancel,
+                  size: 14,
+                  color: e.conforme == true ? Colors.green : Colors.red,
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    e.elementControle,
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
+                  ),
+                ),
+              ],
+            ),
+          )),
+        ],
+      ],
+    ),
+  );
+}
 }
