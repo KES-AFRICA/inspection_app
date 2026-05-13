@@ -1781,8 +1781,7 @@ void _supprimerCoffret(int index, bool isMoyenneTension) {
   @override
   Widget build(BuildContext context) {
     final isMoyenneTension = widget.isMoyenneTension;
-    
-    final hasLocaux = _zone.locaux.isNotEmpty;
+  
     final hasCoffrets = _coffretsDirects.isNotEmpty;
 
     return Scaffold(
@@ -1832,67 +1831,60 @@ void _supprimerCoffret(int index, bool isMoyenneTension) {
                   _buildPhotosTab(),
 
                   // Tab LOCAUX
-                  !hasLocaux
-                      ? RefreshIndicator(
-                        onRefresh: _refreshZone,
-                        child: SingleChildScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          child: SizedBox(
-                            height: MediaQuery.of(context).size.height - 200,
-                            child: _buildEmptyState(
-                              'locaux', 
-                              'Aucun local dans cette zone',
-                              widget.isMoyenneTension ? _ajouterLocalMT : _ajouterLocalBT,
-                              Icons.domain,
-                              'AJOUTER UN LOCAL',
+                  Builder(
+                    builder: (context) {
+                      final drafts = widget.isMoyenneTension
+                          ? HiveService.getLocalDraftsForMoyenneTensionZone(
+                              missionId: widget.mission.id,
+                              zoneIndex: widget.zoneIndex,
+                            )
+                          : HiveService.getLocalDraftsForBasseTensionZone(
+                              missionId: widget.mission.id,
+                              zoneIndex: widget.zoneIndex,
+                            );
+
+                      final locauxExistants = _zone.locaux;
+                      final nomsExistants = locauxExistants.map((l) => l.nom).toSet();
+                      final uniqueDrafts = drafts
+                          .where((d) => !nomsExistants.contains(d['nomLocal']))
+                          .toList();
+
+                      if (locauxExistants.isEmpty && uniqueDrafts.isEmpty) {
+                        return RefreshIndicator(
+                          onRefresh: _refreshZone,
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: SizedBox(
+                              height: MediaQuery.of(context).size.height - 200,
+                              child: _buildEmptyState(
+                                'locaux',
+                                'Aucun local dans cette zone',
+                                widget.isMoyenneTension ? _ajouterLocalMT : _ajouterLocalBT,
+                                Icons.domain,
+                                'AJOUTER UN LOCAL',
+                              ),
                             ),
                           ),
+                        );
+                      }
+
+                      return RefreshIndicator(
+                        onRefresh: _refreshZone,
+                        child: ListView.builder(
+                          padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
+                          itemCount: (uniqueDrafts.length + locauxExistants.length) as int,
+                          itemBuilder: (context, index) {
+                            if (index < uniqueDrafts.length) {
+                              return _buildLocalDraftCard(uniqueDrafts[index], widget.isMoyenneTension);
+                            } else {
+                              final localIndex = index - uniqueDrafts.length;
+                              return _buildLocalCard(locauxExistants[localIndex], localIndex, widget.isMoyenneTension);
+                            }
+                          },
                         ),
-                      )
-                      : Builder(
-                        builder: (context) {
-                          final drafts = widget.isMoyenneTension 
-                              ? HiveService.getLocalDraftsForMoyenneTensionZone(
-                                  missionId: widget.mission.id, 
-                                  zoneIndex: widget.zoneIndex,
-                                )
-                              : HiveService.getLocalDraftsForBasseTensionZone(
-                                  missionId: widget.mission.id, 
-                                  zoneIndex: widget.zoneIndex,
-                                );
-                          
-                          final locauxExistants = _zone.locaux;
-                          
-                          final nomsExistants = locauxExistants.map((l) => l.nom).toSet();
-                          final uniqueDrafts = drafts.where((d) => !nomsExistants.contains(d['nomLocal'])).toList();
-                          
-                          if (locauxExistants.isEmpty && uniqueDrafts.isEmpty) {
-                            return _buildEmptyState(
-                              'locaux', 
-                              'Aucun local dans cette zone',
-                              widget.isMoyenneTension ? _ajouterLocalMT : _ajouterLocalBT,
-                              Icons.domain,
-                              'AJOUTER UN LOCAL',
-                            );
-                          }
-                          
-                          return RefreshIndicator(
-                            onRefresh: _refreshZone,
-                            child: ListView.builder(
-                              padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
-                              itemCount: (uniqueDrafts.length + locauxExistants.length) as int,
-                              itemBuilder: (context, index) {
-                                if (index < uniqueDrafts.length) {
-                                  return _buildLocalDraftCard(uniqueDrafts[index], widget.isMoyenneTension);
-                                } else {
-                                  final localIndex = index - uniqueDrafts.length;
-                                  return _buildLocalCard(locauxExistants[localIndex], localIndex, widget.isMoyenneTension);
-                                }
-                              },
-                            ),
-                          );
-                        },
-                      ),
+                      );
+                    },
+                  ),
                   
                   // Tab COFFRETS
                   !hasCoffrets
