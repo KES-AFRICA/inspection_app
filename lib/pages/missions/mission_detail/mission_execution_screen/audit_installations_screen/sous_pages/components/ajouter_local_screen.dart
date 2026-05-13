@@ -2526,18 +2526,6 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   }
   
   void _supprimerTransformateur(int index) async {
-    // Empêcher suppression du dernier transformateur
-    if (widget.transformateurs.length <= 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Au moins un transformateur est requis'),
-          backgroundColor: Colors.orange,
-          duration: Duration(seconds: 2),
-        ),
-      );
-      return;
-    }
-    
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -4557,11 +4545,21 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
             );
             nouveauLocal = _creerMoyenneTensionLocal();
           } else {
-            await HiveService.addLocalToMoyenneTensionZone(
-              missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, 
-              local: _creerMoyenneTensionLocal(),
-            );
-            nouveauLocal = _creerMoyenneTensionLocal();
+            final localData = _creerMoyenneTensionLocal();
+            final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+            final zone = audit.moyenneTensionZones[widget.zoneIndex!];
+            final existingIndex = zone.locaux.indexWhere((l) => l.nom.trim() == localData.nom.trim());
+            if (existingIndex != -1) {
+              await HiveService.updateLocalInMoyenneTensionZone(
+                missionId: widget.mission.id, zoneIndex: widget.zoneIndex!,
+                localIndex: existingIndex, local: localData,
+              );
+            } else {
+              await HiveService.addLocalToMoyenneTensionZone(
+                missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, local: localData,
+              );
+            }
+            nouveauLocal = localData;
           }
         } else {
           if (widget.isEdition && widget.localIndex != null) {
@@ -4571,10 +4569,19 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
             );
             nouveauLocal = _creerMoyenneTensionLocal();
           } else {
-            await HiveService.addMoyenneTensionLocal(
-              missionId: widget.mission.id, local: _creerMoyenneTensionLocal(),
-            );
-            nouveauLocal = _creerMoyenneTensionLocal();
+            final localData = _creerMoyenneTensionLocal();
+            final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+            final existingIndex = audit.moyenneTensionLocaux.indexWhere((l) => l.nom.trim() == localData.nom.trim());
+            if (existingIndex != -1) {
+              await HiveService.updateMoyenneTensionLocal(
+                missionId: widget.mission.id, localIndex: existingIndex, local: localData,
+              );
+            } else {
+              await HiveService.addMoyenneTensionLocal(
+                missionId: widget.mission.id, local: localData,
+              );
+            }
+            nouveauLocal = localData;
           }
         }
       } else {
@@ -4586,11 +4593,21 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
             );
             nouveauLocal = _creerBasseTensionLocal();
           } else {
-            await HiveService.addLocalToBasseTensionZone(
-              missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, 
-              local: _creerBasseTensionLocal(),
-            );
-            nouveauLocal = _creerBasseTensionLocal();
+            final localData = _creerBasseTensionLocal();
+            final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+            final zone = audit.basseTensionZones[widget.zoneIndex!];
+            final existingIndex = zone.locaux.indexWhere((l) => l.nom.trim() == localData.nom.trim());
+            if (existingIndex != -1) {
+              await HiveService.updateBasseTensionLocal(
+                missionId: widget.mission.id, zoneIndex: widget.zoneIndex!,
+                localIndex: existingIndex, local: localData,
+              );
+            } else {
+              await HiveService.addLocalToBasseTensionZone(
+                missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, local: localData,
+              );
+            }
+            nouveauLocal = localData;
           }
         } else {
           _showError('Erreur: pour basse tension, un local doit être dans une zone');
@@ -4972,14 +4989,24 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     final totalSteps = _getTotalSteps();
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        backgroundColor: Colors.grey.shade50,
-        appBar: AppBar(
-          title: Text(widget.isEdition ? 'Modifier le Local' : 'Ajouter un Local', style: TextStyle(fontSize: context.fontSizeL)),
-          backgroundColor: AppTheme.primaryBlue,
-          foregroundColor: Colors.white,
-          elevation: 0,
-          actions: [
+      child: PopScope(
+        canPop: false,
+        onPopInvokedWithResult: (didPop, _) async {
+          if (didPop) return;
+          _confirmerQuitter();
+        },
+        child: Scaffold(
+          backgroundColor: Colors.grey.shade50,
+          appBar: AppBar(
+            title: Text(widget.isEdition ? 'Modifier le Local' : 'Ajouter un Local', style: TextStyle(fontSize: context.fontSizeL)),
+            backgroundColor: AppTheme.primaryBlue,
+            foregroundColor: Colors.white,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: _confirmerQuitter,
+            ),
+            actions: [
           if (widget.isEdition)
               IconButton(
                 icon: Icon(Icons.check, size: context.iconSizeM),
@@ -5158,6 +5185,34 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           ],
         ),
       ),
+      ),
     );
+  }
+
+  Future<void> _confirmerQuitter() async {
+    final quitter = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Quitter sans sauvegarder ?'),
+        content: const Text(
+          'Les données saisies seront conservées comme brouillon. '
+          'Voulez-vous quitter cette page ?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Rester'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Quitter'),
+          ),
+        ],
+      ),
+    );
+    if (quitter == true && mounted) {
+      Navigator.pop(context);
+    }
   }
 }

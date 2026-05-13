@@ -76,13 +76,15 @@ class MoyenneTensionLocalAdapter extends TypeAdapter<MoyenneTensionLocal> {
       coffrets: (fields[6] as List?)?.cast<CoffretArmoire>(),
       observationsLibres: (fields[7] as List?)?.cast<ObservationLibre>(),
       photos: (fields[8] as List?)?.cast<String>(),
+      cellules: (fields[30] as List?)?.cast<Cellule>(),
+      transformateurs: (fields[31] as List?)?.cast<TransformateurMTBT>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, MoyenneTensionLocal obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.nom)
       ..writeByte(1)
@@ -100,7 +102,11 @@ class MoyenneTensionLocalAdapter extends TypeAdapter<MoyenneTensionLocal> {
       ..writeByte(7)
       ..write(obj.observationsLibres)
       ..writeByte(8)
-      ..write(obj.photos);
+      ..write(obj.photos)
+      ..writeByte(30)
+      ..write(obj.cellules)
+      ..writeByte(31)
+      ..write(obj.transformateurs);
   }
 
   @override
