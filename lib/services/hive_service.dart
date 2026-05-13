@@ -1525,6 +1525,7 @@ static List<String> getCoffretTypes() {
 static Map<String, String> getLocalTypes() {
   return {
     'LOCAL_TRANSFORMATEUR': 'Local Moyenne Tension',
+    'LOCAL_MTBT': 'Local MT/BT',
     'LOCAL_GROUPE_ELECTROGENE': 'Local Groupe Électrogène',
     'LOCAL_TGBT': 'Local TGBT',
     'LOCAL_ONDULEUR': 'Local Onduleur',
@@ -1543,6 +1544,27 @@ static List<String> getDispositionsConstructivesForLocal(String localType) {
       return [
         'Le local est exclusivement réservé à l\'usage électrique',
         'Signalisation visible "Local électrique – Accès réservé au personnel habilité"',
+        'Dimensions',
+        'Parois, plancher et plafond en matériaux non combustibles',
+        'Présence d\'une porte pleine, ouvrant vers l\'extérieur, munie d\'un dispositif anti-panique',
+        'Verrouillage empêchant tout accès non autorisé',
+        'Absence de communication directe avec les locaux à risque',
+        'Revêtement de sol isolant ou antidérapant',
+        'Éclairage normal',
+        'Éclairage de secours conforme',
+        'Ventilation / Climatisation',
+        'Présence de canalisations étrangères',
+        'Présence d\'un revêtement diélectrique ou isolant au sol',
+        'Absence de stockage d\'objets non électriques',
+        'Mise à la terre de toutes les masses métalliques',
+        'Présence de la terre du neutre',
+        'Présence de la terre des masses',
+      ];
+    
+    case 'LOCAL_MTBT':
+      return [
+        'Le local est exclusivement réservé à l\'usage électrique',
+        'Signalisation visible \"Local électrique – Accès réservé au personnel habilité\"',
         'Dimensions',
         'Parois, plancher et plafond en matériaux non combustibles',
         'Présence d\'une porte pleine, ouvrant vers l\'extérieur, munie d\'un dispositif anti-panique',
@@ -5839,7 +5861,8 @@ static Future<void> saveLocalDraft({
     
     // Déterminer le type de local
     String localType = isMoyenneTension ? 'MT' : 'BT';
-    if (isMoyenneTension && local is MoyenneTensionLocal && local.type == 'LOCAL_TRANSFORMATEUR') {
+    if (isMoyenneTension && local is MoyenneTensionLocal && 
+        (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT')) {
       localType = 'MT_TRANSFO';
     }
     

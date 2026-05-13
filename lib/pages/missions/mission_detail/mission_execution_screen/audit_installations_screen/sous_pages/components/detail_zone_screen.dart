@@ -1302,6 +1302,57 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       totalPhotosLocal += observation.photos.length as int;
     }
 
+    // Local inaccessible : affichage simplifié
+    if (local.accessible == false) {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(4),
+        decoration: BoxDecoration(
+          color: Colors.red.shade50,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.red.shade200),
+        ),
+        child: ListTile(
+          leading: Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: Colors.red.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(Icons.lock_outline, color: Colors.red),
+          ),
+          title: Row(
+            children: [
+              Expanded(child: Text(local.nom, style: const TextStyle(fontWeight: FontWeight.w600))),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.red.shade300),
+                ),
+                child: Text('À revérifier',
+                  style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.red.shade700)),
+              ),
+            ],
+          ),
+          subtitle: const Text('Local inaccessible lors de l\'inspection'),
+          trailing: PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'edit') isMoyenneTension ? _editerLocalMT(index) : _editerLocalBT(index);
+              if (value == 'delete') isMoyenneTension ? _supprimerLocalMT(index) : _supprimerLocalBT(index);
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'edit', child: Text('Revérifier')),
+              PopupMenuItem(value: 'delete', child: Text('Supprimer', style: TextStyle(color: Colors.red))),
+            ],
+          ),
+          onTap: () => isMoyenneTension ? _editerLocalMT(index) : _editerLocalBT(index),
+        ),
+      );
+    }
+
     return Container(
       margin: EdgeInsets.only(bottom: 8),
       padding: EdgeInsets.all(4),
@@ -1320,9 +1371,32 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
           ),
           child: Icon(Icons.domain, color: AppTheme.primaryBlue),
         ),
-        title: Text(
-          local.nom,
-          style: TextStyle(fontWeight: FontWeight.w600),
+        title: Row(
+          children: [
+            Expanded(
+              child: Text(
+                local.nom,
+                style: const TextStyle(fontWeight: FontWeight.w600),
+              ),
+            ),
+            if (local.aReverifier == true)
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.red.shade100,
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.red.shade300),
+                ),
+                child: Text(
+                  'À revérifier',
+                  style: TextStyle(
+                    fontSize: 9,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.red.shade700,
+                  ),
+                ),
+              ),
+          ],
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -3628,7 +3628,37 @@ class AjouterLocalScreen extends StatefulWidget {
   State<AjouterLocalScreen> createState() => _AjouterLocalScreenState();
 }
 
+  // ──────────────────────────────────────────────────
+  // ARCHITECTURE DE FLOW
+  // ──────────────────────────────────────────────────
+
+  /// Les deux flows supportés.
+  enum _LocalFlow { standard, long }
+
+  /// Retourne le flow actif selon le type sélectionné.
+  _LocalFlow get _flow {
+    if (_selectedType == 'LOCAL_TRANSFORMATEUR' || _selectedType == 'LOCAL_MTBT') {
+      return _LocalFlow.long;
+    }
+    return _LocalFlow.standard;
+  }
+
+  /// Nombre total d'étapes : standard = 3 (infos + accessibilité + éléments),
+  /// long = 4 (infos + accessibilité + cellules/transfo + éléments).
+  int get _totalSteps => _flow == _LocalFlow.long ? 4 : 3;
+
+  // Indices d'étapes selon le flow
+  // Standard : 0=infos, 1=accessibilité, 2=éléments
+  // Long      : 0=infos, 1=accessibilité, 2=cellules/transfo, 3=éléments
+  int get _stepInfos        => 0;
+  int get _stepAccessibilite => 1;
+  int get _stepCellulesTransfo => 2; // long uniquement
+  int get _stepElements     => _flow == _LocalFlow.long ? 3 : 2;
+
+  String? _selectedType;
+
 class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
+
 
   final _formKey = GlobalKey<FormState>();
 
@@ -3638,7 +3668,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     GlobalKey<_EtapeCelluleTransformateurMultiState>();
       
   final _nomController = TextEditingController();
-  String? _selectedType;
+
+  bool? _accessible; 
   List<ElementControle> _dispositionsConstructives = [];
   List<ElementControle> _conditionsExploitation = [];
   
@@ -3885,9 +3916,21 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     _dispositionsConstructives = List.from(local.dispositionsConstructives);
     _conditionsExploitation = List.from(local.conditionsExploitation);
     _observationsExistantes.addAll(local.observationsLibres);
+
     if (local.photos.isNotEmpty) _localPhotos = List.from(local.photos);
+
+    _accessible = local.accessible;
+    if (local.accessible == false) {
+      // On se positionne au step 1 (accessibilité) au lieu du step 0
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_mainPageController.hasClients) {
+          _mainPageController.jumpToPage(_stepAccessibilite);
+          setState(() => _currentStep = _stepAccessibilite);
+        }
+      });
+    }
     
-    // ✅ CHARGEMENT DES CELLULES ET TRANSFORMATEURS (multiples)
+    // CHARGEMENT DES CELLULES ET TRANSFORMATEURS (multiples)
     if (local is MoyenneTensionLocal && local.type == 'LOCAL_TRANSFORMATEUR') {
       // Migration si nécessaire (ancienne structure)
       local.migrateFromOldFields();
@@ -4000,39 +4043,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   }
 
   void _handleNext() {
-    if (_currentStep == 0) {
-      if (_canProceedToNextStep()) {
-        _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-      } else {
-        _showError('Veuillez remplir tous les champs obligatoires');
-      }
-    } else if (_currentStep == 1) {
-      final elementsState = _etapeElementsKey?.currentState;
-      if (elementsState != null) {
-        if (elementsState.canGoNext()) {
-          if (_selectedType == 'LOCAL_TRANSFORMATEUR') {
-            _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-          } else {
-            _sauvegarder();
-          }
-        } else {
-          elementsState.nextSlide();
-        }
-      }
-    } else if (_currentStep == 2) {
-      final formState = _etapeCelluleTransfoKey.currentState;
-      if (formState != null && formState.isFormOpen) {
-        formState.handleFormNext();
-        return;
-      }
-      if (_selectedType == 'LOCAL_TRANSFORMATEUR' && _transformateurs.isEmpty) {
-        _showError('Au moins un transformateur est requis');
-        return;
-      }
-      _sauvegarder();
-      return;
-    }
-    if (_currentStep == 0) {
+    // ── Step 0 : Informations générales
+    if (_currentStep == _stepInfos) {
       if (_canProceedToNextStep()) {
         _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       } else {
@@ -4041,15 +4053,45 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       return;
     }
 
-    if (_currentStep == 1) {
+    // ── Step 1 : Accessibilité
+    if (_currentStep == _stepAccessibilite) {
+      if (_accessible == null) {
+        _showError('Veuillez indiquer si le local est accessible');
+        return;
+      }
+      if (_accessible == false) {
+        // Sauvegarder immédiatement comme inaccessible
+        _sauvegarderInaccessible();
+        return;
+      }
+      // Accessible → étape suivante
+      _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      return;
+    }
+
+    // ── Step cellules/transfo (flow long uniquement)
+    if (_flow == _LocalFlow.long && _currentStep == _stepCellulesTransfo) {
+      final formState = _etapeCelluleTransfoKey.currentState;
+      if (formState != null && formState.isFormOpen) {
+        formState.handleFormNext();
+        return;
+      }
+      // LOCAL_TRANSFORMATEUR : au moins un transformateur requis
+      if (_selectedType == 'LOCAL_TRANSFORMATEUR' && _transformateurs.isEmpty) {
+        _showError('Au moins un transformateur est requis');
+        return;
+      }
+      // LOCAL_MTBT : cellules et transformateurs optionnels
+      _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      return;
+    }
+
+    // ── Step éléments de contrôle
+    if (_currentStep == _stepElements) {
       final elementsState = _etapeElementsKey?.currentState;
       if (elementsState != null) {
         if (elementsState.canGoNext()) {
-          if (_selectedType == 'LOCAL_TRANSFORMATEUR') {
-            _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-          } else {
-            _sauvegarder();
-          }
+          _sauvegarder();
         } else {
           elementsState.nextSlide();
         }
@@ -4058,21 +4100,12 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   }
 
   void _handlePrevious() {
-    if (_currentStep == 1) {
-      final elementsState = _etapeElementsKey?.currentState;
-      if (elementsState != null) {
-        if (elementsState.canGoPrevious()) {
-          _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-        } else {
-          elementsState.previousSlide();
-        }
-      }
-    } 
-    if (_currentStep == 2) {
+    // ── Step cellules/transfo : formulaire peut être ouvert
+    if (_flow == _LocalFlow.long && _currentStep == _stepCellulesTransfo) {
       final formState = _etapeCelluleTransfoKey.currentState;
       if (formState != null && formState.isFormOpen) {
         if (formState.isFormFirstSlide) {
-          formState.cancelForm(); // Fermer sans sauvegarder
+          formState.cancelForm();
         } else {
           formState.handleFormPrevious();
         }
@@ -4082,7 +4115,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       return;
     }
 
-    if (_currentStep == 1) {
+    // ── Step éléments
+    if (_currentStep == _stepElements) {
       final elementsState = _etapeElementsKey?.currentState;
       if (elementsState != null) {
         if (elementsState.canGoPrevious()) {
@@ -4091,36 +4125,34 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           elementsState.previousSlide();
         }
       }
-    } else if (_currentStep > 0) {
+      return;
+    }
+
+    // Autres steps : page précédente
+    if (_currentStep > 0) {
       _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     }
   }
 
   String _getNextButtonText() {
-    if (_currentStep == 2) {
+    if (_currentStep == _stepAccessibilite && _accessible == false) return 'Enregistrer';
+    if (_flow == _LocalFlow.long && _currentStep == _stepCellulesTransfo) {
       final formState = _etapeCelluleTransfoKey.currentState;
-      if (formState != null && formState.isFormOpen) {
-        return formState.formNextLabel; // 'Suivant' ou 'Terminer'
-      }
-      return 'Terminer';
+      if (formState != null && formState.isFormOpen) return formState.formNextLabel;
+      return 'Suivant';
     }
-    if (_currentStep == 0) return 'Suivant';
-    if (_currentStep == 1) {
+    if (_currentStep == _stepElements) {
       final elementsState = _etapeElementsKey?.currentState;
-      if (elementsState != null && elementsState.canGoNext()) {
-        return _selectedType == 'LOCAL_TRANSFORMATEUR' ? 'Suivant' : 'Terminer';
-      }
+      if (elementsState != null && elementsState.canGoNext()) return 'Terminer';
       return 'Suivant';
     }
     return 'Suivant';
   }
 
   String _getPreviousButtonText() {
-    if (_currentStep == 2) {
+    if (_flow == _LocalFlow.long && _currentStep == _stepCellulesTransfo) {
       final formState = _etapeCelluleTransfoKey.currentState;
-      if (formState != null && formState.isFormOpen && formState.isFormFirstSlide) {
-        return 'Fermer';
-      }
+      if (formState != null && formState.isFormOpen && formState.isFormFirstSlide) return 'Fermer';
     }
     return 'Précédent';
   }
@@ -4635,7 +4667,77 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     }
   }
 
+  Future<void> _sauvegarderInaccessible() async {
+    setState(() => _isLoading = true);
+    try {
+      // Créer le local avec accessible=false et aReverifier=true
+      // Les éléments de contrôle sont vides, pas de cellules ni transformateurs.
+      if (widget.isMoyenneTension) {
+        final local = MoyenneTensionLocal(
+          nom: _nomController.text.trim(),
+          type: _selectedType ?? 'LOCAL_ELECTRIQUE',
+          accessible: false,
+          aReverifier: true,
+        );
+        if (widget.isInZone && widget.zoneIndex != null) {
+          // Vérifier doublon par nom
+          final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+          final zone = audit.moyenneTensionZones[widget.zoneIndex!];
+          final existingIndex = zone.locaux.indexWhere((l) => l.nom.trim() == local.nom.trim());
+          if (existingIndex != -1) {
+            await HiveService.updateLocalInMoyenneTensionZone(
+              missionId: widget.mission.id, zoneIndex: widget.zoneIndex!,
+              localIndex: existingIndex, local: local,
+            );
+          } else {
+            await HiveService.addLocalToMoyenneTensionZone(
+              missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, local: local,
+            );
+          }
+        } else {
+          final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+          final existingIndex = audit.moyenneTensionLocaux.indexWhere((l) => l.nom.trim() == local.nom.trim());
+          if (existingIndex != -1) {
+            await HiveService.updateMoyenneTensionLocal(
+              missionId: widget.mission.id, localIndex: existingIndex, local: local,
+            );
+          } else {
+            await HiveService.addMoyenneTensionLocal(missionId: widget.mission.id, local: local);
+          }
+        }
+      } else {
+        final local = BasseTensionLocal(
+          nom: _nomController.text.trim(),
+          type: _selectedType ?? 'LOCAL_ELECTRIQUE',
+          accessible: false,
+          aReverifier: true,
+        );
+        if (widget.zoneIndex != null) {
+          final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+          final zone = audit.basseTensionZones[widget.zoneIndex!];
+          final existingIndex = zone.locaux.indexWhere((l) => l.nom.trim() == local.nom.trim());
+          if (existingIndex != -1) {
+            await HiveService.updateBasseTensionLocal(
+              missionId: widget.mission.id, zoneIndex: widget.zoneIndex!,
+              localIndex: existingIndex, local: local,
+            );
+          } else {
+            await HiveService.addLocalToBasseTensionZone(
+              missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, local: local,
+            );
+          }
+        }
+      }
 
+      // Supprimer le brouillon éventuel
+      await HiveService.deleteLocalDraft(_draftLocalId!);
+      setState(() => _isLoading = false);
+      if (mounted) Navigator.pop(context, true);
+    } catch (e) {
+      setState(() => _isLoading = false);
+      _showError('Erreur lors de la sauvegarde : $e');
+    }
+  }
 
   Future<void> _allerAuClassement(dynamic local) async {
     if (local == null) {
@@ -4982,7 +5084,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red, duration: const Duration(seconds: 3)));
   }
 
-  int _getTotalSteps() => _selectedType == 'LOCAL_TRANSFORMATEUR' ? 3 : 2;
+  int _getTotalSteps() => _totalSteps;
 
   @override
   Widget build(BuildContext context) {
@@ -5094,6 +5196,9 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                     typeValid: _typeValid,
                     onValidate: () => _validateNom(_nomController.text),
                   ),
+
+                  _buildSlideAccessibilite(),
+
                   if (_selectedType != null)
                     _EtapeElementsControle(
                     key: _etapeElementsKey,
@@ -5214,5 +5319,126 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     if (quitter == true && mounted) {
       Navigator.pop(context);
     }
+  }
+
+  Widget _buildSlideAccessibilite() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Accessibilité du local',
+            style: TextStyle(
+              fontSize: context.fontSizeXL,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.primaryBlue,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Cette information est requise avant de poursuivre l\'inspection.',
+            style: TextStyle(color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            'Ce local est-il accessible ?',
+            style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _buildAccessibiliteOption(
+                  label: 'Oui',
+                  icon: Icons.check_circle_outline,
+                  selected: _accessible == true,
+                  color: Colors.green,
+                  onTap: () => setState(() {
+                    _accessible = true;
+                    // Si on passe de inaccessible à accessible : initialiser les éléments
+                    if (_dispositionsConstructives.isEmpty && _selectedType != null) {
+                      _initializeElementsForType(_selectedType);
+                    }
+                  }),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildAccessibiliteOption(
+                  label: 'Non',
+                  icon: Icons.cancel_outlined,
+                  selected: _accessible == false,
+                  color: Colors.red,
+                  onTap: () => setState(() => _accessible = false),
+                ),
+              ),
+            ],
+          ),
+          if (_accessible == false) ...[
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.red.shade700),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Le local sera enregistré comme inaccessible et marqué "À revérifier". '
+                      'Aucun élément d\'inspection ne sera requis.',
+                      style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccessibiliteOption({
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        decoration: BoxDecoration(
+          color: selected ? color.withOpacity(0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? color : Colors.grey.shade300,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: selected ? color : Colors.grey.shade400, size: 36),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: selected ? color : Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }

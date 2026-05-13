@@ -78,13 +78,15 @@ class MoyenneTensionLocalAdapter extends TypeAdapter<MoyenneTensionLocal> {
       photos: (fields[8] as List?)?.cast<String>(),
       cellules: (fields[30] as List?)?.cast<Cellule>(),
       transformateurs: (fields[31] as List?)?.cast<TransformateurMTBT>(),
+      accessible: fields[32] as bool?,
+      aReverifier: fields[33] as bool?,
     );
   }
 
   @override
   void write(BinaryWriter writer, MoyenneTensionLocal obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.nom)
       ..writeByte(1)
@@ -106,7 +108,11 @@ class MoyenneTensionLocalAdapter extends TypeAdapter<MoyenneTensionLocal> {
       ..writeByte(30)
       ..write(obj.cellules)
       ..writeByte(31)
-      ..write(obj.transformateurs);
+      ..write(obj.transformateurs)
+      ..writeByte(32)
+      ..write(obj.accessible)
+      ..writeByte(33)
+      ..write(obj.aReverifier);
   }
 
   @override
@@ -242,13 +248,15 @@ class BasseTensionLocalAdapter extends TypeAdapter<BasseTensionLocal> {
       coffrets: (fields[4] as List?)?.cast<CoffretArmoire>(),
       observationsLibres: (fields[5] as List?)?.cast<ObservationLibre>(),
       photos: (fields[6] as List?)?.cast<String>(),
+      accessible: fields[7] as bool?,
+      aReverifier: fields[8] as bool?,
     );
   }
 
   @override
   void write(BinaryWriter writer, BasseTensionLocal obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.nom)
       ..writeByte(1)
@@ -262,7 +270,11 @@ class BasseTensionLocalAdapter extends TypeAdapter<BasseTensionLocal> {
       ..writeByte(5)
       ..write(obj.observationsLibres)
       ..writeByte(6)
-      ..write(obj.photos);
+      ..write(obj.photos)
+      ..writeByte(7)
+      ..write(obj.accessible)
+      ..writeByte(8)
+      ..write(obj.aReverifier);
   }
 
   @override

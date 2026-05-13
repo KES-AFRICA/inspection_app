@@ -1813,6 +1813,29 @@ class PdfReportService {
       pw.SizedBox(height: 5),
     ];
 
+    // Local inaccessible : mention claire dans le rapport
+    if (local.accessible == false) {
+      widgets.add(
+        pw.Container(
+          padding: const pw.EdgeInsets.all(8),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.red50,
+            border: pw.Border.all(color: PdfColors.red200),
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+          ),
+          child: pw.Text(
+            'Local inaccessible — à revérifier',
+            style: pw.TextStyle(
+              color: PdfColors.red700,
+              fontWeight: pw.FontWeight.bold,
+              fontSize: 10,
+            ),
+          ),
+        ),
+      );
+      return widgets; // Pas d'éléments à afficher
+    }
+
     if (local.dispositionsConstructives.isNotEmpty) {
       widgets.add(_buildDispositionsTable(local.dispositionsConstructives, 'DISPOSITIONS CONSTRUCTIVES DU LOCAL'));
       widgets.add(pw.SizedBox(height: 5));
@@ -1823,12 +1846,12 @@ class PdfReportService {
       widgets.add(pw.SizedBox(height: 5));
     }
 
-    if (local.cellule != null) {
-      widgets.addAll(_buildCelluleSection(local.cellule!));
+    for (final cellule in local.cellules) {
+      widgets.addAll(_buildCelluleSection(cellule));
     }
 
-    if (local.transformateur != null) {
-      widgets.addAll(_buildTransformateurSection(local.transformateur!));
+    for (final transfo in local.transformateurs) {
+      widgets.addAll(_buildTransformateurSection(transfo));
     }
 
     for (var coffret in local.coffrets) {
@@ -1844,6 +1867,29 @@ class PdfReportService {
       _subSectionBar(local.nom.toUpperCase()),
       pw.SizedBox(height: 5),
     ];
+
+    // Local inaccessible : mention claire dans le rapport
+    if (local.accessible == false) {
+      widgets.add(
+        pw.Container(
+          padding: const pw.EdgeInsets.all(8),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.red50,
+            border: pw.Border.all(color: PdfColors.red200),
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+          ),
+          child: pw.Text(
+            'Local inaccessible — à revérifier',
+            style: pw.TextStyle(
+              color: PdfColors.red700,
+              fontWeight: pw.FontWeight.bold,
+              fontSize: 10,
+            ),
+          ),
+        ),
+      );
+      return widgets; // Pas d'éléments à afficher
+    }
 
     if (local.dispositionsConstructives != null && local.dispositionsConstructives!.isNotEmpty) {
       widgets.add(_buildDispositionsTable(local.dispositionsConstructives!, 'DISPOSITIONS CONSTRUCTIVES DU LOCAL'));

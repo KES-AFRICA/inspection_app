@@ -89,6 +89,12 @@ class MoyenneTensionLocal {
   @HiveField(31)
   List<TransformateurMTBT> transformateurs = [];
 
+  @HiveField(32)
+  bool accessible;
+
+  @HiveField(33)
+  bool aReverifier;
+
   MoyenneTensionLocal({
     required this.nom,
     required this.type,
@@ -101,13 +107,17 @@ class MoyenneTensionLocal {
     List<String>? photos,
     List<Cellule>? cellules,
     List<TransformateurMTBT>? transformateurs,
+    bool? accessible,
+    bool? aReverifier,
   })  : dispositionsConstructives = dispositionsConstructives ?? [],
         conditionsExploitation = conditionsExploitation ?? [],
         coffrets = coffrets ?? [],
         observationsLibres = observationsLibres ?? [],
         photos = photos ?? [],
         cellules = cellules ?? [],
-        transformateurs = transformateurs ?? [];
+        transformateurs = transformateurs ?? [],
+        accessible = accessible ?? true,
+        aReverifier = aReverifier ?? false;
 
   // MÉTHODE DE MIGRATION (préserve les données existantes)
   void migrateFromOldFields() {
@@ -230,6 +240,12 @@ class BasseTensionLocal {
   @HiveField(6)
   List<String> photos; // Chemins des photos spécifiques à ce local
 
+  @HiveField(7)
+  bool accessible;
+
+  @HiveField(8)
+  bool aReverifier;
+
   BasseTensionLocal({
     required this.nom,
     required this.type,
@@ -238,11 +254,15 @@ class BasseTensionLocal {
     List<CoffretArmoire>? coffrets,
     List<ObservationLibre>? observationsLibres,
     List<String>? photos,
+    bool? accessible,
+    bool? aReverifier,
   })  : dispositionsConstructives = dispositionsConstructives ?? [],
         conditionsExploitation = conditionsExploitation ?? [],
         coffrets = coffrets ?? [],
         observationsLibres = observationsLibres ?? [],
-        photos = photos ?? [];
+        photos = photos ?? [],
+        accessible = accessible ?? true,
+        aReverifier = aReverifier ?? false;
 }
 
 // STRUCTURES COMMUNES
