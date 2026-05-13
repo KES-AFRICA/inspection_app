@@ -1402,7 +1402,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(height: 4),
-            Text('${local.coffrets.length} coffret(s) • ${totalPhotosLocal} photo(s) • ${local.observationsLibres.length} observation(s)'),
+            Text('${local.coffrets.length} équipement(s) • ${totalPhotosLocal} photo(s) • ${local.observationsLibres.length} observation(s)'),
             SizedBox(height: 4),
             if (totalCount > 0) ...[
               LinearProgressIndicator(

@@ -3755,6 +3755,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       // Informations de base
       _nomController.text = local.nom ?? '';
       _selectedType = local.type;
+      _accessible = local.accessible;
       _typeValid = true;
       _nomValid = (local.nom != null && local.nom!.isNotEmpty && local.nom != 'Sans nom');
       
@@ -3776,8 +3777,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       _localPhotosValid = true;
       
       // CHARGEMENT DES CELLULES ET TRANSFORMATEURS
-      if (widget.isMoyenneTension && local.type == 'LOCAL_TRANSFORMATEUR') {
-        local.migrateFromOldFields(); // Migration si nécessaire
+      if (widget.isMoyenneTension && (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT')) {
+        local.migrateFromOldFields();
         _cellules = List.from(local.cellules ?? []);
         _transformateurs = List.from(local.transformateurs ?? []);
       } else {
@@ -3798,6 +3799,9 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         }
         if (_currentStep == 1) {
           _etapeElementsKey?.currentState?.rebuildSlides();
+        }
+        if (_currentStep == 2 && (_selectedType == 'LOCAL_TRANSFORMATEUR' || _selectedType == 'LOCAL_MTBT')) {
+          // Step 2 = cellules/transfo : pas besoin de rebuild spécifique
         }
       });
     });
@@ -3827,7 +3831,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     }
     
     // ✅ Pour les locaux transformateur, s'assurer que les listes sont sauvegardées
-    if (widget.isMoyenneTension && typeToSave == 'LOCAL_TRANSFORMATEUR' && local is MoyenneTensionLocal) {
+    if (widget.isMoyenneTension && (typeToSave == 'LOCAL_TRANSFORMATEUR' || typeToSave == 'LOCAL_MTBT') && local is MoyenneTensionLocal) {
       local.cellules = _cellules;
       local.transformateurs = _transformateurs;
     }
@@ -3855,6 +3859,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         conditionsExploitation: _conditionsExploitation,
         observationsLibres: _observationsExistantes,
         photos: _localPhotos,
+        accessible: _accessible ?? true,
+        aReverifier: (_accessible == false),
       );
     }
     
@@ -3931,10 +3937,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     }
     
     // CHARGEMENT DES CELLULES ET TRANSFORMATEURS (multiples)
-    if (local is MoyenneTensionLocal && local.type == 'LOCAL_TRANSFORMATEUR') {
-      // Migration si nécessaire (ancienne structure)
+    if (local is MoyenneTensionLocal && (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT')) {
       local.migrateFromOldFields();
-      
       _cellules = List.from(local.cellules);
       _transformateurs = List.from(local.transformateurs);
     }
@@ -4032,10 +4036,11 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       case 1:
         return true; // La navigation interne du widget gère la validation
       case 2:
-        // Au moins un transformateur requis pour LOCAL_TRANSFORMATEUR
+        // Au moins un transformateur requis pour LOCAL_TRANSFORMATEUR uniquement
         if (_selectedType == 'LOCAL_TRANSFORMATEUR') {
           return _transformateurs.isNotEmpty;
         }
+        // LOCAL_MTBT : tout est optionnel
         return true;
       default:
         return true;
@@ -4054,19 +4059,20 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     }
 
     // ── Step 1 : Accessibilité
-    if (_currentStep == _stepAccessibilite) {
-      if (_accessible == null) {
-        _showError('Veuillez indiquer si le local est accessible');
-        return;
+    if (_currentStep == 1) {
+      final elementsState = _etapeElementsKey?.currentState;
+      if (elementsState != null) {
+        if (elementsState.canGoNext()) {
+          final isFlowLong = _selectedType == 'LOCAL_TRANSFORMATEUR' || _selectedType == 'LOCAL_MTBT';
+          if (isFlowLong) {
+            _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+          } else {
+            _sauvegarder();
+          }
+        } else {
+          elementsState.nextSlide();
+        }
       }
-      if (_accessible == false) {
-        // Sauvegarder immédiatement comme inaccessible
-        _sauvegarderInaccessible();
-        return;
-      }
-      // Accessible → étape suivante
-      _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-      return;
     }
 
     // ── Step cellules/transfo (flow long uniquement)
@@ -4083,6 +4089,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       }
       // LOCAL_MTBT : cellules et transformateurs optionnels
       _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      _sauvegarder();
       return;
     }
 
@@ -4414,7 +4421,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     }
     
     // Pour LOCAL_TRANSFORMATEUR, initialiser les listes vides
-    if (type == 'LOCAL_TRANSFORMATEUR') {
+    if (type == 'LOCAL_TRANSFORMATEUR' || type == 'LOCAL_MTBT') {
       _cellules = [];
       _transformateurs = [];
     }
@@ -5084,7 +5091,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red, duration: const Duration(seconds: 3)));
   }
 
-  int _getTotalSteps() => _totalSteps;
+  int _getTotalSteps() => (_selectedType == 'LOCAL_TRANSFORMATEUR' || _selectedType == 'LOCAL_MTBT') ? 3 : 2;
 
   @override
   Widget build(BuildContext context) {
