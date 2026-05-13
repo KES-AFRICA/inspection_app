@@ -2278,6 +2278,29 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   bool get _isLastSlide => _currentSlide == _totalSlides - 1;
   
   void _nextSlide() {
+    // Slide 0 = données (pas de validation conformité).
+    // Slides 1..n = éléments de contrôle → conformité obligatoire.
+    if (_currentSlide > 0) {
+      final elementsSlides = _currentElementsSlides;
+      final slideIndex = _currentSlide - 1; // offset car slide 0 = données
+      if (slideIndex < elementsSlides.length) {
+        final elements = elementsSlides[slideIndex];
+        final nonRemplis = elements.where((e) => e.conforme == null).toList();
+        if (nonRemplis.isNotEmpty) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                'Veuillez renseigner la conformité de tous les éléments '
+                '(${nonRemplis.length} non rempli${nonRemplis.length > 1 ? 's' : ''})',
+              ),
+              backgroundColor: Colors.orange,
+              duration: const Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+      }
+    }
     if (_slideController.hasClients && !_isLastSlide) {
       _slideController.nextPage(
         duration: const Duration(milliseconds: 300),
@@ -2396,6 +2419,29 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
 
   void handleFormNext() {
     if (_isLastSlide) {
+      // Valider la conformité de la dernière slide d'éléments avant de sauvegarder.
+      if (_currentSlide > 0) {
+        final elementsSlides = _currentElementsSlides;
+        final slideIndex = _currentSlide - 1;
+        if (slideIndex < elementsSlides.length) {
+          final elements = elementsSlides[slideIndex];
+          final nonRemplis = elements.where((e) => e.conforme == null).toList();
+          if (nonRemplis.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Veuillez renseigner la conformité de tous les éléments '
+                  '(${nonRemplis.length} non rempli${nonRemplis.length > 1 ? 's' : ''})',
+                ),
+                backgroundColor: Colors.orange,
+                duration: const Duration(seconds: 2),
+              ),
+            );
+            widget.onFormStateChanged?.call();
+            return;
+          }
+        }
+      }
       if (_isEditingCellule) {
         _sauvegarderCellule();
       } else {
