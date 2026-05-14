@@ -1402,7 +1402,16 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(height: 4),
-            Text('${local.coffrets.length} équipement(s) • ${totalPhotosLocal} photo(s) • ${local.observationsLibres.length} observation(s)'),
+            Text(
+              HiveService.getLocalTypes()[local.type] ?? local.type,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.primaryBlue,
+              ),
+            ),
+            SizedBox(height: 2),
+            Text('${local.coffrets.length} coffret(s) • $totalPhotosLocal photo(s) • ${local.observationsLibres.length} observation(s)'),
             SizedBox(height: 4),
             if (totalCount > 0) ...[
               LinearProgressIndicator(

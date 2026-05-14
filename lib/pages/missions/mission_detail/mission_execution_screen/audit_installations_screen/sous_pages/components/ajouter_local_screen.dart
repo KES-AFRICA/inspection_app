@@ -73,6 +73,7 @@ class _EtapeInformationsGenerales extends StatefulWidget {
   final bool nomValid;
   final bool typeValid;
   final VoidCallback onValidate;
+  final bool isMoyenneTension;
 
   const _EtapeInformationsGenerales({
     required this.nomController,
@@ -95,6 +96,7 @@ class _EtapeInformationsGenerales extends StatefulWidget {
     required this.nomValid,
     required this.typeValid,
     required this.onValidate,
+    required this.isMoyenneTension,
   });
 
   @override
@@ -235,14 +237,24 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
 
   Widget _buildModernTypeSelector(BuildContext context) {
     final localTypes = HiveService.getLocalTypes();
-    final modifiedTypes = localTypes.map((key, value) {
-      if (key == 'LOCAL_TRANSFORMATEUR') {
-        return MapEntry(key, 'Local Moyenne Tension');
+
+    // Filtrer et renommer selon le contexte MT ou BT
+    final filteredTypes = localTypes.entries.where((entry) {
+      if (widget.isMoyenneTension) {
+        // En MT : on garde tout sauf LOCAL_MTBT (déjà présent comme Local MT/BT)
+        return true;
+      } else {
+        // En BT : on exclut LOCAL_TRANSFORMATEUR (Local Moyenne Tension pure)
+        // et on garde LOCAL_MTBT sous le nom "Local HT/BT"
+        return entry.key != 'LOCAL_TRANSFORMATEUR';
       }
-      return MapEntry(key, value);
-    });
-    
-    final filteredTypes = modifiedTypes.entries.toList();
+    }).map((entry) {
+      // Renommer LOCAL_MTBT en "Local HT/BT" côté BT
+      if (!widget.isMoyenneTension && entry.key == 'LOCAL_MTBT') {
+        return MapEntry(entry.key, 'Local HT/BT');
+      }
+      return entry;
+    }).toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -3650,10 +3662,10 @@ class AjouterLocalScreen extends StatefulWidget {
   // Indices d'étapes selon le flow
   // Standard : 0=infos, 1=accessibilité, 2=éléments
   // Long      : 0=infos, 1=accessibilité, 2=cellules/transfo, 3=éléments
-  int get _stepInfos        => 0;
-  int get _stepAccessibilite => 1;
-  int get _stepCellulesTransfo => 2; // long uniquement
-  int get _stepElements     => _flow == _LocalFlow.long ? 3 : 2;
+  int get _stepInfos           => 0;
+  int get _stepAccessibilite   => 1;
+  int get _stepElements        => 2;
+  int get _stepCellulesTransfo => 3; 
 
   String? _selectedType;
 
@@ -4059,43 +4071,45 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         _sauvegarderInaccessible();
         return;
       }
-      // Accessible → étape suivante (cellules si flow long, éléments sinon)
       _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       return;
     }
 
-    // ── Step cellules/transfo (flow long : step 2)
-    if (_flow == _LocalFlow.long && _currentStep == _stepCellulesTransfo) {
-      final formState = _etapeCelluleTransfoKey.currentState;
-      if (formState != null && formState.isFormOpen) {
-        formState.handleFormNext();
-        return;
-      }
-      if (_selectedType == 'LOCAL_TRANSFORMATEUR' && _transformateurs.isEmpty) {
-        _showError('Au moins un transformateur est requis');
-        return;
-      }
-      // LOCAL_MTBT : optionnel → aller aux éléments
-      _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-      return;
-    }
-
-    // ── Step éléments de contrôle (step 2 standard, step 3 long)
+    // ── Step 2 : Éléments de contrôle
     if (_currentStep == _stepElements) {
       final elementsState = _etapeElementsKey?.currentState;
       if (elementsState != null) {
         if (elementsState.canGoNext()) {
-          _sauvegarder();
+          // Dernière slide des éléments
+          if (_flow == _LocalFlow.long) {
+            // Flow long → aller aux cellules/transfo
+            _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+          } else {
+            // Flow standard → sauvegarder
+            _sauvegarder();
+          }
         } else {
           elementsState.nextSlide();
         }
       }
       return;
     }
+
+    // ── Step 3 : Cellules/Transfo (flow long uniquement)
+    if (_flow == _LocalFlow.long && _currentStep == _stepCellulesTransfo) {
+      final formState = _etapeCelluleTransfoKey.currentState;
+      if (formState != null && formState.isFormOpen) {
+        formState.handleFormNext();
+        return;
+      }
+
+      _sauvegarder();
+      return;
+    }
   }
 
   void _handlePrevious() {
-    // ── Step cellules/transfo : formulaire peut être ouvert
+    // ── Step 3 : Cellules/Transfo → formulaire peut être ouvert
     if (_flow == _LocalFlow.long && _currentStep == _stepCellulesTransfo) {
       final formState = _etapeCelluleTransfoKey.currentState;
       if (formState != null && formState.isFormOpen) {
@@ -4106,15 +4120,17 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         }
         return;
       }
+      // Formulaire fermé → retour aux éléments
       _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       return;
     }
 
-    // ── Step éléments
+    // ── Step 2 : Éléments de contrôle
     if (_currentStep == _stepElements) {
       final elementsState = _etapeElementsKey?.currentState;
       if (elementsState != null) {
         if (elementsState.canGoPrevious()) {
+          // Tout début des éléments → retour à l'accessibilité
           _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
         } else {
           elementsState.previousSlide();
@@ -4123,7 +4139,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       return;
     }
 
-    // Autres steps : page précédente
+    // Tous les autres steps → page précédente
     if (_currentStep > 0) {
       _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     }
@@ -4131,15 +4147,17 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
 
   String _getNextButtonText() {
     if (_currentStep == _stepAccessibilite && _accessible == false) return 'Enregistrer';
+    if (_currentStep == _stepElements) {
+      final elementsState = _etapeElementsKey?.currentState;
+      if (elementsState != null && elementsState.canGoNext()) {
+        return _flow == _LocalFlow.long ? 'Suivant' : 'Terminer';
+      }
+      return 'Suivant';
+    }
     if (_flow == _LocalFlow.long && _currentStep == _stepCellulesTransfo) {
       final formState = _etapeCelluleTransfoKey.currentState;
       if (formState != null && formState.isFormOpen) return formState.formNextLabel;
-      return 'Suivant';
-    }
-    if (_currentStep == _stepElements) {
-      final elementsState = _etapeElementsKey?.currentState;
-      if (elementsState != null && elementsState.canGoNext()) return 'Terminer';
-      return 'Suivant';
+      return 'Terminer';
     }
     return 'Suivant';
   }
@@ -5168,6 +5186,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                     nomController: _nomController,
                     selectedType: _selectedType,
                     onTypeChanged: _onTypeChanged,
+                    isMoyenneTension: widget.isMoyenneTension,
                     localPhotos: _localPhotos,
                     onPrendrePhoto: _prendrePhotoLocal,
                     onChoisirPhoto: _choisirPhotoLocalDepuisGalerie,
@@ -5194,28 +5213,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
 
                   _buildSlideAccessibilite(),
 
-                  if (_selectedType == 'LOCAL_TRANSFORMATEUR' || _selectedType == 'LOCAL_MTBT')
-                  _EtapeCelluleTransformateurMulti(
-                    key: _etapeCelluleTransfoKey,
-                    cellules: _cellules,
-                    transformateurs: _transformateurs,
-                    onCellulesChanged: (nouvellesCellules) {
-                      setState(() { _cellules = nouvellesCellules; });
-                      _saveDraft();
-                      _validateCelluleTransfoDonnees();
-                    },
-                    onTransformateursChanged: (nouveauxTransformateurs) {
-                      setState(() { _transformateurs = nouveauxTransformateurs; });
-                      _saveDraft();
-                      _validateCelluleTransfoDonnees();
-                    },
-                    onDataChanged: () {
-                      _saveDraft();
-                      _validateCelluleTransfoDonnees();
-                    },
-                    onFormStateChanged: () => setState(() {}),
-                  ),
-
                   if (_selectedType != null)
                     _EtapeElementsControle(
                     key: _etapeElementsKey,
@@ -5236,6 +5233,28 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                     onRebuildSlides: () {
                       _etapeElementsKey?.currentState?.rebuildSlides();
                     },
+                  ),
+
+                  if (_selectedType == 'LOCAL_TRANSFORMATEUR' || _selectedType == 'LOCAL_MTBT')
+                  _EtapeCelluleTransformateurMulti(
+                    key: _etapeCelluleTransfoKey,
+                    cellules: _cellules,
+                    transformateurs: _transformateurs,
+                    onCellulesChanged: (nouvellesCellules) {
+                      setState(() { _cellules = nouvellesCellules; });
+                      _saveDraft();
+                      _validateCelluleTransfoDonnees();
+                    },
+                    onTransformateursChanged: (nouveauxTransformateurs) {
+                      setState(() { _transformateurs = nouveauxTransformateurs; });
+                      _saveDraft();
+                      _validateCelluleTransfoDonnees();
+                    },
+                    onDataChanged: () {
+                      _saveDraft();
+                      _validateCelluleTransfoDonnees();
+                    },
+                    onFormStateChanged: () => setState(() {}),
                   ),
               ].whereType<Widget>().toList(),
             ),
