@@ -1540,23 +1540,19 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
     
     final currentPoints = _pointsSlides[_currentSlide];
     for (var point in currentPoints) {
-      // Vérifier la conformité
-      if (point.conformite.isEmpty) {
+      if (point.conformite.isEmpty) return false;
+
+      // Priorité obligatoire si Non ou NA
+      if ((point.conformite == 'non' || point.conformite == 'na') && point.priorite == null) {
         return false;
       }
-      
-      // Si conformité = "non", l'observation est OBLIGATOIRE
+
+      // Observation obligatoire si Non
       if (point.conformite == 'non') {
         final pointIndex = _getPointIndex(point);
         final hasObservation = widget.hasObservation[pointIndex] ?? false;
-        
-        // L'observation doit être activée ET non vide
-        if (!hasObservation) {
-          return false;
-        }
-        if (point.observation == null || point.observation!.trim().isEmpty) {
-          return false;
-        }
+        if (!hasObservation) return false;
+        if (point.observation == null || point.observation!.trim().isEmpty) return false;
       }
     }
     return true;
@@ -2050,13 +2046,28 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
                 onTap: () {
                   setState(() {
                     point.conformite = 'non';
+                    point.priorite ??= 3;
                   });
-                  // UNIQUEMENT ICI : on préremplit la référence
                   final reference = NormativeReferenceService.getReferenceForPoint(point.pointVerification);
-                  if (reference != null) {
-                    point.referenceNormative = reference;
-                  }
+                  if (reference != null) point.referenceNormative = reference;
                   widget.onObservationToggleChanged(pointIndex, true);
+                },
+              ),
+            ),
+            SizedBox(width: context.spacingS),
+            Expanded(
+              child: _buildConformiteButton(
+                context,
+                label: 'NA',
+                isSelected: point.conformite == 'na',
+                color: Colors.grey.shade600,
+                onTap: () {
+                  setState(() {
+                    point.conformite = 'na';
+                    point.priorite ??= 3;
+                    point.referenceNormative = null;
+                  });
+                  widget.onObservationToggleChanged(pointIndex, false);
                 },
               ),
             ),
@@ -2562,6 +2573,8 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
           final point = _pointsVerification[i];
           if (point.conformite == 'non') {
             _hasObservation[i] = true;
+          } else if (point.conformite == 'na') {
+            _hasObservation[i] = point.observation != null && point.observation!.isNotEmpty;
           } else {
             _hasObservation[i] = point.observation != null && point.observation!.isNotEmpty;
           }
@@ -2633,6 +2646,8 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
           final point = _pointsVerification[i];
           if (point.conformite == 'non') {
             _hasObservation[i] = true;
+          } else if (point.conformite == 'na') {
+            _hasObservation[i] = point.observation != null && point.observation!.isNotEmpty;
           } else {
             _hasObservation[i] = point.observation != null && point.observation!.isNotEmpty;
           }

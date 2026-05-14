@@ -2145,8 +2145,9 @@ class PdfReportService {
         ...points.asMap().entries.map((e) {
           final pv = e.value;
           final isConf = pv.conformite == 'oui' || pv.conformite == 'Oui';
-          final confColor = pv.conformite == 'non_applicable'
-              ? tableRowAlt
+          final isNA = pv.conformite == 'na' || pv.conformite == 'non_applicable';
+          final confColor = isNA
+              ? PdfColor.fromInt(0xFFE0E0E0)
               : (isConf ? conformeColor : nonConformeColor);
           return pw.TableRow(
             decoration: pw.BoxDecoration(color: e.key.isEven ? PdfColors.white : tableRowAlt),
@@ -2156,7 +2157,7 @@ class PdfReportService {
                 color: confColor,
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 alignment: pw.Alignment.center,
-                child: pw.Text(pv.conformite == 'non_applicable' ? 'NA' : (isConf ? 'Oui' : 'Non'), style: pw.TextStyle(fontSize: fsSmall)),
+                child: pw.Text(isNA ? 'NA' : (isConf ? 'Oui' : 'Non'), style: pw.TextStyle(fontSize: fsSmall)),
               ),
               _cell(pv.observation ?? '', isHeader: false),
               _cell(pv.referenceNormative ?? '', isHeader: false),

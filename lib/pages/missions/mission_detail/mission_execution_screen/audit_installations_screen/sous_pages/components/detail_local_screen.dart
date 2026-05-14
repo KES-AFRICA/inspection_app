@@ -1460,15 +1460,41 @@ Widget _buildInfluenceChip(String type, String code) {
 }
 
 Widget _buildElementItem(ElementControle element) {
+  // Déterminer le statut affiché
+  final String statut;
+  final Color statutBg;
+  final Color statutText;
+  final Color borderColor;
+
+  if (element.estNA) {
+    statut = 'NA';
+    statutBg = Colors.grey.shade200;
+    statutText = Colors.grey.shade700;
+    borderColor = Colors.grey.shade300;
+  } else if (element.conforme == true) {
+    statut = 'OUI';
+    statutBg = Colors.green.shade100;
+    statutText = Colors.green;
+    borderColor = Colors.green.shade200;
+  } else if (element.conforme == false) {
+    statut = 'NON';
+    statutBg = Colors.red.shade100;
+    statutText = Colors.red;
+    borderColor = Colors.red.shade200;
+  } else {
+    statut = '-';
+    statutBg = Colors.orange.shade100;
+    statutText = Colors.orange;
+    borderColor = Colors.orange.shade200;
+  }
+
   return Container(
     margin: EdgeInsets.only(bottom: 8),
     padding: EdgeInsets.all(12),
     decoration: BoxDecoration(
       color: Colors.grey.shade50,
       borderRadius: BorderRadius.circular(8),
-      border: Border.all(
-        color: element.conforme != null ? Colors.green.shade200 : Colors.red.shade200,
-      ),
+      border: Border.all(color: borderColor),
     ),
     child: Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1485,15 +1511,15 @@ Widget _buildElementItem(ElementControle element) {
             Container(
               padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
               decoration: BoxDecoration(
-                color: element.conforme != null  ? Colors.green.shade100 : Colors.red.shade100,
+                color: statutBg,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Text(
-                element.conforme != null ? 'OUI' : 'NON',
+                statut,
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.bold,
-                  color: element.conforme != null ? Colors.green : Colors.red,
+                  color: statutText,
                 ),
               ),
             ),
@@ -1849,7 +1875,8 @@ Widget _buildElementItem(ElementControle element) {
   @override
   Widget build(BuildContext context) {
     // Vérifier si c'est un local MT ET de type transformateur
-    final isTransformateur = widget.isMoyenneTension && _local.type == 'LOCAL_TRANSFORMATEUR';
+    final isTransformateur = widget.isMoyenneTension &&
+        (_local.type == 'LOCAL_TRANSFORMATEUR' || _local.type == 'LOCAL_MTBT');
     // Pour BT, pas de cellule/transformateur
     final hasCelluleTransfo = widget.isMoyenneTension && _local.type == 'LOCAL_TRANSFORMATEUR';
     

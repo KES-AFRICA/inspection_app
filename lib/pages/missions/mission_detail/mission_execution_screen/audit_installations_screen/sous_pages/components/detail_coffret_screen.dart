@@ -1153,6 +1153,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
     switch (conformite) {
       case 'oui': return Colors.green;
       case 'non': return Colors.red;
+      case 'na': return Colors.grey.shade600;
       default: return Colors.orange;
     }
   }
