@@ -287,14 +287,20 @@ class ElementControle {
   @HiveField(5)
   String? referenceNormative;
 
+  @HiveField(6)
+  bool estNA;
+
   ElementControle({
     required this.elementControle,
     required this.conforme,
     this.observation,
     this.priorite,
     List<String>? photos,
-    this.referenceNormative
-  }) : photos = photos ?? [];
+    this.referenceNormative,
+    bool? estNA,
+  })  : photos = photos ?? [],
+        estNA = estNA ?? false;
+
 }
 
 @HiveType(typeId: 9)

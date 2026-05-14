@@ -236,25 +236,18 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
   }
 
   Widget _buildModernTypeSelector(BuildContext context) {
+    
     final localTypes = HiveService.getLocalTypes();
-
-    // Filtrer et renommer selon le contexte MT ou BT
-    final filteredTypes = localTypes.entries.where((entry) {
-      if (widget.isMoyenneTension) {
-        // En MT : on garde tout sauf LOCAL_MTBT (déjà présent comme Local MT/BT)
-        return true;
-      } else {
-        // En BT : on exclut LOCAL_TRANSFORMATEUR (Local Moyenne Tension pure)
-        // et on garde LOCAL_MTBT sous le nom "Local HT/BT"
-        return entry.key != 'LOCAL_TRANSFORMATEUR';
+    final modifiedTypes = localTypes.map((key, value) {
+      if (key == 'LOCAL_TRANSFORMATEUR') {
+        return MapEntry(key, 'Local Moyenne Tension');
       }
-    }).map((entry) {
-      // Renommer LOCAL_MTBT en "Local HT/BT" côté BT
-      if (!widget.isMoyenneTension && entry.key == 'LOCAL_MTBT') {
-        return MapEntry(entry.key, 'Local HT/BT');
-      }
-      return entry;
-    }).toList();
+      return MapEntry(key, value);
+    });
+    
+    final filteredTypes = HiveService.getLocalTypes(
+      isMoyenneTension: widget.isMoyenneTension,
+    ).entries.toList();
 
     return Container(
       decoration: BoxDecoration(
@@ -1059,16 +1052,21 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
     
     final currentElements = _currentSlides[_currentSlide];
     for (var element in currentElements) {
-      if (element.conforme == null) return false;
-      if (element.priorite == null) return false;
-      
+      // Conformité obligatoire (Oui, Non, ou NA)
+      final conformiteRemplie = element.conforme != null || element.estNA;
+      if (!conformiteRemplie) return false;
+
+      // Priorité obligatoire uniquement si Non ou NA
+      final needsPriorite = element.conforme == false || element.estNA;
+      if (needsPriorite && element.priorite == null) return false;
+
       final elementIndex = _getElementIndex(element);
-      // Si conformité = Non, l'observation est OBLIGATOIRE
+      // Observation obligatoire si Non (pas pour NA)
       if (element.conforme == false) {
         if (widget.hasObservation[elementIndex] != true) return false;
         if (element.observation == null || element.observation!.trim().isEmpty) return false;
-      } else {
-        // Si Oui, l'observation est optionnelle
+      } else if (!element.estNA) {
+        // Oui : observation optionnelle mais si toggle activé, le champ doit être rempli
         if (widget.hasObservation[elementIndex] == true) {
           if (element.observation == null || element.observation!.trim().isEmpty) return false;
         }
@@ -1399,14 +1397,15 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
                     child: _buildConformiteButton(
                       context,
                       label: 'Oui',
-                      isSelected: element.conforme == true,
+                      isSelected: element.conforme == true && !element.estNA,
                       color: Colors.green,
                       onTap: () {
                         setState(() {
                           element.conforme = true;
+                          element.estNA = false;
+                          element.priorite = null; // priorité non requise pour Oui
                           widget.onConformeChanged(element);
                           widget.onElementChanged(element, index, 'conformite');
-                          // Forcer l'observation à Non
                           widget.onObservationToggleChanged(globalIndex, false, sectionType);
                         });
                       },
@@ -1417,26 +1416,46 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
                     child: _buildConformiteButton(
                       context,
                       label: 'Non',
-                      isSelected: element.conforme == false,
+                      isSelected: element.conforme == false && !element.estNA,
                       color: Colors.red,
                       onTap: () {
                         setState(() {
                           element.conforme = false;
+                          element.estNA = false;
+                          element.priorite ??= 3; // défaut priorité 3
                           widget.onConformeChanged(element);
                           widget.onElementChanged(element, index, 'conformite');
-                          // Forcer l'observation à Oui
                           widget.onObservationToggleChanged(globalIndex, true, sectionType);
+                        });
+                      },
+                    ),
+                  ),
+                  SizedBox(width: context.spacingS),
+                  Expanded(
+                    child: _buildConformiteButton(
+                      context,
+                      label: 'NA',
+                      isSelected: element.estNA,
+                      color: Colors.grey.shade600,
+                      onTap: () {
+                        setState(() {
+                          element.conforme = null;
+                          element.estNA = true;
+                          element.priorite ??= 3; // défaut priorité 3
+                          widget.onConformeChanged(element);
+                          widget.onElementChanged(element, index, 'conformite');
+                          widget.onObservationToggleChanged(globalIndex, false, sectionType);
                         });
                       },
                     ),
                   ),
                 ],
               ),
-              if (element.conforme == null)
+              if (element.conforme == null && !element.estNA)
                 Padding(
                   padding: EdgeInsets.only(top: context.spacingXS),
                   child: Text(
-                    'Veuillez sélectionner Oui ou Non',
+                    'Veuillez sélectionner Oui, Non ou NA',
                     style: TextStyle(fontSize: context.fontSizeXS, color: Colors.red),
                   ),
                 ),
@@ -1446,6 +1465,7 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
           SizedBox(height: context.spacingM),
           
           // Ligne 2 : Priorité (seule, sur toute la largeur)
+          if (element.conforme == false || element.estNA)
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -2297,7 +2317,15 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       final slideIndex = _currentSlide - 1; // offset car slide 0 = données
       if (slideIndex < elementsSlides.length) {
         final elements = elementsSlides[slideIndex];
-        final nonRemplis = elements.where((e) => e.conforme == null).toList();
+        final nonRemplis = elements.where((e) => e.conforme == null && !e.estNA).toList();
+          final sansPriorite = elements.where((e) => (e.conforme == false || e.estNA) && e.priorite == null).toList();
+          if (sansPriorite.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Priorité manquante pour ${sansPriorite.length} élément${sansPriorite.length > 1 ? 's' : ''}'),
+              backgroundColor: Colors.orange, duration: const Duration(seconds: 2),
+            ));
+            return;
+          }
         if (nonRemplis.isNotEmpty) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -2437,18 +2465,21 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
         final slideIndex = _currentSlide - 1;
         if (slideIndex < elementsSlides.length) {
           final elements = elementsSlides[slideIndex];
-          final nonRemplis = elements.where((e) => e.conforme == null).toList();
+          final nonRemplis = elements.where((e) => e.conforme == null && !e.estNA).toList();
+          final sansPriorite = elements.where((e) => (e.conforme == false || e.estNA) && e.priorite == null).toList();
           if (nonRemplis.isNotEmpty) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Veuillez renseigner la conformité de tous les éléments '
-                  '(${nonRemplis.length} non rempli${nonRemplis.length > 1 ? 's' : ''})',
-                ),
-                backgroundColor: Colors.orange,
-                duration: const Duration(seconds: 2),
-              ),
-            );
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Veuillez renseigner la conformité de tous les éléments (${nonRemplis.length} non rempli${nonRemplis.length > 1 ? 's' : ''})'),
+              backgroundColor: Colors.orange, duration: const Duration(seconds: 2),
+            ));
+            widget.onFormStateChanged?.call();
+            return;
+          }
+          if (sansPriorite.isNotEmpty) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text('Veuillez renseigner la priorité des éléments Non/NA (${sansPriorite.length} manquant${sansPriorite.length > 1 ? 's' : ''})'),
+              backgroundColor: Colors.orange, duration: const Duration(seconds: 2),
+            ));
             widget.onFormStateChanged?.call();
             return;
           }
@@ -3239,11 +3270,12 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
                 Expanded(
                   child: _buildConformiteButton(
                     label: 'Oui',
-                    isSelected: element.conforme == true,
+                    isSelected: element.conforme == true && !element.estNA,
                     color: Colors.green,
                     onTap: () => setState(() {
                       element.conforme = true;
-                      // Si on passe à Oui, on efface l'observation (non obligatoire)
+                      element.estNA = false;
+                      element.priorite = null; // priorité non requise pour Oui
                       if (element.observation != null && element.observation!.isEmpty) {
                         element.observation = null;
                       }
@@ -3255,21 +3287,38 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
                 Expanded(
                   child: _buildConformiteButton(
                     label: 'Non',
-                    isSelected: element.conforme == false,
+                    isSelected: element.conforme == false && !element.estNA,
                     color: Colors.red,
                     onTap: () => setState(() {
                       element.conforme = false;
+                      element.estNA = false;
+                      element.priorite ??= 3;
+                    }),
+                    isSmallScreen: isSmallScreen,
+                  ),
+                ),
+                SizedBox(width: isSmallScreen ? 8 : 10),
+                Expanded(
+                  child: _buildConformiteButton(
+                    label: 'NA',
+                    isSelected: element.estNA,
+                    color: Colors.grey.shade600,
+                    onTap: () => setState(() {
+                      element.conforme = null;
+                      element.estNA = true;
+                      element.priorite ??= 3;
+                      element.observation = null;
                     }),
                     isSmallScreen: isSmallScreen,
                   ),
                 ),
               ],
             ),
-            if (element.conforme == null)
+            if (element.conforme == null && !element.estNA)
               Padding(
                 padding: EdgeInsets.only(top: isSmallScreen ? 6 : 8),
                 child: Text(
-                  'Veuillez sélectionner Oui ou Non',
+                  'Veuillez sélectionner Oui, Non ou NA',
                   style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.red),
                 ),
               ),
@@ -3278,7 +3327,8 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
         
         SizedBox(height: isSmallScreen ? 12 : 16),
         
-        // ✅ PRIORITÉ (obligatoire)
+        // Priorité : uniquement si Non ou NA
+        if (element.conforme == false || element.estNA)
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

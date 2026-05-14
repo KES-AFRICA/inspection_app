@@ -1521,11 +1521,13 @@ static List<String> getCoffretTypes() {
   ];
 }
 
-/// Obtenir tous les types de locaux disponibles
-static Map<String, String> getLocalTypes() {
-  return {
+/// Retourne tous les types de locaux.
+/// [isMoyenneTension] filtre les types selon le contexte :
+/// - null (non filtré) : retourne tous les types
+static Map<String, String> getLocalTypes({bool? isMoyenneTension}) {
+  final all = {
     'LOCAL_TRANSFORMATEUR': 'Local Moyenne Tension',
-    'LOCAL_MTBT': 'Local MT/BT',
+    'LOCAL_MTBT': 'Local HT/BT',
     'LOCAL_GROUPE_ELECTROGENE': 'Local Groupe Électrogène',
     'LOCAL_TGBT': 'Local TGBT',
     'LOCAL_ONDULEUR': 'Local Onduleur',
@@ -1535,6 +1537,14 @@ static Map<String, String> getLocalTypes() {
     'LOCAL_ELECTRIQUE': 'Local Électrique',
     'LOCAL_DE_CONTROLE': 'Local de Contrôle',
   };
+
+  if (isMoyenneTension == true) {
+    return all;
+  } else if (isMoyenneTension == false) {
+    // Zone BT : on retire Local Moyenne Tension (pure MT)
+    return Map.fromEntries(all.entries.where((e) => e.key != 'LOCAL_TRANSFORMATEUR'));
+  }
+  return all;
 }
 
 /// Obtenir les éléments de contrôle pour un type de local

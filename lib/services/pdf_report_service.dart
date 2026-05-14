@@ -1938,8 +1938,11 @@ class PdfReportService {
           final el = e.value;
           String conf;
           PdfColor confColor;
-          if (el.conforme == null) {
-            conf = 'N/A';
+          if (el.estNA) {
+            conf = 'NA';
+            confColor = PdfColor.fromInt(0xFFE0E0E0); // gris clair
+          } else if (el.conforme == null) {
+            conf = '-';
             confColor = tableRowAlt;
           } else if (el.conforme == true) {
             conf = 'Oui';
