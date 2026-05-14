@@ -33,6 +33,10 @@ class _RadioSequenceScreenState extends State<RadioSequenceScreen> {
   bool _isSaving = false;
   bool _showTnOptions = false;
 
+  bool _showAutreField = false;
+  final TextEditingController _autreController = TextEditingController();
+  String? _autreSavedValue;
+
   @override
   void initState() {
     super.initState();
@@ -67,8 +71,17 @@ class _RadioSequenceScreenState extends State<RadioSequenceScreen> {
       }
       
       if (mounted) {
+        final standardOptions = ['IT', 'TT', 'TN'];
+        final isAutre = value != null && !standardOptions.contains(value) && value.isNotEmpty;
         setState(() {
-          _selectedValue = value;
+          if (isAutre) {
+            _selectedValue = 'Autre';
+            _showAutreField = true;
+            _autreController.text = value ?? '';
+            _autreSavedValue = value;
+          } else {
+            _selectedValue = value;
+          }
           _tnDetail = detail;
           _showTnOptions = (value == 'TN');
           _isLoading = false;
@@ -138,6 +151,12 @@ class _RadioSequenceScreenState extends State<RadioSequenceScreen> {
     }
   }
 
+  @override
+  void dispose() {
+    _autreController.dispose();
+    super.dispose();
+  }
+
   // ✅ Sauvegarde du détail TN
   Future<void> _saveTnDetail(String detail) async {
     setState(() => _isSaving = true);
@@ -176,12 +195,40 @@ class _RadioSequenceScreenState extends State<RadioSequenceScreen> {
     setState(() {
       _selectedValue = value;
       _showTnOptions = (value == 'TN');
-      // Si on change vers autre chose que TN, réinitialiser le détail
-      if (value != 'TN') {
-        _tnDetail = null;
-      }
+      _showAutreField = (value == 'Autre');
+      if (value != 'TN') _tnDetail = null;
+      if (value != 'Autre') _autreSavedValue = null;
     });
-    _saveSelection(value);
+    // "Autre" : on attend que l'utilisateur confirme son texte avant de sauvegarder
+    if (value != 'Autre') {
+      _saveSelection(value);
+    }
+  }
+
+  Future<void> _saveAutreValue() async {
+    final customValue = _autreController.text.trim();
+    if (customValue.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Veuillez saisir un régime de neutre'), backgroundColor: Colors.orange));
+      return;
+    }
+    setState(() { _isSaving = true; _autreSavedValue = customValue; });
+    try {
+      await HiveService.updateSelection(
+        missionId: widget.mission.id, field: widget.field, value: customValue);
+      if (!widget.isComplete) widget.onComplete(widget.field);
+      if (mounted) {
+        FocusScope.of(context).unfocus();
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Enregistré : $customValue'),
+          backgroundColor: Colors.green, duration: const Duration(milliseconds: 600)));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red));
+      }
+    } finally { setState(() => _isSaving = false); }
   }
 
   @override
@@ -322,6 +369,60 @@ class _RadioSequenceScreenState extends State<RadioSequenceScreen> {
               padding: EdgeInsets.only(top: isSmallScreen ? 16 : 20),
               child: const Center(child: CircularProgressIndicator()),
             ),
+
+          // Champ libre pour "Autre" (régime de neutre uniquement)
+          if (_showAutreField && widget.field == 'regime_neutre') ...[
+            const SizedBox(height: 20),
+            Container(
+              padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
+              ),
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Row(children: [
+                  Icon(Icons.edit_outlined, color: AppTheme.primaryBlue, size: isSmallScreen ? 18 : 20),
+                  const SizedBox(width: 8),
+                  Text('Précisez le régime de neutre',
+                    style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.w600, color: AppTheme.darkBlue)),
+                ]),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: _autreController,
+                  style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
+                  decoration: InputDecoration(
+                    hintText: 'Ex: IT-T, PEN, BT isolé...',
+                    hintStyle: TextStyle(color: Colors.grey.shade400),
+                    filled: true, fillColor: Colors.white,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: Colors.grey.shade300)),
+                    focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(10), borderSide: BorderSide(color: AppTheme.primaryBlue, width: 1.5)),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: isSmallScreen ? 10 : 12),
+                    suffixIcon: _autreSavedValue != null
+                        ? const Icon(Icons.check_circle, color: Colors.green, size: 20) : null,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(width: double.infinity, child: ElevatedButton(
+                  onPressed: _isSaving ? null : _saveAutreValue,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue, foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
+                  child: Text('Valider', style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.bold)),
+                )),
+                if (_autreSavedValue != null) ...[
+                  const SizedBox(height: 8),
+                  Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                    const Icon(Icons.check_circle, color: Colors.green, size: 14),
+                    const SizedBox(width: 6),
+                    Text('Sauvegardé : $_autreSavedValue',
+                      style: TextStyle(fontSize: 12, color: Colors.green.shade700, fontWeight: FontWeight.w500)),
+                  ]),
+                ],
+              ]),
+            ),
+          ],
         ],
       ),
     );

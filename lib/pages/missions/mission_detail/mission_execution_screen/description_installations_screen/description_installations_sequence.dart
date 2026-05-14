@@ -9,6 +9,8 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 
+
+
 class DescriptionInstallationsSequenceScreen extends StatefulWidget {
   final Mission mission;
   final VoidCallback onPreviousStep;
@@ -40,7 +42,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'shortTitle': 'Alimentation MT',
       'icon': Icons.bolt_outlined,
       'color': const Color(0xFFE67E22),
-      'champs': ['Type De Cellule', 'Calibre Du Disjoncteur', 'Section Du Cable', 'Nature Du Reseau', 'Observations'],
+      'champs': ['Gamme De Cellule', 'Type De Cellule', 'Calibre Du Disjoncteur', 'Section Du Cable', 'Nature Du Reseau', 'Observations'],
       'requiredFields': ['', ],
       'isList': true,
     },
@@ -110,7 +112,7 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       'shortTitle': 'Régime neutre',
       'icon': Icons.settings_input_component_outlined,
       'color': const Color(0xFF7F8C8D),
-      'options': ['IT', 'TT', 'TN'],
+      'options': ['IT', 'TT', 'TN', 'Autre'],
       'isRadio': true,
     },
     {

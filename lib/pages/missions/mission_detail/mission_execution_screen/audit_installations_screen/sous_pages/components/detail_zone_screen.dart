@@ -954,7 +954,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
 
     if (result == true) {
       _rechargerZone();
-      _showSuccess('Coffret ajouté avec succès');
+      _showSuccess('Equipement ajouté avec succès');
     }
   }
 
@@ -999,7 +999,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer ce coffret ?'),
+        content: Text('Voulez-vous vraiment supprimer cet Équipement ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1017,7 +1017,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                   await HiveService.saveAuditInstallations(audit);
                   
                   _rechargerZone();
-                  _showSuccess('Coffret supprimé');
+                  _showSuccess('Équipement supprimé');
                 }
               }
             },
@@ -1045,7 +1045,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
 
     if (result == true) {
       _rechargerZone();
-      _showSuccess('Coffret ajouté avec succès');
+      _showSuccess('Équipement ajouté avec succès');
     }
   }
 
@@ -1090,7 +1090,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer ce coffret ?'),
+        content: Text('Voulez-vous vraiment supprimer ce Équipement ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1108,7 +1108,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                   await HiveService.saveAuditInstallations(audit);
                   
                   _rechargerZone();
-                  _showSuccess('Coffret supprimé');
+                  _showSuccess('Équipement supprimé');
                 }
               }
             },
@@ -1189,8 +1189,8 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                 icon: Icon(Icons.electrical_services, size: 24),
                 label: Text(
                   widget.isMoyenneTension 
-                    ? 'Ajouter un coffret' 
-                    : 'Ajouter un coffret direct',
+                    ? 'Ajouter un Équipement' 
+                    : 'Ajouter un Équipement direct',
                   style: TextStyle(fontSize: 16),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -1588,7 +1588,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   );
 }
 
-// MODIFIER : Éditer un coffret (brouillon ou complet)
+// MODIFIER : Éditer un Équipement (brouillon ou complet)
 void _editerCoffret(CoffretArmoire coffret, int index, bool isMoyenneTension) async {
   final result = await Navigator.push(
     context,
@@ -1600,7 +1600,7 @@ void _editerCoffret(CoffretArmoire coffret, int index, bool isMoyenneTension) as
         isMoyenneTension: widget.isMoyenneTension,
         isInZone: false,
         qrCode: coffret.qrCode, // ← Passer le QR code existant
-        coffret: coffret.statut == 'complet' ? coffret : null, // Si complet, passer le coffret
+        coffret: coffret.statut == 'complet' ? coffret : null, 
         coffretIndex: coffret.statut == 'complet' ? index : null,
       ),
     ),
@@ -1611,7 +1611,7 @@ void _editerCoffret(CoffretArmoire coffret, int index, bool isMoyenneTension) as
   }
 }
 
-// MODIFIER : Voir un coffret complet
+// MODIFIER : Voir un Équipement complet
 void _voirCoffret(int index, bool isMoyenneTension) {
   Navigator.push(
     context,
@@ -1628,13 +1628,13 @@ void _voirCoffret(int index, bool isMoyenneTension) {
   ).then((_) => _rechargerZone());
 }
 
-// MODIFIER : Supprimer un coffret complet
+// MODIFIER : Supprimer un Équipement complet
 void _supprimerCoffret(int index, bool isMoyenneTension) {
   showDialog(
     context: context,
     builder: (context) => AlertDialog(
       title: const Text('Confirmer la suppression'),
-      content: const Text('Voulez-vous vraiment supprimer ce coffret ?'),
+      content: const Text('Voulez-vous vraiment supprimer cet Équipement ?'),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
@@ -1663,7 +1663,7 @@ void _supprimerCoffret(int index, bool isMoyenneTension) {
             }
             
             _rechargerZone();
-            _showSuccess('Coffret supprimé');
+            _showSuccess('Équipement supprimé');
           },
           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
           child: const Text('Supprimer'),
@@ -1723,7 +1723,7 @@ void _supprimerCoffret(int index, bool isMoyenneTension) {
     );
   }
 
-  // Vérifier si un coffret est complet
+  // Vérifier si un Équipement est complet
   bool _isCoffretComplet(CoffretArmoire coffret) {
     if (coffret.nom.isEmpty) return false;
     if (coffret.type.isEmpty) return false;
@@ -1980,8 +1980,8 @@ void _supprimerCoffret(int index, bool isMoyenneTension) {
                             child: _buildEmptyState(
                               'coffrets', 
                               isMoyenneTension 
-                                ? 'Aucun coffret dans cette zone' 
-                                : 'Aucun coffret direct dans cette zone',
+                                ? 'Aucun Équipement dans cette zone' 
+                                : 'Aucun Équipement direct dans cette zone',
                               isMoyenneTension ? _ajouterCoffretMT : _ajouterCoffretDirectBT,
                               Icons.electrical_services,
                               'AJOUTER UN ÉQUIPEMENTS',

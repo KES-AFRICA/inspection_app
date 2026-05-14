@@ -1,10 +1,85 @@
-// lib/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/description_installations_form.dart
+// lib/.../description_installations_form.dart
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
 
+// ============================================================
+// GAMMES DE CELLULES → TYPES ASSOCIÉS
+// ============================================================
+class CelluleGammes {
+  static const Map<String, List<String>> gammeTypes = {
+    'Cellules RM6': [
+      'I : Interrupteur‑sectionneur',
+      'IM : Interrupteur‑sectionneur avec mise à la terre',
+      'IQ : Interrupteur avec disjoncteur',
+      'ID : Interrupteur départ ligne',
+      'Q : Disjoncteur HTA',
+      'IF : Interrupteur‑fusibles',
+      'D : Départ direct',
+      'DM : Départ avec mise à la terre',
+      'M : Mesure HTA',
+      'DE : Cellule de mise à la terre',
+    ],
+    'Cellules SM6': [
+      'IM : interrupteur',
+      'IMC : interrupteur',
+      'IMB : interrupteur',
+      'EMB : mise à la terre du jeu de barres',
+      'PM : interrupteur-fusibles associés',
+      'QM : combiné interrupteur-fusibles',
+      'QMC : combiné interrupteur-fusibles',
+      'QMB : combiné interrupteur-fusibles',
+      'CRM : contacteur et contacteur-fusibles',
+      'DM1-A : disjoncteur (SF6) simple sectionnement',
+      'DM1-D : disjoncteur (SF6) simple sectionnement',
+      'DM1-S : disjoncteur (SF6) simple sectionnement',
+      'DMV-A : disjoncteur (vide) simple sectionnement',
+      'DMV-D : disjoncteur (vide) simple sectionnement',
+      'DMV-S : disjoncteur (vide) simple sectionnement',
+      'DM1-W : disjoncteur (SF6) débrochable simple sectionnement',
+      'DM1-Z : disjoncteur (SF6) débrochable simple sectionnement',
+      'DM2 : disjoncteur (SF6) double sectionnement',
+      'CM : transformateurs de potentiel',
+      'CM2 : transformateurs de potentiel',
+      'GBC-A : mesures d’intensité et/ou de tension',
+      'GBC-B : mesures d’intensité et/ou de tension',
+      'NSM-câbles : pour arrivée prioritaire et secours',
+      'NSM-barres : pour arrivée prioritaire et câbles pour secours',
+      'GIM : gaine intercalaire',
+      'GEM : gaine d’extension',
+      'GBM : gaine de liaison',
+      'GAM2 : gaine d’arrivée',
+      'GAM : gaine d’arrivée',
+      'SM : sectionneur',
+      'TM : transformateur MT/BT pour auxiliaires',
+    ],
+    'Cellules MCset': [
+      'Incoming (I) : Arrivée réseau',
+      'Outgoing (O) : Départ ligne ou câble',
+      'Bus Coupler (BC) : Couplage jeux de barres',
+      'Transformer Feeder (TF) : Départ transformateur',
+      'Generator Feeder (GF) : Groupe électrogène',
+      'Motor Feeder (MF) : Moteur HTA',
+      'Capacitor Feeder (CF) : Batterie de condensateurs',
+      'Metering (M) : Mesure HTA',
+      'Bus Riser (BR) : Liaison tableau',
+    ],
+  };
+
+
+  static List<String> get gammes => gammeTypes.keys.toList();
+
+  static List<String> getTypesForGamme(String? gamme) {
+    if (gamme == null || gamme.isEmpty) return [];
+    return gammeTypes[gamme] ?? gammeTypes['Autre / Inconnu']!;
+  }
+}
+
+// ============================================================
+// WIDGET PRINCIPAL : LISTE DES ITEMS
+// ============================================================
 class DescriptionInstallationsForm extends StatefulWidget {
   final Mission mission;
   final String title;
@@ -12,7 +87,7 @@ class DescriptionInstallationsForm extends StatefulWidget {
   final List<String> champs;
   final Function(String) onComplete;
   final bool isComplete;
-  final VoidCallback onTerminate; // ✅ NOUVEAU
+  final VoidCallback onTerminate;
 
   const DescriptionInstallationsForm({
     super.key,
@@ -34,7 +109,6 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
   bool _isLoading = true;
   bool _isSaving = false;
 
-  // ✅ Liste des champs numériques avec leur unité
   static const Map<String, String> _numericFieldsWithUnit = {
     'Calibre Du Disjoncteur': 'A',
     'Section Du Cable': 'mm²',
@@ -50,468 +124,218 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     'Nombre De Phase': '',
   };
 
-  // ✅ Types de cellule (dropdown)
-  static const List<String> _typeCelluleOptions = [
-    'I : Interrupteur-sectionneur (arrivée / départ boucle)',
-    'IM : Interrupteur-sectionneur avec mise à la terre',
-    'IQ : Interrupteur avec disjoncteur',
-    'ID : Interrupteur départ ligne',
-    'Q : Disjoncteur HTA',
-    'IF : Interrupteur-fusibles (protection transformateur)',
-    'D : Départ direct',
-    'DM : Départ avec mise à la terre',
-    'M : Mesure HTA',
-    'DE : Cellule de mise à la terre',
-    'QM : Interrupteur-sectionneur (arrivée, boucle, couplage)',
-    'QMC : Interrupteur motorisé',
-    'QF : Interrupteur-fusibles (protection transformateur)',
-    'DM1 / DM2 : Départ câble',
-    'GBC : Disjoncteur général',
-    'BC : Couplage jeux de barres',
-    'SE : Sectionnement avec mise à la terre',
-    'Incoming (I) : Arrivée réseau',
-    'Outgoing (O) : Départ ligne ou câble',
-    'Bus Coupler (BC) : Couplage jeux de barres',
-    'Transformer Feeder (TF) : Départ transformateur',
-    'Generator Feeder (GF) : Groupe électrogène',
-    'Motor Feeder (MF) : Moteur HTA',
-    'Capacitor Feeder (CF) : Batterie de condensateurs',
-    'Metering (M) : Mesure HTA',
-    'Bus Riser (BR) : Liaison tableau',
-  ];
-
-  // ✅ Options pour Nature du réseau
   static const List<String> _natureReseauOptions = ['Aérien', 'Souterrain', 'Mixte'];
-
-  // ✅ Sections de câble (dropdown)
   static const List<String> _sectionCableOptions = [
-    '0,5 mm²', '0,75 mm²', '1 mm²', '1,5 mm²', '2,5 mm²', '4 mm²', '6 mm²',
-    '10 mm²', '16 mm²', '25 mm²', '35 mm²', '50 mm²', '70 mm²', '95 mm²',
-    '120 mm²', '150 mm²', '185 mm²', '240 mm²', '300 mm²', '400 mm²',
-    '500 mm²', '630 mm²',
+    '0,5', '0,75', '1', '1,5', '2,5', '4', '6',
+    '10', '16', '25', '35', '50', '70', '95',
+    '120', '150', '185', '240', '300', '400', '500', '630',
   ];
-
-  // ✅ Options pour Mode (carburant)
   static const List<String> _modeOptions = ['Pompe électrique', 'Gravitaire', 'Manuel', 'Autre'];
-
-  // ✅ Options Oui/Non
   static const List<String> _ouiNonOptions = ['Oui', 'Non'];
 
   @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
+  void initState() { super.initState(); _loadData(); }
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    
     try {
       final items = await HiveService.getInstallationItemsFromSection(
-        missionId: widget.mission.id,
-        section: widget.sectionKey,
-      );
-      
-      if (mounted) {
-        setState(() {
-          _items = items;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
+        missionId: widget.mission.id, section: widget.sectionKey);
+      if (mounted) setState(() { _items = items; _isLoading = false; });
+    } catch (e) { setState(() => _isLoading = false); }
   }
 
   Future<void> _addItem() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => _AddEditItemScreen(
-          title: widget.title,
-          champs: widget.champs,
-          numericFieldsWithUnit: _numericFieldsWithUnit,
-          typeCelluleOptions: _typeCelluleOptions,
-          natureReseauOptions: _natureReseauOptions,
-          sectionCableOptions: _sectionCableOptions,
-          modeOptions: _modeOptions,
-          ouiNonOptions: _ouiNonOptions,
-        ),
+    final result = await Navigator.push(context, MaterialPageRoute(
+      builder: (context) => _AddEditItemScreen(
+        title: widget.title, champs: widget.champs,
+        numericFieldsWithUnit: _numericFieldsWithUnit,
+        natureReseauOptions: _natureReseauOptions,
+        sectionCableOptions: _sectionCableOptions,
+        modeOptions: _modeOptions, ouiNonOptions: _ouiNonOptions,
       ),
-    );
-
+    ));
     if (result != null && result is Map<String, String>) {
       setState(() => _isSaving = true);
-      
-      final newItem = InstallationItem(data: result);
       final success = await HiveService.addInstallationItemToSection(
-        missionId: widget.mission.id,
-        section: widget.sectionKey,
-        item: newItem,
-      );
-      
+        missionId: widget.mission.id, section: widget.sectionKey,
+        item: InstallationItem(data: result));
       if (success) {
         await _loadData();
         _checkAndNotifyComplete();
-        
         if (mounted) {
-          // ✅ Dialogue avec CONTINUER / TERMINER
           final shouldContinue = await showDialog<bool>(
-            context: context,
-            barrierDismissible: false,
-            builder: (dialogContext) => AlertDialog(
+            context: context, barrierDismissible: false,
+            builder: (ctx) => AlertDialog(
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               contentPadding: const EdgeInsets.all(20),
-              title: const Row(
-                children: [
-                  Icon(Icons.check_circle, color: Colors.green, size: 28),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Enregistrement réussi',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
-              ),
-              content: const Text(
-                'Voulez-vous continuer à ajouter des éléments ou terminer ?',
-                style: TextStyle(fontSize: 15),
-              ),
+              title: const Row(children: [
+                Icon(Icons.check_circle, color: Colors.green, size: 28), SizedBox(width: 12),
+                Expanded(child: Text('Enregistrement réussi', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold))),
+              ]),
+              content: const Text('Voulez-vous continuer à ajouter ou terminer ?'),
               actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(dialogContext, true),
-                  child: const Text('CONTINUER', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
+                TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('CONTINUER', style: TextStyle(fontWeight: FontWeight.bold))),
                 ElevatedButton(
-                  onPressed: () => Navigator.pop(dialogContext, false),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
+                  onPressed: () => Navigator.pop(ctx, false),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppTheme.primaryBlue, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10))),
                   child: const Text('TERMINER', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),
           );
-
-          if (shouldContinue == true) {
-            // CONTINUER : rouvrir l'écran d'ajout
-            _addItem();
-          } else {
-            // TERMINER : passer à la section suivante
-            widget.onTerminate();
-          }
+          if (shouldContinue == true) { _addItem(); } else { widget.onTerminate(); }
         }
       }
-      
       setState(() => _isSaving = false);
     }
   }
 
   Future<void> _editItem(int index) async {
     final item = _items[index];
-    
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => _AddEditItemScreen(
-          title: widget.title,
-          champs: widget.champs,
-          initialData: item.data,
-          numericFieldsWithUnit: _numericFieldsWithUnit,
-          typeCelluleOptions: _typeCelluleOptions,
-          natureReseauOptions: _natureReseauOptions,
-          sectionCableOptions: _sectionCableOptions,
-          modeOptions: _modeOptions,
-          ouiNonOptions: _ouiNonOptions,
-        ),
+    final result = await Navigator.push(context, MaterialPageRoute(
+      builder: (context) => _AddEditItemScreen(
+        title: widget.title, champs: widget.champs, initialData: item.data,
+        numericFieldsWithUnit: _numericFieldsWithUnit,
+        natureReseauOptions: _natureReseauOptions,
+        sectionCableOptions: _sectionCableOptions,
+        modeOptions: _modeOptions, ouiNonOptions: _ouiNonOptions,
       ),
-    );
-
+    ));
     if (result != null && result is Map<String, String>) {
       setState(() => _isSaving = true);
-      
-      final updatedItem = InstallationItem(data: result, photoPaths: item.photoPaths);
       final success = await HiveService.updateInstallationItemInSection(
-        missionId: widget.mission.id,
-        section: widget.sectionKey,
-        index: index,
-        item: updatedItem,
-      );
-      
+        missionId: widget.mission.id, section: widget.sectionKey, index: index,
+        item: InstallationItem(data: result, photoPaths: item.photoPaths));
       if (success) {
-        await _loadData();
-        _checkAndNotifyComplete();
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Modifié avec succès'), backgroundColor: Colors.green, duration: Duration(milliseconds: 700)),
-          );
-        }
+        await _loadData(); _checkAndNotifyComplete();
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Modifié avec succès'), backgroundColor: Colors.green, duration: Duration(milliseconds: 700)));
       }
-      
       setState(() => _isSaving = false);
     }
   }
 
   Future<void> _deleteItem(int index) async {
-    final confirm = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Supprimer'),
-        content: const Text('Voulez-vous vraiment supprimer cet élément ?'),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Annuler')),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Supprimer'),
-          ),
-        ],
-      ),
-    );
-    
+    final confirm = await showDialog<bool>(context: context, builder: (ctx) => AlertDialog(
+      title: const Text('Supprimer'),
+      content: const Text('Voulez-vous vraiment supprimer cet élément ?'),
+      actions: [
+        TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+        ElevatedButton(onPressed: () => Navigator.pop(ctx, true), style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('Supprimer')),
+      ],
+    ));
     if (confirm == true) {
       setState(() => _isSaving = true);
-      
       final success = await HiveService.removeInstallationItemFromSection(
-        missionId: widget.mission.id,
-        section: widget.sectionKey,
-        index: index,
-      );
-      
+        missionId: widget.mission.id, section: widget.sectionKey, index: index);
       if (success) {
-        await _loadData();
-        _checkAndNotifyComplete();
-        
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Supprimé avec succès'), backgroundColor: Colors.green, duration: Duration(milliseconds: 500)),
-          );
-        }
+        await _loadData(); _checkAndNotifyComplete();
+        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Supprimé'), backgroundColor: Colors.green, duration: Duration(milliseconds: 500)));
       }
-      
       setState(() => _isSaving = false);
     }
   }
 
   void _checkAndNotifyComplete() {
-    if (_items.isNotEmpty && !widget.isComplete) {
-      widget.onComplete(widget.sectionKey);
-    }
+    if (_items.isNotEmpty && !widget.isComplete) widget.onComplete(widget.sectionKey);
   }
 
   @override
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
-    
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    return Stack(children: [
+      _items.isEmpty ? _buildEmpty(isSmallScreen) : _buildList(isSmallScreen),
+      Positioned(
+        bottom: isSmallScreen ? 16 : 20, right: isSmallScreen ? 16 : 20,
+        child: FloatingActionButton.extended(
+          onPressed: _isSaving ? null : _addItem,
+          backgroundColor: AppTheme.primaryBlue,
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: Text(_items.isEmpty ? 'Ajouter' : 'Ajouter un autre',
+            style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 13 : 14)),
+        ),
+      ),
+    ]);
+  }
 
-    return Stack(
-      children: [
-        Column(
-          children: [
-            Expanded(
-              child: _items.isEmpty
-                  ? _buildEmptyState(isSmallScreen)
-                  : ListView.builder(
-                      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                      itemCount: _items.length,
-                      itemBuilder: (context, index) {
-                        return _buildItemCard(_items[index], index, isSmallScreen);
-                      },
-                    ),
+  Widget _buildEmpty(bool isSmallScreen) => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+    Icon(Icons.add_circle_outline, size: isSmallScreen ? 56 : 64, color: Colors.grey.shade300),
+    const SizedBox(height: 16),
+    Text('Aucun élément', style: TextStyle(fontSize: isSmallScreen ? 16 : 18, fontWeight: FontWeight.w600, color: Colors.grey.shade500)),
+    const SizedBox(height: 8),
+    Text('Appuyez sur le bouton pour ajouter', style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.grey.shade400)),
+  ]));
+
+  Widget _buildList(bool isSmallScreen) => ListView.builder(
+    padding: EdgeInsets.fromLTRB(isSmallScreen ? 16 : 20, isSmallScreen ? 16 : 20, isSmallScreen ? 16 : 20, 90),
+    itemCount: _items.length,
+    itemBuilder: (ctx, i) => _buildCard(_items[i], i, isSmallScreen),
+  );
+
+  Widget _buildCard(InstallationItem item, int index, bool isSmallScreen) => Container(
+    margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
+    decoration: BoxDecoration(
+      color: Colors.white, borderRadius: BorderRadius.circular(14),
+      boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 8, offset: const Offset(0, 2))],
+      border: Border.all(color: Colors.grey.shade100),
+    ),
+    child: InkWell(
+      onTap: () => _editItem(index), borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(children: [
+            Container(
+              width: isSmallScreen ? 32 : 36, height: isSmallScreen ? 32 : 36,
+              decoration: BoxDecoration(gradient: LinearGradient(colors: [AppTheme.primaryBlue, AppTheme.primaryBlue.withOpacity(0.7)]), borderRadius: BorderRadius.circular(8)),
+              child: Center(child: Text('${index + 1}', style: TextStyle(fontSize: isSmallScreen ? 13 : 15, fontWeight: FontWeight.bold, color: Colors.white))),
             ),
-          ],
-        ),
-        
-        Positioned(
-          bottom: 16,
-          right: 16,
-          child: FloatingActionButton(
-            onPressed: _isSaving ? null : _addItem,
-            backgroundColor: Colors.green,
-            child: _isSaving 
-                ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Icon(Icons.add),
+            const SizedBox(width: 10),
+            Expanded(child: Text(widget.title, style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.w600, color: Colors.grey.shade800), overflow: TextOverflow.ellipsis)),
+            IconButton(icon: Icon(Icons.edit_outlined, color: AppTheme.primaryBlue, size: isSmallScreen ? 18 : 20), onPressed: () => _editItem(index), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+            const SizedBox(width: 8),
+            IconButton(icon: Icon(Icons.delete_outline, color: Colors.red.shade400, size: isSmallScreen ? 18 : 20), onPressed: () => _deleteItem(index), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+          ]),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8, runSpacing: 6,
+            children: widget.champs.where((c) => item.data.containsKey(c) && item.data[c]!.isNotEmpty).map((champ) {
+              final value = item.data[champ]!;
+              final unit = _numericFieldsWithUnit[champ] ?? '';
+              return Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                decoration: BoxDecoration(color: AppTheme.primaryBlue.withOpacity(0.06), borderRadius: BorderRadius.circular(20), border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.15))),
+                child: Text(unit.isNotEmpty ? '$value $unit' : value,
+                  style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: AppTheme.primaryBlue, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis),
+              );
+            }).toList(),
           ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildEmptyState(bool isSmallScreen) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.add_circle_outline, size: isSmallScreen ? 60 : 80, color: Colors.grey.shade400),
-          const SizedBox(height: 16),
-          Text(
-            'Aucune donnée',
-            style: TextStyle(fontSize: isSmallScreen ? 16 : 18, color: Colors.grey.shade600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Appuyez sur le bouton + pour ajouter',
-            style: TextStyle(fontSize: isSmallScreen ? 12 : 14, color: Colors.grey.shade500),
-          ),
-        ],
+        ]),
       ),
-    );
-  }
-
-  Widget _buildItemCard(InstallationItem item, int index, bool isSmallScreen) {
-    return Card(
-      margin: EdgeInsets.only(bottom: isSmallScreen ? 10 : 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12)),
-      child: InkWell(
-        onTap: () => _editItem(index),
-        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-        child: Padding(
-          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: isSmallScreen ? 28 : 32,
-                    height: isSmallScreen ? 28 : 32,
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '${index + 1}',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 12 : 14,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryBlue,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      widget.title,
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 13 : 14,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade700,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.delete_outline, color: Colors.red, size: isSmallScreen ? 18 : 20),
-                    onPressed: () => _deleteItem(index),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              
-              ...widget.champs.where((champ) => item.data.containsKey(champ) && item.data[champ]!.isNotEmpty).map((champ) {
-                final value = item.data[champ]!;
-                return Padding(
-                  padding: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: isSmallScreen ? 100 : 120,
-                        child: Text(
-                          '$champ:',
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 11 : 12,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade600,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          value,
-                          style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.black87),
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 2,
-                          softWrap: true,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }).toList(),
-              
-              if (item.photoPaths.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Wrap(
-                  spacing: 4,
-                  children: item.photoPaths.map((path) => 
-                    Container(
-                      padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade200,
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.photo, size: isSmallScreen ? 10 : 12, color: Colors.grey.shade600),
-                          const SizedBox(width: 2),
-                          Text(
-                            'Photo',
-                            style: TextStyle(fontSize: isSmallScreen ? 9 : 10, color: Colors.grey.shade600),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ).toList(),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+    ),
+  );
 }
 
 // ============================================================
-// ÉCRAN D'AJOUT/MODIFICATION D'UN ÉLÉMENT (MODIFIÉ)
+// ÉCRAN D'AJOUT / MODIFICATION — DESIGN MODERNE
 // ============================================================
 class _AddEditItemScreen extends StatefulWidget {
   final String title;
   final List<String> champs;
   final Map<String, String>? initialData;
   final Map<String, String> numericFieldsWithUnit;
-  final List<String> typeCelluleOptions;
   final List<String> natureReseauOptions;
   final List<String> sectionCableOptions;
   final List<String> modeOptions;
   final List<String> ouiNonOptions;
 
   const _AddEditItemScreen({
-    required this.title,
-    required this.champs,
-    this.initialData,
-    required this.numericFieldsWithUnit,
-    required this.typeCelluleOptions,
-    required this.natureReseauOptions,
-    required this.sectionCableOptions,
-    required this.modeOptions,
-    required this.ouiNonOptions,
+    required this.title, required this.champs, this.initialData,
+    required this.numericFieldsWithUnit, required this.natureReseauOptions,
+    required this.sectionCableOptions, required this.modeOptions, required this.ouiNonOptions,
   });
 
   @override
@@ -521,325 +345,164 @@ class _AddEditItemScreen extends StatefulWidget {
 class _AddEditItemScreenState extends State<_AddEditItemScreen> {
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, String?> _selectedValues = {};
-  
-  // Pour les années
-  final Map<String, String?> _anneeFabrication = {};
-  final Map<String, String?> _anneeInstallation = {};
-  
-  // Pour la sélection de section de câble (dropdown)
-  String? _selectedSectionCable;
+  String? _selectedGamme;
 
   @override
   void initState() {
     super.initState();
+    _selectedGamme = widget.initialData?['Gamme De Cellule'];
     for (var champ in widget.champs) {
-      // Pour les champs avec dropdown spécifiques
-      if (_isSectionCableField(champ)) {
-        _selectedSectionCable = widget.initialData?[champ] ?? '';
-        _selectedValues[champ] = widget.initialData?[champ] ?? '';
-      }
-      // Pour les champs avec dropdown généraux
-      else if (_isDropdownField(champ)) {
-        _selectedValues[champ] = widget.initialData?[champ] ?? '';
-      }
-      // Pour les champs texte
-      else {
+      if (_isGammeField(champ)) {
+        // handled via _selectedGamme
+      } else if (_isDropdownField(champ)) {
+        _selectedValues[champ] = widget.initialData?[champ];
+      } else {
         _controllers[champ] = TextEditingController(text: widget.initialData?[champ] ?? '');
-      }
-      
-      if (champ == 'Annee De Fabrication') {
-        _anneeFabrication[champ] = widget.initialData?[champ] ?? '';
-      }
-      if (champ == 'Annee D\'Installation') {
-        _anneeInstallation[champ] = widget.initialData?[champ] ?? '';
       }
     }
   }
 
   @override
-  void dispose() {
-    for (var controller in _controllers.values) {
-      controller.dispose();
-    }
-    super.dispose();
+  void dispose() { for (var c in _controllers.values) c.dispose(); super.dispose(); }
+
+  bool _isGammeField(String c) => c == 'Gamme De Cellule';
+  bool _isTypeCelluleField(String c) => c == 'Type De Cellule';
+  bool _isSectionCableField(String c) => c == 'Section Du Cable';
+  bool _isNatureReseauField(String c) => c == 'Nature Du Reseau';
+  bool _isModeField(String c) => c == 'Mode';
+  bool _isOuiNonField(String c) => c == 'Cuve De Retention' || c == 'Indicateur De Niveau' || c == 'Mise A La Terre';
+  bool _isAnneeField(String c) => c == 'Annee De Fabrication' || c == "Annee D'Installation";
+  bool _isDropdownField(String c) => _isGammeField(c) || _isTypeCelluleField(c) || _isSectionCableField(c) || _isNatureReseauField(c) || _isModeField(c) || _isOuiNonField(c) || _isAnneeField(c);
+
+  List<String> _getAnneeOptions() {
+    final y = DateTime.now().year;
+    return List.generate(y - 1900 + 1, (i) => (y - i).toString());
   }
 
-  // Détection des champs dropdown
-  bool _isSectionCableField(String champ) {
-    return champ == 'Section Du Cable';
+  List<String> _optionsFor(String champ) {
+    if (_isTypeCelluleField(champ)) return CelluleGammes.getTypesForGamme(_selectedGamme);
+    if (_isSectionCableField(champ)) return widget.sectionCableOptions;
+    if (_isNatureReseauField(champ)) return widget.natureReseauOptions;
+    if (_isModeField(champ)) return widget.modeOptions;
+    if (_isOuiNonField(champ)) return widget.ouiNonOptions;
+    if (_isAnneeField(champ)) return _getAnneeOptions();
+    return [];
   }
 
-  bool _isTypeCelluleField(String champ) {
-    return champ == 'Type De Cellule';
-  }
-
-  bool _isNatureReseauField(String champ) {
-    return champ == 'Nature Du Reseau';
-  }
-
-  bool _isModeField(String champ) {
-    return champ == 'Mode';
-  }
-
-  bool _isOuiNonField(String champ) {
-    return champ == 'Cuve De Retention' || 
-           champ == 'Indicateur De Niveau' || 
-           champ == 'Mise A La Terre';
-  }
-
-  bool _isDropdownField(String champ) {
-    return _isSectionCableField(champ) ||
-           _isTypeCelluleField(champ) ||
-           _isNatureReseauField(champ) ||
-           _isModeField(champ) ||
-           _isOuiNonField(champ);
-  }
-
-  // Vérification qu'AU MOINS un champ est rempli
   bool _hasAtLeastOneFieldFilled() {
-    for (var champ in widget.champs) {
-      if (_isSectionCableField(champ)) {
-        if (_selectedSectionCable != null && _selectedSectionCable!.isNotEmpty) {
-          return true;
-        }
-      } else if (_isTypeCelluleField(champ)) {
-        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
-          return true;
-        }
-      } else if (_isNatureReseauField(champ)) {
-        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
-          return true;
-        }
-      } else if (_isModeField(champ)) {
-        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
-          return true;
-        }
-      } else if (_isOuiNonField(champ)) {
-        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
-          return true;
-        }
-      } else if (champ == 'Annee De Fabrication' || champ == 'Annee D\'Installation') {
-        final value = champ == 'Annee De Fabrication' 
-            ? _anneeFabrication[champ]
-            : _anneeInstallation[champ];
-        if (value != null && value.isNotEmpty) {
-          return true;
-        }
-      } else {
-        final value = _controllers[champ]?.text.trim() ?? '';
-        if (value.isNotEmpty) {
-          return true;
-        }
-      }
+    if (_selectedGamme != null && _selectedGamme!.isNotEmpty) return true;
+    for (var c in widget.champs) {
+      if (_isGammeField(c)) continue;
+      if (_isDropdownField(c)) { if (_selectedValues[c] != null && _selectedValues[c]!.isNotEmpty) return true; }
+      else { if (_controllers[c]?.text.trim().isNotEmpty == true) return true; }
     }
     return false;
   }
 
   void _save() {
     if (!_hasAtLeastOneFieldFilled()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez remplir au moins un champ'),
-          backgroundColor: Colors.orange,
-        ),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Veuillez remplir au moins un champ'), backgroundColor: Colors.orange));
       return;
     }
-
     final result = <String, String>{};
     for (var champ in widget.champs) {
-      if (_isSectionCableField(champ)) {
-        if (_selectedSectionCable != null && _selectedSectionCable!.isNotEmpty) {
-          result[champ] = _selectedSectionCable!;
-        }
-      } else if (_isTypeCelluleField(champ)) {
-        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
-          result[champ] = _selectedValues[champ]!;
-        }
-      } else if (_isNatureReseauField(champ)) {
-        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
-          result[champ] = _selectedValues[champ]!;
-        }
-      } else if (_isModeField(champ)) {
-        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
-          result[champ] = _selectedValues[champ]!;
-        }
-      } else if (_isOuiNonField(champ)) {
-        if (_selectedValues[champ] != null && _selectedValues[champ]!.isNotEmpty) {
-          result[champ] = _selectedValues[champ]!;
-        }
-      } else if (champ == 'Annee De Fabrication') {
-        if (_anneeFabrication[champ] != null && _anneeFabrication[champ]!.isNotEmpty) {
-          result[champ] = _anneeFabrication[champ]!;
-        }
-      } else if (champ == 'Annee D\'Installation') {
-        if (_anneeInstallation[champ] != null && _anneeInstallation[champ]!.isNotEmpty) {
-          result[champ] = _anneeInstallation[champ]!;
-        }
+      if (_isGammeField(champ)) {
+        if (_selectedGamme != null && _selectedGamme!.isNotEmpty) result[champ] = _selectedGamme!;
+      } else if (_isDropdownField(champ)) {
+        final v = _selectedValues[champ]; if (v != null && v.isNotEmpty) result[champ] = v;
       } else {
-        final value = _controllers[champ]?.text.trim() ?? '';
-        if (value.isNotEmpty) {
-          result[champ] = value;
-        }
+        final v = _controllers[champ]?.text.trim() ?? ''; if (v.isNotEmpty) result[champ] = v;
       }
     }
-
     Navigator.pop(context, result);
   }
 
-  // Widget pour champ numérique avec unité
-  Widget _buildNumericField(String champ, TextEditingController controller, String unit) {
-    final isRequired = false; // Plus aucun champ obligatoire
-    
+  // ── Dropdown moderne avec option vide ──
+  Widget _buildModernDropdown(BuildContext context, String champ, {
+    required String? currentValue, required List<String> options,
+    required ValueChanged<String?> onChanged, String? unitPrefixLabel,
+  }) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    final hasValue = currentValue != null && currentValue.isNotEmpty;
+    final accent = AppTheme.primaryBlue;
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      child: TextFormField(
-        controller: controller,
-        keyboardType: TextInputType.number,
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white, borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: hasValue ? accent.withOpacity(0.5) : Colors.grey.shade300, width: hasValue ? 1.5 : 1),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2))],
+      ),
+      child: DropdownButtonFormField<String>(
+        value: hasValue ? currentValue : null,
+        isExpanded: true,
+        iconSize: 0,
+        dropdownColor: Colors.white,
         decoration: InputDecoration(
-          labelText: isRequired ? '$champ *' : champ,
-          suffixText: unit.isNotEmpty ? unit : null,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          labelText: champ,
+          labelStyle: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: hasValue ? accent : Colors.grey.shade500, fontWeight: hasValue ? FontWeight.w500 : FontWeight.normal),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 12 : 14),
+          suffixIcon: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (hasValue) GestureDetector(
+              onTap: () => onChanged(null),
+              child: Padding(padding: const EdgeInsets.only(right: 4), child: Icon(Icons.clear, size: 16, color: Colors.grey.shade400)),
+            ),
+            Padding(padding: const EdgeInsets.only(right: 12), child: Icon(Icons.keyboard_arrow_down_rounded, color: hasValue ? accent : Colors.grey.shade400, size: 22)),
+          ]),
+          prefixIcon: unitPrefixLabel != null
+              ? Padding(padding: const EdgeInsets.only(left: 12, right: 4, top: 16),
+                  child: Text(unitPrefixLabel, style: TextStyle(fontSize: 11, color: Colors.grey.shade500, fontWeight: FontWeight.w600)))
+              : null,
         ),
+        hint: Text('Sélectionnez...', style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.grey.shade400)),
+        items: [
+          DropdownMenuItem<String>(value: '',
+            child: Row(children: [
+              Icon(Icons.remove_circle_outline, size: 14, color: Colors.grey.shade400), const SizedBox(width: 8),
+              Text('— Aucun —', style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.grey.shade500, fontStyle: FontStyle.italic)),
+            ])),
+          ...options.map((opt) => DropdownMenuItem<String>(value: opt,
+            child: Text(opt, style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.grey.shade800), overflow: TextOverflow.ellipsis))),
+        ],
+        onChanged: (v) => onChanged(v == '' ? null : v),
+        selectedItemBuilder: (ctx) => [
+          Text('—', style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.grey.shade400)),
+          ...options.map((opt) => Text(opt, style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.grey.shade800, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis)),
+        ],
       ),
     );
   }
 
-  Widget _buildTextField(String champ, TextEditingController controller) {
-    final isNumeric = widget.numericFieldsWithUnit.containsKey(champ);
-    final unit = widget.numericFieldsWithUnit[champ] ?? '';
-    
-    if (isNumeric) {
-      return _buildNumericField(champ, controller, unit);
-    }
-    
+  Widget _buildTextField(BuildContext context, String champ, TextEditingController controller) {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    final unit = widget.numericFieldsWithUnit[champ];
+    final isNumeric = unit != null;
+    final hasValue = controller.text.isNotEmpty;
     return Container(
-      margin: const EdgeInsets.only(bottom: 14),
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white, borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: hasValue ? AppTheme.primaryBlue.withOpacity(0.4) : Colors.grey.shade300, width: hasValue ? 1.5 : 1),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2))],
+      ),
       child: TextFormField(
         controller: controller,
-        decoration: InputDecoration(
-          labelText: champ,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        ),
+        keyboardType: isNumeric ? const TextInputType.numberWithOptions(decimal: true) : TextInputType.text,
         maxLines: champ == 'Observations' ? 3 : 1,
-      ),
-    );
-  }
-
-  // Widget pour Section de câble (dropdown avec unité à gauche)
-  Widget _buildSectionCableField(String champ) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      child: DropdownButtonFormField<String>(
-        value: _selectedSectionCable?.isNotEmpty == true ? _selectedSectionCable : null,
-        isExpanded: true,
-        hint: Row(
-          children: [
-            Text(
-              'mm²',
-              style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(width: 4),
-            Text(
-              'Sélectionnez',
-              style: TextStyle(color: Colors.grey.shade500),
-            ),
-          ],
-        ),
+        onChanged: (_) => setState(() {}),
+        style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.grey.shade800),
         decoration: InputDecoration(
           labelText: champ,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          labelStyle: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: hasValue ? AppTheme.primaryBlue : Colors.grey.shade500),
+          border: InputBorder.none,
+          contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: isSmallScreen ? 12 : 14),
+          suffixIcon: (unit != null && unit.isNotEmpty)
+              ? Padding(padding: const EdgeInsets.only(right: 14, top: 16),
+                  child: Text(unit, style: TextStyle(fontSize: 12, color: Colors.grey.shade500, fontWeight: FontWeight.w600)))
+              : null,
+          suffixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         ),
-        items: widget.sectionCableOptions.map((option) {
-          return DropdownMenuItem(
-            value: option,
-            child: Row(
-              children: [
-                Text(
-                  'mm²',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600, fontWeight: FontWeight.w500),
-                ),
-                const SizedBox(width: 4),
-                Text(option),
-              ],
-            ),
-          );
-        }).toList(),
-        onChanged: (value) {
-          setState(() {
-            _selectedSectionCable = value;
-          });
-        },
-      ),
-    );
-  }
-
-  Widget _buildDropdownField(String champ, List<String> options) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      child: DropdownButtonFormField<String>(
-        value: _selectedValues[champ]?.isNotEmpty == true ? _selectedValues[champ] : null,
-        isExpanded: true,
-        hint: Text('Sélectionnez $champ', style: TextStyle(color: Colors.grey.shade500)),
-        decoration: InputDecoration(
-          labelText: champ,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        ),
-        items: options.map((option) {
-          return DropdownMenuItem(
-            value: option,
-            child: Text(option, overflow: TextOverflow.ellipsis),
-          );
-        }).toList(),
-        onChanged: (value) {
-          setState(() {
-            _selectedValues[champ] = value;
-          });
-        },
-      ),
-    );
-  }
-
-  // Générer les années (1900 à année actuelle)
-  List<String> _getAnneeOptions() {
-    final currentYear = DateTime.now().year;
-    return List.generate(currentYear - 1900 + 1, (i) => (currentYear - i).toString());
-  }
-
-  Widget _buildAnneeField(String champ, bool isFabrication) {
-    final currentValue = isFabrication 
-        ? _anneeFabrication[champ] 
-        : _anneeInstallation[champ];
-    final options = _getAnneeOptions();
-    
-    return Container(
-      margin: const EdgeInsets.only(bottom: 14),
-      child: DropdownButtonFormField<String>(
-        value: currentValue?.isNotEmpty == true ? currentValue : null,
-        isExpanded: true,
-        hint: Text('Sélectionnez $champ', style: TextStyle(color: Colors.grey.shade500)),
-        decoration: InputDecoration(
-          labelText: champ,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-        ),
-        items: options.map((year) {
-          return DropdownMenuItem(
-            value: year,
-            child: Text(year),
-          );
-        }).toList(),
-        onChanged: (value) {
-          setState(() {
-            if (isFabrication) {
-              _anneeFabrication[champ] = value;
-            } else {
-              _anneeInstallation[champ] = value;
-            }
-          });
-        },
       ),
     );
   }
@@ -847,19 +510,24 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
   @override
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
-
     return Scaffold(
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: Text(
-          widget.initialData != null ? 'Modifier' : 'Ajouter',
-          style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
-        ),
-        backgroundColor: AppTheme.primaryBlue,
-        foregroundColor: Colors.white,
+        title: Text(widget.initialData != null ? 'Modifier' : 'Ajouter',
+          style: TextStyle(fontSize: isSmallScreen ? 16 : 18, fontWeight: FontWeight.w600)),
+        backgroundColor: AppTheme.primaryBlue, foregroundColor: Colors.white, elevation: 0,
         actions: [
-          TextButton(
-            onPressed: _save,
-            child: const Text('Enregistrer', style: TextStyle(color: Colors.white)),
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+            child: ElevatedButton.icon(
+              onPressed: _save,
+              icon: const Icon(Icons.check, size: 18),
+              label: const Text('Enregistrer'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white, foregroundColor: AppTheme.primaryBlue,
+                padding: const EdgeInsets.symmetric(horizontal: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), elevation: 0),
+            ),
           ),
         ],
       ),
@@ -867,65 +535,94 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
         onTap: () => FocusScope.of(context).unfocus(),
         child: SingleChildScrollView(
           padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-          child: Column(
-            children: [
-              Container(
-                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                decoration: BoxDecoration(
-                  color: AppTheme.primaryBlue.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.info_outline, color: AppTheme.primaryBlue, size: isSmallScreen ? 20 : 24),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Au moins un champ doit être rempli (aucun champ n\'est obligatoire)',
-                        style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.grey.shade600),
-                      ),
-                    ),
-                  ],
-                ),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            // Info header
+            Container(
+              margin: const EdgeInsets.only(bottom: 20),
+              padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [AppTheme.primaryBlue.withOpacity(0.08), AppTheme.primaryBlue.withOpacity(0.03)]),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.15)),
               ),
-              const SizedBox(height: 20),
-              
-              ...widget.champs.map((champ) {
-                // Section de câble (dropdown avec mm²)
-                if (_isSectionCableField(champ)) {
-                  return _buildSectionCableField(champ);
-                }
-                // Type de cellule (dropdown)
-                else if (_isTypeCelluleField(champ)) {
-                  return _buildDropdownField(champ, widget.typeCelluleOptions);
-                }
-                // Nature du réseau (dropdown)
-                else if (_isNatureReseauField(champ)) {
-                  return _buildDropdownField(champ, widget.natureReseauOptions);
-                }
-                // Mode (dropdown)
-                else if (_isModeField(champ)) {
-                  return _buildDropdownField(champ, widget.modeOptions);
-                }
-                // Cuve de rétention, Indicateur de niveau, Mise à la terre (Oui/Non)
-                else if (_isOuiNonField(champ)) {
-                  return _buildDropdownField(champ, widget.ouiNonOptions);
-                }
-                // Année de fabrication
-                else if (champ == 'Annee De Fabrication') {
-                  return _buildAnneeField(champ, true);
-                }
-                // Année d'installation
-                else if (champ == 'Annee D\'Installation') {
-                  return _buildAnneeField(champ, false);
-                }
-                // Champ texte standard (avec support numérique si nécessaire)
-                else {
-                  return _buildTextField(champ, _controllers[champ]!);
-                }
-              }),
-            ],
-          ),
+              child: Row(children: [
+                Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: AppTheme.primaryBlue.withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+                  child: Icon(Icons.info_outline, color: AppTheme.primaryBlue, size: isSmallScreen ? 18 : 20)),
+                const SizedBox(width: 12),
+                Expanded(child: Text('Tous les champs sont optionnels.',
+                  style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: AppTheme.primaryBlue.withOpacity(0.8)))),
+              ]),
+            ),
+
+            // Champs
+            ...widget.champs.map((champ) {
+              // Gamme → contrôle le type de cellule
+              if (_isGammeField(champ)) {
+                return _buildModernDropdown(context, champ,
+                  currentValue: _selectedGamme, options: CelluleGammes.gammes,
+                  onChanged: (v) => setState(() {
+                    _selectedGamme = v;
+                    final curType = _selectedValues['Type De Cellule'];
+                    if (curType != null && !CelluleGammes.getTypesForGamme(v).contains(curType)) {
+                      _selectedValues['Type De Cellule'] = null;
+                    }
+                  }),
+                );
+              }
+
+              // Type de cellule → dépend de la gamme
+              if (_isTypeCelluleField(champ)) {
+                final types = CelluleGammes.getTypesForGamme(_selectedGamme);
+                final locked = _selectedGamme == null || _selectedGamme!.isEmpty;
+                return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  if (locked) Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.orange.shade200)),
+                    child: Row(children: [
+                      Icon(Icons.info_outline, size: 14, color: Colors.orange.shade700), const SizedBox(width: 8),
+                      Text("Sélectionnez d'abord une gamme de cellule", style: TextStyle(fontSize: 12, color: Colors.orange.shade700)),
+                    ]),
+                  ),
+                  IgnorePointer(
+                    ignoring: locked,
+                    child: Opacity(opacity: locked ? 0.4 : 1.0,
+                      child: _buildModernDropdown(context, champ, currentValue: _selectedValues[champ], options: types,
+                        onChanged: (v) => setState(() => _selectedValues[champ] = v))),
+                  ),
+                ]);
+              }
+
+              // Section de câble avec unité à gauche (préfixe)
+              if (_isSectionCableField(champ)) {
+                return _buildModernDropdown(context, champ, currentValue: _selectedValues[champ],
+                  options: widget.sectionCableOptions, unitPrefixLabel: 'mm²',
+                  onChanged: (v) => setState(() => _selectedValues[champ] = v));
+              }
+
+              // Dropdowns standard
+              if (_isDropdownField(champ)) {
+                return _buildModernDropdown(context, champ, currentValue: _selectedValues[champ],
+                  options: _optionsFor(champ), onChanged: (v) => setState(() => _selectedValues[champ] = v));
+              }
+
+              // TextField
+              return _buildTextField(context, champ, _controllers[champ]!);
+            }),
+
+            const SizedBox(height: 12),
+            SizedBox(width: double.infinity, child: ElevatedButton.icon(
+              onPressed: _save,
+              icon: const Icon(Icons.save_outlined),
+              label: Text(widget.initialData != null ? 'Mettre à jour' : 'Enregistrer',
+                style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue, foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 14 : 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
+            )),
+            SizedBox(height: isSmallScreen ? 16 : 20),
+          ]),
         ),
       ),
     );

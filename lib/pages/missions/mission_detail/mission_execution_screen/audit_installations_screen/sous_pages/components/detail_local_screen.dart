@@ -856,7 +856,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       await _refreshLocal();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Coffret ajouté avec succès')),
+          const SnackBar(content: Text('Équipement ajouté avec succès')),
         );
       }
     }
@@ -928,7 +928,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
     }
   }
 
-  // ===== NOUVEAU : Vérifier si un coffret est complet =====
+  // ===== NOUVEAU : Vérifier si un Équipement est complet =====
   bool _isCoffretComplet(CoffretArmoire coffret) {
     if (coffret.nom.isEmpty) return false;
     if (coffret.type.isEmpty) return false;
@@ -1008,7 +1008,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer ce coffret ?'),
+        content: Text('Voulez-vous vraiment supprimer ce Équipement ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -1022,7 +1022,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
               });
               await _sauvegarderLocal();
               ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Coffret supprimé')),
+                SnackBar(content: Text('Équipement supprimé')),
               );
             },
             child: Text('Supprimer', style: TextStyle(color: Colors.red)),
