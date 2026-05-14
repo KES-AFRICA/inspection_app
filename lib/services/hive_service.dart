@@ -1270,6 +1270,53 @@ static CoffretArmoire? findCoffretByQrCode(String missionId, String qrCode) {
     return null;
   }
 }
+
+/// Calcule le prochain numéro d'équipement pour une mission.
+///
+/// Stratégie :
+/// - Parcourt TOUS les coffrets de la mission (locaux MT, zones MT, zones BT, locaux BT).
+/// - Collecte uniquement les [numeroEquipement] qui sont des entiers purs.
+/// - Retourne max + 1, ou 1 si aucun entier trouvé.
+/// - Les valeurs textuelles existantes sont totalement ignorées.
+static int getNextNumeroEquipement(String missionId) {
+  final audit = Hive.box<AuditInstallationsElectriques>(_auditBox)
+      .values
+      .firstWhere((a) => a.missionId == missionId,
+          orElse: () => AuditInstallationsElectriques.create(missionId));
+
+  int maxNumero = 0;
+  bool foundAny = false;
+
+  void checkCoffret(CoffretArmoire c) {
+    final n = int.tryParse(c.numeroEquipement?.trim() ?? '');
+    if (n != null) {
+      foundAny = true;
+      if (n > maxNumero) maxNumero = n;
+    }
+  }
+
+  // Locaux MT directs
+  for (final local in audit.moyenneTensionLocaux) {
+    for (final c in local.coffrets) checkCoffret(c);
+  }
+  // Zones MT → coffrets directs + coffrets dans les locaux
+  for (final zone in audit.moyenneTensionZones) {
+    for (final c in zone.coffrets) checkCoffret(c);
+    for (final local in zone.locaux) {
+      for (final c in local.coffrets) checkCoffret(c);
+    }
+  }
+  // Zones BT → coffrets directs + coffrets dans les locaux
+  for (final zone in audit.basseTensionZones) {
+    for (final c in zone.coffretsDirects) checkCoffret(c);
+    for (final local in zone.locaux) {
+      for (final c in local.coffrets) checkCoffret(c);
+    }
+  }
+
+  return foundAny ? maxNumero + 1 : 1;
+}
+
 // Vérifier si un QR code existe déjà
 static bool qrCodeExists(String missionId, String qrCode) {
   return findCoffretByQrCode(missionId, qrCode) != null;

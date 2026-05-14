@@ -1148,10 +1148,12 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
       final a = widget.alimentations[i];
       _controllers['alim${i}_pdc'] = TextEditingController(text: a.pdcKA);
       _controllers['alim${i}_calibre'] = TextEditingController(text: a.calibre);
+      _controllers['alim${i}_source'] = TextEditingController(text: a.source);
     }
     if (widget.protectionTete != null) {
       _controllers['prot_pdc'] = TextEditingController(text: widget.protectionTete!.pdcKA);
       _controllers['prot_calibre'] = TextEditingController(text: widget.protectionTete!.calibre);
+      _controllers['prot_source'] = TextEditingController(text: widget.protectionTete!.source);
     }
   }
 
@@ -1367,11 +1369,12 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           SizedBox(height: context.spacingS),
 
           if (title == 'ORIGINE DE LA SOURCE') ...[
-            _buildModernDropdown(
+            _buildModernTextField(
               context,
-              label: 'Source',
-              value: a.source,
-              items: _sourceOptions,
+              label: 'Source (ex: TGBT, Armoire RDC...)',
+              controller: isProtectionTete
+                  ? _controllers['prot_source']!
+                  : _controllers['alim${index}_source']!,
               onChanged: (v) => onChanged('source', v),
             ),
             SizedBox(height: context.spacingS),
@@ -1449,7 +1452,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
         border: Border.all(color: Colors.grey.shade300),
       ),
       child: DropdownButtonFormField<String>(
-        initialValue: value.isNotEmpty ? value : null,
+        value: value.isNotEmpty ? value : null,
         isExpanded: true,
         icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
         hint: Text(
@@ -1462,11 +1465,18 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
         ),
-        items: items.map((item) => DropdownMenuItem<String>(
-          value: item,
-          child: Text(item, style: TextStyle(fontSize: context.fontSizeS)),
-        )).toList(),
-        onChanged: (v) { if (v != null) onChanged(v); },
+        items: [
+          // Choix vide — permet d'annuler une sélection
+          DropdownMenuItem<String>(
+            value: '',
+            child: Text('— Aucun —', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500, fontStyle: FontStyle.italic)),
+          ),
+          ...items.map((item) => DropdownMenuItem<String>(
+            value: item,
+            child: Text(item, style: TextStyle(fontSize: context.fontSizeS)),
+          )),
+        ],
+        onChanged: (v) => onChanged(v ?? ''),
       ),
     );
   }
@@ -2536,8 +2546,9 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
       _chargerDonneesExistantes();
     } else {
       _initializeAlimentations();
-      _loadDraft;
-      // Si on a un QR code, charger le brouillon existant
+      // Préremplir le numéro d'équipement automatiquement
+      _autoFillNumeroEquipement();
+      // Si on a un QR code, charger le brouillon existant (peut écraser le numéro si un brouillon existe déjà)
       if (_draftQrCode != null && _draftQrCode!.isNotEmpty) {
         _loadDraftByQrCode(_draftQrCode!);
       }
@@ -2552,6 +2563,9 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
         _nomController.text = draft.nom;
         _numeroEquipementController.text = draft.numeroEquipement ?? '';
         _repereController.text = draft.repere ?? '';
+        if (_numeroEquipementController.text.trim().isEmpty) {
+          _autoFillNumeroEquipement();
+        }
         _selectedType = draft.type;
         _zoneAtex = draft.zoneAtex;
         _domaineTension = draft.domaineTension;
@@ -2611,6 +2625,9 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
         _nomController.text = draft.nom;
         _numeroEquipementController.text = draft.numeroEquipement ?? '';
         _repereController.text = draft.repere ?? '';
+        if (_numeroEquipementController.text.trim().isEmpty) {
+          _autoFillNumeroEquipement();
+        }
         _selectedType = draft.type;
         _zoneAtex = draft.zoneAtex;
         _domaineTension = draft.domaineTension;
@@ -2838,6 +2855,15 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     setState(() => _numeroEquipementValid = true); 
     _scheduleAutoSave();
   }
+  /// Prérempli le numéro d'équipement avec le prochain entier disponible,
+  /// uniquement si le champ est vide (ne jamais écraser une valeur existante).
+  void _autoFillNumeroEquipement() {
+    if (_numeroEquipementController.text.trim().isNotEmpty) return;
+    final next = HiveService.getNextNumeroEquipement(widget.mission.id);
+    _numeroEquipementController.text = next.toString();
+    _validateNumeroEquipement(next.toString());
+  }
+
   void _validateType(String? value){
     setState(() => _typeValid = value != null && value.isNotEmpty);
     _scheduleAutoSave();
