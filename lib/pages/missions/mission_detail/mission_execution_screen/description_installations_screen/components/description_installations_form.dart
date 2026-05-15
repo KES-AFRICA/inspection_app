@@ -209,8 +209,10 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
         item: InstallationItem(data: result, photoPaths: item.photoPaths));
       if (success) {
         await _loadData(); _checkAndNotifyComplete();
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Modifié avec succès'), backgroundColor: Colors.green, duration: Duration(milliseconds: 700)));
+        }
       }
       setState(() => _isSaving = false);
     }
@@ -231,8 +233,10 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
         missionId: widget.mission.id, section: widget.sectionKey, index: index);
       if (success) {
         await _loadData(); _checkAndNotifyComplete();
-        if (mounted) ScaffoldMessenger.of(context).showSnackBar(
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Supprimé'), backgroundColor: Colors.green, duration: Duration(milliseconds: 500)));
+        }
       }
       setState(() => _isSaving = false);
     }
@@ -363,7 +367,9 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
   }
 
   @override
-  void dispose() { for (var c in _controllers.values) c.dispose(); super.dispose(); }
+  void dispose() { for (var c in _controllers.values) {
+    c.dispose();
+  } super.dispose(); }
 
   bool _isGammeField(String c) => c == 'Gamme De Cellule';
   bool _isTypeCelluleField(String c) => c == 'Type De Cellule';
@@ -434,7 +440,7 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
         boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2))],
       ),
       child: DropdownButtonFormField<String>(
-        value: hasValue ? currentValue : null,
+        initialValue: hasValue ? currentValue : null,
         isExpanded: true,
         iconSize: 0,
         dropdownColor: Colors.white,

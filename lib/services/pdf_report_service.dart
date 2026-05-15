@@ -1319,11 +1319,44 @@ class PdfReportService {
                 style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
               ),
             ),
-            ...finalOrder.map((key) => _cell(e.value.data[key]?.toString() ?? '-', isHeader: false)),
+            ...finalOrder.map((key) {
+              final raw = e.value.data[key]?.toString() ?? '-';
+              final unit = _unitForField(key);
+              final display = (raw != '-' && unit.isNotEmpty) ? '$raw $unit' : raw;
+              return _cell(display, isHeader: false);
+            }),
           ],
         )),
       ],
     );
+  }
+
+  static String _unitForField(String fieldKey) {
+    const units = {
+      'Calibre Du Disjoncteur': 'A',
+      'CALIBRE DU DISJONCTEUR': 'A',
+      'Calibre Du Disjoncteur Sortie Transformateur': 'A',
+      'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR': 'A',
+      'Section Du Cable': 'mm²',
+      'SECTION DU CABLE': 'mm²',
+      'Puissance Transformateur': 'kVA',
+      'PUISSANCE TRANSFORMATEUR': 'kVA',
+      'Puissance (Kva)': 'kVA',
+      'PUISSANCE (KVA)': 'kVA',
+      'Tension': 'V',
+      'TENSION': 'V',
+      'Intensite': 'A',
+      'INTENSITE': 'A',
+      'Intensite (A)': 'A',
+      'INTENSITE (A)': 'A',
+      'Entree': 'V',
+      'ENTREE': 'V',
+      'Sortie': 'V',
+      'SORTIE': 'V',
+      'Capacite': 'L',
+      'CAPACITE': 'L',
+    };
+    return units[fieldKey] ?? '';
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -2096,6 +2129,36 @@ class PdfReportService {
         ),
       ],
     ));
+
+    // Observations parafoudre
+    if (coffret.presenceParafoudre && coffret.observationsParafoudre.isNotEmpty) {
+      widgets.add(pw.SizedBox(height: 4));
+      widgets.add(pw.Container(
+        padding: const pw.EdgeInsets.all(6),
+        decoration: pw.BoxDecoration(
+          color: PdfColor.fromInt(0xFFFFF3E0), // orange très clair
+          border: pw.Border.all(color: PdfColor.fromInt(0xFFE65100), width: 0.5),
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text('Observations parafoudre :',
+              style: pw.TextStyle(font: _fontBold, fontSize: fsSmall,
+                  color: PdfColor.fromInt(0xFFE65100))),
+            pw.SizedBox(height: 3),
+            ...coffret.observationsParafoudre.map((obs) => pw.Padding(
+              padding: const pw.EdgeInsets.only(bottom: 2),
+              child: pw.Row(children: [
+                pw.Text('• ', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
+                pw.Expanded(child: pw.Text(obs.texte,
+                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall))),
+              ]),
+            )),
+          ],
+        ),
+      ));
+    }
 
     if (coffret.alimentations.isNotEmpty || coffret.protectionTete != null) {
       widgets.add(pw.Table(

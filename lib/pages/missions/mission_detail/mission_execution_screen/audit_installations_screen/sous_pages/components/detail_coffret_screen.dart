@@ -975,7 +975,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
+          SizedBox(
             width: 120,
             child: Text(
               '$label:',
@@ -1885,6 +1885,52 @@ Future<void> _supprimerEssai(EssaiDeclenchementDifferentiel essai) async {
                             _buildBooleanInfo('Signalisation danger', _coffret.signalisationDanger),
                             _buildBooleanInfo('Présence schéma', _coffret.presenceSchema),
                             _buildBooleanInfo('Présence parafoudre', _coffret.presenceParafoudre),
+                            // Observations parafoudre — affichées uniquement si présence = Oui ET observations existent
+                            if (_coffret.presenceParafoudre && _coffret.observationsParafoudre.isNotEmpty)
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 8, left: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.orange.shade200),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Row(children: [
+                                      Icon(Icons.bolt, color: Colors.orange.shade700, size: 15),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        'Observations parafoudre',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 13,
+                                          color: Colors.orange.shade800,
+                                        ),
+                                      ),
+                                    ]),
+                                    const SizedBox(height: 8),
+                                    ..._coffret.observationsParafoudre.map((obs) => Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: Row(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Icon(Icons.circle, size: 6, color: Colors.orange.shade600),
+                                          const SizedBox(width: 8),
+                                          Expanded(
+                                            child: Text(
+                                              obs.texte,
+                                              style: TextStyle(fontSize: 13, color: Colors.grey.shade800),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )),
+                                  ],
+                                ),
+                              ),
+                            _buildBooleanInfo('Vérification thermographie', _coffret.verificationThermographie),
                             _buildBooleanInfo('Vérification thermographie', _coffret.verificationThermographie),
 
                             // Alimentations

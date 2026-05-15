@@ -52,6 +52,10 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   void initState() {
     super.initState();
     _local = widget.local;
+    // Migration automatique des anciens locaux (cellule unique → liste cellules)
+    if (_local is MoyenneTensionLocal) {
+      (_local as MoyenneTensionLocal).migrateFromOldFields();
+    }
     _loadCoffrets();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -107,6 +111,10 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
             _local = zone.locaux[widget.localIndex];
           }
         }
+      }
+      // Migration automatique à chaque rechargement
+      if (_local is MoyenneTensionLocal) {
+        (_local as MoyenneTensionLocal).migrateFromOldFields();
       }
       _chargerPhotosLocal();
       _loadCoffrets();
@@ -1875,11 +1883,11 @@ Widget _buildElementItem(ElementControle element) {
   @override
   Widget build(BuildContext context) {
     // Vérifier si c'est un local MT ET de type transformateur
-    final isTransformateur = widget.isMoyenneTension &&
-        (_local.type == 'LOCAL_TRANSFORMATEUR' || _local.type == 'LOCAL_MTBT');
-    // Pour BT, pas de cellule/transformateur
-    final hasCelluleTransfo = widget.isMoyenneTension && _local.type == 'LOCAL_TRANSFORMATEUR';
-    
+    final isTransformateur =
+        _local.type == 'LOCAL_TRANSFORMATEUR' || _local.type == 'LOCAL_MTBT';
+
+    final mtLocal = _local is MoyenneTensionLocal ? _local as MoyenneTensionLocal : null;
+
     final tabCount = isTransformateur ? 7 : 5;
 
     return Scaffold(
@@ -1949,25 +1957,30 @@ Widget _buildElementItem(ElementControle element) {
                         // Affiche la liste des cellules, qu'elles viennent de l'ancien champ
                         // unique (cellule) ou de la nouvelle liste (cellules).
                         if (isTransformateur)
-                          _local.cellules.isNotEmpty
-                            ? ListView(
-                                padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
-                                children: _local.cellules.asMap().entries.map<Widget>((entry) {
-                                  return _buildCelluleDetailCard(entry.value, entry.key);
-                                }).toList(),
-                              )
-                            : const Center(child: Text('Aucune cellule')),
+                          Builder(builder: (context) {
+                            final cellules = mtLocal?.cellules ?? [];
+                            return cellules.isNotEmpty
+                              ? ListView(
+                                  padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
+                                  children: cellules.asMap().entries.map<Widget>((entry) {
+                                    return _buildCelluleDetailCard(entry.value, entry.key);
+                                  }).toList(),
+                                )
+                              : const Center(child: Text('Aucune cellule'));
+                          }),
 
-                        // Tab TRANSFORMATEUR (seulement pour MT transformateur)
                         if (isTransformateur)
-                          _local.transformateurs.isNotEmpty
-                            ? ListView(
-                                padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
-                                children: _local.transformateurs.asMap().entries.map<Widget>((entry) {
-                                  return _buildTransformateurDetailCard(entry.value, entry.key);
-                                }).toList(),
-                              )
-                            : const Center(child: Text('Aucune information transformateur')),
+                          Builder(builder: (context) {
+                            final transformateurs = mtLocal?.transformateurs ?? [];
+                            return transformateurs.isNotEmpty
+                              ? ListView(
+                                  padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
+                                  children: transformateurs.asMap().entries.map<Widget>((entry) {
+                                    return _buildTransformateurDetailCard(entry.value, entry.key);
+                                  }).toList(),
+                                )
+                              : const Center(child: Text('Aucune information transformateur'));
+                          }),
 
                         // Tab COFFRETS
                         RefreshIndicator(

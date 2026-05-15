@@ -3839,10 +3839,12 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       _localPhotosValid = true;
       
       // CHARGEMENT DES CELLULES ET TRANSFORMATEURS
-      if (widget.isMoyenneTension && (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT')) {
-        local.migrateFromOldFields();
-        _cellules = List.from(local.cellules ?? []);
-        _transformateurs = List.from(local.transformateurs ?? []);
+      if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+        if (local is MoyenneTensionLocal) {
+          local.migrateFromOldFields();
+          _cellules = List.from(local.cellules);
+          _transformateurs = List.from(local.transformateurs);
+        }
       } else {
         _cellules.clear();
         _transformateurs.clear();
@@ -4657,27 +4659,58 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
             nouveauLocal = localData;
           }
         } else {
+          if (_selectedType == 'LOCAL_MTBT') {
           if (widget.isEdition && widget.localIndex != null) {
             await HiveService.updateMoyenneTensionLocal(
-              missionId: widget.mission.id, localIndex: widget.localIndex!, 
+              missionId: widget.mission.id,
+              localIndex: widget.localIndex!,
               local: _creerMoyenneTensionLocal(),
             );
             nouveauLocal = _creerMoyenneTensionLocal();
           } else {
             final localData = _creerMoyenneTensionLocal();
             final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-            final existingIndex = audit.moyenneTensionLocaux.indexWhere((l) => l.nom.trim() == localData.nom.trim());
+            final existingIndex = audit.moyenneTensionLocaux
+                .indexWhere((l) => l.nom.trim() == localData.nom.trim());
             if (existingIndex != -1) {
               await HiveService.updateMoyenneTensionLocal(
-                missionId: widget.mission.id, localIndex: existingIndex, local: localData,
+                missionId: widget.mission.id,
+                localIndex: existingIndex,
+                local: localData,
               );
             } else {
               await HiveService.addMoyenneTensionLocal(
-                missionId: widget.mission.id, local: localData,
+                missionId: widget.mission.id,
+                local: localData,
               );
             }
             nouveauLocal = localData;
           }
+        } else if (widget.zoneIndex != null) {
+          if (widget.isEdition && widget.localIndex != null) {
+            await HiveService.updateBasseTensionLocal(
+              missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, 
+              localIndex: widget.localIndex!, local: _creerBasseTensionLocal(),
+            );
+            nouveauLocal = _creerBasseTensionLocal();
+          } else {
+            final localData = _creerBasseTensionLocal();
+            final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+            final zone = audit.basseTensionZones[widget.zoneIndex!];
+            final existingIndex = zone.locaux.indexWhere((l) => l.nom.trim() == localData.nom.trim());
+            if (existingIndex != -1) {
+              await HiveService.updateBasseTensionLocal(
+                missionId: widget.mission.id, zoneIndex: widget.zoneIndex!,
+                localIndex: existingIndex, local: localData,
+              );
+            } else {
+              await HiveService.addLocalToBasseTensionZone(
+                missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, local: localData,
+              );
+            }
+            nouveauLocal = localData;
+          }
+        }
         }
       } else {
         if (widget.zoneIndex != null) {
@@ -5113,19 +5146,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   }
 
   MoyenneTensionLocal _creerMoyenneTensionLocal() {
-    // Si le type n'est pas TRANSFORMATEUR, ne pas inclure cellules/transformateurs
-    if (_selectedType != 'LOCAL_TRANSFORMATEUR') {
-      return MoyenneTensionLocal(
-        nom: _nomController.text.trim().isEmpty ? 'Sans nom' : _nomController.text.trim(),
-        type: _selectedType!,
-        dispositionsConstructives: _dispositionsConstructives,
-        conditionsExploitation: _conditionsExploitation,
-        observationsLibres: _observationsExistantes,
-        photos: _localPhotos,
-      );
-    }
-    
-    // Pour LOCAL_TRANSFORMATEUR, inclure les listes multiples
+    // LOCAL_TRANSFORMATEUR et LOCAL_MTBT ont tous les deux cellules et transformateurs
+    final isFlowLong = _selectedType == 'LOCAL_TRANSFORMATEUR' || _selectedType == 'LOCAL_MTBT';
     return MoyenneTensionLocal(
       nom: _nomController.text.trim().isEmpty ? 'Sans nom' : _nomController.text.trim(),
       type: _selectedType!,
@@ -5133,9 +5155,10 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       conditionsExploitation: _conditionsExploitation,
       observationsLibres: _observationsExistantes,
       photos: _localPhotos,
-      // NOUVEAUX CHAMPS
-      cellules: _cellules,
-      transformateurs: _transformateurs,
+      cellules: isFlowLong ? _cellules : [],
+      transformateurs: isFlowLong ? _transformateurs : [],
+      accessible: _accessible ?? true,
+      aReverifier: (_accessible == false),
     );
   }
 
