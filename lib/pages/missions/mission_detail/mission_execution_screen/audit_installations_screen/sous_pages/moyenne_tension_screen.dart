@@ -1017,195 +1017,277 @@ void _ouvrirClassementZone(ClassementZone classement) async {
 
   // MODIFIÉ : _buildLocalCard pour afficher les brouillons
   Widget _buildLocalCard(MoyenneTensionLocal local, int localIndex) {
-    final conformiteCount = local.dispositionsConstructives.where((e) => e.conforme == true).length;
+    final conformiteCount = local.dispositionsConstructives
+        .where((e) => e.conforme == true).length;
+    final nonConformeCount = local.dispositionsConstructives
+        .where((e) => e.conforme == false && !e.estNA).length;
     final totalCount = local.dispositionsConstructives.length;
-    final pourcentage = totalCount > 0 ? (conformiteCount / totalCount * 100).round() : 0;
-    
-    // Récupérer tous les coffrets (existants + brouillons)
+    final pourcentage =
+        totalCount > 0 ? (conformiteCount / totalCount * 100).round() : 0;
+
     final allCoffrets = _getCoffretsForLocal(local, localIndex);
-    final hasIncompletCoffrets = allCoffrets.any((c) => !_isCoffretComplet(c));
+    final totalPhotos = local.photos.length +
+        local.observationsLibres.fold<int>(0, (s, o) => s + o.photos.length);
+
+    final localTypes = HiveService.getLocalTypes();
+    final typeLabel = localTypes[local.type] ?? local.type;
+    final isFlowLong = local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT';
+    final inaccessible = !local.accessible;
+    final aReverifier = local.aReverifier;
+
+    final Color accentColor = inaccessible
+        ? Colors.red
+        : aReverifier
+            ? Colors.orange
+            : AppTheme.primaryBlue;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey),
-      ),
-      child: ListTile(
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppTheme.primaryBlue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(Icons.domain, color: AppTheme.primaryBlue),
+        color: inaccessible ? Colors.red.shade50 : Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: inaccessible
+              ? Colors.red.shade200
+              : aReverifier
+                  ? Colors.orange.shade300
+                  : Colors.grey.shade200,
         ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(local.nom, style: const TextStyle(fontWeight: FontWeight.w600)),
-            ),
-            if (hasIncompletCoffrets)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                margin: const EdgeInsets.only(left: 6),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade100,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.red.shade300),
-                ),
-                child: Text(
-                  'Incomplet',
-                  style: TextStyle(
-                    fontSize: 9,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.red.shade700,
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () => _voirLocal(localIndex),
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Row(children: [
+                Container(
+                  width: 44, height: 44,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [accentColor, accentColor.withOpacity(0.7)],
+                      begin: Alignment.topLeft, end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    inaccessible ? Icons.lock_outline : Icons.domain,
+                    color: Colors.white, size: 22,
                   ),
                 ),
-              ),
-          ],
+                const SizedBox(width: 12),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(local.nom,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 2),
+                    Text(typeLabel,
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: accentColor)),
+                  ],
+                )),
+                Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  if (aReverifier) _buildBadge('À revérifier', Colors.orange),
+                  if (inaccessible) _buildBadge('Inaccessible', Colors.red),
+                ]),
+              ]),
+
+              if (!inaccessible) ...[
+                const SizedBox(height: 12),
+                const Divider(height: 1),
+                const SizedBox(height: 10),
+                Row(children: [
+                  _buildMiniStat(Icons.electrical_services_outlined, '${allCoffrets.length}', 'coffret(s)'),
+                  const SizedBox(width: 12),
+                  _buildMiniStat(Icons.photo_outlined, '$totalPhotos', 'photo(s)'),
+                  const SizedBox(width: 12),
+                  _buildMiniStat(Icons.comment_outlined, '${local.observationsLibres.length}', 'obs.'),
+                  if (isFlowLong) ...[
+                    const SizedBox(width: 12),
+                    _buildMiniStat(Icons.memory_outlined, '${local.cellules.length}', 'cellule(s)'),
+                  ],
+                ]),
+                if (totalCount > 0) ...[
+                  const SizedBox(height: 10),
+                  Row(children: [
+                    Expanded(child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: conformiteCount / totalCount,
+                        backgroundColor: Colors.grey.shade200,
+                        color: _getProgressColor(pourcentage),
+                        minHeight: 6,
+                      ),
+                    )),
+                    const SizedBox(width: 10),
+                    Text('$pourcentage%',
+                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold,
+                          color: _getProgressColor(pourcentage))),
+                    if (nonConformeCount > 0) ...[
+                      const SizedBox(width: 8),
+                      _buildBadge('$nonConformeCount NC', Colors.red),
+                    ],
+                  ]),
+                ] else
+                  Text('Aucune vérification',
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade500)),
+              ] else ...[
+                const SizedBox(height: 8),
+                Text('Local inaccessible lors de l\'inspection',
+                  style: TextStyle(fontSize: 12, color: Colors.red.shade700)),
+              ],
+
+              const SizedBox(height: 10),
+              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+                TextButton.icon(
+                  onPressed: () => _editerLocal(localIndex),
+                  icon: Icon(Icons.edit_outlined, size: 15, color: AppTheme.primaryBlue),
+                  label: Text('Éditer', style: TextStyle(fontSize: 12, color: AppTheme.primaryBlue)),
+                  style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                ),
+                const SizedBox(width: 4),
+                TextButton.icon(
+                  onPressed: () => _supprimerLocal(localIndex),
+                  icon: const Icon(Icons.delete_outline, size: 15, color: Colors.red),
+                  label: const Text('Supprimer', style: TextStyle(fontSize: 12, color: Colors.red)),
+                  style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                ),
+              ]),
+            ],
+          ),
         ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text('${allCoffrets.length} coffret(s)'),
-            const SizedBox(height: 4),
-            if (totalCount > 0) ...[
-              LinearProgressIndicator(
-                value: conformiteCount / totalCount,
-                backgroundColor: Colors.grey.shade200,
-                color: _getProgressColor(pourcentage),
-              ),
-              const SizedBox(height: 4),
-              Text('$pourcentage% conforme'),
-            ] else const Text('Aucune vérification', style: TextStyle(color: Colors.grey)),
-          ],
-        ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) {
-            if (value == 'view') _voirLocal(localIndex);
-            if (value == 'edit') _editerLocal(localIndex);
-            if (value == 'delete') _supprimerLocal(localIndex);
-          },
-          itemBuilder: (context) => const [
-            PopupMenuItem(value: 'view', child: Text('Voir détails')),
-            PopupMenuItem(value: 'edit', child: Text('Éditer')),
-            PopupMenuItem(value: 'delete', child: Text('Supprimer', style: TextStyle(color: Colors.red))),
-          ],
-        ),
-        onTap: () => _voirLocal(localIndex),
       ),
     );
   }
 
+  Widget _buildBadge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      margin: const EdgeInsets.only(bottom: 3),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.4)),
+      ),
+      child: Text(label,
+        style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold,
+            color: color.withOpacity(0.9))),
+    );
+  }
+
+  Widget _buildMiniStat(IconData icon, String value, String label) {
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Icon(icon, size: 13, color: Colors.grey.shade500),
+      const SizedBox(width: 3),
+      Text('$value $label', style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+    ]);
+  }
+
   Widget _buildLocalDraftCard(Map<String, dynamic> draftData) {
     final local = draftData['local'];
-    final nomLocal = draftData['nomLocal'] ?? 'Sans nom';
+    final nomLocal = draftData['nomLocal'] as String? ?? 'Sans nom';
     final currentStep = draftData['currentStep'] as int? ?? 0;
     final draftId = draftData['localId'] as String?;
-    
-    // Déterminer le type de local
-    String typeLocal = 'Local';
-    if (local is MoyenneTensionLocal) {
-      final localTypes = HiveService.getLocalTypes();
-      typeLocal = localTypes[local.type] ?? local.type;
-    }
-    
-    // Calculer la progression (MT peut avoir 2 ou 3 étapes selon le type)
-    final totalSteps = (local is MoyenneTensionLocal && local.type == 'LOCAL_TRANSFORMATEUR') ? 3 : 2;
-    final pourcentage = (currentStep / totalSteps * 100).round();
-    
+
+    final localTypes = HiveService.getLocalTypes();
+    final typeLabel = local is MoyenneTensionLocal
+        ? (localTypes[local.type] ?? local.type)
+        : 'Local';
+
+    final isFlowLong = local?.type == 'LOCAL_TRANSFORMATEUR' || local?.type == 'LOCAL_MTBT';
+    final totalSteps = isFlowLong ? 4 : 3;
+    final progress = totalSteps > 0 ? (currentStep / totalSteps).clamp(0.0, 1.0) : 0.0;
+    final pourcentage = (progress * 100).round();
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.orange.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.orange.shade300),
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: Colors.amber.shade300),
+        boxShadow: [
+          BoxShadow(color: Colors.amber.withOpacity(0.15), blurRadius: 8, offset: const Offset(0, 3)),
+        ],
       ),
-      child: ListTile(
-        leading: Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: Colors.orange.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(Icons.drafts_outlined, color: Colors.orange),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                nomLocal,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.orange.shade100,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.orange.shade300),
-              ),
-              child: Text(
-                'Brouillon',
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.orange.shade700,
-                ),
-              ),
-            ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 4),
-            Text('$typeLocal • Étape $currentStep/$totalSteps • $pourcentage%'),
-            const SizedBox(height: 4),
-            LinearProgressIndicator(
-              value: currentStep / totalSteps,
-              backgroundColor: Colors.grey.shade200,
-              color: Colors.orange,
-            ),
-          ],
-        ),
-        trailing: PopupMenuButton<String>(
-          onSelected: (value) {
-            if (value == 'continue') {
-              _ouvrirBrouillonLocal(draftData);
-            } else if (value == 'delete') {
-              _supprimerBrouillonLocal(draftId, nomLocal);
-            }
-          },
-          itemBuilder: (context) => [
-            const PopupMenuItem(
-              value: 'continue',
-              child: Row(
-                children: [
-                  Icon(Icons.play_arrow, size: 18, color: Colors.green),
-                  SizedBox(width: 8),
-                  Text('Continuer'),
-                ],
-              ),
-            ),
-            const PopupMenuItem(
-              value: 'delete',
-              child: Row(
-                children: [
-                  Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                  SizedBox(width: 8),
-                  Text('Supprimer', style: TextStyle(color: Colors.red)),
-                ],
-              ),
-            ),
-          ],
-        ),
+      child: InkWell(
         onTap: () => _ouvrirBrouillonLocal(draftData),
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Container(
+                width: 44, height: 44,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Colors.amber, Color(0xFFF59E0B)],
+                    begin: Alignment.topLeft, end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Icon(Icons.edit_note, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                Text(nomLocal,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 2),
+                Text(typeLabel,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.amber)),
+              ])),
+              _buildBadge('Brouillon', Colors.amber),
+            ]),
+            const SizedBox(height: 12),
+            const Divider(height: 1),
+            const SizedBox(height: 10),
+            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+              Text('Étape $currentStep / $totalSteps',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
+              Text('$pourcentage%',
+                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.amber)),
+            ]),
+            const SizedBox(height: 4),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress,
+                backgroundColor: Colors.grey.shade200,
+                color: Colors.amber,
+                minHeight: 6,
+              ),
+            ),
+            const SizedBox(height: 10),
+            Row(mainAxisAlignment: MainAxisAlignment.end, children: [
+              TextButton.icon(
+                onPressed: () => _ouvrirBrouillonLocal(draftData),
+                icon: const Icon(Icons.play_arrow, size: 15, color: Colors.amber),
+                label: const Text('Continuer',
+                  style: TextStyle(fontSize: 12, color: Colors.amber)),
+                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+              ),
+              const SizedBox(width: 4),
+              TextButton.icon(
+                onPressed: () => _supprimerBrouillonLocal(draftId, nomLocal),
+                icon: const Icon(Icons.delete_outline, size: 15, color: Colors.red),
+                label: const Text('Supprimer',
+                  style: TextStyle(fontSize: 12, color: Colors.red)),
+                style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+              ),
+            ]),
+          ]),
+        ),
       ),
     );
   }

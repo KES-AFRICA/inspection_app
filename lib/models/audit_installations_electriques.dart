@@ -246,6 +246,12 @@ class BasseTensionLocal {
   @HiveField(8)
   bool aReverifier;
 
+  @HiveField(9)
+  List<Cellule> cellules;
+
+  @HiveField(10)
+  List<TransformateurMTBT> transformateurs;
+
   BasseTensionLocal({
     required this.nom,
     required this.type,
@@ -256,13 +262,17 @@ class BasseTensionLocal {
     List<String>? photos,
     bool? accessible,
     bool? aReverifier,
+    List<Cellule>? cellules,
+    List<TransformateurMTBT>? transformateurs,
   })  : dispositionsConstructives = dispositionsConstructives ?? [],
         conditionsExploitation = conditionsExploitation ?? [],
         coffrets = coffrets ?? [],
         observationsLibres = observationsLibres ?? [],
         photos = photos ?? [],
         accessible = accessible ?? true,
-        aReverifier = aReverifier ?? false;
+        aReverifier = aReverifier ?? false,
+        cellules = cellules ?? [],
+        transformateurs = transformateurs ?? [];
 }
 
 // STRUCTURES COMMUNES

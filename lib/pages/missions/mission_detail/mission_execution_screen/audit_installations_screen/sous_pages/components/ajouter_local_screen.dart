@@ -3784,12 +3784,16 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     super.initState();
     _etapeElementsKey = GlobalKey<_EtapeElementsControleState>();
 
-    // Générer un ID pour le brouillon
-    _draftLocalId = widget.draftId ?? 
-      (widget.isEdition && widget.local != null 
-          ? 'EDIT_${widget.local.hashCode}' 
-          : 'TEMP_${DateTime.now().millisecondsSinceEpoch}');
-    
+    // Un local aReverifier traité comme nouvelle création : ID temporaire unique
+    final _isReverification = widget.isEdition &&
+        widget.local != null &&
+        ((widget.local as dynamic).aReverifier == true);
+
+    _draftLocalId = widget.draftId ??
+        (widget.isEdition && !_isReverification && widget.local != null
+            ? 'EDIT_${widget.local.hashCode}'
+            : 'TEMP_${DateTime.now().millisecondsSinceEpoch}');
+
     if (widget.isEdition) {
       _chargerDonneesExistantes();
       _nomValid = true;
@@ -3844,6 +3848,9 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           local.migrateFromOldFields();
           _cellules = List.from(local.cellules);
           _transformateurs = List.from(local.transformateurs);
+        } else if (local is BasseTensionLocal) {
+          _cellules = List.from(local.cellules);
+          _transformateurs = List.from(local.transformateurs);
         }
       } else {
         _cellules.clear();
@@ -3894,10 +3901,15 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       local = _creerBasseTensionLocalAvecType(typeToSave);
     }
     
-    // ✅ Pour les locaux transformateur, s'assurer que les listes sont sauvegardées
-    if (widget.isMoyenneTension && (typeToSave == 'LOCAL_TRANSFORMATEUR' || typeToSave == 'LOCAL_MTBT') && local is MoyenneTensionLocal) {
-      local.cellules = _cellules;
-      local.transformateurs = _transformateurs;
+    // Inclure cellules/transfo pour tous les flow longs, quelle que soit la zone parente
+    if (typeToSave == 'LOCAL_TRANSFORMATEUR' || typeToSave == 'LOCAL_MTBT') {
+      if (local is MoyenneTensionLocal) {
+        local.cellules = _cellules;
+        local.transformateurs = _transformateurs;
+      } else if (local is BasseTensionLocal) {
+        local.cellules = _cellules;
+        local.transformateurs = _transformateurs;
+      }
     }
     
     await HiveService.saveLocalDraft(
@@ -3958,6 +3970,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
 
   // Créer un local BT avec un type spécifié
   BasseTensionLocal _creerBasseTensionLocalAvecType(String type) {
+    final isFlowLong = type == 'LOCAL_MTBT';
     return BasseTensionLocal(
       nom: _nomController.text.trim().isEmpty ? 'Sans nom' : _nomController.text.trim(),
       type: type,
@@ -3967,6 +3980,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       photos: _localPhotos,
       accessible: _accessible ?? true,
       aReverifier: (_accessible == false),
+      cellules: isFlowLong ? _cellules : [],
+      transformateurs: isFlowLong ? _transformateurs : [],
     );
   }
 
@@ -3984,18 +3999,27 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     if (local.accessible == false) {
       // On se positionne au step 1 (accessibilité) au lieu du step 0
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_mainPageController.hasClients) {
-          _mainPageController.jumpToPage(_stepAccessibilite);
+        if (!mounted) return;
+        Future.microtask(() {
+          if (!mounted) return;
+          if (_mainPageController.hasClients) {
+            _mainPageController.jumpToPage(_stepAccessibilite);
+          }
           setState(() => _currentStep = _stepAccessibilite);
-        }
+        });
       });
     }
     
-    // CHARGEMENT DES CELLULES ET TRANSFORMATEURS (multiples)
-    if (local is MoyenneTensionLocal && (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT')) {
-      local.migrateFromOldFields();
-      _cellules = List.from(local.cellules);
-      _transformateurs = List.from(local.transformateurs);
+    // CHARGEMENT DES CELLULES ET TRANSFORMATEURS
+    if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+      if (local is MoyenneTensionLocal) {
+        local.migrateFromOldFields();
+        _cellules = List.from(local.cellules);
+        _transformateurs = List.from(local.transformateurs);
+      } else if (local is BasseTensionLocal) {
+        _cellules = List.from(local.cellules);
+        _transformateurs = List.from(local.transformateurs);
+      }
     }
     
     // Initialiser conformeSelected pour les éléments existants
@@ -4621,6 +4645,41 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     _saveDraft();
   }
 
+  /// Supprime le local inaccessible de Hive dès que l'utilisateur le marque accessible.
+  /// Le brouillon prend le relai et devient le seul élément visible dans la liste.
+  Future<void> _supprimerLocalOriginalPourReverification() async {
+    if (widget.localIndex == null) return;
+    try {
+      final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+      if (widget.isMoyenneTension) {
+        if (widget.isInZone && widget.zoneIndex != null) {
+          final zone = audit.moyenneTensionZones[widget.zoneIndex!];
+          if (widget.localIndex! < zone.locaux.length) {
+            zone.locaux.removeAt(widget.localIndex!);
+            await HiveService.saveAuditInstallations(audit);
+          }
+        } else {
+          if (widget.localIndex! < audit.moyenneTensionLocaux.length) {
+            audit.moyenneTensionLocaux.removeAt(widget.localIndex!);
+            await HiveService.saveAuditInstallations(audit);
+          }
+        }
+      } else {
+        if (widget.zoneIndex != null &&
+            widget.zoneIndex! < audit.basseTensionZones.length) {
+          final zone = audit.basseTensionZones[widget.zoneIndex!];
+          if (widget.localIndex! < zone.locaux.length) {
+            zone.locaux.removeAt(widget.localIndex!);
+            await HiveService.saveAuditInstallations(audit);
+          }
+        }
+      }
+      if (kDebugMode) print('✅ Local inaccessible supprimé pour révérification');
+    } catch (e) {
+      if (kDebugMode) print('❌ Erreur suppression local révérification: $e');
+    }
+  }
+
   void _sauvegarder() async {
     if (!_nomValid || !_typeValid) {
       _showError('Veuillez remplir tous les champs obligatoires');
@@ -5195,12 +5254,12 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
               onPressed: _confirmerQuitter,
             ),
             actions: [
-          if (widget.isEdition)
-              IconButton(
-                icon: Icon(Icons.check, size: context.iconSizeM),
-                onPressed: _sauvegarder,
-                tooltip: 'Enregistrer les modifications',
-              ),
+                if (widget.isEdition && !(widget.local?.aReverifier ?? false))
+                IconButton(
+                  icon: Icon(Icons.check, size: context.iconSizeM),
+                  onPressed: _sauvegarder,
+                  tooltip: 'Enregistrer les modifications',
+                ),
           ],
         ),
         body: Column(
@@ -5437,13 +5496,22 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                   icon: Icons.check_circle_outline,
                   selected: _accessible == true,
                   color: Colors.green,
-                  onTap: () => setState(() {
-                    _accessible = true;
-                    // Si on passe de inaccessible à accessible : initialiser les éléments
-                    if (_dispositionsConstructives.isEmpty && _selectedType != null) {
-                      _initializeElementsForType(_selectedType);
+                  onTap: () async {
+                    setState(() {
+                      _accessible = true;
+                      if (_dispositionsConstructives.isEmpty && _selectedType != null) {
+                        _initializeElementsForType(_selectedType);
+                      }
+                    });
+                    // Si c'est un local aReverifier : supprimer le local original de Hive
+                    // pour que le brouillon soit visible sans doublon dans la liste
+                    final isReverification = widget.isEdition &&
+                        ((widget.local as dynamic?)?.aReverifier == true);
+                    if (isReverification && widget.localIndex != null) {
+                      await _supprimerLocalOriginalPourReverification();
                     }
-                  }),
+                    _saveDraft();
+                  },
                 ),
               ),
               const SizedBox(width: 16),

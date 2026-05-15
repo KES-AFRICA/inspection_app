@@ -250,13 +250,15 @@ class BasseTensionLocalAdapter extends TypeAdapter<BasseTensionLocal> {
       photos: (fields[6] as List?)?.cast<String>(),
       accessible: fields[7] as bool?,
       aReverifier: fields[8] as bool?,
+      cellules: (fields[9] as List?)?.cast<Cellule>(),
+      transformateurs: (fields[10] as List?)?.cast<TransformateurMTBT>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, BasseTensionLocal obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.nom)
       ..writeByte(1)
@@ -274,7 +276,11 @@ class BasseTensionLocalAdapter extends TypeAdapter<BasseTensionLocal> {
       ..writeByte(7)
       ..write(obj.accessible)
       ..writeByte(8)
-      ..write(obj.aReverifier);
+      ..write(obj.aReverifier)
+      ..writeByte(9)
+      ..write(obj.cellules)
+      ..writeByte(10)
+      ..write(obj.transformateurs);
   }
 
   @override

@@ -1886,9 +1886,21 @@ Widget _buildElementItem(ElementControle element) {
     final isTransformateur =
         _local.type == 'LOCAL_TRANSFORMATEUR' || _local.type == 'LOCAL_MTBT';
 
-    final mtLocal = _local is MoyenneTensionLocal ? _local as MoyenneTensionLocal : null;
+    // Extraire cellules et transformateurs selon le type réel du local
+    // LOCAL_MTBT peut être un MoyenneTensionLocal (créé depuis MT) ou un BasseTensionLocal (créé depuis BT)
+    final List<Cellule> localCellules = _local is MoyenneTensionLocal
+        ? (_local as MoyenneTensionLocal).cellules
+        : _local is BasseTensionLocal
+            ? (_local as BasseTensionLocal).cellules
+            : [];
 
-    final tabCount = isTransformateur ? 7 : 5;
+    final List<TransformateurMTBT> localTransformateurs = _local is MoyenneTensionLocal
+        ? (_local as MoyenneTensionLocal).transformateurs
+        : _local is BasseTensionLocal
+            ? (_local as BasseTensionLocal).transformateurs
+            : [];
+
+    final tabCount = 5 + (isTransformateur ? 2 : 0);
 
     return Scaffold(
       appBar: AppBar(
@@ -1957,30 +1969,24 @@ Widget _buildElementItem(ElementControle element) {
                         // Affiche la liste des cellules, qu'elles viennent de l'ancien champ
                         // unique (cellule) ou de la nouvelle liste (cellules).
                         if (isTransformateur)
-                          Builder(builder: (context) {
-                            final cellules = mtLocal?.cellules ?? [];
-                            return cellules.isNotEmpty
-                              ? ListView(
-                                  padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
-                                  children: cellules.asMap().entries.map<Widget>((entry) {
-                                    return _buildCelluleDetailCard(entry.value, entry.key);
-                                  }).toList(),
-                                )
-                              : const Center(child: Text('Aucune cellule'));
-                          }),
+                          localCellules.isNotEmpty
+                            ? ListView(
+                                padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
+                                children: localCellules.asMap().entries.map<Widget>((entry) {
+                                  return _buildCelluleDetailCard(entry.value, entry.key);
+                                }).toList(),
+                              )
+                            : const Center(child: Text('Aucune cellule')),
 
                         if (isTransformateur)
-                          Builder(builder: (context) {
-                            final transformateurs = mtLocal?.transformateurs ?? [];
-                            return transformateurs.isNotEmpty
-                              ? ListView(
-                                  padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
-                                  children: transformateurs.asMap().entries.map<Widget>((entry) {
-                                    return _buildTransformateurDetailCard(entry.value, entry.key);
-                                  }).toList(),
-                                )
-                              : const Center(child: Text('Aucune information transformateur'));
-                          }),
+                          localTransformateurs.isNotEmpty
+                            ? ListView(
+                                padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
+                                children: localTransformateurs.asMap().entries.map<Widget>((entry) {
+                                  return _buildTransformateurDetailCard(entry.value, entry.key);
+                                }).toList(),
+                              )
+                            : const Center(child: Text('Aucune information transformateur')),
 
                         // Tab COFFRETS
                         RefreshIndicator(
