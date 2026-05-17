@@ -1,5 +1,5 @@
-
 import 'package:flutter/material.dart';
+import 'package:inspec_app/pages/backup/backup_screen.dart';
 import '../../../models/verificateur.dart';
 import '../../../models/mission.dart';
 import '../../../services/hive_service.dart';
@@ -157,6 +157,33 @@ class SidebarMenu extends StatelessWidget {
 
               // Espace vide
               Expanded(child: Container()),
+
+              // ── Bouton Sauvegarde & Restauration ──
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    onClose();
+                    Navigator.of(context).push(MaterialPageRoute(
+                      builder: (context) => BackupScreen(user: user),
+                    ));
+                  },
+                  icon: const Icon(Icons.cloud_upload_outlined,
+                      color: AppTheme.primaryBlue, size: 18),
+                  label: const Text('Sauvegarde & Restauration',
+                      style: TextStyle(
+                          color: AppTheme.primaryBlue,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13)),
+                  style: OutlinedButton.styleFrom(
+                    side: const BorderSide(color: AppTheme.primaryBlue),
+                    padding:
+                        const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+              ),
 
               // Bouton de déconnexion
               Container(

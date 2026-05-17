@@ -19,7 +19,7 @@ class DetailLocalScreen extends StatefulWidget {
   final Mission mission;
   final bool isMoyenneTension;
   final int localIndex;
-  final dynamic local; // MoyenneTensionLocal ou BasseTensionLocal
+  final dynamic local;
   final int? zoneIndex;
   final bool isInZone;
 

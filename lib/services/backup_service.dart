@@ -1,0 +1,1466 @@
+// lib/services/backup_service.dart
+// ============================================================
+// SYSTÈME DE SAUVEGARDE ET RESTAURATION COMPLÈTE
+// Schema version : 1
+// Rétrocompatible : les champs inconnus sont ignorés au parsing.
+// ============================================================
+
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:external_path/external_path.dart';
+import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
+
+import '../models/mission.dart';
+import '../models/audit_installations_electriques.dart';
+import '../models/description_installations.dart';
+import '../models/classement_locaux.dart';
+import '../models/classement_zone.dart';
+import '../models/foudre.dart';
+import '../models/mesures_essais.dart';
+import '../models/jsa.dart';
+import '../models/renseignements_generaux.dart';
+import 'hive_service.dart';
+
+// ─────────────────────────────────────────────────────────────
+// RÉSULTATS TYPÉS
+// ─────────────────────────────────────────────────────────────
+class BackupResult {
+  final bool success;
+  final String? message;
+  final String? filePath;
+  final int? missionCount;
+  final String? errorDetail;
+  const BackupResult({
+    required this.success,
+    this.message,
+    this.filePath,
+    this.missionCount,
+    this.errorDetail,
+  });
+}
+
+class ImportResult {
+  final bool success;
+  final String? message;
+  final int importedMissions;
+  final int skippedMissions;
+  final List<String> warnings;
+  final String? errorDetail;
+  const ImportResult({
+    required this.success,
+    this.message,
+    this.importedMissions = 0,
+    this.skippedMissions = 0,
+    this.warnings = const [],
+    this.errorDetail,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// SERVICE PRINCIPAL
+// ─────────────────────────────────────────────────────────────
+class BackupService {
+  static const int _schemaVersion = 1;
+  static const String _magic = 'INSPEC_BACKUP_V1';
+
+  // ═══════════════════════════════════════════════════════════
+  // EXPORT
+  // ═══════════════════════════════════════════════════════════
+
+  static Future<BackupResult> exporterMissions(String matricule) async {
+    try {
+      final missions = HiveService.getMissionsByMatricule(matricule);
+      if (missions.isEmpty) {
+        return const BackupResult(
+          success: false,
+          message: 'Aucune mission à exporter.',
+        );
+      }
+
+      // Sérialisation sur le thread principal (objets Hive non isolate-safe)
+      final payload = _buildPayload(missions, matricule);
+
+      // Écriture fichier
+      final ts = DateTime.now()
+          .toIso8601String()
+          .replaceAll(':', '-')
+          .replaceAll('.', '-')
+          .substring(0, 19);
+      final fileName = 'inspec_backup_${matricule}_$ts.json';
+      final jsonContent = const JsonEncoder.withIndent('  ').convert(payload);
+
+      // 1. Sauvegarde dans Downloads/Verif Elec/ (même dossier que les rapports)
+      File? savedFile;
+      String? savedPath;
+      try {
+        final downloadsPath = Platform.isAndroid
+            ? await ExternalPath.getExternalStoragePublicDirectory(
+                ExternalPath.DIRECTORY_DOWNLOAD)
+            : (await getApplicationDocumentsDirectory()).path;
+        final verifElecDir = Directory('$downloadsPath/Verif Elec');
+        if (!await verifElecDir.exists()) {
+          await verifElecDir.create(recursive: true);
+        }
+        savedFile = File('${verifElecDir.path}/$fileName');
+        await savedFile.writeAsString(jsonContent, encoding: utf8);
+        savedPath = savedFile.path;
+        if (kDebugMode) print('✅ Backup sauvegardé: $savedPath');
+      } catch (e) {
+        if (kDebugMode) print('⚠️ Sauvegarde locale échouée: $e');
+      }
+
+      // 2. Partage via share_plus (email, Drive, WhatsApp, etc.)
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/$fileName');
+      await tempFile.writeAsString(jsonContent, encoding: utf8);
+      final xFile = XFile(tempFile.path, mimeType: 'application/json');
+      await Share.shareXFiles(
+        [xFile],
+        subject: 'Sauvegarde Inspec — $ts',
+        text: '${missions.length} mission(s) — $ts',
+      );
+
+      final localMsg = savedPath != null
+          ? '\nFichier aussi sauvegardé dans Downloads/Verif Elec/'
+          : '';
+
+      return BackupResult(
+        success: true,
+        message: '${missions.length} mission(s) exportée(s).$localMsg',
+        filePath: savedPath ?? tempFile.path,
+        missionCount: missions.length,
+      );
+    } catch (e, st) {
+      if (kDebugMode) print('❌ Export: $e\n$st');
+      return BackupResult(
+        success: false,
+        message: "Erreur lors de l'export.",
+        errorDetail: e.toString(),
+      );
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // CONSTRUCTION DU JSON
+  // ─────────────────────────────────────────────────────────
+
+  static Map<String, dynamic> _buildPayload(
+      List<Mission> missions, String matricule) {
+    return {
+      'magic': _magic,
+      'schema_version': _schemaVersion,
+      'exported_at': DateTime.now().toIso8601String(),
+      'app_version': '1.0.0',
+      'matricule': matricule,
+      'mission_count': missions.length,
+      'missions': missions.map(_serializeMission).toList(),
+      'local_drafts':
+          _serializeLocalDrafts(missions.map((m) => m.id).toList()),
+      'coffret_drafts':
+          _serializeCoffretDrafts(missions.map((m) => m.id).toList()),
+    };
+  }
+
+  // ── Mission + toutes ses données liées ──
+  static Map<String, dynamic> _serializeMission(Mission m) {
+    final id = m.id;
+    final audit = HiveService.getAuditInstallationsByMissionId(id);
+    final desc = HiveService.getDescriptionInstallationsByMissionId(id);
+    final mesures = HiveService.getMesuresEssaisByMissionId(id);
+    final jsa = HiveService.getJSAByMissionId(id);
+    final rens = HiveService.getRenseignementsGenerauxByMissionId(id);
+    final foudres = HiveService.getFoudreObservationsByMissionId(id);
+    final classements = _classementsByMission(id);
+    final classementZones = _classementZonesByMission(id);
+
+    return {
+      'mission': m.toJson(),
+      'audit': audit != null ? _serializeAudit(audit) : null,
+      'description_installations':
+          desc != null ? _serializeDescription(desc) : null,
+      'mesures_essais': mesures != null ? _serializeMesures(mesures) : null,
+      'jsa': jsa != null ? _serializeJSA(jsa) : null,
+      'renseignements_generaux':
+          rens != null ? _serializeRenseignements(rens) : null,
+      'foudre_observations': foudres.map(_f).toList(),
+      'classements_locaux': classements,
+      'classements_zones': classementZones,
+    };
+  }
+
+  // ── Audit installations ──
+  static Map<String, dynamic> _serializeAudit(
+      AuditInstallationsElectriques a) {
+    return {
+      'missionId': a.missionId,
+      'updatedAt': a.updatedAt.toIso8601String(),
+      'photos': a.photos,
+      'moyenneTensionLocaux':
+          a.moyenneTensionLocaux.map(_serializeMTLocal).toList(),
+      'moyenneTensionZones':
+          a.moyenneTensionZones.map(_serializeMTZone).toList(),
+      'basseTensionZones':
+          a.basseTensionZones.map(_serializeBTZone).toList(),
+    };
+  }
+
+  static Map<String, dynamic> _serializeMTLocal(MoyenneTensionLocal l) => {
+        'nom': l.nom,
+        'type': l.type,
+        'accessible': l.accessible,
+        'aReverifier': l.aReverifier,
+        'photos': l.photos,
+        'dispositionsConstructives':
+            l.dispositionsConstructives.map(_serializeElement).toList(),
+        'conditionsExploitation':
+            l.conditionsExploitation.map(_serializeElement).toList(),
+        // Ancien champ unique (rétrocompat)
+        'cellule': l.cellule != null ? _serializeCellule(l.cellule!) : null,
+        'transformateur': l.transformateur != null
+            ? _serializeTransformateur(l.transformateur!)
+            : null,
+        // Nouvelles listes
+        'cellules': l.cellules.map(_serializeCellule).toList(),
+        'transformateurs':
+            l.transformateurs.map(_serializeTransformateur).toList(),
+        'coffrets': l.coffrets.map(_serializeCoffret).toList(),
+        'observationsLibres':
+            l.observationsLibres.map(_serializeObs).toList(),
+      };
+
+  static Map<String, dynamic> _serializeMTZone(MoyenneTensionZone z) => {
+        'nom': z.nom,
+        'description': z.description,
+        'photos': z.photos,
+        'classementZoneId': z.classementZoneId,
+        'coffrets': z.coffrets.map(_serializeCoffret).toList(),
+        'observationsLibres': z.observationsLibres.map(_serializeObs).toList(),
+        'locaux': z.locaux.map(_serializeMTLocal).toList(),
+      };
+
+  static Map<String, dynamic> _serializeBTZone(BasseTensionZone z) => {
+        'nom': z.nom,
+        'description': z.description,
+        'photos': z.photos,
+        'classementZoneId': z.classementZoneId,
+        'coffretsDirects': z.coffretsDirects.map(_serializeCoffret).toList(),
+        'observationsLibres': z.observationsLibres.map(_serializeObs).toList(),
+        'locaux': z.locaux.map(_serializeBTLocal).toList(),
+      };
+
+  static Map<String, dynamic> _serializeBTLocal(BasseTensionLocal l) => {
+        'nom': l.nom,
+        'type': l.type,
+        'accessible': l.accessible,
+        'aReverifier': l.aReverifier,
+        'photos': l.photos,
+        'dispositionsConstructives':
+            (l.dispositionsConstructives ?? []).map(_serializeElement).toList(),
+        'conditionsExploitation':
+            (l.conditionsExploitation ?? []).map(_serializeElement).toList(),
+        // Fields 9 et 10 — présents si build_runner a été relancé
+        'cellules': l.cellules.map(_serializeCellule).toList(),
+        'transformateurs': l.transformateurs.map(_serializeTransformateur).toList(),
+        'coffrets': l.coffrets.map(_serializeCoffret).toList(),
+        'observationsLibres': l.observationsLibres.map(_serializeObs).toList(),
+      };
+
+  static Map<String, dynamic> _serializeElement(ElementControle e) => {
+        'elementControle': e.elementControle,
+        'conforme': e.conforme,
+        'observation': e.observation,
+        'priorite': e.priorite,
+        'photos': e.photos,
+        'referenceNormative': e.referenceNormative,
+        'estNA': e.estNA,
+      };
+
+  static Map<String, dynamic> _serializeCellule(Cellule c) => {
+        'fonction': c.fonction,
+        'type': c.type,
+        'marqueModeleAnnee': c.marqueModeleAnnee,
+        'tensionAssignee': c.tensionAssignee,
+        'pouvoirCoupure': c.pouvoirCoupure,
+        'numerotation': c.numerotation,
+        'parafoudres': c.parafoudres,
+        'photos': c.photos,
+        'elementsVerifies':
+            c.elementsVerifies.map(_serializeElement).toList(),
+      };
+
+  static Map<String, dynamic> _serializeTransformateur(
+          TransformateurMTBT t) =>
+      {
+        'typeTransformateur': t.typeTransformateur,
+        'marqueAnnee': t.marqueAnnee,
+        'puissanceAssignee': t.puissanceAssignee,
+        'tensionPrimaireSecondaire': t.tensionPrimaireSecondaire,
+        'relaisBuchholz': t.relaisBuchholz,
+        'typeRefroidissement': t.typeRefroidissement,
+        'regimeNeutre': t.regimeNeutre,
+        'photos': t.photos,
+        'elementsVerifies':
+            t.elementsVerifies.map(_serializeElement).toList(),
+      };
+
+  static Map<String, dynamic> _serializeCoffret(CoffretArmoire c) => {
+        'qrCode': c.qrCode,
+        'nom': c.nom,
+        'type': c.type,
+        'description': c.description,
+        'repere': c.repere,
+        'numeroEquipement': c.numeroEquipement,
+        'statut': c.statut,
+        'currentStep': c.currentStep,
+        'zoneAtex': c.zoneAtex,
+        'domaineTension': c.domaineTension,
+        'identificationArmoire': c.identificationArmoire,
+        'signalisationDanger': c.signalisationDanger,
+        'presenceSchema': c.presenceSchema,
+        'presenceParafoudre': c.presenceParafoudre,
+        'verificationThermographie': c.verificationThermographie,
+        'photos': c.photos,
+        'photosExternes': c.photosExternes,
+        'photosInternes': c.photosInternes,
+        'alimentations': c.alimentations.map(_serializeAlim).toList(),
+        'protectionTete': c.protectionTete != null
+            ? _serializeAlim(c.protectionTete!)
+            : null,
+        'pointsVerification':
+            c.pointsVerification.map(_serializePoint).toList(),
+        'observationsLibres': c.observationsLibres.map(_serializeObs).toList(),
+        'observationsParafoudre':
+            c.observationsParafoudre.map(_serializeObs).toList(),
+      };
+
+  static Map<String, dynamic> _serializeAlim(Alimentation a) => {
+        'typeProtection': a.typeProtection,
+        'pdcKA': a.pdcKA,
+        'calibre': a.calibre,
+        'sectionCable': a.sectionCable,
+        'source': a.source,
+        'photos': a.photos,
+      };
+
+  static Map<String, dynamic> _serializePoint(PointVerification p) => {
+        'pointVerification': p.pointVerification,
+        'conformite': p.conformite,
+        'observation': p.observation,
+        'referenceNormative': p.referenceNormative,
+        'priorite': p.priorite,
+        'photos': p.photos,
+      };
+
+  static Map<String, dynamic> _serializeObs(ObservationLibre o) => {
+        'texte': o.texte,
+        'photos': o.photos,
+        'dateCreation': o.dateCreation.toIso8601String(),
+        'dateModification': o.dateModification.toIso8601String(),
+      };
+
+  // ── Description des installations ──
+  static Map<String, dynamic> _serializeDescription(
+      DescriptionInstallations d) =>
+      {
+        'missionId': d.missionId,
+        'alimentationMoyenneTension': d.alimentationMoyenneTension
+            .map(_serializeInstallationItem)
+            .toList(),
+        'alimentationBasseTension': d.alimentationBasseTension
+            .map(_serializeInstallationItem)
+            .toList(),
+        'groupeElectrogene':
+            d.groupeElectrogene.map(_serializeInstallationItem).toList(),
+        'alimentationCarburant':
+            d.alimentationCarburant.map(_serializeInstallationItem).toList(),
+        'inverseur': d.inverseur.map(_serializeInstallationItem).toList(),
+        'stabilisateur':
+            d.stabilisateur.map(_serializeInstallationItem).toList(),
+        'onduleurs': d.onduleurs.map(_serializeInstallationItem).toList(),
+        'regimeNeutre': d.regimeNeutre,
+        'regimeNeutreDetail': d.regimeNeutreDetail,
+        'eclairageSecurite': d.eclairageSecurite,
+        'modificationsInstallations': d.modificationsInstallations,
+        'noteCalcul': d.noteCalcul,
+        'registreSecurite': d.registreSecurite,
+        'presenceParatonnerre': d.presenceParatonnerre,
+        'analyseRisqueFoudre': d.analyseRisqueFoudre,
+        'etudeTechniqueFoudre': d.etudeTechniqueFoudre,
+        'updatedAt': d.updatedAt.toIso8601String(),
+      };
+
+  static Map<String, dynamic> _serializeInstallationItem(
+          InstallationItem i) =>
+      {'data': i.data, 'photoPaths': i.photoPaths};
+
+  // ── Mesures et essais — sérialisation champ par champ ──
+  static Map<String, dynamic> _serializeMesures(MesuresEssais m) => {
+        'missionId': m.missionId,
+        'updatedAt': m.updatedAt.toIso8601String(),
+        'conditionMesure': {'observation': m.conditionMesure.observation},
+        'essaiDemarrageAuto': {
+          'observation': m.essaiDemarrageAuto.observation
+        },
+        'testArretUrgence': {'observation': m.testArretUrgence.observation},
+        'avisMesuresTerre': {
+          'satisfaisants': m.avisMesuresTerre.satisfaisants,
+          'nonSatisfaisants': m.avisMesuresTerre.nonSatisfaisants,
+          'observation': m.avisMesuresTerre.observation,
+        },
+        'prisesTerre': m.prisesTerre
+            .map((p) => {
+                  'localisation': p.localisation,
+                  'identification': p.identification,
+                  'conditionPriseTerre': p.conditionPriseTerre,
+                  'naturePriseTerre': p.naturePriseTerre,
+                  'methodeMesure': p.methodeMesure,
+                  'valeurMesure': p.valeurMesure,
+                  'observation': p.observation,
+                })
+            .toList(),
+        'essaisDeclenchement': m.essaisDeclenchement
+            .map((e) => {
+                  'localisation': e.localisation,
+                  'coffret': e.coffret,
+                  'designationCircuit': e.designationCircuit,
+                  'typeDispositif': e.typeDispositif,
+                  'reglageIAn': e.reglageIAn,
+                  'tempo': e.tempo,
+                  'isolement': e.isolement,
+                  'essai': e.essai,
+                  'observation': e.observation,
+                })
+            .toList(),
+        'continuiteResistances': m.continuiteResistances
+            .map((c) => {
+                  'localisation': c.localisation,
+                  'designationTableau': c.designationTableau,
+                  'origineMesure': c.origineMesure,
+                  'observation': c.observation,
+                })
+            .toList(),
+      };
+
+  // ── JSA ──
+  static Map<String, dynamic> _serializeJSA(JSA j) {
+    return {
+      'missionId': j.missionId,
+      'operationEffectuer': j.operationEffectuer,
+      'updatedAt': j.updatedAt.toIso8601String(),
+      'currentSubCategory': j.currentSubCategory,
+      'inspecteurs': j.inspecteurs.map((i) => {
+        'nom': i.nom,
+        'prenom': i.prenom,
+        'signature': i.signature,
+      }).toList(),
+      'planUrgence': {
+        'voiesIssuesIdentifiees': j.planUrgence.voiesIssuesIdentifiees,
+        'zonesRassemblementIdentifiees': j.planUrgence.zonesRassemblementIdentifiees,
+        'consignesSecuriteInternes': j.planUrgence.consignesSecuriteInternes,
+        'personneContactClient': j.planUrgence.personneContactClient,
+        'personneContactKES': j.planUrgence.personneContactKES,
+      },
+      'dangers': {
+        'chocElectrique': j.dangers.chocElectrique,
+        'bruit': j.dangers.bruit,
+        'stressThermique': j.dangers.stressThermique,
+        'eclairageInadapte': j.dangers.eclairageInadapte,
+        'zoneCirculationMalDefinie': j.dangers.zoneCirculationMalDefinie,
+        'solAccidente': j.dangers.solAccidente,
+        'emissionGazPoussiere': j.dangers.emissionGazPoussiere,
+        'espaceConfine': j.dangers.espaceConfine,
+        'autreEnvironnement': j.dangers.autreEnvironnement,
+        'chuteObjets': j.dangers.chuteObjets,
+        'coactivite': j.dangers.coactivite,
+        'portCharge': j.dangers.portCharge,
+        'expositionProduitsChimiques': j.dangers.expositionProduitsChimiques,
+        'chuteHauteur': j.dangers.chuteHauteur,
+        'electrification': j.dangers.electrification,
+        'incendiesExplosion': j.dangers.incendiesExplosion,
+        'mauvaisesPostures': j.dangers.mauvaisesPostures,
+        'chutePlainPied': j.dangers.chutePlainPied,
+        'autrePhysique': j.dangers.autrePhysique,
+      },
+      'exigencesGenerales': {
+        'signaletiqueSecurite': j.exigencesGenerales.signaletiqueSecurite,
+        'ficheDonneeSecuriteDisponible': j.exigencesGenerales.ficheDonneeSecuriteDisponible,
+        'uneMinuteMaSecurite': j.exigencesGenerales.uneMinuteMaSecurite,
+        'balise': j.exigencesGenerales.balise,
+        'zoneTravailPropre': j.exigencesGenerales.zoneTravailPropre,
+        'toolboxMeeting': j.exigencesGenerales.toolboxMeeting,
+        'permisTravail': j.exigencesGenerales.permisTravail,
+        'extincteurs': j.exigencesGenerales.extincteurs,
+        'outilsMaterielsIsolants': j.exigencesGenerales.outilsMaterielsIsolants,
+        'boitePharmacie': j.exigencesGenerales.boitePharmacie,
+        'autre': j.exigencesGenerales.autre,
+      },
+      'epi': {
+        'casqueSecurite': j.epi.casqueSecurite,
+        'bouchonsOreille': j.epi.bouchonsOreille,
+        'lunettesProtection': j.epi.lunettesProtection,
+        'harnaisSecurite': j.epi.harnaisSecurite,
+        'chaussureSecurite': j.epi.chaussureSecurite,
+        'masqueSecurite': j.epi.masqueSecurite,
+        'combinaisonLongueManche': j.epi.combinaisonLongueManche,
+        'gantsIsolants': j.epi.gantsIsolants,
+        'cacheNez': j.epi.cacheNez,
+        'gilet': j.epi.gilet,
+        'autre': j.epi.autre,
+      },
+      'verificationFinale': {
+        'travailTermineNA': j.verificationFinale.travailTermineNA,
+        'travailTermineApplicable': j.verificationFinale.travailTermineApplicable,
+        'consignationCadenasRetireNA': j.verificationFinale.consignationCadenasRetireNA,
+        'consignationCadenasRetireApplicable': j.verificationFinale.consignationCadenasRetireApplicable,
+        'absenceConsignataireProcedureNA': j.verificationFinale.absenceConsignataireProcedureNA,
+        'absenceConsignataireProcedureApplicable': j.verificationFinale.absenceConsignataireProcedureApplicable,
+        'consignataireAbsentProcedureAppliqueeNA': j.verificationFinale.consignataireAbsentProcedureAppliqueeNA,
+        'consignataireAbsentProcedureAppliqueeApplicable': j.verificationFinale.consignataireAbsentProcedureAppliqueeApplicable,
+        'materielEnleveZoneNettoyeeNA': j.verificationFinale.materielEnleveZoneNettoyeeNA,
+        'materielEnleveZoneNettoyeeApplicable': j.verificationFinale.materielEnleveZoneNettoyeeApplicable,
+        'risquesSupprimesEquipementPretNA': j.verificationFinale.risquesSupprimesEquipementPretNA,
+        'risquesSupprimesEquipementPretApplicable': j.verificationFinale.risquesSupprimesEquipementPretApplicable,
+        'autresPoints': j.verificationFinale.autresPoints,
+        'donneurOrdreSignature': j.verificationFinale.donneurOrdreSignature,
+        'chargeAffairesSignature': j.verificationFinale.chargeAffairesSignature,
+      },
+    };
+  }
+
+  static Map<String, dynamic> _serializeRenseignements(
+      RenseignementsGeneraux r) =>
+      {
+        'missionId': r.missionId,
+        'etablissement': r.etablissement,
+        'installation': r.installation,
+        'activite': r.activite,
+        'dateDebut': r.dateDebut?.toIso8601String(),
+        'dateFin': r.dateFin?.toIso8601String(),
+        'dureeJours': r.dureeJours,
+        'verificationType': r.verificationType,
+        'registreControle': r.registreControle,
+        'compteRendu': r.compteRendu,
+        'accompagnateurs': r.accompagnateurs,
+        'verificateurs': r.verificateurs,
+        'updatedAt': r.updatedAt.toIso8601String(),
+        'nomSite': r.nomSite,
+      };
+
+  static Map<String, dynamic> _f(Foudre f) => f.toJson();
+
+  // ── Classements ──
+  static List<Map<String, dynamic>> _classementsByMission(String missionId) {
+    final box = Hive.box<ClassementEmplacement>('classement_locaux');
+    return box.values
+        .where((c) => c.missionId == missionId)
+        .map((c) => {
+              'missionId': c.missionId,
+              'localisation': c.localisation,
+              'zone': c.zone,
+              'origineClassement': c.origineClassement,
+              'af': c.af,
+              'be': c.be,
+              'ae': c.ae,
+              'ad': c.ad,
+              'ag': c.ag,
+              'ip': c.ip,
+              'ik': c.ik,
+              'updatedAt': c.updatedAt.toIso8601String(),
+              'typeLocal': c.typeLocal,
+              'typeEmplacement': c.typeEmplacement,
+              'heriteDeZone': c.heriteDeZone,
+              'zoneParenteId': c.zoneParenteId,
+            })
+        .toList();
+  }
+
+  static List<Map<String, dynamic>> _classementZonesByMission(
+      String missionId) {
+    final box = Hive.box<ClassementZone>('classement_zones');
+    return box.values
+        .where((c) => c.missionId == missionId)
+        .map((c) => {
+              'missionId': c.missionId,
+              'nomZone': c.nomZone,
+              'origineClassement': c.origineClassement,
+              'typeZone': c.typeZone,
+              'af': c.af,
+              'be': c.be,
+              'ae': c.ae,
+              'ad': c.ad,
+              'ag': c.ag,
+              'ip': c.ip,
+              'ik': c.ik,
+              'updatedAt': c.updatedAt.toIso8601String(),
+            })
+        .toList();
+  }
+
+  // ── Brouillons locaux ──
+  static List<Map<String, dynamic>> _serializeLocalDrafts(
+      List<String> missionIds) {
+    final box = Hive.box('local_drafts');
+    final result = <Map<String, dynamic>>[];
+    for (final key in box.keys) {
+      try {
+        final data = box.get(key);
+        if (data is! Map) continue;
+        final missionId = data['missionId'];
+        if (!missionIds.contains(missionId)) continue;
+        final local = data['local'];
+        Map<String, dynamic>? serializedLocal;
+        String localClass = 'MT';
+        if (local is MoyenneTensionLocal) {
+          serializedLocal = _serializeMTLocal(local);
+          localClass = 'MT';
+        } else if (local is BasseTensionLocal) {
+          serializedLocal = _serializeBTLocal(local);
+          localClass = 'BT';
+        }
+        if (serializedLocal == null) continue;
+        result.add({
+          'key': key.toString(),
+          'missionId': missionId,
+          'isMoyenneTension': data['isMoyenneTension'],
+          'zoneIndex': data['zoneIndex'],
+          'isInZone': data['isInZone'],
+          'localType': data['localType'],
+          'nomLocal': data['nomLocal'],
+          'currentStep': data['currentStep'],
+          'savedAt': data['savedAt'],
+          'localId': data['localId'],
+          'localClass': localClass,
+          'local': serializedLocal,
+        });
+      } catch (e) {
+        if (kDebugMode) print('⚠️ Draft local ignoré: $e');
+      }
+    }
+    return result;
+  }
+
+  // ── Brouillons coffrets ──
+  static List<Map<String, dynamic>> _serializeCoffretDrafts(
+      List<String> missionIds) {
+    final box = Hive.box('coffret_drafts');
+    final result = <Map<String, dynamic>>[];
+    for (final key in box.keys) {
+      try {
+        final data = box.get(key);
+        if (data is! Map) continue;
+        final missionId = data['missionId'];
+        if (!missionIds.contains(missionId)) continue;
+        final coffret = data['coffret'];
+        if (coffret is! CoffretArmoire) continue;
+        result.add({
+          'key': key.toString(),
+          'missionId': missionId,
+          'parentType': data['parentType'],
+          'parentIndex': data['parentIndex'],
+          'isMoyenneTension': data['isMoyenneTension'],
+          'zoneIndex': data['zoneIndex'],
+          'savedAt': data['savedAt'],
+          'coffret': _serializeCoffret(coffret),
+        });
+      } catch (e) {
+        if (kDebugMode) print('⚠️ Draft coffret ignoré: $e');
+      }
+    }
+    return result;
+  }
+
+
+  // ═══════════════════════════════════════════════════════════
+  // IMPORT
+  // ═══════════════════════════════════════════════════════════
+
+  static Future<ImportResult> importerMissions(
+    String filePath, {
+    bool ecraserExistants = false,
+  }) async {
+    final warnings = <String>[];
+    int imported = 0;
+    int skipped = 0;
+
+    // ─ 1. Lecture et validation ─
+    Map<String, dynamic> payload;
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        return const ImportResult(
+            success: false, message: 'Fichier introuvable.');
+      }
+      final content = await file.readAsString(encoding: utf8);
+      payload = jsonDecode(content) as Map<String, dynamic>;
+    } catch (e) {
+      return ImportResult(
+        success: false,
+        message: 'Fichier JSON invalide ou corrompu.',
+        errorDetail: e.toString(),
+      );
+    }
+
+    // ─ 2. Validation magic ─
+    if (payload['magic'] != _magic) {
+      return const ImportResult(
+        success: false,
+        message: "Ce fichier n'est pas une sauvegarde Inspec valide.",
+      );
+    }
+
+    final schemaVersion = payload['schema_version'] as int? ?? 1;
+    if (schemaVersion > _schemaVersion) {
+      return ImportResult(
+        success: false,
+        message:
+            'Sauvegarde créée avec une version plus récente (schéma v$schemaVersion). '
+            'Mettez à jour l\'application.',
+      );
+    }
+
+    // ─ 3. Import des missions ─
+    final missionsData = payload['missions'] as List<dynamic>? ?? [];
+    for (final m in missionsData) {
+      try {
+        final r = await _importMission(
+          m as Map<String, dynamic>,
+          ecraser: ecraserExistants,
+        );
+        if (r == 'imported') {
+          imported++;
+        } else {
+          skipped++;
+          final nom = ((m['mission'] as Map?))?['nom_client'] as String? ??
+              'Mission inconnue';
+          warnings.add('Mission "$nom" ignorée (déjà existante).');
+        }
+      } catch (e) {
+        warnings.add('Erreur sur une mission: $e');
+        if (kDebugMode) print('❌ Import mission: $e');
+      }
+    }
+
+    // ─ 4. Import brouillons ─
+    try {
+      await _importLocalDrafts(
+          payload['local_drafts'] as List<dynamic>? ?? [],
+          ecraser: ecraserExistants);
+    } catch (e) {
+      warnings.add('Brouillons locaux partiellement importés: $e');
+    }
+    try {
+      await _importCoffretDrafts(
+          payload['coffret_drafts'] as List<dynamic>? ?? [],
+          ecraser: ecraserExistants);
+    } catch (e) {
+      warnings.add('Brouillons coffrets partiellement importés: $e');
+    }
+
+    return ImportResult(
+      success: imported > 0 || warnings.isEmpty,
+      message: imported > 0
+          ? '$imported mission(s) importée(s).'
+          : 'Aucune nouvelle mission importée.',
+      importedMissions: imported,
+      skippedMissions: skipped,
+      warnings: warnings,
+    );
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // IMPORT D'UNE MISSION
+  // ─────────────────────────────────────────────────────────
+
+  static Future<String> _importMission(
+    Map<String, dynamic> data, {
+    required bool ecraser,
+  }) async {
+    final mj = data['mission'] as Map<String, dynamic>?;
+    if (mj == null) return 'skipped';
+    final missionId = mj['id'] as String?;
+    if (missionId == null) return 'skipped';
+
+    // Vérifier doublon
+    final box = Hive.box<Mission>('missions');
+    final exists = box.values.any((m) => m.id == missionId);
+    if (exists && !ecraser) return 'skipped';
+
+    // Mission
+    final mission = Mission.fromJson(mj);
+    await box.put(missionId, mission);
+
+    // Audit
+    final auditData = data['audit'] as Map<String, dynamic>?;
+    if (auditData != null) await _importAudit(auditData);
+
+    // Description installations
+    final descData =
+        data['description_installations'] as Map<String, dynamic>?;
+    if (descData != null) await _importDescription(descData);
+
+    // Mesures et essais
+    final mesuresData = data['mesures_essais'] as Map<String, dynamic>?;
+    if (mesuresData != null) await _importMesures(mesuresData);
+
+    // JSA
+    final jsaData = data['jsa'] as Map<String, dynamic>?;
+    if (jsaData != null) await _importJSA(jsaData);
+
+    // Renseignements généraux
+    final rensData =
+        data['renseignements_generaux'] as Map<String, dynamic>?;
+    if (rensData != null) await _importRenseignements(rensData);
+
+    // Foudre
+    for (final f in data['foudre_observations'] as List<dynamic>? ?? []) {
+      await _importFoudre(f as Map<String, dynamic>);
+    }
+
+    // Classements locaux
+    for (final c in data['classements_locaux'] as List<dynamic>? ?? []) {
+      await _importClassement(c as Map<String, dynamic>);
+    }
+
+    // Classements zones
+    for (final c in data['classements_zones'] as List<dynamic>? ?? []) {
+      await _importClassementZone(c as Map<String, dynamic>);
+    }
+
+    return 'imported';
+  }
+
+  // ── Audit ──
+  static Future<void> _importAudit(Map<String, dynamic> d) async {
+    final missionId = d['missionId'] as String;
+    final audit = AuditInstallationsElectriques(
+      missionId: missionId,
+      updatedAt: _dt(d['updatedAt']),
+      photos: _strList(d['photos']),
+      moyenneTensionLocaux: (d['moyenneTensionLocaux'] as List<dynamic>?)
+              ?.map((l) => _parseMTLocal(l as Map<String, dynamic>))
+              .toList() ??
+          [],
+      moyenneTensionZones: (d['moyenneTensionZones'] as List<dynamic>?)
+              ?.map((z) => _parseMTZone(z as Map<String, dynamic>))
+              .toList() ??
+          [],
+      basseTensionZones: (d['basseTensionZones'] as List<dynamic>?)
+              ?.map((z) => _parseBTZone(z as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+    final box =
+        Hive.box<AuditInstallationsElectriques>('audit_installations_electriques');
+    await box.put(missionId, audit);
+  }
+
+  static MoyenneTensionLocal _parseMTLocal(Map<String, dynamic> d) =>
+      MoyenneTensionLocal(
+        nom: d['nom'] as String? ?? '',
+        type: d['type'] as String? ?? 'LOCAL_ELECTRIQUE',
+        accessible: d['accessible'] as bool? ?? true,
+        aReverifier: d['aReverifier'] as bool? ?? false,
+        photos: _strList(d['photos']),
+        dispositionsConstructives: _parseElements(d['dispositionsConstructives']),
+        conditionsExploitation: _parseElements(d['conditionsExploitation']),
+        cellule: d['cellule'] != null
+            ? _parseCellule(d['cellule'] as Map<String, dynamic>)
+            : null,
+        transformateur: d['transformateur'] != null
+            ? _parseTransformateur(d['transformateur'] as Map<String, dynamic>)
+            : null,
+        cellules: (d['cellules'] as List<dynamic>?)
+                ?.map((c) => _parseCellule(c as Map<String, dynamic>))
+                .toList() ??
+            [],
+        transformateurs: (d['transformateurs'] as List<dynamic>?)
+                ?.map((t) => _parseTransformateur(t as Map<String, dynamic>))
+                .toList() ??
+            [],
+        coffrets: _parseCoffrets(d['coffrets']),
+        observationsLibres: _parseObs(d['observationsLibres']),
+      );
+
+  static MoyenneTensionZone _parseMTZone(Map<String, dynamic> d) =>
+      MoyenneTensionZone(
+        nom: d['nom'] as String? ?? '',
+        description: d['description'] as String?,
+        photos: _strList(d['photos']),
+        classementZoneId: d['classementZoneId'] as String?,
+        coffrets: _parseCoffrets(d['coffrets']),
+        observationsLibres: _parseObs(d['observationsLibres']),
+        locaux: (d['locaux'] as List<dynamic>?)
+                ?.map((l) => _parseMTLocal(l as Map<String, dynamic>))
+                .toList() ??
+            [],
+      );
+
+  static BasseTensionZone _parseBTZone(Map<String, dynamic> d) =>
+      BasseTensionZone(
+        nom: d['nom'] as String? ?? '',
+        description: d['description'] as String?,
+        photos: _strList(d['photos']),
+        classementZoneId: d['classementZoneId'] as String?,
+        coffretsDirects: _parseCoffrets(d['coffretsDirects']),
+        observationsLibres: _parseObs(d['observationsLibres']),
+        locaux: (d['locaux'] as List<dynamic>?)
+                ?.map((l) => _parseBTLocal(l as Map<String, dynamic>))
+                .toList() ??
+            [],
+      );
+
+  static BasseTensionLocal _parseBTLocal(Map<String, dynamic> d) =>
+      BasseTensionLocal(
+        nom: d['nom'] as String? ?? '',
+        type: d['type'] as String? ?? 'LOCAL_ELECTRIQUE',
+        accessible: d['accessible'] as bool? ?? true,
+        aReverifier: d['aReverifier'] as bool? ?? false,
+        photos: _strList(d['photos']),
+        dispositionsConstructives: _parseElements(d['dispositionsConstructives']),
+        conditionsExploitation: _parseElements(d['conditionsExploitation']),
+        cellules: (d['cellules'] as List<dynamic>?)
+                ?.map((c) => _parseCellule(c as Map<String, dynamic>))
+                .toList() ??
+            [],
+        transformateurs: (d['transformateurs'] as List<dynamic>?)
+                ?.map((t) => _parseTransformateur(t as Map<String, dynamic>))
+                .toList() ??
+            [],
+        coffrets: _parseCoffrets(d['coffrets']),
+        observationsLibres: _parseObs(d['observationsLibres']),
+      );
+
+  static List<ElementControle> _parseElements(dynamic raw) {
+    if (raw == null) return [];
+    return (raw as List<dynamic>).map((e) {
+      final m = e as Map<String, dynamic>;
+      return ElementControle(
+        elementControle: m['elementControle'] as String? ?? '',
+        conforme: m['conforme'] as bool?,
+        observation: m['observation'] as String?,
+        priorite: m['priorite'] as int?,
+        photos: _strList(m['photos']),
+        referenceNormative: m['referenceNormative'] as String?,
+        estNA: m['estNA'] as bool? ?? false,
+      );
+    }).toList();
+  }
+
+  static Cellule _parseCellule(Map<String, dynamic> d) => Cellule(
+        fonction: d['fonction'] as String? ?? '',
+        type: d['type'] as String? ?? '',
+        marqueModeleAnnee: d['marqueModeleAnnee'] as String? ?? '',
+        tensionAssignee: d['tensionAssignee'] as String? ?? '',
+        pouvoirCoupure: d['pouvoirCoupure'] as String? ?? '',
+        numerotation: d['numerotation'] as String? ?? '',
+        parafoudres: d['parafoudres'] as String? ?? '',
+        photos: _strList(d['photos']),
+        elementsVerifies: _parseElements(d['elementsVerifies']),
+      );
+
+  static TransformateurMTBT _parseTransformateur(Map<String, dynamic> d) =>
+      TransformateurMTBT(
+        typeTransformateur: d['typeTransformateur'] as String? ?? '',
+        marqueAnnee: d['marqueAnnee'] as String? ?? '',
+        puissanceAssignee: d['puissanceAssignee'] as String? ?? '',
+        tensionPrimaireSecondaire:
+            d['tensionPrimaireSecondaire'] as String? ?? '',
+        relaisBuchholz: d['relaisBuchholz'] as String? ?? '',
+        typeRefroidissement: d['typeRefroidissement'] as String? ?? '',
+        regimeNeutre: d['regimeNeutre'] as String? ?? '',
+        photos: _strList(d['photos']),
+        elementsVerifies: _parseElements(d['elementsVerifies']),
+      );
+
+  static List<CoffretArmoire> _parseCoffrets(dynamic raw) {
+    if (raw == null) return [];
+    return (raw as List<dynamic>).map((e) {
+      final d = e as Map<String, dynamic>;
+      return CoffretArmoire(
+        qrCode: d['qrCode'] as String? ?? '',
+        nom: d['nom'] as String? ?? '',
+        type: d['type'] as String? ?? '',
+        description: d['description'] as String?,
+        repere: d['repere'] as String?,
+        numeroEquipement: d['numeroEquipement'] as String?,
+        statut: d['statut'] as String? ?? 'incomplet',
+        currentStep: d['currentStep'] as int? ?? 0,
+        zoneAtex: d['zoneAtex'] as bool? ?? false,
+        domaineTension: d['domaineTension'] as String? ?? '',
+        identificationArmoire: d['identificationArmoire'] as bool? ?? false,
+        signalisationDanger: d['signalisationDanger'] as bool? ?? false,
+        presenceSchema: d['presenceSchema'] as bool? ?? false,
+        presenceParafoudre: d['presenceParafoudre'] as bool? ?? false,
+        verificationThermographie:
+            d['verificationThermographie'] as bool? ?? false,
+        photos: _strList(d['photos']),
+        photosExternes: _strList(d['photosExternes']),
+        photosInternes: _strList(d['photosInternes']),
+        alimentations: (d['alimentations'] as List<dynamic>?)
+                ?.map((a) => _parseAlim(a as Map<String, dynamic>))
+                .toList() ??
+            [],
+        protectionTete: d['protectionTete'] != null
+            ? _parseAlim(d['protectionTete'] as Map<String, dynamic>)
+            : null,
+        pointsVerification: (d['pointsVerification'] as List<dynamic>?)
+                ?.map((p) => _parsePoint(p as Map<String, dynamic>))
+                .toList() ??
+            [],
+        observationsLibres: _parseObs(d['observationsLibres']),
+        observationsParafoudre: _parseObs(d['observationsParafoudre']),
+      );
+    }).toList();
+  }
+
+  static Alimentation _parseAlim(Map<String, dynamic> d) => Alimentation(
+        typeProtection: d['typeProtection'] as String? ?? '',
+        pdcKA: d['pdcKA'] as String? ?? '',
+        calibre: d['calibre'] as String? ?? '',
+        sectionCable: d['sectionCable'] as String? ?? '',
+        source: d['source'] as String? ?? '',
+        photos: _strList(d['photos']),
+      );
+
+  static PointVerification _parsePoint(Map<String, dynamic> d) =>
+      PointVerification(
+        pointVerification: d['pointVerification'] as String? ?? '',
+        conformite: d['conformite'] as String? ?? '',
+        observation: d['observation'] as String?,
+        referenceNormative: d['referenceNormative'] as String?,
+        priorite: d['priorite'] as int?,
+        photos: _strList(d['photos']),
+      );
+
+  static List<ObservationLibre> _parseObs(dynamic raw) {
+    if (raw == null) return [];
+    return (raw as List<dynamic>).map((e) {
+      final m = e as Map<String, dynamic>;
+      return ObservationLibre(
+        texte: m['texte'] as String? ?? '',
+        photos: _strList(m['photos']),
+        dateCreation: _dt(m['dateCreation']),
+        dateModification: _dt(m['dateModification']),
+      );
+    }).toList();
+  }
+
+  // ── Description ──
+  static Future<void> _importDescription(Map<String, dynamic> d) async {
+    final missionId = d['missionId'] as String;
+    final desc = DescriptionInstallations(
+      missionId: missionId,
+      alimentationMoyenneTension:
+          _parseItems(d['alimentationMoyenneTension']),
+      alimentationBasseTension: _parseItems(d['alimentationBasseTension']),
+      groupeElectrogene: _parseItems(d['groupeElectrogene']),
+      alimentationCarburant: _parseItems(d['alimentationCarburant']),
+      inverseur: _parseItems(d['inverseur']),
+      stabilisateur: _parseItems(d['stabilisateur']),
+      onduleurs: _parseItems(d['onduleurs']),
+      regimeNeutre: d['regimeNeutre'] as String?,
+      regimeNeutreDetail: d['regimeNeutreDetail'] as String?,
+      eclairageSecurite: d['eclairageSecurite'] as String?,
+      modificationsInstallations: d['modificationsInstallations'] as String?,
+      noteCalcul: d['noteCalcul'] as String?,
+      registreSecurite: d['registreSecurite'] as String?,
+      presenceParatonnerre: d['presenceParatonnerre'] as String?,
+      analyseRisqueFoudre: d['analyseRisqueFoudre'] as String?,
+      etudeTechniqueFoudre: d['etudeTechniqueFoudre'] as String?,
+      updatedAt: _dt(d['updatedAt']),
+    );
+    final box =
+        Hive.box<DescriptionInstallations>('description_installations');
+    await box.put(missionId, desc);
+  }
+
+  static List<InstallationItem> _parseItems(dynamic raw) {
+    if (raw == null) return [];
+    return (raw as List<dynamic>).map((e) {
+      final m = e as Map<String, dynamic>;
+      return InstallationItem(
+        data: Map<String, String>.from(m['data'] as Map? ?? {}),
+        photoPaths: _strList(m['photoPaths']),
+      );
+    }).toList();
+  }
+
+  // ── Mesures et essais ──
+  static Future<void> _importMesures(Map<String, dynamic> d) async {
+    try {
+      final missionId = d['missionId'] as String;
+      final box = Hive.box<MesuresEssais>('mesures_essais');
+      final exists = box.values.any((m) => m.missionId == missionId);
+      if (exists) return; // Ne pas écraser
+
+      final cm = d['conditionMesure'] as Map<String, dynamic>?;
+      final eda = d['essaiDemarrageAuto'] as Map<String, dynamic>?;
+      final tau = d['testArretUrgence'] as Map<String, dynamic>?;
+      final amt = d['avisMesuresTerre'] as Map<String, dynamic>?;
+
+      final mesures = MesuresEssais(
+        missionId: missionId,
+        updatedAt: _dt(d['updatedAt']),
+        conditionMesure:
+            ConditionMesure(observation: cm?['observation'] as String?),
+        essaiDemarrageAuto:
+            EssaiDemarrageAuto(observation: eda?['observation'] as String?),
+        testArretUrgence:
+            TestArretUrgence(observation: tau?['observation'] as String?),
+        avisMesuresTerre: AvisMesuresTerre(
+          satisfaisants: _strList(amt?['satisfaisants']),
+          nonSatisfaisants: _strList(amt?['nonSatisfaisants']),
+          observation: amt?['observation'] as String?,
+        ),
+        prisesTerre: (d['prisesTerre'] as List<dynamic>?)
+                ?.map((p) {
+                  final m = p as Map<String, dynamic>;
+                  return PriseTerre(
+                    localisation: m['localisation'] as String? ?? '',
+                    identification: m['identification'] as String? ?? '',
+                    conditionPriseTerre:
+                        m['conditionPriseTerre'] as String? ?? '',
+                    naturePriseTerre: m['naturePriseTerre'] as String? ?? '',
+                    methodeMesure: m['methodeMesure'] as String? ?? '',
+                    valeurMesure: (m['valeurMesure'] as num?)?.toDouble(),
+                    observation: m['observation'] as String?,
+                  );
+                })
+                .toList() ??
+            [],
+        essaisDeclenchement: (d['essaisDeclenchement'] as List<dynamic>?)
+                ?.map((e) {
+                  final m = e as Map<String, dynamic>;
+                  return EssaiDeclenchementDifferentiel(
+                    localisation: m['localisation'] as String? ?? '',
+                    coffret: m['coffret'] as String?,
+                    designationCircuit: m['designationCircuit'] as String?,
+                    typeDispositif: m['typeDispositif'] as String? ?? 'DDR',
+                    reglageIAn: (m['reglageIAn'] as num?)?.toDouble(),
+                    tempo: (m['tempo'] as num?)?.toDouble(),
+                    isolement: (m['isolement'] as num?)?.toDouble(),
+                    essai: m['essai'] as String? ?? 'NE',
+                    observation: m['observation'] as String?,
+                  );
+                })
+                .toList() ??
+            [],
+      );
+      await box.add(mesures);
+    } catch (e) {
+      if (kDebugMode) print('⚠️ Mesures import: $e');
+    }
+  }
+
+  // ── JSA ──
+  static Future<void> _importJSA(Map<String, dynamic> d) async {
+    try {
+      final missionId = d['missionId'] as String;
+      final box = Hive.box<JSA>('jsa');
+      final exists = box.values.any((j) => j.missionId == missionId);
+      if (exists) return;
+
+      final pu = d['planUrgence'] as Map<String, dynamic>?;
+      final da = d['dangers'] as Map<String, dynamic>?;
+      final eg = d['exigencesGenerales'] as Map<String, dynamic>?;
+      final ep = d['epi'] as Map<String, dynamic>?;
+      final vf = d['verificationFinale'] as Map<String, dynamic>?;
+
+      final planUrgence = JSAPlanUrgence();
+      if (pu != null) {
+        planUrgence.voiesIssuesIdentifiees = pu['voiesIssuesIdentifiees'] as bool? ?? false;
+        planUrgence.zonesRassemblementIdentifiees = pu['zonesRassemblementIdentifiees'] as bool? ?? false;
+        planUrgence.consignesSecuriteInternes = pu['consignesSecuriteInternes'] as bool? ?? false;
+        planUrgence.personneContactClient = pu['personneContactClient'] as String? ?? '';
+        planUrgence.personneContactKES = pu['personneContactKES'] as String? ?? '';
+      }
+
+      final dangers = JSADangers();
+      if (da != null) {
+        dangers.chocElectrique = da['chocElectrique'] as bool? ?? false;
+        dangers.bruit = da['bruit'] as bool? ?? false;
+        dangers.stressThermique = da['stressThermique'] as bool? ?? false;
+        dangers.eclairageInadapte = da['eclairageInadapte'] as bool? ?? false;
+        dangers.zoneCirculationMalDefinie = da['zoneCirculationMalDefinie'] as bool? ?? false;
+        dangers.solAccidente = da['solAccidente'] as bool? ?? false;
+        dangers.emissionGazPoussiere = da['emissionGazPoussiere'] as bool? ?? false;
+        dangers.espaceConfine = da['espaceConfine'] as bool? ?? false;
+        dangers.autreEnvironnement = da['autreEnvironnement'] as String? ?? '';
+        dangers.chuteObjets = da['chuteObjets'] as bool? ?? false;
+        dangers.coactivite = da['coactivite'] as bool? ?? false;
+        dangers.portCharge = da['portCharge'] as bool? ?? false;
+        dangers.expositionProduitsChimiques = da['expositionProduitsChimiques'] as bool? ?? false;
+        dangers.chuteHauteur = da['chuteHauteur'] as bool? ?? false;
+        dangers.electrification = da['electrification'] as bool? ?? false;
+        dangers.incendiesExplosion = da['incendiesExplosion'] as bool? ?? false;
+        dangers.mauvaisesPostures = da['mauvaisesPostures'] as bool? ?? false;
+        dangers.chutePlainPied = da['chutePlainPied'] as bool? ?? false;
+        dangers.autrePhysique = da['autrePhysique'] as String? ?? '';
+      }
+
+      final exigences = JSAExigencesGenerales();
+      if (eg != null) {
+        exigences.signaletiqueSecurite = eg['signaletiqueSecurite'] as bool? ?? false;
+        exigences.ficheDonneeSecuriteDisponible = eg['ficheDonneeSecuriteDisponible'] as bool? ?? false;
+        exigences.uneMinuteMaSecurite = eg['uneMinuteMaSecurite'] as bool? ?? false;
+        exigences.balise = eg['balise'] as bool? ?? false;
+        exigences.zoneTravailPropre = eg['zoneTravailPropre'] as bool? ?? false;
+        exigences.toolboxMeeting = eg['toolboxMeeting'] as bool? ?? false;
+        exigences.permisTravail = eg['permisTravail'] as bool? ?? false;
+        exigences.extincteurs = eg['extincteurs'] as bool? ?? false;
+        exigences.outilsMaterielsIsolants = eg['outilsMaterielsIsolants'] as bool? ?? false;
+        exigences.boitePharmacie = eg['boitePharmacie'] as bool? ?? false;
+        exigences.autre = eg['autre'] as String? ?? '';
+      }
+
+      final epi = JSAEPI();
+      if (ep != null) {
+        epi.casqueSecurite = ep['casqueSecurite'] as bool? ?? false;
+        epi.bouchonsOreille = ep['bouchonsOreille'] as bool? ?? false;
+        epi.lunettesProtection = ep['lunettesProtection'] as bool? ?? false;
+        epi.harnaisSecurite = ep['harnaisSecurite'] as bool? ?? false;
+        epi.chaussureSecurite = ep['chaussureSecurite'] as bool? ?? false;
+        epi.masqueSecurite = ep['masqueSecurite'] as bool? ?? false;
+        epi.combinaisonLongueManche = ep['combinaisonLongueManche'] as bool? ?? false;
+        epi.gantsIsolants = ep['gantsIsolants'] as bool? ?? false;
+        epi.cacheNez = ep['cacheNez'] as bool? ?? false;
+        epi.gilet = ep['gilet'] as bool? ?? false;
+        epi.autre = ep['autre'] as String? ?? '';
+      }
+
+      final verif = JSAVerificationFinale();
+      if (vf != null) {
+        verif.travailTermineNA = vf['travailTermineNA'] as bool? ?? false;
+        verif.travailTermineApplicable = vf['travailTermineApplicable'] as bool? ?? false;
+        verif.consignationCadenasRetireNA = vf['consignationCadenasRetireNA'] as bool? ?? false;
+        verif.consignationCadenasRetireApplicable = vf['consignationCadenasRetireApplicable'] as bool? ?? false;
+        verif.absenceConsignataireProcedureNA = vf['absenceConsignataireProcedureNA'] as bool? ?? false;
+        verif.absenceConsignataireProcedureApplicable = vf['absenceConsignataireProcedureApplicable'] as bool? ?? false;
+        verif.consignataireAbsentProcedureAppliqueeNA = vf['consignataireAbsentProcedureAppliqueeNA'] as bool? ?? false;
+        verif.consignataireAbsentProcedureAppliqueeApplicable = vf['consignataireAbsentProcedureAppliqueeApplicable'] as bool? ?? false;
+        verif.materielEnleveZoneNettoyeeNA = vf['materielEnleveZoneNettoyeeNA'] as bool? ?? false;
+        verif.materielEnleveZoneNettoyeeApplicable = vf['materielEnleveZoneNettoyeeApplicable'] as bool? ?? false;
+        verif.risquesSupprimesEquipementPretNA = vf['risquesSupprimesEquipementPretNA'] as bool? ?? false;
+        verif.risquesSupprimesEquipementPretApplicable = vf['risquesSupprimesEquipementPretApplicable'] as bool? ?? false;
+        verif.autresPoints = vf['autresPoints'] as String? ?? '';
+        verif.donneurOrdreSignature = vf['donneurOrdreSignature'] as String? ?? '';
+        verif.chargeAffairesSignature = vf['chargeAffairesSignature'] as String? ?? '';
+      }
+
+      final jsa = JSA(
+        missionId: missionId,
+        operationEffectuer: d['operationEffectuer'] as String? ?? '',
+        updatedAt: _dt(d['updatedAt']),
+        currentSubCategory: d['currentSubCategory'] as int? ?? 0,
+        inspecteurs: (d['inspecteurs'] as List<dynamic>?)?.map((i) {
+          final m = i as Map<String, dynamic>;
+          return JSAInspecteur(
+            nom: m['nom'] as String? ?? '',
+            prenom: m['prenom'] as String? ?? '',
+            signature: m['signature'] as String? ?? '',
+          );
+        }).toList() ?? [],
+        planUrgence: planUrgence,
+        dangers: dangers,
+        exigencesGenerales: exigences,
+        epi: epi,
+        verificationFinale: verif,
+      );
+      await box.add(jsa);
+    } catch (e) {
+      if (kDebugMode) print('⚠️ JSA import: $e');
+    }
+  }
+
+  // ── Renseignements généraux ──
+  static Future<void> _importRenseignements(Map<String, dynamic> d) async {
+    try {
+      final missionId = d['missionId'] as String;
+      final box =
+          Hive.box<RenseignementsGeneraux>('renseignements_generaux');
+      final exists = box.values.any((r) => r.missionId == missionId);
+      if (exists) return;
+      final rens = RenseignementsGeneraux(
+        missionId: missionId,
+        etablissement: d['etablissement'] as String? ?? '',
+        installation: d['installation'] as String? ?? '',
+        activite: d['activite'] as String? ?? '',
+        dateDebut: d['dateDebut'] != null
+            ? DateTime.tryParse(d['dateDebut'] as String)
+            : null,
+        dateFin: d['dateFin'] != null
+            ? DateTime.tryParse(d['dateFin'] as String)
+            : null,
+        dureeJours: d['dureeJours'] as int? ?? 0,
+        verificationType: d['verificationType'] as String?,
+        registreControle: d['registreControle'] as String? ?? '',
+        compteRendu: _strList(d['compteRendu']),
+        accompagnateurs: (d['accompagnateurs'] as List<dynamic>?)
+                ?.map((e) => Map<String, String>.from(e as Map))
+                .toList() ??
+            [],
+        verificateurs: (d['verificateurs'] as List<dynamic>?)
+                ?.map((e) => Map<String, String>.from(e as Map))
+                .toList() ??
+            [],
+        nomSite: d['nomSite'] as String? ?? '',
+        updatedAt: _dt(d['updatedAt']),
+
+      );
+      await box.add(rens);
+    } catch (e) {
+      if (kDebugMode) print('⚠️ Renseignements import: $e');
+    }
+  }
+
+  // ── Foudre ──
+  static Future<void> _importFoudre(Map<String, dynamic> d) async {
+    try {
+      final foudre = Foudre.fromJson(d);
+      final box = Hive.box<Foudre>('foudre_observations');
+      await box.add(foudre);
+    } catch (e) {
+      if (kDebugMode) print('⚠️ Foudre import: $e');
+    }
+  }
+
+  // ── Classements ──
+  static Future<void> _importClassement(Map<String, dynamic> d) async {
+    try {
+      final box = Hive.box<ClassementEmplacement>('classement_locaux');
+      await box.add(ClassementEmplacement(
+        missionId: d['missionId'] as String? ?? '',
+        localisation: d['localisation'] as String? ?? '',
+        zone: d['zone'] as String?,
+        origineClassement:
+            d['origineClassement'] as String? ?? 'KES I&P',
+        af: d['af'] as String?,
+        be: d['be'] as String?,
+        ae: d['ae'] as String?,
+        ad: d['ad'] as String?,
+        ag: d['ag'] as String?,
+        ip: d['ip'] as String?,
+        ik: d['ik'] as String?,
+        updatedAt: _dt(d['updatedAt']),
+        typeLocal: d['typeLocal'] as String?,
+        typeEmplacement: d['typeEmplacement'] as String? ?? 'local',
+        heriteDeZone: d['heriteDeZone'] as bool? ?? false,
+        zoneParenteId: d['zoneParenteId'] as String?,
+      ));
+    } catch (e) {
+      if (kDebugMode) print('⚠️ Classement import: $e');
+    }
+  }
+
+  static Future<void> _importClassementZone(Map<String, dynamic> d) async {
+    try {
+      final box = Hive.box<ClassementZone>('classement_zones');
+      await box.add(ClassementZone(
+        missionId: d['missionId'] as String? ?? '',
+        nomZone: d['nomZone'] as String? ?? '',
+        origineClassement:
+            d['origineClassement'] as String? ?? 'KES I&P',
+        typeZone: d['typeZone'] as String? ?? 'BT',
+        af: d['af'] as String?,
+        be: d['be'] as String?,
+        ae: d['ae'] as String?,
+        ad: d['ad'] as String?,
+        ag: d['ag'] as String?,
+        ip: d['ip'] as String?,
+        ik: d['ik'] as String?,
+        updatedAt: _dt(d['updatedAt']),
+      ));
+    } catch (e) {
+      if (kDebugMode) print('⚠️ ClassementZone import: $e');
+    }
+  }
+
+  // ── Brouillons locaux ──
+  static Future<void> _importLocalDrafts(
+    List<dynamic> drafts, {
+    required bool ecraser,
+  }) async {
+    final box = Hive.box('local_drafts');
+    for (final draft in drafts) {
+      try {
+        final d = draft as Map<String, dynamic>;
+        final key = d['key'] as String?;
+        if (key == null) continue;
+        if (box.containsKey(key) && !ecraser) continue;
+        final localData = d['local'] as Map<String, dynamic>?;
+        if (localData == null) continue;
+        final localClass = d['localClass'] as String? ?? 'MT';
+        final localObj = localClass == 'MT'
+            ? _parseMTLocal(localData)
+            : _parseBTLocal(localData);
+        await box.put(key, {
+          'local': localObj,
+          'currentStep': d['currentStep'],
+          'missionId': d['missionId'],
+          'isMoyenneTension': d['isMoyenneTension'],
+          'zoneIndex': d['zoneIndex'],
+          'isInZone': d['isInZone'],
+          'localType': d['localType'],
+          'nomLocal': d['nomLocal'],
+          'savedAt': d['savedAt'],
+          'localId': key,
+        });
+      } catch (e) {
+        if (kDebugMode) print('⚠️ Draft local import: $e');
+      }
+    }
+  }
+
+  // ── Brouillons coffrets ──
+  static Future<void> _importCoffretDrafts(
+    List<dynamic> drafts, {
+    required bool ecraser,
+  }) async {
+    final box = Hive.box('coffret_drafts');
+    for (final draft in drafts) {
+      try {
+        final d = draft as Map<String, dynamic>;
+        final key = d['key'] as String?;
+        if (key == null) continue;
+        if (box.containsKey(key) && !ecraser) continue;
+        final coffretData = d['coffret'] as Map<String, dynamic>?;
+        if (coffretData == null) continue;
+        final coffrets = _parseCoffrets([coffretData]);
+        if (coffrets.isEmpty) continue;
+        await box.put(key, {
+          'coffret': coffrets.first,
+          'missionId': d['missionId'],
+          'parentType': d['parentType'],
+          'parentIndex': d['parentIndex'],
+          'isMoyenneTension': d['isMoyenneTension'],
+          'zoneIndex': d['zoneIndex'],
+          'savedAt': d['savedAt'],
+        });
+      } catch (e) {
+        if (kDebugMode) print('⚠️ Draft coffret import: $e');
+      }
+    }
+  }
+
+  // ─────────────────────────────────────────────────────────
+  // UTILITAIRES
+  // ─────────────────────────────────────────────────────────
+
+  static List<String> _strList(dynamic raw) {
+    if (raw == null) return [];
+    return (raw as List<dynamic>).map((e) => e as String).toList();
+  }
+
+  static DateTime _dt(dynamic raw) {
+    if (raw == null) return DateTime.now();
+    try {
+      return DateTime.parse(raw as String);
+    } catch (_) {
+      return DateTime.now();
+    }
+  }
+}
