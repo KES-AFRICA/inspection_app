@@ -1536,146 +1536,250 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   // MODIFIER : _buildCoffretCard pour gérer les brouillons
   Widget _buildCoffretCard(CoffretArmoire coffret, int index, bool isMoyenneTension) {
   final pointsConformes = coffret.pointsVerification.where((p) => p.conformite == 'oui').length;
+  final pointsNon = coffret.pointsVerification.where((p) => p.conformite == 'non').length;
   final totalPoints = coffret.pointsVerification.length;
   final pourcentage = totalPoints > 0 ? (pointsConformes / totalPoints * 100).round() : 0;
-
   final isComplet = coffret.statut == 'complet' || _isCoffretComplet(coffret);
-  final isDraft = coffret.statut == 'incomplet';
+  final isDraft = coffret.statut != 'complet';
+  final totalPhotos = coffret.photos.length + coffret.photosExternes.length + coffret.photosInternes.length;
+
+  // Couleurs selon état
+  final Color accentColor = isDraft ? Colors.amber : isComplet ? Colors.green : Colors.red;
+  final Color cardBg = isDraft ? Colors.amber.shade50 : Colors.white;
+  final Color borderColor = isDraft
+      ? Colors.amber.shade300
+      : isComplet
+          ? Colors.green.shade200
+          : Colors.red.shade200;
+
+  // Icône selon type
+  IconData typeIcon = Icons.electrical_services;
+  if (coffret.type == 'TGBT') typeIcon = Icons.developer_board;
+  else if (coffret.type == 'ARMOIRE') typeIcon = Icons.view_module_outlined;
+  else if (coffret.type == 'INVERSEUR') typeIcon = Icons.swap_horiz;
+  else if (coffret.type == 'TUR') typeIcon = Icons.power;
+  else if (coffret.type == 'COFFRET') typeIcon = Icons.inbox_outlined;
 
   return Container(
-    margin: EdgeInsets.only(bottom: 8),
-    padding: EdgeInsets.all(4),
+    margin: const EdgeInsets.only(bottom: 12),
     decoration: BoxDecoration(
-      color: isDraft ? Colors.orange.shade50 : Colors.grey.shade50,
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(
-        color: isComplet ? Colors.green.shade200 : Colors.red.shade200,
-      ),
+      color: cardBg,
+      borderRadius: BorderRadius.circular(14),
+      border: Border.all(color: borderColor, width: isDraft ? 1.5 : 1),
+      boxShadow: [
+        BoxShadow(
+          color: accentColor.withOpacity(0.08),
+          blurRadius: 8,
+          offset: const Offset(0, 3),
+        ),
+      ],
     ),
-    child: ListTile(
-      leading: Container(
-        width: 40,
-        height: 40,
-        decoration: BoxDecoration(
-          color: isDraft ? Colors.orange.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Icon(
-          isDraft ? Icons.drafts_outlined : Icons.electrical_services,
-          color: isDraft ? Colors.orange : Colors.orange,
-        ),
-      ),
-      title: Row(
-        children: [
-          Expanded(
-            child: Text(
-              coffret.nom.isEmpty ? 'Sans nom' : coffret.nom,
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-          ),
-          if (!isComplet)
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.red.shade100,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.red.shade300),
-              ),
-              child: Text(
-                'Incomplet',
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.red.shade700,
-                ),
-              ),
-            ),
-          if (isComplet && !isDraft)
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-              decoration: BoxDecoration(
-                color: Colors.green.shade100,
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: Colors.green.shade300),
-              ),
-              child: Text(
-                'Complet',
-                style: TextStyle(
-                  fontSize: 9,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.green.shade700,
-                ),
-              ),
-            ),
-        ],
-      ),
-      subtitle: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(height: 4),
-          Text('${coffret.type} • ${coffret.photos.length} photo(s) • ${coffret.observationsLibres.length} observation(s)'),
-          SizedBox(height: 4),
-          if (totalPoints > 0) ...[
-            LinearProgressIndicator(
-              value: pointsConformes / totalPoints,
-              backgroundColor: Colors.grey.shade200,
-              color: _getProgressColor(pourcentage),
-            ),
-            SizedBox(height: 4),
-            Text('$pourcentage% conforme ($pointsConformes/$totalPoints)'),
-          ],
-        ],
-      ),
-      trailing: PopupMenuButton<String>(
-        onSelected: (value) {
-          if (value == 'edit') {
-            _editerCoffret(coffret, index, isMoyenneTension);
-          } else if (value == 'delete') {
-            if (isDraft) {
-              _supprimerBrouillon(coffret);
-            } else {
-              _supprimerCoffret(coffret, isMoyenneTension);
-            }
-          }
-        },
-        itemBuilder: (context) => [
-          const PopupMenuItem(
-            value: 'edit',
-            child: Row(
-              children: [
-                Icon(Icons.edit_outlined, size: 18),
-                SizedBox(width: 8),
-                Text('Éditer'),
-              ],
-            ),
-          ),
-          const PopupMenuItem(
-            value: 'delete',
-            child: Row(
-              children: [
-                Icon(Icons.delete_outline, size: 18, color: Colors.red),
-                SizedBox(width: 8),
-                Text('Supprimer', style: TextStyle(color: Colors.red)),
-              ],
-            ),
-          ),
-        ],
-      ),
+    child: InkWell(
       onTap: () {
         if (isDraft) {
           _ouvrirBrouillon(coffret);
         } else {
-          // Calculer le vrai index dans _zone.coffretsDirects / _zone.coffrets
-          // (sans les brouillons qui sont en tête de _coffretsDirects)
           final realIndex = isMoyenneTension
               ? _zone.coffrets.indexWhere((c) => c.qrCode == coffret.qrCode)
               : _zone.coffretsDirects.indexWhere((c) => c.qrCode == coffret.qrCode);
-          if (realIndex >= 0) {
-            _voirCoffret(realIndex, isMoyenneTension);
-          }
+          if (realIndex >= 0) _voirCoffret(realIndex, isMoyenneTension);
         }
       },
+      borderRadius: BorderRadius.circular(14),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // ── Header ──
+            Row(
+              children: [
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: isDraft
+                          ? [Colors.amber, Colors.amber.shade600]
+                          : [accentColor, accentColor.withOpacity(0.7)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: Icon(
+                    isDraft ? Icons.edit_note : typeIcon,
+                    color: Colors.white,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        coffret.nom.isEmpty ? 'Sans nom' : coffret.nom,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 1,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        coffret.type,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w500,
+                          color: accentColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                // Badges
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    if (isDraft)
+                      _buildCoffretBadge('Brouillon', Colors.amber)
+                    else if (isComplet)
+                      _buildCoffretBadge('Complet', Colors.green)
+                    else
+                      _buildCoffretBadge('Incomplet', Colors.red),
+                    if (coffret.numeroEquipement != null &&
+                        coffret.numeroEquipement!.isNotEmpty) ...[
+                      const SizedBox(height: 3),
+                      _buildCoffretBadge('#${coffret.numeroEquipement}', Colors.blueGrey),
+                    ],
+                  ],
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 10),
+            const Divider(height: 1),
+            const SizedBox(height: 10),
+
+            // ── Stats ──
+            Row(
+              children: [
+                _buildCoffretStat(Icons.photo_outlined, '$totalPhotos', 'photo(s)'),
+                const SizedBox(width: 14),
+                _buildCoffretStat(Icons.comment_outlined,
+                    '${coffret.observationsLibres.length}', 'obs.'),
+                const SizedBox(width: 14),
+                _buildCoffretStat(Icons.power_input_outlined,
+                    '${coffret.alimentations.length}', 'alim.'),
+                if (coffret.presenceParafoudre) ...[
+                  const SizedBox(width: 14),
+                  _buildCoffretStat(Icons.bolt, '⚡', 'parafoudre'),
+                ],
+              ],
+            ),
+
+            // ── Barre de conformité ──
+            if (totalPoints > 0) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: totalPoints > 0 ? pointsConformes / totalPoints : 0,
+                        backgroundColor: Colors.grey.shade200,
+                        color: _getProgressColor(pourcentage),
+                        minHeight: 6,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Text(
+                    '$pourcentage%',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: _getProgressColor(pourcentage),
+                    ),
+                  ),
+                  if (pointsNon > 0) ...[
+                    const SizedBox(width: 8),
+                    _buildCoffretBadge('$pointsNon NC', Colors.red),
+                  ],
+                ],
+              ),
+            ],
+
+            // ── Actions ──
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  onPressed: () => _editerCoffret(coffret, index, isMoyenneTension),
+                  icon: Icon(Icons.edit_outlined, size: 15, color: AppTheme.primaryBlue),
+                  label: Text('Éditer',
+                      style: TextStyle(fontSize: 12, color: AppTheme.primaryBlue)),
+                  style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8)),
+                ),
+                const SizedBox(width: 4),
+                TextButton.icon(
+                  onPressed: () {
+                    if (isDraft) {
+                      _supprimerBrouillon(coffret);
+                    } else {
+                      _supprimerCoffret(coffret, isMoyenneTension);
+                    }
+                  },
+                  icon: const Icon(Icons.delete_outline, size: 15, color: Colors.red),
+                  label: const Text('Supprimer',
+                      style: TextStyle(fontSize: 12, color: Colors.red)),
+                  style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8)),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     ),
+  );
+}
+
+Widget _buildCoffretBadge(String label, Color color) {
+  return Container(
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.12),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: color.withOpacity(0.4)),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        fontSize: 9,
+        fontWeight: FontWeight.bold,
+        color: color.withOpacity(0.9),
+      ),
+    ),
+  );
+}
+
+Widget _buildCoffretStat(IconData icon, String value, String label) {
+  return Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 13, color: Colors.grey.shade500),
+      const SizedBox(width: 3),
+      Text(
+        '$value $label',
+        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+      ),
+    ],
   );
 }
 

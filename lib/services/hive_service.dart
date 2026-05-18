@@ -6740,6 +6740,59 @@ static Future<void> migratePointsVerificationPriorite() async {
   if (kDebugMode) print('✅ Migration terminée: $fixed points corrigés');
 }
 
+/// Vérifie si un coffret avec le même nom ET le même type existe déjà
+/// dans la mission (tous les emplacements confondus), excluant les brouillons.
+/// Retourne le nom de l'emplacement si doublon trouvé, null sinon.
+static String? findCoffretDoublon({
+  required String missionId,
+  required String nom,
+  required String type,
+  String? excludeQrCode, // Exclure le coffret en cours d'édition
+}) {
+  final audit = Hive.box<AuditInstallationsElectriques>(_auditBox)
+      .values
+      .cast<AuditInstallationsElectriques?>()
+      .firstWhere((a) => a?.missionId == missionId, orElse: () => null);
+  if (audit == null) return null;
+
+  final nomTrim = nom.trim().toLowerCase();
+  final typeTrim = type.trim().toLowerCase();
+
+  bool isDoublon(CoffretArmoire c) {
+    if (c.statut != 'complet') return false; // ignorer brouillons
+    if (excludeQrCode != null && c.qrCode == excludeQrCode) return false;
+    return c.nom.trim().toLowerCase() == nomTrim &&
+        c.type.trim().toLowerCase() == typeTrim;
+  }
+
+  for (final l in audit.moyenneTensionLocaux) {
+    for (final c in l.coffrets) {
+      if (isDoublon(c)) return 'Local MT "${l.nom}"';
+    }
+  }
+  for (final z in audit.moyenneTensionZones) {
+    for (final c in z.coffrets) {
+      if (isDoublon(c)) return 'Zone MT "${z.nom}"';
+    }
+    for (final l in z.locaux) {
+      for (final c in l.coffrets) {
+        if (isDoublon(c)) return 'Local "${l.nom}" (Zone MT "${z.nom}")';
+      }
+    }
+  }
+  for (final z in audit.basseTensionZones) {
+    for (final c in z.coffretsDirects) {
+      if (isDoublon(c)) return 'Zone BT "${z.nom}"';
+    }
+    for (final l in z.locaux) {
+      for (final c in l.coffrets) {
+        if (isDoublon(c)) return 'Local "${l.nom}" (Zone BT "${z.nom}")';
+      }
+    }
+  }
+  return null;
+}
+
 }
 
 // ═══════════════════════════════════════════════════════════════

@@ -2759,6 +2759,9 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   Future<void> _saveDraft() async {
     if (!mounted) return;
     
+    // Le brouillon est réservé aux créations interrompues, pas aux éditions.
+    if (widget.isEdition && widget.coffret != null) return;
+
     String qrCode = _qrCodeController.text.trim();
     if (qrCode.isEmpty) {
       qrCode = 'TEMP_${DateTime.now().millisecondsSinceEpoch}';
@@ -3380,6 +3383,24 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
   if (!_validateAllFields()) { 
     _showError('Veuillez remplir tous les champs obligatoires'); 
     return; 
+  }
+
+  // Vérification doublon nom + type (uniquement pour les nouveaux équipements,
+  // pas pour les éditions du même équipement)
+  if (!widget.isEdition) {
+    final doublon = HiveService.findCoffretDoublon(
+      missionId: widget.mission.id,
+      nom: _nomController.text.trim(),
+      type: _selectedType!,
+    );
+    if (doublon != null) {
+      _showError(
+        'Un équipement "${_nomController.text.trim()}" de type "$_selectedType" '
+        'existe déjà dans $doublon.\n\n'
+        'Veuillez utiliser un nom différent.',
+      );
+      return;
+    }
   }
   
   try {
