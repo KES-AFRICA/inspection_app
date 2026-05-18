@@ -71,8 +71,12 @@ class _RadioSequenceScreenState extends State<RadioSequenceScreen> {
       }
       
       if (mounted) {
+        // La logique "Autre" ne s'applique QU'AU slide regime_neutre
         final standardOptions = ['IT', 'TT', 'TN'];
-        final isAutre = value != null && !standardOptions.contains(value) && value.isNotEmpty;
+        final isAutre = widget.field == 'regime_neutre' &&
+            value != null &&
+            !standardOptions.contains(value) &&
+            value.isNotEmpty;
         setState(() {
           if (isAutre) {
             _selectedValue = 'Autre';

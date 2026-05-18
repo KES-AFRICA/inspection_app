@@ -82,7 +82,7 @@ class BackupService {
       }
 
       // Sérialisation sur le thread principal (objets Hive non isolate-safe)
-      final payload = _buildPayload(missions, matricule);
+      final payload = await _buildPayload(missions, matricule);
 
       // Écriture fichier
       final ts = DateTime.now()
@@ -148,8 +148,12 @@ class BackupService {
   // CONSTRUCTION DU JSON
   // ─────────────────────────────────────────────────────────
 
-  static Map<String, dynamic> _buildPayload(
-      List<Mission> missions, String matricule) {
+  static Future<Map<String, dynamic>> _buildPayload(
+      List<Mission> missions, String matricule) async {
+    final serializedMissions = <Map<String, dynamic>>[];
+    for (final m in missions) {
+      serializedMissions.add(await _serializeMission(m));
+    }
     return {
       'magic': _magic,
       'schema_version': _schemaVersion,
@@ -157,7 +161,7 @@ class BackupService {
       'app_version': '1.0.0',
       'matricule': matricule,
       'mission_count': missions.length,
-      'missions': missions.map(_serializeMission).toList(),
+      'missions': serializedMissions,
       'local_drafts':
           _serializeLocalDrafts(missions.map((m) => m.id).toList()),
       'coffret_drafts':
@@ -180,8 +184,8 @@ class BackupService {
     // Collecter et encoder toutes les photos de la mission
     Map<String, String> photoIndex = {};
     if (audit != null) {
-      final allPaths = _collectAllPhotoPaths(audit);
-      photoIndex = await _serializePhotos(allPaths);
+      final paths = _collectAllPhotoPaths(audit);
+      photoIndex = await _exportPhotos(paths);
     }
 
     return {
@@ -827,7 +831,7 @@ class BackupService {
 
     await box.put(missionId, mission);
 
-    // Restaurer les photos en premier (avant l'audit qui référence les chemins)
+    // Restaurer les photos en premier
     final photosMap = data['photos'] as Map<String, dynamic>?;
     if (photosMap != null && photosMap.isNotEmpty) {
       await _restorePhotos(photosMap);
@@ -1578,11 +1582,69 @@ class BackupService {
 
 
   // ── Sérialiser toutes les photos d'une mission en base64 ──
-  static Future<Map<String, String>> _serializePhotos(
-      List<String> allPaths) async {
+  // ── Collecter tous les chemins photos d'un audit ──
+  static List<String> _collectAllPhotoPaths(AuditInstallationsElectriques a) {
+    final paths = <String>{};
+
+    void addPhotos(List<String> p) => paths.addAll(p.where((x) => x.isNotEmpty));
+    void addElement(ElementControle e) => addPhotos(e.photos);
+    void addObs(List<ObservationLibre> obs) {
+      for (final o in obs) addPhotos(o.photos);
+    }
+    void addCoffret(CoffretArmoire c) {
+      addPhotos(c.photos);
+      addPhotos(c.photosExternes);
+      addPhotos(c.photosInternes);
+      addObs(c.observationsLibres);
+      addObs(c.observationsParafoudre);
+      for (final p in c.pointsVerification) addPhotos(p.photos);
+      for (final al in c.alimentations) addPhotos(al.photos);
+      if (c.protectionTete != null) addPhotos(c.protectionTete!.photos);
+    }
+    void addMTLocal(MoyenneTensionLocal l) {
+      addPhotos(l.photos);
+      addObs(l.observationsLibres);
+      l.dispositionsConstructives.forEach(addElement);
+      l.conditionsExploitation.forEach(addElement);
+      for (final c in l.coffrets) addCoffret(c);
+      for (final cell in l.cellules) {
+        addPhotos(cell.photos);
+        cell.elementsVerifies.forEach(addElement);
+      }
+      for (final t in l.transformateurs) {
+        addPhotos(t.photos);
+        t.elementsVerifies.forEach(addElement);
+      }
+    }
+    void addBTLocal(BasseTensionLocal l) {
+      addPhotos(l.photos);
+      addObs(l.observationsLibres);
+      (l.dispositionsConstructives ?? []).forEach(addElement);
+      (l.conditionsExploitation ?? []).forEach(addElement);
+      for (final c in l.coffrets) addCoffret(c);
+    }
+
+    addPhotos(a.photos);
+    for (final l in a.moyenneTensionLocaux) addMTLocal(l);
+    for (final z in a.moyenneTensionZones) {
+      addPhotos(z.photos);
+      addObs(z.observationsLibres);
+      for (final c in z.coffrets) addCoffret(c);
+      for (final l in z.locaux) addMTLocal(l);
+    }
+    for (final z in a.basseTensionZones) {
+      addPhotos(z.photos);
+      addObs(z.observationsLibres);
+      for (final c in z.coffretsDirects) addCoffret(c);
+      for (final l in z.locaux) addBTLocal(l);
+    }
+    return paths.toList();
+  }
+
+  // ── Encoder les photos en base64 ──
+  static Future<Map<String, String>> _exportPhotos(List<String> paths) async {
     final result = <String, String>{};
-    for (final path in allPaths) {
-      if (path.isEmpty) continue;
+    for (final path in paths) {
       try {
         final file = File(path);
         if (await file.exists()) {
@@ -1596,85 +1658,22 @@ class BackupService {
     return result;
   }
 
-  // ── Collecter tous les chemins photos d'un audit ──
-  static List<String> _collectAllPhotoPaths(
-      AuditInstallationsElectriques audit) {
-    final paths = <String>[];
-    paths.addAll(audit.photos);
-    for (final l in audit.moyenneTensionLocaux) {
-      paths.addAll(_photosFromMTLocal(l));
-    }
-    for (final z in audit.moyenneTensionZones) {
-      paths.addAll(z.photos);
-      for (final o in z.observationsLibres) paths.addAll(o.photos);
-      for (final c in z.coffrets) paths.addAll(_photosFromCoffret(c));
-      for (final l in z.locaux) paths.addAll(_photosFromMTLocal(l));
-    }
-    for (final z in audit.basseTensionZones) {
-      paths.addAll(z.photos);
-      for (final o in z.observationsLibres) paths.addAll(o.photos);
-      for (final c in z.coffretsDirects) paths.addAll(_photosFromCoffret(c));
-      for (final l in z.locaux) paths.addAll(_photosFromBTLocal(l));
-    }
-    return paths.where((p) => p.isNotEmpty).toSet().toList();
-  }
-
-  static List<String> _photosFromMTLocal(MoyenneTensionLocal l) {
-    final p = <String>[...l.photos];
-    for (final o in l.observationsLibres) p.addAll(o.photos);
-    for (final c in l.coffrets) p.addAll(_photosFromCoffret(c));
-    for (final cell in l.cellules) {
-      p.addAll(cell.photos);
-      for (final e in cell.elementsVerifies) p.addAll(e.photos);
-    }
-    for (final t in l.transformateurs) {
-      p.addAll(t.photos);
-      for (final e in t.elementsVerifies) p.addAll(e.photos);
-    }
-    for (final e in l.dispositionsConstructives) p.addAll(e.photos);
-    for (final e in l.conditionsExploitation) p.addAll(e.photos);
-    return p;
-  }
-
-  static List<String> _photosFromBTLocal(BasseTensionLocal l) {
-    final p = <String>[...l.photos];
-    for (final o in l.observationsLibres) p.addAll(o.photos);
-    for (final c in l.coffrets) p.addAll(_photosFromCoffret(c));
-    for (final e in (l.dispositionsConstructives ?? [])) p.addAll(e.photos);
-    for (final e in (l.conditionsExploitation ?? [])) p.addAll(e.photos);
-    return p;
-  }
-
-  static List<String> _photosFromCoffret(CoffretArmoire c) {
-    final p = <String>[...c.photos, ...c.photosExternes, ...c.photosInternes];
-    for (final o in c.observationsLibres) {
-      p.addAll(o.photos);
-    }
-    for (final o in c.observationsParafoudre) {
-      p.addAll(o.photos);
-    }
-    for (final pv in c.pointsVerification) {
-      p.addAll(pv.photos);
-    }
-    for (final a in c.alimentations) {
-      p.addAll(a.photos);
-    }
-    if (c.protectionTete != null) p.addAll(c.protectionTete!.photos);
-    return p;
-  }
-
   // ── Restaurer les photos depuis base64 ──
   static Future<void> _restorePhotos(Map<String, dynamic> photosMap) async {
     final appDir = await getApplicationDocumentsDirectory();
     for (final entry in photosMap.entries) {
-      final originalPath = entry.key;
-      final b64 = entry.value as String?;
-      if (b64 == null || b64.isEmpty) continue;
+      final originalPath = entry.key as String;
+      final b64 = entry.value as String? ?? '';
+      if (b64.isEmpty) continue;
       try {
-        // Reconstruire le chemin dans le répertoire local de cet appareil
-        // On garde le nom de fichier mais on change le préfixe absolu
         final fileName = originalPath.split('/').last;
-        final subDir = _extractSubDir(originalPath);
+        // Extraire le sous-dossier depuis le chemin original
+        String subDir = 'misc';
+        final parts = originalPath.split('/');
+        final idx = parts.indexOf('audit_photos');
+        if (idx != -1 && idx + 2 < parts.length) {
+          subDir = parts[idx + 1];
+        }
         final dir = Directory('${appDir.path}/audit_photos/$subDir');
         if (!await dir.exists()) await dir.create(recursive: true);
         final newFile = File('${dir.path}/$fileName');
@@ -1682,20 +1681,8 @@ class BackupService {
           await newFile.writeAsBytes(base64Decode(b64));
         }
       } catch (e) {
-        if (kDebugMode) print('⚠️ Restauration photo échouée: $originalPath — $e');
+        if (kDebugMode) print('⚠️ Restauration photo: $originalPath — $e');
       }
     }
-  }
-
-  static String _extractSubDir(String path) {
-    // Extrait le sous-dossier depuis le chemin : .../audit_photos/SUBDIR/filename.jpg
-    try {
-      final parts = path.split('/');
-      final idx = parts.indexOf('audit_photos');
-      if (idx != -1 && idx + 1 < parts.length - 1) {
-        return parts[idx + 1];
-      }
-    } catch (_) {}
-    return 'misc';
   }
 }
