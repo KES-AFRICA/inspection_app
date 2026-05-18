@@ -166,7 +166,7 @@ class BackupService {
   }
 
   // ── Mission + toutes ses données liées ──
-  static Map<String, dynamic> _serializeMission(Mission m) {
+  static Future<Map<String, dynamic>> _serializeMission(Mission m) async {
     final id = m.id;
     final audit = HiveService.getAuditInstallationsByMissionId(id);
     final desc = HiveService.getDescriptionInstallationsByMissionId(id);
@@ -177,9 +177,19 @@ class BackupService {
     final classements = _classementsByMission(id);
     final classementZones = _classementZonesByMission(id);
 
+    // Collecter et encoder toutes les photos de la mission
+    Map<String, String> photoIndex = {};
+    if (audit != null) {
+      final allPaths = _collectAllPhotoPaths(audit);
+      photoIndex = await _serializePhotos(allPaths);
+    }
+
     return {
       'mission': m.toJson(),
+      'photo_count': photoIndex.length,
+      'photos': photoIndex,  // Map<chemin_original, base64>
       'audit': audit != null ? _serializeAudit(audit) : null,
+
       'description_installations':
           desc != null ? _serializeDescription(desc) : null,
       'mesures_essais': mesures != null ? _serializeMesures(mesures) : null,
@@ -681,6 +691,9 @@ class BackupService {
   static Future<ImportResult> importerMissions(
     String filePath, {
     bool ecraserExistants = false,
+    required String importeurMatricule,
+    required String importeurNom,
+    required String importeurPrenom,
   }) async {
     final warnings = <String>[];
     int imported = 0;
@@ -727,9 +740,12 @@ class BackupService {
     for (final m in missionsData) {
       try {
         final r = await _importMission(
-          m as Map<String, dynamic>,
-          ecraser: ecraserExistants,
-        );
+            m as Map<String, dynamic>,
+            ecraser: ecraserExistants,
+            importeurMatricule: importeurMatricule,
+            importeurNom: importeurNom,
+            importeurPrenom: importeurPrenom,
+          );
         if (r == 'imported') {
           imported++;
         } else {
@@ -778,20 +794,44 @@ class BackupService {
   static Future<String> _importMission(
     Map<String, dynamic> data, {
     required bool ecraser,
+    required String importeurMatricule,
+    required String importeurNom,
+    required String importeurPrenom,
   }) async {
     final mj = data['mission'] as Map<String, dynamic>?;
     if (mj == null) return 'skipped';
     final missionId = mj['id'] as String?;
     if (missionId == null) return 'skipped';
 
-    // Vérifier doublon
+    // Vérifier doublon — la clé Hive de la mission EST son id
     final box = Hive.box<Mission>('missions');
-    final exists = box.values.any((m) => m.id == missionId);
-    if (exists && !ecraser) return 'skipped';
+    final existing = box.get(missionId);
+    if (existing != null && !ecraser) return 'skipped';
 
-    // Mission
+    // Mission — put avec l'id comme clé (cohérent avec HiveService.saveMission)
     final mission = Mission.fromJson(mj);
+
+    // S'assurer que l'importeur apparaît dans les verificateurs
+    // pour que getMissionsByMatricule la retourne dans sa liste
+    mission.verificateurs ??= [];
+    final dejaPresent = mission.verificateurs!
+        .any((v) => v['matricule'] == importeurMatricule);
+    if (!dejaPresent) {
+      mission.verificateurs!.add({
+        'matricule': importeurMatricule,
+        'nom': importeurNom,
+        'prenom': importeurPrenom,
+        'role': 'importeur',
+      });
+    }
+
     await box.put(missionId, mission);
+
+    // Restaurer les photos en premier (avant l'audit qui référence les chemins)
+    final photosMap = data['photos'] as Map<String, dynamic>?;
+    if (photosMap != null && photosMap.isNotEmpty) {
+      await _restorePhotos(photosMap);
+    }
 
     // Audit
     final auditData = data['audit'] as Map<String, dynamic>?;
@@ -836,26 +876,49 @@ class BackupService {
   // ── Audit ──
   static Future<void> _importAudit(Map<String, dynamic> d) async {
     final missionId = d['missionId'] as String;
+
+    // Vérifier si un audit existe déjà pour cette mission
+    final box = Hive.box<AuditInstallationsElectriques>(
+        'audit_installations_electriques');
+    final exists =
+        box.values.any((a) => a.missionId == missionId);
+    if (exists) return;
+
     final audit = AuditInstallationsElectriques(
       missionId: missionId,
       updatedAt: _dt(d['updatedAt']),
       photos: _strList(d['photos']),
-      moyenneTensionLocaux: (d['moyenneTensionLocaux'] as List<dynamic>?)
-              ?.map((l) => _parseMTLocal(l as Map<String, dynamic>))
-              .toList() ??
-          [],
-      moyenneTensionZones: (d['moyenneTensionZones'] as List<dynamic>?)
-              ?.map((z) => _parseMTZone(z as Map<String, dynamic>))
-              .toList() ??
-          [],
-      basseTensionZones: (d['basseTensionZones'] as List<dynamic>?)
-              ?.map((z) => _parseBTZone(z as Map<String, dynamic>))
-              .toList() ??
-          [],
+      moyenneTensionLocaux:
+          (d['moyenneTensionLocaux'] as List<dynamic>?)
+                  ?.map((l) =>
+                      _parseMTLocal(l as Map<String, dynamic>))
+                  .toList() ??
+              [],
+      moyenneTensionZones:
+          (d['moyenneTensionZones'] as List<dynamic>?)
+                  ?.map((z) =>
+                      _parseMTZone(z as Map<String, dynamic>))
+                  .toList() ??
+              [],
+      basseTensionZones:
+          (d['basseTensionZones'] as List<dynamic>?)
+                  ?.map((z) =>
+                      _parseBTZone(z as Map<String, dynamic>))
+                  .toList() ??
+              [],
     );
-    final box =
-        Hive.box<AuditInstallationsElectriques>('audit_installations_electriques');
-    await box.put(missionId, audit);
+
+    // Utiliser box.add() comme HiveService le fait — clé auto-incrémentée
+    await box.add(audit);
+
+    // Mettre à jour la référence dans la mission
+    final missionBox = Hive.box<Mission>('missions');
+    final mission = missionBox.get(missionId);
+    if (mission != null) {
+      mission.auditInstallationsElectriquesId =
+          audit.key.toString();
+      await mission.save();
+    }
   }
 
   static MoyenneTensionLocal _parseMTLocal(Map<String, dynamic> d) =>
@@ -938,14 +1001,19 @@ class BackupService {
     if (raw == null) return [];
     return (raw as List<dynamic>).map((e) {
       final m = e as Map<String, dynamic>;
+      final conforme = m['conforme'] as bool?;
+      final estNA = m['estNA'] as bool? ?? false;
+      // Priorité par défaut à 3 si Non ou NA et absente du JSON
+      final priorite = m['priorite'] as int? ??
+          ((conforme == false || estNA) ? 3 : null);
       return ElementControle(
         elementControle: m['elementControle'] as String? ?? '',
-        conforme: m['conforme'] as bool?,
+        conforme: conforme,
         observation: m['observation'] as String?,
-        priorite: m['priorite'] as int?,
+        priorite: priorite,
         photos: _strList(m['photos']),
         referenceNormative: m['referenceNormative'] as String?,
-        estNA: m['estNA'] as bool? ?? false,
+        estNA: estNA,
       );
     }).toList();
   }
@@ -1026,15 +1094,21 @@ class BackupService {
         photos: _strList(d['photos']),
       );
 
-  static PointVerification _parsePoint(Map<String, dynamic> d) =>
-      PointVerification(
-        pointVerification: d['pointVerification'] as String? ?? '',
-        conformite: d['conformite'] as String? ?? '',
-        observation: d['observation'] as String?,
-        referenceNormative: d['referenceNormative'] as String?,
-        priorite: d['priorite'] as int?,
-        photos: _strList(d['photos']),
-      );
+  static PointVerification _parsePoint(Map<String, dynamic> d) {
+    final conformite = d['conformite'] as String? ?? '';
+    // Priorité par défaut à 3 si Non ou NA et absente du JSON
+    // évite que _isCurrentSlideValid bloque la navigation après import
+    final priorite = d['priorite'] as int? ??
+        ((conformite == 'non' || conformite == 'na') ? 3 : null);
+    return PointVerification(
+      pointVerification: d['pointVerification'] as String? ?? '',
+      conformite: conformite,
+      observation: d['observation'] as String?,
+      referenceNormative: d['referenceNormative'] as String?,
+      priorite: priorite,
+      photos: _strList(d['photos']),
+    );
+  }
 
   static List<ObservationLibre> _parseObs(dynamic raw) {
     if (raw == null) return [];
@@ -1052,10 +1126,15 @@ class BackupService {
   // ── Description ──
   static Future<void> _importDescription(Map<String, dynamic> d) async {
     final missionId = d['missionId'] as String;
+    final box = Hive.box<DescriptionInstallations>('description_installations');
+
+    // Ne pas écraser une description existante
+    final exists = box.values.any((v) => v.missionId == missionId);
+    if (exists) return;
+
     final desc = DescriptionInstallations(
       missionId: missionId,
-      alimentationMoyenneTension:
-          _parseItems(d['alimentationMoyenneTension']),
+      alimentationMoyenneTension: _parseItems(d['alimentationMoyenneTension']),
       alimentationBasseTension: _parseItems(d['alimentationBasseTension']),
       groupeElectrogene: _parseItems(d['groupeElectrogene']),
       alimentationCarburant: _parseItems(d['alimentationCarburant']),
@@ -1073,9 +1152,16 @@ class BackupService {
       etudeTechniqueFoudre: d['etudeTechniqueFoudre'] as String?,
       updatedAt: _dt(d['updatedAt']),
     );
-    final box =
-        Hive.box<DescriptionInstallations>('description_installations');
-    await box.put(missionId, desc);
+
+    await box.add(desc);
+
+    // Mettre à jour la référence dans la mission
+    final missionBox = Hive.box<Mission>('missions');
+    final mission = missionBox.get(missionId);
+    if (mission != null) {
+      mission.descriptionInstallationsId = desc.key.toString();
+      await mission.save();
+    }
   }
 
   static List<InstallationItem> _parseItems(dynamic raw) {
@@ -1144,6 +1230,18 @@ class BackupService {
                     tempo: (m['tempo'] as num?)?.toDouble(),
                     isolement: (m['isolement'] as num?)?.toDouble(),
                     essai: m['essai'] as String? ?? 'NE',
+                    observation: m['observation'] as String?,
+                  );
+                })
+                .toList() ??
+            [],
+        continuiteResistances: (d['continuiteResistances'] as List<dynamic>?)
+                ?.map((c) {
+                  final m = c as Map<String, dynamic>;
+                  return ContinuiteResistance(
+                    localisation: m['localisation'] as String? ?? '',
+                    designationTableau: m['designationTableau'] as String? ?? '',
+                    origineMesure: m['origineMesure'] as String? ?? '',
                     observation: m['observation'] as String?,
                   );
                 })
@@ -1332,6 +1430,13 @@ class BackupService {
   static Future<void> _importClassement(Map<String, dynamic> d) async {
     try {
       final box = Hive.box<ClassementEmplacement>('classement_locaux');
+      final missionId = d['missionId'] as String? ?? '';
+      final localisation = d['localisation'] as String? ?? '';
+      // Anti-doublon : ne pas réinsérer si déjà présent
+      final existe = box.values.any(
+          (c) => c.missionId == missionId && c.localisation == localisation);
+      if (existe) return;
+
       await box.add(ClassementEmplacement(
         missionId: d['missionId'] as String? ?? '',
         localisation: d['localisation'] as String? ?? '',
@@ -1359,6 +1464,12 @@ class BackupService {
   static Future<void> _importClassementZone(Map<String, dynamic> d) async {
     try {
       final box = Hive.box<ClassementZone>('classement_zones');
+      final missionId = d['missionId'] as String? ?? '';
+      final nomZone = d['nomZone'] as String? ?? '';
+      // Anti-doublon : ne pas réinsérer si déjà présent
+      final existe = box.values
+          .any((c) => c.missionId == missionId && c.nomZone == nomZone);
+      if (existe) return;
       await box.add(ClassementZone(
         missionId: d['missionId'] as String? ?? '',
         nomZone: d['nomZone'] as String? ?? '',
@@ -1462,5 +1573,129 @@ class BackupService {
     } catch (_) {
       return DateTime.now();
     }
+  }
+
+
+
+  // ── Sérialiser toutes les photos d'une mission en base64 ──
+  static Future<Map<String, String>> _serializePhotos(
+      List<String> allPaths) async {
+    final result = <String, String>{};
+    for (final path in allPaths) {
+      if (path.isEmpty) continue;
+      try {
+        final file = File(path);
+        if (await file.exists()) {
+          final bytes = await file.readAsBytes();
+          result[path] = base64Encode(bytes);
+        }
+      } catch (e) {
+        if (kDebugMode) print('⚠️ Photo ignorée: $path — $e');
+      }
+    }
+    return result;
+  }
+
+  // ── Collecter tous les chemins photos d'un audit ──
+  static List<String> _collectAllPhotoPaths(
+      AuditInstallationsElectriques audit) {
+    final paths = <String>[];
+    paths.addAll(audit.photos);
+    for (final l in audit.moyenneTensionLocaux) {
+      paths.addAll(_photosFromMTLocal(l));
+    }
+    for (final z in audit.moyenneTensionZones) {
+      paths.addAll(z.photos);
+      for (final o in z.observationsLibres) paths.addAll(o.photos);
+      for (final c in z.coffrets) paths.addAll(_photosFromCoffret(c));
+      for (final l in z.locaux) paths.addAll(_photosFromMTLocal(l));
+    }
+    for (final z in audit.basseTensionZones) {
+      paths.addAll(z.photos);
+      for (final o in z.observationsLibres) paths.addAll(o.photos);
+      for (final c in z.coffretsDirects) paths.addAll(_photosFromCoffret(c));
+      for (final l in z.locaux) paths.addAll(_photosFromBTLocal(l));
+    }
+    return paths.where((p) => p.isNotEmpty).toSet().toList();
+  }
+
+  static List<String> _photosFromMTLocal(MoyenneTensionLocal l) {
+    final p = <String>[...l.photos];
+    for (final o in l.observationsLibres) p.addAll(o.photos);
+    for (final c in l.coffrets) p.addAll(_photosFromCoffret(c));
+    for (final cell in l.cellules) {
+      p.addAll(cell.photos);
+      for (final e in cell.elementsVerifies) p.addAll(e.photos);
+    }
+    for (final t in l.transformateurs) {
+      p.addAll(t.photos);
+      for (final e in t.elementsVerifies) p.addAll(e.photos);
+    }
+    for (final e in l.dispositionsConstructives) p.addAll(e.photos);
+    for (final e in l.conditionsExploitation) p.addAll(e.photos);
+    return p;
+  }
+
+  static List<String> _photosFromBTLocal(BasseTensionLocal l) {
+    final p = <String>[...l.photos];
+    for (final o in l.observationsLibres) p.addAll(o.photos);
+    for (final c in l.coffrets) p.addAll(_photosFromCoffret(c));
+    for (final e in (l.dispositionsConstructives ?? [])) p.addAll(e.photos);
+    for (final e in (l.conditionsExploitation ?? [])) p.addAll(e.photos);
+    return p;
+  }
+
+  static List<String> _photosFromCoffret(CoffretArmoire c) {
+    final p = <String>[...c.photos, ...c.photosExternes, ...c.photosInternes];
+    for (final o in c.observationsLibres) {
+      p.addAll(o.photos);
+    }
+    for (final o in c.observationsParafoudre) {
+      p.addAll(o.photos);
+    }
+    for (final pv in c.pointsVerification) {
+      p.addAll(pv.photos);
+    }
+    for (final a in c.alimentations) {
+      p.addAll(a.photos);
+    }
+    if (c.protectionTete != null) p.addAll(c.protectionTete!.photos);
+    return p;
+  }
+
+  // ── Restaurer les photos depuis base64 ──
+  static Future<void> _restorePhotos(Map<String, dynamic> photosMap) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    for (final entry in photosMap.entries) {
+      final originalPath = entry.key;
+      final b64 = entry.value as String?;
+      if (b64 == null || b64.isEmpty) continue;
+      try {
+        // Reconstruire le chemin dans le répertoire local de cet appareil
+        // On garde le nom de fichier mais on change le préfixe absolu
+        final fileName = originalPath.split('/').last;
+        final subDir = _extractSubDir(originalPath);
+        final dir = Directory('${appDir.path}/audit_photos/$subDir');
+        if (!await dir.exists()) await dir.create(recursive: true);
+        final newFile = File('${dir.path}/$fileName');
+        if (!await newFile.exists()) {
+          await newFile.writeAsBytes(base64Decode(b64));
+        }
+      } catch (e) {
+        if (kDebugMode) print('⚠️ Restauration photo échouée: $originalPath — $e');
+      }
+    }
+  }
+
+  static String _extractSubDir(String path) {
+    // Extrait le sous-dossier depuis le chemin : .../audit_photos/SUBDIR/filename.jpg
+    try {
+      final parts = path.split('/');
+      final idx = parts.indexOf('audit_photos');
+      if (idx != -1 && idx + 1 < parts.length - 1) {
+        return parts[idx + 1];
+      }
+    } catch (_) {}
+    return 'misc';
   }
 }

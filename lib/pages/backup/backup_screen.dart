@@ -54,6 +54,9 @@ class _BackupScreenState extends State<BackupScreen> {
     final result = await BackupService.importerMissions(
       filePath,
       ecraserExistants: opts['ecraser'] as bool,
+      importeurMatricule: widget.user.matricule,
+      importeurNom: widget.user.nom,
+      importeurPrenom: widget.user.prenom,
     );
     if (!mounted) return;
     setState(() => _isImporting = false);
@@ -70,7 +73,7 @@ class _BackupScreenState extends State<BackupScreen> {
       ));
     }
   }
-  
+
 
   // ── Dialogue options import ──
   Future<Map<String, dynamic>?> _showImportOptionsDialog() {
@@ -147,6 +150,7 @@ class _BackupScreenState extends State<BackupScreen> {
 
   // ── Rapport d'import ──
   void _showImportReport(ImportResult result) {
+    final hasNewMissions = result.importedMissions > 0;
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -195,7 +199,14 @@ class _BackupScreenState extends State<BackupScreen> {
         ),
         actions: [
           ElevatedButton(
-            onPressed: () => Navigator.pop(ctx),
+            onPressed: () {
+              Navigator.pop(ctx);
+              // Si de nouvelles missions ont été importées, retourner à la liste
+              // pour forcer son rechargement et afficher les nouvelles missions
+              if (hasNewMissions) {
+                Navigator.of(context).pop();
+              }
+            },
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryBlue),
             child: const Text('Fermer'),
