@@ -1823,6 +1823,8 @@ Future<void> _supprimerEssai(EssaiDeclenchementDifferentiel essai) async {
           Expanded(
             child: DefaultTabController(
               length: 5,
+              // currentStep peut dépasser 5 si sauvegardé avec ancienne logique → clamp
+              initialIndex: (_coffret.currentStep).clamp(0, 4),
               child: Column(
                 children: [
                   Container(

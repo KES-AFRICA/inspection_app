@@ -128,7 +128,7 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
     }
   }
 
-  void _continuerAvecQrCode() {
+  Future<void> _continuerAvecQrCode() async {
     if (_scannedQrCode == null) return;
 
     if (_isExistingDraft && _existingCoffret != null) {
@@ -154,12 +154,9 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
       return;
     }
     
-    if (_isExistingCompleted) {
-      _showErrorDialog(
-        'Impossible de modifier cet équipement',
-        'Cet équipement a déjà été finalisé et ne peut plus être modifié.\n\n'
-        'Veuillez scanner un autre QR code.',
-      );
+    if (_isExistingCompleted && _existingCoffret != null) {
+      // Proposer de charger les données dans le nouvel emplacement
+      await _proposerChargementEquipementExistant(_existingCoffret!);
       return;
     }
     
@@ -209,6 +206,97 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
         ],
       ),
     );
+  }
+
+  /// Quand un QR déjà finalisé est scanné dans un nouveau local/zone,
+  /// on propose à l'utilisateur de charger ses données pour les sauvegarder
+  /// dans le nouvel emplacement (copie des informations vers le nouveau parent).
+  Future<void> _proposerChargementEquipementExistant(
+      CoffretArmoire existing) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(children: [
+          const Icon(Icons.info_outline, color: Colors.blue, size: 26),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text('Équipement existant',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold)),
+          ),
+        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'L\'équipement "${existing.nom}" a déjà été inspecté.',
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: Colors.blue.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.shade200),
+              ),
+              child: const Text(
+                'Voulez-vous charger ses données dans ce nouvel emplacement ? '
+                'Toutes les informations seront pré-remplies.',
+                style: TextStyle(fontSize: 13, color: Colors.blue),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(ctx, false);
+              _resetScanner();
+            },
+            child: const Text('Scanner autre QR'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Charger les données',
+                style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      // Ouvrir AjouterCoffretScreen en mode édition avec les données existantes
+      // mais pour le NOUVEL emplacement (parentType/parentIndex actuels)
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => AjouterCoffretScreen(
+            mission: widget.mission,
+            parentType: widget.parentType,
+            parentIndex: widget.parentIndex,
+            isMoyenneTension: widget.isMoyenneTension,
+            zoneIndex: widget.zoneIndex,
+            isInZone: widget.isInZone,
+            qrCode: _scannedQrCode,
+            // Passer le coffret existant comme données de départ
+            // isEdition=false car c'est un nouvel emplacement
+            coffret: existing,
+            coffretIndex: null,
+          ),
+        ),
+      ).then((value) {
+        if (value == true) Navigator.pop(context, true);
+      });
+    }
   }
 
   void _resetScanner() {

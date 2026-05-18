@@ -71,6 +71,7 @@ class HiveService {
     Hive.registerAdapter(LastReportAdapter());
 
     // Ouvrir toutes les boxes avec le type correct
+    await Hive.openBox('meta');
     await Hive.openBox<Verificateur>(_verificateurBox);
     await Hive.openBox<Mission>(_missionBox);
     await Hive.openBox<DescriptionInstallations>(_descriptionBox); 
@@ -88,6 +89,7 @@ class HiveService {
     
     // Box pour les préférences MT (type dynamique)
     await Hive.openBox(_mtPreferenceBox);
+    
   
   }
 
@@ -6665,6 +6667,77 @@ static String? getRegimeNeutreDetail(String missionId) {
   } catch (e) {
     return null;
   }
+}
+
+
+/// Migration unique : corriger les points de vérification sans priorité.
+/// À appeler une seule fois au démarrage de l'app, après l'ouverture des boxes.
+/// Les données créées avant l'ajout du champ priorité ont priorite=null
+/// pour les conformités 'non' — ce qui bloque la navigation dans le formulaire.
+static Future<void> migratePointsVerificationPriorite() async {
+  const migrationKey = 'migration_pv_priorite_done_v1';
+  final metaBox = Hive.box('meta');
+  if (metaBox.get(migrationKey) == true) return; // déjà faite
+
+  if (kDebugMode) print('🔄 Migration priorité points de vérification...');
+  int fixed = 0;
+
+  final auditBox = Hive.box<AuditInstallationsElectriques>(_auditBox);
+
+  void fixCoffret(CoffretArmoire c) {
+    bool changed = false;
+    for (final p in c.pointsVerification) {
+      if ((p.conformite == 'non' || p.conformite == 'na') && p.priorite == null) {
+        p.priorite = 3; // Priorité basse par défaut
+        changed = true;
+        fixed++;
+      }
+    }
+    // Pas besoin de sauvegarder individuellement — l'audit parent sera sauvegardé
+  }
+
+  for (final audit in auditBox.values) {
+    bool auditChanged = false;
+
+    for (final local in audit.moyenneTensionLocaux) {
+      for (final c in local.coffrets) { fixCoffret(c); auditChanged = true; }
+    }
+    for (final zone in audit.moyenneTensionZones) {
+      for (final c in zone.coffrets) { fixCoffret(c); auditChanged = true; }
+      for (final local in zone.locaux) {
+        for (final c in local.coffrets) { fixCoffret(c); auditChanged = true; }
+      }
+    }
+    for (final zone in audit.basseTensionZones) {
+      for (final c in zone.coffretsDirects) { fixCoffret(c); auditChanged = true; }
+      for (final local in zone.locaux) {
+        for (final c in local.coffrets) { fixCoffret(c); auditChanged = true; }
+      }
+    }
+
+    if (auditChanged) await audit.save();
+  }
+
+  // Migrer aussi les brouillons coffrets
+  final draftsBox = Hive.box('coffret_drafts');
+  for (final key in draftsBox.keys) {
+    final data = draftsBox.get(key);
+    if (data is! Map) continue;
+    final coffret = data['coffret'];
+    if (coffret is! CoffretArmoire) continue;
+    bool changed = false;
+    for (final p in coffret.pointsVerification) {
+      if ((p.conformite == 'non' || p.conformite == 'na') && p.priorite == null) {
+        p.priorite = 3;
+        changed = true;
+        fixed++;
+      }
+    }
+    if (changed) await draftsBox.put(key, data);
+  }
+
+  await metaBox.put(migrationKey, true);
+  if (kDebugMode) print('✅ Migration terminée: $fixed points corrigés');
 }
 
 }

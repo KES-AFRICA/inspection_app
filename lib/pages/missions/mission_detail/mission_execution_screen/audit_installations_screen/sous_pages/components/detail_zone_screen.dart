@@ -1634,7 +1634,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
             if (isDraft) {
               _supprimerBrouillon(coffret);
             } else {
-              _supprimerCoffret(index, isMoyenneTension);
+              _supprimerCoffret(coffret, isMoyenneTension);
             }
           }
         },
@@ -1665,7 +1665,14 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
         if (isDraft) {
           _ouvrirBrouillon(coffret);
         } else {
-          _voirCoffret(index, isMoyenneTension);
+          // Calculer le vrai index dans _zone.coffretsDirects / _zone.coffrets
+          // (sans les brouillons qui sont en tête de _coffretsDirects)
+          final realIndex = isMoyenneTension
+              ? _zone.coffrets.indexWhere((c) => c.qrCode == coffret.qrCode)
+              : _zone.coffretsDirects.indexWhere((c) => c.qrCode == coffret.qrCode);
+          if (realIndex >= 0) {
+            _voirCoffret(realIndex, isMoyenneTension);
+          }
         }
       },
     ),
@@ -1674,6 +1681,11 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
 
 // MODIFIER : Éditer un Équipement (brouillon ou complet)
 void _editerCoffret(CoffretArmoire coffret, int index, bool isMoyenneTension) async {
+  // Recalculer le vrai index dans la liste source (sans brouillons)
+  final realIndex = isMoyenneTension
+      ? _zone.coffrets.indexWhere((c) => c.qrCode == coffret.qrCode)
+      : _zone.coffretsDirects.indexWhere((c) => c.qrCode == coffret.qrCode);
+
   final result = await Navigator.push(
     context,
     MaterialPageRoute(
@@ -1683,13 +1695,13 @@ void _editerCoffret(CoffretArmoire coffret, int index, bool isMoyenneTension) as
         parentIndex: widget.zoneIndex,
         isMoyenneTension: widget.isMoyenneTension,
         isInZone: false,
-        qrCode: coffret.qrCode, // ← Passer le QR code existant
-        coffret: coffret.statut == 'complet' ? coffret : null, 
-        coffretIndex: coffret.statut == 'complet' ? index : null,
+        qrCode: coffret.qrCode,
+        coffret: coffret.statut == 'complet' ? coffret : null,
+        coffretIndex: coffret.statut == 'complet' ? realIndex : null,
       ),
     ),
   );
-  
+
   if (result == true) {
     _rechargerZone();
   }
@@ -1713,12 +1725,12 @@ void _voirCoffret(int index, bool isMoyenneTension) {
 }
 
 // MODIFIER : Supprimer un Équipement complet
-void _supprimerCoffret(int index, bool isMoyenneTension) {
+void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
   showDialog(
     context: context,
     builder: (context) => AlertDialog(
       title: const Text('Confirmer la suppression'),
-      content: const Text('Voulez-vous vraiment supprimer cet Équipement ?'),
+      content: const Text('Voulez-vous vraiment supprimer ce coffret ?'),
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
@@ -1727,27 +1739,28 @@ void _supprimerCoffret(int index, bool isMoyenneTension) {
         ElevatedButton(
           onPressed: () async {
             Navigator.pop(context);
-            
             final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-            
             if (isMoyenneTension) {
               if (widget.zoneIndex < audit.moyenneTensionZones.length) {
-                if (index < audit.moyenneTensionZones[widget.zoneIndex].coffrets.length) {
-                  audit.moyenneTensionZones[widget.zoneIndex].coffrets.removeAt(index);
+                final realIndex = audit.moyenneTensionZones[widget.zoneIndex].coffrets
+                    .indexWhere((c) => c.qrCode == coffret.qrCode);
+                if (realIndex >= 0) {
+                  audit.moyenneTensionZones[widget.zoneIndex].coffrets.removeAt(realIndex);
                   await HiveService.saveAuditInstallations(audit);
                 }
               }
             } else {
               if (widget.zoneIndex < audit.basseTensionZones.length) {
-                if (index < audit.basseTensionZones[widget.zoneIndex].coffretsDirects.length) {
-                  audit.basseTensionZones[widget.zoneIndex].coffretsDirects.removeAt(index);
+                final realIndex = audit.basseTensionZones[widget.zoneIndex].coffretsDirects
+                    .indexWhere((c) => c.qrCode == coffret.qrCode);
+                if (realIndex >= 0) {
+                  audit.basseTensionZones[widget.zoneIndex].coffretsDirects.removeAt(realIndex);
                   await HiveService.saveAuditInstallations(audit);
                 }
               }
             }
-            
             _rechargerZone();
-            _showSuccess('Équipement supprimé');
+            _showSuccess('Coffret supprimé');
           },
           style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
           child: const Text('Supprimer'),

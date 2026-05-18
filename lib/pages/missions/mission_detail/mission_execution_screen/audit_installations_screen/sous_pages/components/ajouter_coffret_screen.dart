@@ -1547,22 +1547,25 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
 
   bool _isCurrentSlideValid() {
     if (_pointsSlides.isEmpty) return true;
-    
+
     final currentPoints = _pointsSlides[_currentSlide];
     for (var point in currentPoints) {
       if (point.conformite.isEmpty) return false;
 
-      // Priorité obligatoire si Non ou NA
-      if ((point.conformite == 'non' || point.conformite == 'na') && point.priorite == null) {
-        return false;
-      }
+      if (point.conformite == 'non' || point.conformite == 'na') {
+        // Si priorité manquante → attribuer silencieusement 3 plutôt que bloquer
+        // (données créées avant l'ajout du champ priorité)
+        point.priorite ??= 3;
 
-      // Observation obligatoire si Non
-      if (point.conformite == 'non') {
-        final pointIndex = _getPointIndex(point);
-        final hasObservation = widget.hasObservation[pointIndex] ?? false;
-        if (!hasObservation) return false;
-        if (point.observation == null || point.observation!.trim().isEmpty) return false;
+        // Observation obligatoire uniquement pour 'non'
+        if (point.conformite == 'non') {
+          final pointIndex = _getPointIndex(point);
+          final hasObservation = widget.hasObservation[pointIndex] ?? false;
+          if (!hasObservation) return false;
+          if (point.observation == null || point.observation!.trim().isEmpty) {
+            return false;
+          }
+        }
       }
     }
     return true;

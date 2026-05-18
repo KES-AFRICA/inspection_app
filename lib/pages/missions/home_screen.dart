@@ -207,11 +207,8 @@ void _saveStatsPeriodPreference(String period) {
               searchQuery: _searchQuery,
               currentPageIndex: _currentPageIndex,
               onNavigationItemSelected: _onNavigationItemSelected,
-              onClose: () {
-                setState(() {
-                  _showSidebar = false;
-                });
-              },
+              onClose: () => setState(() => _showSidebar = false),
+              onRefreshMissions: _loadLocalMissions,
             ),
           ],
         ),

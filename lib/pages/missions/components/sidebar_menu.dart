@@ -15,6 +15,7 @@ class SidebarMenu extends StatelessWidget {
   final int currentPageIndex;
   final Function(int) onNavigationItemSelected;
   final VoidCallback onClose;
+  final VoidCallback? onRefreshMissions;
 
   const SidebarMenu({
     super.key,
@@ -26,6 +27,7 @@ class SidebarMenu extends StatelessWidget {
     required this.currentPageIndex,
     required this.onNavigationItemSelected,
     required this.onClose,
+    this.onRefreshMissions,
   });
 
   Future<void> _logout(BuildContext context) async {
@@ -165,8 +167,8 @@ class SidebarMenu extends StatelessWidget {
                   onPressed: () {
                     onClose();
                     Navigator.of(context).push(MaterialPageRoute(
-                      builder: (context) => BackupScreen(user: user),
-                    ));
+                    builder: (context) => BackupScreen(user: user),
+                  )).then((_) => onRefreshMissions?.call());
                   },
                   icon: const Icon(Icons.cloud_upload_outlined,
                       color: AppTheme.primaryBlue, size: 18),

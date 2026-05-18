@@ -201,11 +201,7 @@ class _BackupScreenState extends State<BackupScreen> {
           ElevatedButton(
             onPressed: () {
               Navigator.pop(ctx);
-              // Si de nouvelles missions ont été importées, retourner à la liste
-              // pour forcer son rechargement et afficher les nouvelles missions
-              if (hasNewMissions) {
-                Navigator.of(context).pop();
-              }
+              Navigator.of(context).pop();
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: AppTheme.primaryBlue),

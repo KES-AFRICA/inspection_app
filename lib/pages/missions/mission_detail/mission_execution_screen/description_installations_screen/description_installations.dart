@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
@@ -80,7 +81,9 @@ class _DescriptionInstallationsScreenState extends State<DescriptionInstallation
         _isLoading = false;
       });
     } catch (e) {
-      print('❌ Erreur vérification sections: $e');
+      if (kDebugMode) {
+        print('❌ Erreur vérification sections: $e');
+      }
       setState(() => _isLoading = false);
     }
   }

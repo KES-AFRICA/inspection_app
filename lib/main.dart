@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'package:inspec_app/pages/missions/home_screen.dart';
 import 'package:inspec_app/pages/register_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:inspec_app/services/secure_password_service.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/login_screen.dart';
 import 'package:inspec_app/models/verificateur.dart';
@@ -14,6 +13,8 @@ void main() async {
   
   // Initialiser Hive
   await HiveService.init();
+  // Migration silencieuse des données existantes
+  await HiveService.migratePointsVerificationPriorite();
   
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
