@@ -3384,24 +3384,6 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
     _showError('Veuillez remplir tous les champs obligatoires'); 
     return; 
   }
-
-  // Vérification doublon nom + type (uniquement pour les nouveaux équipements,
-  // pas pour les éditions du même équipement)
-  if (!widget.isEdition) {
-    final doublon = HiveService.findCoffretDoublon(
-      missionId: widget.mission.id,
-      nom: _nomController.text.trim(),
-      type: _selectedType!,
-    );
-    if (doublon != null) {
-      _showError(
-        'Un équipement "${_nomController.text.trim()}" de type "$_selectedType" '
-        'existe déjà dans $doublon.\n\n'
-        'Veuillez utiliser un nom différent.',
-      );
-      return;
-    }
-  }
   
   try {
     final toutesPhotos = [..._coffretPhotosExterne, ..._coffretPhotosInterne];
