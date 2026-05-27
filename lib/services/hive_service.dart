@@ -6361,27 +6361,38 @@ static Future<bool> updateUserPassword({
   required String newPassword,
 }) async {
   try {
+    final normalizedEmail = email.trim().toLowerCase();
     final box = Hive.box<Verificateur>(_verificateurBox);
-    final user = box.get(email.toLowerCase());
-    
+    final user = box.get(normalizedEmail);
+
     if (user == null) {
+      if (kDebugMode) print('❌ Utilisateur non trouvé: $normalizedEmail');
+      return false;
+    }
+
+    // Écrire le nouveau hash bcrypt dans FlutterSecureStorage
+    final passwordResult = await SecurePasswordService.createPassword(
+      email: normalizedEmail,
+      plainPassword: newPassword,
+    );
+
+    if (!passwordResult.success) {
       if (kDebugMode) {
-        print('❌ Utilisateur non trouvé: $email');
+        print('❌ Hash bcrypt échoué: ${passwordResult.errorMessage}');
       }
       return false;
     }
-    
-    user.password = newPassword;
+
+    user.password = ''; // vider l'éventuel ancien mot de passe en clair
     await user.save();
-    
-    if (kDebugMode) {
-      print('✅ Mot de passe mis à jour pour: $email');
-    }
+
+    // Réinitialiser les compteurs de sécurité (lockout, tentatives échouées)
+    await SecurePasswordService.resetSecurityCounters(normalizedEmail);
+
+    if (kDebugMode) print('✅ Mot de passe mis à jour avec bcrypt pour: $normalizedEmail');
     return true;
   } catch (e) {
-    if (kDebugMode) {
-      print('❌ Erreur updateUserPassword: $e');
-    }
+    if (kDebugMode) print('❌ Erreur updateUserPassword: $e');
     return false;
   }
 }
