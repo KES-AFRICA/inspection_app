@@ -15,12 +15,14 @@ class DescriptionInstallationsSequenceScreen extends StatefulWidget {
   final Mission mission;
   final VoidCallback onPreviousStep;
   final VoidCallback onNextStep;
+  final int? initialSectionIndex; 
 
   const DescriptionInstallationsSequenceScreen({
     super.key,
     required this.mission,
     required this.onPreviousStep,
     required this.onNextStep,
+    this.initialSectionIndex,
   });
 
   @override
@@ -233,9 +235,9 @@ class _DescriptionInstallationsSequenceScreenState extends State<DescriptionInst
       
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _pageController.hasClients) {
-          int targetStep = savedPosition;
-          
-          if (_isFirstLoad && savedPosition == 0) {
+          int targetStep = widget.initialSectionIndex ?? savedPosition;
+
+          if (widget.initialSectionIndex == null && _isFirstLoad && savedPosition == 0) {
             for (int i = 0; i < _sections.length; i++) {
               final section = _sections[i];
               final key = section['key'] as String;

@@ -22,6 +22,7 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
   final _activiteClientCtrl = TextEditingController();
   final _adresseClientCtrl = TextEditingController();
   final _nomSiteCtrl = TextEditingController();
+  final _installationCtrl = TextEditingController();
   
   // Sélection pour Nature de vérification
   String? _natureMission;
@@ -66,6 +67,7 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
     _activiteClientCtrl.dispose();
     _adresseClientCtrl.dispose();
     _nomSiteCtrl.dispose();
+    _installationCtrl.dispose();
     super.dispose();
   }
 
@@ -93,6 +95,16 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
       return;
     }
 
+    if (_installationCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez saisir l\'installation vérifiée'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
 
     try {
@@ -103,7 +115,8 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
         nomClient: _nomClientCtrl.text.trim(),
         activiteClient: _activiteClientCtrl.text.trim().isEmpty ? null : _activiteClientCtrl.text.trim(),
         adresseClient: _adresseClientCtrl.text.trim().isEmpty ? null : _adresseClientCtrl.text.trim(),
-        nomSite: _nomSiteCtrl.text.trim(), // NOUVEAU
+        nomSite: _nomSiteCtrl.text.trim(),
+        installation: _installationCtrl.text.trim(),
         natureMission: _natureMission,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -500,6 +513,16 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
                   isRequired: true,
                 ),
                 SizedBox(height: isSmallScreen ? 24 : 28),
+
+                // Installation vérifiée
+                _buildTextField(
+                  controller: _installationCtrl,
+                  label: 'Installation vérifiée',
+                  icon: Icons.electrical_services,
+                  hint: 'Ex: Installations électriques BT/MT...',
+                  isRequired: true,
+                ),
+                SizedBox(height: isSmallScreen ? 14 : 16),
                 
                 // Adresse
                 _buildTextField(

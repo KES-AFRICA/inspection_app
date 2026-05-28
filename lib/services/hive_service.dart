@@ -5471,7 +5471,7 @@ static Future<RenseignementsGeneraux> getOrCreateRenseignementsGeneraux(String m
     final newData = RenseignementsGeneraux(
       missionId: missionId,
       etablissement: mission?.nomClient ?? '',
-      installation: '',
+      installation: mission?.installation ?? '',
       activite: mission?.activiteClient ?? '',
       verificationType: mission?.natureMission,
       updatedAt: DateTime.now(),

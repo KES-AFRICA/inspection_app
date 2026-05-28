@@ -493,7 +493,7 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
     if (_accompagnateurs.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Veuillez d\'abord ajouter des accompagnateurs'),
+          content: Text('Veuillez d\'abord ajouter des accompagnateurs/référents'),
           backgroundColor: Colors.orange,
         ),
       );
@@ -887,9 +887,9 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
             Padding(
               padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
               child: Text(
-                'Ajouter un accompagnateur',
+                'Ajouter un accompagnateur / référent',
                 style: TextStyle(
-                  fontSize: isSmallScreen ? 18 : 20,
+                  fontSize: isSmallScreen ? 14 : 16,
                   fontWeight: FontWeight.bold,
                 ),
                 textAlign: TextAlign.center,
@@ -916,15 +916,34 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
                     SizedBox(height: isSmallScreen ? 12 : 14),
                     
                     // Email
-                    TextField(
-                      controller: emailController,
-                      decoration: InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: Icon(Icons.email, size: isSmallScreen ? 18 : 20),
-                        border: const OutlineInputBorder(),
-                      ),
-                      keyboardType: TextInputType.emailAddress,
-                      textInputAction: TextInputAction.next,
+                    // Email
+                    StatefulBuilder(
+                      builder: (context, setFieldState) {
+                        bool emailInvalid = false;
+                        return TextField(
+                          controller: emailController,
+                          decoration: InputDecoration(
+                            labelText: 'Email',
+                            prefixIcon: Icon(Icons.email, size: isSmallScreen ? 18 : 20),
+                            border: const OutlineInputBorder(),
+                            errorText: emailInvalid ? 'Email invalide' : null,
+                            suffixIcon: emailController.text.isNotEmpty
+                                ? Icon(
+                                    _isValidEmail(emailController.text)
+                                        ? Icons.check_circle
+                                        : Icons.error,
+                                    color: _isValidEmail(emailController.text)
+                                        ? Colors.green
+                                        : Colors.red,
+                                    size: 18,
+                                  )
+                                : null,
+                          ),
+                          keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
+                          onChanged: (_) => setFieldState(() {}),
+                        );
+                      },
                     ),
                     SizedBox(height: isSmallScreen ? 12 : 14),
                     
@@ -1035,6 +1054,19 @@ void _submitAccompagnateur(
     return;
   }
 
+  // Validation email (si renseigné)
+  final email = emailController.text.trim();
+  if (email.isNotEmpty && !_isValidEmail(email)) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Adresse email invalide'),
+        backgroundColor: Colors.red,
+        duration: Duration(seconds: 3),
+      ),
+    );
+    return;
+  }
+
   // Validation du téléphone (optionnel mais format si présent)
   final telephone = telephoneController.text.trim();
   if (telephone.isNotEmpty && !_isValidPhoneNumber(telephone)) {
@@ -1063,6 +1095,14 @@ void _submitAccompagnateur(
     // Format accepté : +XXXXXXXXXXXXX ou chiffres (9-15 caractères)
     final phoneRegex = RegExp(r'^\+?[0-9]{9,15}$');
     return phoneRegex.hasMatch(phone.replaceAll(' ', ''));
+  }
+
+  bool _isValidEmail(String email) {
+    // RFC 5322 simplifié — couvre 99% des cas réels
+    final emailRegex = RegExp(
+      r'^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$',
+    );
+    return emailRegex.hasMatch(email.trim());
   }
 
   void _supprimerAccompagnateur(int index) async {
@@ -1409,7 +1449,7 @@ void _submitAccompagnateur(
 
               // Accompagnateurs
               _buildDynamicListSection(
-                title: 'Accompagnateurs',
+                title: 'Accompagnateurs / Référent',
                 icon: Icons.people,
                 color: Colors.blue,
                 items: _accompagnateurs,
@@ -1825,6 +1865,14 @@ void _submitAccompagnateur(
     final hasError = showError && items.isEmpty;
     final borderColor = hasError ? Colors.red.shade300 : Colors.transparent;
 
+    // Taille de police réduite en cas d'erreur pour éviter l'overflow
+    final titleFontSize = isSmallScreen
+        ? (hasError ? 12.0 : 14.0)
+        : (hasError ? 14.0 : 16.0);
+    final asteriskFontSize = isSmallScreen
+        ? (hasError ? 12.0 : 14.0)
+        : (hasError ? 14.0 : 16.0);
+
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -1861,19 +1909,22 @@ void _submitAccompagnateur(
                 Expanded(
                   child: Row(
                     children: [
-                      Text(
-                        title,
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 14 : 16,
-                          fontWeight: FontWeight.w600,
-                          color: hasError ? Colors.red : Colors.black87,
+                      Flexible(
+                        child: Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: titleFontSize,
+                            fontWeight: FontWeight.w600,
+                            color: hasError ? Colors.red : Colors.black87,
+                          ),
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
                       if (isRequired)
                         Text(
                           ' *',
                           style: TextStyle(
-                            fontSize: isSmallScreen ? 14 : 16,
+                            fontSize: asteriskFontSize,
                             color: hasError ? Colors.red : Colors.red,
                             fontWeight: FontWeight.bold,
                           ),
@@ -1961,7 +2012,7 @@ void _submitAccompagnateur(
                     onPressed: onAdd,
                     icon: Icon(Icons.add, size: isSmallScreen ? 16 : 18),
                     label: Text(
-                      'AJOUTER UN $title'.toUpperCase(),
+                      'AJOUTER',
                       style: TextStyle(fontSize: isSmallScreen ? 12 : 14),
                     ),
                     style: OutlinedButton.styleFrom(

@@ -18,10 +18,17 @@ class DescriptionStep extends StatefulWidget {
   });
 
   @override
-  State<DescriptionStep> createState() => _DescriptionStepState();
+  State<DescriptionStep> createState() => DescriptionStepState();
 }
 
-class _DescriptionStepState extends State<DescriptionStep> {
+class DescriptionStepState extends State<DescriptionStep> {
+  int? _pendingSection;
+
+  /// Appelé depuis le drawer pour aller directement à une section.
+  void jumpToSection(int index) {
+    setState(() => _pendingSection = index);
+  }
+
   @override
   void initState() {
     super.initState();
@@ -31,9 +38,11 @@ class _DescriptionStepState extends State<DescriptionStep> {
   @override
   Widget build(BuildContext context) {
     return DescriptionInstallationsSequenceScreen(
+      key: _pendingSection != null ? ValueKey('desc_$_pendingSection') : null,
       mission: widget.mission,
       onPreviousStep: widget.onPreviousStep,
       onNextStep: widget.onNextStep,
+      initialSectionIndex: _pendingSection,
     );
   }
 }

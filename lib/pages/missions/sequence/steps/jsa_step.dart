@@ -29,6 +29,7 @@ class JsaStepState extends State<JsaStep> with AutomaticKeepAliveClientMixin {
 
   late JSA _jsa;
   bool _isLoading = true;
+  bool get isLoading => _isLoading;
   bool _isFirstLoad = true;
   bool _hasAttemptedNext = false; // ✅ Pour contrôler l'affichage des erreurs
 
@@ -348,6 +349,77 @@ class JsaStepState extends State<JsaStep> with AutomaticKeepAliveClientMixin {
       _saveJSA();
       _saveCurrentPosition();
     }
+  }
+
+  /// Méthode publique appelée depuis le drawer pour naviguer vers une sous-catégorie.
+  /// Vérifie que toutes les sous-catégories précédentes sont valides avant de naviguer.
+  void navigateToSubCategory(int index) {
+    if (index < 0 || index >= totalSubCategories) return;
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _hasAttemptedNext = false;
+      _jsa.currentSubCategory = index;
+    });
+    _saveCurrentPosition();
+  }
+
+  /// Retourne true si la sous-catégorie [index] est considérée complète.
+  bool isSubCategoryComplete(int index) {
+    if (_isLoading) return false;
+    switch (index) {
+      case 0:
+        return _operationController.text.trim().isNotEmpty && _jsa.inspecteurs.isNotEmpty;
+      case 1:
+        return _jsa.planUrgence.voiesIssuesIdentifiees ||
+               _jsa.planUrgence.zonesRassemblementIdentifiees ||
+               _jsa.planUrgence.consignesSecuriteInternes ||
+               _personneContactClientController.text.trim().isNotEmpty ||
+               _personneContactKESController.text.trim().isNotEmpty;
+      case 2:
+        return _jsa.dangers.chocElectrique || _jsa.dangers.bruit ||
+               _jsa.dangers.stressThermique || _jsa.dangers.eclairageInadapte ||
+               _jsa.dangers.zoneCirculationMalDefinie || _jsa.dangers.solAccidente ||
+               _jsa.dangers.emissionGazPoussiere || _jsa.dangers.espaceConfine ||
+               _autreEnvironnementController.text.trim().isNotEmpty ||
+               _jsa.dangers.chuteObjets || _jsa.dangers.coactivite ||
+               _jsa.dangers.portCharge || _jsa.dangers.expositionProduitsChimiques ||
+               _jsa.dangers.chuteHauteur || _jsa.dangers.electrification ||
+               _jsa.dangers.incendiesExplosion || _jsa.dangers.mauvaisesPostures ||
+               _jsa.dangers.chutePlainPied || _autrePhysiqueController.text.trim().isNotEmpty;
+      case 3:
+        return _jsa.exigencesGenerales.signaletiqueSecurite ||
+               _jsa.exigencesGenerales.ficheDonneeSecuriteDisponible ||
+               _jsa.exigencesGenerales.uneMinuteMaSecurite || _jsa.exigencesGenerales.balise ||
+               _jsa.exigencesGenerales.zoneTravailPropre || _jsa.exigencesGenerales.toolboxMeeting ||
+               _jsa.exigencesGenerales.permisTravail || _jsa.exigencesGenerales.extincteurs ||
+               _jsa.exigencesGenerales.outilsMaterielsIsolants ||
+               _jsa.exigencesGenerales.boitePharmacie ||
+               _autreExigenceController.text.trim().isNotEmpty;
+      case 4:
+        return _jsa.epi.casqueSecurite || _jsa.epi.bouchonsOreille ||
+               _jsa.epi.lunettesProtection || _jsa.epi.harnaisSecurite ||
+               _jsa.epi.chaussureSecurite || _jsa.epi.masqueSecurite ||
+               _jsa.epi.combinaisonLongueManche || _jsa.epi.gantsIsolants ||
+               _jsa.epi.cacheNez || _jsa.epi.gilet ||
+               _autreEPIController.text.trim().isNotEmpty;
+      case 5:
+        return _jsa.verificationFinale.travailTermineNA ||
+               _jsa.verificationFinale.travailTermineApplicable ||
+               _jsa.verificationFinale.consignationCadenasRetireNA ||
+               _jsa.verificationFinale.consignationCadenasRetireApplicable ||
+               _jsa.verificationFinale.absenceConsignataireProcedureNA ||
+               _jsa.verificationFinale.absenceConsignataireProcedureApplicable ||
+               _donneurOrdreSignatureController.text.trim().isNotEmpty ||
+               _chargeAffairesSignatureController.text.trim().isNotEmpty;
+      default:
+        return false;
+    }
+  }
+
+  /// JSA entièrement complète = toutes les sous-catégories valides.
+  bool get isFullyComplete {
+    if (_isLoading) return false;
+    return List.generate(totalSubCategories, (i) => isSubCategoryComplete(i)).every((v) => v);
   }
 
   void _goToRenseignements() {

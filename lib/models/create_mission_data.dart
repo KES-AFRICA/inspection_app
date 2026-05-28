@@ -6,6 +6,7 @@ class CreateMissionData {
   String? activiteClient;
   String? adresseClient;
   String nomSite;
+  String installation;
   String? dgResponsable;
   DateTime? dateIntervention;
   DateTime? dateRapport;
@@ -35,6 +36,7 @@ class CreateMissionData {
     this.activiteClient,
     this.adresseClient,
     required this.nomSite,
+    required this.installation,
     this.dgResponsable,
     this.dateIntervention,
     this.dateRapport,

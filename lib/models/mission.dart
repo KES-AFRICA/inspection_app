@@ -119,9 +119,11 @@ class Mission extends HiveObject {
   @HiveField(37)
   String? schemaOption;
 
-  // ✅ NOUVEAU : Liste des documents personnalisés ajoutés par l'utilisateur
   @HiveField(38)
   List<String> autresDocuments;
+
+  @HiveField(39)
+  String? installation;
 
   Mission({
     required this.id,
@@ -162,6 +164,7 @@ class Mission extends HiveObject {
     this.jsaId,
     this.schemaOption,
     List<String>? autresDocuments,
+    this.installation,
   }) : autresDocuments = autresDocuments ?? [];
 
   factory Mission.fromJson(Map<String, dynamic> json) {
@@ -221,6 +224,7 @@ class Mission extends HiveObject {
       autresDocuments: json['autres_documents'] != null
           ? List<String>.from(json['autres_documents'])
           : [],
+      installation: json['installation'] as String?,
     );
   }
 
@@ -264,6 +268,7 @@ class Mission extends HiveObject {
       'jsa_id': jsaId,
       'schema_option': schemaOption,
       'autres_documents': autresDocuments,
+      'installation': installation,
     };
   }
 
