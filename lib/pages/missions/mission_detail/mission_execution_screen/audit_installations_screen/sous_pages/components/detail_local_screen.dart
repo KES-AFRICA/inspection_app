@@ -52,7 +52,6 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   void initState() {
     super.initState();
     _local = widget.local;
-    // Migration automatique des anciens locaux (cellule unique → liste cellules)
     if (_local is MoyenneTensionLocal) {
       (_local as MoyenneTensionLocal).migrateFromOldFields();
     }
@@ -60,6 +59,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _chargerPhotosLocal();
+        _refreshLocal();
       }
     });
   }
@@ -2089,6 +2089,75 @@ Widget _buildElementItem(ElementControle element) {
             ? (_local as BasseTensionLocal).transformateurs
             : [];
 
+    final isInaccessible = !(_local.accessible ?? true);
+
+    // ── Local INACCESSIBLE : seulement observations + photos ──
+    if (isInaccessible) {
+      return Scaffold(
+        appBar: AppBar(
+          title: Text(_local.nom),
+          backgroundColor: Colors.red.shade700,
+          foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.edit),
+              onPressed: _editerLocal,
+              tooltip: 'Modifier le local',
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // Bandeau inaccessible
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              color: Colors.red.shade50,
+              child: Row(children: [
+                Icon(Icons.lock_outline, color: Colors.red.shade700, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Local inaccessible — aucun équipement ne peut être ajouté',
+                    style: TextStyle(
+                        color: Colors.red.shade700,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ]),
+            ),
+            Expanded(
+              child: DefaultTabController(
+                length: 2,
+                child: Column(children: [
+                  Container(
+                    color: Colors.white,
+                    child: TabBar(
+                      labelColor: Colors.red.shade700,
+                      unselectedLabelColor: Colors.grey,
+                      indicatorColor: Colors.red.shade700,
+                      tabs: [
+                        Tab(text: 'OBSERVATIONS (${_local.observationsLibres.length})'),
+                        Tab(text: 'PHOTOS (${_localPhotos.length})'),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: TabBarView(children: [
+                      _buildObservationsTab(),
+                      _buildPhotosTab(),
+                    ]),
+                  ),
+                ]),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // ── Local ACCESSIBLE : tous les onglets ──
     final tabCount = 5 + (isTransformateur ? 2 : 0);
 
     return Scaffold(
@@ -2098,12 +2167,12 @@ Widget _buildElementItem(ElementControle element) {
         foregroundColor: Colors.white,
         actions: [
           IconButton(
-            icon: Icon(Icons.edit),
+            icon: const Icon(Icons.edit),
             onPressed: _editerLocal,
             tooltip: 'Modifier le local',
           ),
           IconButton(
-            icon: Icon(Icons.add),
+            icon: const Icon(Icons.add),
             onPressed: _ajouterCoffret,
             tooltip: 'Ajouter un coffret',
           ),
@@ -2128,7 +2197,6 @@ Widget _buildElementItem(ElementControle element) {
                         Tab(text: 'OBSERVATIONS (${_local.observationsLibres.length})'),
                         Tab(text: 'PHOTOS (${_localPhotos.length})'),
                         Tab(text: 'VÉRIFICATIONS'),
-                        // Seulement pour MT transformateur
                         if (isTransformateur) Tab(text: 'CELLULE'),
                         if (isTransformateur) Tab(text: 'TRANSFORMATEUR'),
                         Tab(text: 'ÉQUIPEMENTS (${_coffrets.length})'),
@@ -2139,24 +2207,15 @@ Widget _buildElementItem(ElementControle element) {
                   Expanded(
                     child: TabBarView(
                       children: [
-                        // Tab OBSERVATIONS
                         _buildObservationsTab(),
-                        
-                        // Tab PHOTOS
                         _buildPhotosTab(),
-
-                        // Tab VÉRIFICATIONS
                         ListView(
-                          padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),
+                          padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
                           children: [
                             _buildSection('DISPOSITIONS CONSTRUCTIVES', _local.dispositionsConstructives ?? []),
                             _buildSection('CONDITIONS D\'EXPLOITATION', _local.conditionsExploitation ?? []),
                           ],
                         ),
-
-                        // Tab CELLULE (seulement pour MT transformateur)
-                        // Affiche la liste des cellules, qu'elles viennent de l'ancien champ
-                        // unique (cellule) ou de la nouvelle liste (cellules).
                         if (isTransformateur)
                           localCellules.isNotEmpty
                             ? ListView(
@@ -2166,7 +2225,6 @@ Widget _buildElementItem(ElementControle element) {
                                 }).toList(),
                               )
                             : const Center(child: Text('Aucune cellule')),
-
                         if (isTransformateur)
                           localTransformateurs.isNotEmpty
                             ? ListView(
@@ -2176,8 +2234,6 @@ Widget _buildElementItem(ElementControle element) {
                                 }).toList(),
                               )
                             : const Center(child: Text('Aucune information transformateur')),
-
-                        // Tab COFFRETS
                         RefreshIndicator(
                           onRefresh: _refreshLocal,
                           child: _coffrets.isEmpty
@@ -2191,10 +2247,8 @@ Widget _buildElementItem(ElementControle element) {
                                         children: [
                                           Icon(Icons.electrical_services_outlined, size: 64, color: Colors.grey.shade400),
                                           const SizedBox(height: 16),
-                                          Text(
-                                            'Aucun équipement ajouté',
-                                            style: TextStyle(fontSize: 18, color: Colors.grey.shade600),
-                                          ),
+                                          Text('Aucun équipement ajouté',
+                                              style: TextStyle(fontSize: 18, color: Colors.grey.shade600)),
                                           const SizedBox(height: 8),
                                           ElevatedButton.icon(
                                             onPressed: _ajouterCoffret,
@@ -2218,9 +2272,8 @@ Widget _buildElementItem(ElementControle element) {
                                   },
                                 ),
                         ),
-
                         _buildClassementTab(),
-                      ].where((widget) => widget != null).toList(), // Filtrer les nulls
+                      ].where((w) => w != null).toList(),
                     ),
                   ),
                 ],
@@ -2233,7 +2286,7 @@ Widget _buildElementItem(ElementControle element) {
           ? FloatingActionButton(
               onPressed: _ajouterCoffret,
               backgroundColor: AppTheme.primaryBlue,
-              child: Icon(Icons.add, color: Colors.white),
+              child: const Icon(Icons.add, color: Colors.white),
             )
           : null,
     );

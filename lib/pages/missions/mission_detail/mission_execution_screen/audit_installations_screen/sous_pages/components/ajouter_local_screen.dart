@@ -4833,6 +4833,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           type: _selectedType ?? 'LOCAL_ELECTRIQUE',
           accessible: false,
           aReverifier: true,
+          observationsLibres: _observationsExistantes,
+          photos: _localPhotos,
         );
         if (widget.isInZone && widget.zoneIndex != null) {
           // Vérifier doublon par nom
@@ -4866,6 +4868,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           type: _selectedType ?? 'LOCAL_ELECTRIQUE',
           accessible: false,
           aReverifier: true,
+          observationsLibres: _observationsExistantes,
+          photos: _localPhotos,
         );
         if (widget.zoneIndex != null) {
           final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
