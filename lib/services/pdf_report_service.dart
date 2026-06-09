@@ -1423,35 +1423,42 @@ class PdfReportService {
           ));
         }
       }
-      if (local.cellule != null) {
-        for (var el in local.cellule!.elementsVerifies) {
-          if (el.conforme == false) {
+      // Cellules (liste complète, pas ancien champ unique)
+      for (var i = 0; i < local.cellules.length; i++) {
+        final cellule = local.cellules[i];
+        final label = 'Cellule ${i + 1} — ${cellule.fonction}';
+        for (var el in cellule.elementsVerifies) {
+          if (el.conforme == false || el.estNA) {
             list.add(_ObsRecap(
               localisation: local.nom,
-              coffret: 'Cellule',
+              coffret: label,
               observation: el.observation ?? el.elementControle,
               refNorm: el.referenceNormative ?? '',
-              priorite: el.priorite?.toString() ?? '',
+              priorite: el.conforme == false ? (el.priorite?.toString() ?? '') : 'NA',
             ));
           }
         }
       }
-      if (local.transformateur != null) {
-        for (var el in local.transformateur!.elementsVerifies) {
-          if (el.conforme == false) {
+      // Transformateurs (liste complète)
+      for (var i = 0; i < local.transformateurs.length; i++) {
+        final transfo = local.transformateurs[i];
+        final label = 'Transformateur ${i + 1}';
+        for (var el in transfo.elementsVerifies) {
+          if (el.conforme == false || el.estNA) {
             list.add(_ObsRecap(
               localisation: local.nom,
-              coffret: 'Transformateur',
+              coffret: label,
               observation: el.observation ?? el.elementControle,
               refNorm: el.referenceNormative ?? '',
-              priorite: el.priorite?.toString() ?? '',
+              priorite: el.conforme == false ? (el.priorite?.toString() ?? '') : 'NA',
             ));
           }
         }
       }
       for (var coffret in local.coffrets) {
         for (var pv in coffret.pointsVerification) {
-          if (pv.conformite == 'non' || pv.conformite == 'Non' || pv.conformite == 'Non conforme') {
+          final conf = pv.conformite.toLowerCase().trim();
+          if (conf == 'non' || conf == 'non conforme') {
             list.add(_ObsRecap(
               localisation: local.nom,
               coffret: coffret.nom,
@@ -1465,19 +1472,24 @@ class PdfReportService {
           list.add(_ObsRecap(
             localisation: local.nom,
             coffret: coffret.nom,
-            observation: obs.texte,
-            refNorm: '',
-            priorite: '',
+            observation: obs.texte, refNorm: '', priorite: '',
           ));
+        }
+        // Observations parafoudre dans la liste récap
+        if (coffret.presenceParafoudre) {
+          for (var obs in coffret.observationsParafoudre) {
+            list.add(_ObsRecap(
+              localisation: local.nom,
+              coffret: '${coffret.nom} (Parafoudre)',
+              observation: obs.texte, refNorm: '', priorite: '',
+            ));
+          }
         }
       }
       for (var obs in local.observationsLibres) {
         list.add(_ObsRecap(
           localisation: local.nom,
-          coffret: '',
-          observation: obs.texte,
-          refNorm: '',
-          priorite: '',
+          coffret: '', observation: obs.texte, refNorm: '', priorite: '',
         ));
       }
     }
@@ -1485,7 +1497,8 @@ class PdfReportService {
     for (var zone in audit.moyenneTensionZones) {
       for (var coffret in zone.coffrets) {
         for (var pv in coffret.pointsVerification) {
-          if (pv.conformite == 'non' || pv.conformite == 'Non' || pv.conformite == 'Non conforme') {
+          final conf = pv.conformite.toLowerCase().trim();
+          if (conf == 'non' || conf == 'non conforme') {
             list.add(_ObsRecap(
               localisation: zone.nom,
               coffret: coffret.nom,
@@ -1500,6 +1513,15 @@ class PdfReportService {
             localisation: zone.nom, coffret: coffret.nom,
             observation: obs.texte, refNorm: '', priorite: '',
           ));
+        }
+        if (coffret.presenceParafoudre) {
+          for (var obs in coffret.observationsParafoudre) {
+            list.add(_ObsRecap(
+              localisation: zone.nom,
+              coffret: '${coffret.nom} (Parafoudre)',
+              observation: obs.texte, refNorm: '', priorite: '',
+            ));
+          }
         }
       }
       for (var local in zone.locaux) {
@@ -1533,6 +1555,15 @@ class PdfReportService {
               observation: obs.texte, refNorm: '', priorite: '',
             ));
           }
+          if (coffret.presenceParafoudre) {
+          for (var obs in coffret.observationsParafoudre) {
+            list.add(_ObsRecap(
+              localisation: zone.nom,
+              coffret: '${coffret.nom} (Parafoudre)',
+              observation: obs.texte, refNorm: '', priorite: '',
+            ));
+          }
+        }
         }
         for (var obs in local.observationsLibres) {
           list.add(_ObsRecap(
@@ -1574,18 +1605,27 @@ class PdfReportService {
             observation: obs.texte, refNorm: '', priorite: '',
           ));
         }
+        if (coffret.presenceParafoudre) {
+          for (var obs in coffret.observationsParafoudre) {
+            list.add(_ObsRecap(
+              localisation: zone.nom,
+              coffret: '${coffret.nom} (Parafoudre)',
+              observation: obs.texte, refNorm: '', priorite: '',
+            ));
+          }
+        }
       }
 
       for (var local in zone.locaux) {
         if (local.dispositionsConstructives != null) {
           for (var el in local.dispositionsConstructives!) {
-            if (el.conforme == false) {
+            if (el.conforme == false || el.estNA) {
               list.add(_ObsRecap(
                 localisation: '${zone.nom} / ${local.nom}',
                 coffret: 'Dispositions constructives',
                 observation: el.observation ?? el.elementControle,
                 refNorm: el.referenceNormative ?? '',
-                priorite: el.priorite?.toString() ?? '',
+                priorite: el.conforme == false ? (el.priorite?.toString() ?? '') : 'NA',
               ));
             }
           }
@@ -1605,7 +1645,8 @@ class PdfReportService {
         }
         for (var coffret in local.coffrets) {
           for (var pv in coffret.pointsVerification) {
-            if (pv.conformite == 'non' || pv.conformite == 'Non' || pv.conformite == 'Non conforme') {
+            final conf = pv.conformite.toLowerCase().trim();
+            if (conf == 'non' || conf == 'non conforme') {
               list.add(_ObsRecap(
                 localisation: '${zone.nom} / ${local.nom}',
                 coffret: coffret.nom,
@@ -1622,6 +1663,16 @@ class PdfReportService {
               observation: obs.texte, refNorm: '', priorite: '',
             ));
           }
+          if (coffret.presenceParafoudre) {
+            for (var obs in coffret.observationsParafoudre) {
+              list.add(_ObsRecap(
+                localisation: '${zone.nom} / ${local.nom}',
+                coffret: '${coffret.nom} (Parafoudre)',
+                observation: obs.texte, refNorm: '', priorite: '',
+              ));
+            }
+          }
+
         }
         for (var obs in local.observationsLibres) {
           list.add(_ObsRecap(
@@ -1856,13 +1907,38 @@ class PdfReportService {
             border: pw.Border.all(color: PdfColors.red200),
             borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
           ),
-          child: pw.Text(
-            'Local inaccessible — à revérifier',
-            style: pw.TextStyle(
-              color: PdfColors.red700,
-              fontWeight: pw.FontWeight.bold,
-              fontSize: 10,
-            ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(children: [
+                pw.Container(
+                  width: 10, height: 10,
+                  decoration: const pw.BoxDecoration(
+                    color: PdfColors.red,
+                    shape: pw.BoxShape.circle,
+                  ),
+                ),
+                pw.SizedBox(width: 6),
+                pw.Text(
+                  '⚠ LOCAL INACCESSIBLE — NON INSPECTÉ',
+                  style: pw.TextStyle(
+                    color: PdfColors.red,
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              ]),
+              pw.SizedBox(height: 4),
+              pw.Text(
+                'Ce local n\'a pas pu être inspecté lors de la visite. '
+                'Une nouvelle vérification est nécessaire pour couvrir cet emplacement.',
+                style: pw.TextStyle(
+                  color: PdfColors.red700,
+                  fontSize: 9,
+                  fontStyle: pw.FontStyle.italic,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -1911,13 +1987,38 @@ class PdfReportService {
             border: pw.Border.all(color: PdfColors.red200),
             borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
           ),
-          child: pw.Text(
-            'Local inaccessible — à revérifier',
-            style: pw.TextStyle(
-              color: PdfColors.red700,
-              fontWeight: pw.FontWeight.bold,
-              fontSize: 10,
-            ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(children: [
+                pw.Container(
+                  width: 10, height: 10,
+                  decoration: const pw.BoxDecoration(
+                    color: PdfColors.red,
+                    shape: pw.BoxShape.circle,
+                  ),
+                ),
+                pw.SizedBox(width: 6),
+                pw.Text(
+                  '⚠ LOCAL INACCESSIBLE — NON INSPECTÉ',
+                  style: pw.TextStyle(
+                    color: PdfColors.red,
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 10,
+                  ),
+                ),
+              ]),
+              pw.SizedBox(height: 4),
+              pw.Text(
+                'Ce local n\'a pas pu être inspecté lors de la visite. '
+                'Une nouvelle vérification est nécessaire pour couvrir cet emplacement.',
+                style: pw.TextStyle(
+                  color: PdfColors.red700,
+                  fontSize: 9,
+                  fontStyle: pw.FontStyle.italic,
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -2736,11 +2837,23 @@ class PdfReportService {
     if (audit != null) {
       for (var local in audit.moyenneTensionLocaux) {
         _addPhotosFromList(allPhotos, local.photos, local.nom);
-        if (local.cellule != null) {
-          _addPhotosFromList(allPhotos, local.cellule!.photos, '${local.nom} - Cellule');
+        for (var i = 0; i < local.cellules.length; i++) {
+          _addPhotosFromList(
+              allPhotos, local.cellules[i].photos,
+              '${local.nom} - Cellule ${i + 1} (${local.cellules[i].fonction})');
+          for (var el in local.cellules[i].elementsVerifies) {
+            _addPhotosFromList(allPhotos, el.photos,
+                '${local.nom} - Cellule ${i + 1} élément');
+          }
         }
-        if (local.transformateur != null) {
-          _addPhotosFromList(allPhotos, local.transformateur!.photos, '${local.nom} - Transformateur');
+        for (var i = 0; i < local.transformateurs.length; i++) {
+          _addPhotosFromList(
+              allPhotos, local.transformateurs[i].photos,
+              '${local.nom} - Transformateur ${i + 1}');
+          for (var el in local.transformateurs[i].elementsVerifies) {
+            _addPhotosFromList(allPhotos, el.photos,
+                '${local.nom} - Transformateur ${i + 1} élément');
+          }
         }
         for (var c in local.coffrets) {
           _addPhotosFromList(allPhotos, c.photos, '${local.nom} - ${c.nom}', repere: c.repere);

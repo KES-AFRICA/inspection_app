@@ -1587,13 +1587,24 @@ static Map<String, String> getLocalTypes({bool? isMoyenneTension}) {
     'LOCAL_DE_CONTROLE': 'Local de Contrôle',
   };
 
-  if (isMoyenneTension == true) {
-    return all;
+    if (isMoyenneTension == true) {
+    return {
+      'LOCAL_TRANSFORMATEUR': 'Local Moyenne Tension',
+      'LOCAL_MTBT': 'Local HT/BT',
+    };
   } else if (isMoyenneTension == false) {
     // Zone BT : on retire Local Moyenne Tension (pure MT)
     return Map.fromEntries(all.entries.where((e) => e.key != 'LOCAL_TRANSFORMATEUR'));
   }
   return all;
+
+  // if (isMoyenneTension == true) {
+  //   return all;
+  // } else if (isMoyenneTension == false) {
+  //   // Zone BT : on retire Local Moyenne Tension (pure MT)
+  //   return Map.fromEntries(all.entries.where((e) => e.key != 'LOCAL_TRANSFORMATEUR'));
+  // }
+  // return all;
 }
 
 /// Obtenir les éléments de contrôle pour un type de local

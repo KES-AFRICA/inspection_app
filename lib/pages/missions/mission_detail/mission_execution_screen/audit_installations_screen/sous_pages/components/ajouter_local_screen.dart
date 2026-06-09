@@ -299,7 +299,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
                 ),
               ),
               child: DropdownButtonFormField<String>(
-                value: widget.selectedType,
+                initialValue: widget.selectedType,
                 isExpanded: true,
                 icon: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryBlue, size: context.iconSizeM),
                 dropdownColor: Colors.white,
