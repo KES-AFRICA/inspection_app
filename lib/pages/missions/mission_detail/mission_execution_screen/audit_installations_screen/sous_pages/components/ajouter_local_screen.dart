@@ -1464,8 +1464,8 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
           
           SizedBox(height: context.spacingM),
           
-          // Ligne 2 : Priorité (seule, sur toute la largeur)
-          if (element.conforme == false || element.estNA)
+          // Priorité — uniquement si NON (pas NA)
+          if (element.conforme == false && !element.estNA)
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1504,18 +1504,18 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
               suggestions: suggestions,
               color: color,
             ),
+            
+            SizedBox(height: context.spacingM),
+            
+            // Photos — masquées si observation = NON (hasObservation = false)
+            _buildModernElementPhotos(
+              context: context,
+              element: element,
+              index: index,
+              sectionType: sectionType,
+              color: color,
+            ),
           ],
-          
-          SizedBox(height: context.spacingM),
-          
-          // Photos
-          _buildModernElementPhotos(
-            context: context,
-            element: element,
-            index: index,
-            sectionType: sectionType,
-            color: color,
-          ),
         ],
       ),
     );
