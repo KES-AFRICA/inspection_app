@@ -434,7 +434,7 @@ class PdfReportService {
         pw.Container(
           width: double.infinity,
           child: pw.Text(
-            'VERIFICATION PERIODIQUE REGLEMENTAIRE DES INSTALLATIONS ELECTRIQUES',
+            '${mission.natureMission!.toUpperCase()} DES INSTALLATIONS ELECTRIQUES',
             style: pw.TextStyle(font: _fontRegular, fontSize: 16, color: accentColor),
             textAlign: pw.TextAlign.center,
           ),
@@ -448,7 +448,16 @@ class PdfReportService {
             textAlign: pw.TextAlign.center,
           ),
         ),
-        pw.SizedBox(height: 100),
+        pw.SizedBox(height: 20),
+        pw.Container(
+          width: double.infinity,
+          child: pw.Text(
+            mission.nomSite!.toUpperCase(),
+            style: pw.TextStyle(font: _fontBold, fontSize: 16, fontWeight: pw.FontWeight.bold, color: accentColor),
+            textAlign: pw.TextAlign.center,
+          ),
+        ),
+        pw.SizedBox(height: 150),
         pw.Row(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
