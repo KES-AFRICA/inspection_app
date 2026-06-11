@@ -1557,9 +1557,8 @@ class PdfReportService {
         final isLast = i == group.items.length - 1;
 
         PdfColor? rowBg;
-        if (o.priorite == '3') {
-          rowBg = PdfColor.fromInt(0xFFFFEEEE);
-        } else if (o.priorite == '2') rowBg = PdfColor.fromInt(0xFFFFF8EE);
+        if (o.priorite == '3') rowBg = PdfColor.fromInt(0xFFFFEEEE);
+        else if (o.priorite == '2') rowBg = PdfColor.fromInt(0xFFFFF8EE);
         else if (o.priorite == '1') rowBg = priorite1Color;
 
         PdfColor badgeColor = PdfColors.white;
@@ -1572,9 +1571,6 @@ class PdfReportService {
           children: [
             // LOCAL : nom centré seulement sur la 1ère ligne du groupe
             pw.Container(
-              color: isFirst
-                  ? PdfColor.fromInt(0xFFD6E8F5)
-                  : PdfColor.fromInt(0xFFEBF3FA),
               padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               alignment: pw.Alignment.center,
               child: isFirst
@@ -1639,11 +1635,11 @@ class PdfReportService {
     final header = pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.5),
       columnWidths: const {
-        0: pw.FlexColumnWidth(1.4),  // LOCAL
-        1: pw.FlexColumnWidth(1.4),  // ÉQUIPEMENT
-        2: pw.FlexColumnWidth(3.4),  // OBSERVATIONS
-        3: pw.FlexColumnWidth(1.4),  // REF. NORMATIVE
-        4: pw.FlexColumnWidth(0.6),  // PRIORITÉ
+        0: pw.FlexColumnWidth(1.4),
+        1: pw.FlexColumnWidth(1.4),
+        2: pw.FlexColumnWidth(3.4),
+        3: pw.FlexColumnWidth(1.4),
+        4: pw.FlexColumnWidth(0.6),
       },
       children: [
         pw.TableRow(
@@ -1651,9 +1647,7 @@ class PdfReportService {
           children: [
             _obsHeaderCellMT('LOCALISATION'),
             _obsHeaderCellMT('NON-CONFORMITÉ - PRÉCONISATION'),
-            _obsHeaderCellMT(''),
-            _obsHeaderCellMT(''),
-            _obsHeaderCellMT(''),
+            _obsHeaderCellMT(''), _obsHeaderCellMT(''), _obsHeaderCellMT(''),
           ],
         ),
         pw.TableRow(
@@ -1669,68 +1663,95 @@ class PdfReportService {
       ],
     );
 
+    // ── Regrouper par local, puis par équipement dans chaque local ──────────
     final groups = _groupByLocal(obs);
     final dataRows = <pw.TableRow>[];
     int globalNum = 0;
 
     for (final group in groups) {
-      for (int i = 0; i < group.items.length; i++) {
-        final o = group.items[i];
-        final isFirst = i == 0;
-        globalNum++;
+      // Sous-grouper par équipement
+      final equipGroups = <_ObsGroup>[];
+      for (final o in group.items) {
+        if (equipGroups.isEmpty || equipGroups.last.local != o.coffret) {
+          equipGroups.add(_ObsGroup(local: o.coffret, items: [o]));
+        } else {
+          equipGroups.last.items.add(o);
+        }
+      }
 
-        PdfColor? rowBg;
-        if (o.priorite == '3') rowBg = PdfColor.fromInt(0xFFFFEEEE);
-        else if (o.priorite == '2') rowBg = PdfColor.fromInt(0xFFFFF8EE);
-        else if (o.priorite == '1') rowBg = priorite1Color;
-        else if (globalNum.isOdd) rowBg = tableRowAlt;
+      final totalLocalRows = group.items.length;
+      int localRowsDone = 0;
 
-        PdfColor badgeColor = PdfColors.white;
-        if (o.priorite == '1') badgeColor = priorite1Color;
-        if (o.priorite == '2') badgeColor = priorite2Color;
-        if (o.priorite == '3') badgeColor = priorite3Color;
+      for (final equipGroup in equipGroups) {
+        final totalEquipRows = equipGroup.items.length;
 
-        dataRows.add(pw.TableRow(
-          decoration: rowBg != null ? pw.BoxDecoration(color: rowBg) : null,
-          children: [
-            pw.Container(
-              color: isFirst
-                  ? PdfColor.fromInt(0xFFD6E8F5)
-                  : PdfColor.fromInt(0xFFEBF3FA),
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              alignment: pw.Alignment.center,
-              child: isFirst
-                  ? pw.Text(group.local.toUpperCase(),
-                      style: pw.TextStyle(font: _fontBold, fontSize: fsSmall),
-                      textAlign: pw.TextAlign.center)
-                  : pw.SizedBox(),
-            ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-              child: pw.Text(o.coffret,
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-            ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-              child: pw.Text(o.observation,
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-            ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-              child: pw.Text(o.refNorm,
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-            ),
-            pw.Container(
-              color: o.priorite.isNotEmpty ? badgeColor : null,
-              padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
-              alignment: pw.Alignment.center,
-              child: pw.Text(o.priorite,
-                  style: pw.TextStyle(
-                      font: _fontBold, fontSize: fsSmall,
-                      color: o.priorite == '3' ? PdfColors.red900 : PdfColors.black)),
-            ),
-          ],
-        ));
+        for (int i = 0; i < equipGroup.items.length; i++) {
+          final o = equipGroup.items[i];
+          final isFirstLocal = localRowsDone == 0;
+          final isFirstEquip = i == 0;
+          globalNum++;
+
+          PdfColor? rowBg;
+          if (o.priorite == '3') rowBg = PdfColor.fromInt(0xFFFFEEEE);
+          else if (o.priorite == '2') rowBg = PdfColor.fromInt(0xFFFFF8EE);
+          else if (o.priorite == '1') rowBg = priorite1Color;
+          else if (globalNum.isOdd) rowBg = tableRowAlt;
+
+          PdfColor badgeColor = PdfColors.white;
+          if (o.priorite == '1') badgeColor = priorite1Color;
+          if (o.priorite == '2') badgeColor = priorite2Color;
+          if (o.priorite == '3') badgeColor = priorite3Color;
+
+          dataRows.add(pw.TableRow(
+            decoration: rowBg != null ? pw.BoxDecoration(color: rowBg) : null,
+            children: [
+              // LOCAL — affiché seulement sur la 1ère ligne du groupe local
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: isFirstLocal
+                    ? pw.Text(group.local.toUpperCase(),
+                        style: pw.TextStyle(font: _fontBold, fontSize: fsSmall),
+                        textAlign: pw.TextAlign.center)
+                    : pw.SizedBox(),
+              ),
+              // ÉQUIPEMENT — affiché seulement sur la 1ère ligne du groupe équipement
+              pw.Container(
+                color: isFirstEquip ? PdfColor.fromInt(0xFFEEF4FA) : null,
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: isFirstEquip
+                    ? pw.Text(o.coffret,
+                        style: pw.TextStyle(font: _fontBold, fontSize: fsSmall),
+                        textAlign: pw.TextAlign.center)
+                    : pw.SizedBox(),
+              ),
+              // OBSERVATIONS
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                child: pw.Text(o.observation,
+                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+              ),
+              // REF. NORMATIVE
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                child: pw.Text(o.refNorm,
+                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+              ),
+              // PRIORITÉ
+              pw.Container(
+                color: o.priorite.isNotEmpty ? badgeColor : null,
+                padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+                alignment: pw.Alignment.center,
+                child: pw.Text(o.priorite,
+                    style: pw.TextStyle(font: _fontBold, fontSize: fsSmall,
+                        color: o.priorite == '3' ? PdfColors.red900 : PdfColors.black)),
+              ),
+            ],
+          ));
+
+          localRowsDone++;
+        }
       }
     }
 
@@ -1748,6 +1769,7 @@ class PdfReportService {
 
     return [header, dataTable];
   }
+
 
   static pw.Widget _obsHeaderCellMT(String text) {
     return pw.Container(
@@ -2437,7 +2459,7 @@ class PdfReportService {
             ),
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-              child: pw.Text('Éléments vérifiés',
+              child: pw.Text('Observations / Anomalies constatées',
                   style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor)),
             ),
           ],
@@ -2524,7 +2546,7 @@ class PdfReportService {
       infoTable,
       if (cellule.elementsVerifies.isNotEmpty) ...[
         pw.SizedBox(height: 3),
-        _buildDispositionsTable(cellule.elementsVerifies, 'Éléments vérifiés de la cellule'),
+        _buildDispositionsTable(cellule.elementsVerifies, 'VÉRIFICATIONS DE LA CELLULE'),
       ],
       pw.SizedBox(height: 5),
     ];
@@ -2567,48 +2589,75 @@ class PdfReportService {
       infoTable,
       if (transfo.elementsVerifies.isNotEmpty) ...[
         pw.SizedBox(height: 3),
-        _buildDispositionsTable(transfo.elementsVerifies, 'Éléments vérifiés du transformateur'),
+        _buildDispositionsTable(transfo.elementsVerifies, 'VÉRIFICATIONS DU TRANSFORMATEUR'),
       ],
       pw.SizedBox(height: 5),
     ];
   }
 
+
+  /// Cellule booléenne : affiche "OUI" vert ou "NON" rouge selon la valeur
+  static pw.Widget _boolCell(bool value) {
+    final color = value ? conformeColor : nonConformeColor;
+    final text = value ? 'OUI' : 'NON';
+    return pw.Container(
+      color: color,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      alignment: pw.Alignment.center,
+      child: pw.Text(text,
+          style: pw.TextStyle(font: _fontBold, fontSize: fsSmall,
+              color: value ? PdfColor.fromInt(0xFF1B5E20) : PdfColors.red900)),
+    );
+  }
+
   static List<pw.Widget> _buildCoffret(CoffretArmoire coffret) {
     final widgets = <pw.Widget>[pw.SizedBox(height: 6)];
 
-    // ── En-tête équipement : numéro, nom, type ──────────────────────────────
-    // Charge la photo interne si disponible
+    // ── Photo interne ──────────────────────────────────────────────────────
     pw.MemoryImage? photoInterne;
-    if (coffret.photosInternes.isNotEmpty) {
+    for (final src in [...coffret.photosInternes, ...coffret.photos]) {
+      if (src.isEmpty) continue;
       try {
-        final f = File(coffret.photosInternes.first);
-        if (f.existsSync()) photoInterne = pw.MemoryImage(f.readAsBytesSync());
-      } catch (_) {}
-    } else if (coffret.photos.isNotEmpty) {
-      try {
-        final f = File(coffret.photos.first);
-        if (f.existsSync()) photoInterne = pw.MemoryImage(f.readAsBytesSync());
+        final f = File(src);
+        if (f.existsSync()) {
+          photoInterne = pw.MemoryImage(f.readAsBytesSync());
+          break;
+        }
       } catch (_) {}
     }
 
-    // Tableau principal de l'équipement
+    // ══════════════════════════════════════════════════════════════════════
+    // TABLEAU 1 : En-tête + Informations générales (4 col + photo)
+    // ══════════════════════════════════════════════════════════════════════
+    final photoCell = pw.Container(
+      color: lightBlue,
+      padding: const pw.EdgeInsets.all(3),
+      alignment: pw.Alignment.center,
+      child: photoInterne != null
+          ? pw.ClipRRect(
+              horizontalRadius: 2,
+              verticalRadius: 2,
+              child: pw.Image(photoInterne, width: 65, height: 55, fit: pw.BoxFit.cover),
+            )
+          : pw.SizedBox(height: 55),
+    );
+
     widgets.add(pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.5),
       columnWidths: const {
-        0: pw.FlexColumnWidth(1.5),
-        1: pw.FlexColumnWidth(1.5),
-        2: pw.FlexColumnWidth(1.5),
-        3: pw.FlexColumnWidth(1.5),
-        4: pw.FlexColumnWidth(1.2),
+        0: pw.FlexColumnWidth(1.4), // intitulé col 1
+        1: pw.FlexColumnWidth(1.6), // valeur col 1
+        2: pw.FlexColumnWidth(1.4), // intitulé col 2
+        3: pw.FlexColumnWidth(1.6), // valeur col 2
+        4: pw.FlexColumnWidth(1.2), // photo
       },
       children: [
-        // Titre équipement sur toute la largeur — fond lightBlue
+        // ── Titre type : nom (fond lightBlue, toute la largeur) ──
         pw.TableRow(
           decoration: pw.BoxDecoration(color: lightBlue),
           children: [
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-              alignment: pw.Alignment.centerLeft,
+              padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               child: pw.Text(
                 '${coffret.type} : ${coffret.nom}',
                 style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
@@ -2617,67 +2666,71 @@ class PdfReportService {
             pw.Container(color: lightBlue),
             pw.Container(color: lightBlue),
             pw.Container(color: lightBlue),
-            // Photo interne dans la dernière cellule du header
-            pw.Container(
-              color: lightBlue,
-              padding: const pw.EdgeInsets.all(2),
-              alignment: pw.Alignment.center,
-              child: photoInterne != null
-                  ? pw.ClipRect(
-                      child: pw.Image(photoInterne,
-                          width: 60, height: 50, fit: pw.BoxFit.cover),
-                    )
-                  : pw.SizedBox(height: 50),
-            ),
+            photoCell,
           ],
         ),
-        // Ligne 1 : infos générales
+        // ── Ligne 1 ─────────────────────────────────────────────
         pw.TableRow(
           decoration: pw.BoxDecoration(color: tableRowAlt),
           children: [
-            _cell('Repère / Localisation', isHeader: false),
-            _cell(coffret.repere ?? '-', isHeader: false),
-            _cell('Zone ATEX', isHeader: false),
-            _cell(coffret.zoneAtex ? 'Oui' : 'Non', isHeader: false),
-            _cell('', isHeader: false),
+            _labelCell('Repère / Localisation'),
+            _valueCell(coffret.repere?.isEmpty == false ? coffret.repere! : '-'),
+            _labelCell('N° Équipement'),
+            _valueCell(coffret.numeroEquipement?.isEmpty == false ? coffret.numeroEquipement! : '-'),
+            pw.Container(color: tableRowAlt),
           ],
         ),
+        // ── Ligne 2 ─────────────────────────────────────────────
         pw.TableRow(children: [
-          _cell('Domaine de tension', isHeader: false),
-          _cell(coffret.domaineTension, isHeader: false),
-          _cell('Identification armoire', isHeader: false),
-          _cell(coffret.identificationArmoire ? '☑ Oui   ☐ Non' : '☐ Oui   ☑ Non', isHeader: false),
-          _cell('', isHeader: false),
+          _labelCell('Domaine de tension'),
+          _valueCell(coffret.domaineTension),
+          _labelCell('Zone ATEX'),
+          _boolCell(coffret.zoneAtex),
+          pw.Container(),
         ]),
+        // ── Ligne 3 ─────────────────────────────────────────────
         pw.TableRow(
           decoration: pw.BoxDecoration(color: tableRowAlt),
           children: [
-            _cell('Signalisation danger', isHeader: false),
-            _cell(coffret.signalisationDanger ? '☑ Oui   ☐ Non' : '☐ Oui   ☑ Non', isHeader: false),
-            _cell('Présence schéma', isHeader: false),
-            _cell(coffret.presenceSchema ? '☑ Oui   ☐ Non' : '☐ Oui   ☑ Non', isHeader: false),
-            _cell('', isHeader: false),
+            _labelCell('Identification armoire'),
+            _boolCell(coffret.identificationArmoire),
+            _labelCell('Signalisation danger'),
+            _boolCell(coffret.signalisationDanger),
+            pw.Container(color: tableRowAlt),
           ],
         ),
+        // ── Ligne 4 ─────────────────────────────────────────────
         pw.TableRow(children: [
-          _cell('Présence parafoudre', isHeader: false),
-          _cell(coffret.presenceParafoudre ? '☑ Oui   ☐ Non' : '☐ Oui   ☑ Non', isHeader: false),
-          _cell('Thermographie', isHeader: false),
-          _cell(coffret.verificationThermographie ? '☑ Oui   ☐ Non' : '☐ Oui   ☑ Non', isHeader: false),
-          _cell('', isHeader: false),
+          _labelCell('Présence schéma'),
+          _boolCell(coffret.presenceSchema),
+          _labelCell('Présence parafoudre'),
+          _boolCell(coffret.presenceParafoudre),
+          pw.Container(),
         ]),
+        // ── Ligne 5 ─────────────────────────────────────────────
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: tableRowAlt),
+          children: [
+            _labelCell('Vérification thermographie'),
+            _boolCell(coffret.verificationThermographie),
+            _labelCell('Description'),
+            _valueCell(coffret.description?.isEmpty == false ? coffret.description! : '-'),
+            pw.Container(color: tableRowAlt),
+          ],
+        ),
       ],
     ));
 
-    // Observations parafoudre
+    // ══════════════════════════════════════════════════════════════════════
+    // OBSERVATIONS PARAFOUDRE
+    // ══════════════════════════════════════════════════════════════════════
     if (coffret.presenceParafoudre && coffret.observationsParafoudre.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 4));
       widgets.add(pw.Container(
-        padding: const pw.EdgeInsets.all(6),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
         decoration: pw.BoxDecoration(
           color: PdfColor.fromInt(0xFFFFF3E0),
           border: pw.Border.all(color: PdfColor.fromInt(0xFFE65100), width: 0.5),
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
         ),
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -2686,83 +2739,124 @@ class PdfReportService {
                 style: pw.TextStyle(font: _fontBold, fontSize: fsSmall,
                     color: PdfColor.fromInt(0xFFE65100))),
             pw.SizedBox(height: 3),
-            ...coffret.observationsParafoudre.map((obs) => pw.Padding(
-              padding: const pw.EdgeInsets.only(bottom: 2),
-              child: pw.Row(children: [
-                pw.Text('• ', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
-                pw.Expanded(child: pw.Text(obs.texte,
-                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall))),
-              ]),
-            )),
+            ...coffret.observationsParafoudre.map((obs) => pw.Row(children: [
+              pw.Text('•  ', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
+              pw.Expanded(child: pw.Text(obs.texte,
+                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall))),
+            ])),
           ],
         ),
       ));
     }
 
-    // Alimentations
+    // ══════════════════════════════════════════════════════════════════════
+    // TABLEAU 2 : Alimentations (+ Protection de tête si présente)
+    // ══════════════════════════════════════════════════════════════════════
     if (coffret.alimentations.isNotEmpty || coffret.protectionTete != null) {
       widgets.add(pw.SizedBox(height: 3));
+      final alimentRows = <pw.TableRow>[];
+
+      // En-tête alimentation
+      alimentRows.add(pw.TableRow(
+        decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
+        children: [
+          _thCell('Alimentation'),
+          _thCell('Type protection'),
+          _thCell('PDC (kA)'),
+          _thCell('Calibre (A)'),
+          _thCell('Section câble'),
+        ],
+      ));
+
+      for (final a in coffret.alimentations) {
+        alimentRows.add(pw.TableRow(children: [
+          _valueCell(a.source.isEmpty ? '-' : a.source),
+          _valueCell(a.typeProtection),
+          _valueCell(a.pdcKA),
+          _valueCell(a.calibre),
+          _valueCell(a.sectionCable),
+        ]));
+      }
+
+      if (coffret.protectionTete != null) {
+        final pt = coffret.protectionTete!;
+        alimentRows.add(pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
+          children: [
+            _thCell('Protection de tête'),
+            _thCell('Type protection'),
+            _thCell('PDC (kA)'),
+            _thCell('Calibre (A)'),
+            _thCell('Section câble'),
+          ],
+        ));
+        alimentRows.add(pw.TableRow(children: [
+          _valueCell('-'),
+          _valueCell(pt.typeProtection),
+          _valueCell(pt.pdcKA),
+          _valueCell(pt.calibre),
+          _valueCell(pt.sectionCable),
+        ]));
+      }
+
       widgets.add(pw.Table(
         border: pw.TableBorder.all(color: borderColor, width: 0.4),
         columnWidths: const {
-          0: pw.FlexColumnWidth(2.2),
-          1: pw.FlexColumnWidth(2),
-          2: pw.FlexColumnWidth(0.8),
+          0: pw.FlexColumnWidth(2.0),
+          1: pw.FlexColumnWidth(2.0),
+          2: pw.FlexColumnWidth(0.9),
           3: pw.FlexColumnWidth(0.9),
-          4: pw.FlexColumnWidth(1.2),
+          4: pw.FlexColumnWidth(1.4),
         },
-        children: [
-          pw.TableRow(
-            decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
-            children: [
-              _cell('Origine alimentation', isHeader: true),
-              _cell('Type de protection', isHeader: true),
-              _cell('PDC kA', isHeader: true),
-              _cell('Calibre', isHeader: true),
-              _cell('Section câble', isHeader: true),
-            ],
-          ),
-          ...coffret.alimentations.map((a) =>
-            _tableDataRow([a.source.isEmpty ? '-' : a.source,
-              a.typeProtection, a.pdcKA, a.calibre, a.sectionCable], alt: false)),
-          if (coffret.protectionTete != null) ...[
-            pw.TableRow(
-              decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
-              children: [
-                _cell('Protection de tête', isHeader: true),
-                _cell('Type de protection', isHeader: true),
-                _cell('PDC kA', isHeader: true),
-                _cell('Calibre', isHeader: true),
-                _cell('Section câble', isHeader: true),
-              ],
-            ),
-            _tableDataRow([
-              '',
-              coffret.protectionTete!.typeProtection,
-              coffret.protectionTete!.pdcKA,
-              coffret.protectionTete!.calibre,
-              coffret.protectionTete!.sectionCable,
-            ], alt: false),
-          ],
-        ],
+        children: alimentRows,
       ));
     }
 
-    // Points de vérification
+    // ══════════════════════════════════════════════════════════════════════
+    // POINTS DE VÉRIFICATION
+    // ══════════════════════════════════════════════════════════════════════
     if (coffret.pointsVerification.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 3));
       widgets.add(_buildPointsVerificationTable(coffret.pointsVerification));
     }
 
-    // Observations libres
+    // ══════════════════════════════════════════════════════════════════════
+    // OBSERVATIONS LIBRES
+    // ══════════════════════════════════════════════════════════════════════
     if (coffret.observationsLibres.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 3));
-      widgets.add(_buildSimpleObsTable(coffret.observationsLibres, 'Observations du coffret'));
+      widgets.add(_buildSimpleObsTable(coffret.observationsLibres, 'Observations'));
     }
 
-    widgets.add(pw.SizedBox(height: 8));
+    widgets.add(pw.SizedBox(height: 10));
     return widgets;
   }
+
+  /// Cellule intitulé (gras, fond gris clair)
+  static pw.Widget _labelCell(String text) => pw.Container(
+    color: PdfColor.fromInt(0xFFECECEC),
+    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+    alignment: pw.Alignment.centerLeft,
+    child: pw.Text(text, style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
+  );
+
+  /// Cellule valeur (police normale)
+  static pw.Widget _valueCell(String text) => pw.Padding(
+    padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+    child: pw.Text(text, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+  );
+
+  /// En-tête tableau (fond bleu clair, gras, centré)
+  static pw.Widget _thCell(String text) => pw.Container(
+    color: PdfColor.fromInt(0xFFE8F0FB),
+    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+    alignment: pw.Alignment.center,
+    child: pw.Text(text,
+        style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+        textAlign: pw.TextAlign.center),
+  );
+
+
   static pw.Widget _buildPointsVerificationTable(List<PointVerification> points) {
     return pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.4),
@@ -2801,7 +2895,7 @@ class PdfReportService {
           final confColor = isNA
               ? PdfColor.fromInt(0xFFE0E0E0)
               : (isConf ? conformeColor : nonConformeColor);
-          final confText = isNA ? 'N A' : (isConf ? '☑ Oui   ☐ Non' : '☐ Oui   ☑ Non');
+          final confText = isNA ? 'N/A' : (isConf ? 'OUI' : 'NON');
           return pw.TableRow(
             decoration: pw.BoxDecoration(color: e.key.isEven ? PdfColors.white : tableRowAlt),
             children: [
@@ -3591,85 +3685,38 @@ class PdfReportService {
   // ──────────────────────────────────────────────────────────────
 
   /// Convertit les caractères spéciaux en versions compatibles avec les polices standard
+  /// Normalise le texte pour l'encodage PDF.
+  /// IMPORTANT : conserve tous les accents français (supportés nativement
+  /// par Helvetica Latin-1 et toute police TrueType chargée).
+  /// Seuls les symboles Unicode hors-charset sont translittérés.
   static String _normalizeText(String text) {
     if (text.isEmpty) return text;
-    
-    // Mappings des caractères problématiques
-    final replacements = {
-      // Indices et exposants
-      '₂': '2',      // indice 2
-      '₃': '3',      // indice 3
-      '₄': '4',      // indice 4
-      '²': '2',      // exposant 2 (CO2 → CO2)
-      '³': '3',      // exposant 3
-      '¹': '1',      // exposant 1
-      
-      // Signes mathématiques
-      '≥': '>=',
-      '≤': '<=',
-      '≠': '!=',
-      '±': '+/-',
-      '∞': 'infini',
-      '∑': 'Somme',
-      '√': 'racine',
-      '∝': '~',
-      '°': '°',      // degré - garder (ASCII compatible)
-      '→': '->',
-      '←': '<-',
-      '↔': '<->',
-      
-      // Symboles monétaires
-      '€': 'EUR',
-      '£': 'GBP',
-      '¥': 'JPY',
-      
-      // Guillemets et ponctuation spéciale
-      '«': '"',
-      '»': '"',
-      '“': '"',
-      '”': '"',
-      '‘': "'",
-      '’': "'",
-      '…': '...',
-      '—': '-',
-      '–': '-',
-      
-      // Lettres accentuées (déjà supportées normalement)
-      // Mais au cas où...
-      'é': 'e',
-      'è': 'e',
-      'ê': 'e',
-      'ë': 'e',
-      'à': 'a',
-      'â': 'a',
-      'ä': 'a',
-      'î': 'i',
-      'ï': 'i',
-      'ô': 'o',
-      'ö': 'o',
-      'ù': 'u',
-      'û': 'u',
-      'ü': 'u',
-      'ç': 'c',
-      'œ': 'oe',
-      'æ': 'ae',
-      
-      // Symboles électriques
-      'Ω': 'Ohm',
-      'μ': 'u',      // micro → u
-      '∆': 'Delta',
-      'Φ': 'Phi',
+
+    const replacements = <String, String>{
+      // Guillemets typographiques
+      '«': '"', '»': '"', '“': '"', '”': '"',
+      '‘': "'", '’': "'",
+      // Tirets longs
+      '—': '-', '–': '-', '…': '...',
+      // Symboles mathématiques
+      '≥': '>=', '≤': '<=', '≠': '!=',
+      '±': '+/-', '∞': 'inf', '√': 'racine',
+      '→': '->', '←': '<-', '↔': '<->',
+      '∑': 'Somme', '∆': 'Delta', 'Φ': 'Phi',
       'θ': 'theta',
+      // Symboles électriques
+      'Ω': 'Ohm', 'μ': 'u', 'Σ': 'Sigma',
+      // Exposants/indices
+      '²': '2', '³': '3', '¹': '1',
+      '₁': '1', '₂': '2', '₃': '3', '₄': '4',
+      // Monétaires
+      '€': 'EUR', '£': 'GBP', '¥': 'JPY',
     };
-    
+
     var result = text;
-    replacements.forEach((original, replacement) {
-      result = result.replaceAll(original, replacement);
-    });
-    
+    replacements.forEach((k, v) => result = result.replaceAll(k, v));
     return result;
   }
-  
   static pw.Widget _sectionBox(String title) {
     return pw.Container(
       width: double.infinity,
