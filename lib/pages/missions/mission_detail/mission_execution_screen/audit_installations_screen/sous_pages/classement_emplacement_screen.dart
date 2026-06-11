@@ -196,10 +196,11 @@ class _ClassementEmplacementScreenState extends State<ClassementEmplacementScree
               ),
               style: TextStyle(fontSize: optionFontSize, color: Colors.black87),
               items: options.map((option) {
+                final label = HiveService.getLabelForCode(option);
                 return DropdownMenuItem<String>(
-                  value: option,
+                  value: option,          // valeur stockée = code court
                   child: Text(
-                    option,
+                    label,                // affiché = label complet
                     style: TextStyle(fontSize: optionFontSize),
                     overflow: TextOverflow.ellipsis,
                     maxLines: 1,
@@ -730,7 +731,7 @@ class _ClassementEmplacementScreenState extends State<ClassementEmplacementScree
               children: [
                 Expanded(
                   child: Text(
-                    value ?? 'Non défini',
+                    value != null ? HiveService.getLabelForCode(value) : 'Non défini',
                     style: TextStyle(
                       fontSize: titleFontSize * 0.9,
                       color: value != null ? Colors.black87 : Colors.grey.shade500,

@@ -1,7 +1,6 @@
 // classement_locaux.dart
 import 'package:hive/hive.dart';
 import 'package:inspec_app/models/classement_zone.dart';
-import 'package:inspec_app/services/hive_service.dart';
 
 part 'classement_locaux.g.dart';
 
@@ -156,7 +155,7 @@ class ClassementEmplacement extends HiveObject {
     final aeNum = _extraireNumAE(ae!);
     final adNum = _extraireNumAD(ad!);
     if (aeNum == null || adNum == null) return null;
-    return 'IP${aeNum}${adNum}';
+    return 'IP$aeNum$adNum';
   }
 
   String? _calculerIK() {

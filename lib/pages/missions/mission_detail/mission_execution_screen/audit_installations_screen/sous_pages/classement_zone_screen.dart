@@ -171,9 +171,14 @@ class _ClassementZoneScreenState extends State<ClassementZoneScreen> {
               ),
               style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.black87),
               items: options.map((option) {
+                final label = HiveService.getLabelForCode(option);
                 return DropdownMenuItem<String>(
                   value: option,
-                  child: Text(option),
+                  child: Text(
+                    label,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
+                  ),
                 );
               }).toList(),
               onChanged: onChanged,

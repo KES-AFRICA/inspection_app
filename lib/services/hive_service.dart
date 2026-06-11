@@ -2641,11 +2641,55 @@ static Future<void> saveClassement(ClassementEmplacement classement) async {
 // ============================================================
 
 /// Obtenir les options pour chaque type d'influence
+// Codes stockés en base (inchangés — rétrocompatibilité PDF)
 static List<String> getOptionsAF() => ['AF1', 'AF2', 'AF3', 'AF4'];
 static List<String> getOptionsBE() => ['BE1', 'BE2', 'BE3', 'BE4'];
 static List<String> getOptionsAE() => ['AE1', 'AE2', 'AE3', 'AE4'];
 static List<String> getOptionsAD() => ['AD1', 'AD2', 'AD3', 'AD4', 'AD5', 'AD6', 'AD7', 'AD8', 'AD9'];
 static List<String> getOptionsAG() => ['AG1', 'AG2', 'AG3', 'AG4'];
+
+// Labels complets pour l'affichage dans les dropdowns (value = code, child = label)
+static const Map<String, String> labelsAF = {
+  'AF1': 'AF1 : Négligeable',
+  'AF2': 'AF2 : Agents d\'origine atmosphérique',
+  'AF3': 'AF3 : Intermittente ou accidentelle',
+  'AF4': 'AF4 : Permanente',
+};
+static const Map<String, String> labelsBE = {
+  'BE1': 'BE1 : Risques négligeables',
+  'BE2': 'BE2 : Risques d\'incendie',
+  'BE3': 'BE3 : Risques d\'explosion',
+  'BE4': 'BE4 : Risques de contamination',
+};
+static const Map<String, String> labelsAE = {
+  'AE1': 'AE1 : Négligeable',
+  'AE2': 'AE2 : Petits objets (≥ 2,5 mm)',
+  'AE3': 'AE3 : Très petits objets',
+  'AE4': 'AE4 : Poussières',
+};
+static const Map<String, String> labelsAD = {
+  'AD1': 'AD1 : Négligeable',
+  'AD2': 'AD2 : Chutes de gouttes d\'eau',
+  'AD3': 'AD3 : Chutes de gouttes d\'eau jusqu\'à 15°',
+  'AD4': 'AD4 : Aspersion d\'eau',
+  'AD5': 'AD5 : Projections d\'eau',
+  'AD6': 'AD6 : Jets d\'eau',
+  'AD7': 'AD7 : Paquets d\'eau',
+  'AD8': 'AD8 : Immersion',
+  'AD9': 'AD9 : Submersion',
+};
+static const Map<String, String> labelsAG = {
+  'AG1': 'AG1 : Faibles (0,225 J)',
+  'AG2': 'AG2 : Moyens (2 J)',
+  'AG3': 'AG3 : Importants (5 J)',
+  'AG4': 'AG4 : Très importants (20 J)',
+};
+
+/// Retourne le label complet pour un code donné (ex: 'AF1' → 'AF1 : Négligeable')
+static String getLabelForCode(String code) {
+  return labelsAF[code] ?? labelsBE[code] ?? labelsAE[code] ??
+         labelsAD[code] ?? labelsAG[code] ?? code;
+}
 
 /// Obtenir toutes les options groupées
 static Map<String, List<String>> getAllOptions() {
