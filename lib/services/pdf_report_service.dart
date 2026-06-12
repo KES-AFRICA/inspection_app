@@ -1,7 +1,5 @@
 // pdf_report_service.dart 
 
-// ignore_for_file: curly_braces_in_flow_control_structures
-
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
