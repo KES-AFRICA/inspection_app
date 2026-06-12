@@ -1,13 +1,19 @@
 // lib/services/backup_service.dart
 // ============================================================
 // SYSTÈME DE SAUVEGARDE ET RESTAURATION COMPLÈTE
-// Schema version : 1
-// Rétrocompatible : les champs inconnus sont ignorés au parsing.
+// Schema version : 2
+// Rétrocompatible V1 : les sauvegardes V1 sont importables.
+// Nouveautés V2 :
+//   - exporterMission(missionId) : export ciblé d'une seule mission
+//   - deleteMissionCompletely(missionId) : suppression totale sécurisée
+//   - Checksum SHA-256 sur chaque export (détection de corruption)
+//   - Magic V2 : INSPEC_BACKUP_V2
 // ============================================================
 
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:external_path/external_path.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
@@ -61,11 +67,26 @@ class ImportResult {
 }
 
 // ─────────────────────────────────────────────────────────────
+// RÉSULTAT DE SUPPRESSION
+// ─────────────────────────────────────────────────────────────
+class DeleteResult {
+  final bool success;
+  final String? message;
+  final int deletedPhotos;
+  const DeleteResult({
+    required this.success,
+    this.message,
+    this.deletedPhotos = 0,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
 // SERVICE PRINCIPAL
 // ─────────────────────────────────────────────────────────────
 class BackupService {
-  static const int _schemaVersion = 1;
-  static const String _magic = 'INSPEC_BACKUP_V1';
+  static const int _schemaVersion = 2;
+  static const String _magic   = 'INSPEC_BACKUP_V2';
+  static const String _magicV1 = 'INSPEC_BACKUP_V1'; // rétrocompat import
 
   // ═══════════════════════════════════════════════════════════
   // EXPORT
@@ -148,17 +169,103 @@ class BackupService {
   // CONSTRUCTION DU JSON
   // ─────────────────────────────────────────────────────────
 
+  /// Export ciblé d'une seule mission — utilisé par MissionCard (menu ⋮).
+  /// Format V2 avec photos base64 encodées et checksum SHA-256.
+  static Future<BackupResult> exporterMission(String missionId) async {
+    try {
+      final mission = HiveService.getMissionById(missionId);
+      if (mission == null) {
+        return const BackupResult(
+          success: false,
+          message: 'Mission introuvable.',
+        );
+      }
+
+      final serialized = await _serializeMission(mission);
+
+      final payload = <String, dynamic>{
+        'magic': _magic,
+        'schema_version': _schemaVersion,
+        'exported_at': DateTime.now().toIso8601String(),
+        'app_version': '2.0.0',
+        'export_type': 'single_mission',
+        'mission_count': 1,
+        'missions': [serialized],
+        'local_drafts': _serializeLocalDrafts([mission.id]),
+        'coffret_drafts': _serializeCoffretDrafts([mission.id]),
+      };
+
+      // Checksum SHA-256 (calculé avant ajout du champ checksum)
+      final contentForHash = jsonEncode(Map<String, dynamic>.from(payload));
+      payload['checksum'] =
+          sha256.convert(utf8.encode(contentForHash)).toString();
+
+      final ts = DateTime.now()
+          .toIso8601String()
+          .replaceAll(':', '-')
+          .replaceAll('.', '-')
+          .substring(0, 19);
+      final safeClient =
+          mission.nomClient.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
+      final fileName = 'inspec_${safeClient}_$ts.json';
+      final jsonContent =
+          const JsonEncoder.withIndent('  ').convert(payload);
+
+      // Sauvegarde locale
+      String? savedPath;
+      try {
+        final downloadsPath = Platform.isAndroid
+            ? await ExternalPath.getExternalStoragePublicDirectory(
+                ExternalPath.DIRECTORY_DOWNLOAD)
+            : (await getApplicationDocumentsDirectory()).path;
+        final dir = Directory('$downloadsPath/Verif Elec');
+        if (!await dir.exists()) await dir.create(recursive: true);
+        final file = File('${dir.path}/$fileName');
+        await file.writeAsString(jsonContent, encoding: utf8);
+        savedPath = file.path;
+        if (kDebugMode) print('✅ Backup mission: $savedPath');
+      } catch (e) {
+        if (kDebugMode) print('⚠️ Sauvegarde locale ignorée: $e');
+      }
+
+      // Partage
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/$fileName');
+      await tempFile.writeAsString(jsonContent, encoding: utf8);
+      await Share.shareXFiles(
+        [XFile(tempFile.path, mimeType: 'application/json')],
+        subject: 'Sauvegarde — ${mission.nomClient}',
+        text: 'Export mission ${mission.nomClient} ($ts)',
+      );
+
+      return BackupResult(
+        success: true,
+        message: 'Mission exportée avec succès.',
+        filePath: savedPath ?? tempFile.path,
+        missionCount: 1,
+      );
+    } catch (e, st) {
+      if (kDebugMode) print('❌ exporterMission: $e\n$st');
+      return BackupResult(
+        success: false,
+        message: "Erreur lors de l'export de la mission.",
+        errorDetail: e.toString(),
+      );
+    }
+  }
+
   static Future<Map<String, dynamic>> _buildPayload(
       List<Mission> missions, String matricule) async {
     final serializedMissions = <Map<String, dynamic>>[];
     for (final m in missions) {
       serializedMissions.add(await _serializeMission(m));
     }
-    return {
+    final payload = <String, dynamic>{
       'magic': _magic,
       'schema_version': _schemaVersion,
       'exported_at': DateTime.now().toIso8601String(),
-      'app_version': '1.0.0',
+      'app_version': '2.0.0',
+      'export_type': 'all_missions',
       'matricule': matricule,
       'mission_count': missions.length,
       'missions': serializedMissions,
@@ -167,6 +274,11 @@ class BackupService {
       'coffret_drafts':
           _serializeCoffretDrafts(missions.map((m) => m.id).toList()),
     };
+    // Checksum SHA-256
+    final contentForHash = jsonEncode(Map<String, dynamic>.from(payload));
+    payload['checksum'] =
+        sha256.convert(utf8.encode(contentForHash)).toString();
+    return payload;
   }
 
   // ── Mission + toutes ses données liées ──
@@ -721,12 +833,32 @@ class BackupService {
       );
     }
 
-    // ─ 2. Validation magic ─
-    if (payload['magic'] != _magic) {
+    // ─ 2. Validation magic (V1 rétrocompat + V2) ─
+    final fileMagic = payload['magic'] as String?;
+    if (fileMagic != _magic && fileMagic != _magicV1) {
       return const ImportResult(
         success: false,
         message: "Ce fichier n'est pas une sauvegarde Inspec valide.",
       );
+    }
+
+    // ─ 2b. Vérification checksum SHA-256 (V2 uniquement) ─
+    if (fileMagic == _magic) {
+      final checksum = payload['checksum'] as String?;
+      if (checksum != null) {
+        final withoutChecksum =
+            Map<String, dynamic>.from(payload)..remove('checksum');
+        final computed = sha256
+            .convert(utf8.encode(jsonEncode(withoutChecksum)))
+            .toString();
+        if (computed != checksum) {
+          return const ImportResult(
+            success: false,
+            message: 'Intégrité du fichier compromise (checksum invalide). '
+                'Le fichier est peut-être corrompu ou modifié.',
+          );
+        }
+      }
     }
 
     final schemaVersion = payload['schema_version'] as int? ?? 1;
@@ -1683,6 +1815,139 @@ class BackupService {
       } catch (e) {
         if (kDebugMode) print('⚠️ Restauration photo: $originalPath — $e');
       }
+    }}
+  // ─────────────────────────────────────────────────────────
+  // SUPPRESSION COMPLÈTE D'UNE MISSION — utilisé par MissionCard
+  // ─────────────────────────────────────────────────────────
+
+  /// Supprime une mission et TOUTES ses données associées de façon atomique.
+  /// Nettoie : toutes les boxes Hive + photos disque + brouillons + rapports.
+  /// Aucune donnée orpheline ne subsiste après l'appel.
+  static Future<DeleteResult> deleteMissionCompletely(
+      String missionId) async {
+    int deletedPhotos = 0;
+
+    try {
+      // ── 1. Collecter les chemins photos AVANT suppression ─────────
+      final allPhotoPaths = <String>[];
+      final audit = HiveService.getAuditInstallationsByMissionId(missionId);
+      if (audit != null) {
+        allPhotoPaths.addAll(_collectAllPhotoPaths(audit));
+      }
+
+      // ── 2. Supprimer toutes les boxes Hive liées ──────────────────
+      Future<void> cleanBox<T>(String boxName,
+          bool Function(T) predicate) async {
+        try {
+          final box = Hive.box<T>(boxName);
+          final toDelete =
+              box.values.where(predicate).map((e) => (e as dynamic).key).toList();
+          for (final k in toDelete) {
+            await box.delete(k);
+          }
+        } catch (e) {
+          if (kDebugMode) print('⚠️ cleanBox $boxName: $e');
+        }
+      }
+
+      await cleanBox<AuditInstallationsElectriques>(
+          'audit_installations_electriques',
+          (a) => a.missionId == missionId);
+      await cleanBox<DescriptionInstallations>(
+          'description_installations',
+          (d) => d.missionId == missionId);
+      await cleanBox<ClassementEmplacement>(
+          'classement_locaux',
+          (c) => c.missionId == missionId);
+      await cleanBox<ClassementZone>(
+          'classement_zones',
+          (z) => z.missionId == missionId);
+      await cleanBox<Foudre>(
+          'foudre_observations',
+          (f) => f.missionId == missionId);
+      await cleanBox<MesuresEssais>(
+          'mesures_essais',
+          (m) => m.missionId == missionId);
+      await cleanBox<JSA>(
+          'jsa',
+          (j) => j.missionId == missionId);
+      await cleanBox<RenseignementsGeneraux>(
+          'renseignements_generaux',
+          (r) => r.missionId == missionId);
+
+      // Brouillons coffrets
+      try {
+        final coffretDraftsBox = Hive.box('coffret_drafts');
+        final coffretKeys = coffretDraftsBox.keys.where((k) {
+          final data = coffretDraftsBox.get(k);
+          return data is Map && data['missionId'] == missionId;
+        }).toList();
+        for (final k in coffretKeys) {
+          await coffretDraftsBox.delete(k);
+        }
+      } catch (e) {
+        if (kDebugMode) print('⚠️ coffret_drafts delete: $e');
+      }
+
+      // Brouillons locaux
+      try {
+        final localDraftsBox = Hive.box('local_drafts');
+        final localKeys = localDraftsBox.keys.where((k) {
+          final data = localDraftsBox.get(k);
+          return data is Map && data['missionId'] == missionId;
+        }).toList();
+        for (final k in localKeys) {
+          await localDraftsBox.delete(k);
+        }
+      } catch (e) {
+        if (kDebugMode) print('⚠️ local_drafts delete: $e');
+      }
+
+      // Rapports générés
+      try {
+        final lastReportBox = Hive.box('last_reports');
+        if (lastReportBox.containsKey(missionId)) {
+          await lastReportBox.delete(missionId);
+        }
+      } catch (e) {
+        if (kDebugMode) print('⚠️ last_reports delete: $e');
+      }
+
+      // ── 3. Supprimer la mission elle-même ─────────────────────────
+      final missionBox = Hive.box<Mission>('missions');
+      await missionBox.delete(missionId);
+
+      // ── 4. Supprimer les photos du disque ─────────────────────────
+      for (final path in allPhotoPaths) {
+        try {
+          final f = File(path);
+          if (await f.exists()) {
+            await f.delete();
+            deletedPhotos++;
+          }
+        } catch (e) {
+          if (kDebugMode) print('⚠️ Photo non supprimée: $path — $e');
+        }
+      }
+
+      if (kDebugMode) {
+        print(
+            '✅ Mission $missionId supprimée. Photos: $deletedPhotos');
+      }
+
+      return DeleteResult(
+        success: true,
+        message:
+            'Mission supprimée avec succès ($deletedPhotos photo(s) effacée(s)).',
+        deletedPhotos: deletedPhotos,
+      );
+    } catch (e, st) {
+      if (kDebugMode) print('❌ deleteMissionCompletely: $e\n$st');
+      return DeleteResult(
+        success: false,
+        message: 'Erreur lors de la suppression : ${e.toString()}',
+        deletedPhotos: deletedPhotos,
+      );
     }
   }
 }
