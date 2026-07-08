@@ -13,6 +13,12 @@ import 'package:inspec_app/features/mission/domain/repositories/mission_reposito
 import 'package:inspec_app/features/mission/data/repositories/mission_repository_impl.dart';
 import 'package:inspec_app/features/mission/data/datasources/mission_local_data_source.dart';
 import 'package:inspec_app/features/mission/domain/usecases/get_missions_use_case.dart';
+// JSA
+import 'package:inspec_app/features/jsa/domain/repositories/jsa_repository.dart';
+import 'package:inspec_app/features/jsa/data/repositories/jsa_repository_impl.dart';
+import 'package:inspec_app/features/jsa/data/datasources/jsa_local_data_source.dart';
+import 'package:inspec_app/features/jsa/domain/usecases/get_jsa_by_mission_use_case.dart';
+import 'package:inspec_app/features/jsa/domain/usecases/save_jsa_use_case.dart';
 
 final sl = GetIt.instance;
 
@@ -24,6 +30,7 @@ Future<void> init() async {
   // DataSources
   sl.registerLazySingleton<AuthLocalDataSource>(() => AuthLocalDataSourceImpl());
   sl.registerLazySingleton<MissionLocalDataSource>(() => MissionLocalDataSourceImpl());
+  sl.registerLazySingleton<JsaLocalDataSource>(() => JsaLocalDataSourceImpl());
 
   // Repositories (avec injection de DataSource)
   sl.registerLazySingleton<VerificateurRepository>(
@@ -32,9 +39,14 @@ Future<void> init() async {
   sl.registerLazySingleton<MissionRepository>(
     () => MissionRepositoryImpl(missionLocalDataSource: sl()),
   );
+  sl.registerLazySingleton<JsaRepository>(
+    () => JsaRepositoryImpl(jsaLocalDataSource: sl()),
+  );
 
   // UseCases
   sl.registerLazySingleton<CheckLoginStatusUseCase>(() => CheckLoginStatusUseCase(repository: sl()));
   sl.registerLazySingleton<GetCurrentUserUseCase>(() => GetCurrentUserUseCase(repository: sl()));
   sl.registerLazySingleton<GetMissionsUseCase>(() => GetMissionsUseCase(repository: sl()));
+  sl.registerLazySingleton<GetJsaByMissionUseCase>(() => GetJsaByMissionUseCase(repository: sl()));
+  sl.registerLazySingleton<SaveJsaUseCase>(() => SaveJsaUseCase(repository: sl()));
 }
