@@ -299,7 +299,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
                 ),
               ),
               child: DropdownButtonFormField<String>(
-                initialValue: widget.selectedType,
+                value: widget.selectedType,
                 isExpanded: true,
                 icon: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryBlue, size: context.iconSizeM),
                 dropdownColor: Colors.white,
@@ -1464,8 +1464,8 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
           
           SizedBox(height: context.spacingM),
           
-          // Priorité — uniquement si NON (pas NA)
-          if (element.conforme == false && !element.estNA)
+          // Ligne 2 : Priorité (seule, sur toute la largeur)
+          if (element.conforme == false || element.estNA)
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1504,18 +1504,18 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
               suggestions: suggestions,
               color: color,
             ),
-            
-            SizedBox(height: context.spacingM),
-            
-            // Photos — masquées si observation = NON (hasObservation = false)
-            _buildModernElementPhotos(
-              context: context,
-              element: element,
-              index: index,
-              sectionType: sectionType,
-              color: color,
-            ),
           ],
+          
+          SizedBox(height: context.spacingM),
+          
+          // Photos
+          _buildModernElementPhotos(
+            context: context,
+            element: element,
+            index: index,
+            sectionType: sectionType,
+            color: color,
+          ),
         ],
       ),
     );
@@ -2192,7 +2192,12 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   final _transfoRefroidissementController = TextEditingController();
   final _transfoRegimeController = TextEditingController();
   List<ElementControle> _transfoElements = [];
-  
+
+  // Controllers d'observation par élément — garantit que le texte persiste
+  // lors des reconstructions de widget (TextFormField initialValue ne suffit pas).
+  final Map<ElementControle, TextEditingController> _obsControllersCellule = {};
+  final Map<ElementControle, TextEditingController> _obsControllersTransfo = {};
+
   // Navigation slides pour le formulaire
   final PageController _slideController = PageController();
   int _currentSlide = 0;
@@ -2280,6 +2285,14 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _celluleNumerotationController.text = cellule.numerotation;
     _celluleParafoudresController.text = cellule.parafoudres;
     _celluleElements = List.from(cellule.elementsVerifies);
+
+    // Initialiser un controller par élément avec le texte d'observation existant
+    for (final c in _obsControllersCellule.values) c.dispose();
+    _obsControllersCellule.clear();
+    for (final el in _celluleElements) {
+      _obsControllersCellule[el] =
+          TextEditingController(text: el.observation ?? '');
+    }
   }
   
   void _chargerTransformateurPourEdition(TransformateurMTBT transfo) {
@@ -2291,6 +2304,14 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoRefroidissementController.text = transfo.typeRefroidissement;
     _transfoRegimeController.text = transfo.regimeNeutre;
     _transfoElements = List.from(transfo.elementsVerifies);
+
+    // Initialiser un controller par élément avec le texte d'observation existant
+    for (final c in _obsControllersTransfo.values) c.dispose();
+    _obsControllersTransfo.clear();
+    for (final el in _transfoElements) {
+      _obsControllersTransfo[el] =
+          TextEditingController(text: el.observation ?? '');
+    }
   }
   
   // ============================================================
@@ -3420,6 +3441,12 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: TextField(
+                  // Utilise le controller dédié à cet élément pour charger
+                  // le texte existant lors d'une édition (initialValue seul ne
+                  // recharge pas quand le widget est reconstruit dans le PageView).
+                  controller: isCellule
+                      ? (_obsControllersCellule[element] ??= TextEditingController(text: element.observation ?? ''))
+                      : (_obsControllersTransfo[element] ??= TextEditingController(text: element.observation ?? '')),
                   onChanged: (value) => setState(() => element.observation = value),
                   decoration: InputDecoration(
                     hintText: 'Saisissez votre observation...',
@@ -3655,6 +3682,9 @@ Widget _buildPrioriteButton({
     _transfoBuchholzController.dispose();
     _transfoRefroidissementController.dispose();
     _transfoRegimeController.dispose();
+    // Libérer les controllers d'observation
+    for (final c in _obsControllersCellule.values) c.dispose();
+    for (final c in _obsControllersTransfo.values) c.dispose();
     super.dispose();
   }
 }
@@ -4833,8 +4863,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           type: _selectedType ?? 'LOCAL_ELECTRIQUE',
           accessible: false,
           aReverifier: true,
-          observationsLibres: _observationsExistantes,
-          photos: _localPhotos,
         );
         if (widget.isInZone && widget.zoneIndex != null) {
           // Vérifier doublon par nom
@@ -4868,8 +4896,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           type: _selectedType ?? 'LOCAL_ELECTRIQUE',
           accessible: false,
           aReverifier: true,
-          observationsLibres: _observationsExistantes,
-          photos: _localPhotos,
         );
         if (widget.zoneIndex != null) {
           final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);

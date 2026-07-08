@@ -7,6 +7,7 @@ import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/login_screen.dart';
 import 'package:inspec_app/models/verificateur.dart';
+import 'package:inspec_app/core/di/injection_container.dart' as di;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -15,6 +16,9 @@ void main() async {
   await HiveService.init();
   // Migration silencieuse des données existantes
   await HiveService.migratePointsVerificationPriorite();
+  
+  // Initialiser l'injection de dépendances
+  await di.init();
   
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
