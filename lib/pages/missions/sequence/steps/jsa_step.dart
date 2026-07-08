@@ -4,6 +4,10 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/jsa.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/core/di/injection_container.dart' as di;
+import 'package:inspec_app/features/jsa/domain/usecases/get_jsa_by_mission_use_case.dart';
+import 'package:inspec_app/features/jsa/domain/usecases/save_jsa_use_case.dart';
+import 'package:inspec_app/features/jsa/data/mappers/jsa_mapper.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/widgets/app_bottom_sheet.dart';
 
@@ -83,7 +87,8 @@ class JsaStepState extends State<JsaStep> with AutomaticKeepAliveClientMixin {
     setState(() => _isLoading = true);
     
     try {
-      _jsa = await HiveService.getOrCreateJSA(widget.mission.id);
+      final jsaEntity = await di.sl<GetJsaByMissionUseCase>()(widget.mission.id);
+      _jsa = JsaMapper.toModel(jsaEntity);
       _loadControllersFromJSA();
       
       if (_isFirstLoad) {
@@ -136,7 +141,8 @@ class JsaStepState extends State<JsaStep> with AutomaticKeepAliveClientMixin {
     _jsa.planUrgence.personneContactClient = _personneContactClientController.text.trim();
     _jsa.planUrgence.personneContactKES = _personneContactKESController.text.trim();
     
-    await HiveService.saveJSA(_jsa);
+    final jsaEntity = JsaMapper.toEntity(_jsa);
+    await di.sl<SaveJsaUseCase>()(jsaEntity);
     widget.onDataChanged({'jsa_saved': true, 'current_step': currentSubCategory});
   }
 
