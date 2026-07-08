@@ -29,6 +29,16 @@ import 'package:inspec_app/features/mission/data/repositories/renseignements_gen
 import 'package:inspec_app/features/mission/data/datasources/renseignements_generaux_local_data_source.dart';
 import 'package:inspec_app/features/mission/domain/usecases/get_renseignements_generaux_use_case.dart';
 import 'package:inspec_app/features/mission/domain/usecases/save_renseignements_generaux_use_case.dart';
+// Description des Installations
+import 'package:inspec_app/features/description_installations/domain/repositories/description_installations_repository.dart';
+import 'package:inspec_app/features/description_installations/data/repositories/description_installations_repository_impl.dart';
+import 'package:inspec_app/features/description_installations/data/datasources/description_installations_local_data_source.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/get_description_installations_use_case.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/save_description_installations_use_case.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/add_installation_item_use_case.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/update_installation_item_use_case.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/remove_installation_item_use_case.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/update_description_selection_use_case.dart';
 
 final sl = GetIt.instance;
 
@@ -44,6 +54,9 @@ Future<void> init() async {
   sl.registerLazySingleton<RenseignementsGenerauxLocalDataSource>(
     () => RenseignementsGenerauxLocalDataSourceImpl(),
   );
+  sl.registerLazySingleton<DescriptionInstallationsLocalDataSource>(
+    () => DescriptionInstallationsLocalDataSourceImpl(),
+  );
 
   // Repositories (avec injection de DataSource)
   sl.registerLazySingleton<VerificateurRepository>(
@@ -57,6 +70,9 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<RenseignementsGenerauxRepository>(
     () => RenseignementsGenerauxRepositoryImpl(localDataSource: sl()),
+  );
+  sl.registerLazySingleton<DescriptionInstallationsRepository>(
+    () => DescriptionInstallationsRepositoryImpl(localDataSource: sl()),
   );
 
   // UseCases
@@ -80,5 +96,23 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<SaveRenseignementsGenerauxUseCase>(
     () => SaveRenseignementsGenerauxUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<GetDescriptionInstallationsUseCase>(
+    () => GetDescriptionInstallationsUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<SaveDescriptionInstallationsUseCase>(
+    () => SaveDescriptionInstallationsUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<AddInstallationItemUseCase>(
+    () => AddInstallationItemUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<UpdateInstallationItemUseCase>(
+    () => UpdateInstallationItemUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<RemoveInstallationItemUseCase>(
+    () => RemoveInstallationItemUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<UpdateDescriptionSelectionUseCase>(
+    () => UpdateDescriptionSelectionUseCase(repository: sl()),
   );
 }
