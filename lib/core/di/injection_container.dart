@@ -39,6 +39,12 @@ import 'package:inspec_app/features/description_installations/domain/usecases/ad
 import 'package:inspec_app/features/description_installations/domain/usecases/update_installation_item_use_case.dart';
 import 'package:inspec_app/features/description_installations/domain/usecases/remove_installation_item_use_case.dart';
 import 'package:inspec_app/features/description_installations/domain/usecases/update_description_selection_use_case.dart';
+// Audit des Installations
+import 'package:inspec_app/features/audit_installations/domain/repositories/audit_installations_repository.dart';
+import 'package:inspec_app/features/audit_installations/data/repositories/audit_installations_repository_impl.dart';
+import 'package:inspec_app/features/audit_installations/data/datasources/audit_installations_local_data_source.dart';
+import 'package:inspec_app/features/audit_installations/domain/usecases/get_audit_installations_use_case.dart';
+import 'package:inspec_app/features/audit_installations/domain/usecases/save_audit_installations_use_case.dart';
 
 final sl = GetIt.instance;
 
@@ -57,6 +63,9 @@ Future<void> init() async {
   sl.registerLazySingleton<DescriptionInstallationsLocalDataSource>(
     () => DescriptionInstallationsLocalDataSourceImpl(),
   );
+  sl.registerLazySingleton<AuditInstallationsLocalDataSource>(
+    () => AuditInstallationsLocalDataSourceImpl(),
+  );
 
   // Repositories (avec injection de DataSource)
   sl.registerLazySingleton<VerificateurRepository>(
@@ -73,6 +82,9 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<DescriptionInstallationsRepository>(
     () => DescriptionInstallationsRepositoryImpl(localDataSource: sl()),
+  );
+  sl.registerLazySingleton<AuditInstallationsRepository>(
+    () => AuditInstallationsRepositoryImpl(localDataSource: sl()),
   );
 
   // UseCases
@@ -114,5 +126,11 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<UpdateDescriptionSelectionUseCase>(
     () => UpdateDescriptionSelectionUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<GetAuditInstallationsUseCase>(
+    () => GetAuditInstallationsUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<SaveAuditInstallationsUseCase>(
+    () => SaveAuditInstallationsUseCase(repository: sl()),
   );
 }
