@@ -10,6 +10,8 @@ import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/core/di/injection_container.dart' as di;
 import 'package:inspec_app/features/auth/domain/repositories/verificateur_repository.dart';
 import 'package:inspec_app/features/auth/data/mappers/verificateur_mapper.dart';
+import 'package:inspec_app/features/auth/domain/usecases/check_login_status_use_case.dart';
+import 'package:inspec_app/features/auth/domain/usecases/get_current_user_use_case.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -54,9 +56,8 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final authRepository = di.sl<VerificateurRepository>();
-    final bool isLoggedIn = authRepository.isUserLoggedIn();
-    final verificateurEntity = authRepository.getCurrentUser();
+    final isLoggedIn = di.sl<CheckLoginStatusUseCase>()();
+    final verificateurEntity = di.sl<GetCurrentUserUseCase>()();
 
     if (isLoggedIn && verificateurEntity != null) {
       final currentUserModel = VerificateurMapper.toModel(verificateurEntity);
