@@ -5,6 +5,11 @@ import 'package:inspec_app/models/foudre.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_foudre_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/foudre/domain/entities/foudre_entity.dart';
+import 'package:inspec_app/features/foudre/data/mappers/foudre_mapper.dart';
+import 'package:inspec_app/features/foudre/domain/usecases/get_foudre_observations_use_case.dart';
+import 'package:inspec_app/features/foudre/domain/usecases/delete_foudre_observation_use_case.dart';
 
 class FoudreScreen extends StatefulWidget {
   final Mission mission;
@@ -29,7 +34,9 @@ class _FoudreScreenState extends State<FoudreScreen> {
 
   Future<void> _loadObservations() async {
     setState(() => _isLoading = true);
-    _observations = HiveService.getFoudreObservationsByMissionId(widget.mission.id);
+    final useCase = GetIt.instance<GetFoudreObservationsUseCase>();
+    final entities = await useCase(widget.mission.id);
+    _observations = entities.map(FoudreMapper.toModel).toList();
     setState(() => _isLoading = false);
   }
 
@@ -76,7 +83,8 @@ class _FoudreScreenState extends State<FoudreScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              final success = await HiveService.deleteFoudreObservation(observation.key);
+              final deleteUseCase = GetIt.instance<DeleteFoudreObservationUseCase>();
+              final success = await deleteUseCase(observation.key);
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -156,7 +164,10 @@ class _FoudreScreenState extends State<FoudreScreen> {
   }
 
   Widget _buildHeaderStats() {
-    final stats = HiveService.getFoudreStatsForMission(widget.mission.id);
+    final total = _observations.length;
+    final p1 = _observations.where((obs) => obs.niveauPriorite == 1).length;
+    final p2 = _observations.where((obs) => obs.niveauPriorite == 2).length;
+    final p3 = _observations.where((obs) => obs.niveauPriorite == 3).length;
     
     return Container(
       padding: EdgeInsets.all(16),
@@ -167,13 +178,13 @@ class _FoudreScreenState extends State<FoudreScreen> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          _buildStatCard('Total', stats['total'] ?? 0, AppTheme.primaryBlue),
+          _buildStatCard('Total', total, AppTheme.primaryBlue),
          
-          _buildStatCard('P1', stats['priorite_1'] ?? 0, Colors.blue),
+          _buildStatCard('P1', p1, Colors.blue),
          
-          _buildStatCard('P2', stats['priorite_2'] ?? 0, Colors.orange),
+          _buildStatCard('P2', p2, Colors.orange),
          
-          _buildStatCard('P3', stats['priorite_3'] ?? 0, Colors.red),
+          _buildStatCard('P3', p3, Colors.red),
         ],
       ),
     );

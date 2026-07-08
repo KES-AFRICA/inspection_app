@@ -45,6 +45,14 @@ import 'package:inspec_app/features/audit_installations/data/repositories/audit_
 import 'package:inspec_app/features/audit_installations/data/datasources/audit_installations_local_data_source.dart';
 import 'package:inspec_app/features/audit_installations/domain/usecases/get_audit_installations_use_case.dart';
 import 'package:inspec_app/features/audit_installations/domain/usecases/save_audit_installations_use_case.dart';
+// Audit Foudre
+import 'package:inspec_app/features/foudre/domain/repositories/foudre_repository.dart';
+import 'package:inspec_app/features/foudre/data/repositories/foudre_repository_impl.dart';
+import 'package:inspec_app/features/foudre/data/datasources/foudre_local_data_source.dart';
+import 'package:inspec_app/features/foudre/domain/usecases/get_foudre_observations_use_case.dart';
+import 'package:inspec_app/features/foudre/domain/usecases/create_foudre_observation_use_case.dart';
+import 'package:inspec_app/features/foudre/domain/usecases/update_foudre_observation_use_case.dart';
+import 'package:inspec_app/features/foudre/domain/usecases/delete_foudre_observation_use_case.dart';
 
 final sl = GetIt.instance;
 
@@ -66,6 +74,9 @@ Future<void> init() async {
   sl.registerLazySingleton<AuditInstallationsLocalDataSource>(
     () => AuditInstallationsLocalDataSourceImpl(),
   );
+  sl.registerLazySingleton<FoudreLocalDataSource>(
+    () => FoudreLocalDataSourceImpl(),
+  );
 
   // Repositories (avec injection de DataSource)
   sl.registerLazySingleton<VerificateurRepository>(
@@ -85,6 +96,9 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<AuditInstallationsRepository>(
     () => AuditInstallationsRepositoryImpl(localDataSource: sl()),
+  );
+  sl.registerLazySingleton<FoudreRepository>(
+    () => FoudreRepositoryImpl(localDataSource: sl()),
   );
 
   // UseCases
@@ -132,5 +146,17 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<SaveAuditInstallationsUseCase>(
     () => SaveAuditInstallationsUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<GetFoudreObservationsUseCase>(
+    () => GetFoudreObservationsUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<CreateFoudreObservationUseCase>(
+    () => CreateFoudreObservationUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<UpdateFoudreObservationUseCase>(
+    () => UpdateFoudreObservationUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<DeleteFoudreObservationUseCase>(
+    () => DeleteFoudreObservationUseCase(repository: sl()),
   );
 }

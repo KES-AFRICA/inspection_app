@@ -4,6 +4,9 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/foudre.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/foudre/domain/usecases/create_foudre_observation_use_case.dart';
+import 'package:inspec_app/features/foudre/domain/usecases/update_foudre_observation_use_case.dart';
 
 class AjouterFoudreScreen extends StatefulWidget {
   final Mission mission;
@@ -42,7 +45,8 @@ class _AjouterFoudreScreenState extends State<AjouterFoudreScreen> {
         
         if (widget.isEdition) {
           // Mise à jour
-          final success = await HiveService.updateFoudreObservation(
+          final updateUseCase = GetIt.instance<UpdateFoudreObservationUseCase>();
+          final success = await updateUseCase(
             foudreId: widget.observation!.key,
             observation: observationTexte,
             niveauPriorite: _niveauPriorite,
@@ -61,7 +65,8 @@ class _AjouterFoudreScreenState extends State<AjouterFoudreScreen> {
           }
         } else {
           // Création
-          final foudre = await HiveService.createFoudreObservation(
+          final createUseCase = GetIt.instance<CreateFoudreObservationUseCase>();
+          await createUseCase(
             missionId: widget.mission.id,
             observation: observationTexte,
             niveauPriorite: _niveauPriorite,
