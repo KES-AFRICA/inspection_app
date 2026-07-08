@@ -6,6 +6,12 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/renseignements_generaux.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/core/di/injection_container.dart' as di;
+import 'package:inspec_app/features/mission/domain/usecases/get_renseignements_generaux_use_case.dart';
+import 'package:inspec_app/features/mission/domain/usecases/save_renseignements_generaux_use_case.dart';
+import 'package:inspec_app/features/mission/data/mappers/renseignements_generaux_mapper.dart';
+import 'package:inspec_app/features/auth/domain/usecases/get_current_user_use_case.dart';
+import 'package:inspec_app/features/auth/data/mappers/verificateur_mapper.dart';
 import 'package:inspec_app/widgets/app_bottom_sheet.dart';
 
 // Liste des vérificateurs prédéfinis
@@ -192,10 +198,12 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
     setState(() => _isLoading = true);
 
     try {
-      _data = await HiveService.getOrCreateRenseignementsGeneraux(widget.mission.id);
+      final entity = await di.sl<GetRenseignementsGenerauxUseCase>()(widget.mission.id);
+      _data = RenseignementsGenerauxMapper.toModel(entity);
 
       // ✅ Ajouter le vérificateur courant avec une copie modifiable
-      final currentUser = HiveService.getCurrentUser();
+      final currentUserEntity = di.sl<GetCurrentUserUseCase>()();
+      final currentUser = currentUserEntity != null ? VerificateurMapper.toModel(currentUserEntity) : null;
       if (currentUser != null) {
         // S'assurer que la liste est modifiable
         if (_data!.verificateurs.isEmpty) {
@@ -211,7 +219,8 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
             'nom': '${currentUser.prenom} ${currentUser.nom}',
             'email': currentUser.email,
           });
-          await HiveService.saveRenseignementsGeneraux(_data!);
+          final entity = RenseignementsGenerauxMapper.toEntity(_data!);
+          await di.sl<SaveRenseignementsGenerauxUseCase>()(entity);
         }
       }
 
@@ -269,7 +278,8 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
     _data!.verificateurs = List.from(_verificateurs);
     _data!.updatedAt = DateTime.now();
 
-    await HiveService.saveRenseignementsGeneraux(_data!);
+    final entity = RenseignementsGenerauxMapper.toEntity(_data!);
+    await di.sl<SaveRenseignementsGenerauxUseCase>()(entity);
 
     widget.onDataChanged(_data!.toMap());
     _notifyValidation();
@@ -622,7 +632,8 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
 
   void _showVerificateurBottomSheet() {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
-    final currentUser = HiveService.getCurrentUser();
+    final currentUserEntity = di.sl<GetCurrentUserUseCase>()();
+    final currentUser = currentUserEntity != null ? VerificateurMapper.toModel(currentUserEntity) : null;
 
     showModalBottomSheet(
       context: context,
@@ -1116,7 +1127,8 @@ void _submitAccompagnateur(
 
   void _supprimerVerificateur(int index) async {
     final verificateurSupprime = _verificateurs[index];
-    final currentUser = HiveService.getCurrentUser();
+    final currentUserEntity = di.sl<GetCurrentUserUseCase>()();
+    final currentUser = currentUserEntity != null ? VerificateurMapper.toModel(currentUserEntity) : null;
 
     // Empêcher la suppression du vérificateur courant
     if (currentUser != null &&
