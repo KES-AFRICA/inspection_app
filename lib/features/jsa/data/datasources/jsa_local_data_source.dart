@@ -36,7 +36,16 @@ class JsaLocalDataSourceImpl implements JsaLocalDataSource {
 
   @override
   Future<void> saveJSA(JSA jsa) async {
+    final box = Hive.box<JSA>(_jsaBox);
     jsa.updatedAt = DateTime.now();
-    await jsa.save();
+    
+    try {
+      // Trouver l'objet existant dans la boîte par son missionId pour obtenir sa clé
+      final existing = box.values.firstWhere((element) => element.missionId == jsa.missionId);
+      await box.put(existing.key, jsa);
+    } catch (e) {
+      // Si non trouvé, on l'ajoute à la boîte
+      await box.add(jsa);
+    }
   }
 }
