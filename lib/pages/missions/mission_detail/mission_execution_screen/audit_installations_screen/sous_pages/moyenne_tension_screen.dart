@@ -12,6 +12,10 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_local_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_zone_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/audit_installations/data/mappers/audit_installations_mapper.dart';
+import 'package:inspec_app/features/audit_installations/domain/usecases/get_audit_installations_use_case.dart';
+import 'package:inspec_app/features/audit_installations/domain/usecases/save_audit_installations_use_case.dart';
 
 class MoyenneTensionScreen extends StatefulWidget {
   final Mission mission;
@@ -40,7 +44,9 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
     
     try {
       // Recharger l'audit
-      final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+      final getAuditUseCase = GetIt.instance<GetAuditInstallationsUseCase>();
+      final entity = await getAuditUseCase(widget.mission.id);
+      final audit = AuditInstallationsMapper.toModel(entity);
 
       setState(() {
         _audit = audit;
@@ -491,7 +497,8 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
               }
               
               setState(() => _audit!.moyenneTensionLocaux.removeAt(index));
-              await HiveService.saveAuditInstallations(_audit!);
+              final saveAuditUseCase = GetIt.instance<SaveAuditInstallationsUseCase>();
+              await saveAuditUseCase(AuditInstallationsMapper.toEntity(_audit!));
               
               _loadData();
               
@@ -560,11 +567,11 @@ class _MoyenneTensionScreenState extends State<MoyenneTensionScreen> {
                 );
               }
               
-              // 5. Supprimer la zone de l'audit
               setState(() {
                 _audit!.moyenneTensionZones.removeAt(index);
               });
-              await HiveService.saveAuditInstallations(_audit!);
+              final saveAuditUseCase = GetIt.instance<SaveAuditInstallationsUseCase>();
+              await saveAuditUseCase(AuditInstallationsMapper.toEntity(_audit!));
               
               // 6. Supprimer le classement de la zone
               await HiveService.deleteClassementZone(
