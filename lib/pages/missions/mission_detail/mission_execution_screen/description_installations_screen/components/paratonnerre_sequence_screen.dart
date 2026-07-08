@@ -2,7 +2,9 @@
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:inspec_app/services/hive_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/get_description_installations_use_case.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/update_description_selection_use_case.dart';
 
 class ParatonnerreSequenceScreen extends StatefulWidget {
   final Mission mission;
@@ -39,7 +41,8 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
     setState(() => _isLoading = true);
     
     try {
-      final desc = await HiveService.getOrCreateDescriptionInstallations(widget.mission.id);
+      final getDescUseCase = GetIt.instance<GetDescriptionInstallationsUseCase>();
+      final desc = await getDescUseCase(widget.mission.id);
       
       if (mounted) {
         setState(() {
@@ -59,17 +62,17 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
     setState(() => _isSaving = true);
     
     try {
-      final success = await HiveService.updateSelection(
+      final updateSelectionUseCase = GetIt.instance<UpdateDescriptionSelectionUseCase>();
+      final success = await updateSelectionUseCase(
         missionId: widget.mission.id,
         field: field,
         value: value,
       );
       
       // Vérifier si la section est complète
-      final desc = await HiveService.getOrCreateDescriptionInstallations(widget.mission.id);
-      final isParatonnerreComplete = desc.presenceParatonnerre != null &&
-          desc.analyseRisqueFoudre != null &&
-          desc.etudeTechniqueFoudre != null;
+      final getDescUseCase = GetIt.instance<GetDescriptionInstallationsUseCase>();
+      final desc = await getDescUseCase(widget.mission.id);
+      final isParatonnerreComplete = desc.isSectionComplete('paratonnerre');
       
       if (isParatonnerreComplete && !widget.isComplete) {
         widget.onComplete('paratonnerre');

@@ -3,7 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:inspec_app/services/hive_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/description_installations/domain/entities/installation_item_entity.dart';
+import 'package:inspec_app/features/description_installations/data/mappers/description_installations_mapper.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/get_description_installations_use_case.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/add_installation_item_use_case.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/update_installation_item_use_case.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/remove_installation_item_use_case.dart';
 
 // ============================================================
 // GAMMES DE CELLULES → TYPES ASSOCIÉS
@@ -175,9 +181,36 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
     try {
-      final items = await HiveService.getInstallationItemsFromSection(
-        missionId: widget.mission.id, section: widget.sectionKey);
-      if (mounted) setState(() { _items = items; _isLoading = false; });
+      final getDescUseCase = GetIt.instance<GetDescriptionInstallationsUseCase>();
+      final desc = await getDescUseCase(widget.mission.id);
+      
+      List<InstallationItemEntity> items = [];
+      switch (widget.sectionKey) {
+        case 'alimentation_moyenne_tension':
+          items = desc.alimentationMoyenneTension;
+          break;
+        case 'alimentation_basse_tension':
+          items = desc.alimentationBasseTension;
+          break;
+        case 'groupe_electrogene':
+          items = desc.groupeElectrogene;
+          break;
+        case 'alimentation_carburant':
+          items = desc.alimentationCarburant;
+          break;
+        case 'inverseur':
+          items = desc.inverseur;
+          break;
+        case 'stabilisateur':
+          items = desc.stabilisateur;
+          break;
+        case 'onduleurs':
+          items = desc.onduleurs;
+          break;
+      }
+      
+      final modelItems = items.map((e) => DescriptionInstallationsMapper.toItemModel(e)).toList();
+      if (mounted) setState(() { _items = modelItems; _isLoading = false; });
     } catch (e) { setState(() => _isLoading = false); }
   }
 
@@ -193,9 +226,10 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     ));
     if (result != null && result is Map<String, String>) {
       setState(() => _isSaving = true);
-      final success = await HiveService.addInstallationItemToSection(
+      final addUseCase = GetIt.instance<AddInstallationItemUseCase>();
+      final success = await addUseCase(
         missionId: widget.mission.id, section: widget.sectionKey,
-        item: InstallationItem(data: result));
+        item: InstallationItemEntity(data: result, createdAt: DateTime.now()));
       if (success) {
         await _loadData();
         _checkAndNotifyComplete();
@@ -240,9 +274,10 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     ));
     if (result != null && result is Map<String, String>) {
       setState(() => _isSaving = true);
-      final success = await HiveService.updateInstallationItemInSection(
+      final updateUseCase = GetIt.instance<UpdateInstallationItemUseCase>();
+      final success = await updateUseCase(
         missionId: widget.mission.id, section: widget.sectionKey, index: index,
-        item: InstallationItem(data: result, photoPaths: item.photoPaths));
+        item: InstallationItemEntity(data: result, photoPaths: item.photoPaths, createdAt: item.createdAt));
       if (success) {
         await _loadData(); _checkAndNotifyComplete();
         if (mounted) {
@@ -265,7 +300,8 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     ));
     if (confirm == true) {
       setState(() => _isSaving = true);
-      final success = await HiveService.removeInstallationItemFromSection(
+      final removeUseCase = GetIt.instance<RemoveInstallationItemUseCase>();
+      final success = await removeUseCase(
         missionId: widget.mission.id, section: widget.sectionKey, index: index);
       if (success) {
         await _loadData(); _checkAndNotifyComplete();

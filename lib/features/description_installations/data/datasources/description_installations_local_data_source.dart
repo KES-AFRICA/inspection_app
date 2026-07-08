@@ -209,6 +209,9 @@ class DescriptionInstallationsLocalDataSourceImpl implements DescriptionInstalla
         case 'regime_neutre':
           desc.regimeNeutre = value;
           break;
+        case 'regime_neutre_detail':
+          desc.regimeNeutreDetail = value.isEmpty ? null : value;
+          break;
         case 'eclairage_securite':
           desc.eclairageSecurite = value;
           break;

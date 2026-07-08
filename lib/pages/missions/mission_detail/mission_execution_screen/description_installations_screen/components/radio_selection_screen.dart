@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/get_description_installations_use_case.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/update_description_selection_use_case.dart';
 
 class RadioSelectionScreen extends StatefulWidget {
   final Mission mission;
@@ -31,7 +33,8 @@ class _RadioSelectionScreenState extends State<RadioSelectionScreen> {
   }
 
   void _loadCurrentSelection() async {
-    final desc = await HiveService.getOrCreateDescriptionInstallations(widget.mission.id);
+    final getDescUseCase = GetIt.instance<GetDescriptionInstallationsUseCase>();
+    final desc = await getDescUseCase(widget.mission.id);
     
     setState(() {
       switch (widget.field) {
@@ -56,7 +59,8 @@ class _RadioSelectionScreenState extends State<RadioSelectionScreen> {
 
   void _sauvegarder() async {
     if (_selectedOption != null) {
-      final success = await HiveService.updateSelection(
+      final updateSelectionUseCase = GetIt.instance<UpdateDescriptionSelectionUseCase>();
+      final success = await updateSelectionUseCase(
         missionId: widget.mission.id,
         field: widget.field,
         value: _selectedOption!,

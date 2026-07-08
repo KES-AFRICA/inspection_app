@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/ajouter_carte.dart';
-import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/features/description_installations/domain/entities/installation_item_entity.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/get_description_installations_use_case.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/add_installation_item_use_case.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/update_installation_item_use_case.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/remove_installation_item_use_case.dart';
 
 class InstallationDetailScreen extends StatefulWidget {
   final Mission mission;
@@ -32,13 +37,36 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
   }
 
   void _loadCartes() async {
-    final cartes = await HiveService.getCartesFromSection(
-      missionId: widget.mission.id,
-      section: widget.sectionKey,
-    );
+    final getDescUseCase = GetIt.instance<GetDescriptionInstallationsUseCase>();
+    final desc = await getDescUseCase(widget.mission.id);
+    
+    List<InstallationItemEntity> items = [];
+    switch (widget.sectionKey) {
+      case 'alimentation_moyenne_tension':
+        items = desc.alimentationMoyenneTension;
+        break;
+      case 'alimentation_basse_tension':
+        items = desc.alimentationBasseTension;
+        break;
+      case 'groupe_electrogene':
+        items = desc.groupeElectrogene;
+        break;
+      case 'alimentation_carburant':
+        items = desc.alimentationCarburant;
+        break;
+      case 'inverseur':
+        items = desc.inverseur;
+        break;
+      case 'stabilisateur':
+        items = desc.stabilisateur;
+        break;
+      case 'onduleurs':
+        items = desc.onduleurs;
+        break;
+    }
     
     setState(() {
-      _cartes = cartes;
+      _cartes = items.map((item) => item.data).toList();
     });
   }
 
@@ -55,10 +83,14 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
     );
 
     if (result != null && result is Map<String, String>) {
-      final success = await HiveService.addCarteToSection(
+      final addUseCase = GetIt.instance<AddInstallationItemUseCase>();
+      final success = await addUseCase(
         missionId: widget.mission.id,
         section: widget.sectionKey,
-        carte: result,
+        item: InstallationItemEntity(
+          data: result,
+          createdAt: DateTime.now(),
+        ),
       );
 
       if (success) {
@@ -88,11 +120,15 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
     );
 
     if (result != null && result is Map<String, String>) {
-      final success = await HiveService.updateCarteInSection(
+      final updateUseCase = GetIt.instance<UpdateInstallationItemUseCase>();
+      final success = await updateUseCase(
         missionId: widget.mission.id,
         section: widget.sectionKey,
         index: index,
-        carte: result,
+        item: InstallationItemEntity(
+          data: result,
+          createdAt: DateTime.now(),
+        ),
       );
 
       if (success) {
@@ -122,7 +158,8 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              final success = await HiveService.removeCarteFromSection(
+              final removeUseCase = GetIt.instance<RemoveInstallationItemUseCase>();
+              final success = await removeUseCase(
                 missionId: widget.mission.id,
                 section: widget.sectionKey,
                 index: index,

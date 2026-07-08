@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/get_description_installations_use_case.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/update_description_selection_use_case.dart';
 
 class ParatonnerreScreen extends StatefulWidget {
   final Mission mission;
@@ -29,7 +31,8 @@ class _ParatonnerreScreenState extends State<ParatonnerreScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final desc = await HiveService.getOrCreateDescriptionInstallations(widget.mission.id);
+      final getDescUseCase = GetIt.instance<GetDescriptionInstallationsUseCase>();
+      final desc = await getDescUseCase(widget.mission.id);
       
       setState(() {
         _presenceParatonnerre = desc.presenceParatonnerre;
@@ -47,19 +50,21 @@ class _ParatonnerreScreenState extends State<ParatonnerreScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final success1 = await HiveService.updateSelection(
+      final updateSelectionUseCase = GetIt.instance<UpdateDescriptionSelectionUseCase>();
+
+      final success1 = await updateSelectionUseCase(
         missionId: widget.mission.id,
         field: 'presence_paratonnerre',
         value: _presenceParatonnerre ?? '',
       );
 
-      final success2 = await HiveService.updateSelection(
+      final success2 = await updateSelectionUseCase(
         missionId: widget.mission.id,
         field: 'analyse_risque_foudre',
         value: _analyseRisqueFoudre ?? '',
       );
 
-      final success3 = await HiveService.updateSelection(
+      final success3 = await updateSelectionUseCase(
         missionId: widget.mission.id,
         field: 'etude_technique_foudre',
         value: _etudeTechniqueFoudre ?? '',

@@ -4,7 +4,10 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/models/mission.dart';
-import 'package:inspec_app/services/hive_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/description_installations/domain/entities/installation_item_entity.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/update_installation_item_use_case.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/remove_installation_item_use_case.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final Mission mission;
@@ -185,11 +188,16 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         widget.item.updateField(champ, _controllers[champ]!.text.trim());
       }
 
-      await HiveService.updateInstallationItemInSection(
+      final updateUseCase = GetIt.instance<UpdateInstallationItemUseCase>();
+      await updateUseCase(
         missionId: widget.mission.id,
         section: widget.sectionKey,
         index: widget.index,
-        item: widget.item,
+        item: InstallationItemEntity(
+          data: widget.item.data,
+          photoPaths: widget.item.photoPaths,
+          createdAt: widget.item.createdAt,
+        ),
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -238,7 +246,8 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       });
 
       try {
-        await HiveService.removeInstallationItemFromSection(
+        final removeUseCase = GetIt.instance<RemoveInstallationItemUseCase>();
+        await removeUseCase(
           missionId: widget.mission.id,
           section: widget.sectionKey,
           index: widget.index,

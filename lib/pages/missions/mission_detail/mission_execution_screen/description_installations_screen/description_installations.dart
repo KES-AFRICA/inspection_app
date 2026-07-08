@@ -1,11 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/radio_selection_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/installation_detail.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/paratonnerre_screen.dart';
-import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/features/description_installations/domain/usecases/get_description_installations_use_case.dart';
+import 'package:inspec_app/features/description_installations/data/mappers/description_installations_mapper.dart';
 
 class DescriptionInstallationsScreen extends StatefulWidget {
   final Mission mission;
@@ -54,17 +56,16 @@ class _DescriptionInstallationsScreenState extends State<DescriptionInstallation
       
       final tempStatus = <String, bool>{};
       
+      // Récupérer la description via le Use Case
+      final getDescUseCase = GetIt.instance<GetDescriptionInstallationsUseCase>();
+      final descEntity = await getDescUseCase(widget.mission.id);
+      final desc = DescriptionInstallationsMapper.toModel(descEntity);
+      
       for (var section in sectionsWithCards) {
-        final items = await HiveService.getInstallationItemsFromSection(
-          missionId: widget.mission.id,
-          section: section,
-        );
-        tempStatus[section] = items.isNotEmpty;
+        tempStatus[section] = desc.isSectionComplete(section);
       }
       
       // 2. Vérifier les sélections radio
-      final desc = await HiveService.getOrCreateDescriptionInstallations(widget.mission.id);
-      
       tempStatus['regime_neutre'] = desc.regimeNeutre != null && desc.regimeNeutre!.isNotEmpty;
       tempStatus['eclairage_securite'] = desc.eclairageSecurite != null && desc.eclairageSecurite!.isNotEmpty;
       tempStatus['modifications_installations'] = desc.modificationsInstallations != null && desc.modificationsInstallations!.isNotEmpty;
