@@ -58,7 +58,8 @@ class _DocumentsStepState extends State<DocumentsStep> {
   }
 
   Future<void> _loadMission() async {
-    final mission = HiveService.getMissionById(widget.mission.id);
+    final missionEntity = di.sl<GetMissionByIdUseCase>()(widget.mission.id);
+    final mission = missionEntity != null ? MissionMapper.toModel(missionEntity) : null;
     if (mission != null) {
       setState(() {
         _mission = mission;
@@ -116,7 +117,7 @@ class _DocumentsStepState extends State<DocumentsStep> {
       _mission.updatedAt = DateTime.now();
     });
     
-    await HiveService.updateDocumentStatus(
+    await di.sl<UpdateDocumentStatusUseCase>()(
       missionId: _mission.id,
       documentField: documentField,
       value: value,
@@ -161,9 +162,9 @@ class _DocumentsStepState extends State<DocumentsStep> {
     if (result == true) {
       final nouveauNom = _nouveauDocumentController.text.trim();
       if (nouveauNom.isNotEmpty) {
-        final success = await HiveService.addDocumentPersonnalise(
+        final success = await di.sl<AddDocumentPersonnaliseUseCase>()(
           missionId: _mission.id,
-          documentNom: nouveauNom,
+          documentName: nouveauNom,
         );
         
         if (success) {
@@ -210,9 +211,9 @@ class _DocumentsStepState extends State<DocumentsStep> {
     );
 
     if (confirm == true) {
-      final success = await HiveService.removeDocumentPersonnalise(
+      final success = await di.sl<RemoveDocumentPersonnaliseUseCase>()(
         missionId: _mission.id,
-        documentNom: documentNom,
+        documentName: documentNom,
       );
       
       if (success) {
