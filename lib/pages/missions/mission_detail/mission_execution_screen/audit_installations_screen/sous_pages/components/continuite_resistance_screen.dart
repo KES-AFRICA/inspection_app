@@ -3,6 +3,10 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart';
+import 'package:inspec_app/features/mesures_essais/domain/usecases/get_mesures_essais_use_case.dart';
+import 'package:inspec_app/features/mesures_essais/domain/usecases/save_mesures_essais_use_case.dart';
 
 class ContinuiteResistanceScreen extends StatefulWidget {
   final Mission mission;
@@ -26,7 +30,9 @@ class _ContinuiteResistanceScreenState extends State<ContinuiteResistanceScreen>
   Future<void> _loadMesures() async {
     setState(() => _isLoading = true);
     try {
-      final mesures = await HiveService.getOrCreateMesuresEssais(widget.mission.id);
+      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+      final entity = await getUseCase(widget.mission.id);
+      final mesures = MesuresEssaisMapper.toModel(entity);
       _mesures = mesures.continuiteResistances;
     } catch (e) {
       print('❌ Erreur chargement continuité/résistance: $e');
@@ -81,10 +87,17 @@ class _ContinuiteResistanceScreenState extends State<ContinuiteResistanceScreen>
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              final success = await HiveService.deleteContinuiteResistance(
-                missionId: widget.mission.id,
-                index: index,
-              );
+              final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+              final entity = await getUseCase(widget.mission.id);
+              final mesures = MesuresEssaisMapper.toModel(entity);
+              
+              if (index < mesures.continuiteResistances.length) {
+                mesures.continuiteResistances.removeAt(index);
+                final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
+                await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
+              }
+              
+              final success = true;
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -462,19 +475,22 @@ class _AjouterContinuiteResistanceScreenState extends State<AjouterContinuiteRes
             : null,
       );
 
-      bool success;
+      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+      final entity = await getUseCase(widget.mission.id);
+      final mesures = MesuresEssaisMapper.toModel(entity);
+
       if (widget.isEdition) {
-        success = await HiveService.updateContinuiteResistance(
-          missionId: widget.mission.id,
-          index: widget.index!,
-          mesure: mesure,
-        );
+        if (widget.index! < mesures.continuiteResistances.length) {
+          mesures.continuiteResistances[widget.index!] = mesure;
+        }
       } else {
-        success = await HiveService.addContinuiteResistance(
-          missionId: widget.mission.id,
-          mesure: mesure,
-        );
+        mesures.continuiteResistances.add(mesure);
       }
+
+      final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
+      await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
+
+      bool success = true;
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(

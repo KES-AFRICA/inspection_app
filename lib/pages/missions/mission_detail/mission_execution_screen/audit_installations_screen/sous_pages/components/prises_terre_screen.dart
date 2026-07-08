@@ -4,6 +4,10 @@ import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart';
+import 'package:inspec_app/features/mesures_essais/domain/usecases/get_mesures_essais_use_case.dart';
+import 'package:inspec_app/features/mesures_essais/domain/usecases/save_mesures_essais_use_case.dart';
 
 class PrisesTerreScreen extends StatefulWidget {
   final Mission mission;
@@ -31,7 +35,9 @@ class _PrisesTerreScreenState extends State<PrisesTerreScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final mesures = await HiveService.getOrCreateMesuresEssais(widget.mission.id);
+      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+      final entity = await getUseCase(widget.mission.id);
+      final mesures = MesuresEssaisMapper.toModel(entity);
       setState(() {
         _prisesTerre = List.from(mesures.prisesTerre);
         _isLoading = false;
@@ -62,10 +68,16 @@ class _PrisesTerreScreenState extends State<PrisesTerreScreen> {
         observation: result['observation'],
       );
       
-      final success = await HiveService.addPriseTerre(
-        missionId: widget.mission.id,
-        priseTerre: nouvellePrise,
-      );
+      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+      final entity = await getUseCase(widget.mission.id);
+      final mesures = MesuresEssaisMapper.toModel(entity);
+      
+      mesures.prisesTerre.add(nouvellePrise);
+      
+      final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
+      await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
+      
+      final success = true;
       
       if (success) {
         await _loadData();
@@ -110,11 +122,17 @@ class _PrisesTerreScreenState extends State<PrisesTerreScreen> {
         observation: result['observation'],
       );
       
-      final success = await HiveService.updatePriseTerre(
-        missionId: widget.mission.id,
-        index: index,
-        priseTerre: updatedPrise,
-      );
+      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+      final entity = await getUseCase(widget.mission.id);
+      final mesures = MesuresEssaisMapper.toModel(entity);
+      
+      if (index < mesures.prisesTerre.length) {
+        mesures.prisesTerre[index] = updatedPrise;
+        final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
+        await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
+      }
+      
+      final success = true;
       
       if (success) {
         await _loadData();
@@ -145,10 +163,17 @@ class _PrisesTerreScreenState extends State<PrisesTerreScreen> {
     );
     
     if (confirm == true) {
-      final success = await HiveService.deletePriseTerre(
-        missionId: widget.mission.id,
-        index: index,
-      );
+      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+      final entity = await getUseCase(widget.mission.id);
+      final mesures = MesuresEssaisMapper.toModel(entity);
+      
+      if (index < mesures.prisesTerre.length) {
+        mesures.prisesTerre.removeAt(index);
+        final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
+        await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
+      }
+      
+      final success = true;
       
       if (success) {
         await _loadData();

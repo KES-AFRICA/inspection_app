@@ -8,6 +8,10 @@ import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart';
+import 'package:inspec_app/features/mesures_essais/domain/usecases/get_mesures_essais_use_case.dart';
+import 'package:inspec_app/features/mesures_essais/domain/usecases/save_mesures_essais_use_case.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -2705,9 +2709,12 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
 
   Future<void> _transfererEssais(String ancienNom, String nouveauNom) async {
     try {
-      final mesures = await HiveService.getOrCreateMesuresEssais(widget.mission.id);
+      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+      final entity = await getUseCase(widget.mission.id);
+      final mesures = MesuresEssaisMapper.toModel(entity);
       for (var essai in mesures.essaisDeclenchement) { if (essai.coffret == ancienNom) essai.coffret = nouveauNom; }
-      await HiveService.saveMesuresEssais(mesures);
+      final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
+      await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
     } catch (e) { _showError('Erreur transfert essais'); }
   }
 

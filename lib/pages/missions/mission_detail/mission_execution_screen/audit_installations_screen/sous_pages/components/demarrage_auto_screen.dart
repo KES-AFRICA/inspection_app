@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart';
+import 'package:inspec_app/features/mesures_essais/domain/usecases/get_mesures_essais_use_case.dart';
+import 'package:inspec_app/features/mesures_essais/domain/usecases/save_mesures_essais_use_case.dart';
 
 class DemarrageAutoScreen extends StatefulWidget {
   final Mission mission;
@@ -31,7 +35,9 @@ class _DemarrageAutoScreenState extends State<DemarrageAutoScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final mesures = await HiveService.getOrCreateMesuresEssais(widget.mission.id);
+      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+      final entity = await getUseCase(widget.mission.id);
+      final mesures = MesuresEssaisMapper.toModel(entity);
       
       if (mounted) {
         setState(() {
@@ -48,10 +54,16 @@ class _DemarrageAutoScreenState extends State<DemarrageAutoScreen> {
     setState(() => _isSaving = true);
     
     try {
-      final success = await HiveService.updateEssaiDemarrageAuto(
-        missionId: widget.mission.id,
-        observation: value,
-      );
+      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+      final entity = await getUseCase(widget.mission.id);
+      final mesures = MesuresEssaisMapper.toModel(entity);
+      
+      mesures.essaiDemarrageAuto.observation = value;
+      
+      final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
+      await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
+      
+      final success = true;
       
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

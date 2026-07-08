@@ -8,6 +8,9 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/prises_terre_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart';
+import 'package:inspec_app/features/mesures_essais/domain/usecases/get_mesures_essais_use_case.dart';
 
 class MesuresEssaisScreen extends StatefulWidget {
   final Mission mission;
@@ -33,7 +36,9 @@ class _MesuresEssaisScreenState extends State<MesuresEssaisScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final mesures = await HiveService.getOrCreateMesuresEssais(widget.mission.id);
+      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+      final entity = await getUseCase(widget.mission.id);
+      final mesures = MesuresEssaisMapper.toModel(entity);
       _stats = mesures.calculerStatistiques();
       
       // Vérifier l'état de chaque section

@@ -3,6 +3,10 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart';
+import 'package:inspec_app/features/mesures_essais/domain/usecases/get_mesures_essais_use_case.dart';
+import 'package:inspec_app/features/mesures_essais/domain/usecases/save_mesures_essais_use_case.dart';
 
 // ================================================================
 // ÉCRAN PRINCIPAL : LISTE DES ESSAIS
@@ -44,7 +48,9 @@ class _EssaisDeclenchementScreenState extends State<EssaisDeclenchementScreen> {
   Future<void> _loadEssais() async {
     setState(() => _isLoading = true);
     try {
-      final mesures = await HiveService.getOrCreateMesuresEssais(widget.mission.id);
+      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+      final entity = await getUseCase(widget.mission.id);
+      final mesures = MesuresEssaisMapper.toModel(entity);
       _essais = mesures.essaisDeclenchement;
     } catch (e) {
       print('❌ Erreur chargement essais déclenchement: $e');
@@ -100,10 +106,17 @@ class _EssaisDeclenchementScreenState extends State<EssaisDeclenchementScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              final success = await HiveService.deleteEssaiDeclenchement(
-                missionId: widget.mission.id,
-                index: index,
-              );
+              final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+              final entity = await getUseCase(widget.mission.id);
+              final mesures = MesuresEssaisMapper.toModel(entity);
+              
+              if (index < mesures.essaisDeclenchement.length) {
+                mesures.essaisDeclenchement.removeAt(index);
+                final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
+                await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
+              }
+              
+              final success = true;
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -766,19 +779,22 @@ class _AjouterEssaiDeclenchementScreenState extends State<AjouterEssaiDeclenchem
       observation: _observationController.text.trim().isNotEmpty ? _observationController.text.trim() : null,
     );
 
-    bool success;
+    final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+    final entity = await getUseCase(widget.mission.id);
+    final mesures = MesuresEssaisMapper.toModel(entity);
+
     if (widget.isEdition) {
-      success = await HiveService.updateEssaiDeclenchement(
-        missionId: widget.mission.id,
-        index: widget.index!,
-        essai: essai,
-      );
+      if (widget.index! < mesures.essaisDeclenchement.length) {
+        mesures.essaisDeclenchement[widget.index!] = essai;
+      }
     } else {
-      success = await HiveService.addEssaiDeclenchement(
-        missionId: widget.mission.id,
-        essai: essai,
-      );
+      mesures.essaisDeclenchement.add(essai);
     }
+
+    final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
+    await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
+
+    bool success = true;
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(

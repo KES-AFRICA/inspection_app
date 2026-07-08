@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart';
+import 'package:inspec_app/features/mesures_essais/domain/usecases/get_mesures_essais_use_case.dart';
+import 'package:inspec_app/features/mesures_essais/domain/usecases/save_mesures_essais_use_case.dart';
 
 class AvisMesuresScreen extends StatefulWidget {
   final Mission mission;
@@ -30,7 +34,9 @@ class _AvisMesuresScreenState extends State<AvisMesuresScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final mesures = await HiveService.getOrCreateMesuresEssais(widget.mission.id);
+      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+      final entity = await getUseCase(widget.mission.id);
+      final mesures = MesuresEssaisMapper.toModel(entity);
       _totalPrisesTerre = mesures.prisesTerre.length;
       
       
@@ -57,12 +63,18 @@ class _AvisMesuresScreenState extends State<AvisMesuresScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final success = await HiveService.updateAvisMesuresTerre(
-        missionId: widget.mission.id,
-        observation: _observationController.text.trim(),
-        satisfaisants: _satisfaisants,
-        nonSatisfaisants: _nonSatisfaisants,
-      );
+      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
+      final entity = await getUseCase(widget.mission.id);
+      final mesures = MesuresEssaisMapper.toModel(entity);
+      
+      mesures.avisMesuresTerre.observation = _observationController.text.trim();
+      mesures.avisMesuresTerre.satisfaisants = _satisfaisants;
+      mesures.avisMesuresTerre.nonSatisfaisants = _nonSatisfaisants;
+      
+      final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
+      await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
+      
+      final success = true;
       
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
