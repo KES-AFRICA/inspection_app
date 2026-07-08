@@ -53,6 +53,12 @@ import 'package:inspec_app/features/foudre/domain/usecases/get_foudre_observatio
 import 'package:inspec_app/features/foudre/domain/usecases/create_foudre_observation_use_case.dart';
 import 'package:inspec_app/features/foudre/domain/usecases/update_foudre_observation_use_case.dart';
 import 'package:inspec_app/features/foudre/domain/usecases/delete_foudre_observation_use_case.dart';
+// Mesures et Essais
+import 'package:inspec_app/features/mesures_essais/domain/repositories/mesures_essais_repository.dart';
+import 'package:inspec_app/features/mesures_essais/data/repositories/mesures_essais_repository_impl.dart';
+import 'package:inspec_app/features/mesures_essais/data/datasources/mesures_essais_local_data_source.dart';
+import 'package:inspec_app/features/mesures_essais/domain/usecases/get_mesures_essais_use_case.dart';
+import 'package:inspec_app/features/mesures_essais/domain/usecases/save_mesures_essais_use_case.dart';
 
 final sl = GetIt.instance;
 
@@ -77,6 +83,9 @@ Future<void> init() async {
   sl.registerLazySingleton<FoudreLocalDataSource>(
     () => FoudreLocalDataSourceImpl(),
   );
+  sl.registerLazySingleton<MesuresEssaisLocalDataSource>(
+    () => MesuresEssaisLocalDataSourceImpl(),
+  );
 
   // Repositories (avec injection de DataSource)
   sl.registerLazySingleton<VerificateurRepository>(
@@ -99,6 +108,9 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<FoudreRepository>(
     () => FoudreRepositoryImpl(localDataSource: sl()),
+  );
+  sl.registerLazySingleton<MesuresEssaisRepository>(
+    () => MesuresEssaisRepositoryImpl(localDataSource: sl()),
   );
 
   // UseCases
@@ -158,5 +170,11 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<DeleteFoudreObservationUseCase>(
     () => DeleteFoudreObservationUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<GetMesuresEssaisUseCase>(
+    () => GetMesuresEssaisUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<SaveMesuresEssaisUseCase>(
+    () => SaveMesuresEssaisUseCase(repository: sl()),
   );
 }
