@@ -8,6 +8,8 @@ import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/login_screen.dart';
 import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/core/di/injection_container.dart' as di;
+import 'package:inspec_app/features/auth/domain/repositories/verificateur_repository.dart';
+import 'package:inspec_app/features/auth/data/mappers/verificateur_mapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,11 +54,13 @@ class AuthWrapper extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final bool isLoggedIn = HiveService.isUserLoggedIn();
-    final Verificateur? currentUser = HiveService.getCurrentUser();
+    final authRepository = di.sl<VerificateurRepository>();
+    final bool isLoggedIn = authRepository.isUserLoggedIn();
+    final verificateurEntity = authRepository.getCurrentUser();
 
-    if (isLoggedIn && currentUser != null) {
-      return HomeScreen(user: currentUser);
+    if (isLoggedIn && verificateurEntity != null) {
+      final currentUserModel = VerificateurMapper.toModel(verificateurEntity);
+      return HomeScreen(user: currentUserModel);
     } else {
       return const LoginScreen();
     }
