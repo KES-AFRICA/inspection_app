@@ -19,6 +19,12 @@ import 'package:inspec_app/features/jsa/data/repositories/jsa_repository_impl.da
 import 'package:inspec_app/features/jsa/data/datasources/jsa_local_data_source.dart';
 import 'package:inspec_app/features/jsa/domain/usecases/get_jsa_by_mission_use_case.dart';
 import 'package:inspec_app/features/jsa/domain/usecases/save_jsa_use_case.dart';
+// Renseignements Généraux
+import 'package:inspec_app/features/mission/domain/repositories/renseignements_generaux_repository.dart';
+import 'package:inspec_app/features/mission/data/repositories/renseignements_generaux_repository_impl.dart';
+import 'package:inspec_app/features/mission/data/datasources/renseignements_generaux_local_data_source.dart';
+import 'package:inspec_app/features/mission/domain/usecases/get_renseignements_generaux_use_case.dart';
+import 'package:inspec_app/features/mission/domain/usecases/save_renseignements_generaux_use_case.dart';
 
 final sl = GetIt.instance;
 
@@ -31,6 +37,9 @@ Future<void> init() async {
   sl.registerLazySingleton<AuthLocalDataSource>(() => AuthLocalDataSourceImpl());
   sl.registerLazySingleton<MissionLocalDataSource>(() => MissionLocalDataSourceImpl());
   sl.registerLazySingleton<JsaLocalDataSource>(() => JsaLocalDataSourceImpl());
+  sl.registerLazySingleton<RenseignementsGenerauxLocalDataSource>(
+    () => RenseignementsGenerauxLocalDataSourceImpl(),
+  );
 
   // Repositories (avec injection de DataSource)
   sl.registerLazySingleton<VerificateurRepository>(
@@ -42,6 +51,9 @@ Future<void> init() async {
   sl.registerLazySingleton<JsaRepository>(
     () => JsaRepositoryImpl(jsaLocalDataSource: sl()),
   );
+  sl.registerLazySingleton<RenseignementsGenerauxRepository>(
+    () => RenseignementsGenerauxRepositoryImpl(localDataSource: sl()),
+  );
 
   // UseCases
   sl.registerLazySingleton<CheckLoginStatusUseCase>(() => CheckLoginStatusUseCase(repository: sl()));
@@ -49,4 +61,10 @@ Future<void> init() async {
   sl.registerLazySingleton<GetMissionsUseCase>(() => GetMissionsUseCase(repository: sl()));
   sl.registerLazySingleton<GetJsaByMissionUseCase>(() => GetJsaByMissionUseCase(repository: sl()));
   sl.registerLazySingleton<SaveJsaUseCase>(() => SaveJsaUseCase(repository: sl()));
+  sl.registerLazySingleton<GetRenseignementsGenerauxUseCase>(
+    () => GetRenseignementsGenerauxUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<SaveRenseignementsGenerauxUseCase>(
+    () => SaveRenseignementsGenerauxUseCase(repository: sl()),
+  );
 }
