@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/get_description_installations_use_case.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/update_description_selection_use_case.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 
-class ParatonnerreSequenceScreen extends StatefulWidget {
+class ParatonnerreSequenceScreen extends ConsumerStatefulWidget {
   final Mission mission;
   final Function(String) onComplete;
   final bool isComplete;
@@ -19,14 +19,14 @@ class ParatonnerreSequenceScreen extends StatefulWidget {
   });
 
   @override
-  State<ParatonnerreSequenceScreen> createState() => _ParatonnerreSequenceScreenState();
+  ConsumerState<ParatonnerreSequenceScreen> createState() => _ParatonnerreSequenceScreenState();
 }
 
-class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen> {
+class _ParatonnerreSequenceScreenState extends ConsumerState<ParatonnerreSequenceScreen> {
   String? _presenceParatonnerre;
   String? _analyseRisqueFoudre;
   String? _etudeTechniqueFoudre;
-  bool _isLoading = true;
+  bool _isFirstLoad = true;
   bool _isSaving = false;
 
   final List<String> _options = ['Oui', 'Non'];
@@ -34,27 +34,6 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
   @override
   void initState() {
     super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-    
-    try {
-      final getDescUseCase = GetIt.instance<GetDescriptionInstallationsUseCase>();
-      final desc = await getDescUseCase(widget.mission.id);
-      
-      if (mounted) {
-        setState(() {
-          _presenceParatonnerre = desc.presenceParatonnerre;
-          _analyseRisqueFoudre = desc.analyseRisqueFoudre;
-          _etudeTechniqueFoudre = desc.etudeTechniqueFoudre;
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
   }
 
   // ✅ SAUVEGARDE INSTANTANÉE
@@ -62,17 +41,12 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
     setState(() => _isSaving = true);
     
     try {
-      final updateSelectionUseCase = GetIt.instance<UpdateDescriptionSelectionUseCase>();
-      final success = await updateSelectionUseCase(
-        missionId: widget.mission.id,
-        field: field,
-        value: value,
-      );
+      final notifier = ref.read(descriptionInstallationsProvider(widget.mission.id).notifier);
+      final success = await notifier.updateDescriptionSelection(field, value);
       
       // Vérifier si la section est complète
-      final getDescUseCase = GetIt.instance<GetDescriptionInstallationsUseCase>();
-      final desc = await getDescUseCase(widget.mission.id);
-      final isParatonnerreComplete = desc.isSectionComplete('paratonnerre');
+      final stateData = ref.read(descriptionInstallationsProvider(widget.mission.id)).value;
+      final isParatonnerreComplete = stateData?.isSectionComplete('paratonnerre') ?? false;
       
       if (isParatonnerreComplete && !widget.isComplete) {
         widget.onComplete('paratonnerre');
@@ -101,12 +75,20 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
   @override
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
-    
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    final asyncData = ref.watch(descriptionInstallationsProvider(widget.mission.id));
 
-    return SingleChildScrollView(
+    return asyncData.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Erreur: $err')),
+      data: (desc) {
+        if (_isFirstLoad) {
+          _presenceParatonnerre = desc.presenceParatonnerre;
+          _analyseRisqueFoudre = desc.analyseRisqueFoudre;
+          _etudeTechniqueFoudre = desc.etudeTechniqueFoudre;
+          _isFirstLoad = false;
+        }
+
+        return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       child: Column(
         children: [
@@ -177,6 +159,8 @@ class _ParatonnerreSequenceScreenState extends State<ParatonnerreSequenceScreen>
             ),
         ],
       ),
+    );
+      },
     );
   }
 

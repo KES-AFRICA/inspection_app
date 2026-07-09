@@ -1,7 +1,7 @@
 // lib/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/description_installations_sequence.dart
 
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/description_installations_form.dart';
@@ -9,9 +9,10 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/radio_sequence_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/get_description_installations_use_case.dart';
+import 'package:inspec_app/core/providers/description_installations_providers.dart';
+import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 
-class DescriptionInstallationsSequenceScreen extends StatefulWidget {
+class DescriptionInstallationsSequenceScreen extends ConsumerStatefulWidget {
   final Mission mission;
   final VoidCallback onPreviousStep;
   final VoidCallback onNextStep;
@@ -26,12 +27,12 @@ class DescriptionInstallationsSequenceScreen extends StatefulWidget {
   });
 
   @override
-  State<DescriptionInstallationsSequenceScreen> createState() =>
+  ConsumerState<DescriptionInstallationsSequenceScreen> createState() =>
       _DescriptionInstallationsSequenceScreenState();
 }
 
 class _DescriptionInstallationsSequenceScreenState
-    extends State<DescriptionInstallationsSequenceScreen> {
+    extends ConsumerState<DescriptionInstallationsSequenceScreen> {
   int _currentStep = 0;
   Map<String, bool> _progress = {};
   bool _isLoading = true;
@@ -352,8 +353,7 @@ class _DescriptionInstallationsSequenceScreenState
     });
 
     try {
-      final getDescUseCase =
-          GetIt.instance<GetDescriptionInstallationsUseCase>();
+      final getDescUseCase = ref.read(getDescriptionInstallationsUseCaseProvider);
       final descEntity = await getDescUseCase(widget.mission.id);
       final freshProgress = descEntity.getProgress();
       if (mounted) {

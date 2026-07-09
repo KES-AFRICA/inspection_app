@@ -4,12 +4,8 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/description_installations/domain/entities/installation_item_entity.dart';
-import 'package:inspec_app/features/description_installations/data/mappers/description_installations_mapper.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/get_description_installations_use_case.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/add_installation_item_use_case.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/update_installation_item_use_case.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/remove_installation_item_use_case.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 
 // ============================================================
 // GAMMES DE CELLULES → TYPES ASSOCIÉS
@@ -122,7 +118,7 @@ class CelluleGammes {
 // ============================================================
 // WIDGET PRINCIPAL : LISTE DES ITEMS
 // ============================================================
-class DescriptionInstallationsForm extends StatefulWidget {
+class DescriptionInstallationsForm extends ConsumerStatefulWidget {
   final Mission mission;
   final String title;
   final String sectionKey;
@@ -143,12 +139,10 @@ class DescriptionInstallationsForm extends StatefulWidget {
   });
 
   @override
-  State<DescriptionInstallationsForm> createState() => _DescriptionInstallationsFormState();
+  ConsumerState<DescriptionInstallationsForm> createState() => _DescriptionInstallationsFormState();
 }
 
-class _DescriptionInstallationsFormState extends State<DescriptionInstallationsForm> {
-  List<InstallationItem> _items = [];
-  bool _isLoading = true;
+class _DescriptionInstallationsFormState extends ConsumerState<DescriptionInstallationsForm> {
   bool _isSaving = false;
 
   static const Map<String, String> _numericFieldsWithUnit = {
@@ -176,43 +170,7 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
   static const List<String> _ouiNonOptions = ['Oui', 'Non'];
 
   @override
-  void initState() { super.initState(); _loadData(); }
-
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-    try {
-      final getDescUseCase = GetIt.instance<GetDescriptionInstallationsUseCase>();
-      final desc = await getDescUseCase(widget.mission.id);
-      
-      List<InstallationItemEntity> items = [];
-      switch (widget.sectionKey) {
-        case 'alimentation_moyenne_tension':
-          items = desc.alimentationMoyenneTension;
-          break;
-        case 'alimentation_basse_tension':
-          items = desc.alimentationBasseTension;
-          break;
-        case 'groupe_electrogene':
-          items = desc.groupeElectrogene;
-          break;
-        case 'alimentation_carburant':
-          items = desc.alimentationCarburant;
-          break;
-        case 'inverseur':
-          items = desc.inverseur;
-          break;
-        case 'stabilisateur':
-          items = desc.stabilisateur;
-          break;
-        case 'onduleurs':
-          items = desc.onduleurs;
-          break;
-      }
-      
-      final modelItems = items.map((e) => DescriptionInstallationsMapper.toItemModel(e)).toList();
-      if (mounted) setState(() { _items = modelItems; _isLoading = false; });
-    } catch (e) { setState(() => _isLoading = false); }
-  }
+  void initState() { super.initState(); }
 
   Future<void> _addItem() async {
     final result = await Navigator.push(context, MaterialPageRoute(
@@ -226,13 +184,12 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     ));
     if (result != null && result is Map<String, String>) {
       setState(() => _isSaving = true);
-      final addUseCase = GetIt.instance<AddInstallationItemUseCase>();
-      final success = await addUseCase(
-        missionId: widget.mission.id, section: widget.sectionKey,
-        item: InstallationItemEntity(data: result, createdAt: DateTime.now()));
+      final notifier = ref.read(descriptionInstallationsProvider(widget.mission.id).notifier);
+      final success = await notifier.addInstallationItem(
+        widget.sectionKey,
+        InstallationItem(data: result, createdAt: DateTime.now())
+      );
       if (success) {
-        await _loadData();
-        _checkAndNotifyComplete();
         if (mounted) {
           final shouldContinue = await showDialog<bool>(
             context: context, barrierDismissible: false,
@@ -261,8 +218,8 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     }
   }
 
-  Future<void> _editItem(int index) async {
-    final item = _items[index];
+  Future<void> _editItem(int index, List<InstallationItem> items) async {
+    final item = items[index];
     final result = await Navigator.push(context, MaterialPageRoute(
       builder: (context) => _AddEditItemScreen(
         title: widget.title, champs: widget.champs, initialData: item.data,
@@ -274,12 +231,12 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     ));
     if (result != null && result is Map<String, String>) {
       setState(() => _isSaving = true);
-      final updateUseCase = GetIt.instance<UpdateInstallationItemUseCase>();
-      final success = await updateUseCase(
-        missionId: widget.mission.id, section: widget.sectionKey, index: index,
-        item: InstallationItemEntity(data: result, photoPaths: item.photoPaths, createdAt: item.createdAt));
+      final notifier = ref.read(descriptionInstallationsProvider(widget.mission.id).notifier);
+      final success = await notifier.updateInstallationItem(
+        widget.sectionKey, index,
+        InstallationItem(data: result, photoPaths: item.photoPaths, createdAt: item.createdAt)
+      );
       if (success) {
-        await _loadData(); _checkAndNotifyComplete();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Modifié avec succès'), backgroundColor: Colors.green, duration: Duration(milliseconds: 700)));
@@ -300,11 +257,9 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     ));
     if (confirm == true) {
       setState(() => _isSaving = true);
-      final removeUseCase = GetIt.instance<RemoveInstallationItemUseCase>();
-      final success = await removeUseCase(
-        missionId: widget.mission.id, section: widget.sectionKey, index: index);
+      final notifier = ref.read(descriptionInstallationsProvider(widget.mission.id).notifier);
+      final success = await notifier.removeInstallationItem(widget.sectionKey, index);
       if (success) {
-        await _loadData(); _checkAndNotifyComplete();
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Supprimé'), backgroundColor: Colors.green, duration: Duration(milliseconds: 500)));
@@ -314,27 +269,61 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     }
   }
 
-  void _checkAndNotifyComplete() {
-    if (_items.isNotEmpty && !widget.isComplete) widget.onComplete(widget.sectionKey);
-  }
-
   @override
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
-    return Stack(children: [
-      _items.isEmpty ? _buildEmpty(isSmallScreen) : _buildList(isSmallScreen),
-      Positioned(
-        bottom: isSmallScreen ? 16 : 20, right: isSmallScreen ? 16 : 20,
-        child: FloatingActionButton.extended(
-          onPressed: _isSaving ? null : _addItem,
-          backgroundColor: AppTheme.primaryBlue,
-          icon: const Icon(Icons.add, color: Colors.white),
-          label: Text(_items.isEmpty ? 'Ajouter' : 'Ajouter un autre',
-            style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 13 : 14)),
-        ),
-      ),
-    ]);
+    final asyncData = ref.watch(descriptionInstallationsProvider(widget.mission.id));
+
+    return asyncData.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Erreur: $err')),
+      data: (desc) {
+        List<InstallationItem> items = [];
+        switch (widget.sectionKey) {
+          case 'alimentation_moyenne_tension':
+            items = desc.alimentationMoyenneTension;
+            break;
+          case 'alimentation_basse_tension':
+            items = desc.alimentationBasseTension;
+            break;
+          case 'groupe_electrogene':
+            items = desc.groupeElectrogene;
+            break;
+          case 'alimentation_carburant':
+            items = desc.alimentationCarburant;
+            break;
+          case 'inverseur':
+            items = desc.inverseur;
+            break;
+          case 'stabilisateur':
+            items = desc.stabilisateur;
+            break;
+          case 'onduleurs':
+            items = desc.onduleurs;
+            break;
+        }
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (items.isNotEmpty && !widget.isComplete) {
+            widget.onComplete(widget.sectionKey);
+          }
+        });
+
+        return Stack(children: [
+          items.isEmpty ? _buildEmpty(isSmallScreen) : _buildList(items, isSmallScreen),
+          Positioned(
+            bottom: isSmallScreen ? 16 : 20, right: isSmallScreen ? 16 : 20,
+            child: FloatingActionButton.extended(
+              onPressed: _isSaving ? null : _addItem,
+              backgroundColor: AppTheme.primaryBlue,
+              icon: const Icon(Icons.add, color: Colors.white),
+              label: Text(items.isEmpty ? 'Ajouter' : 'Ajouter un autre',
+                style: TextStyle(color: Colors.white, fontSize: isSmallScreen ? 13 : 14)),
+            ),
+          ),
+        ]);
+      },
+    );
   }
 
   Widget _buildEmpty(bool isSmallScreen) => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
@@ -345,13 +334,13 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
     Text('Appuyez sur le bouton pour ajouter', style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.grey.shade400)),
   ]));
 
-  Widget _buildList(bool isSmallScreen) => ListView.builder(
+  Widget _buildList(List<InstallationItem> items, bool isSmallScreen) => ListView.builder(
     padding: EdgeInsets.fromLTRB(isSmallScreen ? 16 : 20, isSmallScreen ? 16 : 20, isSmallScreen ? 16 : 20, 90),
-    itemCount: _items.length,
-    itemBuilder: (ctx, i) => _buildCard(_items[i], i, isSmallScreen),
+    itemCount: items.length,
+    itemBuilder: (ctx, i) => _buildCard(items, items[i], i, isSmallScreen),
   );
 
-  Widget _buildCard(InstallationItem item, int index, bool isSmallScreen) => Container(
+  Widget _buildCard(List<InstallationItem> items, InstallationItem item, int index, bool isSmallScreen) => Container(
     margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
     decoration: BoxDecoration(
       color: Colors.white, borderRadius: BorderRadius.circular(14),
@@ -359,7 +348,7 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
       border: Border.all(color: Colors.grey.shade100),
     ),
     child: InkWell(
-      onTap: () => _editItem(index), borderRadius: BorderRadius.circular(14),
+      onTap: () => _editItem(index, items), borderRadius: BorderRadius.circular(14),
       child: Padding(
         padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
         child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -371,7 +360,7 @@ class _DescriptionInstallationsFormState extends State<DescriptionInstallationsF
             ),
             const SizedBox(width: 10),
             Expanded(child: Text(widget.title, style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.w600, color: Colors.grey.shade800), overflow: TextOverflow.ellipsis)),
-            IconButton(icon: Icon(Icons.edit_outlined, color: AppTheme.primaryBlue, size: isSmallScreen ? 18 : 20), onPressed: () => _editItem(index), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+            IconButton(icon: Icon(Icons.edit_outlined, color: AppTheme.primaryBlue, size: isSmallScreen ? 18 : 20), onPressed: () => _editItem(index, items), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
             const SizedBox(width: 8),
             IconButton(icon: Icon(Icons.delete_outline, color: Colors.red.shade400, size: isSmallScreen ? 18 : 20), onPressed: () => _deleteItem(index), padding: EdgeInsets.zero, constraints: const BoxConstraints()),
           ]),

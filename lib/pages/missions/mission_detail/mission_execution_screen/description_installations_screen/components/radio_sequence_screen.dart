@@ -3,11 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/get_description_installations_use_case.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/update_description_selection_use_case.dart';
-import 'package:inspec_app/services/hive_service.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 
-class RadioSequenceScreen extends StatefulWidget {
+class RadioSequenceScreen extends ConsumerStatefulWidget {
   final Mission mission;
   final String title;
   final String field;
@@ -26,13 +25,13 @@ class RadioSequenceScreen extends StatefulWidget {
   });
 
   @override
-  State<RadioSequenceScreen> createState() => _RadioSequenceScreenState();
+  ConsumerState<RadioSequenceScreen> createState() => _RadioSequenceScreenState();
 }
 
-class _RadioSequenceScreenState extends State<RadioSequenceScreen> {
+class _RadioSequenceScreenState extends ConsumerState<RadioSequenceScreen> {
   String? _selectedValue;
   String? _tnDetail; // 'C' ou 'S' pour TN-C ou TN-S
-  bool _isLoading = true;
+  bool _isFirstLoad = true;
   bool _isSaving = false;
   bool _showTnOptions = false;
 
@@ -43,63 +42,6 @@ class _RadioSequenceScreenState extends State<RadioSequenceScreen> {
   @override
   void initState() {
     super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-
-    try {
-      final getDescUseCase =
-          GetIt.instance<GetDescriptionInstallationsUseCase>();
-      final desc = await getDescUseCase(widget.mission.id);
-      String? value;
-      String? detail;
-
-      switch (widget.field) {
-        case 'regime_neutre':
-          value = desc.regimeNeutre;
-          detail = desc.regimeNeutreDetail;
-          break;
-        case 'eclairage_securite':
-          value = desc.eclairageSecurite;
-          break;
-        case 'modifications_installations':
-          value = desc.modificationsInstallations;
-          break;
-        case 'note_calcul':
-          value = desc.noteCalcul;
-          break;
-        case 'registre_securite':
-          value = desc.registreSecurite;
-          break;
-      }
-
-      if (mounted) {
-        // La logique "Autre" ne s'applique QU'AU slide regime_neutre
-        final standardOptions = ['IT', 'TT', 'TN'];
-        final isAutre =
-            widget.field == 'regime_neutre' &&
-            value != null &&
-            !standardOptions.contains(value) &&
-            value.isNotEmpty;
-        setState(() {
-          if (isAutre) {
-            _selectedValue = 'Autre';
-            _showAutreField = true;
-            _autreController.text = value ?? '';
-            _autreSavedValue = value;
-          } else {
-            _selectedValue = value;
-          }
-          _tnDetail = detail;
-          _showTnOptions = (value == 'TN');
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      setState(() => _isLoading = false);
-    }
   }
 
   // ✅ SAUVEGARDE INSTANTANÉE
@@ -107,25 +49,16 @@ class _RadioSequenceScreenState extends State<RadioSequenceScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final updateSelectionUseCase =
-          GetIt.instance<UpdateDescriptionSelectionUseCase>();
+      final notifier = ref.read(descriptionInstallationsProvider(widget.mission.id).notifier);
       // Si c'est le régime de neutre, gérer le détail TN
       if (widget.field == 'regime_neutre') {
         // Sauvegarder la valeur principale
-        final success = await updateSelectionUseCase(
-          missionId: widget.mission.id,
-          field: widget.field,
-          value: value,
-        );
+        final success = await notifier.updateDescriptionSelection(widget.field, value);
 
         // Si la valeur est 'TN', on garde le détail existant
         // Sinon, on efface le détail
         if (value != 'TN' && _tnDetail != null) {
-          await updateSelectionUseCase(
-            missionId: widget.mission.id,
-            field: 'regime_neutre_detail',
-            value: '',
-          );
+          await notifier.updateDescriptionSelection('regime_neutre_detail', '');
           setState(() => _tnDetail = null);
         }
 
@@ -133,11 +66,7 @@ class _RadioSequenceScreenState extends State<RadioSequenceScreen> {
           widget.onComplete(widget.field);
         }
       } else {
-        final success = await updateSelectionUseCase(
-          missionId: widget.mission.id,
-          field: widget.field,
-          value: value,
-        );
+        final success = await notifier.updateDescriptionSelection(widget.field, value);
 
         if (success && !widget.isComplete) {
           widget.onComplete(widget.field);
@@ -175,13 +104,8 @@ class _RadioSequenceScreenState extends State<RadioSequenceScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final updateSelectionUseCase =
-          GetIt.instance<UpdateDescriptionSelectionUseCase>();
-      final success = await updateSelectionUseCase(
-        missionId: widget.mission.id,
-        field: 'regime_neutre_detail',
-        value: detail,
-      );
+      final notifier = ref.read(descriptionInstallationsProvider(widget.mission.id).notifier);
+      final success = await notifier.updateDescriptionSelection('regime_neutre_detail', detail);
 
       if (success) {
         setState(() => _tnDetail = detail);
@@ -237,11 +161,8 @@ class _RadioSequenceScreenState extends State<RadioSequenceScreen> {
       _autreSavedValue = customValue;
     });
     try {
-      await HiveService.updateSelection(
-        missionId: widget.mission.id,
-        field: widget.field,
-        value: customValue,
-      );
+      final notifier = ref.read(descriptionInstallationsProvider(widget.mission.id).notifier);
+      await notifier.updateDescriptionSelection(widget.field, customValue);
       if (!widget.isComplete) widget.onComplete(widget.field);
       if (mounted) {
         FocusScope.of(context).unfocus();
@@ -267,14 +188,57 @@ class _RadioSequenceScreenState extends State<RadioSequenceScreen> {
   @override
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    final asyncData = ref.watch(descriptionInstallationsProvider(widget.mission.id));
 
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    return asyncData.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Erreur: $err')),
+      data: (desc) {
+        if (_isFirstLoad) {
+          String? value;
+          String? detail;
 
-    final displayOptions = widget.options;
+          switch (widget.field) {
+            case 'regime_neutre':
+              value = desc.regimeNeutre;
+              detail = desc.regimeNeutreDetail;
+              break;
+            case 'eclairage_securite':
+              value = desc.eclairageSecurite;
+              break;
+            case 'modifications_installations':
+              value = desc.modificationsInstallations;
+              break;
+            case 'note_calcul':
+              value = desc.noteCalcul;
+              break;
+            case 'registre_securite':
+              value = desc.registreSecurite;
+              break;
+          }
 
-    return SingleChildScrollView(
+          final standardOptions = ['IT', 'TT', 'TN'];
+          final isAutre = widget.field == 'regime_neutre' &&
+              value != null &&
+              !standardOptions.contains(value) &&
+              value.isNotEmpty;
+
+          if (isAutre) {
+            _selectedValue = 'Autre';
+            _showAutreField = true;
+            _autreController.text = value ?? '';
+            _autreSavedValue = value;
+          } else {
+            _selectedValue = value;
+          }
+          _tnDetail = detail;
+          _showTnOptions = (value == 'TN');
+          _isFirstLoad = false;
+        }
+
+        final displayOptions = widget.options;
+
+        return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       child: Column(
         children: [
@@ -542,6 +506,8 @@ class _RadioSequenceScreenState extends State<RadioSequenceScreen> {
           ],
         ],
       ),
+    );
+      },
     );
   }
 
