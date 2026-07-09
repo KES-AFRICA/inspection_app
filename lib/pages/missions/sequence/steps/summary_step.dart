@@ -2,6 +2,9 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/mission/domain/usecases/get_renseignements_generaux_use_case.dart';
+import 'package:inspec_app/features/mission/domain/usecases/update_mission_status_use_case.dart';
 import 'package:inspec_app/models/last_report.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';

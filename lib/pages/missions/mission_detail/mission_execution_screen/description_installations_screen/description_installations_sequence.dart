@@ -10,7 +10,6 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/core/providers/description_installations_providers.dart';
-import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 
 class DescriptionInstallationsSequenceScreen extends ConsumerStatefulWidget {
   final Mission mission;
