@@ -1,24 +1,21 @@
 // lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/prises_terre_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:inspec_app/services/hive_service.dart';
-import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart';
-import 'package:inspec_app/features/mesures_essais/domain/usecases/get_mesures_essais_use_case.dart';
-import 'package:inspec_app/features/mesures_essais/domain/usecases/save_mesures_essais_use_case.dart';
+import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 
-class PrisesTerreScreen extends StatefulWidget {
+class PrisesTerreScreen extends ConsumerStatefulWidget {
   final Mission mission;
 
   const PrisesTerreScreen({super.key, required this.mission});
 
   @override
-  State<PrisesTerreScreen> createState() => _PrisesTerreScreenState();
+  ConsumerState<PrisesTerreScreen> createState() => _PrisesTerreScreenState();
 }
 
-class _PrisesTerreScreenState extends State<PrisesTerreScreen> {
+class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
   List<PriseTerre> _prisesTerre = [];
   bool _isLoading = true;
 
@@ -35,9 +32,7 @@ class _PrisesTerreScreenState extends State<PrisesTerreScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-      final entity = await getUseCase(widget.mission.id);
-      final mesures = MesuresEssaisMapper.toModel(entity);
+      final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
       setState(() {
         _prisesTerre = List.from(mesures.prisesTerre);
         _isLoading = false;
@@ -68,16 +63,10 @@ class _PrisesTerreScreenState extends State<PrisesTerreScreen> {
         observation: result['observation'],
       );
       
-      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-      final entity = await getUseCase(widget.mission.id);
-      final mesures = MesuresEssaisMapper.toModel(entity);
-      
+      final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
       mesures.prisesTerre.add(nouvellePrise);
       
-      final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
-      await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
-      
-      final success = true;
+      final success = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).saveMesures(mesures);
       
       if (success) {
         await _loadData();
@@ -122,24 +111,19 @@ class _PrisesTerreScreenState extends State<PrisesTerreScreen> {
         observation: result['observation'],
       );
       
-      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-      final entity = await getUseCase(widget.mission.id);
-      final mesures = MesuresEssaisMapper.toModel(entity);
+      final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
       
       if (index < mesures.prisesTerre.length) {
         mesures.prisesTerre[index] = updatedPrise;
-        final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
-        await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
-      }
-      
-      final success = true;
-      
-      if (success) {
-        await _loadData();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Prise de terre modifiée'), backgroundColor: Colors.green),
-          );
+        final success = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).saveMesures(mesures);
+        
+        if (success) {
+          await _loadData();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Prise de terre modifiée'), backgroundColor: Colors.green),
+            );
+          }
         }
       }
     }
@@ -163,24 +147,19 @@ class _PrisesTerreScreenState extends State<PrisesTerreScreen> {
     );
     
     if (confirm == true) {
-      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-      final entity = await getUseCase(widget.mission.id);
-      final mesures = MesuresEssaisMapper.toModel(entity);
+      final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
       
       if (index < mesures.prisesTerre.length) {
         mesures.prisesTerre.removeAt(index);
-        final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
-        await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
-      }
-      
-      final success = true;
-      
-      if (success) {
-        await _loadData();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Prise de terre supprimée'), backgroundColor: Colors.green),
-          );
+        final success = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).saveMesures(mesures);
+        
+        if (success) {
+          await _loadData();
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Prise de terre supprimée'), backgroundColor: Colors.green),
+            );
+          }
         }
       }
     }

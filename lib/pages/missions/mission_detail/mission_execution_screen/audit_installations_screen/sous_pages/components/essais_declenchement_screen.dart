@@ -1,27 +1,25 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart';
-import 'package:inspec_app/features/mesures_essais/domain/usecases/get_mesures_essais_use_case.dart';
-import 'package:inspec_app/features/mesures_essais/domain/usecases/save_mesures_essais_use_case.dart';
+import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 
 // ================================================================
 // ÉCRAN PRINCIPAL : LISTE DES ESSAIS
 // ================================================================
 
-class EssaisDeclenchementScreen extends StatefulWidget {
+class EssaisDeclenchementScreen extends ConsumerStatefulWidget {
   final Mission mission;
 
   const EssaisDeclenchementScreen({super.key, required this.mission});
 
   @override
-  State<EssaisDeclenchementScreen> createState() => _EssaisDeclenchementScreenState();
+  ConsumerState<EssaisDeclenchementScreen> createState() => _EssaisDeclenchementScreenState();
 }
 
-class _EssaisDeclenchementScreenState extends State<EssaisDeclenchementScreen> {
+class _EssaisDeclenchementScreenState extends ConsumerState<EssaisDeclenchementScreen> {
   List<EssaiDeclenchementDifferentiel> _essais = [];
   bool _isLoading = true;
 
@@ -48,9 +46,7 @@ class _EssaisDeclenchementScreenState extends State<EssaisDeclenchementScreen> {
   Future<void> _loadEssais() async {
     setState(() => _isLoading = true);
     try {
-      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-      final entity = await getUseCase(widget.mission.id);
-      final mesures = MesuresEssaisMapper.toModel(entity);
+      final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
       _essais = mesures.essaisDeclenchement;
     } catch (e) {
       print('❌ Erreur chargement essais déclenchement: $e');
@@ -106,26 +102,20 @@ class _EssaisDeclenchementScreenState extends State<EssaisDeclenchementScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-              final entity = await getUseCase(widget.mission.id);
-              final mesures = MesuresEssaisMapper.toModel(entity);
+              final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
               
               if (index < mesures.essaisDeclenchement.length) {
                 mesures.essaisDeclenchement.removeAt(index);
-                final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
-                await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
+                await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).saveMesures(mesures);
               }
               
-              final success = true;
-              if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Essai supprimé', style: TextStyle(fontSize: _fontSizeM(context))),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-                await _loadEssais();
-              }
+              await _loadEssais();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Essai supprimé', style: TextStyle(fontSize: _fontSizeM(context))),
+                  backgroundColor: Colors.green,
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: Colors.red,
@@ -490,7 +480,7 @@ class _EssaisDeclenchementScreenState extends State<EssaisDeclenchementScreen> {
 // ÉCRAN POUR AJOUTER/MODIFIER UN ESSAI
 // ================================================================
 
-class AjouterEssaiDeclenchementScreen extends StatefulWidget {
+class AjouterEssaiDeclenchementScreen extends ConsumerStatefulWidget {
   final Mission mission;
   final EssaiDeclenchementDifferentiel? essai;
   final int? index;
@@ -511,10 +501,10 @@ class AjouterEssaiDeclenchementScreen extends StatefulWidget {
   bool get aCoffretPredefini => coffretPredefini != null && coffretPredefini!.isNotEmpty;
 
   @override
-  State<AjouterEssaiDeclenchementScreen> createState() => _AjouterEssaiDeclenchementScreenState();
+  ConsumerState<AjouterEssaiDeclenchementScreen> createState() => _AjouterEssaiDeclenchementScreenState();
 }
 
-class _AjouterEssaiDeclenchementScreenState extends State<AjouterEssaiDeclenchementScreen> {
+class _AjouterEssaiDeclenchementScreenState extends ConsumerState<AjouterEssaiDeclenchementScreen> {
   final _formKey = GlobalKey<FormState>();
   final _localisationController = TextEditingController();
   final _coffretController = TextEditingController();
@@ -779,9 +769,7 @@ class _AjouterEssaiDeclenchementScreenState extends State<AjouterEssaiDeclenchem
       observation: _observationController.text.trim().isNotEmpty ? _observationController.text.trim() : null,
     );
 
-    final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-    final entity = await getUseCase(widget.mission.id);
-    final mesures = MesuresEssaisMapper.toModel(entity);
+    final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
 
     if (widget.isEdition) {
       if (widget.index! < mesures.essaisDeclenchement.length) {
@@ -791,10 +779,7 @@ class _AjouterEssaiDeclenchementScreenState extends State<AjouterEssaiDeclenchem
       mesures.essaisDeclenchement.add(essai);
     }
 
-    final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
-    await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
-
-    bool success = true;
+    final success = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).saveMesures(mesures);
 
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(

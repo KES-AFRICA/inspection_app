@@ -5,6 +5,7 @@ import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/ajouter_carte.dart';
 import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/item_detail_screen.dart';
 
 class InstallationDetailScreen extends ConsumerStatefulWidget {
   final Mission mission;
@@ -21,10 +22,12 @@ class InstallationDetailScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<InstallationDetailScreen> createState() => _InstallationDetailScreenState();
+  ConsumerState<InstallationDetailScreen> createState() =>
+      _InstallationDetailScreenState();
 }
 
-class _InstallationDetailScreenState extends ConsumerState<InstallationDetailScreen> {
+class _InstallationDetailScreenState
+    extends ConsumerState<InstallationDetailScreen> {
   List<InstallationItem> _items = [];
 
   @override
@@ -34,8 +37,10 @@ class _InstallationDetailScreenState extends ConsumerState<InstallationDetailScr
   }
 
   void _loadCartes() async {
-    final desc = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).load();
-    
+    final desc = await ref
+        .read(descriptionInstallationsProvider(widget.mission.id).notifier)
+        .load();
+
     List<InstallationItem> items = [];
     switch (widget.sectionKey) {
       case 'alimentation_moyenne_tension':
@@ -60,7 +65,7 @@ class _InstallationDetailScreenState extends ConsumerState<InstallationDetailScr
         items = desc.onduleurs;
         break;
     }
-    
+
     setState(() {
       _items = items;
     });
@@ -79,14 +84,16 @@ class _InstallationDetailScreenState extends ConsumerState<InstallationDetailScr
     );
 
     if (result != null && result is Map<String, String>) {
-      final success = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).addInstallationItem(
-        widget.sectionKey,
-        InstallationItem(
-          data: result,
-          photoPaths: [],
-          createdAt: DateTime.now(),
-        ),
-      );
+      final success = await ref
+          .read(descriptionInstallationsProvider(widget.mission.id).notifier)
+          .addInstallationItem(
+            widget.sectionKey,
+            InstallationItem(
+              data: result,
+              photoPaths: [],
+              createdAt: DateTime.now(),
+            ),
+          );
 
       if (success) {
         _loadCartes();
@@ -115,15 +122,17 @@ class _InstallationDetailScreenState extends ConsumerState<InstallationDetailScr
     );
 
     if (result != null && result is Map<String, String>) {
-      final success = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).updateInstallationItem(
-        widget.sectionKey,
-        index,
-        InstallationItem(
-          data: result,
-          photoPaths: item.photoPaths,
-          createdAt: item.createdAt,
-        ),
-      );
+      final success = await ref
+          .read(descriptionInstallationsProvider(widget.mission.id).notifier)
+          .updateInstallationItem(
+            widget.sectionKey,
+            index,
+            InstallationItem(
+              data: result,
+              photoPaths: item.photoPaths,
+              createdAt: item.createdAt,
+            ),
+          );
 
       if (success) {
         _loadCartes();
@@ -152,19 +161,24 @@ class _InstallationDetailScreenState extends ConsumerState<InstallationDetailScr
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              final success = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).removeInstallationItem(
-                widget.sectionKey,
-                index,
-              );
+              final success = await ref
+                  .read(
+                    descriptionInstallationsProvider(
+                      widget.mission.id,
+                    ).notifier,
+                  )
+                  .removeInstallationItem(widget.sectionKey, index);
 
               if (success) {
-               _loadCartes();
+                _loadCartes();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Carte supprimée')),
                 );
               } else {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Erreur lors de la suppression')),
+                  const SnackBar(
+                    content: Text('Erreur lors de la suppression'),
+                  ),
                 );
               }
             },
@@ -188,7 +202,11 @@ class _InstallationDetailScreenState extends ConsumerState<InstallationDetailScr
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.list_alt_outlined, size: 64, color: Colors.grey.shade400),
+                  Icon(
+                    Icons.list_alt_outlined,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
                   const SizedBox(height: 16),
                   Text(
                     'Aucune carte ajoutée',
@@ -203,7 +221,12 @@ class _InstallationDetailScreenState extends ConsumerState<InstallationDetailScr
               ),
             )
           : ListView.builder(
-              padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 80),
+              padding: const EdgeInsets.only(
+                top: 16,
+                left: 16,
+                right: 16,
+                bottom: 80,
+              ),
               itemCount: _items.length,
               itemBuilder: (context, index) {
                 final carte = _items[index].data;
@@ -220,8 +243,9 @@ class _InstallationDetailScreenState extends ConsumerState<InstallationDetailScr
 
   Widget _buildCarteItem(Map<String, String> carte, int index) {
     // Vérifier si c'est la section MT pour afficher l'IACM
-    final isMoyenneTension = widget.sectionKey == 'alimentation_moyenne_tension';
-    
+    final isMoyenneTension =
+        widget.sectionKey == 'alimentation_moyenne_tension';
+
     return Card(
       margin: const EdgeInsets.only(bottom: 16),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -251,14 +275,16 @@ class _InstallationDetailScreenState extends ConsumerState<InstallationDetailScr
             children: [
               ...widget.champs.map((champ) {
                 String valeur = carte[champ] ?? '';
-                
+
                 // Pour la section MT, afficher aussi l'IACM si présent
-                if (isMoyenneTension && champ == 'NATURE DU RESEAU' && carte.containsKey('PRESENCE IACM')) {
+                if (isMoyenneTension &&
+                    champ == 'NATURE DU RESEAU' &&
+                    carte.containsKey('PRESENCE IACM')) {
                   valeur = '$valeur (IACM: ${carte['PRESENCE IACM']})';
                 }
-                
+
                 final estObservations = _estChampObservations(champ);
-                
+
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 12),
                   child: Column(
@@ -302,14 +328,14 @@ class _InstallationDetailScreenState extends ConsumerState<InstallationDetailScr
                   ),
                 );
               }),
-              
+
               // Séparateur
               Container(
                 height: 1,
                 color: Colors.grey.shade200,
                 margin: const EdgeInsets.symmetric(vertical: 8),
               ),
-              
+
               // Boutons d'action
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
@@ -321,15 +347,18 @@ class _InstallationDetailScreenState extends ConsumerState<InstallationDetailScr
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryBlue,
                       foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
                   ),
-                  
+
                   const SizedBox(width: 12),
-                  
+
                   ElevatedButton.icon(
                     onPressed: () => _supprimerCarte(index),
                     icon: const Icon(Icons.delete_outline, size: 18),
@@ -337,7 +366,10 @@ class _InstallationDetailScreenState extends ConsumerState<InstallationDetailScr
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red.shade50,
                       foregroundColor: Colors.red,
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                         side: BorderSide(color: Colors.red.shade200),
@@ -354,8 +386,8 @@ class _InstallationDetailScreenState extends ConsumerState<InstallationDetailScr
   }
 
   bool _estChampObservations(String champ) {
-    return champ.toLowerCase().contains('observation') || 
-           champ.toLowerCase().contains('remarque') ||
-           champ.toLowerCase().contains('note');
+    return champ.toLowerCase().contains('observation') ||
+        champ.toLowerCase().contains('remarque') ||
+        champ.toLowerCase().contains('note');
   }
 }

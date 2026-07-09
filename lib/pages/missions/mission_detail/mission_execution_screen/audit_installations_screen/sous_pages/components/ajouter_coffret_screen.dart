@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
 import 'package:inspec_app/services/normative_reference_service.dart';
@@ -8,10 +9,7 @@ import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart';
-import 'package:inspec_app/features/mesures_essais/domain/usecases/get_mesures_essais_use_case.dart';
-import 'package:inspec_app/features/mesures_essais/domain/usecases/save_mesures_essais_use_case.dart';
+import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -2105,7 +2103,7 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
 // ================================================================
 // WIDGET PRINCIPAL : AjouterCoffretScreen
 // ================================================================
-class AjouterCoffretScreen extends StatefulWidget {
+class AjouterCoffretScreen extends ConsumerStatefulWidget {
   final Mission mission;
   final String parentType;
   final int parentIndex;
@@ -2132,10 +2130,10 @@ class AjouterCoffretScreen extends StatefulWidget {
   bool get isEdition => coffret != null;
 
   @override
-  State<AjouterCoffretScreen> createState() => _AjouterCoffretScreenState();
+  ConsumerState<AjouterCoffretScreen> createState() => _AjouterCoffretScreenState();
 }
 
-class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
+class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   final _formKey = GlobalKey<FormState>();
   final _nomController = TextEditingController();
   final _numeroEquipementController = TextEditingController();
@@ -2709,12 +2707,9 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
 
   Future<void> _transfererEssais(String ancienNom, String nouveauNom) async {
     try {
-      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-      final entity = await getUseCase(widget.mission.id);
-      final mesures = MesuresEssaisMapper.toModel(entity);
+      final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
       for (var essai in mesures.essaisDeclenchement) { if (essai.coffret == ancienNom) essai.coffret = nouveauNom; }
-      final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
-      await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
+      await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).saveMesures(mesures);
     } catch (e) { _showError('Erreur transfert essais'); }
   }
 

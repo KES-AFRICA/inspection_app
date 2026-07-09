@@ -1,23 +1,21 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart';
-import 'package:inspec_app/features/mesures_essais/domain/usecases/get_mesures_essais_use_case.dart';
-import 'package:inspec_app/features/mesures_essais/domain/usecases/save_mesures_essais_use_case.dart';
+import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 
-class ContinuiteResistanceScreen extends StatefulWidget {
+class ContinuiteResistanceScreen extends ConsumerStatefulWidget {
   final Mission mission;
 
   const ContinuiteResistanceScreen({super.key, required this.mission});
 
   @override
-  State<ContinuiteResistanceScreen> createState() => _ContinuiteResistanceScreenState();
+  ConsumerState<ContinuiteResistanceScreen> createState() => _ContinuiteResistanceScreenState();
 }
 
-class _ContinuiteResistanceScreenState extends State<ContinuiteResistanceScreen> {
+class _ContinuiteResistanceScreenState extends ConsumerState<ContinuiteResistanceScreen> {
   List<ContinuiteResistance> _mesures = [];
   bool _isLoading = true;
 
@@ -30,9 +28,7 @@ class _ContinuiteResistanceScreenState extends State<ContinuiteResistanceScreen>
   Future<void> _loadMesures() async {
     setState(() => _isLoading = true);
     try {
-      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-      final entity = await getUseCase(widget.mission.id);
-      final mesures = MesuresEssaisMapper.toModel(entity);
+      final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
       _mesures = mesures.continuiteResistances;
     } catch (e) {
       print('❌ Erreur chargement continuité/résistance: $e');
@@ -87,26 +83,20 @@ class _ContinuiteResistanceScreenState extends State<ContinuiteResistanceScreen>
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-              final entity = await getUseCase(widget.mission.id);
-              final mesures = MesuresEssaisMapper.toModel(entity);
+              final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
               
               if (index < mesures.continuiteResistances.length) {
                 mesures.continuiteResistances.removeAt(index);
-                final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
-                await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
+                await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).saveMesures(mesures);
               }
               
-              final success = true;
-              if (success) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Mesure supprimée'),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-                await _loadMesures();
-              }
+              _loadMesures();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Mesure supprimée'),
+                  backgroundColor: Colors.green,
+                ),
+              );
             },
             style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
             child: Text('Supprimer'),
@@ -408,7 +398,7 @@ class _ContinuiteResistanceScreenState extends State<ContinuiteResistanceScreen>
 }
 
 // Écran pour ajouter/modifier une mesure
-class AjouterContinuiteResistanceScreen extends StatefulWidget {
+class AjouterContinuiteResistanceScreen extends ConsumerStatefulWidget {
   final Mission mission;
   final ContinuiteResistance? mesure;
   final int? index;
@@ -423,10 +413,10 @@ class AjouterContinuiteResistanceScreen extends StatefulWidget {
   bool get isEdition => mesure != null;
 
   @override
-  State<AjouterContinuiteResistanceScreen> createState() => _AjouterContinuiteResistanceScreenState();
+  ConsumerState<AjouterContinuiteResistanceScreen> createState() => _AjouterContinuiteResistanceScreenState();
 }
 
-class _AjouterContinuiteResistanceScreenState extends State<AjouterContinuiteResistanceScreen> {
+class _AjouterContinuiteResistanceScreenState extends ConsumerState<AjouterContinuiteResistanceScreen> {
   final _formKey = GlobalKey<FormState>();
   final _localisationController = TextEditingController();
   final _tableauController = TextEditingController();
@@ -475,9 +465,7 @@ class _AjouterContinuiteResistanceScreenState extends State<AjouterContinuiteRes
             : null,
       );
 
-      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-      final entity = await getUseCase(widget.mission.id);
-      final mesures = MesuresEssaisMapper.toModel(entity);
+      final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
 
       if (widget.isEdition) {
         if (widget.index! < mesures.continuiteResistances.length) {
@@ -487,10 +475,7 @@ class _AjouterContinuiteResistanceScreenState extends State<AjouterContinuiteRes
         mesures.continuiteResistances.add(mesure);
       }
 
-      final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
-      await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
-
-      bool success = true;
+      final success = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).saveMesures(mesures);
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(

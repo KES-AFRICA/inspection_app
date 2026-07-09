@@ -1,23 +1,20 @@
 // lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/demarrage_auto_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:inspec_app/services/hive_service.dart';
-import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart';
-import 'package:inspec_app/features/mesures_essais/domain/usecases/get_mesures_essais_use_case.dart';
-import 'package:inspec_app/features/mesures_essais/domain/usecases/save_mesures_essais_use_case.dart';
+import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 
-class DemarrageAutoScreen extends StatefulWidget {
+class DemarrageAutoScreen extends ConsumerStatefulWidget {
   final Mission mission;
 
   const DemarrageAutoScreen({super.key, required this.mission});
 
   @override
-  State<DemarrageAutoScreen> createState() => _DemarrageAutoScreenState();
+  ConsumerState<DemarrageAutoScreen> createState() => _DemarrageAutoScreenState();
 }
 
-class _DemarrageAutoScreenState extends State<DemarrageAutoScreen> {
+class _DemarrageAutoScreenState extends ConsumerState<DemarrageAutoScreen> {
   String? _selectedValue;
   bool _isLoading = true;
   bool _isSaving = false;
@@ -35,9 +32,7 @@ class _DemarrageAutoScreenState extends State<DemarrageAutoScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-      final entity = await getUseCase(widget.mission.id);
-      final mesures = MesuresEssaisMapper.toModel(entity);
+      final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
       
       if (mounted) {
         setState(() {
@@ -54,16 +49,10 @@ class _DemarrageAutoScreenState extends State<DemarrageAutoScreen> {
     setState(() => _isSaving = true);
     
     try {
-      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-      final entity = await getUseCase(widget.mission.id);
-      final mesures = MesuresEssaisMapper.toModel(entity);
-      
+      final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
       mesures.essaiDemarrageAuto.observation = value;
       
-      final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
-      await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
-      
-      final success = true;
+      final success = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).saveMesures(mesures);
       
       if (success && mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

@@ -1,22 +1,19 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:inspec_app/services/hive_service.dart';
-import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart';
-import 'package:inspec_app/features/mesures_essais/domain/usecases/get_mesures_essais_use_case.dart';
-import 'package:inspec_app/features/mesures_essais/domain/usecases/save_mesures_essais_use_case.dart';
+import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 
-class ConditionsMesureScreen extends StatefulWidget {
+class ConditionsMesureScreen extends ConsumerStatefulWidget {
   final Mission mission;
 
   const ConditionsMesureScreen({super.key, required this.mission});
 
   @override
-  State<ConditionsMesureScreen> createState() => _ConditionsMesureScreenState();
+  ConsumerState<ConditionsMesureScreen> createState() => _ConditionsMesureScreenState();
 }
 
-class _ConditionsMesureScreenState extends State<ConditionsMesureScreen> {
+class _ConditionsMesureScreenState extends ConsumerState<ConditionsMesureScreen> {
   final _observationController = TextEditingController();
   bool _isLoading = false;
   bool _hasData = false;
@@ -31,9 +28,7 @@ class _ConditionsMesureScreenState extends State<ConditionsMesureScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-      final entity = await getUseCase(widget.mission.id);
-      final mesures = MesuresEssaisMapper.toModel(entity);
+      final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
       if (mesures.conditionMesure.observation != null) {
         _observationController.text = mesures.conditionMesure.observation!;
         _hasData = true;
@@ -54,16 +49,10 @@ class _ConditionsMesureScreenState extends State<ConditionsMesureScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-      final entity = await getUseCase(widget.mission.id);
-      final mesures = MesuresEssaisMapper.toModel(entity);
-      
+      final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
       mesures.conditionMesure.observation = _observationController.text.trim();
       
-      final saveUseCase = GetIt.instance<SaveMesuresEssaisUseCase>();
-      await saveUseCase(MesuresEssaisMapper.toEntity(mesures));
-      
-      final success = true;
+      final success = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).saveMesures(mesures);
       
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
