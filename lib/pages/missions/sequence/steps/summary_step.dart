@@ -411,7 +411,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
   }
 
   Future<void> _sendEmailWithAttachment() async {
-    final getRgUseCase = GetIt.instance<GetRenseignementsGenerauxUseCase>();
+    final getRgUseCase = ref.read(getRenseignementsGenerauxUseCaseProvider);
     final renseignements = await getRgUseCase(widget.mission.id);
     final verificateurs = renseignements.verificateurs;
     
@@ -469,7 +469,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
   }
 
   Future<void> _finishMission() async {
-    final updateStatusUseCase = GetIt.instance<UpdateMissionStatusUseCase>();
+    final updateStatusUseCase = ref.read(updateMissionStatusUseCaseProvider);
     await updateStatusUseCase(
       missionId: widget.mission.id,
       status: 'termine',
