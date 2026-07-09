@@ -10,6 +10,8 @@ import 'package:inspec_app/features/mission/domain/usecases/update_schema_option
 import 'package:inspec_app/features/mission/domain/usecases/update_mission_status_use_case.dart';
 import 'package:inspec_app/features/mission/domain/usecases/save_last_report_use_case.dart';
 import 'package:inspec_app/features/mission/domain/usecases/get_all_reports_for_mission_use_case.dart';
+import 'package:inspec_app/features/mission/domain/usecases/get_renseignements_generaux_use_case.dart';
+import 'package:inspec_app/features/mission/domain/usecases/save_renseignements_generaux_use_case.dart';
 
 final getMissionsUseCaseProvider = Provider<GetMissionsUseCase>((ref) {
   return GetIt.instance<GetMissionsUseCase>();
@@ -45,4 +47,12 @@ final saveLastReportUseCaseProvider = Provider<SaveLastReportUseCase>((ref) {
 
 final getAllReportsForMissionUseCaseProvider = Provider<GetAllReportsForMissionUseCase>((ref) {
   return GetIt.instance<GetAllReportsForMissionUseCase>();
+});
+
+final getRenseignementsGenerauxUseCaseProvider = Provider<GetRenseignementsGenerauxUseCase>((ref) {
+  return GetIt.instance<GetRenseignementsGenerauxUseCase>();
+});
+
+final saveRenseignementsGenerauxUseCaseProvider = Provider<SaveRenseignementsGenerauxUseCase>((ref) {
+  return GetIt.instance<SaveRenseignementsGenerauxUseCase>();
 });

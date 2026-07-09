@@ -1,17 +1,16 @@
 // lib/pages/missions/sequence/steps/general_info_step.dart
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:inspec_app/core/di/injection_container.dart' as di;
+import 'package:inspec_app/features/auth/data/mappers/verificateur_mapper.dart';
+import 'package:inspec_app/features/auth/domain/usecases/get_current_user_use_case.dart';
 import 'package:intl/intl.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/renseignements_generaux.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:inspec_app/core/di/injection_container.dart' as di;
-import 'package:inspec_app/features/mission/domain/usecases/get_renseignements_generaux_use_case.dart';
-import 'package:inspec_app/features/mission/domain/usecases/save_renseignements_generaux_use_case.dart';
-import 'package:inspec_app/features/mission/data/mappers/renseignements_generaux_mapper.dart';
-import 'package:inspec_app/features/auth/domain/usecases/get_current_user_use_case.dart';
-import 'package:inspec_app/features/auth/data/mappers/verificateur_mapper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:inspec_app/features/mission/presentation/providers/renseignements_generaux_provider.dart';
 import 'package:inspec_app/widgets/app_bottom_sheet.dart';
 
 // Liste des vérificateurs prédéfinis
@@ -22,7 +21,7 @@ const List<Map<String, String>> _verificateursPredefinis = [
   {'nom': 'Fabrice NKOUASSI', 'email': 'fabrice.nkouassi@kes-africa.com'},
 ];
 
-class GeneralInfoStep extends StatefulWidget {
+class GeneralInfoStep extends ConsumerStatefulWidget {
   final Mission mission;
   final Function(Map<String, dynamic>) onDataChanged;
   final Function(bool) onValidationChanged;
@@ -35,10 +34,10 @@ class GeneralInfoStep extends StatefulWidget {
   });
 
   @override
-  State<GeneralInfoStep> createState() => GeneralInfoStepState();
+  ConsumerState<GeneralInfoStep> createState() => GeneralInfoStepState();
 }
 
-class GeneralInfoStepState extends State<GeneralInfoStep> {
+class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
   // Contrôleurs
   late TextEditingController _etablissementController;
   late TextEditingController _installationController;
@@ -79,7 +78,8 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
     {
       'value': 'Périodique réglementaire',
       'title': 'Périodique réglementaire',
-      'description': 'Vérification périodique selon la réglementation en vigueur',
+      'description':
+          'Vérification périodique selon la réglementation en vigueur',
       'icon': Icons.calendar_today,
       'color': Colors.blue,
     },
@@ -130,16 +130,16 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
   // Getters pour la validation
   bool get isFormValid {
     return _etablissementController.text.trim().isNotEmpty &&
-           _installationController.text.trim().isNotEmpty &&
-           _activiteController.text.trim().isNotEmpty &&
-           _nomSiteController.text.trim().isNotEmpty &&
-           _verificationType != null &&
-           _dateDebut != null &&
-           _dateFin != null &&
-           _accompagnateurs.isNotEmpty &&
-           _verificateurs.isNotEmpty &&
-           _registreControle != null &&
-           _compteRenduDestinataires.isNotEmpty;
+        _installationController.text.trim().isNotEmpty &&
+        _activiteController.text.trim().isNotEmpty &&
+        _nomSiteController.text.trim().isNotEmpty &&
+        _verificationType != null &&
+        _dateDebut != null &&
+        _dateFin != null &&
+        _accompagnateurs.isNotEmpty &&
+        _verificateurs.isNotEmpty &&
+        _registreControle != null &&
+        _compteRenduDestinataires.isNotEmpty;
   }
 
   // Méthode pour déclencher la validation (appelée depuis le parent)
@@ -163,7 +163,6 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
   void initState() {
     super.initState();
     _initControllers();
-    _loadData();
 
     _etablissementFocus.addListener(() {
       if (!_etablissementFocus.hasFocus) {
@@ -194,97 +193,38 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
     _nomSiteController = TextEditingController();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-
-    try {
-      final entity = await di.sl<GetRenseignementsGenerauxUseCase>()(widget.mission.id);
-      _data = RenseignementsGenerauxMapper.toModel(entity);
-
-      // ✅ Ajouter le vérificateur courant avec une copie modifiable
-      final currentUserEntity = di.sl<GetCurrentUserUseCase>()();
-      final currentUser = currentUserEntity != null ? VerificateurMapper.toModel(currentUserEntity) : null;
-      if (currentUser != null) {
-        // S'assurer que la liste est modifiable
-        if (_data!.verificateurs.isEmpty) {
-          _data!.verificateurs = [];
-        }
-        
-        final currentUserExists = _data!.verificateurs.any((v) =>
-            v['nom'] == '${currentUser.prenom} ${currentUser.nom}' ||
-            v['email'] == currentUser.email);
-        
-        if (!currentUserExists) {
-          _data!.verificateurs.add({
-            'nom': '${currentUser.prenom} ${currentUser.nom}',
-            'email': currentUser.email,
-          });
-          final entity = RenseignementsGenerauxMapper.toEntity(_data!);
-          await di.sl<SaveRenseignementsGenerauxUseCase>()(entity);
-        }
-      }
-
-      setState(() {
-        _etablissementController.text = _data!.etablissement;
-        _installationController.text = _data!.installation;
-        _activiteController.text = _data!.activite;
-        _nomSiteController.text = _data!.nomSite;
-
-        _dateDebut = _data!.dateDebut;
-        _dateFin = _data!.dateFin;
-        _dureeJours = _data!.dureeJours;
-        _verificationType = _data!.verificationType;
-        _registreControle = _data!.registreControle.isNotEmpty ? _data!.registreControle : null;
-        _compteRenduDestinataires = List.from(_data!.compteRendu);
-        _accompagnateurs = List.from(_data!.accompagnateurs);
-        _verificateurs = List.from(_data!.verificateurs);
-
-        if (_etablissementController.text.isNotEmpty) _etablissementTouched = true;
-        if (_installationController.text.isNotEmpty) _installationTouched = true;
-        if (_activiteController.text.isNotEmpty) _activiteTouched = true;
-        if (_nomSiteController.text.isNotEmpty) _nomSiteTouched = true;
-
-        _isFirstLoad = false;
-      });
-
-      _notifyValidation();
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Erreur chargement: $e');
-      }
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
   void _notifyValidation() {
     widget.onValidationChanged(isFormValid);
   }
 
   Future<void> _saveData() async {
-    if (_data == null) return;
+    final notifier = ref.read(
+      renseignementsGenerauxProvider(widget.mission.id).notifier,
+    );
+    await notifier.updateField(
+      etablissement: _etablissementController.text,
+      installation: _installationController.text,
+      activite: _activiteController.text,
+      nomSite: _nomSiteController.text,
+      dateDebut: _dateDebut,
+      dateFin: _dateFin,
+      dureeJours: _dureeJours,
+      verificationType: _verificationType,
+      registreControle: _registreControle ?? '',
+      compteRendu: _compteRenduDestinataires,
+      accompagnateurs: List.from(_accompagnateurs),
+      verificateurs: List.from(_verificateurs),
+    );
 
-    _data!.etablissement = _etablissementController.text;
-    _data!.installation = _installationController.text;
-    _data!.activite = _activiteController.text;
-    _data!.nomSite = _nomSiteController.text;
-    _data!.dateDebut = _dateDebut;
-    _data!.dateFin = _dateFin;
-    _data!.dureeJours = _dureeJours;
-    _data!.verificationType = _verificationType;
-    _data!.registreControle = _registreControle ?? '';
-    _data!.compteRendu = _compteRenduDestinataires;
-    _data!.accompagnateurs = List.from(_accompagnateurs);
-    _data!.verificateurs = List.from(_verificateurs);
-    _data!.updatedAt = DateTime.now();
-
-    final entity = RenseignementsGenerauxMapper.toEntity(_data!);
-    await di.sl<SaveRenseignementsGenerauxUseCase>()(entity);
-
-    widget.onDataChanged(_data!.toMap());
+    final currentData = ref
+        .read(renseignementsGenerauxProvider(widget.mission.id))
+        .value;
+    if (currentData != null) {
+      widget.onDataChanged(currentData.toMap());
+    }
     _notifyValidation();
     if (kDebugMode) {
-      print('✅ Renseignements généraux sauvegardés');
+      print('✅ Renseignements généraux sauvegardés via Riverpod');
     }
   }
 
@@ -300,7 +240,9 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
   Future<void> _selectDate(BuildContext context, bool isDebut) async {
     final picked = await showDatePicker(
       context: context,
-      initialDate: isDebut ? (_dateDebut ?? DateTime.now()) : (_dateFin ?? DateTime.now()),
+      initialDate: isDebut
+          ? (_dateDebut ?? DateTime.now())
+          : (_dateFin ?? DateTime.now()),
       firstDate: DateTime(2020),
       lastDate: DateTime(2030),
       builder: (context, child) {
@@ -352,11 +294,11 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
             child: Container(
               padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
               decoration: BoxDecoration(
-                color: isSelected ? (option['color'] as Color).withOpacity(0.05) : Colors.transparent,
+                color: isSelected
+                    ? (option['color'] as Color).withOpacity(0.05)
+                    : Colors.transparent,
                 border: isSelected
-                    ? Border(
-                        left: BorderSide(color: option['color'], width: 4),
-                      )
+                    ? Border(left: BorderSide(color: option['color'], width: 4))
                     : null,
               ),
               child: Row(
@@ -366,7 +308,9 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
                     height: isSmallScreen ? 40 : 48,
                     decoration: BoxDecoration(
                       color: (option['color'] as Color).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                      borderRadius: BorderRadius.circular(
+                        isSmallScreen ? 10 : 12,
+                      ),
                     ),
                     child: Icon(
                       option['icon'],
@@ -384,7 +328,9 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
                           style: TextStyle(
                             fontSize: isSmallScreen ? 14 : 16,
                             fontWeight: FontWeight.w600,
-                            color: isSelected ? option['color'] : Colors.black87,
+                            color: isSelected
+                                ? option['color']
+                                : Colors.black87,
                           ),
                         ),
                         SizedBox(height: isSmallScreen ? 2 : 4),
@@ -438,11 +384,11 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
             child: Container(
               padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
               decoration: BoxDecoration(
-                color: isSelected ? (option['color'] as Color).withOpacity(0.05) : Colors.transparent,
+                color: isSelected
+                    ? (option['color'] as Color).withOpacity(0.05)
+                    : Colors.transparent,
                 border: isSelected
-                    ? Border(
-                        left: BorderSide(color: option['color'], width: 4),
-                      )
+                    ? Border(left: BorderSide(color: option['color'], width: 4))
                     : null,
               ),
               child: Row(
@@ -452,7 +398,9 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
                     height: isSmallScreen ? 40 : 48,
                     decoration: BoxDecoration(
                       color: (option['color'] as Color).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                      borderRadius: BorderRadius.circular(
+                        isSmallScreen ? 10 : 12,
+                      ),
                     ),
                     child: Icon(
                       option['icon'],
@@ -470,7 +418,9 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
                           style: TextStyle(
                             fontSize: isSmallScreen ? 14 : 16,
                             fontWeight: FontWeight.w600,
-                            color: isSelected ? option['color'] : Colors.black87,
+                            color: isSelected
+                                ? option['color']
+                                : Colors.black87,
                           ),
                         ),
                         SizedBox(height: isSmallScreen ? 2 : 4),
@@ -503,7 +453,9 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
     if (_accompagnateurs.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Veuillez d\'abord ajouter des accompagnateurs/référents'),
+          content: Text(
+            'Veuillez d\'abord ajouter des accompagnateurs/référents',
+          ),
           backgroundColor: Colors.orange,
         ),
       );
@@ -511,7 +463,9 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
     }
 
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
-    final Set<String> tempSelection = Set<String>.from(_compteRenduDestinataires);
+    final Set<String> tempSelection = Set<String>.from(
+      _compteRenduDestinataires,
+    );
 
     showModalBottomSheet(
       context: context,
@@ -529,7 +483,9 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
                 child: OutlinedButton(
                   onPressed: () => Navigator.pop(context),
                   style: OutlinedButton.styleFrom(
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+                    padding: EdgeInsets.symmetric(
+                      vertical: isSmallScreen ? 12 : 14,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -553,7 +509,9 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryBlue,
                     foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+                    padding: EdgeInsets.symmetric(
+                      vertical: isSmallScreen ? 12 : 14,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(10),
                     ),
@@ -576,12 +534,19 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
               ),
               child: Row(
                 children: [
-                  Icon(Icons.info_outline, size: isSmallScreen ? 16 : 18, color: Colors.blue),
+                  Icon(
+                    Icons.info_outline,
+                    size: isSmallScreen ? 16 : 18,
+                    color: Colors.blue,
+                  ),
                   SizedBox(width: isSmallScreen ? 8 : 10),
                   Expanded(
                     child: Text(
                       'Vous pouvez sélectionner plusieurs destinataires',
-                      style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.blue.shade700),
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 12 : 13,
+                        color: Colors.blue.shade700,
+                      ),
                     ),
                   ),
                 ],
@@ -600,14 +565,20 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                subtitle: accomp['poste']?.isNotEmpty == true ||
+                subtitle:
+                    accomp['poste']?.isNotEmpty == true ||
                         accomp['email']?.isNotEmpty == true ||
                         accomp['telephone']?.isNotEmpty == true
                     ? Text(
-                        [accomp['poste'], accomp['email'], accomp['telephone']]
-                            .where((e) => e != null && e!.isNotEmpty)
-                            .join(' • '),
-                        style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.grey.shade600),
+                        [
+                          accomp['poste'],
+                          accomp['email'],
+                          accomp['telephone'],
+                        ].where((e) => e != null && e!.isNotEmpty).join(' • '),
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 11 : 12,
+                          color: Colors.grey.shade600,
+                        ),
                       )
                     : null,
                 value: isSelected,
@@ -633,7 +604,9 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
   void _showVerificateurBottomSheet() {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
     final currentUserEntity = di.sl<GetCurrentUserUseCase>()();
-    final currentUser = currentUserEntity != null ? VerificateurMapper.toModel(currentUserEntity) : null;
+    final currentUser = currentUserEntity != null
+        ? VerificateurMapper.toModel(currentUserEntity)
+        : null;
 
     showModalBottomSheet(
       context: context,
@@ -655,12 +628,19 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, size: isSmallScreen ? 16 : 18, color: Colors.blue),
+                Icon(
+                  Icons.info_outline,
+                  size: isSmallScreen ? 16 : 18,
+                  color: Colors.blue,
+                ),
                 SizedBox(width: isSmallScreen ? 8 : 10),
                 Expanded(
                   child: Text(
                     'Le vérificateur courant (vous) est déjà sélectionné.',
-                    style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.blue.shade700),
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 12 : 13,
+                      color: Colors.blue.shade700,
+                    ),
                   ),
                 ),
               ],
@@ -668,8 +648,11 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
           ),
 
           ..._verificateursPredefinis.map((verif) {
-            final isAlreadyAdded = _verificateurs.any((v) => v['nom'] == verif['nom'] && v['email'] == verif['email']);
-            final isCurrentUser = currentUser != null &&
+            final isAlreadyAdded = _verificateurs.any(
+              (v) => v['nom'] == verif['nom'] && v['email'] == verif['email'],
+            );
+            final isCurrentUser =
+                currentUser != null &&
                 '${currentUser.prenom} ${currentUser.nom}' == verif['nom'] &&
                 currentUser.email == verif['email'];
 
@@ -678,7 +661,9 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
                 width: isSmallScreen ? 40 : 44,
                 height: isSmallScreen ? 40 : 44,
                 decoration: BoxDecoration(
-                  color: isAlreadyAdded ? Colors.grey.shade300 : AppTheme.primaryBlue.withOpacity(0.1),
+                  color: isAlreadyAdded
+                      ? Colors.grey.shade300
+                      : AppTheme.primaryBlue.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
@@ -703,10 +688,18 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
                 ),
               ),
               trailing: isAlreadyAdded
-                  ? Icon(Icons.check_circle, color: Colors.green, size: isSmallScreen ? 20 : 22)
+                  ? Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                      size: isSmallScreen ? 20 : 22,
+                    )
                   : (isCurrentUser
-                      ? Icon(Icons.person_outline, color: Colors.blue, size: isSmallScreen ? 20 : 22)
-                      : null),
+                        ? Icon(
+                            Icons.person_outline,
+                            color: Colors.blue,
+                            size: isSmallScreen ? 20 : 22,
+                          )
+                        : null),
               enabled: !isAlreadyAdded && !isCurrentUser,
               onTap: (isAlreadyAdded || isCurrentUser)
                   ? null
@@ -733,7 +726,11 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
                 color: Colors.orange.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: Icon(Icons.add, color: Colors.orange, size: isSmallScreen ? 20 : 22),
+              child: Icon(
+                Icons.add,
+                color: Colors.orange,
+                size: isSmallScreen ? 20 : 22,
+              ),
             ),
             title: Text(
               'Autre (saisie manuelle)',
@@ -745,7 +742,10 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
             ),
             subtitle: Text(
               'Ajouter un vérificateur non listé',
-              style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.grey.shade600),
+              style: TextStyle(
+                fontSize: isSmallScreen ? 11 : 12,
+                color: Colors.grey.shade600,
+              ),
             ),
             onTap: () {
               Navigator.pop(context);
@@ -820,7 +820,10 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
               }
               // Vérifier si déjà ajouté
               final alreadyExists = _verificateurs.any(
-                  (v) => v['nom'] == nom && v['email'] == emailController.text.trim());
+                (v) =>
+                    v['nom'] == nom &&
+                    v['email'] == emailController.text.trim(),
+              );
               if (alreadyExists) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
@@ -854,253 +857,270 @@ class GeneralInfoStepState extends State<GeneralInfoStep> {
   }
 
   void _showAccompagnateurBottomSheet() {
-  final nomController = TextEditingController();
-  final emailController = TextEditingController();
-  final posteController = TextEditingController();
-  final telephoneController = TextEditingController();
-  final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    final nomController = TextEditingController();
+    final emailController = TextEditingController();
+    final posteController = TextEditingController();
+    final telephoneController = TextEditingController();
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
 
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true, // ✅ Permet au bottom sheet de prendre toute la hauteur
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    backgroundColor: Colors.transparent,
-    builder: (context) => Padding(
-      // ✅ Ajout d'un padding en bas égal à la hauteur du clavier
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled:
+          true, // ✅ Permet au bottom sheet de prendre toute la hauteur
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Container(
-        constraints: BoxConstraints(
-          // ✅ Hauteur maximale = 90% de l'écran moins le clavier
-          maxHeight: MediaQuery.of(context).size.height * 0.85,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Padding(
+        // ✅ Ajout d'un padding en bas égal à la hauteur du clavier
+        padding: EdgeInsets.only(
+          bottom: MediaQuery.of(context).viewInsets.bottom,
         ),
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            // Handle
-            Container(
-              margin: EdgeInsets.only(top: isSmallScreen ? 8 : 12),
-              width: isSmallScreen ? 30 : 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: Colors.grey.shade300,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-            // Titre
-            Padding(
-              padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-              child: Text(
-                'Ajouter un accompagnateur / référent',
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 14 : 16,
-                  fontWeight: FontWeight.bold,
+        child: Container(
+          constraints: BoxConstraints(
+            // ✅ Hauteur maximale = 90% de l'écran moins le clavier
+            maxHeight: MediaQuery.of(context).size.height * 0.85,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle
+              Container(
+                margin: EdgeInsets.only(top: isSmallScreen ? 8 : 12),
+                width: isSmallScreen ? 30 : 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
                 ),
-                textAlign: TextAlign.center,
               ),
-            ),
-            const Divider(height: 0),
-            // Contenu scrollable
-            Flexible(
-              child: SingleChildScrollView(
+              // Titre
+              Padding(
                 padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-                child: Column(
-                  children: [
-                    // Nom complet *
-                    TextField(
-                      controller: nomController,
-                      decoration: InputDecoration(
-                        labelText: 'Nom complet *',
-                        prefixIcon: Icon(Icons.person, size: isSmallScreen ? 18 : 20),
-                        border: const OutlineInputBorder(),
-                      ),
-                      autofocus: true, // ✅ Ouvre le clavier automatiquement
-                      textInputAction: TextInputAction.next,
-                    ),
-                    SizedBox(height: isSmallScreen ? 12 : 14),
-                    
-                    // Email
-                    // Email
-                    StatefulBuilder(
-                      builder: (context, setFieldState) {
-                        bool emailInvalid = false;
-                        return TextField(
-                          controller: emailController,
-                          decoration: InputDecoration(
-                            labelText: 'Email',
-                            prefixIcon: Icon(Icons.email, size: isSmallScreen ? 18 : 20),
-                            border: const OutlineInputBorder(),
-                            errorText: emailInvalid ? 'Email invalide' : null,
-                            suffixIcon: emailController.text.isNotEmpty
-                                ? Icon(
-                                    _isValidEmail(emailController.text)
-                                        ? Icons.check_circle
-                                        : Icons.error,
-                                    color: _isValidEmail(emailController.text)
-                                        ? Colors.green
-                                        : Colors.red,
-                                    size: 18,
-                                  )
-                                : null,
+                child: Text(
+                  'Ajouter un accompagnateur / référent',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const Divider(height: 0),
+              // Contenu scrollable
+              Flexible(
+                child: SingleChildScrollView(
+                  padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                  child: Column(
+                    children: [
+                      // Nom complet *
+                      TextField(
+                        controller: nomController,
+                        decoration: InputDecoration(
+                          labelText: 'Nom complet *',
+                          prefixIcon: Icon(
+                            Icons.person,
+                            size: isSmallScreen ? 18 : 20,
                           ),
-                          keyboardType: TextInputType.emailAddress,
-                          textInputAction: TextInputAction.next,
-                          onChanged: (_) => setFieldState(() {}),
-                        );
-                      },
-                    ),
-                    SizedBox(height: isSmallScreen ? 12 : 14),
-                    
-                    // Téléphone
-                    TextField(
-                      controller: telephoneController,
-                      decoration: InputDecoration(
-                        labelText: 'Téléphone',
-                        prefixIcon: Icon(Icons.phone, size: isSmallScreen ? 18 : 20),
-                        border: const OutlineInputBorder(),
-                        hintText: 'Ex: +237 6 12 34 56 78',
+                          border: const OutlineInputBorder(),
+                        ),
+                        autofocus: true, // ✅ Ouvre le clavier automatiquement
+                        textInputAction: TextInputAction.next,
                       ),
-                      keyboardType: TextInputType.phone,
-                      textInputAction: TextInputAction.next,
-                    ),
-                    SizedBox(height: isSmallScreen ? 12 : 14),
-                    
-                    // Poste / Fonction
-                    TextField(
-                      controller: posteController,
-                      decoration: InputDecoration(
-                        labelText: 'Poste / Fonction',
-                        prefixIcon: Icon(Icons.work, size: isSmallScreen ? 18 : 20),
-                        border: const OutlineInputBorder(),
+                      SizedBox(height: isSmallScreen ? 12 : 14),
+
+                      // Email
+                      // Email
+                      StatefulBuilder(
+                        builder: (context, setFieldState) {
+                          bool emailInvalid = false;
+                          return TextField(
+                            controller: emailController,
+                            decoration: InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: Icon(
+                                Icons.email,
+                                size: isSmallScreen ? 18 : 20,
+                              ),
+                              border: const OutlineInputBorder(),
+                              errorText: emailInvalid ? 'Email invalide' : null,
+                              suffixIcon: emailController.text.isNotEmpty
+                                  ? Icon(
+                                      _isValidEmail(emailController.text)
+                                          ? Icons.check_circle
+                                          : Icons.error,
+                                      color: _isValidEmail(emailController.text)
+                                          ? Colors.green
+                                          : Colors.red,
+                                      size: 18,
+                                    )
+                                  : null,
+                            ),
+                            keyboardType: TextInputType.emailAddress,
+                            textInputAction: TextInputAction.next,
+                            onChanged: (_) => setFieldState(() {}),
+                          );
+                        },
                       ),
-                      textInputAction: TextInputAction.done,
-                      onSubmitted: (_) => _submitAccompagnateur(
-                        nomController,
-                        emailController,
-                        telephoneController,
-                        posteController,
+                      SizedBox(height: isSmallScreen ? 12 : 14),
+
+                      // Téléphone
+                      TextField(
+                        controller: telephoneController,
+                        decoration: InputDecoration(
+                          labelText: 'Téléphone',
+                          prefixIcon: Icon(
+                            Icons.phone,
+                            size: isSmallScreen ? 18 : 20,
+                          ),
+                          border: const OutlineInputBorder(),
+                          hintText: 'Ex: +237 6 12 34 56 78',
+                        ),
+                        keyboardType: TextInputType.phone,
+                        textInputAction: TextInputAction.next,
+                      ),
+                      SizedBox(height: isSmallScreen ? 12 : 14),
+
+                      // Poste / Fonction
+                      TextField(
+                        controller: posteController,
+                        decoration: InputDecoration(
+                          labelText: 'Poste / Fonction',
+                          prefixIcon: Icon(
+                            Icons.work,
+                            size: isSmallScreen ? 18 : 20,
+                          ),
+                          border: const OutlineInputBorder(),
+                        ),
+                        textInputAction: TextInputAction.done,
+                        onSubmitted: (_) => _submitAccompagnateur(
+                          nomController,
+                          emailController,
+                          telephoneController,
+                          posteController,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              // Boutons d'action
+              const Divider(height: 0),
+              Padding(
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: OutlinedButton.styleFrom(
+                          padding: EdgeInsets.symmetric(
+                            vertical: isSmallScreen ? 12 : 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: Text(
+                          'Annuler',
+                          style: TextStyle(fontSize: isSmallScreen ? 14 : 15),
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: isSmallScreen ? 10 : 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => _submitAccompagnateur(
+                          nomController,
+                          emailController,
+                          telephoneController,
+                          posteController,
+                        ),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(
+                            vertical: isSmallScreen ? 12 : 14,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        child: Text(
+                          'Ajouter',
+                          style: TextStyle(fontSize: isSmallScreen ? 14 : 15),
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
-            ),
-            // Boutons d'action
-            const Divider(height: 0),
-            Padding(
-              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Text(
-                        'Annuler',
-                        style: TextStyle(fontSize: isSmallScreen ? 14 : 15),
-                      ),
-                    ),
-                  ),
-                  SizedBox(width: isSmallScreen ? 10 : 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: () => _submitAccompagnateur(
-                        nomController,
-                        emailController,
-                        telephoneController,
-                        posteController,
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      child: Text(
-                        'Ajouter',
-                        style: TextStyle(fontSize: isSmallScreen ? 14 : 15),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: isSmallScreen ? 8 : 12),
-          ],
+              SizedBox(height: isSmallScreen ? 8 : 12),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
-
-// Méthode séparée pour la soumission (évite la duplication de code)
-void _submitAccompagnateur(
-  TextEditingController nomController,
-  TextEditingController emailController,
-  TextEditingController telephoneController,
-  TextEditingController posteController,
-) async {
-  final nom = nomController.text.trim();
-  if (nom.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Le nom est obligatoire'),
-        backgroundColor: Colors.red,
-      ),
     );
-    return;
   }
 
-  // Validation email (si renseigné)
-  final email = emailController.text.trim();
-  if (email.isNotEmpty && !_isValidEmail(email)) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Adresse email invalide'),
-        backgroundColor: Colors.red,
-        duration: Duration(seconds: 3),
-      ),
-    );
-    return;
-  }
+  // Méthode séparée pour la soumission (évite la duplication de code)
+  void _submitAccompagnateur(
+    TextEditingController nomController,
+    TextEditingController emailController,
+    TextEditingController telephoneController,
+    TextEditingController posteController,
+  ) async {
+    final nom = nomController.text.trim();
+    if (nom.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Le nom est obligatoire'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
 
-  // Validation du téléphone (optionnel mais format si présent)
-  final telephone = telephoneController.text.trim();
-  if (telephone.isNotEmpty && !_isValidPhoneNumber(telephone)) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Format de téléphone invalide'),
-        backgroundColor: Colors.red,
-      ),
-    );
-    return;
-  }
+    // Validation email (si renseigné)
+    final email = emailController.text.trim();
+    if (email.isNotEmpty && !_isValidEmail(email)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Adresse email invalide'),
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 3),
+        ),
+      );
+      return;
+    }
 
-  Navigator.pop(context);
-  setState(() {
-    _accompagnateurs.add({
-      'nom': nom,
-      'email': emailController.text.trim(),
-      'poste': posteController.text.trim(),
-      'telephone': telephone,
+    // Validation du téléphone (optionnel mais format si présent)
+    final telephone = telephoneController.text.trim();
+    if (telephone.isNotEmpty && !_isValidPhoneNumber(telephone)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Format de téléphone invalide'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    Navigator.pop(context);
+    setState(() {
+      _accompagnateurs.add({
+        'nom': nom,
+        'email': emailController.text.trim(),
+        'poste': posteController.text.trim(),
+        'telephone': telephone,
+      });
     });
-  });
-  await _saveData();
-}
+    await _saveData();
+  }
 
   bool _isValidPhoneNumber(String phone) {
     // Format accepté : +XXXXXXXXXXXXX ou chiffres (9-15 caractères)
@@ -1128,11 +1148,14 @@ void _submitAccompagnateur(
   void _supprimerVerificateur(int index) async {
     final verificateurSupprime = _verificateurs[index];
     final currentUserEntity = di.sl<GetCurrentUserUseCase>()();
-    final currentUser = currentUserEntity != null ? VerificateurMapper.toModel(currentUserEntity) : null;
+    final currentUser = currentUserEntity != null
+        ? VerificateurMapper.toModel(currentUserEntity)
+        : null;
 
     // Empêcher la suppression du vérificateur courant
     if (currentUser != null &&
-        verificateurSupprime['nom'] == '${currentUser.prenom} ${currentUser.nom}') {
+        verificateurSupprime['nom'] ==
+            '${currentUser.prenom} ${currentUser.nom}') {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Vous ne pouvez pas supprimer le vérificateur courant'),
@@ -1166,8 +1189,12 @@ void _submitAccompagnateur(
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
 
-    if (_isLoading) {
-      return Center(
+    final asyncData = ref.watch(
+      renseignementsGenerauxProvider(widget.mission.id),
+    );
+
+    return asyncData.when(
+      loading: () => Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -1179,403 +1206,471 @@ void _submitAccompagnateur(
             ),
           ],
         ),
-      );
-    }
+      ),
+      error: (err, stack) => Center(child: Text('Erreur: $err')),
+      data: (data) {
+        if (_isFirstLoad) {
+          _etablissementController.text = data.etablissement;
+          _installationController.text = data.installation;
+          _activiteController.text = data.activite;
+          _nomSiteController.text = data.nomSite;
 
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: SafeArea(
-        child: SingleChildScrollView(
-          padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
+          _dateDebut = data.dateDebut;
+          _dateFin = data.dateFin;
+          _dureeJours = data.dureeJours;
+          _verificationType = data.verificationType;
+          _registreControle = data.registreControle.isNotEmpty
+              ? data.registreControle
+              : null;
+          _compteRenduDestinataires = List.from(data.compteRendu);
+          _accompagnateurs = List.from(data.accompagnateurs);
+          _verificateurs = List.from(data.verificateurs);
+
+          if (_etablissementController.text.isNotEmpty)
+            _etablissementTouched = true;
+          if (_installationController.text.isNotEmpty)
+            _installationTouched = true;
+          if (_activiteController.text.isNotEmpty) _activiteTouched = true;
+          if (_nomSiteController.text.isNotEmpty) _nomSiteTouched = true;
+
+          _isFirstLoad = false;
+        }
+
+        return GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: SafeArea(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: Text(
-                      'Renseignements Principaux',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 20 : 22,
-                        fontWeight: FontWeight.bold,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          'Renseignements Principaux',
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 20 : 22,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: isSmallScreen ? 10 : 12,
+                          vertical: isSmallScreen ? 4 : 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isFormValid
+                              ? Colors.green.withOpacity(0.1)
+                              : Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(
+                            isSmallScreen ? 16 : 20,
+                          ),
+                          border: Border.all(
+                            color: isFormValid ? Colors.green : Colors.orange,
+                            width: 1.5,
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              isFormValid
+                                  ? Icons.check_circle
+                                  : Icons.info_outline,
+                              size: isSmallScreen ? 14 : 16,
+                              color: isFormValid ? Colors.green : Colors.orange,
+                            ),
+                            SizedBox(width: isSmallScreen ? 4 : 6),
+                            Text(
+                              isFormValid ? 'Complet' : 'En cours',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 11 : 12,
+                                fontWeight: FontWeight.w600,
+                                color: isFormValid
+                                    ? Colors.green
+                                    : Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  SizedBox(height: isSmallScreen ? 20 : 24),
+
+                  // Établissement
+                  _buildTextField(
+                    controller: _etablissementController,
+                    label: 'Établissement vérifié',
+                    icon: Icons.business,
+                    focusNode: _etablissementFocus,
+                    isRequired: true,
+                    showError: _shouldShowError(
+                      hasValue: _etablissementController.text.trim().isNotEmpty,
+                      isTouched: _etablissementTouched,
                     ),
                   ),
-                  Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: isSmallScreen ? 10 : 12,
-                      vertical: isSmallScreen ? 4 : 6,
+
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+
+                  // Installation vérifiée
+                  _buildTextField(
+                    controller: _installationController,
+                    label: 'Installation vérifiée',
+                    icon: Icons.location_city,
+                    hint: 'Ex: Bâtiment A',
+                    focusNode: _installationFocus,
+                    isRequired: true,
+                    showError: _shouldShowError(
+                      hasValue: _installationController.text.trim().isNotEmpty,
+                      isTouched: _installationTouched,
                     ),
+                  ),
+
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+
+                  // Activité principale
+                  _buildTextField(
+                    controller: _activiteController,
+                    label: 'Activité principale',
+                    icon: Icons.work_outline,
+                    hint: 'Ex: BTP, Industrie, Services...',
+                    focusNode: _activiteFocus,
+                    isRequired: true,
+                    showError: _shouldShowError(
+                      hasValue: _activiteController.text.trim().isNotEmpty,
+                      isTouched: _activiteTouched,
+                    ),
+                  ),
+
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+
+                  // Nom du site (NOUVEAU)
+                  _buildTextField(
+                    controller: _nomSiteController,
+                    label: 'Nom du site',
+                    icon: Icons.location_city,
+                    hint: 'Ex: Siège Social, Agence Centrale...',
+                    focusNode: _nomSiteFocus,
+                    isRequired: true,
+                    showError: _shouldShowError(
+                      hasValue: _nomSiteController.text.trim().isNotEmpty,
+                      isTouched: _nomSiteTouched,
+                    ),
+                  ),
+
+                  SizedBox(height: isSmallScreen ? 20 : 24),
+
+                  // Type de vérification
+                  _buildDisplayField(
+                    label: 'Nature de vérification',
+                    value: _verificationType,
+                    hint: 'Sélectionnez le type de vérification',
+                    icon: Icons.verified_outlined,
+                    onTap: _showVerificationPicker,
+                    color: _verificationType != null ? Colors.blue : null,
+                    isRequired: true,
+                    showError: _hasAttemptedValidation,
+                  ),
+                  SizedBox(height: isSmallScreen ? 20 : 24),
+
+                  // Dates
+                  Container(
                     decoration: BoxDecoration(
-                      color: isFormValid ? Colors.green.withOpacity(0.1) : Colors.orange.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(
+                        isSmallScreen ? 14 : 16,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.03),
+                          blurRadius: 10,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                       border: Border.all(
-                        color: isFormValid ? Colors.green : Colors.orange,
-                        width: 1.5,
+                        color:
+                            _hasAttemptedValidation &&
+                                (_dateDebut == null || _dateFin == null)
+                            ? Colors.red.shade300
+                            : Colors.transparent,
+                        width:
+                            _hasAttemptedValidation &&
+                                (_dateDebut == null || _dateFin == null)
+                            ? 1.5
+                            : 0,
                       ),
                     ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Icon(
-                          isFormValid ? Icons.check_circle : Icons.info_outline,
-                          size: isSmallScreen ? 14 : 16,
-                          color: isFormValid ? Colors.green : Colors.orange,
+                        Padding(
+                          padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+                          child: Row(
+                            children: [
+                              Container(
+                                padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(
+                                    isSmallScreen ? 10 : 12,
+                                  ),
+                                ),
+                                child: Icon(
+                                  Icons.calendar_today,
+                                  color: Colors.orange,
+                                  size: isSmallScreen ? 18 : 20,
+                                ),
+                              ),
+                              SizedBox(width: isSmallScreen ? 10 : 12),
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      'Période d\'intervention',
+                                      style: TextStyle(
+                                        fontSize: isSmallScreen ? 14 : 16,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    Text(
+                                      ' *',
+                                      style: TextStyle(
+                                        fontSize: isSmallScreen ? 14 : 16,
+                                        color: Colors.red,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                         ),
-                        SizedBox(width: isSmallScreen ? 4 : 6),
-                        Text(
-                          isFormValid ? 'Complet' : 'En cours',
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 11 : 12,
-                            fontWeight: FontWeight.w600,
-                            color: isFormValid ? Colors.green : Colors.orange,
+                        const Divider(height: 0),
+                        Padding(
+                          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                          child: Column(
+                            children: [
+                              _buildDateField(
+                                label: 'Date de début',
+                                date: _dateDebut,
+                                icon: Icons.play_arrow,
+                                onTap: () => _selectDate(context, true),
+                                isRequired: true,
+                                showError: _hasAttemptedValidation,
+                              ),
+                              SizedBox(height: isSmallScreen ? 12 : 16),
+                              _buildDateField(
+                                label: 'Date de fin',
+                                date: _dateFin,
+                                icon: Icons.check,
+                                onTap: () => _selectDate(context, false),
+                                isRequired: true,
+                                showError: _hasAttemptedValidation,
+                              ),
+                              SizedBox(height: isSmallScreen ? 12 : 16),
+                              Container(
+                                padding: EdgeInsets.all(
+                                  isSmallScreen ? 12 : 16,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryBlue.withOpacity(0.05),
+                                  borderRadius: BorderRadius.circular(
+                                    isSmallScreen ? 10 : 12,
+                                  ),
+                                  border: Border.all(
+                                    color: AppTheme.primaryBlue.withOpacity(
+                                      0.1,
+                                    ),
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      padding: EdgeInsets.all(
+                                        isSmallScreen ? 6 : 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: AppTheme.primaryBlue.withOpacity(
+                                          0.1,
+                                        ),
+                                        borderRadius: BorderRadius.circular(
+                                          isSmallScreen ? 8 : 10,
+                                        ),
+                                      ),
+                                      child: Icon(
+                                        Icons.timer_outlined,
+                                        color: AppTheme.primaryBlue,
+                                        size: isSmallScreen ? 18 : 20,
+                                      ),
+                                    ),
+                                    SizedBox(width: isSmallScreen ? 10 : 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Durée',
+                                            style: TextStyle(
+                                              fontSize: isSmallScreen ? 11 : 12,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                          FittedBox(
+                                            fit: BoxFit.scaleDown,
+                                            alignment: Alignment.centerLeft,
+                                            child: Text(
+                                              '$_dureeJours jour(s)',
+                                              style: TextStyle(
+                                                fontSize: isSmallScreen
+                                                    ? 16
+                                                    : 18,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
                     ),
                   ),
+                  SizedBox(height: isSmallScreen ? 20 : 24),
+
+                  // Accompagnateurs
+                  _buildDynamicListSection(
+                    title: 'Accompagnateurs / Référent',
+                    icon: Icons.people,
+                    color: Colors.blue,
+                    items: _accompagnateurs,
+                    itemBuilder: (accomp) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          accomp['nom']!,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: isSmallScreen ? 13 : 14,
+                          ),
+                        ),
+                        if (accomp['email']!.isNotEmpty)
+                          Text(
+                            accomp['email']!,
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 11 : 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        if (accomp['telephone']!.isNotEmpty)
+                          Text(
+                            accomp['telephone']!,
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 11 : 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        if (accomp['poste']!.isNotEmpty)
+                          Text(
+                            accomp['poste']!,
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 11 : 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                      ],
+                    ),
+                    onAdd: _showAccompagnateurBottomSheet,
+                    onDelete: _supprimerAccompagnateur,
+                    isRequired: true,
+                    showError: _hasAttemptedValidation,
+                  ),
+                  SizedBox(height: isSmallScreen ? 20 : 24),
+
+                  // Vérificateurs
+                  _buildDynamicListSection(
+                    title: 'Vérificateurs',
+                    icon: Icons.verified_user,
+                    color: Colors.green,
+                    items: _verificateurs,
+                    itemBuilder: (verif) => Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          verif['nom']!,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: isSmallScreen ? 13 : 14,
+                          ),
+                        ),
+                        if (verif['email']!.isNotEmpty)
+                          Text(
+                            verif['email']!,
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 11 : 12,
+                              color: Colors.grey,
+                            ),
+                          ),
+                      ],
+                    ),
+                    onAdd: _showVerificateurBottomSheet,
+                    onDelete: _supprimerVerificateur,
+                    isRequired: true,
+                    showError: _hasAttemptedValidation,
+                  ),
+                  SizedBox(height: isSmallScreen ? 20 : 24),
+
+                  // Registre de contrôle
+                  _buildDisplayField(
+                    label: 'Registre de contrôle',
+                    value: _registreControle,
+                    hint: 'Sélectionnez l\'état du registre',
+                    icon: Icons.book_outlined,
+                    onTap: _showRegistrePicker,
+                    color: _registreControle != null
+                        ? (_registreControle == 'Présenté'
+                              ? Colors.green
+                              : Colors.red)
+                        : null,
+                    isRequired: true,
+                    showError: _hasAttemptedValidation,
+                  ),
+                  SizedBox(height: isSmallScreen ? 20 : 24),
+
+                  // Compte rendu de fin de visite fait à
+                  _buildDisplayField(
+                    label: 'Compte rendu de fin de visite fait à',
+                    value: _compteRenduDestinataires.isEmpty
+                        ? null
+                        : _compteRenduDestinataires.join(', '),
+                    hint: _accompagnateurs.isEmpty
+                        ? 'Ajoutez d\'abord des accompagnateurs'
+                        : 'Sélectionnez les destinataires',
+                    icon: Icons.description_outlined,
+                    onTap: _showCompteRenduBottomSheet,
+                    color: _compteRenduDestinataires.isNotEmpty
+                        ? Colors.purple
+                        : null,
+                    isRequired: true,
+                    showError: _hasAttemptedValidation,
+                  ),
+                  SizedBox(height: isSmallScreen ? 24 : 32),
                 ],
               ),
-
-              SizedBox(height: isSmallScreen ? 20 : 24),
-
-              // Établissement
-              _buildTextField(
-                controller: _etablissementController,
-                label: 'Établissement vérifié',
-                icon: Icons.business,
-                focusNode: _etablissementFocus,
-                isRequired: true,
-                showError: _shouldShowError(
-                  hasValue: _etablissementController.text.trim().isNotEmpty,
-                  isTouched: _etablissementTouched,
-                ),
-              ),
-
-              SizedBox(height: isSmallScreen ? 12 : 16),
-
-              // Installation vérifiée
-              _buildTextField(
-                controller: _installationController,
-                label: 'Installation vérifiée',
-                icon: Icons.location_city,
-                hint: 'Ex: Bâtiment A',
-                focusNode: _installationFocus,
-                isRequired: true,
-                showError: _shouldShowError(
-                  hasValue: _installationController.text.trim().isNotEmpty,
-                  isTouched: _installationTouched,
-                ),
-              ),
-
-              SizedBox(height: isSmallScreen ? 12 : 16),
-
-              // Activité principale
-              _buildTextField(
-                controller: _activiteController,
-                label: 'Activité principale',
-                icon: Icons.work_outline,
-                hint: 'Ex: BTP, Industrie, Services...',
-                focusNode: _activiteFocus,
-                isRequired: true,
-                showError: _shouldShowError(
-                  hasValue: _activiteController.text.trim().isNotEmpty,
-                  isTouched: _activiteTouched,
-                ),
-              ),
-              
-              SizedBox(height: isSmallScreen ? 12 : 16),
-
-              // Nom du site (NOUVEAU)
-              _buildTextField(
-                controller: _nomSiteController,
-                label: 'Nom du site',
-                icon: Icons.location_city,
-                hint: 'Ex: Siège Social, Agence Centrale...',
-                focusNode: _nomSiteFocus,
-                isRequired: true,
-                showError: _shouldShowError(
-                  hasValue: _nomSiteController.text.trim().isNotEmpty,
-                  isTouched: _nomSiteTouched,
-                ),
-              ),
-
-              SizedBox(height: isSmallScreen ? 20 : 24),
-
-              // Type de vérification
-              _buildDisplayField(
-                label: 'Nature de vérification',
-                value: _verificationType,
-                hint: 'Sélectionnez le type de vérification',
-                icon: Icons.verified_outlined,
-                onTap: _showVerificationPicker,
-                color: _verificationType != null ? Colors.blue : null,
-                isRequired: true,
-                showError: _hasAttemptedValidation,
-              ),
-              SizedBox(height: isSmallScreen ? 20 : 24),
-
-              // Dates
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 10,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                  border: Border.all(
-                    color: _hasAttemptedValidation && (_dateDebut == null || _dateFin == null)
-                        ? Colors.red.shade300
-                        : Colors.transparent,
-                    width: _hasAttemptedValidation && (_dateDebut == null || _dateFin == null) ? 1.5 : 0,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
-                      child: Row(
-                        children: [
-                          Container(
-                            padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-                            ),
-                            child: Icon(
-                              Icons.calendar_today,
-                              color: Colors.orange,
-                              size: isSmallScreen ? 18 : 20,
-                            ),
-                          ),
-                          SizedBox(width: isSmallScreen ? 10 : 12),
-                          Expanded(
-                            child: Row(
-                              children: [
-                                Text(
-                                  'Période d\'intervention',
-                                  style: TextStyle(
-                                    fontSize: isSmallScreen ? 14 : 16,
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                                Text(
-                                  ' *',
-                                  style: TextStyle(
-                                    fontSize: isSmallScreen ? 14 : 16,
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const Divider(height: 0),
-                    Padding(
-                      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                      child: Column(
-                        children: [
-                          _buildDateField(
-                            label: 'Date de début',
-                            date: _dateDebut,
-                            icon: Icons.play_arrow,
-                            onTap: () => _selectDate(context, true),
-                            isRequired: true,
-                            showError: _hasAttemptedValidation,
-                          ),
-                          SizedBox(height: isSmallScreen ? 12 : 16),
-                          _buildDateField(
-                            label: 'Date de fin',
-                            date: _dateFin,
-                            icon: Icons.check,
-                            onTap: () => _selectDate(context, false),
-                            isRequired: true,
-                            showError: _hasAttemptedValidation,
-                          ),
-                          SizedBox(height: isSmallScreen ? 12 : 16),
-                          Container(
-                            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryBlue.withOpacity(0.05),
-                              borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-                              border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.1)),
-                            ),
-                            child: Row(
-                              children: [
-                                Container(
-                                  padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryBlue.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
-                                  ),
-                                  child: Icon(
-                                    Icons.timer_outlined,
-                                    color: AppTheme.primaryBlue,
-                                    size: isSmallScreen ? 18 : 20,
-                                  ),
-                                ),
-                                SizedBox(width: isSmallScreen ? 10 : 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        'Durée',
-                                        style: TextStyle(
-                                          fontSize: isSmallScreen ? 11 : 12,
-                                          color: Colors.grey,
-                                        ),
-                                      ),
-                                      FittedBox(
-                                        fit: BoxFit.scaleDown,
-                                        alignment: Alignment.centerLeft,
-                                        child: Text(
-                                          '$_dureeJours jour(s)',
-                                          style: TextStyle(
-                                            fontSize: isSmallScreen ? 16 : 18,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              SizedBox(height: isSmallScreen ? 20 : 24),
-
-              // Accompagnateurs
-              _buildDynamicListSection(
-                title: 'Accompagnateurs / Référent',
-                icon: Icons.people,
-                color: Colors.blue,
-                items: _accompagnateurs,
-                itemBuilder: (accomp) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      accomp['nom']!,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: isSmallScreen ? 13 : 14,
-                      ),
-                    ),
-                    if (accomp['email']!.isNotEmpty)
-                      Text(
-                        accomp['email']!,
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 11 : 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    if (accomp['telephone']!.isNotEmpty)
-                      Text(
-                        accomp['telephone']!,
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 11 : 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    if (accomp['poste']!.isNotEmpty)
-                      Text(
-                        accomp['poste']!,
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 11 : 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                  ],
-                ),
-                onAdd: _showAccompagnateurBottomSheet,
-                onDelete: _supprimerAccompagnateur,
-                isRequired: true,
-                showError: _hasAttemptedValidation,
-              ),
-              SizedBox(height: isSmallScreen ? 20 : 24),
-
-              // Vérificateurs
-              _buildDynamicListSection(
-                title: 'Vérificateurs',
-                icon: Icons.verified_user,
-                color: Colors.green,
-                items: _verificateurs,
-                itemBuilder: (verif) => Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      verif['nom']!,
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: isSmallScreen ? 13 : 14,
-                      ),
-                    ),
-                    if (verif['email']!.isNotEmpty)
-                      Text(
-                        verif['email']!,
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 11 : 12,
-                          color: Colors.grey,
-                        ),
-                      ),
-                  ],
-                ),
-                onAdd: _showVerificateurBottomSheet,
-                onDelete: _supprimerVerificateur,
-                isRequired: true,
-                showError: _hasAttemptedValidation,
-              ),
-              SizedBox(height: isSmallScreen ? 20 : 24),
-
-              // Registre de contrôle
-              _buildDisplayField(
-                label: 'Registre de contrôle',
-                value: _registreControle,
-                hint: 'Sélectionnez l\'état du registre',
-                icon: Icons.book_outlined,
-                onTap: _showRegistrePicker,
-                color: _registreControle != null
-                    ? (_registreControle == 'Présenté' ? Colors.green : Colors.red)
-                    : null,
-                isRequired: true,
-                showError: _hasAttemptedValidation,
-              ),
-              SizedBox(height: isSmallScreen ? 20 : 24),
-
-              // Compte rendu de fin de visite fait à
-              _buildDisplayField(
-                label: 'Compte rendu de fin de visite fait à',
-                value: _compteRenduDestinataires.isEmpty
-                    ? null
-                    : _compteRenduDestinataires.join(', '),
-                hint: _accompagnateurs.isEmpty
-                    ? 'Ajoutez d\'abord des accompagnateurs'
-                    : 'Sélectionnez les destinataires',
-                icon: Icons.description_outlined,
-                onTap: _showCompteRenduBottomSheet,
-                color: _compteRenduDestinataires.isNotEmpty ? Colors.purple : null,
-                isRequired: true,
-                showError: _hasAttemptedValidation,
-              ),
-              SizedBox(height: isSmallScreen ? 24 : 32),
-            ],
+            ),
           ),
-        ),
-      ),
+        );
+      },
     );
   }
 
@@ -1593,7 +1688,9 @@ void _submitAccompagnateur(
 
     final borderColor = showError && !hasText
         ? Colors.red.shade300
-        : (hasText ? AppTheme.primaryBlue.withOpacity(0.3) : Colors.grey.shade200);
+        : (hasText
+              ? AppTheme.primaryBlue.withOpacity(0.3)
+              : Colors.grey.shade200);
 
     return AnimatedBuilder(
       animation: focusNode,
@@ -1624,11 +1721,14 @@ void _submitAccompagnateur(
             focusNode: focusNode,
             onChanged: (_) {
               _saveData();
-              if (!_etablissementTouched && controller == _etablissementController) {
+              if (!_etablissementTouched &&
+                  controller == _etablissementController) {
                 setState(() => _etablissementTouched = true);
-              } else if (!_installationTouched && controller == _installationController) {
+              } else if (!_installationTouched &&
+                  controller == _installationController) {
                 setState(() => _installationTouched = true);
-              } else if (!_activiteTouched && controller == _activiteController) {
+              } else if (!_activiteTouched &&
+                  controller == _activiteController) {
                 setState(() => _activiteTouched = true);
               } else if (!_nomSiteTouched && controller == _nomSiteController) {
                 setState(() => _nomSiteTouched = true);
@@ -1637,7 +1737,9 @@ void _submitAccompagnateur(
             decoration: InputDecoration(
               labelText: isRequired ? '$label *' : label,
               labelStyle: TextStyle(
-                color: showError && !hasText ? Colors.red : Colors.grey.shade600,
+                color: showError && !hasText
+                    ? Colors.red
+                    : Colors.grey.shade600,
               ),
               hintText: hint,
               prefixIcon: Icon(
@@ -1645,11 +1747,23 @@ void _submitAccompagnateur(
                 size: isSmallScreen ? 18 : 20,
                 color: focusNode.hasFocus
                     ? AppTheme.primaryBlue
-                    : (showError && !hasText ? Colors.red : (hasText ? AppTheme.primaryBlue : Colors.grey)),
+                    : (showError && !hasText
+                          ? Colors.red
+                          : (hasText ? AppTheme.primaryBlue : Colors.grey)),
               ),
               suffixIcon: hasText
-                  ? Icon(Icons.check_circle, color: Colors.green, size: isSmallScreen ? 16 : 18)
-                  : (showError && isRequired ? Icon(Icons.error_outline, color: Colors.red, size: isSmallScreen ? 16 : 18) : null),
+                  ? Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                      size: isSmallScreen ? 16 : 18,
+                    )
+                  : (showError && isRequired
+                        ? Icon(
+                            Icons.error_outline,
+                            color: Colors.red,
+                            size: isSmallScreen ? 16 : 18,
+                          )
+                        : null),
               border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
                 borderSide: BorderSide.none,
@@ -1687,7 +1801,9 @@ void _submitAccompagnateur(
         : (color ?? (value != null ? AppTheme.primaryBlue : Colors.grey));
     final borderColor = hasError
         ? Colors.red.shade300
-        : (value != null ? displayColor.withOpacity(0.3) : Colors.grey.shade200);
+        : (value != null
+              ? displayColor.withOpacity(0.3)
+              : Colors.grey.shade200);
 
     return InkWell(
       onTap: onTap,
@@ -1716,7 +1832,11 @@ void _submitAccompagnateur(
                 color: displayColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
               ),
-              child: Icon(icon, size: isSmallScreen ? 18 : 20, color: displayColor),
+              child: Icon(
+                icon,
+                size: isSmallScreen ? 18 : 20,
+                color: displayColor,
+              ),
             ),
             SizedBox(width: isSmallScreen ? 10 : 12),
             Expanded(
@@ -1751,7 +1871,9 @@ void _submitAccompagnateur(
                       fontWeight: FontWeight.w500,
                       color: hasError
                           ? Colors.red.shade400
-                          : (value != null ? Colors.black87 : Colors.grey.shade500),
+                          : (value != null
+                                ? Colors.black87
+                                : Colors.grey.shade500),
                     ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
@@ -1803,13 +1925,17 @@ void _submitAccompagnateur(
               decoration: BoxDecoration(
                 color: hasError
                     ? Colors.red.withOpacity(0.1)
-                    : (date != null ? AppTheme.primaryBlue.withOpacity(0.1) : Colors.grey.withOpacity(0.1)),
+                    : (date != null
+                          ? AppTheme.primaryBlue.withOpacity(0.1)
+                          : Colors.grey.withOpacity(0.1)),
                 borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
               ),
               child: Icon(
                 icon,
                 size: isSmallScreen ? 16 : 18,
-                color: hasError ? Colors.red : (date != null ? AppTheme.primaryBlue : Colors.grey),
+                color: hasError
+                    ? Colors.red
+                    : (date != null ? AppTheme.primaryBlue : Colors.grey),
               ),
             ),
             SizedBox(width: isSmallScreen ? 10 : 12),
@@ -1839,13 +1965,17 @@ void _submitAccompagnateur(
                   ),
                   SizedBox(height: isSmallScreen ? 1 : 2),
                   Text(
-                    date != null ? DateFormat('dd/MM/yyyy').format(date!) : 'Non définie',
+                    date != null
+                        ? DateFormat('dd/MM/yyyy').format(date!)
+                        : 'Non définie',
                     style: TextStyle(
                       fontSize: isSmallScreen ? 13 : 14,
                       fontWeight: FontWeight.w500,
                       color: hasError
                           ? Colors.red.shade400
-                          : (date != null ? Colors.black87 : Colors.grey.shade500),
+                          : (date != null
+                                ? Colors.black87
+                                : Colors.grey.shade500),
                     ),
                   ),
                 ],
@@ -1854,7 +1984,11 @@ void _submitAccompagnateur(
             Icon(
               Icons.calendar_today,
               size: isSmallScreen ? 16 : 18,
-              color: hasError ? Colors.red.shade300 : (date != null ? AppTheme.primaryBlue : Colors.grey.shade400),
+              color: hasError
+                  ? Colors.red.shade300
+                  : (date != null
+                        ? AppTheme.primaryBlue
+                        : Colors.grey.shade400),
             ),
           ],
         ),
@@ -1908,8 +2042,12 @@ void _submitAccompagnateur(
                 Container(
                   padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
                   decoration: BoxDecoration(
-                    color: hasError ? Colors.red.withOpacity(0.1) : color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                    color: hasError
+                        ? Colors.red.withOpacity(0.1)
+                        : color.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(
+                      isSmallScreen ? 10 : 12,
+                    ),
                   ),
                   child: Icon(
                     icon,
@@ -1967,7 +2105,9 @@ void _submitAccompagnateur(
                       padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                        borderRadius: BorderRadius.circular(
+                          isSmallScreen ? 10 : 12,
+                        ),
                         border: Border.all(color: Colors.grey.shade200),
                       ),
                       child: Row(
@@ -1995,7 +2135,9 @@ void _submitAccompagnateur(
                     margin: EdgeInsets.only(bottom: isSmallScreen ? 10 : 12),
                     decoration: BoxDecoration(
                       color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                      borderRadius: BorderRadius.circular(
+                        isSmallScreen ? 10 : 12,
+                      ),
                       border: Border.all(color: Colors.red.shade200),
                     ),
                     child: Row(
@@ -2029,9 +2171,13 @@ void _submitAccompagnateur(
                     ),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.primaryBlue,
-                      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
+                      padding: EdgeInsets.symmetric(
+                        vertical: isSmallScreen ? 10 : 12,
+                      ),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                        borderRadius: BorderRadius.circular(
+                          isSmallScreen ? 8 : 10,
+                        ),
                       ),
                     ),
                   ),
