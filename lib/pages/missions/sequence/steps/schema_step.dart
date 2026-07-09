@@ -3,13 +3,11 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:inspec_app/services/hive_service.dart';
-import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/mission/domain/usecases/get_mission_by_id_use_case.dart';
-import 'package:inspec_app/features/mission/domain/usecases/update_schema_option_use_case.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:inspec_app/features/mission/presentation/providers/mission_detail_provider.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 
-class SchemaStep extends StatefulWidget {
+class SchemaStep extends ConsumerStatefulWidget {
   final Mission mission;
   final Function(Map<String, dynamic>) onDataChanged;
 
@@ -20,52 +18,34 @@ class SchemaStep extends StatefulWidget {
   });
 
   @override
-  State<SchemaStep> createState() => _SchemaStepState();
+  ConsumerState<SchemaStep> createState() => _SchemaStepState();
 }
 
-class _SchemaStepState extends State<SchemaStep> {
+class _SchemaStepState extends ConsumerState<SchemaStep> {
   String? _selectedOption;
-  bool _isLoading = true;
+  bool _isFirstLoad = true;
   bool _hasAttemptedNext = false;
 
   @override
   void initState() {
     super.initState();
-    _loadSavedData();
   }
 
-  Future<void> _loadSavedData() async {
-    setState(() => _isLoading = true);
-    
+  Future<void> _loadFallbackOption() async {
     try {
-      // ✅ Charger depuis la mission d'abord
-      final getUseCase = GetIt.instance<GetMissionByIdUseCase>();
-      final missionEntity = getUseCase(widget.mission.id);
-      if (missionEntity != null && missionEntity.schemaOption != null) {
+      final savedData = await SequenceProgressService.getStepData(
+        widget.mission.id, 
+        'schema'
+      );
+      if (savedData != null && savedData is Map<String, dynamic>) {
         setState(() {
-          _selectedOption = missionEntity.schemaOption;
+          _selectedOption = savedData['schema_option'];
         });
-      }
-      
-      // Sinon essayer depuis SequenceProgressService
-      if (_selectedOption == null) {
-        final savedData = await SequenceProgressService.getStepData(
-          widget.mission.id, 
-          'schema'
-        );
-        
-        if (savedData != null && savedData is Map<String, dynamic>) {
-          setState(() {
-            _selectedOption = savedData['schema_option'];
-          });
-        }
       }
     } catch (e) {
       if (kDebugMode) {
-        print('❌ Erreur chargement schema: $e');
+        print('❌ Erreur chargement fallback schema: $e');
       }
-    } finally {
-      setState(() => _isLoading = false);
     }
   }
 
@@ -80,19 +60,12 @@ class _SchemaStepState extends State<SchemaStep> {
     await SequenceProgressService.saveStepData(widget.mission.id, 'schema', data);
     widget.onDataChanged(data);
     
-    // Sauvegarder dans la mission (persistant)
-    final updateUseCase = GetIt.instance<UpdateSchemaOptionUseCase>();
-    final success = await updateUseCase(
-      missionId: widget.mission.id,
-      option: _selectedOption!,
-    );
-    if (success && kDebugMode) {
-      print('✅ Schéma sauvegardé dans mission: $_selectedOption');
-    }
+    // Sauvegarder dans la mission (persistant) via le notifier Riverpod
+    final notifier = ref.read(missionDetailProvider(widget.mission.id).notifier);
+    await notifier.updateSchemaOption(_selectedOption!);
     
-    //  Marquer l'étape comme complétée
-      await SequenceProgressService.markStepCompleted(widget.mission.id, 5);
-  
+    // Marquer l'étape comme complétée
+    await SequenceProgressService.markStepCompleted(widget.mission.id, 5);
   }
 
   void _handleOptionSelected(String? value) {
@@ -107,11 +80,21 @@ class _SchemaStepState extends State<SchemaStep> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    final asyncData = ref.watch(missionDetailProvider(widget.mission.id));
 
-    return GestureDetector(
+    return asyncData.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Erreur: $err')),
+      data: (mission) {
+        if (_isFirstLoad) {
+          _selectedOption = mission.schemaOption;
+          if (_selectedOption == null) {
+            _loadFallbackOption();
+          }
+          _isFirstLoad = false;
+        }
+
+        return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -218,6 +201,8 @@ class _SchemaStepState extends State<SchemaStep> {
           ],
         ),
       ),
+    );
+      },
     );
   }
 }

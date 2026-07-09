@@ -99,6 +99,25 @@ class MissionDetailNotifier extends StateNotifier<AsyncValue<Mission>> {
     }
   }
 
+  Future<void> updateSchemaOption(String option) async {
+    final current = state.value;
+    if (current == null) return;
+
+    try {
+      current.schemaOption = option;
+      current.updatedAt = DateTime.now();
+      state = AsyncValue.data(current);
+
+      final updateUseCase = ref.read(updateSchemaOptionUseCaseProvider);
+      await updateUseCase(
+        missionId: missionId,
+        option: option,
+      );
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
+
   Future<bool> addDocumentPersonnalise(String documentName) async {
     final current = state.value;
     if (current == null) return false;
