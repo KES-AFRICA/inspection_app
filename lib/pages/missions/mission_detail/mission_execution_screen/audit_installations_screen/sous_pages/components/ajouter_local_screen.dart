@@ -4012,6 +4012,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       aReverifier: (_accessible == false),
       cellules: isFlowLong ? _cellules : [],
       transformateurs: isFlowLong ? _transformateurs : [],
+      coffrets: widget.isEdition && widget.local != null ? (widget.local as BasseTensionLocal).coffrets : [],
     );
   }
 
@@ -5248,6 +5249,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       transformateurs: isFlowLong ? _transformateurs : [],
       accessible: _accessible ?? true,
       aReverifier: (_accessible == false),
+      coffrets: widget.isEdition && widget.local != null ? (widget.local as MoyenneTensionLocal).coffrets : [],
     );
   }
 

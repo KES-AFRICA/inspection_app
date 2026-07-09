@@ -971,7 +971,7 @@ void _ouvrirClassementZone(ClassementZone classement) async {
   );
   
   if (result == true) {
-    setState(() {});
+    _loadData();
   }
 }
 

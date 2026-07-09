@@ -2854,14 +2854,29 @@ class _AjouterCoffretScreenState extends State<AjouterCoffretScreen> {
         else if (!widget.isMoyenneTension && widget.parentIndex < audit.basseTensionZones.length && widget.coffretIndex! < audit.basseTensionZones[widget.parentIndex].coffretsDirects.length) { target = audit.basseTensionZones[widget.parentIndex].coffretsDirects[widget.coffretIndex!]; found = true; }
       }
       if (found && target != null) {
-        target.nom = newCoffret.nom; target.type = newCoffret.type; target.repere = newCoffret.repere;
-        target.zoneAtex = newCoffret.zoneAtex; target.domaineTension = newCoffret.domaineTension;
-        target.identificationArmoire = newCoffret.identificationArmoire; target.signalisationDanger = newCoffret.signalisationDanger;
-        target.presenceSchema = newCoffret.presenceSchema; target.presenceParafoudre = newCoffret.presenceParafoudre;
+        target.qrCode = newCoffret.qrCode;
+        target.nom = newCoffret.nom;
+        target.type = newCoffret.type;
+        target.description = newCoffret.description;
+        target.repere = newCoffret.repere;
+        target.zoneAtex = newCoffret.zoneAtex;
+        target.domaineTension = newCoffret.domaineTension;
+        target.identificationArmoire = newCoffret.identificationArmoire;
+        target.signalisationDanger = newCoffret.signalisationDanger;
+        target.presenceSchema = newCoffret.presenceSchema;
+        target.presenceParafoudre = newCoffret.presenceParafoudre;
         target.verificationThermographie = newCoffret.verificationThermographie;
-        target.alimentations = newCoffret.alimentations; target.protectionTete = newCoffret.protectionTete;
-        target.pointsVerification = newCoffret.pointsVerification; target.photos = newCoffret.photos;
+        target.alimentations = newCoffret.alimentations;
+        target.protectionTete = newCoffret.protectionTete;
+        target.pointsVerification = newCoffret.pointsVerification;
+        target.photos = newCoffret.photos;
+        target.numeroEquipement = newCoffret.numeroEquipement;
+        target.statut = newCoffret.statut;
+        target.currentStep = newCoffret.currentStep;
+        target.photosExternes = newCoffret.photosExternes;
+        target.photosInternes = newCoffret.photosInternes;
         target.observationsLibres = newCoffret.observationsLibres;
+        target.observationsParafoudre = newCoffret.observationsParafoudre;
         await HiveService.saveAuditInstallations(audit);
         return true;
       }

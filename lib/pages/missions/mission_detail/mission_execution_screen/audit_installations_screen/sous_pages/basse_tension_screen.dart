@@ -674,7 +674,7 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
     );
     
     if (result == true) {
-      setState(() {});
+      _loadAudit();
     }
   }
 
