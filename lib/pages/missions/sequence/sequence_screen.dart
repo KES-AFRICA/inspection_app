@@ -65,12 +65,42 @@ const List<_Item> _items = [
     isRequired: true,
     hasSubs: true,
     subs: [
-      _Sub(key: 'jsa_0', label: 'Opération & Équipe',        icon: Icons.people_outline,               jsaSubIndex: 0),
-      _Sub(key: 'jsa_1', label: "Plan d'intervention",        icon: Icons.emergency_outlined,            jsaSubIndex: 1),
-      _Sub(key: 'jsa_2', label: 'Dangers',                   icon: Icons.warning_amber_outlined,        jsaSubIndex: 2),
-      _Sub(key: 'jsa_3', label: 'Exigences générales (EPC)', icon: Icons.security_outlined,             jsaSubIndex: 3),
-      _Sub(key: 'jsa_4', label: 'EPI',                       icon: Icons.health_and_safety_outlined,    jsaSubIndex: 4),
-      _Sub(key: 'jsa_5', label: 'Vérification finale',       icon: Icons.verified_outlined,             jsaSubIndex: 5),
+      _Sub(
+        key: 'jsa_0',
+        label: 'Opération & Équipe',
+        icon: Icons.people_outline,
+        jsaSubIndex: 0,
+      ),
+      _Sub(
+        key: 'jsa_1',
+        label: "Plan d'intervention",
+        icon: Icons.emergency_outlined,
+        jsaSubIndex: 1,
+      ),
+      _Sub(
+        key: 'jsa_2',
+        label: 'Dangers',
+        icon: Icons.warning_amber_outlined,
+        jsaSubIndex: 2,
+      ),
+      _Sub(
+        key: 'jsa_3',
+        label: 'Exigences générales (EPC)',
+        icon: Icons.security_outlined,
+        jsaSubIndex: 3,
+      ),
+      _Sub(
+        key: 'jsa_4',
+        label: 'EPI',
+        icon: Icons.health_and_safety_outlined,
+        jsaSubIndex: 4,
+      ),
+      _Sub(
+        key: 'jsa_5',
+        label: 'Vérification finale',
+        icon: Icons.verified_outlined,
+        jsaSubIndex: 5,
+      ),
     ],
   ),
   _Item(
@@ -92,19 +122,84 @@ const List<_Item> _items = [
     icon: Icons.description_outlined,
     hasSubs: true,
     subs: [
-      _Sub(key: 'alimentation_moyenne_tension', label: 'Alimentation MT',        icon: Icons.bolt_outlined,                  descSectionIndex: 0),
-      _Sub(key: 'alimentation_basse_tension',   label: 'Alimentation BT',        icon: Icons.electrical_services_outlined,   descSectionIndex: 1),
-      _Sub(key: 'groupe_electrogene',           label: 'Groupe électrogène',     icon: Icons.power_outlined,                 descSectionIndex: 2),
-      _Sub(key: 'alimentation_carburant',       label: 'Alimentation carburant', icon: Icons.local_gas_station_outlined,     descSectionIndex: 3),
-      _Sub(key: 'inverseur',                    label: 'Inverseur',              icon: Icons.swap_horiz_outlined,            descSectionIndex: 4),
-      _Sub(key: 'stabilisateur',                label: 'Stabilisateur',          icon: Icons.tune_outlined,                  descSectionIndex: 5),
-      _Sub(key: 'onduleurs',                    label: 'Onduleurs',              icon: Icons.battery_charging_full_outlined, descSectionIndex: 6),
-      _Sub(key: 'regime_neutre',                label: 'Régime du neutre',       icon: Icons.settings_ethernet_outlined,     descSectionIndex: 7),
-      _Sub(key: 'eclairage_securite',           label: 'Éclairage de sécurité',  icon: Icons.lightbulb_outline,              descSectionIndex: 8),
-      _Sub(key: 'modifications_installations',  label: 'Modifications',          icon: Icons.build_outlined,                 descSectionIndex: 9),
-      _Sub(key: 'note_calcul',                  label: 'Notes de calcul',        icon: Icons.calculate_outlined,             descSectionIndex: 10),
-      _Sub(key: 'paratonnerre',                 label: 'Paratonnerre',           icon: Icons.thunderstorm_outlined,          descSectionIndex: 11),
-      _Sub(key: 'registre_securite',            label: 'Registre de sécurité',   icon: Icons.menu_book_outlined,             descSectionIndex: 12),
+      _Sub(
+        key: 'alimentation_moyenne_tension',
+        label: 'Alimentation MT',
+        icon: Icons.bolt_outlined,
+        descSectionIndex: 0,
+      ),
+      _Sub(
+        key: 'alimentation_basse_tension',
+        label: 'Alimentation BT',
+        icon: Icons.electrical_services_outlined,
+        descSectionIndex: 1,
+      ),
+      _Sub(
+        key: 'groupe_electrogene',
+        label: 'Groupe électrogène',
+        icon: Icons.power_outlined,
+        descSectionIndex: 2,
+      ),
+      _Sub(
+        key: 'alimentation_carburant',
+        label: 'Alimentation carburant',
+        icon: Icons.local_gas_station_outlined,
+        descSectionIndex: 3,
+      ),
+      _Sub(
+        key: 'inverseur',
+        label: 'Inverseur',
+        icon: Icons.swap_horiz_outlined,
+        descSectionIndex: 4,
+      ),
+      _Sub(
+        key: 'stabilisateur',
+        label: 'Stabilisateur',
+        icon: Icons.tune_outlined,
+        descSectionIndex: 5,
+      ),
+      _Sub(
+        key: 'onduleurs',
+        label: 'Onduleurs',
+        icon: Icons.battery_charging_full_outlined,
+        descSectionIndex: 6,
+      ),
+      _Sub(
+        key: 'regime_neutre',
+        label: 'Régime du neutre',
+        icon: Icons.settings_ethernet_outlined,
+        descSectionIndex: 7,
+      ),
+      _Sub(
+        key: 'eclairage_securite',
+        label: 'Éclairage de sécurité',
+        icon: Icons.lightbulb_outline,
+        descSectionIndex: 8,
+      ),
+      _Sub(
+        key: 'modifications_installations',
+        label: 'Modifications',
+        icon: Icons.build_outlined,
+        descSectionIndex: 9,
+      ),
+      _Sub(
+        key: 'note_calcul',
+        label: 'Notes de calcul',
+        icon: Icons.calculate_outlined,
+        descSectionIndex: 10,
+      ),
+      _Sub(
+        key: 'paratonnerre',
+        label: 'Paratonnerre',
+        icon: Icons.thunderstorm_outlined,
+        descSectionIndex: 11,
+      ),
+      _Sub(
+        key: 'registre_securite',
+        label: 'Registre de sécurité',
+        icon: Icons.menu_book_outlined,
+        descSectionIndex: 12,
+      ),
     ],
   ),
   _Item(
@@ -113,10 +208,30 @@ const List<_Item> _items = [
     icon: Icons.electrical_services_outlined,
     hasSubs: true,
     subs: [
-      _Sub(key: 'audit_mt',      label: 'Moyenne tension',      icon: Icons.high_quality_outlined,   isAuditNav: true),
-      _Sub(key: 'audit_bt',      label: 'Basse tension',        icon: Icons.low_priority_outlined,   isAuditNav: true),
-      _Sub(key: 'audit_foudre',  label: 'Observations foudre',  icon: Icons.thunderstorm_outlined,   isAuditNav: true),
-      _Sub(key: 'audit_mesures', label: 'Mesures et essais',    icon: Icons.science_outlined,        isAuditNav: true),
+      _Sub(
+        key: 'audit_mt',
+        label: 'Moyenne tension',
+        icon: Icons.high_quality_outlined,
+        isAuditNav: true,
+      ),
+      _Sub(
+        key: 'audit_bt',
+        label: 'Basse tension',
+        icon: Icons.low_priority_outlined,
+        isAuditNav: true,
+      ),
+      _Sub(
+        key: 'audit_foudre',
+        label: 'Observations foudre',
+        icon: Icons.thunderstorm_outlined,
+        isAuditNav: true,
+      ),
+      _Sub(
+        key: 'audit_mesures',
+        label: 'Mesures et essais',
+        icon: Icons.science_outlined,
+        isAuditNav: true,
+      ),
     ],
   ),
   _Item(
@@ -140,58 +255,78 @@ const List<_Item> _items = [
 bool _jsaSubCompleteFromHive(dynamic jsa, int index) {
   if (jsa == null) return false;
   switch (index) {
-    case 0: return jsa.operationEffectuer?.isNotEmpty == true && (jsa.inspecteurs?.isNotEmpty ?? false);
+    case 0:
+      return jsa.operationEffectuer?.isNotEmpty == true &&
+          (jsa.inspecteurs?.isNotEmpty ?? false);
     case 1:
       final p = jsa.planUrgence;
-      return p != null && (
-        p.voiesIssuesIdentifiees == true ||
-        p.zonesRassemblementIdentifiees == true ||
-        p.consignesSecuriteInternes == true ||
-        (p.personneContactClient?.isNotEmpty ?? false) ||
-        (p.personneContactKES?.isNotEmpty ?? false)
-      );
+      return p != null &&
+          (p.voiesIssuesIdentifiees == true ||
+              p.zonesRassemblementIdentifiees == true ||
+              p.consignesSecuriteInternes == true ||
+              (p.personneContactClient?.isNotEmpty ?? false) ||
+              (p.personneContactKES?.isNotEmpty ?? false));
     case 2:
       final d = jsa.dangers;
-      return d != null && (
-        d.chocElectrique == true || d.bruit == true || d.stressThermique == true ||
-        d.eclairageInadapte == true || d.zoneCirculationMalDefinie == true ||
-        d.solAccidente == true || d.emissionGazPoussiere == true ||
-        d.espaceConfine == true || (d.autreEnvironnement?.isNotEmpty ?? false) ||
-        d.chuteObjets == true || d.coactivite == true || d.portCharge == true ||
-        d.expositionProduitsChimiques == true || d.chuteHauteur == true ||
-        d.electrification == true || d.incendiesExplosion == true ||
-        d.mauvaisesPostures == true || d.chutePlainPied == true ||
-        (d.autrePhysique?.isNotEmpty ?? false)
-      );
+      return d != null &&
+          (d.chocElectrique == true ||
+              d.bruit == true ||
+              d.stressThermique == true ||
+              d.eclairageInadapte == true ||
+              d.zoneCirculationMalDefinie == true ||
+              d.solAccidente == true ||
+              d.emissionGazPoussiere == true ||
+              d.espaceConfine == true ||
+              (d.autreEnvironnement?.isNotEmpty ?? false) ||
+              d.chuteObjets == true ||
+              d.coactivite == true ||
+              d.portCharge == true ||
+              d.expositionProduitsChimiques == true ||
+              d.chuteHauteur == true ||
+              d.electrification == true ||
+              d.incendiesExplosion == true ||
+              d.mauvaisesPostures == true ||
+              d.chutePlainPied == true ||
+              (d.autrePhysique?.isNotEmpty ?? false));
     case 3:
       final e = jsa.exigencesGenerales;
-      return e != null && (
-        e.signaletiqueSecurite == true || e.ficheDonneeSecuriteDisponible == true ||
-        e.uneMinuteMaSecurite == true || e.balise == true ||
-        e.zoneTravailPropre == true || e.toolboxMeeting == true ||
-        e.permisTravail == true || e.extincteurs == true ||
-        e.outilsMaterielsIsolants == true || e.boitePharmacie == true ||
-        (e.autre?.isNotEmpty ?? false)
-      );
+      return e != null &&
+          (e.signaletiqueSecurite == true ||
+              e.ficheDonneeSecuriteDisponible == true ||
+              e.uneMinuteMaSecurite == true ||
+              e.balise == true ||
+              e.zoneTravailPropre == true ||
+              e.toolboxMeeting == true ||
+              e.permisTravail == true ||
+              e.extincteurs == true ||
+              e.outilsMaterielsIsolants == true ||
+              e.boitePharmacie == true ||
+              (e.autre?.isNotEmpty ?? false));
     case 4:
       final ep = jsa.epi;
-      return ep != null && (
-        ep.casqueSecurite == true || ep.bouchonsOreille == true ||
-        ep.lunettesProtection == true || ep.harnaisSecurite == true ||
-        ep.chaussureSecurite == true || ep.masqueSecurite == true ||
-        ep.combinaisonLongueManche == true || ep.gantsIsolants == true ||
-        ep.cacheNez == true || ep.gilet == true ||
-        (ep.autre?.isNotEmpty ?? false)
-      );
+      return ep != null &&
+          (ep.casqueSecurite == true ||
+              ep.bouchonsOreille == true ||
+              ep.lunettesProtection == true ||
+              ep.harnaisSecurite == true ||
+              ep.chaussureSecurite == true ||
+              ep.masqueSecurite == true ||
+              ep.combinaisonLongueManche == true ||
+              ep.gantsIsolants == true ||
+              ep.cacheNez == true ||
+              ep.gilet == true ||
+              (ep.autre?.isNotEmpty ?? false));
     case 5:
       final v = jsa.verificationFinale;
-      return v != null && (
-        v.travailTermineNA == true || v.travailTermineApplicable == true ||
-        v.consignationCadenasRetireNA == true || v.consignationCadenasRetireApplicable == true ||
-        (v.donneurOrdreSignature?.isNotEmpty ?? false) ||
-        (v.chargeAffairesSignature?.isNotEmpty ?? false)
-      );
-    default: return false;
+      return v != null &&
+          (v.travailTermineNA == true ||
+              v.travailTermineApplicable == true ||
+              v.consignationCadenasRetireNA == true ||
+              v.consignationCadenasRetireApplicable == true ||
+              (v.donneurOrdreSignature?.isNotEmpty ?? false) ||
+              (v.chargeAffairesSignature?.isNotEmpty ?? false));
+    default:
+      return false;
   }
 }
 
@@ -216,7 +351,6 @@ class SequenceScreen extends StatefulWidget {
 
 class _SequenceScreenState extends State<SequenceScreen>
     with SingleTickerProviderStateMixin {
-
   // ── Workflow ──
   late int _currentStep;
   late List<Map<String, dynamic>> _steps;
@@ -238,8 +372,10 @@ class _SequenceScreenState extends State<SequenceScreen>
 
   // ── Keys ──
   final GlobalKey<JsaStepState> _jsaKey = GlobalKey<JsaStepState>();
-  final GlobalKey<GeneralInfoStepState> _generalInfoKey = GlobalKey<GeneralInfoStepState>();
-  final GlobalKey<DescriptionStepState> _descKey = GlobalKey<DescriptionStepState>();
+  final GlobalKey<GeneralInfoStepState> _generalInfoKey =
+      GlobalKey<GeneralInfoStepState>();
+  final GlobalKey<DescriptionStepState> _descKey =
+      GlobalKey<DescriptionStepState>();
 
   // ═══════════════════════════════════════════════════════════
   //  INIT
@@ -255,11 +391,14 @@ class _SequenceScreenState extends State<SequenceScreen>
 
   void _initAnim() {
     _animCtrl = AnimationController(
-        vsync: this, duration: const Duration(milliseconds: 280));
+      vsync: this,
+      duration: const Duration(milliseconds: 280),
+    );
     _slideAnim = CurvedAnimation(
-        parent: _animCtrl,
-        curve: Curves.easeOutCubic,
-        reverseCurve: Curves.easeInCubic);
+      parent: _animCtrl,
+      curve: Curves.easeOutCubic,
+      reverseCurve: Curves.easeInCubic,
+    );
     _fadeAnim = CurvedAnimation(parent: _animCtrl, curve: Curves.easeOut);
   }
 
@@ -268,7 +407,9 @@ class _SequenceScreenState extends State<SequenceScreen>
     final mission = HiveService.getMissionById(widget.mission.id);
     if (mission != null && mission.isEnAttente) {
       await HiveService.updateMissionStatus(
-          missionId: widget.mission.id, newStatus: 'en_cours');
+        missionId: widget.mission.id,
+        newStatus: 'en_cours',
+      );
       widget.mission.status = 'en_cours';
     }
   }
@@ -296,8 +437,9 @@ class _SequenceScreenState extends State<SequenceScreen>
       {
         'title': 'Documents nécessaires',
         'widget': DocumentsStep(
-            mission: widget.mission,
-            onDataChanged: (data) => _saveStepData('documents', data)),
+          mission: widget.mission,
+          onDataChanged: (data) => _saveStepData('documents', data),
+        ),
       },
       {
         'title': 'Description des installations',
@@ -312,14 +454,16 @@ class _SequenceScreenState extends State<SequenceScreen>
       {
         'title': 'Audit des installations',
         'widget': AuditStep(
-            mission: widget.mission,
-            onDataChanged: (data) => _saveStepData('audit', data)),
+          mission: widget.mission,
+          onDataChanged: (data) => _saveStepData('audit', data),
+        ),
       },
       {
         'title': 'Schéma des installations',
         'widget': SchemaStep(
-            mission: widget.mission,
-            onDataChanged: (data) => _saveStepData('schema', data)),
+          mission: widget.mission,
+          onDataChanged: (data) => _saveStepData('schema', data),
+        ),
       },
       {
         'title': 'Sommaire',
@@ -335,16 +479,20 @@ class _SequenceScreenState extends State<SequenceScreen>
 
   Future<void> _loadProgress() async {
     setState(() => _isLoading = true);
-    final progress =
-        await SequenceProgressService.getProgress(widget.mission.id);
-    _completedSteps =
-        List<int>.from(progress['completedSteps'] as List<dynamic>? ?? []);
+    final progress = await SequenceProgressService.getProgress(
+      widget.mission.id,
+    );
+    _completedSteps = List<int>.from(
+      progress['completedSteps'] as List<dynamic>? ?? [],
+    );
 
     var savedStep = progress['currentStep'] ?? 0;
     if (widget.initialStep > 0 && widget.initialStep < _steps.length) {
       savedStep = widget.initialStep;
       await SequenceProgressService.saveCurrentStep(
-          widget.mission.id, savedStep);
+        widget.mission.id,
+        savedStep,
+      );
     } else if (savedStep >= _steps.length) {
       savedStep = _steps.length - 1;
     }
@@ -382,11 +530,16 @@ class _SequenceScreenState extends State<SequenceScreen>
     }
 
     // Audit
-    final audit = HiveService.getAuditInstallationsByMissionId(widget.mission.id);
-    final foudres = HiveService.getFoudreObservationsByMissionId(widget.mission.id);
+    final audit = HiveService.getAuditInstallationsByMissionId(
+      widget.mission.id,
+    );
+    final foudres = HiveService.getFoudreObservationsByMissionId(
+      widget.mission.id,
+    );
     final mesures = HiveService.getMesuresEssaisByMissionId(widget.mission.id);
 
-    final auditMt = audit != null &&
+    final auditMt =
+        audit != null &&
         (audit.moyenneTensionLocaux.isNotEmpty ||
             audit.moyenneTensionZones.isNotEmpty);
     final auditBt = audit != null && audit.basseTensionZones.isNotEmpty;
@@ -411,7 +564,10 @@ class _SequenceScreenState extends State<SequenceScreen>
 
   Future<void> _saveStepData(String stepKey, dynamic data) async {
     await SequenceProgressService.saveStepData(
-        widget.mission.id, stepKey, data);
+      widget.mission.id,
+      stepKey,
+      data,
+    );
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -457,8 +613,7 @@ class _SequenceScreenState extends State<SequenceScreen>
   }
 
   bool get _renseignementsComplete =>
-      _generalInfoKey.currentState?.isFormValid ??
-      _completedSteps.contains(1);
+      _generalInfoKey.currentState?.isFormValid ?? _completedSteps.contains(1);
 
   bool get _schemaComplete {
     final mission = HiveService.getMissionById(widget.mission.id);
@@ -484,18 +639,22 @@ class _SequenceScreenState extends State<SequenceScreen>
       _closeDrawer();
       await Future.delayed(const Duration(milliseconds: 220));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Row(children: [
-            const Icon(Icons.lock_outline, color: Colors.white, size: 18),
-            const SizedBox(width: 8),
-            Expanded(
-                child:
-                    Text(block, style: const TextStyle(fontSize: 13))),
-          ]),
-          backgroundColor: Colors.red.shade700,
-          duration: const Duration(seconds: 4),
-          behavior: SnackBarBehavior.floating,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Row(
+              children: [
+                const Icon(Icons.lock_outline, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(block, style: const TextStyle(fontSize: 13)),
+                ),
+              ],
+            ),
+            backgroundColor: Colors.red.shade700,
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
       return;
     }
@@ -506,21 +665,27 @@ class _SequenceScreenState extends State<SequenceScreen>
 
     _dismissKeyboard();
     await SequenceProgressService.saveCurrentStep(
-        widget.mission.id, _currentStep);
+      widget.mission.id,
+      _currentStep,
+    );
     setState(() => _currentStep = stepIndex);
-    await _pageController.animateToPage(stepIndex,
-        duration: const Duration(milliseconds: 350), curve: Curves.easeInOut);
-    await SequenceProgressService.saveCurrentStep(
-        widget.mission.id, stepIndex);
+    await _pageController.animateToPage(
+      stepIndex,
+      duration: const Duration(milliseconds: 350),
+      curve: Curves.easeInOut,
+    );
+    await SequenceProgressService.saveCurrentStep(widget.mission.id, stepIndex);
   }
 
   Future<void> _navigateToJsaSub(int subIndex) async {
     _closeDrawer();
     if (_currentStep != 0) {
       setState(() => _currentStep = 0);
-      await _pageController.animateToPage(0,
-          duration: const Duration(milliseconds: 350),
-          curve: Curves.easeInOut);
+      await _pageController.animateToPage(
+        0,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+      );
       await SequenceProgressService.saveCurrentStep(widget.mission.id, 0);
       await Future.delayed(const Duration(milliseconds: 400));
     }
@@ -533,19 +698,24 @@ class _SequenceScreenState extends State<SequenceScreen>
       _closeDrawer();
       await Future.delayed(const Duration(milliseconds: 220));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(block),
-          backgroundColor: Colors.red.shade700,
-          behavior: SnackBarBehavior.floating,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(block),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
       return;
     }
     _closeDrawer();
     if (_currentStep != 3) {
       setState(() => _currentStep = 3);
-      await _pageController.animateToPage(3,
-          duration: const Duration(milliseconds: 350), curve: Curves.easeInOut);
+      await _pageController.animateToPage(
+        3,
+        duration: const Duration(milliseconds: 350),
+        curve: Curves.easeInOut,
+      );
       await SequenceProgressService.saveCurrentStep(widget.mission.id, 3);
       await Future.delayed(const Duration(milliseconds: 300));
     }
@@ -558,11 +728,13 @@ class _SequenceScreenState extends State<SequenceScreen>
       _closeDrawer();
       await Future.delayed(const Duration(milliseconds: 220));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text(block),
-          backgroundColor: Colors.red.shade700,
-          behavior: SnackBarBehavior.floating,
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(block),
+            backgroundColor: Colors.red.shade700,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
       }
       return;
     }
@@ -573,29 +745,35 @@ class _SequenceScreenState extends State<SequenceScreen>
     switch (key) {
       case 'audit_mt':
         await Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) =>
-                    MoyenneTensionScreen(mission: widget.mission)));
+          context,
+          MaterialPageRoute(
+            builder: (_) => MoyenneTensionScreen(mission: widget.mission),
+          ),
+        );
         break;
       case 'audit_bt':
         await Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => BasseTensionScreen(mission: widget.mission)));
+          context,
+          MaterialPageRoute(
+            builder: (_) => BasseTensionScreen(mission: widget.mission),
+          ),
+        );
         break;
       case 'audit_foudre':
         await Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) => FoudreScreen(mission: widget.mission)));
+          context,
+          MaterialPageRoute(
+            builder: (_) => FoudreScreen(mission: widget.mission),
+          ),
+        );
         break;
       case 'audit_mesures':
         await Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (_) =>
-                    MesuresEssaisScreen(mission: widget.mission)));
+          context,
+          MaterialPageRoute(
+            builder: (_) => MesuresEssaisScreen(mission: widget.mission),
+          ),
+        );
         break;
     }
     // Rafraîchir après retour
@@ -614,29 +792,34 @@ class _SequenceScreenState extends State<SequenceScreen>
     if (_currentStep == 0) {
       final jsaState = _jsaKey.currentState;
       if (jsaState != null && !jsaState.isFullyComplete) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text(
-              'Veuillez compléter toutes les sections du JSA avant de continuer.'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Veuillez compléter toutes les sections du JSA avant de continuer.',
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
         return;
       }
     }
 
     if (_currentStep == 1) {
       _generalInfoKey.currentState?.triggerValidation();
-      final isValid =
-          _generalInfoKey.currentState?.isFormValid ?? false;
+      final isValid = _generalInfoKey.currentState?.isFormValid ?? false;
       if (!isValid) {
         await Future.delayed(const Duration(milliseconds: 50));
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text(
-                'Veuillez remplir tous les champs obligatoires (marqués en rouge)'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
-          ));
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Veuillez remplir tous les champs obligatoires (marqués en rouge)',
+              ),
+              backgroundColor: Colors.red,
+              duration: Duration(seconds: 3),
+            ),
+          );
         }
         return;
       }
@@ -644,31 +827,42 @@ class _SequenceScreenState extends State<SequenceScreen>
 
     if (_currentStep == 5 && !_schemaComplete) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text(
-              'Veuillez sélectionner Oui ou Non pour le schéma des installations'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 3),
-        ));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Veuillez sélectionner Oui ou Non pour le schéma des installations',
+            ),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
       }
       return;
     }
 
     if (_currentStep < _steps.length - 1) {
       await SequenceProgressService.saveCurrentStep(
-          widget.mission.id, _currentStep);
+        widget.mission.id,
+        _currentStep,
+      );
       await SequenceProgressService.markStepCompleted(
-          widget.mission.id, _currentStep);
+        widget.mission.id,
+        _currentStep,
+      );
       if (!_completedSteps.contains(_currentStep)) {
         setState(() => _completedSteps.add(_currentStep));
       }
 
       setState(() => _currentStep++);
-      await _pageController.animateToPage(_currentStep,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeInOut);
+      await _pageController.animateToPage(
+        _currentStep,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
       await SequenceProgressService.saveCurrentStep(
-          widget.mission.id, _currentStep);
+        widget.mission.id,
+        _currentStep,
+      );
     }
   }
 
@@ -678,18 +872,24 @@ class _SequenceScreenState extends State<SequenceScreen>
 
     if (_currentStep > 0) {
       await SequenceProgressService.saveCurrentStep(
-          widget.mission.id, _currentStep);
+        widget.mission.id,
+        _currentStep,
+      );
       setState(() => _currentStep--);
       final bool jump = (_currentStep + 1) == 3 && _currentStep == 2;
       if (jump) {
         _pageController.jumpToPage(_currentStep);
       } else {
-        await _pageController.animateToPage(_currentStep,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut);
+        await _pageController.animateToPage(
+          _currentStep,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeInOut,
+        );
       }
       await SequenceProgressService.saveCurrentStep(
-          widget.mission.id, _currentStep);
+        widget.mission.id,
+        _currentStep,
+      );
     }
   }
 
@@ -709,8 +909,7 @@ class _SequenceScreenState extends State<SequenceScreen>
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
-          body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     if (_currentStep >= _steps.length) _currentStep = _steps.length - 1;
@@ -732,10 +931,16 @@ class _SequenceScreenState extends State<SequenceScreen>
             icon: AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               child: _drawerOpen
-                  ? const Icon(Icons.close,
-                      key: ValueKey('c'), color: Colors.white)
-                  : const Icon(Icons.menu_book_outlined,
-                      key: ValueKey('o'), color: Colors.white),
+                  ? const Icon(
+                      Icons.close,
+                      key: ValueKey('c'),
+                      color: Colors.white,
+                    )
+                  : const Icon(
+                      Icons.menu_book_outlined,
+                      key: ValueKey('o'),
+                      color: Colors.white,
+                    ),
             ),
             tooltip: 'Sommaire',
             onPressed: _toggleDrawer,
@@ -761,8 +966,7 @@ class _SequenceScreenState extends State<SequenceScreen>
               children: [
                 LinearProgressIndicator(
                   value: (_currentStep + 1) / total,
-                  backgroundColor:
-                      AppTheme.primaryBlue.withOpacity(0.3),
+                  backgroundColor: AppTheme.primaryBlue.withOpacity(0.3),
                   color: Colors.white,
                   minHeight: 4,
                 ),
@@ -770,13 +974,10 @@ class _SequenceScreenState extends State<SequenceScreen>
                   child: PageView(
                     controller: _pageController,
                     physics: const NeverScrollableScrollPhysics(),
-                    children:
-                        _steps.map((s) => s['widget'] as Widget).toList(),
+                    children: _steps.map((s) => s['widget'] as Widget).toList(),
                   ),
                 ),
-                if (_currentStep != 0 &&
-                    _currentStep != 3 &&
-                    _currentStep != 6)
+                if (_currentStep != 0 && _currentStep != 3 && _currentStep != 6)
                   _buildNavButtons(isLast),
               ],
             ),
@@ -787,8 +988,7 @@ class _SequenceScreenState extends State<SequenceScreen>
                 opacity: _fadeAnim,
                 child: GestureDetector(
                   onTap: _closeDrawer,
-                  child:
-                      Container(color: Colors.black.withOpacity(0.45)),
+                  child: Container(color: Colors.black.withOpacity(0.45)),
                 ),
               ),
 
@@ -817,51 +1017,62 @@ class _SequenceScreenState extends State<SequenceScreen>
   Widget _buildNavButtons(bool isLast) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: Colors.white, boxShadow: [
-        BoxShadow(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
             color: Colors.black.withOpacity(0.05),
             blurRadius: 8,
-            offset: const Offset(0, -2)),
-      ]),
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
       child: Row(
         children: [
           if (_currentStep > 0)
             Expanded(
-                child: OutlinedButton(
-              onPressed: _goToPreviousStep,
-              style: OutlinedButton.styleFrom(
+              child: OutlinedButton(
+                onPressed: _goToPreviousStep,
+                style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10))),
-              child: const Row(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Icon(Icons.arrow_back, size: 18),
                     SizedBox(width: 8),
                     Text('Précédent'),
-                  ]),
-            )),
+                  ],
+                ),
+              ),
+            ),
           if (_currentStep > 0) const SizedBox(width: 12),
           Expanded(
-              child: ElevatedButton(
-            onPressed: _goToNextStep,
-            style: ElevatedButton.styleFrom(
-                backgroundColor:
-                    isLast ? Colors.green : AppTheme.primaryBlue,
+            child: ElevatedButton(
+              onPressed: _goToNextStep,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isLast ? Colors.green : AppTheme.primaryBlue,
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10))),
-            child: Row(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(isLast ? 'TERMINER' : 'SUIVANT'),
                   if (!isLast) ...[
                     const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward, size: 18)
+                    const Icon(Icons.arrow_forward, size: 18),
                   ],
-                ]),
-          )),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -884,8 +1095,7 @@ class _SequenceScreenState extends State<SequenceScreen>
         decoration: const BoxDecoration(
           color: Colors.white,
           // ← arrondi à droite (drawer depuis la gauche)
-          borderRadius:
-              BorderRadius.horizontal(right: Radius.circular(20)),
+          borderRadius: BorderRadius.horizontal(right: Radius.circular(20)),
         ),
         child: SafeArea(
           child: Column(
@@ -896,67 +1106,90 @@ class _SequenceScreenState extends State<SequenceScreen>
                   gradient: LinearGradient(
                     colors: [
                       AppTheme.primaryBlue,
-                      AppTheme.primaryBlue.withOpacity(0.82)
+                      AppTheme.primaryBlue.withOpacity(0.82),
                     ],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
                   // ← arrondi à droite
                   borderRadius: const BorderRadius.only(
-                      topRight: Radius.circular(20)),
+                    topRight: Radius.circular(20),
+                  ),
                 ),
                 padding: const EdgeInsets.fromLTRB(20, 20, 16, 16),
                 child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        const Icon(Icons.menu_book_outlined,
-                            color: Colors.white, size: 22),
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(
+                          Icons.menu_book_outlined,
+                          color: Colors.white,
+                          size: 22,
+                        ),
                         const SizedBox(width: 10),
                         const Expanded(
-                            child: Text('Sommaire',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.bold))),
+                          child: Text(
+                            'Sommaire',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                         GestureDetector(
                           onTap: _closeDrawer,
                           child: Container(
                             padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(8)),
-                            child: const Icon(Icons.close,
-                                color: Colors.white, size: 18),
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Icon(
+                              Icons.close,
+                              color: Colors.white,
+                              size: 18,
+                            ),
                           ),
                         ),
-                      ]),
-                      const SizedBox(height: 14),
-                      Row(children: [
+                      ],
+                    ),
+                    const SizedBox(height: 14),
+                    Row(
+                      children: [
                         Expanded(
-                            child: ClipRRect(
-                          borderRadius: BorderRadius.circular(4),
-                          child: LinearProgressIndicator(
-                            value: done / _steps.length,
-                            backgroundColor:
-                                Colors.white.withOpacity(0.3),
-                            color: Colors.greenAccent,
-                            minHeight: 6,
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(4),
+                            child: LinearProgressIndicator(
+                              value: done / _steps.length,
+                              backgroundColor: Colors.white.withOpacity(0.3),
+                              color: Colors.greenAccent,
+                              minHeight: 6,
+                            ),
                           ),
-                        )),
+                        ),
                         const SizedBox(width: 10),
-                        Text('$pct%',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold)),
-                      ]),
-                      const SizedBox(height: 6),
-                      Text('$done/${_steps.length} sections complétées',
-                          style: TextStyle(
-                              color: Colors.white.withOpacity(0.8),
-                              fontSize: 12)),
-                    ]),
+                        Text(
+                          '$pct%',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      '$done/${_steps.length} sections complétées',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
               ),
 
               // Items
@@ -972,14 +1205,15 @@ class _SequenceScreenState extends State<SequenceScreen>
               Container(
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                    border: Border(
-                        top: BorderSide(color: Colors.grey.shade200))),
+                  border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                ),
                 child: Text(
                   'Touchez une section pour y accéder directement',
                   style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade500,
-                      fontStyle: FontStyle.italic),
+                    fontSize: 11,
+                    color: Colors.grey.shade500,
+                    fontStyle: FontStyle.italic,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ),
@@ -993,17 +1227,16 @@ class _SequenceScreenState extends State<SequenceScreen>
   Widget _buildItem(_Item item) {
     final isCurrent = _currentStep == item.stepIndex;
     final isComplete = _completedSteps.contains(item.stepIndex);
-    final isExpanded =
-        item.hasSubs && _expandedSteps.contains(item.stepIndex);
+    final isExpanded = item.hasSubs && _expandedSteps.contains(item.stepIndex);
     final isBlocked = _blockMessage(item.stepIndex) != null;
 
     final Color stateColor = isBlocked
         ? Colors.grey.shade400
         : isCurrent
-            ? AppTheme.primaryBlue
-            : isComplete
-                ? Colors.green
-                : Colors.grey.shade500;
+        ? AppTheme.primaryBlue
+        : isComplete
+        ? Colors.green
+        : Colors.grey.shade500;
 
     return Column(
       children: [
@@ -1011,119 +1244,140 @@ class _SequenceScreenState extends State<SequenceScreen>
           onTap: () => _navigateToStep(item.stepIndex),
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 180),
-            margin:
-                const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
-            padding: const EdgeInsets.symmetric(
-                horizontal: 12, vertical: 11),
+            margin: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
             decoration: BoxDecoration(
               color: isCurrent
                   ? AppTheme.primaryBlue.withOpacity(0.10)
                   : isComplete
-                      ? Colors.green.withOpacity(0.05)
-                      : Colors.transparent,
+                  ? Colors.green.withOpacity(0.05)
+                  : Colors.transparent,
               borderRadius: BorderRadius.circular(12),
               border: isCurrent
-                  ? Border.all(
-                      color: AppTheme.primaryBlue.withOpacity(0.3))
+                  ? Border.all(color: AppTheme.primaryBlue.withOpacity(0.3))
                   : null,
             ),
-            child: Row(children: [
-              Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  color: stateColor.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(9),
-                ),
-                child: Center(
-                  child: isBlocked
-                      ? Icon(Icons.lock_outline,
-                          color: stateColor, size: 17)
-                      : isComplete && !isCurrent
-                          ? Icon(Icons.check_circle,
-                              color: Colors.green, size: 18)
-                          : Icon(item.icon,
-                              color: stateColor, size: 18),
-                ),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(children: [
-                        Expanded(
-                            child: Text(item.title,
-                                style: TextStyle(
-                                  fontSize: 13.5,
-                                  fontWeight: isCurrent
-                                      ? FontWeight.w700
-                                      : FontWeight.w500,
-                                  color: isBlocked
-                                      ? Colors.grey.shade500
-                                      : isCurrent
-                                          ? AppTheme.primaryBlue
-                                          : isComplete
-                                              ? Colors.black87
-                                              : Colors.grey.shade700,
-                                ))),
-                        if (item.isRequired &&
-                            !isComplete &&
-                            !isCurrent)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 5, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.shade100,
-                              borderRadius: BorderRadius.circular(7),
-                              border: Border.all(
-                                  color: Colors.orange.shade300),
-                            ),
-                            child: Text('Requis',
-                                style: TextStyle(
-                                    fontSize: 9,
-                                    color: Colors.orange.shade800,
-                                    fontWeight: FontWeight.bold)),
-                          ),
-                      ]),
-                      if (isCurrent)
-                        Text('En cours',
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: AppTheme.primaryBlue
-                                    .withOpacity(0.7)))
-                      else if (isComplete)
-                        Text('Complétée',
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.green.shade600))
-                      else if (isBlocked)
-                        Text('Accès verrouillé',
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade500)),
-                    ]),
-              ),
-              if (item.hasSubs)
-                GestureDetector(
-                  onTap: () => setState(() {
-                    if (isExpanded) {
-                      _expandedSteps.remove(item.stepIndex);
-                    } else {
-                      _expandedSteps.add(item.stepIndex);
-                    }
-                  }),
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 8),
-                    child: AnimatedRotation(
-                      turns: isExpanded ? 0.5 : 0,
-                      duration: const Duration(milliseconds: 200),
-                      child: Icon(Icons.keyboard_arrow_down,
-                          size: 18, color: Colors.grey.shade500),
-                    ),
+            child: Row(
+              children: [
+                Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: stateColor.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(9),
+                  ),
+                  child: Center(
+                    child: isBlocked
+                        ? Icon(Icons.lock_outline, color: stateColor, size: 17)
+                        : isComplete && !isCurrent
+                        ? Icon(
+                            Icons.check_circle,
+                            color: Colors.green,
+                            size: 18,
+                          )
+                        : Icon(item.icon, color: stateColor, size: 18),
                   ),
                 ),
-            ]),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              item.title,
+                              style: TextStyle(
+                                fontSize: 13.5,
+                                fontWeight: isCurrent
+                                    ? FontWeight.w700
+                                    : FontWeight.w500,
+                                color: isBlocked
+                                    ? Colors.grey.shade500
+                                    : isCurrent
+                                    ? AppTheme.primaryBlue
+                                    : isComplete
+                                    ? Colors.black87
+                                    : Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                          if (item.isRequired && !isComplete && !isCurrent)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 5,
+                                vertical: 2,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.orange.shade100,
+                                borderRadius: BorderRadius.circular(7),
+                                border: Border.all(
+                                  color: Colors.orange.shade300,
+                                ),
+                              ),
+                              child: Text(
+                                'Requis',
+                                style: TextStyle(
+                                  fontSize: 9,
+                                  color: Colors.orange.shade800,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                      if (isCurrent)
+                        Text(
+                          'En cours',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: AppTheme.primaryBlue.withOpacity(0.7),
+                          ),
+                        )
+                      else if (isComplete)
+                        Text(
+                          'Complétée',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.green.shade600,
+                          ),
+                        )
+                      else if (isBlocked)
+                        Text(
+                          'Accès verrouillé',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade500,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+                if (item.hasSubs)
+                  GestureDetector(
+                    onTap: () => setState(() {
+                      if (isExpanded) {
+                        _expandedSteps.remove(item.stepIndex);
+                      } else {
+                        _expandedSteps.add(item.stepIndex);
+                      }
+                    }),
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 8),
+                      child: AnimatedRotation(
+                        turns: isExpanded ? 0.5 : 0,
+                        duration: const Duration(milliseconds: 200),
+                        child: Icon(
+                          Icons.keyboard_arrow_down,
+                          size: 18,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
 
@@ -1143,8 +1397,7 @@ class _SequenceScreenState extends State<SequenceScreen>
 
   Widget _buildSubs(_Item item) {
     return Padding(
-      padding:
-          const EdgeInsets.only(left: 24, right: 10, bottom: 4),
+      padding: const EdgeInsets.only(left: 24, right: 10, bottom: 4),
       child: Column(
         children: item.subs.map((sub) {
           bool subComplete = false;
@@ -1161,8 +1414,8 @@ class _SequenceScreenState extends State<SequenceScreen>
           final subColor = blocked
               ? Colors.grey.shade400
               : subComplete
-                  ? Colors.green
-                  : Colors.grey.shade500;
+              ? Colors.green
+              : Colors.grey.shade500;
 
           return InkWell(
             onTap: blocked
@@ -1179,50 +1432,57 @@ class _SequenceScreenState extends State<SequenceScreen>
             borderRadius: BorderRadius.circular(8),
             child: Container(
               margin: const EdgeInsets.only(bottom: 3),
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 12, vertical: 9),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
               decoration: BoxDecoration(
                 color: subComplete
                     ? Colors.green.withOpacity(0.05)
                     : Colors.grey.shade50,
                 borderRadius: BorderRadius.circular(8),
                 border: subComplete
-                    ? Border.all(
-                        color: Colors.green.withOpacity(0.2))
+                    ? Border.all(color: Colors.green.withOpacity(0.2))
                     : null,
               ),
-              child: Row(children: [
-                Container(
-                  width: 4,
-                  height: 4,
-                  decoration: BoxDecoration(
-                      color: subColor, shape: BoxShape.circle),
-                ),
-                const SizedBox(width: 8),
-                Icon(
-                    subComplete
-                        ? Icons.check_circle
-                        : sub.icon,
+              child: Row(
+                children: [
+                  Container(
+                    width: 4,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: subColor,
+                      shape: BoxShape.circle,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Icon(
+                    subComplete ? Icons.check_circle : sub.icon,
                     size: 14,
-                    color: subColor),
-                const SizedBox(width: 8),
-                Expanded(
-                    child: Text(sub.label,
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: blocked
-                              ? Colors.grey.shade400
-                              : subComplete
-                                  ? Colors.green.shade700
-                                  : Colors.grey.shade700,
-                          fontWeight: subComplete
-                              ? FontWeight.w500
-                              : FontWeight.normal,
-                        ))),
-                if (!blocked)
-                  Icon(Icons.chevron_right,
-                      size: 14, color: Colors.grey.shade400),
-              ]),
+                    color: subColor,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      sub.label,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: blocked
+                            ? Colors.grey.shade400
+                            : subComplete
+                            ? Colors.green.shade700
+                            : Colors.grey.shade700,
+                        fontWeight: subComplete
+                            ? FontWeight.w500
+                            : FontWeight.normal,
+                      ),
+                    ),
+                  ),
+                  if (!blocked)
+                    Icon(
+                      Icons.chevron_right,
+                      size: 14,
+                      color: Colors.grey.shade400,
+                    ),
+                ],
+              ),
             ),
           );
         }).toList(),
@@ -1239,19 +1499,22 @@ class _SequenceScreenState extends State<SequenceScreen>
       builder: (context) => AlertDialog(
         title: const Text('Quitter la mission'),
         content: const Text(
-            'Votre progression sera sauvegardée. Vous pourrez reprendre plus tard.'),
+          'Votre progression sera sauvegardée. Vous pourrez reprendre plus tard.',
+        ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Annuler')),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
           ElevatedButton(
             onPressed: () {
               Navigator.pop(context);
               Navigator.pop(context);
             },
             style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white),
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
             child: const Text('Quitter'),
           ),
         ],
