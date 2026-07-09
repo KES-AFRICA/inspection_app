@@ -23,15 +23,17 @@ class DescriptionInstallationsNotifier
     load();
   }
 
-  Future<void> load() async {
+  Future<DescriptionInstallations> load() async {
     try {
       state = const AsyncValue.loading();
       final getUseCase = ref.read(getDescriptionInstallationsUseCaseProvider);
       final entity = await getUseCase(missionId);
       final model = DescriptionInstallationsMapper.toModel(entity);
       state = AsyncValue.data(model);
+      return model;
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
+      rethrow;
     }
   }
 

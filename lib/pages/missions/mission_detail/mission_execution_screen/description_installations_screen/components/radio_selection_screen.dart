@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/get_description_installations_use_case.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/update_description_selection_use_case.dart';
+import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 
-class RadioSelectionScreen extends StatefulWidget {
+class RadioSelectionScreen extends ConsumerStatefulWidget {
   final Mission mission;
   final String title;
   final String field;
@@ -20,10 +19,10 @@ class RadioSelectionScreen extends StatefulWidget {
   });
 
   @override
-  State<RadioSelectionScreen> createState() => _RadioSelectionScreenState();
+  ConsumerState<RadioSelectionScreen> createState() => _RadioSelectionScreenState();
 }
 
-class _RadioSelectionScreenState extends State<RadioSelectionScreen> {
+class _RadioSelectionScreenState extends ConsumerState<RadioSelectionScreen> {
   String? _selectedOption;
 
   @override
@@ -33,8 +32,7 @@ class _RadioSelectionScreenState extends State<RadioSelectionScreen> {
   }
 
   void _loadCurrentSelection() async {
-    final getDescUseCase = GetIt.instance<GetDescriptionInstallationsUseCase>();
-    final desc = await getDescUseCase(widget.mission.id);
+    final desc = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).load();
     
     setState(() {
       switch (widget.field) {
@@ -59,18 +57,16 @@ class _RadioSelectionScreenState extends State<RadioSelectionScreen> {
 
   void _sauvegarder() async {
     if (_selectedOption != null) {
-      final updateSelectionUseCase = GetIt.instance<UpdateDescriptionSelectionUseCase>();
-      final success = await updateSelectionUseCase(
-        missionId: widget.mission.id,
-        field: widget.field,
-        value: _selectedOption!,
+      final success = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).updateDescriptionSelection(
+        widget.field,
+        _selectedOption!,
       );
 
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Option sauvegardée: $_selectedOption')),
         );
-        Navigator.pop(context);
+        Navigator.pop(context, true);
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Erreur lors de la sauvegarde')),

@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/get_description_installations_use_case.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/update_description_selection_use_case.dart';
+import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 
-class ParatonnerreScreen extends StatefulWidget {
+class ParatonnerreScreen extends ConsumerStatefulWidget {
   final Mission mission;
 
   const ParatonnerreScreen({super.key, required this.mission});
 
   @override
-  State<ParatonnerreScreen> createState() => _ParatonnerreScreenState();
+  ConsumerState<ParatonnerreScreen> createState() => _ParatonnerreScreenState();
 }
 
-class _ParatonnerreScreenState extends State<ParatonnerreScreen> {
+class _ParatonnerreScreenState extends ConsumerState<ParatonnerreScreen> {
   String? _presenceParatonnerre;
   String? _analyseRisqueFoudre;
   String? _etudeTechniqueFoudre;
@@ -31,8 +30,7 @@ class _ParatonnerreScreenState extends State<ParatonnerreScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final getDescUseCase = GetIt.instance<GetDescriptionInstallationsUseCase>();
-      final desc = await getDescUseCase(widget.mission.id);
+      final desc = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).load();
       
       setState(() {
         _presenceParatonnerre = desc.presenceParatonnerre;
@@ -50,24 +48,21 @@ class _ParatonnerreScreenState extends State<ParatonnerreScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final updateSelectionUseCase = GetIt.instance<UpdateDescriptionSelectionUseCase>();
+      final notifier = ref.read(descriptionInstallationsProvider(widget.mission.id).notifier);
 
-      final success1 = await updateSelectionUseCase(
-        missionId: widget.mission.id,
-        field: 'presence_paratonnerre',
-        value: _presenceParatonnerre ?? '',
+      final success1 = await notifier.updateDescriptionSelection(
+        'presence_paratonnerre',
+        _presenceParatonnerre ?? '',
       );
 
-      final success2 = await updateSelectionUseCase(
-        missionId: widget.mission.id,
-        field: 'analyse_risque_foudre',
-        value: _analyseRisqueFoudre ?? '',
+      final success2 = await notifier.updateDescriptionSelection(
+        'analyse_risque_foudre',
+        _analyseRisqueFoudre ?? '',
       );
 
-      final success3 = await updateSelectionUseCase(
-        missionId: widget.mission.id,
-        field: 'etude_technique_foudre',
-        value: _etudeTechniqueFoudre ?? '',
+      final success3 = await notifier.updateDescriptionSelection(
+        'etude_technique_foudre',
+        _etudeTechniqueFoudre ?? '',
       );
 
       if (success1 && success2 && success3) {

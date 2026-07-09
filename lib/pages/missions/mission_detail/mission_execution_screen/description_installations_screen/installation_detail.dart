@@ -1,15 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/models/mission.dart';
+import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/ajouter_carte.dart';
-import 'package:inspec_app/features/description_installations/domain/entities/installation_item_entity.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/get_description_installations_use_case.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/add_installation_item_use_case.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/update_installation_item_use_case.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/remove_installation_item_use_case.dart';
+import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 
-class InstallationDetailScreen extends StatefulWidget {
+class InstallationDetailScreen extends ConsumerStatefulWidget {
   final Mission mission;
   final String title;
   final String sectionKey;
@@ -24,11 +21,11 @@ class InstallationDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<InstallationDetailScreen> createState() => _InstallationDetailScreenState();
+  ConsumerState<InstallationDetailScreen> createState() => _InstallationDetailScreenState();
 }
 
-class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
-  List<Map<String, String>> _cartes = [];
+class _InstallationDetailScreenState extends ConsumerState<InstallationDetailScreen> {
+  List<InstallationItem> _items = [];
 
   @override
   void initState() {
@@ -37,10 +34,9 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
   }
 
   void _loadCartes() async {
-    final getDescUseCase = GetIt.instance<GetDescriptionInstallationsUseCase>();
-    final desc = await getDescUseCase(widget.mission.id);
+    final desc = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).load();
     
-    List<InstallationItemEntity> items = [];
+    List<InstallationItem> items = [];
     switch (widget.sectionKey) {
       case 'alimentation_moyenne_tension':
         items = desc.alimentationMoyenneTension;
@@ -66,7 +62,7 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
     }
     
     setState(() {
-      _cartes = items.map((item) => item.data).toList();
+      _items = items;
     });
   }
 
@@ -83,12 +79,11 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
     );
 
     if (result != null && result is Map<String, String>) {
-      final addUseCase = GetIt.instance<AddInstallationItemUseCase>();
-      final success = await addUseCase(
-        missionId: widget.mission.id,
-        section: widget.sectionKey,
-        item: InstallationItemEntity(
+      final success = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).addInstallationItem(
+        widget.sectionKey,
+        InstallationItem(
           data: result,
+          photoPaths: [],
           createdAt: DateTime.now(),
         ),
       );
@@ -107,27 +102,26 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
   }
 
   void _editerCarte(int index) async {
-    final carte = _cartes[index];
+    final item = _items[index];
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AjouterCarteScreen(
           champs: widget.champs,
-          carte: carte,
-          sectionKey: widget.sectionKey, // Passer la sectionKey
+          carte: item.data,
+          sectionKey: widget.sectionKey,
         ),
       ),
     );
 
     if (result != null && result is Map<String, String>) {
-      final updateUseCase = GetIt.instance<UpdateInstallationItemUseCase>();
-      final success = await updateUseCase(
-        missionId: widget.mission.id,
-        section: widget.sectionKey,
-        index: index,
-        item: InstallationItemEntity(
+      final success = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).updateInstallationItem(
+        widget.sectionKey,
+        index,
+        InstallationItem(
           data: result,
-          createdAt: DateTime.now(),
+          photoPaths: item.photoPaths,
+          createdAt: item.createdAt,
         ),
       );
 
@@ -158,11 +152,9 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              final removeUseCase = GetIt.instance<RemoveInstallationItemUseCase>();
-              final success = await removeUseCase(
-                missionId: widget.mission.id,
-                section: widget.sectionKey,
-                index: index,
+              final success = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).removeInstallationItem(
+                widget.sectionKey,
+                index,
               );
 
               if (success) {
@@ -191,7 +183,7 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
         backgroundColor: Colors.blue,
         foregroundColor: Colors.white,
       ),
-      body: _cartes.isEmpty
+      body: _items.isEmpty
           ? Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -212,9 +204,9 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
             )
           : ListView.builder(
               padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 80),
-              itemCount: _cartes.length,
+              itemCount: _items.length,
               itemBuilder: (context, index) {
-                final carte = _cartes[index];
+                final carte = _items[index].data;
                 return _buildCarteItem(carte, index);
               },
             ),
@@ -235,7 +227,22 @@ class _InstallationDetailScreenState extends State<InstallationDetailScreen> {
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
       child: InkWell(
-        onTap: () => _editerCarte(index),
+        onTap: () {
+          final item = _items[index];
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ItemDetailScreen(
+                mission: widget.mission,
+                sectionKey: widget.sectionKey,
+                item: item,
+                index: index,
+                champs: widget.champs,
+                requiredFields: const [],
+              ),
+            ),
+          ).then((_) => _loadCartes());
+        },
         borderRadius: BorderRadius.circular(12),
         child: Padding(
           padding: const EdgeInsets.all(16),

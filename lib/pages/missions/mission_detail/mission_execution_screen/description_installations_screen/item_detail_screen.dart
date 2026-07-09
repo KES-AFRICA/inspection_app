@@ -1,15 +1,13 @@
 // item_detail_screen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/models/mission.dart';
-import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/description_installations/domain/entities/installation_item_entity.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/update_installation_item_use_case.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/remove_installation_item_use_case.dart';
+import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 
-class ItemDetailScreen extends StatefulWidget {
+class ItemDetailScreen extends ConsumerStatefulWidget {
   final Mission mission;
   final String sectionKey;
   final InstallationItem item;
@@ -28,10 +26,10 @@ class ItemDetailScreen extends StatefulWidget {
   });
 
   @override
-  State<ItemDetailScreen> createState() => _ItemDetailScreenState();
+  ConsumerState<ItemDetailScreen> createState() => _ItemDetailScreenState();
 }
 
-class _ItemDetailScreenState extends State<ItemDetailScreen> {
+class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
   final Map<String, TextEditingController> _controllers = {};
   final ImagePicker _picker = ImagePicker();
   bool _isEditing = false;
@@ -188,16 +186,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
         widget.item.updateField(champ, _controllers[champ]!.text.trim());
       }
 
-      final updateUseCase = GetIt.instance<UpdateInstallationItemUseCase>();
-      await updateUseCase(
-        missionId: widget.mission.id,
-        section: widget.sectionKey,
-        index: widget.index,
-        item: InstallationItemEntity(
-          data: widget.item.data,
-          photoPaths: widget.item.photoPaths,
-          createdAt: widget.item.createdAt,
-        ),
+      final success = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).updateInstallationItem(
+        widget.sectionKey,
+        widget.index,
+        widget.item,
       );
 
       ScaffoldMessenger.of(context).showSnackBar(
@@ -246,14 +238,14 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
       });
 
       try {
-        final removeUseCase = GetIt.instance<RemoveInstallationItemUseCase>();
-        await removeUseCase(
-          missionId: widget.mission.id,
-          section: widget.sectionKey,
-          index: widget.index,
+        final success = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).removeInstallationItem(
+          widget.sectionKey,
+          widget.index,
         );
 
-        Navigator.pop(context, true);
+        if (success) {
+          Navigator.pop(context, true);
+        }
       } catch (e) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

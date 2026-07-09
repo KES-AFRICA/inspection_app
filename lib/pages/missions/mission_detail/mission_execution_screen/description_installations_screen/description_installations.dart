@@ -1,15 +1,15 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
+
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/radio_selection_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/installation_detail.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/paratonnerre_screen.dart';
-import 'package:inspec_app/features/description_installations/domain/usecases/get_description_installations_use_case.dart';
-import 'package:inspec_app/features/description_installations/data/mappers/description_installations_mapper.dart';
 
-class DescriptionInstallationsScreen extends StatefulWidget {
+class DescriptionInstallationsScreen extends ConsumerStatefulWidget {
   final Mission mission;
 
   const DescriptionInstallationsScreen({
@@ -18,10 +18,10 @@ class DescriptionInstallationsScreen extends StatefulWidget {
   });
 
   @override
-  State<DescriptionInstallationsScreen> createState() => _DescriptionInstallationsScreenState();
+  ConsumerState<DescriptionInstallationsScreen> createState() => _DescriptionInstallationsScreenState();
 }
 
-class _DescriptionInstallationsScreenState extends State<DescriptionInstallationsScreen> {
+class _DescriptionInstallationsScreenState extends ConsumerState<DescriptionInstallationsScreen> {
   // Map pour stocker l'état de remplissage de chaque section
   Map<String, bool> _sectionStatus = {};
   bool _isLoading = true;
@@ -56,10 +56,9 @@ class _DescriptionInstallationsScreenState extends State<DescriptionInstallation
       
       final tempStatus = <String, bool>{};
       
-      // Récupérer la description via le Use Case
-      final getDescUseCase = GetIt.instance<GetDescriptionInstallationsUseCase>();
-      final descEntity = await getDescUseCase(widget.mission.id);
-      final desc = DescriptionInstallationsMapper.toModel(descEntity);
+      // Récupérer la description via le provider
+      ref.invalidate(descriptionInstallationsProvider(widget.mission.id));
+      final desc = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).load();
       
       for (var section in sectionsWithCards) {
         tempStatus[section] = desc.isSectionComplete(section);
