@@ -3,21 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/core/providers/description_installations_providers.dart';
 import 'package:inspec_app/features/description_installations/data/mappers/description_installations_mapper.dart';
 import 'package:inspec_app/models/description_installations.dart';
-import 'package:inspec_app/models/installation_item.dart';
 
-final descriptionInstallationsProvider = StateNotifierProvider.family.autoDispose<
-    DescriptionInstallationsNotifier,
-    AsyncValue<DescriptionInstallations>,
-    String>((ref, missionId) {
-  return DescriptionInstallationsNotifier(ref: ref, missionId: missionId);
-});
+final descriptionInstallationsProvider = StateNotifierProvider.family
+    .autoDispose<
+      DescriptionInstallationsNotifier,
+      AsyncValue<DescriptionInstallations>,
+      String
+    >((ref, missionId) {
+      return DescriptionInstallationsNotifier(ref: ref, missionId: missionId);
+    });
 
-class DescriptionInstallationsNotifier extends StateNotifier<AsyncValue<DescriptionInstallations>> {
+class DescriptionInstallationsNotifier
+    extends StateNotifier<AsyncValue<DescriptionInstallations>> {
   final Ref ref;
   final String missionId;
 
   DescriptionInstallationsNotifier({required this.ref, required this.missionId})
-      : super(const AsyncValue.loading()) {
+    : super(const AsyncValue.loading()) {
     load();
   }
 
@@ -33,16 +35,19 @@ class DescriptionInstallationsNotifier extends StateNotifier<AsyncValue<Descript
     }
   }
 
-  Future<bool> addInstallationItem(String sectionKey, InstallationItem item) async {
+  Future<bool> addInstallationItem(
+    String sectionKey,
+    InstallationItem item,
+  ) async {
     final current = state.value;
     if (current == null) return false;
 
     try {
       final addUseCase = ref.read(addInstallationItemUseCaseProvider);
-      final itemEntity = DescriptionInstallationsMapper.itemToEntity(item);
+      final itemEntity = DescriptionInstallationsMapper.toItemEntity(item);
       final success = await addUseCase(
         missionId: missionId,
-        sectionKey: sectionKey,
+        section: sectionKey,
         item: itemEntity,
       );
 
@@ -55,16 +60,20 @@ class DescriptionInstallationsNotifier extends StateNotifier<AsyncValue<Descript
     }
   }
 
-  Future<bool> updateInstallationItem(String sectionKey, int index, InstallationItem item) async {
+  Future<bool> updateInstallationItem(
+    String sectionKey,
+    int index,
+    InstallationItem item,
+  ) async {
     final current = state.value;
     if (current == null) return false;
 
     try {
       final updateUseCase = ref.read(updateInstallationItemUseCaseProvider);
-      final itemEntity = DescriptionInstallationsMapper.itemToEntity(item);
+      final itemEntity = DescriptionInstallationsMapper.toItemEntity(item);
       final success = await updateUseCase(
         missionId: missionId,
-        sectionKey: sectionKey,
+        section: sectionKey,
         index: index,
         item: itemEntity,
       );
@@ -86,7 +95,7 @@ class DescriptionInstallationsNotifier extends StateNotifier<AsyncValue<Descript
       final removeUseCase = ref.read(removeInstallationItemUseCaseProvider);
       final success = await removeUseCase(
         missionId: missionId,
-        sectionKey: sectionKey,
+        section: sectionKey,
         index: index,
       );
 
@@ -99,17 +108,18 @@ class DescriptionInstallationsNotifier extends StateNotifier<AsyncValue<Descript
     }
   }
 
-  Future<bool> updateDescriptionSelection(String key, String? value, {String? detail}) async {
+  Future<bool> updateDescriptionSelection(String field, String value) async {
     final current = state.value;
     if (current == null) return false;
 
     try {
-      final updateSelectionUseCase = ref.read(updateDescriptionSelectionUseCaseProvider);
+      final updateSelectionUseCase = ref.read(
+        updateDescriptionSelectionUseCaseProvider,
+      );
       final success = await updateSelectionUseCase(
         missionId: missionId,
-        key: key,
+        field: field,
         value: value,
-        detail: detail,
       );
 
       if (success) {
