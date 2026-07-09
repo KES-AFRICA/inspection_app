@@ -4,6 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/mission/domain/usecases/get_mission_by_id_use_case.dart';
+import 'package:inspec_app/features/mission/domain/usecases/update_schema_option_use_case.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 
 class SchemaStep extends StatefulWidget {
@@ -36,10 +39,11 @@ class _SchemaStepState extends State<SchemaStep> {
     
     try {
       // ✅ Charger depuis la mission d'abord
-      final mission = HiveService.getMissionById(widget.mission.id);
-      if (mission != null && mission.schemaOption != null) {
+      final getUseCase = GetIt.instance<GetMissionByIdUseCase>();
+      final missionEntity = getUseCase(widget.mission.id);
+      if (missionEntity != null && missionEntity.schemaOption != null) {
         setState(() {
-          _selectedOption = mission.schemaOption;
+          _selectedOption = missionEntity.schemaOption;
         });
       }
       
@@ -77,14 +81,13 @@ class _SchemaStepState extends State<SchemaStep> {
     widget.onDataChanged(data);
     
     // Sauvegarder dans la mission (persistant)
-    final mission = HiveService.getMissionById(widget.mission.id);
-    if (mission != null) {
-      mission.schemaOption = _selectedOption;
-      mission.updatedAt = DateTime.now();
-      await mission.save();
-      if (kDebugMode) {
-        print('✅ Schéma sauvegardé dans mission: $_selectedOption');
-      }
+    final updateUseCase = GetIt.instance<UpdateSchemaOptionUseCase>();
+    final success = await updateUseCase(
+      missionId: widget.mission.id,
+      option: _selectedOption!,
+    );
+    if (success && kDebugMode) {
+      print('✅ Schéma sauvegardé dans mission: $_selectedOption');
     }
     
     //  Marquer l'étape comme complétée

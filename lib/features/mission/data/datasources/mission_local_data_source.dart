@@ -1,6 +1,6 @@
-// lib/features/mission/data/datasources/mission_local_data_source.dart
 import 'package:hive/hive.dart';
 import 'package:inspec_app/models/mission.dart';
+import 'package:inspec_app/models/last_report.dart';
 
 abstract class MissionLocalDataSource {
   List<Mission> getMissionsByMatricule(String matricule);
@@ -18,6 +18,16 @@ abstract class MissionLocalDataSource {
     required String missionId,
     required String documentName,
   });
+  Future<bool> updateSchemaOption({
+    required String missionId,
+    required String option,
+  });
+  Future<bool> updateMissionStatus({
+    required String missionId,
+    required String status,
+  });
+  Future<void> saveLastReport(LastReport report);
+  Future<List<LastReport>> getAllReportsForMission(String missionId);
 }
 
 class MissionLocalDataSourceImpl implements MissionLocalDataSource {
@@ -153,5 +163,55 @@ class MissionLocalDataSourceImpl implements MissionLocalDataSource {
     } catch (e) {
       return false;
     }
+  }
+
+  @override
+  Future<bool> updateSchemaOption({
+    required String missionId,
+    required String option,
+  }) async {
+    try {
+      final box = Hive.box<Mission>(_missionBox);
+      final mission = box.get(missionId);
+      if (mission == null) return false;
+      
+      mission.schemaOption = option;
+      mission.updatedAt = DateTime.now();
+      await mission.save();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  @override
+  Future<bool> updateMissionStatus({
+    required String missionId,
+    required String status,
+  }) async {
+    try {
+      final box = Hive.box<Mission>(_missionBox);
+      final mission = box.get(missionId);
+      if (mission == null) return false;
+      
+      mission.status = status;
+      mission.updatedAt = DateTime.now();
+      await mission.save();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  @override
+  Future<void> saveLastReport(LastReport report) async {
+    final box = await Hive.openBox<LastReport>('last_reports');
+    await box.add(report);
+  }
+
+  @override
+  Future<List<LastReport>> getAllReportsForMission(String missionId) async {
+    final box = await Hive.openBox<LastReport>('last_reports');
+    return box.values.where((r) => r.missionId == missionId).toList();
   }
 }

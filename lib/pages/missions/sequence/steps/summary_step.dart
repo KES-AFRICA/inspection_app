@@ -8,6 +8,12 @@ import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/file_storage_service.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:get_it/get_it.dart';
+import 'package:inspec_app/features/mission/domain/usecases/get_mission_by_id_use_case.dart';
+import 'package:inspec_app/features/mission/domain/usecases/update_mission_status_use_case.dart';
+import 'package:inspec_app/features/mission/domain/usecases/save_last_report_use_case.dart';
+import 'package:inspec_app/features/mission/domain/usecases/get_all_reports_for_mission_use_case.dart';
+import 'package:inspec_app/features/mission/domain/usecases/get_renseignements_generaux_use_case.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/services/pdf_report_service.dart';
 import 'package:inspec_app/services/word_report_service.dart';
@@ -65,11 +71,13 @@ class _SummaryStepState extends State<SummaryStep> {
   }
 
   Future<void> _ensureStatusIsTermine() async {
-    final mission = HiveService.getMissionById(widget.mission.id);
-    if (mission != null && !mission.isTermine) {
-      await HiveService.updateMissionStatus(
+    final getUseCase = GetIt.instance<GetMissionByIdUseCase>();
+    final missionEntity = getUseCase(widget.mission.id);
+    if (missionEntity != null && missionEntity.status != 'termine') {
+      final updateStatusUseCase = GetIt.instance<UpdateMissionStatusUseCase>();
+      await updateStatusUseCase(
         missionId: widget.mission.id,
-        newStatus: 'termine',
+        status: 'termine',
       );
       widget.mission.status = 'termine';
     }
@@ -91,7 +99,8 @@ class _SummaryStepState extends State<SummaryStep> {
   }
 
   Future<void> _loadLastReports() async {
-    final reports = await HiveService.getAllReportsForMission(widget.mission.id);
+    final getReportsUseCase = GetIt.instance<GetAllReportsForMissionUseCase>();
+    final reports = await getReportsUseCase(widget.mission.id);
     
     for (var report in reports) {
       final file = File(report.filePath);
@@ -156,7 +165,8 @@ class _SummaryStepState extends State<SummaryStep> {
           generatedAt: DateTime.now(),
           reportType: reportType,
         );
-        await HiveService.saveLastReport(lastReport);
+        final saveReportUseCase = GetIt.instance<SaveLastReportUseCase>();
+        await saveReportUseCase(lastReport);
         
         setState(() {
           if (reportType == 'pdf') {
@@ -415,8 +425,9 @@ class _SummaryStepState extends State<SummaryStep> {
   }
 
   Future<void> _sendEmailWithAttachment() async {
-    final renseignements = await HiveService.getRenseignementsGenerauxByMissionId(widget.mission.id);
-    final verificateurs = renseignements?.verificateurs ?? [];
+    final getRgUseCase = GetIt.instance<GetRenseignementsGenerauxUseCase>();
+    final renseignements = await getRgUseCase(widget.mission.id);
+    final verificateurs = renseignements.verificateurs;
     
     final emails = verificateurs
         .map((v) => v['email'])
@@ -472,9 +483,10 @@ class _SummaryStepState extends State<SummaryStep> {
   }
 
   Future<void> _finishMission() async {
-    await HiveService.updateMissionStatus(
+    final updateStatusUseCase = GetIt.instance<UpdateMissionStatusUseCase>();
+    await updateStatusUseCase(
       missionId: widget.mission.id,
-      newStatus: 'termine',
+      status: 'termine',
     );
     
     if (mounted) {

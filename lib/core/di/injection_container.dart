@@ -17,6 +17,10 @@ import 'package:inspec_app/features/mission/domain/usecases/get_mission_by_id_us
 import 'package:inspec_app/features/mission/domain/usecases/update_document_status_use_case.dart';
 import 'package:inspec_app/features/mission/domain/usecases/add_document_personnalise_use_case.dart';
 import 'package:inspec_app/features/mission/domain/usecases/remove_document_personnalise_use_case.dart';
+import 'package:inspec_app/features/mission/domain/usecases/update_schema_option_use_case.dart';
+import 'package:inspec_app/features/mission/domain/usecases/update_mission_status_use_case.dart';
+import 'package:inspec_app/features/mission/domain/usecases/save_last_report_use_case.dart';
+import 'package:inspec_app/features/mission/domain/usecases/get_all_reports_for_mission_use_case.dart';
 // JSA
 import 'package:inspec_app/features/jsa/domain/repositories/jsa_repository.dart';
 import 'package:inspec_app/features/jsa/data/repositories/jsa_repository_impl.dart';
@@ -126,6 +130,18 @@ Future<void> init() async {
   );
   sl.registerLazySingleton<RemoveDocumentPersonnaliseUseCase>(
     () => RemoveDocumentPersonnaliseUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<UpdateSchemaOptionUseCase>(
+    () => UpdateSchemaOptionUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<UpdateMissionStatusUseCase>(
+    () => UpdateMissionStatusUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<SaveLastReportUseCase>(
+    () => SaveLastReportUseCase(repository: sl()),
+  );
+  sl.registerLazySingleton<GetAllReportsForMissionUseCase>(
+    () => GetAllReportsForMissionUseCase(repository: sl()),
   );
   sl.registerLazySingleton<GetJsaByMissionUseCase>(() => GetJsaByMissionUseCase(repository: sl()));
   sl.registerLazySingleton<SaveJsaUseCase>(() => SaveJsaUseCase(repository: sl()));

@@ -4,6 +4,8 @@ import '../../domain/repositories/mission_repository.dart';
 import '../datasources/mission_local_data_source.dart';
 import '../mappers/mission_mapper.dart';
 
+import 'package:inspec_app/models/last_report.dart';
+
 class MissionRepositoryImpl implements MissionRepository {
   final MissionLocalDataSource missionLocalDataSource;
 
@@ -54,5 +56,37 @@ class MissionRepositoryImpl implements MissionRepository {
       missionId: missionId,
       documentName: documentName,
     );
+  }
+
+  @override
+  Future<bool> updateSchemaOption({
+    required String missionId,
+    required String option,
+  }) {
+    return missionLocalDataSource.updateSchemaOption(
+      missionId: missionId,
+      option: option,
+    );
+  }
+
+  @override
+  Future<bool> updateMissionStatus({
+    required String missionId,
+    required String status,
+  }) {
+    return missionLocalDataSource.updateMissionStatus(
+      missionId: missionId,
+      status: status,
+    );
+  }
+
+  @override
+  Future<void> saveLastReport(LastReport report) {
+    return missionLocalDataSource.saveLastReport(report);
+  }
+
+  @override
+  Future<List<LastReport>> getAllReportsForMission(String missionId) {
+    return missionLocalDataSource.getAllReportsForMission(missionId);
   }
 }

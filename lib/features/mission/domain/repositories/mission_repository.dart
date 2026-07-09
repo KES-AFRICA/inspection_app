@@ -1,4 +1,4 @@
-// lib/features/mission/domain/repositories/mission_repository.dart
+import 'package:inspec_app/models/last_report.dart';
 import '../entities/mission_entity.dart';
 
 abstract class MissionRepository {
@@ -17,4 +17,14 @@ abstract class MissionRepository {
     required String missionId,
     required String documentName,
   });
+  Future<bool> updateSchemaOption({
+    required String missionId,
+    required String option,
+  });
+  Future<bool> updateMissionStatus({
+    required String missionId,
+    required String status,
+  });
+  Future<void> saveLastReport(LastReport report);
+  Future<List<LastReport>> getAllReportsForMission(String missionId);
 }
