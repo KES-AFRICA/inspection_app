@@ -165,6 +165,7 @@ class _DescriptionInstallationsSequenceScreenState
       'shortTitle': 'Régime de neutre',
       'icon': Icons.gavel_outlined,
       'color': const Color(0xFF2C3E50),
+      'options': ['IT', 'TT', 'TN'],
       'isRadio': true,
     },
     {

@@ -21,8 +21,8 @@ class FoudreScreen extends StatefulWidget {
 }
 
 class _FoudreScreenState extends State<FoudreScreen> {
-  late List<Foudre> _observations;
-  bool _isLoading = false;
+  List<Foudre> _observations = [];
+  bool _isLoading = true;
   String _searchQuery = '';
   int? _filterPriorite;
 
