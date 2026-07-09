@@ -3,14 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:inspec_app/core/di/injection_container.dart' as di;
-import 'package:inspec_app/features/mission/domain/usecases/get_mission_by_id_use_case.dart';
-import 'package:inspec_app/features/mission/domain/usecases/update_document_status_use_case.dart';
-import 'package:inspec_app/features/mission/domain/usecases/add_document_personnalise_use_case.dart';
-import 'package:inspec_app/features/mission/domain/usecases/remove_document_personnalise_use_case.dart';
-import 'package:inspec_app/features/mission/data/mappers/mission_mapper.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:inspec_app/features/mission/presentation/providers/mission_detail_provider.dart';
 
-class DocumentsStep extends StatefulWidget {
+class DocumentsStep extends ConsumerStatefulWidget {
   final Mission mission;
   final Function(Map<String, dynamic>) onDataChanged;
 
@@ -21,12 +17,10 @@ class DocumentsStep extends StatefulWidget {
   });
 
   @override
-  State<DocumentsStep> createState() => _DocumentsStepState();
+  ConsumerState<DocumentsStep> createState() => _DocumentsStepState();
 }
 
-class _DocumentsStepState extends State<DocumentsStep> {
-  late Mission _mission;
-  bool _isLoading = true;
+class _DocumentsStepState extends ConsumerState<DocumentsStep> {
 
   final TextEditingController _nouveauDocumentController = TextEditingController();
 
@@ -48,7 +42,6 @@ class _DocumentsStepState extends State<DocumentsStep> {
   @override
   void initState() {
     super.initState();
-    _loadMission();
   }
 
   @override
@@ -57,73 +50,13 @@ class _DocumentsStepState extends State<DocumentsStep> {
     super.dispose();
   }
 
-  Future<void> _loadMission() async {
-    final missionEntity = di.sl<GetMissionByIdUseCase>()(widget.mission.id);
-    final mission = missionEntity != null ? MissionMapper.toModel(missionEntity) : null;
-    if (mission != null) {
-      setState(() {
-        _mission = mission;
-        _isLoading = false;
-      });
-      _notifyDataChanged();
-    } else {
-      setState(() => _isLoading = false);
-    }
-  }
-
   Future<void> _handleDocumentChanged(String documentField, bool value) async {
-    setState(() {
-      switch (documentField) {
-        case 'doc_cahier_prescriptions':
-          _mission.docCahierPrescriptions = value;
-          break;
-        case 'doc_notes_calculs':
-          _mission.docNotesCalculs = value;
-          break;
-        case 'doc_schemas_unifilaires':
-          _mission.docSchemasUnifilaires = value;
-          break;
-        case 'doc_plan_masse':
-          _mission.docPlanMasse = value;
-          break;
-        case 'doc_plans_architecturaux':
-          _mission.docPlansArchitecturaux = value;
-          break;
-        case 'doc_declarations_ce':
-          _mission.docDeclarationsCe = value;
-          break;
-        case 'doc_liste_installations':
-          _mission.docListeInstallations = value;
-          break;
-        case 'doc_plan_locaux_risques':
-          _mission.docPlanLocauxRisques = value;
-          break;
-        case 'doc_rapport_analyse_foudre':
-          _mission.docRapportAnalyseFoudre = value;
-          break;
-        case 'doc_rapport_etude_foudre':
-          _mission.docRapportEtudeFoudre = value;
-          break;
-        case 'doc_registre_securite':
-          _mission.docRegistreSecurite = value;
-          break;
-        case 'doc_rapport_derniere_verif':
-          _mission.docRapportDerniereVerif = value;
-          break;
-        case 'doc_autre':
-          _mission.docAutre = value;
-          break;
-      }
-      _mission.updatedAt = DateTime.now();
-    });
-    
-    await di.sl<UpdateDocumentStatusUseCase>()(
-      missionId: _mission.id,
-      documentField: documentField,
-      value: value,
-    );
-    
-    _notifyDataChanged();
+    final notifier = ref.read(missionDetailProvider(widget.mission.id).notifier);
+    await notifier.updateDocumentStatus(documentField, value);
+    final current = ref.read(missionDetailProvider(widget.mission.id)).value;
+    if (current != null) {
+      _notifyDataChanged(current);
+    }
   }
 
   Future<void> _ajouterDocumentPersonnalise() async {
@@ -162,14 +95,14 @@ class _DocumentsStepState extends State<DocumentsStep> {
     if (result == true) {
       final nouveauNom = _nouveauDocumentController.text.trim();
       if (nouveauNom.isNotEmpty) {
-        final success = await di.sl<AddDocumentPersonnaliseUseCase>()(
-          missionId: _mission.id,
-          documentName: nouveauNom,
-        );
+        final notifier = ref.read(missionDetailProvider(widget.mission.id).notifier);
+        final success = await notifier.addDocumentPersonnalise(nouveauNom);
         
         if (success) {
-          setState(() {});
-          _notifyDataChanged();
+          final current = ref.read(missionDetailProvider(widget.mission.id)).value;
+          if (current != null) {
+            _notifyDataChanged(current);
+          }
           
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -211,14 +144,14 @@ class _DocumentsStepState extends State<DocumentsStep> {
     );
 
     if (confirm == true) {
-      final success = await di.sl<RemoveDocumentPersonnaliseUseCase>()(
-        missionId: _mission.id,
-        documentName: documentNom,
-      );
+      final notifier = ref.read(missionDetailProvider(widget.mission.id).notifier);
+      final success = await notifier.removeDocumentPersonnalise(documentNom);
       
       if (success) {
-        setState(() {});
-        _notifyDataChanged();
+        final current = ref.read(missionDetailProvider(widget.mission.id)).value;
+        if (current != null) {
+          _notifyDataChanged(current);
+        }
         
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -230,22 +163,22 @@ class _DocumentsStepState extends State<DocumentsStep> {
     }
   }
 
-  void _notifyDataChanged() {
+  void _notifyDataChanged(Mission mission) {
     widget.onDataChanged({
       'documents': {
-        'doc_cahier_prescriptions': _mission.docCahierPrescriptions,
-        'doc_notes_calculs': _mission.docNotesCalculs,
-        'doc_schemas_unifilaires': _mission.docSchemasUnifilaires,
-        'doc_plan_masse': _mission.docPlanMasse,
-        'doc_plans_architecturaux': _mission.docPlansArchitecturaux,
-        'doc_declarations_ce': _mission.docDeclarationsCe,
-        'doc_liste_installations': _mission.docListeInstallations,
-        'doc_plan_locaux_risques': _mission.docPlanLocauxRisques,
-        'doc_rapport_analyse_foudre': _mission.docRapportAnalyseFoudre,
-        'doc_rapport_etude_foudre': _mission.docRapportEtudeFoudre,
-        'doc_registre_securite': _mission.docRegistreSecurite,
-        'doc_rapport_derniere_verif': _mission.docRapportDerniereVerif,
-        'doc_autre': _mission.docAutre,
+        'doc_cahier_prescriptions': mission.docCahierPrescriptions,
+        'doc_notes_calculs': mission.docNotesCalculs,
+        'doc_schemas_unifilaires': mission.docSchemasUnifilaires,
+        'doc_plan_masse': mission.docPlanMasse,
+        'doc_plans_architecturaux': mission.docPlansArchitecturaux,
+        'doc_declarations_ce': mission.docDeclarationsCe,
+        'doc_liste_installations': mission.docListeInstallations,
+        'doc_plan_locaux_risques': mission.docPlanLocauxRisques,
+        'doc_rapport_analyse_foudre': mission.docRapportAnalyseFoudre,
+        'doc_rapport_etude_foudre': mission.docRapportEtudeFoudre,
+        'doc_registre_securite': mission.docRegistreSecurite,
+        'doc_rapport_derniere_verif': mission.docRapportDerniereVerif,
+        'doc_autre': mission.docAutre,
       }
     });
   }
@@ -295,94 +228,103 @@ class _DocumentsStepState extends State<DocumentsStep> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    final asyncData = ref.watch(missionDetailProvider(widget.mission.id));
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // En-tête
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryBlue,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: const Column(
-              children: [
-                Icon(Icons.folder_open, size: 40, color: Colors.white),
-                SizedBox(height: 8),
-                Text(
-                  'Documents nécessaires à la vérification',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                  textAlign: TextAlign.center,
+    return asyncData.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Erreur: $err')),
+      data: (mission) {
+        // Optionnel : notifier le changement d'état au premier chargement
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          _notifyDataChanged(mission);
+        });
+
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // En-tête
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue,
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                SizedBox(height: 4),
-                Text(
-                  'Cochez les documents qui ont été fournis',
-                  style: TextStyle(fontSize: 12, color: Colors.white70),
-                  textAlign: TextAlign.center,
+                child: const Column(
+                  children: [
+                    Icon(Icons.folder_open, size: 40, color: Colors.white),
+                    SizedBox(height: 8),
+                    Text(
+                      'Documents nécessaires à la vérification',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Cochez les documents qui ont été fournis',
+                      style: TextStyle(fontSize: 12, color: Colors.white70),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+              
+              const SizedBox(height: 24),
+              
+              // Documents standards
+              ..._documentsStandards.map((doc) => _buildDocumentTile(
+                title: doc['title'] as String,
+                value: _getDocumentValue(mission, doc['field'] as String),
+                onChanged: (val) => _handleDocumentChanged(doc['field'] as String, val ?? false),
+              )),
+              
+              // Documents personnalisés
+              ...mission.autresDocuments.map((doc) => _buildDocumentTile(
+                title: doc,
+                value: true,
+                onChanged: (_) {},
+                onDelete: () => _supprimerDocumentPersonnalise(doc),
+              )),
+              
+              const SizedBox(height: 16),
+              
+              // Bouton "Autre"
+              TextButton.icon(
+                onPressed: _ajouterDocumentPersonnalise,
+                icon: const Icon(Icons.add),
+                label: const Text('Autre'),
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.primaryBlue,
+                ),
+              ),
+            ],
           ),
-          
-          const SizedBox(height: 24),
-          
-          // Documents standards
-          ..._documentsStandards.map((doc) => _buildDocumentTile(
-            title: doc['title'] as String,
-            value: _getDocumentValue(doc['field'] as String),
-            onChanged: (val) => _handleDocumentChanged(doc['field'] as String, val ?? false),
-          )),
-          
-          // Documents personnalisés
-          ..._mission.autresDocuments.map((doc) => _buildDocumentTile(
-            title: doc,
-            value: true,
-            onChanged: (_) {},
-            onDelete: () => _supprimerDocumentPersonnalise(doc),
-          )),
-          
-          const SizedBox(height: 16),
-          
-          // Bouton "Autre"
-          TextButton.icon(
-            onPressed: _ajouterDocumentPersonnalise,
-            icon: const Icon(Icons.add),
-            label: const Text('Autre'),
-            style: TextButton.styleFrom(
-              foregroundColor: AppTheme.primaryBlue,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  bool _getDocumentValue(String field) {
+  bool _getDocumentValue(Mission mission, String field) {
     switch (field) {
-      case 'doc_cahier_prescriptions': return _mission.docCahierPrescriptions;
-      case 'doc_notes_calculs': return _mission.docNotesCalculs;
-      case 'doc_schemas_unifilaires': return _mission.docSchemasUnifilaires;
-      case 'doc_plan_masse': return _mission.docPlanMasse;
-      case 'doc_plans_architecturaux': return _mission.docPlansArchitecturaux;
-      case 'doc_declarations_ce': return _mission.docDeclarationsCe;
-      case 'doc_liste_installations': return _mission.docListeInstallations;
-      case 'doc_plan_locaux_risques': return _mission.docPlanLocauxRisques;
-      case 'doc_rapport_analyse_foudre': return _mission.docRapportAnalyseFoudre;
-      case 'doc_rapport_etude_foudre': return _mission.docRapportEtudeFoudre;
-      case 'doc_registre_securite': return _mission.docRegistreSecurite;
-      case 'doc_rapport_derniere_verif': return _mission.docRapportDerniereVerif;
-      case 'doc_autre': return _mission.docAutre;
+      case 'doc_cahier_prescriptions': return mission.docCahierPrescriptions;
+      case 'doc_notes_calculs': return mission.docNotesCalculs;
+      case 'doc_schemas_unifilaires': return mission.docSchemasUnifilaires;
+      case 'doc_plan_masse': return mission.docPlanMasse;
+      case 'doc_plans_architecturaux': return mission.docPlansArchitecturaux;
+      case 'doc_declarations_ce': return mission.docDeclarationsCe;
+      case 'doc_liste_installations': return mission.docListeInstallations;
+      case 'doc_plan_locaux_risques': return mission.docPlanLocauxRisques;
+      case 'doc_rapport_analyse_foudre': return mission.docRapportAnalyseFoudre;
+      case 'doc_rapport_etude_foudre': return mission.docRapportEtudeFoudre;
+      case 'doc_registre_securite': return mission.docRegistreSecurite;
+      case 'doc_rapport_derniere_verif': return mission.docRapportDerniereVerif;
+      case 'doc_autre': return mission.docAutre;
       default: return false;
     }
   }

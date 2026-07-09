@@ -4,14 +4,13 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/jsa.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:inspec_app/core/di/injection_container.dart' as di;
-import 'package:inspec_app/features/jsa/domain/usecases/get_jsa_by_mission_use_case.dart';
-import 'package:inspec_app/features/jsa/domain/usecases/save_jsa_use_case.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:inspec_app/features/jsa/presentation/providers/jsa_provider.dart';
 import 'package:inspec_app/features/jsa/data/mappers/jsa_mapper.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/widgets/app_bottom_sheet.dart';
 
-class JsaStep extends StatefulWidget {
+class JsaStep extends ConsumerStatefulWidget {
   final Mission mission;
   final Function(Map<String, dynamic>) onDataChanged;
   final VoidCallback? onNextStep;
@@ -24,10 +23,10 @@ class JsaStep extends StatefulWidget {
   });
 
   @override
-  State<JsaStep> createState() => JsaStepState();
+  ConsumerState<JsaStep> createState() => JsaStepState();
 }
 
-class JsaStepState extends State<JsaStep> with AutomaticKeepAliveClientMixin {
+class JsaStepState extends ConsumerState<JsaStep> with AutomaticKeepAliveClientMixin {
   @override
   bool get wantKeepAlive => true; // ✅ Préserve l'état entre les navigations
 
@@ -80,39 +79,17 @@ class JsaStepState extends State<JsaStep> with AutomaticKeepAliveClientMixin {
   @override
   void initState() {
     super.initState();
-    _loadData();
   }
 
-  Future<void> _loadData() async {
-    setState(() => _isLoading = true);
-    
-    try {
-      final jsaEntity = await di.sl<GetJsaByMissionUseCase>()(widget.mission.id);
-      _jsa = JsaMapper.toModel(jsaEntity);
-      _loadControllersFromJSA();
-      
-      if (_isFirstLoad) {
-        final savedPosition = await SequenceProgressService.getStepData(
-          widget.mission.id,
-          'jsa_current_subcategory',
-        );
-        if (savedPosition != null && savedPosition is int && savedPosition < totalSubCategories) {
-          _jsa.currentSubCategory = savedPosition;
-        }
-        _isFirstLoad = false;
-      }
-    } catch (e) {
-      debugPrint('❌ Erreur chargement JSA: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Erreur lors du chargement des données'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
+  Future<void> _loadSavedPosition() async {
+    final savedPosition = await SequenceProgressService.getStepData(
+      widget.mission.id,
+      'jsa_current_subcategory',
+    );
+    if (savedPosition != null && savedPosition is int && savedPosition < totalSubCategories) {
+      setState(() {
+        _jsa.currentSubCategory = savedPosition;
+      });
     }
   }
 
@@ -130,19 +107,18 @@ class JsaStepState extends State<JsaStep> with AutomaticKeepAliveClientMixin {
   }
 
   Future<void> _saveJSA() async {
-    _jsa.operationEffectuer = _operationController.text.trim();
-    _jsa.dangers.autreEnvironnement = _autreEnvironnementController.text.trim();
-    _jsa.dangers.autrePhysique = _autrePhysiqueController.text.trim();
-    _jsa.exigencesGenerales.autre = _autreExigenceController.text.trim();
-    _jsa.epi.autre = _autreEPIController.text.trim();
-    _jsa.verificationFinale.autresPoints = _autresPointsVerifController.text.trim();
-    _jsa.verificationFinale.donneurOrdreSignature = _donneurOrdreSignatureController.text.trim();
-    _jsa.verificationFinale.chargeAffairesSignature = _chargeAffairesSignatureController.text.trim();
-    _jsa.planUrgence.personneContactClient = _personneContactClientController.text.trim();
-    _jsa.planUrgence.personneContactKES = _personneContactKESController.text.trim();
-    
-    final jsaEntity = JsaMapper.toEntity(_jsa);
-    await di.sl<SaveJsaUseCase>()(jsaEntity);
+    await ref.read(jsaProvider(widget.mission.id).notifier).updateJsa((current) {
+      current.operationEffectuer = _operationController.text.trim();
+      current.dangers.autreEnvironnement = _autreEnvironnementController.text.trim();
+      current.dangers.autrePhysique = _autrePhysiqueController.text.trim();
+      current.exigencesGenerales.autre = _autreExigenceController.text.trim();
+      current.epi.autre = _autreEPIController.text.trim();
+      current.verificationFinale.autresPoints = _autresPointsVerifController.text.trim();
+      current.verificationFinale.donneurOrdreSignature = _donneurOrdreSignatureController.text.trim();
+      current.verificationFinale.chargeAffairesSignature = _chargeAffairesSignatureController.text.trim();
+      current.planUrgence.personneContactClient = _personneContactClientController.text.trim();
+      current.planUrgence.personneContactKES = _personneContactKESController.text.trim();
+    });
     widget.onDataChanged({'jsa_saved': true, 'current_step': currentSubCategory});
   }
 
@@ -1447,11 +1423,20 @@ bool _hasAnyDataInCurrentSection() {
     
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
     
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    final asyncData = ref.watch(jsaProvider(widget.mission.id));
 
-    final error = _getCurrentSubCategoryError();
+    return asyncData.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Erreur: $err')),
+      data: (data) {
+        if (_isFirstLoad) {
+          _jsa = data;
+          _loadControllersFromJSA();
+          _loadSavedPosition();
+          _isFirstLoad = false;
+        }
+
+        final error = _getCurrentSubCategoryError();
     final isValid = _isCurrentSubCategoryValid();
     final isLastSubCategory = currentSubCategory == totalSubCategories - 1;
 
@@ -1714,6 +1699,8 @@ bool _hasAnyDataInCurrentSection() {
           ),
         ],
       ),
+    );
+      },
     );
   }
 
