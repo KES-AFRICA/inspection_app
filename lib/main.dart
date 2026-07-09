@@ -13,6 +13,8 @@ import 'package:inspec_app/features/auth/data/mappers/verificateur_mapper.dart';
 import 'package:inspec_app/features/auth/domain/usecases/check_login_status_use_case.dart';
 import 'package:inspec_app/features/auth/domain/usecases/get_current_user_use_case.dart';
 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -29,7 +31,7 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
