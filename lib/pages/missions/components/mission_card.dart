@@ -407,107 +407,182 @@ class _DeleteDialogState extends State<_DeleteDialog> {
     final ready = _countdown == 0;
 
     return AlertDialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-      contentPadding: const EdgeInsets.fromLTRB(20, 14, 20, 0),
-      actionsPadding: const EdgeInsets.fromLTRB(12, 8, 12, 14),
-      title: const Row(children: [
-        Icon(Icons.warning_rounded, color: Colors.red, size: 20),
-        SizedBox(width: 8),
-        Text('Supprimer la mission',
-            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
-      ]),
+      backgroundColor: Colors.white,
+      elevation: 6,
+      shadowColor: Colors.black.withOpacity(0.1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
+      title: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 24),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              'Supprimer la mission',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.darkBlue,
+                fontFamily: 'Outfit',
+              ),
+            ),
+          ),
+        ],
+      ),
       content: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          Text(
+            'Vous êtes sur le point de supprimer définitivement la mission de :',
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 12),
+          
           // Nom de la mission
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
               color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.grey.shade200),
             ),
             child: Text(
               widget.missionName,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600, fontSize: 14),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 15,
+                color: AppTheme.darkBlue,
+              ),
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 16),
 
           // Avertissement
           Container(
-            padding: const EdgeInsets.all(10),
+            padding: const EdgeInsets.all(14),
             decoration: BoxDecoration(
               color: Colors.red.shade50,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.red.shade100),
             ),
-            child: Text(
-              'Action irréversible. Toutes les données, photos et fichiers associés seront définitivement supprimés.',
-              style: TextStyle(
-                  fontSize: 12, color: Colors.red.shade700),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline, color: Colors.red.shade700, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Cette action est irréversible. Toutes les données d\'inspection, photos et rapports associés seront définitivement effacés.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.red.shade700,
+                      height: 1.4,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 14),
+          const SizedBox(height: 20),
 
           // Compte à rebours
           Center(
-            child: ready
-                ? Row(mainAxisSize: MainAxisSize.min, children: [
-                    Icon(Icons.check_circle_outline,
-                        size: 16, color: Colors.red.shade600),
-                    const SizedBox(width: 6),
-                    Text('Vous pouvez confirmer',
-                        style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.red.shade600,
-                            fontWeight: FontWeight.w600)),
-                  ])
-                : Row(mainAxisSize: MainAxisSize.min, children: [
-                    SizedBox(
-                      width: 22,
-                      height: 22,
-                      child: CircularProgressIndicator(
-                        value: (10 - _countdown) / 10,
-                        strokeWidth: 2.5,
-                        backgroundColor: Colors.grey.shade200,
-                        color: Colors.red.shade400,
-                      ),
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: ready
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.check_circle_outline, size: 18, color: Colors.green.shade600),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Confirmation disponible',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.green.shade600,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            value: (10 - _countdown) / 10,
+                            strokeWidth: 2.5,
+                            backgroundColor: Colors.grey.shade100,
+                            color: Colors.red.shade500,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          'Bouton de confirmation disponible dans $_countdown s',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'Disponible dans $_countdown s',
-                      style: TextStyle(
-                          fontSize: 12, color: Colors.grey.shade600),
-                    ),
-                  ]),
+            ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
         ],
       ),
       actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text('Annuler',
-              style: TextStyle(color: Colors.grey)),
-        ),
-        FilledButton(
-          onPressed: ready ? () => Navigator.pop(context, true) : null,
-          style: FilledButton.styleFrom(
-            backgroundColor: Colors.red.shade600,
-            disabledBackgroundColor: Colors.red.shade200,
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8)),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-          ),
-          child: const Text('Supprimer',
-              style: TextStyle(
-                  fontSize: 13, fontWeight: FontWeight.w600)),
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context, false),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.grey.shade700,
+                  side: BorderSide(color: Colors.grey.shade300),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text(
+                  'Annuler',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: ready ? () => Navigator.pop(context, true) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade600,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.red.shade200,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  elevation: ready ? 2 : 0,
+                ),
+                child: const Text(
+                  'Confirmer',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
         ),
       ],
     );

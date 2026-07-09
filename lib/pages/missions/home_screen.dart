@@ -287,7 +287,11 @@ void _saveStatsPeriodPreference(String period) {
                   itemCount: _filteredMissions.length,
                   itemBuilder: (context, index) {
                     final mission = _filteredMissions[index];
-                    return MissionCard(mission: mission, user: widget.user);
+                    return MissionCard(
+                      mission: mission,
+                      user: widget.user,
+                      onDeleted: _loadLocalMissions,
+                    );
                   },
                 ),
         ),
