@@ -31,7 +31,7 @@ class _FoudreScreenState extends ConsumerState<FoudreScreen> {
 
   Future<void> _loadObservations() async {
     setState(() => _isLoading = true);
-    final entities = await ref.read(foudreObservationsProvider(widget.mission.id).future);
+    final entities = await ref.read(foudreObservationsProvider(widget.mission.id).notifier).load();
     _observations = entities;
     setState(() => _isLoading = false);
   }

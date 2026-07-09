@@ -34,7 +34,7 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
 
   void _loadAudit() async {
     try {
-      final audit = await ref.read(auditInstallationsProvider(widget.mission.id).future);
+      final audit = await ref.read(auditInstallationsProvider(widget.mission.id).notifier).load();
       setState(() {
         _audit = audit;
         _isLoading = false;
@@ -53,7 +53,7 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final audit = await ref.read(auditInstallationsProvider(widget.mission.id).future);
+      final audit = await ref.read(auditInstallationsProvider(widget.mission.id).notifier).load();
       setState(() {
         _audit = audit;
         _isLoading = false;

@@ -23,15 +23,17 @@ class AuditInstallationsNotifier
     load();
   }
 
-  Future<void> load() async {
+  Future<AuditInstallationsElectriques> load() async {
     try {
       state = const AsyncValue.loading();
       final getUseCase = ref.read(getAuditInstallationsUseCaseProvider);
       final entity = await getUseCase(missionId);
       final model = AuditInstallationsMapper.toModel(entity);
       state = AsyncValue.data(model);
+      return model;
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
+      rethrow;
     }
   }
 

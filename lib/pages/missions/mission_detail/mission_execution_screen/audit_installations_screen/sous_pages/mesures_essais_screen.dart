@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
@@ -7,7 +8,6 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/demarrage_auto_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/prises_terre_screen.dart';
-import 'package:inspec_app/services/hive_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 
@@ -17,7 +17,8 @@ class MesuresEssaisScreen extends ConsumerStatefulWidget {
   const MesuresEssaisScreen({super.key, required this.mission});
 
   @override
-  ConsumerState<MesuresEssaisScreen> createState() => _MesuresEssaisScreenState();
+  ConsumerState<MesuresEssaisScreen> createState() =>
+      _MesuresEssaisScreenState();
 }
 
 class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
@@ -33,12 +34,14 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
 
   Future<void> _loadData() async {
     setState(() => _isLoading = true);
-    
+
     try {
       ref.invalidate(mesuresEssaisProvider(widget.mission.id));
-      final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).future);
+      final mesures = await ref
+          .read(mesuresEssaisProvider(widget.mission.id).notifier)
+          .load();
       _stats = mesures.calculerStatistiques();
-      
+
       // Vérifier l'état de chaque section
       _sectionStatus = {
         'demarrage_auto': _stats['demarrage_auto_renseigne'] ?? false,
@@ -49,7 +52,9 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
         'continuite_resistance': (mesures.continuiteResistances.isNotEmpty),
       };
     } catch (e) {
-      print('❌ Erreur chargement mesures et essais: $e');
+      if (kDebugMode) {
+        print('❌ Erreur chargement mesures et essais: $e');
+      }
     } finally {
       setState(() => _isLoading = false);
     }
@@ -59,9 +64,15 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
     return _sectionStatus[sectionKey] ?? false;
   }
 
-  Widget _buildSectionTile(String title, IconData icon, String subtitle, Function onTap, String sectionKey) {
+  Widget _buildSectionTile(
+    String title,
+    IconData icon,
+    String subtitle,
+    Function onTap,
+    String sectionKey,
+  ) {
     final isComplete = _isSectionComplete(sectionKey);
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       decoration: BoxDecoration(
@@ -77,7 +88,8 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
           width: 45,
           height: 45,
           decoration: BoxDecoration(
-            color: (isComplete ? Colors.green : AppTheme.primaryBlue).withOpacity(0.1),
+            color: (isComplete ? Colors.green : AppTheme.primaryBlue)
+                .withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(
@@ -107,14 +119,16 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
             if (isComplete)
               Icon(Icons.check_circle, color: Colors.green, size: 20),
             const SizedBox(width: 4),
-            Icon(Icons.chevron_right, color: isComplete ? Colors.green.shade400 : Colors.grey.shade500),
+            Icon(
+              Icons.chevron_right,
+              color: isComplete ? Colors.green.shade400 : Colors.grey.shade500,
+            ),
           ],
         ),
         onTap: () => onTap(),
       ),
     );
   }
-
 
   void _navigateToDemarrageAuto() {
     Navigator.push(
@@ -156,7 +170,8 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => EssaisDeclenchementScreen(mission: widget.mission),
+        builder: (context) =>
+            EssaisDeclenchementScreen(mission: widget.mission),
       ),
     ).then((_) => _loadData());
   }
@@ -165,7 +180,8 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ContinuiteResistanceScreen(mission: widget.mission),
+        builder: (context) =>
+            ContinuiteResistanceScreen(mission: widget.mission),
       ),
     ).then((_) => _loadData());
   }
@@ -195,7 +211,7 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   children: [
                     const Divider(height: 0, thickness: 0.5),
-                    
+
                     _buildSectionTile(
                       'Essais démarrage auto',
                       Icons.power_settings_new_outlined,
@@ -204,7 +220,7 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
                       'demarrage_auto',
                     ),
                     const Divider(height: 0, thickness: 0.5),
-                    
+
                     _buildSectionTile(
                       'Test arrêt urgence',
                       Icons.emergency_outlined,
@@ -213,7 +229,7 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
                       'arret_urgence',
                     ),
                     const Divider(height: 0, thickness: 0.5),
-                    
+
                     _buildSectionTile(
                       'Prises de terre',
                       Icons.bolt_outlined,
@@ -222,7 +238,7 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
                       'prises_terre',
                     ),
                     const Divider(height: 0, thickness: 0.5),
-                    
+
                     _buildSectionTile(
                       'Avis sur les mesures',
                       Icons.assessment_outlined,
@@ -231,7 +247,7 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
                       'avis_mesures',
                     ),
                     const Divider(height: 0, thickness: 0.5),
-                    
+
                     _buildSectionTile(
                       'Essais déclenchement',
                       Icons.flash_on_outlined,
@@ -240,7 +256,7 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
                       'essais_declenchement',
                     ),
                     const Divider(height: 0, thickness: 0.5),
-                    
+
                     _buildSectionTile(
                       'Continuité et résistance',
                       Icons.cable_outlined,

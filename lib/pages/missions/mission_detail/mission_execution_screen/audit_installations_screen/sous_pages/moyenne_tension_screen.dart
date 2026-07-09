@@ -42,7 +42,7 @@ class _MoyenneTensionScreenState extends ConsumerState<MoyenneTensionScreen> {
     
     try {
       // Recharger l'audit
-      final audit = await ref.read(auditInstallationsProvider(widget.mission.id).future);
+      final audit = await ref.read(auditInstallationsProvider(widget.mission.id).notifier).load();
 
       setState(() {
         _audit = audit;

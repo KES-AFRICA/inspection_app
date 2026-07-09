@@ -5,10 +5,11 @@ import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_m
 import 'package:inspec_app/models/mesures_essais.dart';
 
 final mesuresEssaisProvider = StateNotifierProvider.family
-    .autoDispose<MesuresEssaisNotifier, AsyncValue<MesuresEssais>, String>((
-      ref,
-      missionId,
-    ) {
+    .autoDispose<
+      MesuresEssaisNotifier,
+      AsyncValue<MesuresEssais>,
+      String
+    >((ref, missionId) {
       return MesuresEssaisNotifier(ref: ref, missionId: missionId);
     });
 
@@ -21,15 +22,17 @@ class MesuresEssaisNotifier extends StateNotifier<AsyncValue<MesuresEssais>> {
     load();
   }
 
-  Future<void> load() async {
+  Future<MesuresEssais> load() async {
     try {
       state = const AsyncValue.loading();
       final getUseCase = ref.read(getMesuresEssaisUseCaseProvider);
       final entity = await getUseCase(missionId);
       final model = MesuresEssaisMapper.toModel(entity);
       state = AsyncValue.data(model);
+      return model;
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
+      rethrow;
     }
   }
 
@@ -37,11 +40,9 @@ class MesuresEssaisNotifier extends StateNotifier<AsyncValue<MesuresEssais>> {
     try {
       final saveUseCase = ref.read(saveMesuresEssaisUseCaseProvider);
       final entity = MesuresEssaisMapper.toEntity(mesures);
-      final success = await saveUseCase(entity);
-      if (success) {
-        state = AsyncValue.data(mesures);
-      }
-      return success;
+      await saveUseCase(entity);
+      state = AsyncValue.data(mesures);
+      return true;
     } catch (e) {
       return false;
     }

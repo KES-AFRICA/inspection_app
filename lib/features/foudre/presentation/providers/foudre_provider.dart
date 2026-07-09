@@ -22,15 +22,17 @@ class FoudreObservationsNotifier extends StateNotifier<AsyncValue<List<Foudre>>>
     load();
   }
 
-  Future<void> load() async {
+  Future<List<Foudre>> load() async {
     try {
       state = const AsyncValue.loading();
       final getUseCase = ref.read(getFoudreObservationsUseCaseProvider);
       final entities = await getUseCase(missionId);
       final models = entities.map(FoudreMapper.toModel).toList();
       state = AsyncValue.data(models);
+      return models;
     } catch (e, stackTrace) {
       state = AsyncValue.error(e, stackTrace);
+      rethrow;
     }
   }
 
