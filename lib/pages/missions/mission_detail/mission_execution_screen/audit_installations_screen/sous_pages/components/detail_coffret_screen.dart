@@ -1492,7 +1492,7 @@ Widget _buildEssaiCard(EssaiDeclenchementDifferentiel essai, int index) {
 }
   Widget _buildCoffretStats() {
     final pointsConformes = _coffret.pointsVerification.where((p) => p.conformite == 'oui').length;
-    final totalPoints = _coffret.pointsVerification.length;
+    final totalPoints = _coffret.pointsVerification.where((p) => p.conformite != 'na').length;
     final pourcentage = totalPoints > 0 ? (pointsConformes / totalPoints * 100).round() : 0;
 
     // Calculer le nombre total de photos (coffret + toutes les observations)

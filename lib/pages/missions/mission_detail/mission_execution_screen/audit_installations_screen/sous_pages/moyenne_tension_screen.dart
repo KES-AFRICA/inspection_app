@@ -1019,10 +1019,10 @@ void _ouvrirClassementZone(ClassementZone classement) async {
   // MODIFIÉ : _buildLocalCard pour afficher les brouillons
   Widget _buildLocalCard(MoyenneTensionLocal local, int localIndex) {
     final conformiteCount = local.dispositionsConstructives
-        .where((e) => e.conforme == true).length;
+        .where((e) => e.conforme == true && !e.estNA).length;
     final nonConformeCount = local.dispositionsConstructives
         .where((e) => e.conforme == false && !e.estNA).length;
-    final totalCount = local.dispositionsConstructives.length;
+    final totalCount = local.dispositionsConstructives.where((e) => !e.estNA).length;
     final pourcentage =
         totalCount > 0 ? (conformiteCount / totalCount * 100).round() : 0;
 

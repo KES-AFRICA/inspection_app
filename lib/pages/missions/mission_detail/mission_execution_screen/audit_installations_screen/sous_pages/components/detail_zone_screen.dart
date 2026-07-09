@@ -1287,9 +1287,9 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
             ? (local.dispositionsConstructives ?? [])
             : <ElementControle>[];
 
-    final conformiteCount = dispositions.where((e) => e.conforme == true).length;
+    final conformiteCount = dispositions.where((e) => e.conforme == true && !e.estNA).length;
     final nonConformeCount = dispositions.where((e) => e.conforme == false && !e.estNA).length;
-    final totalCount = dispositions.length;
+    final totalCount = dispositions.where((e) => !e.estNA).length;
     final pourcentage = totalCount > 0 ? (conformiteCount / totalCount * 100).round() : 0;
 
     final int totalPhotos = (local.photos as List).length +
@@ -1537,7 +1537,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   Widget _buildCoffretCard(CoffretArmoire coffret, int index, bool isMoyenneTension) {
   final pointsConformes = coffret.pointsVerification.where((p) => p.conformite == 'oui').length;
   final pointsNon = coffret.pointsVerification.where((p) => p.conformite == 'non').length;
-  final totalPoints = coffret.pointsVerification.length;
+  final totalPoints = coffret.pointsVerification.where((p) => p.conformite != 'na').length;
   final pourcentage = totalPoints > 0 ? (pointsConformes / totalPoints * 100).round() : 0;
   final isComplet = coffret.statut == 'complet' || _isCoffretComplet(coffret);
   final isDraft = coffret.statut != 'complet';

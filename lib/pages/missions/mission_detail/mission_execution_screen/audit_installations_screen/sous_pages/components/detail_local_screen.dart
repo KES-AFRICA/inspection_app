@@ -1089,8 +1089,8 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   }
 
   Widget _buildSection(String title, List<ElementControle> elements) {
-    final conformiteCount = elements.where((e) => e.conforme == true).length;
-    final totalCount = elements.length;
+    final conformiteCount = elements.where((e) => e.conforme == true && !e.estNA).length;
+    final totalCount = elements.where((e) => !e.estNA).length;
     final pourcentage = totalCount > 0 ? (conformiteCount / totalCount * 100).round() : 0;
 
     return Card(
@@ -1649,7 +1649,7 @@ Widget _buildElementItem(ElementControle element) {
         coffret.pointsVerification.where((p) => p.conformite == 'oui').length;
     final pointsNon =
         coffret.pointsVerification.where((p) => p.conformite == 'non').length;
-    final totalPoints = coffret.pointsVerification.length;
+    final totalPoints = coffret.pointsVerification.where((p) => p.conformite != 'na').length;
     final pourcentage =
         totalPoints > 0 ? (pointsConformes / totalPoints * 100).round() : 0;
     final isComplet = coffret.statut == 'complet' || _isCoffretComplet(coffret);
