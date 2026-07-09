@@ -1639,6 +1639,7 @@ bool _hasAnyDataInCurrentSection() {
           _loadControllersFromJSA();
           _loadSavedPosition();
           _isFirstLoad = false;
+          _isLoading = false;
         }
 
         final error = _getCurrentSubCategoryError();
