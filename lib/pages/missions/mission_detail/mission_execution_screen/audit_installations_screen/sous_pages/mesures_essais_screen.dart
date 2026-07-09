@@ -8,20 +8,19 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/prises_terre_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/mesures_essais/data/mappers/mesures_essais_mapper.dart';
-import 'package:inspec_app/features/mesures_essais/domain/usecases/get_mesures_essais_use_case.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 
-class MesuresEssaisScreen extends StatefulWidget {
+class MesuresEssaisScreen extends ConsumerStatefulWidget {
   final Mission mission;
 
   const MesuresEssaisScreen({super.key, required this.mission});
 
   @override
-  State<MesuresEssaisScreen> createState() => _MesuresEssaisScreenState();
+  ConsumerState<MesuresEssaisScreen> createState() => _MesuresEssaisScreenState();
 }
 
-class _MesuresEssaisScreenState extends State<MesuresEssaisScreen> {
+class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
   bool _isLoading = true;
   Map<String, dynamic> _stats = {};
   Map<String, bool> _sectionStatus = {};
@@ -36,9 +35,8 @@ class _MesuresEssaisScreenState extends State<MesuresEssaisScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final getUseCase = GetIt.instance<GetMesuresEssaisUseCase>();
-      final entity = await getUseCase(widget.mission.id);
-      final mesures = MesuresEssaisMapper.toModel(entity);
+      ref.invalidate(mesuresEssaisProvider(widget.mission.id));
+      final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).future);
       _stats = mesures.calculerStatistiques();
       
       // Vérifier l'état de chaque section

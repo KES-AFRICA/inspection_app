@@ -5,22 +5,19 @@ import 'package:inspec_app/models/foudre.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_foudre_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/foudre/domain/entities/foudre_entity.dart';
-import 'package:inspec_app/features/foudre/data/mappers/foudre_mapper.dart';
-import 'package:inspec_app/features/foudre/domain/usecases/get_foudre_observations_use_case.dart';
-import 'package:inspec_app/features/foudre/domain/usecases/delete_foudre_observation_use_case.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:inspec_app/features/foudre/presentation/providers/foudre_provider.dart';
 
-class FoudreScreen extends StatefulWidget {
+class FoudreScreen extends ConsumerStatefulWidget {
   final Mission mission;
 
   const FoudreScreen({super.key, required this.mission});
 
   @override
-  State<FoudreScreen> createState() => _FoudreScreenState();
+  ConsumerState<FoudreScreen> createState() => _FoudreScreenState();
 }
 
-class _FoudreScreenState extends State<FoudreScreen> {
+class _FoudreScreenState extends ConsumerState<FoudreScreen> {
   List<Foudre> _observations = [];
   bool _isLoading = true;
   String _searchQuery = '';
@@ -34,9 +31,8 @@ class _FoudreScreenState extends State<FoudreScreen> {
 
   Future<void> _loadObservations() async {
     setState(() => _isLoading = true);
-    final useCase = GetIt.instance<GetFoudreObservationsUseCase>();
-    final entities = await useCase(widget.mission.id);
-    _observations = entities.map(FoudreMapper.toModel).toList();
+    final entities = await ref.read(foudreObservationsProvider(widget.mission.id).future);
+    _observations = entities;
     setState(() => _isLoading = false);
   }
 
@@ -83,8 +79,7 @@ class _FoudreScreenState extends State<FoudreScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              final deleteUseCase = GetIt.instance<DeleteFoudreObservationUseCase>();
-              final success = await deleteUseCase(observation.key);
+              final success = await ref.read(foudreObservationsProvider(widget.mission.id).notifier).removeObservation(observation.key);
               if (success) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(

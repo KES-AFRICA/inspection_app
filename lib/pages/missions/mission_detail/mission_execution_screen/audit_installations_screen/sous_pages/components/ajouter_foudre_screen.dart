@@ -4,11 +4,10 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/foudre.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/foudre/domain/usecases/create_foudre_observation_use_case.dart';
-import 'package:inspec_app/features/foudre/domain/usecases/update_foudre_observation_use_case.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:inspec_app/features/foudre/presentation/providers/foudre_provider.dart';
 
-class AjouterFoudreScreen extends StatefulWidget {
+class AjouterFoudreScreen extends ConsumerStatefulWidget {
   final Mission mission;
   final Foudre? observation;
 
@@ -21,10 +20,10 @@ class AjouterFoudreScreen extends StatefulWidget {
   bool get isEdition => observation != null;
 
   @override
-  State<AjouterFoudreScreen> createState() => _AjouterFoudreScreenState();
+  ConsumerState<AjouterFoudreScreen> createState() => _AjouterFoudreScreenState();
 }
 
-class _AjouterFoudreScreenState extends State<AjouterFoudreScreen> {
+class _AjouterFoudreScreenState extends ConsumerState<AjouterFoudreScreen> {
   final _formKey = GlobalKey<FormState>();
   final _observationController = TextEditingController();
   int _niveauPriorite = 2; // Par défaut priorité moyenne
@@ -45,8 +44,7 @@ class _AjouterFoudreScreenState extends State<AjouterFoudreScreen> {
         
         if (widget.isEdition) {
           // Mise à jour
-          final updateUseCase = GetIt.instance<UpdateFoudreObservationUseCase>();
-          final success = await updateUseCase(
+          final success = await ref.read(foudreObservationsProvider(widget.mission.id).notifier).updateObservation(
             foudreId: widget.observation!.key,
             observation: observationTexte,
             niveauPriorite: _niveauPriorite,
@@ -65,20 +63,22 @@ class _AjouterFoudreScreenState extends State<AjouterFoudreScreen> {
           }
         } else {
           // Création
-          final createUseCase = GetIt.instance<CreateFoudreObservationUseCase>();
-          await createUseCase(
-            missionId: widget.mission.id,
+          final success = await ref.read(foudreObservationsProvider(widget.mission.id).notifier).addObservation(
             observation: observationTexte,
             niveauPriorite: _niveauPriorite,
           );
           
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Observation créée'),
-              backgroundColor: Colors.green,
-            ),
-          );
-          Navigator.pop(context, true);
+          if (success) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Observation créée'),
+                backgroundColor: Colors.green,
+              ),
+            );
+            Navigator.pop(context, true);
+          } else {
+            _showError('Erreur lors de la création');
+          }
         }
       } catch (e) {
         _showError('Erreur: $e');

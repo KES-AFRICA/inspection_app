@@ -10,21 +10,19 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_zone_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_zone_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/audit_installations/data/mappers/audit_installations_mapper.dart';
-import 'package:inspec_app/features/audit_installations/domain/usecases/get_audit_installations_use_case.dart';
-import 'package:inspec_app/features/audit_installations/domain/usecases/save_audit_installations_use_case.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:inspec_app/features/audit_installations/presentation/providers/audit_installations_provider.dart';
 
-class BasseTensionScreen extends StatefulWidget {
+class BasseTensionScreen extends ConsumerStatefulWidget {
   final Mission mission;
 
   const BasseTensionScreen({super.key, required this.mission});
 
   @override
-  State<BasseTensionScreen> createState() => _BasseTensionScreenState();
+  ConsumerState<BasseTensionScreen> createState() => _BasseTensionScreenState();
 }
 
-class _BasseTensionScreenState extends State<BasseTensionScreen> {
+class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
   AuditInstallationsElectriques? _audit;
   bool _isLoading = true;
 
@@ -36,9 +34,7 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
 
   void _loadAudit() async {
     try {
-      final getAuditUseCase = GetIt.instance<GetAuditInstallationsUseCase>();
-      final entity = await getAuditUseCase(widget.mission.id);
-      final audit = AuditInstallationsMapper.toModel(entity);
+      final audit = await ref.read(auditInstallationsProvider(widget.mission.id).future);
       setState(() {
         _audit = audit;
         _isLoading = false;
@@ -57,9 +53,7 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
     setState(() => _isLoading = true);
     
     try {
-      final getAuditUseCase = GetIt.instance<GetAuditInstallationsUseCase>();
-      final entity = await getAuditUseCase(widget.mission.id);
-      final audit = AuditInstallationsMapper.toModel(entity);
+      final audit = await ref.read(auditInstallationsProvider(widget.mission.id).future);
       setState(() {
         _audit = audit;
         _isLoading = false;
@@ -164,8 +158,7 @@ class _BasseTensionScreenState extends State<BasseTensionScreen> {
               setState(() {
                 _audit!.basseTensionZones.removeAt(index);
               });
-              final saveAuditUseCase = GetIt.instance<SaveAuditInstallationsUseCase>();
-              await saveAuditUseCase(AuditInstallationsMapper.toEntity(_audit!));
+              await ref.read(auditInstallationsProvider(widget.mission.id).notifier).saveAudit(_audit!);
               
               // 4. Supprimer le classement de la zone
               await HiveService.deleteClassementZone(
