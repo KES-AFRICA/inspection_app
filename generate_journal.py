@@ -21,7 +21,7 @@ def generate_excel():
         [
             "1",
             "Restructuration de l'application (Clean Architecture)",
-            "Juin - Juillet 2026",
+            "08/07/2026 - 09/07/2026",
             "Découpler la logique métier de la base de données de persistance locale Hive et de l'interface utilisateur pour rendre l'application robuste, évolutive et testable.",
             "Migration de l'intégralité des 10 modules de la séquence d'inspection vers un modèle à 3 couches (Domain pour la logique pure et Use Cases, Data pour l'infrastructure Hive et Presentation pour l'interface utilisateur). Injection des dépendances gérée via GetIt.",
             "1. Robustesse et modularité accrues du code.\n2. Indépendance totale vis-à-vis du moteur de base de données Hive.\n3. Possibilité d'écrire des tests automatisés sur la logique métier.",
@@ -30,9 +30,9 @@ def generate_excel():
         [
             "2",
             "Introduction du State Management avec Riverpod",
-            "Juillet 2026 (En cours)",
+            "09/07/2026",
             "Remplacer l'état local éparpillé (setState) par une gestion d'état réactive, centralisée et robuste, garantissant zéro perte de données pour les inspecteurs sur le terrain.",
-            "Mise en place de ProviderScope racine, création de providers immutables de Use Cases, et migration progressive de toutes les étapes de la séquence d'inspection (étape pilote 'Renseignements Généraux' complétée, étapes 'JSA' et 'Documents' en cours de planification).",
+            "Mise en place de ProviderScope racine, création de providers immutables de Use Cases, et migration progressive de toutes les étapes de la séquence d'inspection (étapes 'Renseignements Généraux', 'JSA', 'Documents requis' et 'Schéma des installations' migrées, autres en cours).",
             "1. Cycle de vie de l'état applicatif unifié et réactif.\n2. Sauvegarde asynchrone transparente en tâche de fond pour l'inspecteur.\n3. Sécurisation et fluidité accrue de la saisie utilisateur sans frame lags.",
             "En cours"
         ]

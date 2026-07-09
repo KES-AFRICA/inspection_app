@@ -7,13 +7,9 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/file_storage_service.dart';
-import 'package:inspec_app/services/hive_service.dart';
-import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/mission/domain/usecases/get_mission_by_id_use_case.dart';
-import 'package:inspec_app/features/mission/domain/usecases/update_mission_status_use_case.dart';
-import 'package:inspec_app/features/mission/domain/usecases/save_last_report_use_case.dart';
-import 'package:inspec_app/features/mission/domain/usecases/get_all_reports_for_mission_use_case.dart';
-import 'package:inspec_app/features/mission/domain/usecases/get_renseignements_generaux_use_case.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:inspec_app/core/providers/mission_providers.dart';
+import 'package:inspec_app/features/mission/presentation/providers/mission_detail_provider.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/services/pdf_report_service.dart';
 import 'package:inspec_app/services/word_report_service.dart';
@@ -24,7 +20,7 @@ import 'package:printing/printing.dart';
 import 'package:path/path.dart' as path;
 import 'package:url_launcher/url_launcher.dart';
 
-class SummaryStep extends StatefulWidget {
+class SummaryStep extends ConsumerStatefulWidget {
   final Mission mission;
   final Verificateur user;
   final Function(Map<String, dynamic>) onDataChanged;
@@ -39,12 +35,12 @@ class SummaryStep extends StatefulWidget {
   });
 
   @override
-  State<SummaryStep> createState() => _SummaryStepState();
+  ConsumerState<SummaryStep> createState() => _SummaryStepState();
 }
 
-class _SummaryStepState extends State<SummaryStep> {
+class _SummaryStepState extends ConsumerState<SummaryStep> {
   Map<String, dynamic> _progress = {};
-  bool _isLoading = true;
+  bool _isFirstLoad = true;
   bool _isGenerating = false;
   File? _pdfFile;
   File? _wordFile;
@@ -58,7 +54,6 @@ class _SummaryStepState extends State<SummaryStep> {
     super.initState();
     _loadProgress();
     widget.onDataChanged({'summary_active': true});
-    _ensureStatusIsTermine();
     _loadLastReports();
     _markCurrentStepCompleted();
   }
@@ -70,36 +65,24 @@ class _SummaryStepState extends State<SummaryStep> {
     }
   }
 
-  Future<void> _ensureStatusIsTermine() async {
-    final getUseCase = GetIt.instance<GetMissionByIdUseCase>();
-    final missionEntity = getUseCase(widget.mission.id);
-    if (missionEntity != null && missionEntity.status != 'termine') {
-      final updateStatusUseCase = GetIt.instance<UpdateMissionStatusUseCase>();
-      await updateStatusUseCase(
-        missionId: widget.mission.id,
-        status: 'termine',
-      );
+  Future<void> _ensureStatusIsTermine(Mission mission) async {
+    if (mission.status != 'termine') {
+      final notifier = ref.read(missionDetailProvider(widget.mission.id).notifier);
+      await notifier.updateMissionStatus('termine');
       widget.mission.status = 'termine';
     }
   }
 
   Future<void> _loadProgress() async {
-    setState(() => _isLoading = true);
-    
     await SequenceProgressService.markStepCompleted(widget.mission.id, 6);
-    
-    _progress = await SequenceProgressService.getProgress(widget.mission.id);
-    
-    final completedSteps = _progress['completedSteps'] as List<dynamic>? ?? [];
-    if (kDebugMode) {
-      print('📊 Étapes complétées: $completedSteps');
-    }
-    
-    setState(() => _isLoading = false);
+    final progress = await SequenceProgressService.getProgress(widget.mission.id);
+    setState(() {
+      _progress = progress;
+    });
   }
 
   Future<void> _loadLastReports() async {
-    final getReportsUseCase = GetIt.instance<GetAllReportsForMissionUseCase>();
+    final getReportsUseCase = ref.read(getAllReportsForMissionUseCaseProvider);
     final reports = await getReportsUseCase(widget.mission.id);
     
     for (var report in reports) {
@@ -165,7 +148,7 @@ class _SummaryStepState extends State<SummaryStep> {
           generatedAt: DateTime.now(),
           reportType: reportType,
         );
-        final saveReportUseCase = GetIt.instance<SaveLastReportUseCase>();
+        final saveReportUseCase = ref.read(saveLastReportUseCaseProvider);
         await saveReportUseCase(lastReport);
         
         setState(() {
@@ -875,54 +858,63 @@ class _SummaryStepState extends State<SummaryStep> {
   
   @override
   Widget build(BuildContext context) {
-    if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    final asyncData = ref.watch(missionDetailProvider(widget.mission.id));
 
-    final completedSteps = _getCompletedStepsCount();
-    final totalSteps = _getTotalSteps();
-    final percentage = (completedSteps / totalSteps * 100).round();
+    return asyncData.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Erreur: $err')),
+      data: (mission) {
+        if (_isFirstLoad) {
+          _ensureStatusIsTermine(mission);
+          _isFirstLoad = false;
+        }
 
-    return Column(
-      children: [
-        Expanded(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,  // ← Permet au Column de s'adapter au contenu
-              children: [
-                // En-tête de succès
-                _buildSuccessHeader(completedSteps, totalSteps, percentage),
-                const SizedBox(height: 24),
+        final completedSteps = _getCompletedStepsCount();
+        final totalSteps = _getTotalSteps();
+        final percentage = (completedSteps / totalSteps * 100).round();
 
-                // Informations de la mission
-                _buildMissionInfoCard(),
-                const SizedBox(height: 24),
+        return Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,  // ← Permet au Column de s'adapter au contenu
+                  children: [
+                    // En-tête de succès
+                    _buildSuccessHeader(completedSteps, totalSteps, percentage),
+                    const SizedBox(height: 24),
 
-                // Étapes complétées
-                _buildStepsCompletionCard(),
-                const SizedBox(height: 24),
+                    // Informations de la mission
+                    _buildMissionInfoCard(),
+                    const SizedBox(height: 24),
 
-                // Bouton Générer/Régénérer
-                _buildGenerateButton(),
-                const SizedBox(height: 16),
+                    // Étapes complétées
+                    _buildStepsCompletionCard(),
+                    const SizedBox(height: 24),
 
-                // Zone des rapports (format compact pour éviter le débordement)
-                if (hasAnyReport) ...[
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  ..._buildReportsList(),
-                ],
-                
-                // Espace final pour éviter que le contenu ne touche le bord
-                const SizedBox(height: 16),
-              ],
+                    // Bouton Générer/Régénérer
+                    _buildGenerateButton(),
+                    const SizedBox(height: 16),
+
+                    // Zone des rapports (format compact pour éviter le débordement)
+                    if (hasAnyReport) ...[
+                      const Divider(),
+                      const SizedBox(height: 8),
+                      ..._buildReportsList(),
+                    ],
+                    
+                    // Espace final pour éviter que le contenu ne touche le bord
+                    const SizedBox(height: 16),
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
-        _buildBottomNavigation(),
-      ],
+            _buildBottomNavigation(),
+          ],
+        );
+      },
     );
   }
 }

@@ -159,4 +159,23 @@ class MissionDetailNotifier extends StateNotifier<AsyncValue<Mission>> {
       return false;
     }
   }
+
+  Future<void> updateMissionStatus(String status) async {
+    final current = state.value;
+    if (current == null) return;
+
+    try {
+      current.status = status;
+      current.updatedAt = DateTime.now();
+      state = AsyncValue.data(current);
+
+      final updateUseCase = ref.read(updateMissionStatusUseCaseProvider);
+      await updateUseCase(
+        missionId: missionId,
+        status: status,
+      );
+    } catch (e, stackTrace) {
+      state = AsyncValue.error(e, stackTrace);
+    }
+  }
 }
