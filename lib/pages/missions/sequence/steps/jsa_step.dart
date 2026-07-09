@@ -107,17 +107,94 @@ class JsaStepState extends ConsumerState<JsaStep> with AutomaticKeepAliveClientM
   }
 
   Future<void> _saveJSA() async {
+    // 1. Mettre d'abord à jour les champs texte locaux sur _jsa
+    _jsa.operationEffectuer = _operationController.text.trim();
+    _jsa.dangers.autreEnvironnement = _autreEnvironnementController.text.trim();
+    _jsa.dangers.autrePhysique = _autrePhysiqueController.text.trim();
+    _jsa.exigencesGenerales.autre = _autreExigenceController.text.trim();
+    _jsa.epi.autre = _autreEPIController.text.trim();
+    _jsa.verificationFinale.autresPoints = _autresPointsVerifController.text.trim();
+    _jsa.verificationFinale.donneurOrdreSignature = _donneurOrdreSignatureController.text.trim();
+    _jsa.verificationFinale.chargeAffairesSignature = _chargeAffairesSignatureController.text.trim();
+    _jsa.planUrgence.personneContactClient = _personneContactClientController.text.trim();
+    _jsa.planUrgence.personneContactKES = _personneContactKESController.text.trim();
+
+    // 2. Transmettre l'intégralité du modèle local au notifier réactif
     await ref.read(jsaProvider(widget.mission.id).notifier).updateJsa((current) {
-      current.operationEffectuer = _operationController.text.trim();
-      current.dangers.autreEnvironnement = _autreEnvironnementController.text.trim();
-      current.dangers.autrePhysique = _autrePhysiqueController.text.trim();
-      current.exigencesGenerales.autre = _autreExigenceController.text.trim();
-      current.epi.autre = _autreEPIController.text.trim();
-      current.verificationFinale.autresPoints = _autresPointsVerifController.text.trim();
-      current.verificationFinale.donneurOrdreSignature = _donneurOrdreSignatureController.text.trim();
-      current.verificationFinale.chargeAffairesSignature = _chargeAffairesSignatureController.text.trim();
-      current.planUrgence.personneContactClient = _personneContactClientController.text.trim();
-      current.planUrgence.personneContactKES = _personneContactKESController.text.trim();
+      current.operationEffectuer = _jsa.operationEffectuer;
+      current.currentSubCategory = _jsa.currentSubCategory;
+      current.inspecteurs = List.from(_jsa.inspecteurs);
+
+      // Plan urgence
+      current.planUrgence.voiesIssuesIdentifiees = _jsa.planUrgence.voiesIssuesIdentifiees;
+      current.planUrgence.zonesRassemblementIdentifiees = _jsa.planUrgence.zonesRassemblementIdentifiees;
+      current.planUrgence.consignesSecuriteInternes = _jsa.planUrgence.consignesSecuriteInternes;
+      current.planUrgence.personneContactClient = _jsa.planUrgence.personneContactClient;
+      current.planUrgence.personneContactKES = _jsa.planUrgence.personneContactKES;
+
+      // Dangers
+      current.dangers.chocElectrique = _jsa.dangers.chocElectrique;
+      current.dangers.bruit = _jsa.dangers.bruit;
+      current.dangers.stressThermique = _jsa.dangers.stressThermique;
+      current.dangers.eclairageInadapte = _jsa.dangers.eclairageInadapte;
+      current.dangers.zoneCirculationMalDefinie = _jsa.dangers.zoneCirculationMalDefinie;
+      current.dangers.solAccidente = _jsa.dangers.solAccidente;
+      current.dangers.emissionGazPoussiere = _jsa.dangers.emissionGazPoussiere;
+      current.dangers.espaceConfine = _jsa.dangers.espaceConfine;
+      current.dangers.autreEnvironnement = _jsa.dangers.autreEnvironnement;
+      current.dangers.chuteObjets = _jsa.dangers.chuteObjets;
+      current.dangers.coactivite = _jsa.dangers.coactivite;
+      current.dangers.portCharge = _jsa.dangers.portCharge;
+      current.dangers.expositionProduitsChimiques = _jsa.dangers.expositionProduitsChimiques;
+      current.dangers.chuteHauteur = _jsa.dangers.chuteHauteur;
+      current.dangers.electrification = _jsa.dangers.electrification;
+      current.dangers.incendiesExplosion = _jsa.dangers.incendiesExplosion;
+      current.dangers.mauvaisesPostures = _jsa.dangers.mauvaisesPostures;
+      current.dangers.chutePlainPied = _jsa.dangers.chutePlainPied;
+      current.dangers.autrePhysique = _jsa.dangers.autrePhysique;
+
+      // Exigences
+      current.exigencesGenerales.signaletiqueSecurite = _jsa.exigencesGenerales.signaletiqueSecurite;
+      current.exigencesGenerales.ficheDonneeSecuriteDisponible = _jsa.exigencesGenerales.ficheDonneeSecuriteDisponible;
+      current.exigencesGenerales.uneMinuteMaSecurite = _jsa.exigencesGenerales.uneMinuteMaSecurite;
+      current.exigencesGenerales.balise = _jsa.exigencesGenerales.balise;
+      current.exigencesGenerales.zoneTravailPropre = _jsa.exigencesGenerales.zoneTravailPropre;
+      current.exigencesGenerales.toolboxMeeting = _jsa.exigencesGenerales.toolboxMeeting;
+      current.exigencesGenerales.permisTravail = _jsa.exigencesGenerales.permisTravail;
+      current.exigencesGenerales.extincteurs = _jsa.exigencesGenerales.extincteurs;
+      current.exigencesGenerales.outilsMaterielsIsolants = _jsa.exigencesGenerales.outilsMaterielsIsolants;
+      current.exigencesGenerales.boitePharmacie = _jsa.exigencesGenerales.boitePharmacie;
+      current.exigencesGenerales.autre = _jsa.exigencesGenerales.autre;
+
+      // EPI
+      current.epi.casqueSecurite = _jsa.epi.casqueSecurite;
+      current.epi.bouchonsOreille = _jsa.epi.bouchonsOreille;
+      current.epi.lunettesProtection = _jsa.epi.lunettesProtection;
+      current.epi.harnaisSecurite = _jsa.epi.harnaisSecurite;
+      current.epi.chaussureSecurite = _jsa.epi.chaussureSecurite;
+      current.epi.masqueSecurite = _jsa.epi.masqueSecurite;
+      current.epi.combinaisonLongueManche = _jsa.epi.combinaisonLongueManche;
+      current.epi.gantsIsolants = _jsa.epi.gantsIsolants;
+      current.epi.cacheNez = _jsa.epi.cacheNez;
+      current.epi.gilet = _jsa.epi.gilet;
+      current.epi.autre = _jsa.epi.autre;
+
+      // Verification finale
+      current.verificationFinale.travailTermineNA = _jsa.verificationFinale.travailTermineNA;
+      current.verificationFinale.travailTermineApplicable = _jsa.verificationFinale.travailTermineApplicable;
+      current.verificationFinale.consignationCadenasRetireNA = _jsa.verificationFinale.consignationCadenasRetireNA;
+      current.verificationFinale.consignationCadenasRetireApplicable = _jsa.verificationFinale.consignationCadenasRetireApplicable;
+      current.verificationFinale.absenceConsignataireProcedureNA = _jsa.verificationFinale.absenceConsignataireProcedureNA;
+      current.verificationFinale.absenceConsignataireProcedureApplicable = _jsa.verificationFinale.absenceConsignataireProcedureApplicable;
+      current.verificationFinale.consignataireAbsentProcedureAppliqueeNA = _jsa.verificationFinale.consignataireAbsentProcedureAppliqueeNA;
+      current.verificationFinale.consignataireAbsentProcedureAppliqueeApplicable = _jsa.verificationFinale.consignataireAbsentProcedureAppliqueeApplicable;
+      current.verificationFinale.materielEnleveZoneNettoyeeNA = _jsa.verificationFinale.materielEnleveZoneNettoyeeNA;
+      current.verificationFinale.materielEnleveZoneNettoyeeApplicable = _jsa.verificationFinale.materielEnleveZoneNettoyeeApplicable;
+      current.verificationFinale.risquesSupprimesEquipementPretNA = _jsa.verificationFinale.risquesSupprimesEquipementPretNA;
+      current.verificationFinale.risquesSupprimesEquipementPretApplicable = _jsa.verificationFinale.risquesSupprimesEquipementPretApplicable;
+      current.verificationFinale.autresPoints = _jsa.verificationFinale.autresPoints;
+      current.verificationFinale.donneurOrdreSignature = _jsa.verificationFinale.donneurOrdreSignature;
+      current.verificationFinale.chargeAffairesSignature = _jsa.verificationFinale.chargeAffairesSignature;
     });
     widget.onDataChanged({'jsa_saved': true, 'current_step': currentSubCategory});
   }
@@ -303,7 +380,7 @@ class JsaStepState extends ConsumerState<JsaStep> with AutomaticKeepAliveClientM
   }
 }
 
-  void _nextSubCategory() {
+  Future<void> _nextSubCategory() async {
     FocusScope.of(context).unfocus();
     
     // ✅ Marquer qu'on a tenté d'avancer (active les messages d'erreur)
@@ -317,18 +394,24 @@ class JsaStepState extends ConsumerState<JsaStep> with AutomaticKeepAliveClientM
     }
     
     if (currentSubCategory < totalSubCategories - 1) {
-      setState(() => _jsa.currentSubCategory++);
-      _saveJSA();
+      setState(() {
+        _jsa.currentSubCategory++;
+        _hasAttemptedNext = false; // Réinitialiser pour le slide suivant !
+      });
+      await _saveJSA();
       _saveCurrentPosition();
     }
   }
 
-  void _previousSubCategory() {
+  Future<void> _previousSubCategory() async {
     FocusScope.of(context).unfocus();
     
     if (currentSubCategory > 0) {
-      setState(() => _jsa.currentSubCategory--);
-      _saveJSA();
+      setState(() {
+        _jsa.currentSubCategory--;
+        _hasAttemptedNext = false; // Réinitialiser pour le slide précédent !
+      });
+      await _saveJSA();
       _saveCurrentPosition();
     }
   }
@@ -404,7 +487,7 @@ class JsaStepState extends ConsumerState<JsaStep> with AutomaticKeepAliveClientM
     return List.generate(totalSubCategories, (i) => isSubCategoryComplete(i)).every((v) => v);
   }
 
-  void _goToRenseignements() {
+  Future<void> _goToRenseignements() async {
     // ✅ Marquer qu'on a tenté d'avancer
     if (!_hasAttemptedNext) {
       setState(() => _hasAttemptedNext = true);
@@ -415,7 +498,7 @@ class JsaStepState extends ConsumerState<JsaStep> with AutomaticKeepAliveClientM
       return;
     }
     
-    _saveJSA();
+    await _saveJSA();
     _saveCurrentPosition();
     if (widget.onNextStep != null) {
       widget.onNextStep!();
@@ -787,29 +870,42 @@ bool _hasAnyDataInCurrentSection() {
           SizedBox(height: isSmallScreen ? 20 : 24),
           
           // Champ Opération
-          Text(
-            'Opération à effectuer *',
-            style: TextStyle(
-              fontSize: isSmallScreen ? 14 : 15,
-              fontWeight: FontWeight.w600,
-              color: _hasAttemptedNext && !isValid ? Colors.red : AppTheme.darkBlue,
+          Text.rich(
+            TextSpan(
+              children: [
+                TextSpan(
+                  text: 'Opération à effectuer ',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 14 : 15,
+                    fontWeight: FontWeight.bold,
+                    color: _hasAttemptedNext && !isValid ? Colors.red.shade700 : AppTheme.darkBlue,
+                  ),
+                ),
+                const TextSpan(
+                  text: '*',
+                  style: TextStyle(
+                    color: Colors.red,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 8),
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withOpacity(0.03),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
               ],
               border: _hasAttemptedNext && !isValid && _operationController.text.trim().isEmpty
                   ? Border.all(color: Colors.red.shade300, width: 1.5)
-                  : null,
+                  : Border.all(color: Colors.grey.shade100),
             ),
             child: TextFormField(
               controller: _operationController,
@@ -820,14 +916,14 @@ bool _hasAnyDataInCurrentSection() {
                 hintText: 'Décrivez l\'opération à effectuer...',
                 hintStyle: TextStyle(fontSize: isSmallScreen ? 14 : 15, color: Colors.grey.shade400),
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
                 fillColor: Colors.white,
                 contentPadding: EdgeInsets.all(isSmallScreen ? 14 : 16),
                 suffixIcon: _operationController.text.trim().isNotEmpty
-                    ? Icon(Icons.check_circle, color: Colors.green, size: isSmallScreen ? 20 : 22)
+                    ? Icon(Icons.check_circle, color: Colors.green.shade600, size: isSmallScreen ? 20 : 22)
                     : null,
               ),
               onChanged: (_) {
@@ -845,11 +941,11 @@ bool _hasAnyDataInCurrentSection() {
               padding: EdgeInsets.only(top: isSmallScreen ? 6 : 8),
               child: Row(
                 children: [
-                  Icon(Icons.error_outline, color: Colors.red, size: isSmallScreen ? 14 : 16),
+                  Icon(Icons.error_outline, color: Colors.red.shade700, size: isSmallScreen ? 14 : 16),
                   const SizedBox(width: 6),
                   Text(
                     error ?? 'Ce champ est requis',
-                    style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.red),
+                    style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.red.shade700, fontWeight: FontWeight.w500),
                   ),
                 ],
               ),
@@ -861,12 +957,25 @@ bool _hasAnyDataInCurrentSection() {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Inspecteurs *',
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 14 : 15,
-                  fontWeight: FontWeight.w600,
-                  color: _hasAttemptedNext && _jsa.inspecteurs.isEmpty ? Colors.red : AppTheme.darkBlue,
+              Text.rich(
+                TextSpan(
+                  children: [
+                    TextSpan(
+                      text: 'Inspecteurs ',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 14 : 15,
+                        fontWeight: FontWeight.bold,
+                        color: _hasAttemptedNext && _jsa.inspecteurs.isEmpty ? Colors.red.shade700 : AppTheme.darkBlue,
+                      ),
+                    ),
+                    const TextSpan(
+                      text: '*',
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (_jsa.inspecteurs.length < 6)
@@ -875,7 +984,7 @@ bool _hasAnyDataInCurrentSection() {
                   icon: Icon(Icons.add_circle_outline, color: AppTheme.primaryBlue, size: isSmallScreen ? 18 : 20),
                   label: Text(
                     'Ajouter',
-                    style: TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w600, fontSize: isSmallScreen ? 13 : 14),
+                    style: TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.bold, fontSize: isSmallScreen ? 13 : 14),
                   ),
                 ),
             ],
@@ -887,7 +996,7 @@ bool _hasAnyDataInCurrentSection() {
               padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
               decoration: BoxDecoration(
                 color: _hasAttemptedNext ? Colors.red.shade50 : Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(16),
                 border: Border.all(
                   color: _hasAttemptedNext ? Colors.red.shade200 : Colors.grey.shade200,
                 ),
@@ -898,6 +1007,7 @@ bool _hasAnyDataInCurrentSection() {
                   style: TextStyle(
                     fontSize: isSmallScreen ? 13 : 14,
                     color: _hasAttemptedNext ? Colors.red.shade700 : Colors.grey.shade600,
+                    fontWeight: _hasAttemptedNext ? FontWeight.w500 : FontWeight.normal,
                   ),
                 ),
               ),
@@ -963,49 +1073,108 @@ bool _hasAnyDataInCurrentSection() {
   }
 
   Widget _buildSub2PlanUrgence(bool isSmallScreen) {
+    final isValid = _isCurrentSubCategoryValid();
     return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildStatusBadge(true, isSmallScreen),
+          _buildStatusBadge(isValid, isSmallScreen),
           SizedBox(height: isSmallScreen ? 20 : 24),
           
-          _buildModernCheckbox(
-            'Voies d\'issues de secours identifiées',
-            _jsa.planUrgence.voiesIssuesIdentifiees,
-            (v) => setState(() => _jsa.planUrgence.voiesIssuesIdentifiees = v!),
-            AppTheme.primaryBlue,
-            isSmallScreen,
-          ),
-          _buildModernCheckbox(
-            'Zones de rassemblement identifiées',
-            _jsa.planUrgence.zonesRassemblementIdentifiees,
-            (v) => setState(() => _jsa.planUrgence.zonesRassemblementIdentifiees = v!),
-            AppTheme.primaryBlue,
-            isSmallScreen,
-          ),
-          _buildModernCheckbox(
-            'Consignes de sécurité internes',
-            _jsa.planUrgence.consignesSecuriteInternes,
-            (v) => setState(() => _jsa.planUrgence.consignesSecuriteInternes = v!),
-            AppTheme.primaryBlue,
-            isSmallScreen,
+          // Bloc Mesures de sécurité
+          Container(
+            padding: EdgeInsets.all(isSmallScreen ? 14 : 18),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryBlue.withOpacity(0.03),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.1)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.security, color: AppTheme.primaryBlue, size: isSmallScreen ? 18 : 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Mesures de sécurité',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 14 : 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.primaryBlue,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: isSmallScreen ? 12 : 16),
+                _buildModernCheckbox(
+                  'Voies d\'issues de secours identifiées',
+                  _jsa.planUrgence.voiesIssuesIdentifiees,
+                  (v) => setState(() => _jsa.planUrgence.voiesIssuesIdentifiees = v!),
+                  AppTheme.primaryBlue,
+                  isSmallScreen,
+                ),
+                _buildModernCheckbox(
+                  'Zones de rassemblement identifiées',
+                  _jsa.planUrgence.zonesRassemblementIdentifiees,
+                  (v) => setState(() => _jsa.planUrgence.zonesRassemblementIdentifiees = v!),
+                  AppTheme.primaryBlue,
+                  isSmallScreen,
+                ),
+                _buildModernCheckbox(
+                  'Consignes de sécurité internes',
+                  _jsa.planUrgence.consignesSecuriteInternes,
+                  (v) => setState(() => _jsa.planUrgence.consignesSecuriteInternes = v!),
+                  AppTheme.primaryBlue,
+                  isSmallScreen,
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 20),
           
-          _buildModernTextField(
-            controller: _personneContactClientController,
-            label: 'Personne à contacter chez le client',
-            onChanged: (_) => _saveJSA(),
-            isSmallScreen: isSmallScreen,
-          ),
-          const SizedBox(height: 12),
-          _buildModernTextField(
-            controller: _personneContactKESController,
-            label: 'Personne à contacter chez KES',
-            onChanged: (_) => _saveJSA(),
-            isSmallScreen: isSmallScreen,
+          // Bloc Contacts
+          Container(
+            padding: EdgeInsets.all(isSmallScreen ? 14 : 18),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.grey.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.phone_in_talk, color: AppTheme.darkBlue, size: isSmallScreen ? 18 : 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Contacts d\'urgence',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 14 : 15,
+                        fontWeight: FontWeight.bold,
+                        color: AppTheme.darkBlue,
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: isSmallScreen ? 14 : 18),
+                _buildModernTextField(
+                  controller: _personneContactClientController,
+                  label: 'Personne à contacter chez le client',
+                  onChanged: (_) => _saveJSA(),
+                  isSmallScreen: isSmallScreen,
+                ),
+                const SizedBox(height: 4),
+                _buildModernTextField(
+                  controller: _personneContactKESController,
+                  label: 'Personne à contacter chez KES',
+                  onChanged: (_) => _saveJSA(),
+                  isSmallScreen: isSmallScreen,
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -1013,12 +1182,13 @@ bool _hasAnyDataInCurrentSection() {
   }
 
   Widget _buildSub3Dangers(bool isSmallScreen) {
+    final isValid = _isCurrentSubCategoryValid();
     return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildStatusBadge(true, isSmallScreen),
+          _buildStatusBadge(isValid, isSmallScreen),
           SizedBox(height: isSmallScreen ? 20 : 24),
           
           _buildSectionTitle('Lié à l\'environnement', AppTheme.primaryBlue, isSmallScreen),
@@ -1050,12 +1220,13 @@ bool _hasAnyDataInCurrentSection() {
   }
 
   Widget _buildSub4Exigences(bool isSmallScreen) {
+    final isValid = _isCurrentSubCategoryValid();
     return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildStatusBadge(true, isSmallScreen),
+          _buildStatusBadge(isValid, isSmallScreen),
           SizedBox(height: isSmallScreen ? 20 : 24),
           
           _buildModernCheckbox('Signalétique sécurité', _jsa.exigencesGenerales.signaletiqueSecurite, (v) => setState(() => _jsa.exigencesGenerales.signaletiqueSecurite = v!), currentColor, isSmallScreen),
@@ -1075,12 +1246,13 @@ bool _hasAnyDataInCurrentSection() {
   }
 
   Widget _buildSub5EPI(bool isSmallScreen) {
+    final isValid = _isCurrentSubCategoryValid();
     return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildStatusBadge(true, isSmallScreen),
+          _buildStatusBadge(isValid, isSmallScreen),
           SizedBox(height: isSmallScreen ? 20 : 24),
           
           _buildModernCheckbox('Casque de sécurité', _jsa.epi.casqueSecurite, (v) => setState(() => _jsa.epi.casqueSecurite = v!), currentColor, isSmallScreen),
@@ -1100,22 +1272,24 @@ bool _hasAnyDataInCurrentSection() {
   }
 
   Widget _buildSub6Verification(bool isSmallScreen) {
+    final isValid = _isCurrentSubCategoryValid();
     return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildStatusBadge(true, isSmallScreen),
+          _buildStatusBadge(isValid, isSmallScreen),
           SizedBox(height: isSmallScreen ? 20 : 24),
           
           Container(
             padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: Colors.grey.shade200),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withOpacity(0.02),
                   blurRadius: 8,
                   offset: const Offset(0, 2),
                 ),
@@ -1213,9 +1387,9 @@ bool _hasAnyDataInCurrentSection() {
           Container(
             padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
             decoration: BoxDecoration(
-              color: currentColor.withOpacity(0.05),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: currentColor.withOpacity(0.2)),
+              color: currentColor.withOpacity(0.03),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: currentColor.withOpacity(0.1)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1228,7 +1402,7 @@ bool _hasAnyDataInCurrentSection() {
                       'Signatures',
                       style: TextStyle(
                         fontSize: isSmallScreen ? 14 : 15,
-                        fontWeight: FontWeight.w700,
+                        fontWeight: FontWeight.bold,
                         color: currentColor,
                       ),
                     ),
@@ -1266,24 +1440,29 @@ bool _hasAnyDataInCurrentSection() {
     bool isSmallScreen,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 6),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: value ? color.withOpacity(0.3) : Colors.grey.shade200,
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 4,
-            offset: const Offset(0, 1),
+            color: Colors.black.withOpacity(0.015),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: CheckboxListTile(
+      child: SwitchListTile.adaptive(
         title: Text(
           title,
           style: TextStyle(
             fontSize: isSmallScreen ? 13 : 14,
-            fontWeight: FontWeight.w500,
+            fontWeight: FontWeight.w600,
+            color: value ? AppTheme.darkBlue : Colors.grey.shade700,
           ),
         ),
         value: value,
@@ -1292,9 +1471,9 @@ bool _hasAnyDataInCurrentSection() {
           _saveJSA();
         },
         dense: true,
-        controlAffinity: ListTileControlAffinity.leading,
         activeColor: color,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        activeTrackColor: color.withOpacity(0.2),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
       ),
     );
   }
@@ -1310,10 +1489,10 @@ bool _hasAnyDataInCurrentSection() {
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withOpacity(0.03),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1327,10 +1506,11 @@ bool _hasAnyDataInCurrentSection() {
           labelText: label,
           labelStyle: TextStyle(
             fontSize: isSmallScreen ? 13 : 14,
-            color: Colors.grey.shade600,
+            color: Colors.grey.shade500,
+            fontWeight: FontWeight.w500,
           ),
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide.none,
           ),
           filled: true,
@@ -1351,66 +1531,91 @@ bool _hasAnyDataInCurrentSection() {
     bool isSmallScreen,
   ) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
       child: Row(
         children: [
           Expanded(
-            flex: 3,
             child: Text(
               title,
               style: TextStyle(
                 fontSize: isSmallScreen ? 13 : 14,
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.darkBlue,
               ),
             ),
           ),
-          const SizedBox(width: 8),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'NA',
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 12 : 13,
-                  color: na ? color : Colors.grey.shade600,
-                  fontWeight: na ? FontWeight.w600 : FontWeight.normal,
+          const SizedBox(width: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            padding: const EdgeInsets.all(3),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () {
+                    onChanged(!na, false);
+                    _saveJSA();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: na ? Colors.white : Colors.transparent,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: na
+                          ? [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.05),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              )
+                            ]
+                          : [],
+                    ),
+                    child: Text(
+                      'N/A',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: na ? Colors.red.shade600 : Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              Checkbox(
-                value: na,
-                onChanged: (v) {
-                  onChanged(v ?? false, app);
-                  _saveJSA();
-                },
-                visualDensity: VisualDensity.compact,
-                activeColor: color,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-              ),
-            ],
-          ),
-          const SizedBox(width: 16),
-          Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'App',
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 12 : 13,
-                  color: app ? color : Colors.grey.shade600,
-                  fontWeight: app ? FontWeight.w600 : FontWeight.normal,
+                GestureDetector(
+                  onTap: () {
+                    onChanged(false, !app);
+                    _saveJSA();
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: app ? color : Colors.transparent,
+                      borderRadius: BorderRadius.circular(18),
+                      boxShadow: app
+                          ? [
+                              BoxShadow(
+                                color: color.withOpacity(0.2),
+                                blurRadius: 4,
+                                offset: const Offset(0, 1),
+                              )
+                            ]
+                          : [],
+                    ),
+                    child: Text(
+                      'Oui',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: app ? Colors.white : Colors.grey.shade600,
+                      ),
+                    ),
+                  ),
                 ),
-              ),
-              Checkbox(
-                value: app,
-                onChanged: (v) {
-                  onChanged(na, v ?? false);
-                  _saveJSA();
-                },
-                visualDensity: VisualDensity.compact,
-                activeColor: color,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-              ),
-            ],
+              ],
+            ),
           ),
         ],
       ),

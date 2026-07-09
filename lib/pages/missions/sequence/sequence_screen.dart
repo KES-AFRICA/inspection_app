@@ -323,6 +323,14 @@ bool _jsaSubCompleteFromHive(dynamic jsa, int index) {
               v.travailTermineApplicable == true ||
               v.consignationCadenasRetireNA == true ||
               v.consignationCadenasRetireApplicable == true ||
+              v.absenceConsignataireProcedureNA == true ||
+              v.absenceConsignataireProcedureApplicable == true ||
+              v.consignataireAbsentProcedureAppliqueeNA == true ||
+              v.consignataireAbsentProcedureAppliqueeApplicable == true ||
+              v.materielEnleveZoneNettoyeeNA == true ||
+              v.materielEnleveZoneNettoyeeApplicable == true ||
+              v.risquesSupprimesEquipementPretNA == true ||
+              v.risquesSupprimesEquipementPretApplicable == true ||
               (v.donneurOrdreSignature?.isNotEmpty ?? false) ||
               (v.chargeAffairesSignature?.isNotEmpty ?? false));
     default:
