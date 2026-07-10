@@ -518,90 +518,98 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
           borderRadius: BorderRadius.circular(16),
           child: Padding(
             padding: const EdgeInsets.all(14),
-            child: Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Badge Type Fichier Stylisé
-                Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: isPdf
-                          ? [Colors.red.shade600, Colors.red.shade400]
-                          : [Colors.blue.shade600, Colors.blue.shade400],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: color.withOpacity(0.3),
-                        blurRadius: 6,
-                        offset: const Offset(0, 3),
-                      ),
-                    ],
-                  ),
-                  child: Center(
-                    child: Text(
-                      isPdf ? 'PDF' : 'DOCX',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 11,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 14),
-                
-                // Détails Fichier
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        cleanFileName,
-                        style: const TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black87,
+                Row(
+                  children: [
+                    // Badge Type Fichier Stylisé
+                    Container(
+                      width: 48,
+                      height: 48,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: isPdf
+                              ? [Colors.red.shade600, Colors.red.shade400]
+                              : [Colors.blue.shade600, Colors.blue.shade400],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(Icons.visibility_outlined, size: 12, color: Colors.grey.shade500),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Cliquez pour prévisualiser',
-                            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: color.withOpacity(0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
                           ),
                         ],
                       ),
-                    ],
-                  ),
+                      child: Center(
+                        child: Text(
+                          isPdf ? 'PDF' : 'DOCX',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 11,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 14),
+                    
+                    // Détails Fichier
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            cleanFileName,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black87,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.visibility_outlined, size: 12, color: Colors.grey.shade500),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Cliquez pour prévisualiser',
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const SizedBox(height: 10),
                 
-                // Boutons d'Action Premium
+                // Boutons d'Action Premium alignés à droite
                 Row(
-                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     _buildCircleActionButton(
                       icon: Icons.download_rounded,
                       tooltip: 'Télécharger',
                       onTap: () => _downloadReport(file, fileName!),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     _buildCircleActionButton(
                       icon: Icons.share_rounded,
                       tooltip: 'Partager',
                       onTap: () => _shareReport(file),
                     ),
-                    const SizedBox(width: 6),
+                    const SizedBox(width: 8),
                     _buildCircleActionButton(
                       icon: Icons.email_rounded,
                       tooltip: 'Email',
