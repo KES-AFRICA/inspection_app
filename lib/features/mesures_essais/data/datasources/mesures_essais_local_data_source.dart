@@ -39,7 +39,15 @@ class MesuresEssaisLocalDataSourceImpl implements MesuresEssaisLocalDataSource {
   Future<void> saveMesuresEssais(MesuresEssais mesures) async {
     try {
       mesures.updatedAt = DateTime.now();
-      await mesures.save();
+      
+      final existingIndex = _box.values.toList().indexWhere((m) => m.missionId == mesures.missionId);
+      if (existingIndex != -1) {
+        final existingKey = _box.keyAt(existingIndex);
+        await _box.put(existingKey, mesures);
+      } else {
+        await _box.add(mesures);
+      }
+      
       if (kDebugMode) print('✅ MesuresEssais sauvegardé pour mission: ${mesures.missionId}');
     } catch (e) {
       if (kDebugMode) print('❌ Erreur saveMesuresEssais: $e');
