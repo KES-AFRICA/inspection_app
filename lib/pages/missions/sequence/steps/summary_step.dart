@@ -43,7 +43,6 @@ class SummaryStep extends ConsumerStatefulWidget {
 
 class _SummaryStepState extends ConsumerState<SummaryStep> {
   Map<String, dynamic> _progress = {};
-  bool _isFirstLoad = true;
   bool _isGenerating = false;
   File? _pdfFile;
   File? _wordFile;
@@ -65,14 +64,6 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
     await SequenceProgressService.markStepCompleted(widget.mission.id, 6);
     if (kDebugMode) {
       print('✅ Étape 6 (Résumé) marquée comme complétée');
-    }
-  }
-
-  Future<void> _ensureStatusIsTermine(Mission mission) async {
-    if (mission.status != 'termine') {
-      final notifier = ref.read(missionDetailProvider(widget.mission.id).notifier);
-      await notifier.updateMissionStatus('termine');
-      widget.mission.status = 'termine';
     }
   }
 
@@ -1038,11 +1029,6 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, stack) => Center(child: Text('Erreur: $err')),
       data: (mission) {
-        if (_isFirstLoad) {
-          _ensureStatusIsTermine(mission);
-          _isFirstLoad = false;
-        }
-
         final completedSteps = _getCompletedStepsCount();
         final totalSteps = _getTotalSteps();
         final percentage = (completedSteps / totalSteps * 100).round();

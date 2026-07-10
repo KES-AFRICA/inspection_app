@@ -1,4 +1,4 @@
-// lib/features/foudre/presentation/providers/foudre_provider.dart
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/core/providers/foudre_providers.dart';
 import 'package:inspec_app/features/foudre/data/mappers/foudre_mapper.dart';
@@ -49,7 +49,10 @@ class FoudreObservationsNotifier extends StateNotifier<AsyncValue<List<Foudre>>>
       );
       await load();
       return true;
-    } catch (e) {
+    } catch (e, stack) {
+      if (kDebugMode) {
+        print('❌ Error in addObservation: $e\n$stack');
+      }
       return false;
     }
   }
@@ -70,7 +73,10 @@ class FoudreObservationsNotifier extends StateNotifier<AsyncValue<List<Foudre>>>
         await load();
       }
       return success;
-    } catch (e) {
+    } catch (e, stack) {
+      if (kDebugMode) {
+        print('❌ Error in updateObservation: $e\n$stack');
+      }
       return false;
     }
   }
@@ -83,7 +89,10 @@ class FoudreObservationsNotifier extends StateNotifier<AsyncValue<List<Foudre>>>
         await load();
       }
       return success;
-    } catch (e) {
+    } catch (e, stack) {
+      if (kDebugMode) {
+        print('❌ Error in removeObservation: $e\n$stack');
+      }
       return false;
     }
   }

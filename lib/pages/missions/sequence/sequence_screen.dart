@@ -1003,8 +1003,7 @@ class _SequenceScreenState extends State<SequenceScreen>
                     children: _steps.map((s) => s['widget'] as Widget).toList(),
                   ),
                 ),
-                if (_currentStep != 6)
-                  _buildNavButtons(isLast),
+                if (_currentStep != 6) _buildNavButtons(isLast),
               ],
             ),
 
@@ -1050,7 +1049,7 @@ class _SequenceScreenState extends State<SequenceScreen>
       if (jsaState != null) {
         showPrevious = !jsaState.isFirstSlide;
         if (jsaState.isLastSlide) {
-          nextLabel = 'RENSEIGNEMENTS';
+          nextLabel = 'Renseignements';
         }
       }
     }
@@ -1060,7 +1059,7 @@ class _SequenceScreenState extends State<SequenceScreen>
       final descState = _descKey.currentState;
       if (descState != null) {
         if (descState.isLastSlide) {
-          nextLabel = 'AUDIT';
+          nextLabel = 'Audit';
         }
       }
     }
@@ -1093,9 +1092,19 @@ class _SequenceScreenState extends State<SequenceScreen>
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.arrow_back, size: 18, color: AppTheme.primaryBlue),
+                    Icon(
+                      Icons.arrow_back,
+                      size: 18,
+                      color: AppTheme.primaryBlue,
+                    ),
                     SizedBox(width: 8),
-                    Text('Précédent', style: TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w600)),
+                    Text(
+                      'Précédent',
+                      style: TextStyle(
+                        color: AppTheme.primaryBlue,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -1124,7 +1133,9 @@ class _SequenceScreenState extends State<SequenceScreen>
                     nextLabel,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  if (nextLabel == 'SUIVANT' || nextLabel == 'RENSEIGNEMENTS' || nextLabel == 'AUDIT') ...[
+                  if (nextLabel == 'SUIVANT' ||
+                      nextLabel == 'RENSEIGNEMENTS' ||
+                      nextLabel == 'AUDIT') ...[
                     const SizedBox(width: 8),
                     const Icon(Icons.arrow_forward, size: 18),
                   ],
