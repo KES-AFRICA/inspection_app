@@ -504,83 +504,117 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
     required IconData icon,
     required Color color,
   }) {
+    final cleanFileName = fileName?.split('/').last ?? 'Rapport généré';
+    final isPdf = reportType == 'pdf';
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: () => _previewReport(file, reportType),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.all(14),
             child: Row(
               children: [
-                // Icône
+                // Badge Type Fichier Stylisé
                 Container(
-                  width: 44,
-                  height: 44,
+                  width: 50,
+                  height: 50,
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(10),
+                    gradient: LinearGradient(
+                      colors: isPdf
+                          ? [Colors.red.shade600, Colors.red.shade400]
+                          : [Colors.blue.shade600, Colors.blue.shade400],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: color.withOpacity(0.3),
+                        blurRadius: 6,
+                        offset: const Offset(0, 3),
+                      ),
+                    ],
                   ),
-                  child: Icon(icon, size: 24, color: color),
+                  child: Center(
+                    child: Text(
+                      isPdf ? 'PDF' : 'DOCX',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 11,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 
-                // Informations du fichier
+                // Détails Fichier
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        fileName?.split('/').last ?? 'Rapport généré',
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w600,
+                        cleanFileName,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w700,
                           color: Colors.black87,
                         ),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Cliquez pour visualiser',
-                        style: TextStyle(fontSize: 10, color: Colors.grey.shade600),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(Icons.visibility_outlined, size: 12, color: Colors.grey.shade500),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Cliquez pour prévisualiser',
+                            style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                          ),
+                        ],
                       ),
                     ],
                   ),
                 ),
                 
-                // Actions
+                // Boutons d'Action Premium
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    IconButton(
-                      onPressed: () => _downloadReport(file, fileName!),
-                      icon: Icon(Icons.download, size: 18, color: Colors.grey.shade600),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32),
+                    _buildCircleActionButton(
+                      icon: Icons.download_rounded,
                       tooltip: 'Télécharger',
+                      onTap: () => _downloadReport(file, fileName!),
                     ),
-                    IconButton(
-                      onPressed: () => _shareReport(file),
-                      icon: Icon(Icons.share, size: 18, color: Colors.grey.shade600),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32),
+                    const SizedBox(width: 6),
+                    _buildCircleActionButton(
+                      icon: Icons.share_rounded,
                       tooltip: 'Partager',
+                      onTap: () => _shareReport(file),
                     ),
-                    IconButton(
-                      onPressed: _sendEmailWithAttachment,
-                      icon: Icon(Icons.email, size: 18, color: Colors.grey.shade600),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(minWidth: 32),
-                      tooltip: 'Envoyer par email',
+                    const SizedBox(width: 6),
+                    _buildCircleActionButton(
+                      icon: Icons.email_rounded,
+                      tooltip: 'Email',
+                      onTap: _sendEmailWithAttachment,
                     ),
                   ],
                 ),
@@ -588,6 +622,27 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCircleActionButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: IconButton(
+        onPressed: onTap,
+        icon: Icon(icon, size: 16, color: Colors.grey.shade700),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+        tooltip: tooltip,
       ),
     );
   }
@@ -628,41 +683,85 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
   
   Widget _buildSuccessHeader(int completedSteps, int totalSteps, int percentage) {
     return Container(
+      width: double.infinity,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: Colors.green.shade50,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.green.shade200),
+        gradient: LinearGradient(
+          colors: [Colors.teal.shade700, Colors.teal.shade400],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(24),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.teal.shade800.withOpacity(0.2),
+            blurRadius: 12,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      child: Column(
+      child: Row(
         children: [
-          const Icon(Icons.check_circle, size: 64, color: Colors.green),
-          const SizedBox(height: 12),
-          Text(
-            'Mission terminée !',
-            style: TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: Colors.green.shade800,
+          // Grand indicateur circulaire premium
+          Stack(
+            alignment: Alignment.center,
+            children: [
+              SizedBox(
+                width: 76,
+                height: 76,
+                child: CircularProgressIndicator(
+                  value: percentage / 100,
+                  strokeWidth: 8,
+                  backgroundColor: Colors.white.withOpacity(0.2),
+                  valueColor: const AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              Text(
+                '$percentage%',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(width: 20),
+          
+          // Textes informatifs
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Félicitations !',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                const Text(
+                  'Mission Terminée',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Vous avez validé $completedSteps étapes sur $totalSteps.',
+                  style: TextStyle(
+                    color: Colors.white.withOpacity(0.85),
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Vous avez complété $completedSteps/$totalSteps étapes',
-            style: TextStyle(fontSize: 14, color: Colors.green.shade700),
-          ),
-          const SizedBox(height: 8),
-          LinearProgressIndicator(
-            value: percentage / 100,
-            backgroundColor: Colors.green.shade100,
-            color: Colors.green,
-            minHeight: 8,
-            borderRadius: BorderRadius.circular(4),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            '$percentage% complété',
-            style: TextStyle(fontSize: 12, color: Colors.green.shade600),
           ),
         ],
       ),
@@ -671,23 +770,36 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
 
   Widget _buildMissionInfoCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade100, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Informations de la mission', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
+          const Row(
+            children: [
+              Icon(Icons.business_center_rounded, color: AppTheme.primaryBlue, size: 22),
+              SizedBox(width: 8),
+              Text('Informations de la mission', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)),
+            ],
+          ),
+          const SizedBox(height: 16),
           _buildSummaryRow('Client', widget.mission.nomClient),
           if (widget.mission.activiteClient != null)
             _buildSummaryRow('Activité', widget.mission.activiteClient!),
           if (widget.mission.adresseClient != null)
             _buildSummaryRow('Adresse', widget.mission.adresseClient!),
-          _buildSummaryRow('Statut', widget.mission.status),
+          _buildSummaryRow('Statut', widget.mission.status.toUpperCase()),
         ],
       ),
     );
@@ -695,24 +807,40 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
 
   Widget _buildStepsCompletionCard() {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade100, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Étapes complétées', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 12),
-          _buildStepTile(0, 'JSA', _progress['completedSteps']?.contains(0) ?? false, Icons.engineering_outlined),
-          _buildStepTile(1, 'Renseignements généraux', _progress['completedSteps']?.contains(1) ?? false, Icons.info_outline),
-          _buildStepTile(2, 'Documents nécessaires', _progress['completedSteps']?.contains(2) ?? false, Icons.folder_outlined),
-          _buildStepTile(3, 'Description des installations', _progress['completedSteps']?.contains(3) ?? false, Icons.description_outlined),
-          _buildStepTile(4, 'Audit des installations', _progress['completedSteps']?.contains(4) ?? false, Icons.electrical_services_outlined),
-          _buildStepTile(5, 'Schéma des installations', _progress['completedSteps']?.contains(5) ?? false, Icons.timeline_outlined),
-          _buildStepTile(6, 'Résumé', true, Icons.summarize_outlined),
+          const Row(
+            children: [
+              Icon(Icons.checklist_rtl_rounded, color: AppTheme.primaryBlue, size: 22),
+              SizedBox(width: 8),
+              Text(
+                'Progression de la mission',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _buildStepTimelineTile(0, 'JSA', _progress['completedSteps']?.contains(0) ?? false, Icons.engineering_rounded, false),
+          _buildStepTimelineTile(1, 'Renseignements généraux', _progress['completedSteps']?.contains(1) ?? false, Icons.info_rounded, false),
+          _buildStepTimelineTile(2, 'Documents nécessaires', _progress['completedSteps']?.contains(2) ?? false, Icons.folder_rounded, false),
+          _buildStepTimelineTile(3, 'Description des installations', _progress['completedSteps']?.contains(3) ?? false, Icons.description_rounded, false),
+          _buildStepTimelineTile(4, 'Audit des installations', _progress['completedSteps']?.contains(4) ?? false, Icons.electrical_services_rounded, false),
+          _buildStepTimelineTile(5, 'Schéma des installations', _progress['completedSteps']?.contains(5) ?? false, Icons.schema_rounded, false),
+          _buildStepTimelineTile(6, 'Rapport final généré', true, Icons.summarize_rounded, true),
         ],
       ),
     );
@@ -821,32 +949,75 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
     );
   }
 
-  Widget _buildStepTile(int index, String title, bool isCompleted, IconData icon) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+  Widget _buildStepTimelineTile(int index, String title, bool isCompleted, IconData icon, bool isLast) {
+    final color = isCompleted ? Colors.green : Colors.grey.shade400;
+    return IntrinsicHeight(
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              color: isCompleted ? Colors.green.shade50 : Colors.grey.shade100,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Icon(
-              isCompleted ? Icons.check_circle : icon,
-              color: isCompleted ? Colors.green : Colors.grey.shade500,
-              size: 18,
-            ),
+          // Colonne Timeline à gauche (Cercle + Ligne de liaison)
+          Column(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  color: isCompleted ? Colors.green.shade50 : Colors.grey.shade50,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color, width: 2),
+                  boxShadow: isCompleted
+                      ? [
+                          BoxShadow(
+                            color: Colors.green.withOpacity(0.2),
+                            blurRadius: 4,
+                            offset: const Offset(0, 2),
+                          ),
+                        ]
+                      : [],
+                ),
+                child: Icon(
+                  isCompleted ? Icons.check : icon,
+                  color: color,
+                  size: 16,
+                ),
+              ),
+              if (!isLast)
+                Expanded(
+                  child: Container(
+                    width: 2,
+                    color: isCompleted ? Colors.green : Colors.grey.shade200,
+                  ),
+                ),
+            ],
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 14),
+          
+          // Contenu de l'étape à droite
           Expanded(
-            child: Text(
-              title,
-              style: TextStyle(
-                fontSize: 14,
-                color: isCompleted ? Colors.black87 : Colors.grey.shade500,
-                fontWeight: isCompleted ? FontWeight.w500 : FontWeight.normal,
+            child: Container(
+              padding: const EdgeInsets.only(bottom: 18),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: isCompleted ? Colors.black87 : Colors.grey.shade500,
+                      fontWeight: isCompleted ? FontWeight.w700 : FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    isCompleted ? 'Complété' : 'En attente',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: isCompleted ? Colors.green.shade700 : Colors.grey.shade500,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

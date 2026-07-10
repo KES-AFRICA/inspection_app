@@ -19,10 +19,12 @@ class ParatonnerreSequenceScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<ParatonnerreSequenceScreen> createState() => _ParatonnerreSequenceScreenState();
+  ConsumerState<ParatonnerreSequenceScreen> createState() =>
+      _ParatonnerreSequenceScreenState();
 }
 
-class _ParatonnerreSequenceScreenState extends ConsumerState<ParatonnerreSequenceScreen> {
+class _ParatonnerreSequenceScreenState
+    extends ConsumerState<ParatonnerreSequenceScreen> {
   String? _presenceParatonnerre;
   String? _analyseRisqueFoudre;
   String? _etudeTechniqueFoudre;
@@ -39,19 +41,24 @@ class _ParatonnerreSequenceScreenState extends ConsumerState<ParatonnerreSequenc
   // ✅ SAUVEGARDE INSTANTANÉE
   Future<void> _saveField(String field, String value) async {
     setState(() => _isSaving = true);
-    
+
     try {
-      final notifier = ref.read(descriptionInstallationsProvider(widget.mission.id).notifier);
+      final notifier = ref.read(
+        descriptionInstallationsProvider(widget.mission.id).notifier,
+      );
       final success = await notifier.updateDescriptionSelection(field, value);
-      
+
       // Vérifier si la section est complète
-      final stateData = ref.read(descriptionInstallationsProvider(widget.mission.id)).value;
-      final isParatonnerreComplete = stateData?.isSectionComplete('paratonnerre') ?? false;
-      
+      final stateData = ref
+          .read(descriptionInstallationsProvider(widget.mission.id))
+          .value;
+      final isParatonnerreComplete =
+          stateData?.isSectionComplete('paratonnerre') ?? false;
+
       if (isParatonnerreComplete && !widget.isComplete) {
         widget.onComplete('paratonnerre');
       }
-      
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -75,7 +82,9 @@ class _ParatonnerreSequenceScreenState extends ConsumerState<ParatonnerreSequenc
   @override
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
-    final asyncData = ref.watch(descriptionInstallationsProvider(widget.mission.id));
+    final asyncData = ref.watch(
+      descriptionInstallationsProvider(widget.mission.id),
+    );
 
     return asyncData.when(
       loading: () => const Center(child: CircularProgressIndicator()),
@@ -89,77 +98,54 @@ class _ParatonnerreSequenceScreenState extends ConsumerState<ParatonnerreSequenc
         }
 
         return SingleChildScrollView(
-      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-      child: Column(
-        children: [
-          // Message informatif
-          Container(
-            padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
-            margin: EdgeInsets.only(bottom: isSmallScreen ? 16 : 20),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
-              border: Border.all(color: Colors.blue.shade200),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: Colors.blue, size: isSmallScreen ? 16 : 18),
-                SizedBox(width: isSmallScreen ? 8 : 10),
-                Expanded(
-                  child: Text(
-                    'Tous les champs sont sauvegardés automatiquement',
-                    style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.blue.shade700),
-                  ),
+          padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+          child: Column(
+            children: [
+              // Présence paratonnerre
+              _buildRadioSection(
+                title: 'Présence de paratonnerre',
+                value: _presenceParatonnerre,
+                onChanged: (value) {
+                  setState(() => _presenceParatonnerre = value);
+                  _saveField('presence_paratonnerre', value);
+                },
+                isSmallScreen: isSmallScreen,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Analyse risque foudre
+              _buildRadioSection(
+                title: 'Analyse risque foudre',
+                value: _analyseRisqueFoudre,
+                onChanged: (value) {
+                  setState(() => _analyseRisqueFoudre = value);
+                  _saveField('analyse_risque_foudre', value);
+                },
+                isSmallScreen: isSmallScreen,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Étude technique foudre
+              _buildRadioSection(
+                title: 'Étude technique foudre',
+                value: _etudeTechniqueFoudre,
+                onChanged: (value) {
+                  setState(() => _etudeTechniqueFoudre = value);
+                  _saveField('etude_technique_foudre', value);
+                },
+                isSmallScreen: isSmallScreen,
+              ),
+
+              if (_isSaving)
+                Padding(
+                  padding: EdgeInsets.only(top: isSmallScreen ? 16 : 20),
+                  child: const Center(child: CircularProgressIndicator()),
                 ),
-              ],
-            ),
+            ],
           ),
-          
-          // Présence paratonnerre
-          _buildRadioSection(
-            title: 'Présence de paratonnerre',
-            value: _presenceParatonnerre,
-            onChanged: (value) {
-              setState(() => _presenceParatonnerre = value);
-              _saveField('presence_paratonnerre', value);
-            },
-            isSmallScreen: isSmallScreen,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Analyse risque foudre
-          _buildRadioSection(
-            title: 'Analyse risque foudre',
-            value: _analyseRisqueFoudre,
-            onChanged: (value) {
-              setState(() => _analyseRisqueFoudre = value);
-              _saveField('analyse_risque_foudre', value);
-            },
-            isSmallScreen: isSmallScreen,
-          ),
-          
-          const SizedBox(height: 16),
-          
-          // Étude technique foudre
-          _buildRadioSection(
-            title: 'Étude technique foudre',
-            value: _etudeTechniqueFoudre,
-            onChanged: (value) {
-              setState(() => _etudeTechniqueFoudre = value);
-              _saveField('etude_technique_foudre', value);
-            },
-            isSmallScreen: isSmallScreen,
-          ),
-          
-          if (_isSaving)
-            Padding(
-              padding: EdgeInsets.only(top: isSmallScreen ? 16 : 20),
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-        ],
-      ),
-    );
+        );
       },
     );
   }
@@ -204,9 +190,11 @@ class _ParatonnerreSequenceScreenState extends ConsumerState<ParatonnerreSequenc
               ),
               value: option,
               groupValue: value,
-              onChanged: _isSaving ? null : (val) {
-                if (val != null) onChanged(val);
-              },
+              onChanged: _isSaving
+                  ? null
+                  : (val) {
+                      if (val != null) onChanged(val);
+                    },
               activeColor: AppTheme.primaryBlue,
               controlAffinity: ListTileControlAffinity.leading,
             );

@@ -14,12 +14,14 @@ class JsaStep extends ConsumerStatefulWidget {
   final Mission mission;
   final Function(Map<String, dynamic>) onDataChanged;
   final VoidCallback? onNextStep;
+  final VoidCallback? onSubStepChanged;
 
   const JsaStep({
     super.key,
     required this.mission,
     required this.onDataChanged,
     this.onNextStep,
+    this.onSubStepChanged,
   });
 
   @override
@@ -426,6 +428,51 @@ class JsaStepState extends ConsumerState<JsaStep> with AutomaticKeepAliveClientM
       _jsa.currentSubCategory = index;
     });
     _saveCurrentPosition();
+    if (widget.onSubStepChanged != null) widget.onSubStepChanged!();
+  }
+
+  bool get isFirstSlide => currentSubCategory == 0;
+  bool get isLastSlide => currentSubCategory == totalSubCategories - 1;
+
+  Future<bool> next() async {
+    FocusScope.of(context).unfocus();
+    setState(() {
+      _hasAttemptedNext = true;
+    });
+    
+    if (!_isCurrentSubCategoryValid()) {
+      _showError(_getCurrentSubCategoryError() ?? 'Veuillez compléter cette section');
+      return true; // Reste sur la JSA
+    }
+    
+    if (currentSubCategory < totalSubCategories - 1) {
+      setState(() {
+        _jsa.currentSubCategory++;
+        _hasAttemptedNext = false;
+      });
+      await _saveJSA();
+      _saveCurrentPosition();
+      if (widget.onSubStepChanged != null) widget.onSubStepChanged!();
+      return true; // Reste sur la JSA
+    } else {
+      return false; // Passe à l'étape suivante globale
+    }
+  }
+
+  Future<bool> previous() async {
+    FocusScope.of(context).unfocus();
+    if (currentSubCategory > 0) {
+      setState(() {
+        _jsa.currentSubCategory--;
+        _hasAttemptedNext = false;
+      });
+      await _saveJSA();
+      _saveCurrentPosition();
+      if (widget.onSubStepChanged != null) widget.onSubStepChanged!();
+      return true; // Reste sur la JSA
+    } else {
+      return false; // Permet de reculer au niveau de SequenceScreen (impossible pour l'étape 0 de toute façon)
+    }
   }
 
   /// Retourne true si la sous-catégorie [index] est considérée complète.
@@ -1822,84 +1869,6 @@ bool _hasAnyDataInCurrentSection() {
                 _buildSub4Exigences(isSmallScreen),
                 _buildSub5EPI(isSmallScreen),
                 _buildSub6Verification(isSmallScreen),
-              ],
-            ),
-          ),
-          
-          // Barre de navigation
-          Container(
-            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 8,
-                  offset: const Offset(0, -2),
-                ),
-              ],
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: currentSubCategory > 0 ? _previousSubCategory : null,
-                    style: OutlinedButton.styleFrom(
-                      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
-                      side: BorderSide(
-                        color: currentSubCategory > 0 ? AppTheme.primaryBlue : Colors.grey.shade400,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.arrow_back,
-                          size: 18,
-                          color: currentSubCategory > 0 ? AppTheme.primaryBlue : Colors.grey.shade400,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'PRÉCÉDENT',
-                          style: TextStyle(
-                            color: currentSubCategory > 0 ? AppTheme.primaryBlue : Colors.grey.shade400,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: isLastSubCategory ? _goToRenseignements : _nextSubCategory,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: currentColor,
-                      foregroundColor: Colors.white,
-                      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          isLastSubCategory ? 'RENSEIGNEMENTS' : 'SUIVANT',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        if (!isLastSubCategory) ...[
-                          const SizedBox(width: 8),
-                          const Icon(Icons.arrow_forward, size: 18),
-                        ],
-                      ],
-                    ),
-                  ),
-                ),
               ],
             ),
           ),

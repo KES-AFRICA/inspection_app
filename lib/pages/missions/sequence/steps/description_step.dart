@@ -8,6 +8,7 @@ class DescriptionStep extends StatefulWidget {
   final Function(Map<String, dynamic>) onDataChanged;
   final VoidCallback onPreviousStep;
   final VoidCallback onNextStep;
+  final VoidCallback? onSubStepChanged;
 
   const DescriptionStep({
     super.key,
@@ -15,6 +16,7 @@ class DescriptionStep extends StatefulWidget {
     required this.onDataChanged,
     required this.onPreviousStep,
     required this.onNextStep,
+    this.onSubStepChanged,
   });
 
   @override
@@ -23,10 +25,23 @@ class DescriptionStep extends StatefulWidget {
 
 class DescriptionStepState extends State<DescriptionStep> {
   int? _pendingSection;
+  final GlobalKey<DescriptionInstallationsSequenceScreenState> _subKey =
+      GlobalKey<DescriptionInstallationsSequenceScreenState>();
 
   /// Appelé depuis le drawer pour aller directement à une section.
   void jumpToSection(int index) {
     setState(() => _pendingSection = index);
+  }
+
+  bool get isFirstSlide => _subKey.currentState?.isFirstSlide ?? true;
+  bool get isLastSlide => _subKey.currentState?.isLastSlide ?? true;
+
+  bool next() {
+    return _subKey.currentState?.next() ?? false;
+  }
+
+  bool previous() {
+    return _subKey.currentState?.previous() ?? false;
   }
 
   @override
@@ -38,11 +53,12 @@ class DescriptionStepState extends State<DescriptionStep> {
   @override
   Widget build(BuildContext context) {
     return DescriptionInstallationsSequenceScreen(
-      key: _pendingSection != null ? ValueKey('desc_$_pendingSection') : null,
+      key: _pendingSection != null ? ValueKey('desc_$_pendingSection') : _subKey,
       mission: widget.mission,
       onPreviousStep: widget.onPreviousStep,
       onNextStep: widget.onNextStep,
       initialSectionIndex: _pendingSection,
+      onSubStepChanged: widget.onSubStepChanged,
     );
   }
 }

@@ -22,8 +22,8 @@ class MissionCard extends StatelessWidget {
   String _normalizeStatus(String status) {
     final s = status.toLowerCase().trim();
     if (s.contains('encour') || s.contains('en cours')) return 'En cours';
-    if (s.contains('termine') || s.contains('terminé'))  return 'Terminé';
-    if (s.contains('attente'))                           return 'En attente';
+    if (s.contains('termine') || s.contains('terminé')) return 'Terminé';
+    if (s.contains('attente')) return 'En attente';
     return status[0].toUpperCase() + status.substring(1).toLowerCase();
   }
 
@@ -31,17 +31,23 @@ class MissionCard extends StatelessWidget {
   // Les missions terminées n'affichent pas le libellé — juste la pastille verte.
   String _badgeLabel(String status) {
     switch (_normalizeStatus(status)) {
-      case 'En cours':   return 'En cours';
-      case 'En attente': return 'En attente';
-      default:           return ''; // terminée → pas de texte de statut
+      case 'En cours':
+        return 'En cours';
+      case 'En attente':
+        return 'En attente';
+      default:
+        return ''; // terminée → pas de texte de statut
     }
   }
 
   Color _getStatusColor(String status) {
     switch (_normalizeStatus(status)) {
-      case 'En attente': return Colors.orange;
-      case 'En cours':   return AppTheme.primaryBlue;
-      default:           return Colors.green; // terminée
+      case 'En attente':
+        return Colors.orange;
+      case 'En cours':
+        return AppTheme.primaryBlue;
+      default:
+        return Colors.green; // terminée
     }
   }
 
@@ -65,23 +71,32 @@ class MissionCard extends StatelessWidget {
         PopupMenuItem<String>(
           value: 'export',
           height: 44,
-          child: Row(children: [
-            Icon(Icons.file_upload_outlined,
-                size: 18, color: AppTheme.primaryBlue),
-            const SizedBox(width: 10),
-            const Text('Exporter', style: TextStyle(fontSize: 13)),
-          ]),
+          child: Row(
+            children: [
+              Icon(
+                Icons.file_upload_outlined,
+                size: 18,
+                color: AppTheme.primaryBlue,
+              ),
+              const SizedBox(width: 10),
+              const Text('Exporter', style: TextStyle(fontSize: 13)),
+            ],
+          ),
         ),
         const PopupMenuDivider(height: 1),
         PopupMenuItem<String>(
           value: 'delete',
           height: 44,
-          child: Row(children: [
-            Icon(Icons.delete_outline, size: 18, color: Colors.red.shade600),
-            const SizedBox(width: 10),
-            Text('Supprimer',
-                style: TextStyle(fontSize: 13, color: Colors.red.shade600)),
-          ]),
+          child: Row(
+            children: [
+              Icon(Icons.delete_outline, size: 18, color: Colors.red.shade600),
+              const SizedBox(width: 10),
+              Text(
+                'Supprimer',
+                style: TextStyle(fontSize: 13, color: Colors.red.shade600),
+              ),
+            ],
+          ),
         ),
       ],
     ).then((val) {
@@ -92,31 +107,42 @@ class MissionCard extends StatelessWidget {
 
   Future<void> _handleExport(BuildContext context) async {
     // Indicateur non bloquant
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Row(children: [
-        SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-                color: Colors.white, strokeWidth: 2)),
-        SizedBox(width: 12),
-        Text('Export en cours…'),
-      ]),
-      duration: Duration(seconds: 30),
-      behavior: SnackBarBehavior.floating,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('Export en cours…'),
+          ],
+        ),
+        duration: Duration(seconds: 30),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
 
     final result = await BackupService.exporterMission(mission.id);
 
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(result.message ??
-          (result.success ? 'Export réussi.' : 'Erreur export.')),
-      backgroundColor: result.success ? Colors.green : Colors.red,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 3),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result.message ??
+              (result.success ? 'Export réussi.' : 'Erreur export.'),
+        ),
+        backgroundColor: result.success ? Colors.green : Colors.red,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   Future<void> _handleDelete(BuildContext context) async {
@@ -127,31 +153,42 @@ class MissionCard extends StatelessWidget {
     );
     if (confirmed != true || !context.mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-      content: Row(children: [
-        SizedBox(
-            width: 16,
-            height: 16,
-            child: CircularProgressIndicator(
-                color: Colors.white, strokeWidth: 2)),
-        SizedBox(width: 12),
-        Text('Suppression en cours…'),
-      ]),
-      duration: Duration(seconds: 30),
-      behavior: SnackBarBehavior.floating,
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Row(
+          children: [
+            SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(
+                color: Colors.white,
+                strokeWidth: 2,
+              ),
+            ),
+            SizedBox(width: 12),
+            Text('Suppression en cours…'),
+          ],
+        ),
+        duration: Duration(seconds: 30),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
 
     final result = await BackupService.deleteMissionCompletely(mission.id);
 
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text(result.message ??
-          (result.success ? 'Mission supprimée.' : 'Erreur suppression.')),
-      backgroundColor: result.success ? Colors.green : Colors.red,
-      behavior: SnackBarBehavior.floating,
-      duration: const Duration(seconds: 3),
-    ));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          result.message ??
+              (result.success ? 'Mission supprimée.' : 'Erreur suppression.'),
+        ),
+        backgroundColor: result.success ? Colors.green : Colors.red,
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 3),
+      ),
+    );
 
     if (result.success) onDeleted?.call();
   }
@@ -168,8 +205,7 @@ class MissionCard extends StatelessWidget {
       child: InkWell(
         onTap: () => Navigator.of(context).pushReplacement(
           MaterialPageRoute(
-            builder: (_) =>
-                MissionDetailScreen(mission: mission, user: user),
+            builder: (_) => MissionDetailScreen(mission: mission, user: user),
           ),
         ),
         borderRadius: BorderRadius.circular(12),
@@ -184,155 +220,202 @@ class MissionCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Logo + nom + activité
-                    Row(children: [
-                      if (mission.logoClient != null) ...[
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(6),
-                          child: Image.network(
-                            mission.logoClient!,
-                            width: 38,
-                            height: 38,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
+                    Row(
+                      children: [
+                        if (mission.logoClient != null) ...[
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: Image.network(
+                              mission.logoClient!,
                               width: 38,
                               height: 38,
-                              decoration: BoxDecoration(
-                                color: AppTheme.primaryBlue.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(6),
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => Container(
+                                width: 38,
+                                height: 38,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryBlue.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Icon(
+                                  Icons.business,
+                                  size: 20,
+                                  color: AppTheme.primaryBlue,
+                                ),
                               ),
-                              child: Icon(Icons.business,
-                                  size: 20, color: AppTheme.primaryBlue),
                             ),
                           ),
-                        ),
-                        const SizedBox(width: 10),
-                      ],
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              mission.nomClient,
-                              style: const TextStyle(
+                          const SizedBox(width: 10),
+                        ],
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                mission.nomClient,
+                                style: const TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1A1A2E)),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            if (mission.activiteClient != null) ...[
-                              const SizedBox(height: 2),
-                              Text(
-                                mission.activiteClient!,
-                                style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.textLight),
-                                maxLines: 1,
+                                  color: Color(0xFF1A1A2E),
+                                ),
+                                maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
+                              if (mission.activiteClient != null) ...[
+                                const SizedBox(height: 2),
+                                Text(
+                                  mission.activiteClient!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: AppTheme.textLight,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
-                    ]),
+                      ],
+                    ),
 
                     const SizedBox(height: 10),
 
                     // Badge statut
                     // Badge statut — sans "Terminé" (pastille suffisante)
-                    Builder(builder: (ctx) {
-                      final label = _badgeLabel(mission.status);
-                      if (label.isEmpty) {
-                        // Terminée : pastille colorée seule
-                        return Row(mainAxisSize: MainAxisSize.min, children: [
-                          Container(
-                            width: 8, height: 8,
-                            decoration: BoxDecoration(
-                              color: statusColor, shape: BoxShape.circle),
+                    Builder(
+                      builder: (ctx) {
+                        final label = _badgeLabel(mission.status);
+                        if (label.isEmpty) {
+                          // Terminée : pastille colorée seule
+                          return Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: statusColor,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 3,
                           ),
-                        ]);
-                      }
-                      return Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.10),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                              color: statusColor.withOpacity(0.25)),
-                        ),
-                        child: Text(
-                          label,
-                          style: TextStyle(
+                          decoration: BoxDecoration(
+                            color: statusColor.withOpacity(0.10),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(
+                              color: statusColor.withOpacity(0.25),
+                            ),
+                          ),
+                          child: Text(
+                            label,
+                            style: TextStyle(
                               fontSize: 11,
                               color: statusColor,
-                              fontWeight: FontWeight.w600),
-                        ),
-                      );
-                    }),
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
 
                     // Adresse
                     if (mission.adresseClient != null) ...[
                       const SizedBox(height: 8),
-                      Row(children: [
-                        Icon(Icons.location_on_outlined,
-                            size: 13, color: AppTheme.greyDark),
-                        const SizedBox(width: 4),
-                        Expanded(
-                          child: Text(
-                            mission.adresseClient!,
-                            style: TextStyle(
-                                fontSize: 12, color: AppTheme.greyDark),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 13,
+                            color: AppTheme.greyDark,
                           ),
-                        ),
-                      ]),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              mission.adresseClient!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.greyDark,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
 
                     // Date intervention
                     if (mission.dateIntervention != null) ...[
                       const SizedBox(height: 4),
-                      Row(children: [
-                        Icon(Icons.calendar_today_outlined,
-                            size: 13, color: AppTheme.greyDark),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Intervention : ${_formatDate(mission.dateIntervention!)}',
-                          style: TextStyle(
-                              fontSize: 12, color: AppTheme.greyDark),
-                        ),
-                      ]),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 13,
+                            color: AppTheme.greyDark,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Intervention : ${_formatDate(mission.dateIntervention!)}',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.greyDark,
+                            ),
+                          ),
+                        ],
+                      ),
                     ],
 
                     // Dates créé / modifié
                     const SizedBox(height: 4),
-                    Row(children: [
-                      Icon(Icons.access_time,
-                          size: 12, color: Colors.grey.shade400),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Créé ${_formatDate(mission.createdAt)}',
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey.shade400),
-                      ),
-                      const SizedBox(width: 10),
-                      Icon(Icons.update,
-                          size: 12, color: Colors.grey.shade400),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Modifié ${_formatDate(mission.updatedAt)}',
-                        style: TextStyle(
-                            fontSize: 11, color: Colors.grey.shade400),
-                      ),
-                    ]),
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.access_time,
+                          size: 12,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Créé ${_formatDate(mission.createdAt)}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Icon(
+                          Icons.update,
+                          size: 12,
+                          color: Colors.grey.shade400,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          'Modifié ${_formatDate(mission.updatedAt)}',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
+                      ],
+                    ),
 
                     // Nature mission
                     if (mission.natureMission != null) ...[
                       const SizedBox(height: 8),
                       Container(
                         padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
                         decoration: BoxDecoration(
                           color: AppTheme.lightBlue.withOpacity(0.15),
                           borderRadius: BorderRadius.circular(4),
@@ -340,9 +423,10 @@ class MissionCard extends StatelessWidget {
                         child: Text(
                           mission.natureMission!,
                           style: TextStyle(
-                              fontSize: 11,
-                              color: AppTheme.darkBlue,
-                              fontWeight: FontWeight.w600),
+                            fontSize: 11,
+                            color: AppTheme.darkBlue,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ],
@@ -356,8 +440,11 @@ class MissionCard extends StatelessWidget {
                     _showMenu(context, details.globalPosition),
                 child: Padding(
                   padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
-                  child: Icon(Icons.more_vert,
-                      size: 20, color: Colors.grey.shade500),
+                  child: Icon(
+                    Icons.more_vert,
+                    size: 20,
+                    color: Colors.grey.shade500,
+                  ),
                 ),
               ),
             ],
@@ -422,7 +509,11 @@ class _DeleteDialogState extends State<_DeleteDialog> {
               color: Colors.red.shade50,
               shape: BoxShape.circle,
             ),
-            child: Icon(Icons.warning_amber_rounded, color: Colors.red.shade700, size: 24),
+            child: Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.red.shade700,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -447,7 +538,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
             style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
           ),
           const SizedBox(height: 12),
-          
+
           // Nom de la mission
           Container(
             width: double.infinity,
@@ -505,7 +596,11 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                   ? Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(Icons.check_circle_outline, size: 18, color: Colors.green.shade600),
+                        Icon(
+                          Icons.check_circle_outline,
+                          size: 18,
+                          color: Colors.green.shade600,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Confirmation disponible',
@@ -532,7 +627,7 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                         ),
                         const SizedBox(width: 10),
                         Text(
-                          'Bouton de confirmation disponible dans $_countdown s',
+                          'Confirmation dans $_countdown s',
                           style: TextStyle(
                             fontSize: 13,
                             color: Colors.grey.shade600,
@@ -555,7 +650,9 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                 style: OutlinedButton.styleFrom(
                   foregroundColor: Colors.grey.shade700,
                   side: BorderSide(color: Colors.grey.shade300),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
                 child: const Text(
@@ -572,7 +669,9 @@ class _DeleteDialogState extends State<_DeleteDialog> {
                   backgroundColor: Colors.red.shade600,
                   foregroundColor: Colors.white,
                   disabledBackgroundColor: Colors.red.shade200,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                   elevation: ready ? 2 : 0,
                 ),

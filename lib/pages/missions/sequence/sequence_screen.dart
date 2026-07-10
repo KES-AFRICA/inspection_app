@@ -431,6 +431,7 @@ class _SequenceScreenState extends State<SequenceScreen>
           mission: widget.mission,
           onDataChanged: (data) => _saveStepData('jsa', data),
           onNextStep: _goToNextStep,
+          onSubStepChanged: () => setState(() {}),
         ),
       },
       {
@@ -457,6 +458,7 @@ class _SequenceScreenState extends State<SequenceScreen>
           onDataChanged: (data) => _saveStepData('description', data),
           onPreviousStep: _goToPreviousStep,
           onNextStep: _goToNextStep,
+          onSubStepChanged: () => setState(() {}),
         ),
       },
       {
@@ -799,17 +801,9 @@ class _SequenceScreenState extends State<SequenceScreen>
 
     if (_currentStep == 0) {
       final jsaState = _jsaKey.currentState;
-      if (jsaState != null && !jsaState.isFullyComplete) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Veuillez compléter toutes les sections du JSA avant de continuer.',
-            ),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 3),
-          ),
-        );
-        return;
+      if (jsaState != null) {
+        final handled = await jsaState.next();
+        if (handled) return; // Le slide JSA interne a changé
       }
     }
 
@@ -830,6 +824,14 @@ class _SequenceScreenState extends State<SequenceScreen>
           );
         }
         return;
+      }
+    }
+
+    if (_currentStep == 3) {
+      final descState = _descKey.currentState;
+      if (descState != null) {
+        final handled = descState.next();
+        if (handled) return; // La sous-page description a changé
       }
     }
 
@@ -877,6 +879,22 @@ class _SequenceScreenState extends State<SequenceScreen>
   Future<void> _goToPreviousStep() async {
     _dismissKeyboard();
     _closeDrawer();
+
+    if (_currentStep == 0) {
+      final jsaState = _jsaKey.currentState;
+      if (jsaState != null) {
+        final handled = await jsaState.previous();
+        if (handled) return; // Recul interne de la JSA
+      }
+    }
+
+    if (_currentStep == 3) {
+      final descState = _descKey.currentState;
+      if (descState != null) {
+        final handled = descState.previous();
+        if (handled) return; // Recul interne de la description
+      }
+    }
 
     if (_currentStep > 0) {
       await SequenceProgressService.saveCurrentStep(
@@ -985,7 +1003,7 @@ class _SequenceScreenState extends State<SequenceScreen>
                     children: _steps.map((s) => s['widget'] as Widget).toList(),
                   ),
                 ),
-                if (_currentStep != 0 && _currentStep != 3 && _currentStep != 6)
+                if (_currentStep != 6)
                   _buildNavButtons(isLast),
               ],
             ),
@@ -1023,6 +1041,30 @@ class _SequenceScreenState extends State<SequenceScreen>
   }
 
   Widget _buildNavButtons(bool isLast) {
+    bool showPrevious = _currentStep > 0;
+    String nextLabel = isLast ? 'TERMINER' : 'SUIVANT';
+
+    // Personnalisation dynamique pour la JSA (Étape 0)
+    if (_currentStep == 0) {
+      final jsaState = _jsaKey.currentState;
+      if (jsaState != null) {
+        showPrevious = !jsaState.isFirstSlide;
+        if (jsaState.isLastSlide) {
+          nextLabel = 'RENSEIGNEMENTS';
+        }
+      }
+    }
+
+    // Personnalisation dynamique pour la Description (Étape 3)
+    if (_currentStep == 3) {
+      final descState = _descKey.currentState;
+      if (descState != null) {
+        if (descState.isLastSlide) {
+          nextLabel = 'AUDIT';
+        }
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1037,12 +1079,13 @@ class _SequenceScreenState extends State<SequenceScreen>
       ),
       child: Row(
         children: [
-          if (_currentStep > 0)
+          if (showPrevious) ...[
             Expanded(
               child: OutlinedButton(
                 onPressed: _goToPreviousStep,
                 style: OutlinedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
+                  side: const BorderSide(color: AppTheme.primaryBlue),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -1050,14 +1093,19 @@ class _SequenceScreenState extends State<SequenceScreen>
                 child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.arrow_back, size: 18),
+                    Icon(Icons.arrow_back, size: 18, color: AppTheme.primaryBlue),
                     SizedBox(width: 8),
-                    Text('Précédent'),
+                    Text('Précédent', style: TextStyle(color: AppTheme.primaryBlue, fontWeight: FontWeight.w600)),
                   ],
                 ),
               ),
             ),
-          if (_currentStep > 0) const SizedBox(width: 12),
+            const SizedBox(width: 12),
+          ] else if (_currentStep > 0) ...[
+            // Espace pour garder le bouton Suivant aligné à droite si pas de précédent
+            const Spacer(),
+            const SizedBox(width: 12),
+          ],
           Expanded(
             child: ElevatedButton(
               onPressed: _goToNextStep,
@@ -1072,8 +1120,11 @@ class _SequenceScreenState extends State<SequenceScreen>
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(isLast ? 'TERMINER' : 'SUIVANT'),
-                  if (!isLast) ...[
+                  Text(
+                    nextLabel,
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  if (nextLabel == 'SUIVANT' || nextLabel == 'RENSEIGNEMENTS' || nextLabel == 'AUDIT') ...[
                     const SizedBox(width: 8),
                     const Icon(Icons.arrow_forward, size: 18),
                   ],

@@ -650,18 +650,43 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
 
   Widget _buildObservationsTab() {
     final observations = _coffret.observationsLibres;
-    
+    final observationsPara = _coffret.observationsParafoudre;
+    final hasAnyObs = observations.isNotEmpty || observationsPara.isNotEmpty;
+
     return Padding(
       padding: EdgeInsets.all(16),
       child: Column(
         children: [
-          if (observations.isNotEmpty) ...[
+          if (hasAnyObs) ...[
             Expanded(
-              child: ListView.builder(
-                itemCount: observations.length,
-                itemBuilder: (context, index) {
-                  return _buildObservationCard(observations[index], index);
-                },
+              child: ListView(
+                children: [
+                  if (observations.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8, top: 4),
+                      child: Text(
+                        'Observations générales',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
+                      ),
+                    ),
+                    ...observations.asMap().entries.map((entry) {
+                      return _buildObservationCard(entry.value, entry.key);
+                    }).toList(),
+                    if (observationsPara.isNotEmpty) const SizedBox(height: 16),
+                  ],
+                  if (observationsPara.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8, top: 4),
+                      child: Text(
+                        'Observations parafoudre (paratonnerre)',
+                        style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.orange.shade800),
+                      ),
+                    ),
+                    ...observationsPara.map((obs) {
+                      return _buildParafoudreObservationCard(obs);
+                    }).toList(),
+                  ],
+                ],
               ),
             ),
           ] else ...[
@@ -709,6 +734,100 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildParafoudreObservationCard(ObservationLibre observation) {
+    return Card(
+      margin: EdgeInsets.only(bottom: 12),
+      color: Colors.orange.shade50.withOpacity(0.3),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: BorderSide(color: Colors.orange.shade200.withOpacity(0.5)),
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'Parafoudre',
+                    style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.orange.shade900),
+                  ),
+                ),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    observation.texte,
+                    style: TextStyle(fontWeight: FontWeight.w500, color: Colors.grey.shade800),
+                  ),
+                ),
+              ],
+            ),
+            
+            SizedBox(height: 8),
+            Text(
+              '${_formatDate(observation.dateCreation)}',
+              style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+            ),
+            
+            if (observation.photos.isNotEmpty) ...[
+              SizedBox(height: 8),
+              Text(
+                'Photos associées (${observation.photos.length})',
+                style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+              ),
+              SizedBox(height: 4),
+              SizedBox(
+                height: 80,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  itemCount: observation.photos.length,
+                  itemBuilder: (context, photoIndex) {
+                    return GestureDetector(
+                      onTap: () => _previsualiserPhoto(observation.photos, photoIndex),
+                      child: Container(
+                        width: 80,
+                        margin: EdgeInsets.only(right: 8),
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: Image.file(
+                            File(observation.photos[photoIndex]),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) {
+                              return Container(
+                                color: Colors.grey.shade200,
+                                child: Center(
+                                  child: Icon(
+                                    Icons.broken_image_outlined,
+                                    color: Colors.grey.shade400,
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -1495,11 +1614,16 @@ Widget _buildEssaiCard(EssaiDeclenchementDifferentiel essai, int index) {
     final totalPoints = _coffret.pointsVerification.where((p) => p.conformite != 'na').length;
     final pourcentage = totalPoints > 0 ? (pointsConformes / totalPoints * 100).round() : 0;
 
-    // Calculer le nombre total de photos (coffret + toutes les observations)
+    // Calculer le nombre total de photos (coffret + toutes les observations libres et parafoudre)
     int totalPhotos = _coffretPhotos.length;
     for (var observation in _coffret.observationsLibres) {
       totalPhotos += observation.photos.length;
     }
+    for (var observation in _coffret.observationsParafoudre) {
+      totalPhotos += observation.photos.length;
+    }
+
+    final totalObsCount = _coffret.observationsLibres.length + _coffret.observationsParafoudre.length;
 
     return Container(
       padding: EdgeInsets.all(16),
@@ -1513,7 +1637,7 @@ Widget _buildEssaiCard(EssaiDeclenchementDifferentiel essai, int index) {
           _buildStatItem('Points', '$pointsConformes/$totalPoints'),
           _buildStatItem('Conformité', '$pourcentage%'),
           _buildStatItem('Photos', totalPhotos.toString()),
-          _buildStatItem('Observations', _coffret.observationsLibres.length.toString()),
+          _buildStatItem('Observations', totalObsCount.toString()),
         ],
       ),
     );
@@ -1835,7 +1959,7 @@ Future<void> _supprimerEssai(EssaiDeclenchementDifferentiel essai) async {
                       indicatorColor: widget.isMoyenneTension ? Colors.blue : Colors.blue,
                       isScrollable: true,
                       tabs: [
-                        Tab(text: 'OBSERVATIONS (${_coffret.observationsLibres.length})'),
+                        Tab(text: 'OBSERVATIONS (${_coffret.observationsLibres.length + _coffret.observationsParafoudre.length})'),
                         Tab(text: 'PHOTOS (${_coffretPhotos.length})'),
                         Tab(text: 'INFORMATIONS'),
                         Tab(text: 'POINTS (${_coffret.pointsVerification.length})'),

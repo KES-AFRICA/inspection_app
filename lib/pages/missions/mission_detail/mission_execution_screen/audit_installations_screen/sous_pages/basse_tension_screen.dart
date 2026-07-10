@@ -792,55 +792,94 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
       totalCoffrets += local.coffrets.length;
     }
 
+    bool nonClassee = true;
+    if (zone.classementZoneId != null) {
+      final classement = HiveService.getClassementZoneById(zone.classementZoneId!);
+      if (classement != null && classement.estComplet) {
+        nonClassee = false;
+      }
+    }
+
     return Container(
-      margin: EdgeInsets.only(bottom: 8),
-      padding: EdgeInsets.all(4),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Colors.grey.shade400,
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: InkWell(
         onTap: () => _voirZone(index),
         borderRadius: BorderRadius.circular(12),
         child: Padding(
-          padding: EdgeInsets.all(16),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: Colors.blue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppTheme.primaryBlue.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(Icons.map_outlined, color: Colors.blue),
+                    child: const Icon(Icons.map_outlined, color: AppTheme.primaryBlue, size: 20),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          zone.nom,
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.black87,
-                          ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Text(
+                                zone.nom,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
+                            if (nonClassee) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade50,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: Colors.orange.shade200),
+                                ),
+                                child: Text(
+                                  'Non classée',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange.shade900,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                        if (zone.description != null) ...[
-                          SizedBox(height: 4),
+                        if (zone.description != null && zone.description!.isNotEmpty) ...[
+                          const SizedBox(height: 4),
                           Text(
                             zone.description!,
                             style: TextStyle(
                               color: Colors.grey.shade600,
-                              fontSize: 14,
+                              fontSize: 13,
                             ),
                           ),
                         ],
@@ -853,10 +892,11 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
                       if (value == 'edit') _editerZone(index);
                       if (value == 'delete') _supprimerZone(index);
                     },
+                    icon: Icon(Icons.more_vert, color: Colors.grey.shade600),
                     itemBuilder: (context) => [
-                      PopupMenuItem(value: 'view', child: Text('Voir détails')),
-                      PopupMenuItem(value: 'edit', child: Text('Éditer')),
-                      PopupMenuItem(
+                      const PopupMenuItem(value: 'view', child: Text('Voir détails')),
+                      const PopupMenuItem(value: 'edit', child: Text('Éditer')),
+                      const PopupMenuItem(
                         value: 'delete',
                         child: Text('Supprimer', style: TextStyle(color: Colors.red)),
                       ),

@@ -16,6 +16,7 @@ class DescriptionInstallationsSequenceScreen extends ConsumerStatefulWidget {
   final VoidCallback onPreviousStep;
   final VoidCallback onNextStep;
   final int? initialSectionIndex;
+  final VoidCallback? onSubStepChanged;
 
   const DescriptionInstallationsSequenceScreen({
     super.key,
@@ -23,14 +24,15 @@ class DescriptionInstallationsSequenceScreen extends ConsumerStatefulWidget {
     required this.onPreviousStep,
     required this.onNextStep,
     this.initialSectionIndex,
+    this.onSubStepChanged,
   });
 
   @override
   ConsumerState<DescriptionInstallationsSequenceScreen> createState() =>
-      _DescriptionInstallationsSequenceScreenState();
+      DescriptionInstallationsSequenceScreenState();
 }
 
-class _DescriptionInstallationsSequenceScreenState
+class DescriptionInstallationsSequenceScreenState
     extends ConsumerState<DescriptionInstallationsSequenceScreen> {
   int _currentStep = 0;
   Map<String, bool> _progress = {};
@@ -320,6 +322,35 @@ class _DescriptionInstallationsSequenceScreenState
     }
   }
 
+  bool get isFirstSlide => _currentStep == 0;
+  bool get isLastSlide => _currentStep == _sections.length - 1;
+
+  bool next() {
+    FocusScope.of(context).unfocus();
+    if (_currentStep < _sections.length - 1) {
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+      return true; // Reste sur la description
+    } else {
+      return false; // Étape terminée, passe à la suite
+    }
+  }
+
+  bool previous() {
+    FocusScope.of(context).unfocus();
+    if (_currentStep > 0) {
+      _pageController.previousPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+      return true; // Reste sur la description
+    } else {
+      return false; // Permet de reculer à l'étape précédente globale
+    }
+  }
+
   void _nextStep() {
     FocusScope.of(context).unfocus();
 
@@ -510,6 +541,7 @@ class _DescriptionInstallationsSequenceScreenState
               physics: const NeverScrollableScrollPhysics(),
               onPageChanged: (index) {
                 setState(() => _currentStep = index);
+                if (widget.onSubStepChanged != null) widget.onSubStepChanged!();
               },
               children: _sections.map((section) {
                 return _buildSectionWidget(
@@ -521,7 +553,6 @@ class _DescriptionInstallationsSequenceScreenState
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNavigation(),
     );
   }
 

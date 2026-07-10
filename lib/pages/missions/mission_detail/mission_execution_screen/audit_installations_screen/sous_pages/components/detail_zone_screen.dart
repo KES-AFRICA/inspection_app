@@ -1405,21 +1405,19 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                 const SizedBox(height: 10),
 
                 // ── Stats ──
-                Row(
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 6,
                   children: [
                     _buildMiniStat(Icons.electrical_services_outlined,
                         '${(local.coffrets as List).length}', 'coffrets'),
-                    const SizedBox(width: 12),
                     _buildMiniStat(Icons.photo_outlined,
                         '$totalPhotos', 'photos'),
-                    const SizedBox(width: 12),
                     _buildMiniStat(Icons.comment_outlined,
                         '${(local.observationsLibres as List).length}', 'obs.'),
-                    if (isFlowLong && local is MoyenneTensionLocal) ...[
-                      const SizedBox(width: 12),
+                    if (isFlowLong && local is MoyenneTensionLocal)
                       _buildMiniStat(Icons.memory_outlined,
                           '${local.cellules.length}', 'cellules'),
-                    ],
                   ],
                 ),
 

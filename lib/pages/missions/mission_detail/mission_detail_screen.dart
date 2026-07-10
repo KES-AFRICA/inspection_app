@@ -353,12 +353,12 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
                 // Carte de l'équipe
                 _buildTeamCard(isSmallScreen),
                 
-                SizedBox(height: isSmallScreen ? 20 : 24),
-                
-                // Bouton Générer rapport PDF (toujours visible)
-                _buildPdfButton(isSmallScreen),
-                
-                SizedBox(height: isSmallScreen ? 24 : 32),
+                if (!_currentMission.isEnAttente) ...[
+                  SizedBox(height: isSmallScreen ? 20 : 24),
+                  _buildPdfButton(isSmallScreen),
+                  SizedBox(height: isSmallScreen ? 24 : 32),
+                ] else
+                  SizedBox(height: isSmallScreen ? 24 : 32),
               ]),
             ),
           ),

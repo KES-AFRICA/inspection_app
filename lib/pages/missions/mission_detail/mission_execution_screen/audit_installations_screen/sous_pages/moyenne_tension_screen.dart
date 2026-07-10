@@ -1108,17 +1108,17 @@ void _ouvrirClassementZone(ClassementZone classement) async {
                 const SizedBox(height: 12),
                 const Divider(height: 1),
                 const SizedBox(height: 10),
-                Row(children: [
-                  _buildMiniStat(Icons.electrical_services_outlined, '${allCoffrets.length}', 'coffret(s)'),
-                  const SizedBox(width: 12),
-                  _buildMiniStat(Icons.photo_outlined, '$totalPhotos', 'photo(s)'),
-                  const SizedBox(width: 12),
-                  _buildMiniStat(Icons.comment_outlined, '${local.observationsLibres.length}', 'obs.'),
-                  if (isFlowLong) ...[
-                    const SizedBox(width: 12),
-                    _buildMiniStat(Icons.memory_outlined, '${local.cellules.length}', 'cellule(s)'),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 6,
+                  children: [
+                    _buildMiniStat(Icons.electrical_services_outlined, '${allCoffrets.length}', 'coffret(s)'),
+                    _buildMiniStat(Icons.photo_outlined, '$totalPhotos', 'photo(s)'),
+                    _buildMiniStat(Icons.comment_outlined, '${local.observationsLibres.length}', 'obs.'),
+                    if (isFlowLong)
+                      _buildMiniStat(Icons.memory_outlined, '${local.cellules.length}', 'cellule(s)'),
                   ],
-                ]),
+                ),
                 if (totalCount > 0) ...[
                   const SizedBox(height: 10),
                   Row(children: [
@@ -1367,12 +1367,27 @@ void _supprimerBrouillonLocal(String? draftId, String nomLocal) {
       totalCoffrets += _getCoffretsForLocalInZone(local, localIndex, i).length;
     }
 
+    bool nonClassee = true;
+    if (zone.classementZoneId != null) {
+      final classement = HiveService.getClassementZoneById(zone.classementZoneId!);
+      if (classement != null && classement.estComplet) {
+        nonClassee = false;
+      }
+    }
+
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade400),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade200, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: InkWell(
         onTap: () => _voirZone(localIndex),
@@ -1383,15 +1398,16 @@ void _supprimerBrouillonLocal(String? draftId, String nomLocal) {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Container(
                     width: 40,
                     height: 40,
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppTheme.primaryBlue.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Icon(Icons.map_outlined, color: AppTheme.primaryBlue),
+                    child: const Icon(Icons.map_outlined, color: AppTheme.primaryBlue, size: 20),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -1399,18 +1415,48 @@ void _supprimerBrouillonLocal(String? draftId, String nomLocal) {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
                             Expanded(
                               child: Text(
                                 zone.nom,
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.black87),
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black87,
+                                ),
                               ),
                             ),
+                            if (nonClassee) ...[
+                              const SizedBox(width: 8),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade50,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(color: Colors.orange.shade200),
+                                ),
+                                child: Text(
+                                  'Non classée',
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.orange.shade900,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ],
                         ),
-                        if (zone.description != null) ...[
+                        if (zone.description != null && zone.description!.isNotEmpty) ...[
                           const SizedBox(height: 4),
-                          Text(zone.description!, style: TextStyle(color: Colors.grey.shade600, fontSize: 14)),
+                          Text(
+                            zone.description!,
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontSize: 13,
+                            ),
+                          ),
                         ],
                       ],
                     ),
@@ -1421,6 +1467,7 @@ void _supprimerBrouillonLocal(String? draftId, String nomLocal) {
                       if (value == 'edit') _editerZone(localIndex);
                       if (value == 'delete') _supprimerZone(localIndex);
                     },
+                    icon: Icon(Icons.more_vert, color: Colors.grey.shade600),
                     itemBuilder: (context) => const [
                       PopupMenuItem(value: 'view', child: Text('Voir détails')),
                       PopupMenuItem(value: 'edit', child: Text('Éditer')),
