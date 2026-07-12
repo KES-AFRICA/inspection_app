@@ -43,7 +43,9 @@ class MesuresEssaisNotifier extends StateNotifier<AsyncValue<MesuresEssais>> {
       await saveUseCase(entity);
       state = AsyncValue.data(mesures);
       return true;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ Erreur saveMesures pour mission $missionId: $e');
+      print('📋 StackTrace: $stackTrace');
       return false;
     }
   }

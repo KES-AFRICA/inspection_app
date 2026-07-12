@@ -15,6 +15,7 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'observation_enrichie_widget.dart';
 
 // Extension pour obtenir la taille de l'écran facilement
 extension ScreenSize on BuildContext {
@@ -971,6 +972,8 @@ class _EtapeElementsControle extends StatefulWidget {
   final Function(int, String, ElementControle, String) onUseSuggestion;
   final Function(String) onAjouterAutre; // Callback pour ajouter "Autre"
   final VoidCallback onRebuildSlides; // NOUVEAU : Callback pour reconstruire les slides après ajout
+  final Future<String?> Function(File, String) onSavePhoto;
+  final VoidCallback onAutoSave;
 
   const _EtapeElementsControle({
     super.key,
@@ -989,6 +992,8 @@ class _EtapeElementsControle extends StatefulWidget {
     required this.onUseSuggestion,
     required this.onAjouterAutre,
     required this.onRebuildSlides,
+    required this.onSavePhoto,
+    required this.onAutoSave,
   });
 
   @override
@@ -1057,7 +1062,7 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
       if (!conformiteRemplie) return false;
 
       // Priorité obligatoire uniquement si Non ou NA
-      final needsPriorite = element.conforme == false || element.estNA;
+      final needsPriorite = element.conforme == false;
       if (needsPriorite && element.priorite == null) return false;
 
       final elementIndex = _getElementIndex(element);
@@ -1441,7 +1446,7 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
                         setState(() {
                           element.conforme = null;
                           element.estNA = true;
-                          element.priorite ??= 3; // défaut priorité 3
+                          element.priorite = null;
                           widget.onConformeChanged(element);
                           widget.onElementChanged(element, index, 'conformite');
                           widget.onObservationToggleChanged(globalIndex, false, sectionType);
@@ -1465,7 +1470,7 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
           SizedBox(height: context.spacingM),
           
           // Ligne 2 : Priorité (seule, sur toute la largeur)
-          if (element.conforme == false || element.estNA)
+          if (element.conforme == false)
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -1495,27 +1500,21 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
           
           if (hasObservation) ...[
             SizedBox(height: context.spacingS),
-            _buildModernObservationField(
-              context: context,
+            ObservationEnrichieWidget(
               element: element,
-              index: index,
-              globalIndex: globalIndex,
-              sectionType: sectionType,
-              suggestions: suggestions,
+              onChanged: () {
+                setState(() {});
+                widget.onAutoSave();
+              },
               color: color,
+              onSavePhoto: (file, section) async {
+                return await widget.onSavePhoto(file, section);
+              },
+              suggestions: suggestions,
+              showPriority: false,
+              sectionType: sectionType,
             ),
           ],
-          
-          SizedBox(height: context.spacingM),
-          
-          // Photos
-          _buildModernElementPhotos(
-            context: context,
-            element: element,
-            index: index,
-            sectionType: sectionType,
-            color: color,
-          ),
         ],
       ),
     );
@@ -2147,6 +2146,7 @@ class _EtapeCelluleTransformateurMulti extends StatefulWidget {
   final Function(List<TransformateurMTBT>) onTransformateursChanged;
   final VoidCallback onDataChanged;
   final VoidCallback? onFormStateChanged;
+  final Future<String?> Function(File, String) onSavePhoto;
 
   const _EtapeCelluleTransformateurMulti({
     super.key,
@@ -2156,6 +2156,7 @@ class _EtapeCelluleTransformateurMulti extends StatefulWidget {
     required this.onTransformateursChanged,
     required this.onDataChanged,
     this.onFormStateChanged,
+    required this.onSavePhoto,
   });
 
   @override
@@ -2339,7 +2340,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       if (slideIndex < elementsSlides.length) {
         final elements = elementsSlides[slideIndex];
         final nonRemplis = elements.where((e) => e.conforme == null && !e.estNA).toList();
-          final sansPriorite = elements.where((e) => (e.conforme == false || e.estNA) && e.priorite == null).toList();
+        final sansPriorite = elements.where((e) => e.conforme == false && e.priorite == null).toList();
           if (sansPriorite.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text('Priorité manquante pour ${sansPriorite.length} élément${sansPriorite.length > 1 ? 's' : ''}'),
@@ -2487,7 +2488,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
         if (slideIndex < elementsSlides.length) {
           final elements = elementsSlides[slideIndex];
           final nonRemplis = elements.where((e) => e.conforme == null && !e.estNA).toList();
-          final sansPriorite = elements.where((e) => (e.conforme == false || e.estNA) && e.priorite == null).toList();
+          final sansPriorite = elements.where((e) => e.conforme == false && e.priorite == null).toList();
           if (nonRemplis.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text('Veuillez renseigner la conformité de tous les éléments (${nonRemplis.length} non rempli${nonRemplis.length > 1 ? 's' : ''})'),
@@ -2498,7 +2499,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           }
           if (sansPriorite.isNotEmpty) {
             ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-              content: Text('Veuillez renseigner la priorité des éléments Non/NA (${sansPriorite.length} manquant${sansPriorite.length > 1 ? 's' : ''})'),
+              content: Text('Veuillez renseigner la priorité des éléments Non (${sansPriorite.length} manquant${sansPriorite.length > 1 ? 's' : ''})'),
               backgroundColor: Colors.orange, duration: const Duration(seconds: 2),
             ));
             widget.onFormStateChanged?.call();
@@ -3327,7 +3328,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
                     onTap: () => setState(() {
                       element.conforme = null;
                       element.estNA = true;
-                      element.priorite ??= 3;
+                      element.priorite = null;
                       element.observation = null;
                     }),
                     isSmallScreen: isSmallScreen,
@@ -3346,126 +3347,20 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           ],
         ),
         
-        SizedBox(height: isSmallScreen ? 12 : 16),
-        
-        // Priorité : uniquement si Non ou NA
-        if (element.conforme == false || element.estNA)
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Text(
-                  'Priorité',
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 12 : 13,
-                    fontWeight: FontWeight.w600,
-                    color: element.priorite == null ? Colors.red : Colors.grey.shade700,
-                  ),
-                ),
-              ],
-            ),
-            SizedBox(height: isSmallScreen ? 8 : 10),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildPrioriteButton(
-                    niveau: 1,
-                    label: 'N1 (Basse)',
-                    isSelected: element.priorite == 1,
-                    color: Colors.blue,
-                    onTap: () => setState(() => element.priorite = 1),
-                    isSmallScreen: isSmallScreen,
-                  ),
-                ),
-                SizedBox(width: isSmallScreen ? 8 : 10),
-                Expanded(
-                  child: _buildPrioriteButton(
-                    niveau: 2,
-                    label: 'N2 (Moyenne)',
-                    isSelected: element.priorite == 2,
-                    color: Colors.orange,
-                    onTap: () => setState(() => element.priorite = 2),
-                    isSmallScreen: isSmallScreen,
-                  ),
-                ),
-                SizedBox(width: isSmallScreen ? 8 : 10),
-                Expanded(
-                  child: _buildPrioriteButton(
-                    niveau: 3,
-                    label: 'N3 (Haute)',
-                    isSelected: element.priorite == 3,
-                    color: Colors.red,
-                    onTap: () => setState(() => element.priorite = 3),
-                    isSmallScreen: isSmallScreen,
-                  ),
-                ),
-              ],
-            ),
-            if (element.priorite == null)
-              Padding(
-                padding: EdgeInsets.only(top: isSmallScreen ? 6 : 8),
-                child: Text(
-                  'Veuillez sélectionner un niveau de priorité',
-                  style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.red),
-                ),
-              ),
-          ],
-        ),
-        
-        // ✅ OBSERVATION (obligatoire si Non)
         if (element.conforme == false) ...[
           SizedBox(height: isSmallScreen ? 12 : 16),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text(
-                    'Observation *',
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 12 : 13,
-                      fontWeight: FontWeight.w600,
-                      color: (element.observation == null || element.observation!.isEmpty) ? Colors.red : Colors.grey.shade700,
-                    ),
-                  ),
-                ],
-              ),
-              SizedBox(height: isSmallScreen ? 6 : 8),
-              Container(
-                decoration: BoxDecoration(
-                  border: Border.all(
-                    color: (element.observation == null || element.observation!.isEmpty) ? Colors.red.shade300 : Colors.grey.shade300,
-                    width: (element.observation == null || element.observation!.isEmpty) ? 1.5 : 1,
-                  ),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: TextField(
-                  // Utilise le controller dédié à cet élément pour charger
-                  // le texte existant lors d'une édition (initialValue seul ne
-                  // recharge pas quand le widget est reconstruit dans le PageView).
-                  controller: isCellule
-                      ? (_obsControllersCellule[element] ??= TextEditingController(text: element.observation ?? ''))
-                      : (_obsControllersTransfo[element] ??= TextEditingController(text: element.observation ?? '')),
-                  onChanged: (value) => setState(() => element.observation = value),
-                  decoration: InputDecoration(
-                    hintText: 'Saisissez votre observation...',
-                    hintStyle: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.grey.shade400),
-                    border: InputBorder.none,
-                    contentPadding: EdgeInsets.all(isSmallScreen ? 12 : 14),
-                  ),
-                  maxLines: 3,
-                ),
-              ),
-              if (element.observation == null || element.observation!.isEmpty)
-                Padding(
-                  padding: EdgeInsets.only(top: isSmallScreen ? 4 : 6),
-                  child: Text(
-                    'L\'observation est obligatoire quand la conformité est "Non"',
-                    style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.red),
-                  ),
-                ),
-            ],
+          ObservationEnrichieWidget(
+            element: element,
+            onChanged: () {
+              setState(() {});
+            },
+            color: color,
+            onSavePhoto: (file, section) async {
+              return await widget.onSavePhoto(file, section);
+            },
+            suggestions: const [],
+            showPriority: true,
+            sectionType: isCellule ? 'cellule' : 'transformateur',
           ),
         ],
       ],
@@ -4093,7 +3988,11 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   void _onConformeChanged(ElementControle element) {
     setState(() {
       _conformeSelected[element] = true;
-      element.priorite ??= 3;
+      if (element.conforme == false) {
+        element.priorite ??= 3;
+      } else {
+        element.priorite = null;
+      }
       
       int? elementIndex;
       for (int i = 0; i < _dispositionsConstructives.length; i++) {
@@ -4132,7 +4031,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     if (elements.isEmpty) return false;
     for (var element in elements) {
       if (!(_conformeSelected[element] ?? false)) return false;
-      if (element.priorite == null) return false;
+      if (element.conforme == false && element.priorite == null) return false;
     }
     return true;
   }
@@ -5397,6 +5296,10 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                     onRebuildSlides: () {
                       _etapeElementsKey?.currentState?.rebuildSlides();
                     },
+                    onSavePhoto: (file, section) async {
+                      return await _savePhotoToAppDirectory(file, section);
+                    },
+                    onAutoSave: () => _scheduleAutoSave(),
                   ),
 
                   if (_selectedType == 'LOCAL_TRANSFORMATEUR' || _selectedType == 'LOCAL_MTBT')
@@ -5419,6 +5322,9 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                       _validateCelluleTransfoDonnees();
                     },
                     onFormStateChanged: () => setState(() {}),
+                    onSavePhoto: (file, section) async {
+                      return await _savePhotoToAppDirectory(file, section);
+                    },
                   ),
               ].whereType<Widget>().toList(),
             ),

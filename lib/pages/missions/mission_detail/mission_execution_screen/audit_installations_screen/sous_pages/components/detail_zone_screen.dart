@@ -37,11 +37,12 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   final ImagePicker _picker = ImagePicker();
   List<String> _zonePhotos = [];
   bool _isLoadingZonePhotos = false;
-  
+
   // Listes combinées (brouillons + coffrets existants)
   List<CoffretArmoire> _coffretsDirects = [];
-  List<CoffretArmoire> _coffretsDansLocaux = []; // Pour les coffrets dans les locaux
-  
+  List<CoffretArmoire> _coffretsDansLocaux =
+      []; // Pour les coffrets dans les locaux
+
   // Pour les nouvelles observations
   final _nouvelleObservationController = TextEditingController();
   List<String> _photosPourNouvelleObservation = [];
@@ -58,10 +59,10 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   // Charger les coffrets (existants + brouillons)
   void _loadCoffrets() {
     // Récupérer les coffrets déjà sauvegardés
-    final savedCoffrets = widget.isMoyenneTension 
+    final savedCoffrets = widget.isMoyenneTension
         ? List<CoffretArmoire>.from(_zone.coffrets)
         : List<CoffretArmoire>.from(_zone.coffretsDirects);
-    
+
     // Récupérer les brouillons pour cette zone
     final drafts = HiveService.getCoffretDraftsForLocation(
       missionId: widget.mission.id,
@@ -70,25 +71,27 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       isMoyenneTension: widget.isMoyenneTension,
       zoneIndex: null,
     );
-    
+
     // Filtrer les brouillons qui ne sont PAS déjà dans les coffrets sauvegardés
     final savedQrCodes = savedCoffrets.map((c) => c.qrCode).toSet();
-    final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).toList();
-    
+    final uniqueDrafts = drafts
+        .where((d) => !savedQrCodes.contains(d.qrCode))
+        .toList();
+
     setState(() {
       _coffretsDirects = [...uniqueDrafts, ...savedCoffrets];
     });
   }
-  
+
   void _loadCoffretsDansLocaux() {
     final allCoffretsInLocaux = <CoffretArmoire>[];
-    
+
     for (var local in _zone.locaux) {
       // Coffrets existants dans ce local
       final savedCoffrets = List<CoffretArmoire>.from(local.coffrets);
       allCoffretsInLocaux.addAll(savedCoffrets);
     }
-    
+
     setState(() {
       _coffretsDansLocaux = allCoffretsInLocaux;
     });
@@ -112,17 +115,20 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
         maxWidth: 1024,
         maxHeight: 1024,
       );
-      
+
       if (photo != null) {
         setState(() => _isLoadingZonePhotos = true);
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'zones');
-        
+
+        final savedPath = await _savePhotoToAppDirectory(
+          File(photo.path),
+          'zones',
+        );
+
         setState(() {
           _zonePhotos.add(savedPath);
           _zone.photos = _zonePhotos;
         });
-        
+
         await _sauvegarderZone();
         _showSuccess('Photo ajoutée à la zone');
       }
@@ -141,17 +147,20 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
         maxWidth: 1024,
         maxHeight: 1024,
       );
-      
+
       if (photo != null) {
         setState(() => _isLoadingZonePhotos = true);
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'zones');
-        
+
+        final savedPath = await _savePhotoToAppDirectory(
+          File(photo.path),
+          'zones',
+        );
+
         setState(() {
           _zonePhotos.add(savedPath);
           _zone.photos = _zonePhotos;
         });
-        
+
         await _sauvegarderZone();
         _showSuccess('Photo ajoutée depuis la galerie');
       }
@@ -165,14 +174,14 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   Future<String> _savePhotoToAppDirectory(File photoFile, String subDir) async {
     final appDir = await getApplicationDocumentsDirectory();
     final photosDir = Directory('${appDir.path}/audit_photos/$subDir');
-    
+
     if (!await photosDir.exists()) {
       await photosDir.create(recursive: true);
     }
-    
+
     final fileName = '${subDir}_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final newPath = '${photosDir.path}/$fileName';
-    
+
     await photoFile.copy(newPath);
     return newPath;
   }
@@ -198,10 +207,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  File(photos[index]),
-                  fit: BoxFit.contain,
-                ),
+                child: Image.file(File(photos[index]), fit: BoxFit.contain),
               ),
             ),
             Positioned(
@@ -256,29 +262,29 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              
+
               try {
                 // Supprimer le fichier physique
                 final file = File(photos[index]);
                 if (await file.exists()) {
                   await file.delete();
                 }
-                
+
                 // Mettre à jour la liste
                 setState(() {
                   photos.removeAt(index);
-                  
+
                   // Si c'est une photo de la zone, mettre à jour la zone
                   if (photos == _zonePhotos) {
                     _zone.photos = _zonePhotos;
                   }
                 });
-                
+
                 // Sauvegarder si c'est une photo de la zone
                 if (photos == _zonePhotos) {
                   await _sauvegarderZone();
                 }
-                
+
                 _showSuccess('Photo supprimée');
               } catch (e) {
                 _showError('Erreur lors de la suppression: $e');
@@ -292,7 +298,13 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     );
   }
 
-  Widget _buildPhotosSection(String title, List<String> photos, Function prendrePhoto, Function choisirPhoto, {bool isLoading = false}) {
+  Widget _buildPhotosSection(
+    String title,
+    List<String> photos,
+    Function prendrePhoto,
+    Function choisirPhoto, {
+    bool isLoading = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -450,7 +462,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
 
   Widget _buildPhotosTab() {
     return Padding(
-      padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),
+      padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
       child: _buildPhotosSection(
         'Photos de la zone',
         _zonePhotos,
@@ -472,9 +484,12 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
         maxWidth: 1024,
         maxHeight: 1024,
       );
-      
+
       if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations_zones');
+        final savedPath = await _savePhotoToAppDirectory(
+          File(photo.path),
+          'observations_zones',
+        );
         setState(() {
           photosList.add(savedPath);
         });
@@ -484,7 +499,9 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     }
   }
 
-  Future<void> _choisirPhotoObservationDepuisGalerie(List<String> photosList) async {
+  Future<void> _choisirPhotoObservationDepuisGalerie(
+    List<String> photosList,
+  ) async {
     try {
       final XFile? photo = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -492,9 +509,12 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
         maxWidth: 1024,
         maxHeight: 1024,
       );
-      
+
       if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations_zones');
+        final savedPath = await _savePhotoToAppDirectory(
+          File(photo.path),
+          'observations_zones',
+        );
         setState(() {
           photosList.add(savedPath);
         });
@@ -520,14 +540,14 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
         ),
       ),
     );
-    
+
     // Rafraîchir la liste même si l'utilisateur a annulé
     _rechargerZone();
   }
 
   void _editerObservation(int index) async {
     final observation = _zone.observationsLibres[index];
-    
+
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -544,11 +564,11 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
         ),
       ),
     );
-    
+
     // Rafraîchir après retour
     _rechargerZone();
   }
-  
+
   void _supprimerObservation(int index) {
     showDialog(
       context: context,
@@ -563,7 +583,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              
+
               // Supprimer les fichiers photos associés
               final observation = _zone.observationsLibres[index];
               for (var photoPath in observation.photos) {
@@ -576,11 +596,11 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                   print('Erreur suppression photo: $e');
                 }
               }
-              
+
               setState(() {
                 _zone.observationsLibres.removeAt(index);
               });
-              
+
               await _sauvegarderZone();
               _showSuccess('Observation supprimée');
             },
@@ -624,13 +644,13 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                 ),
               ],
             ),
-            
+
             SizedBox(height: 4),
             Text(
               '${_formatDate(observation.dateCreation)}',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
-            
+
             if (observation.photos.isNotEmpty) ...[
               SizedBox(height: 8),
               Text(
@@ -645,7 +665,8 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                   itemCount: observation.photos.length,
                   itemBuilder: (context, photoIndex) {
                     return GestureDetector(
-                      onTap: () => _previsualiserPhoto(observation.photos, photoIndex),
+                      onTap: () =>
+                          _previsualiserPhoto(observation.photos, photoIndex),
                       child: Container(
                         width: 80,
                         margin: EdgeInsets.only(right: 8),
@@ -689,9 +710,9 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
 
   Widget _buildObservationsTab() {
     final observations = _zone.observationsLibres;
-    
+
     return Padding(
-      padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),
+      padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
       child: Column(
         children: [
           if (observations.isNotEmpty) ...[
@@ -747,7 +768,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
               minimumSize: Size(double.infinity, 48),
             ),
           ),
-           SizedBox(height: 64),
+          SizedBox(height: 64),
         ],
       ),
     );
@@ -824,13 +845,14 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              
-              final success = await HiveService.deleteLocalFromMoyenneTensionZone(
-                missionId: widget.mission.id,
-                zoneIndex: widget.zoneIndex,
-                localIndex: index,
-              );
-              
+
+              final success =
+                  await HiveService.deleteLocalFromMoyenneTensionZone(
+                    missionId: widget.mission.id,
+                    zoneIndex: widget.zoneIndex,
+                    localIndex: index,
+                  );
+
               if (success) {
                 _rechargerZone();
                 _showSuccess('Local supprimé');
@@ -916,14 +938,19 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              
-              final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-              
+
+              final audit = await HiveService.getOrCreateAuditInstallations(
+                widget.mission.id,
+              );
+
               if (widget.zoneIndex < audit.basseTensionZones.length) {
-                if (index < audit.basseTensionZones[widget.zoneIndex].locaux.length) {
-                  audit.basseTensionZones[widget.zoneIndex].locaux.removeAt(index);
+                if (index <
+                    audit.basseTensionZones[widget.zoneIndex].locaux.length) {
+                  audit.basseTensionZones[widget.zoneIndex].locaux.removeAt(
+                    index,
+                  );
                   await HiveService.saveAuditInstallations(audit);
-                  
+
                   _rechargerZone();
                   _showSuccess('Local supprimé');
                 }
@@ -942,8 +969,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => 
-        QrScanCoffretScreen(
+        builder: (context) => QrScanCoffretScreen(
           mission: widget.mission,
           parentType: 'zone_mt',
           parentIndex: widget.zoneIndex,
@@ -1008,14 +1034,22 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              
-              final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-              
+
+              final audit = await HiveService.getOrCreateAuditInstallations(
+                widget.mission.id,
+              );
+
               if (widget.zoneIndex < audit.moyenneTensionZones.length) {
-                if (index < audit.moyenneTensionZones[widget.zoneIndex].coffrets.length) {
-                  audit.moyenneTensionZones[widget.zoneIndex].coffrets.removeAt(index);
+                if (index <
+                    audit
+                        .moyenneTensionZones[widget.zoneIndex]
+                        .coffrets
+                        .length) {
+                  audit.moyenneTensionZones[widget.zoneIndex].coffrets.removeAt(
+                    index,
+                  );
                   await HiveService.saveAuditInstallations(audit);
-                  
+
                   _rechargerZone();
                   _showSuccess('Équipement supprimé');
                 }
@@ -1099,14 +1133,21 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              
-              final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-              
+
+              final audit = await HiveService.getOrCreateAuditInstallations(
+                widget.mission.id,
+              );
+
               if (widget.zoneIndex < audit.basseTensionZones.length) {
-                if (index < audit.basseTensionZones[widget.zoneIndex].coffretsDirects.length) {
-                  audit.basseTensionZones[widget.zoneIndex].coffretsDirects.removeAt(index);
+                if (index <
+                    audit
+                        .basseTensionZones[widget.zoneIndex]
+                        .coffretsDirects
+                        .length) {
+                  audit.basseTensionZones[widget.zoneIndex].coffretsDirects
+                      .removeAt(index);
                   await HiveService.saveAuditInstallations(audit);
-                  
+
                   _rechargerZone();
                   _showSuccess('Équipement supprimé');
                 }
@@ -1144,9 +1185,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       context: context,
       isScrollControlled: true,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(20.0),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20.0)),
       ),
       builder: (context) => Container(
         padding: EdgeInsets.all(20),
@@ -1159,13 +1198,12 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
               child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
-                  widget.isMoyenneTension ? _ajouterLocalMT() : _ajouterLocalBT();
+                  widget.isMoyenneTension
+                      ? _ajouterLocalMT()
+                      : _ajouterLocalBT();
                 },
                 icon: Icon(Icons.domain, size: 24),
-                label: Text(
-                  'Ajouter un local',
-                  style: TextStyle(fontSize: 16),
-                ),
+                label: Text('Ajouter un local', style: TextStyle(fontSize: 16)),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryBlue,
                   foregroundColor: Colors.white,
@@ -1177,20 +1215,22 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                 ),
               ),
             ),
-            
+
             // Bouton pour ajouter un coffret
             Container(
               margin: EdgeInsets.only(bottom: 20),
               child: ElevatedButton.icon(
                 onPressed: () {
                   Navigator.pop(context);
-                  widget.isMoyenneTension ? _ajouterCoffretMT() : _ajouterCoffretDirectBT();
+                  widget.isMoyenneTension
+                      ? _ajouterCoffretMT()
+                      : _ajouterCoffretDirectBT();
                 },
                 icon: Icon(Icons.electrical_services, size: 24),
                 label: Text(
-                  widget.isMoyenneTension 
-                    ? 'Ajouter un Équipement' 
-                    : 'Ajouter un Équipement direct',
+                  widget.isMoyenneTension
+                      ? 'Ajouter un Équipement'
+                      : 'Ajouter un Équipement direct',
                   style: TextStyle(fontSize: 16),
                 ),
                 style: ElevatedButton.styleFrom(
@@ -1204,16 +1244,13 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                 ),
               ),
             ),
-            
+
             // Bouton pour annuler
             TextButton(
               onPressed: () => Navigator.pop(context),
               child: Text(
                 'Annuler',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
-                ),
+                style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
               ),
             ),
             SizedBox(height: MediaQuery.of(context).viewInsets.bottom),
@@ -1224,8 +1261,10 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   }
 
   void _rechargerZone() async {
-    final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-  
+    final audit = await HiveService.getOrCreateAuditInstallations(
+      widget.mission.id,
+    );
+
     setState(() {
       if (widget.isMoyenneTension) {
         if (widget.zoneIndex < audit.moyenneTensionZones.length) {
@@ -1242,8 +1281,10 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   }
 
   Future<void> _sauvegarderZone() async {
-    final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-    
+    final audit = await HiveService.getOrCreateAuditInstallations(
+      widget.mission.id,
+    );
+
     if (widget.isMoyenneTension) {
       if (widget.zoneIndex < audit.moyenneTensionZones.length) {
         audit.moyenneTensionZones[widget.zoneIndex] = _zone;
@@ -1253,7 +1294,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
         audit.basseTensionZones[widget.zoneIndex] = _zone;
       }
     }
-    
+
     await HiveService.saveAuditInstallations(audit);
   }
 
@@ -1284,38 +1325,46 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     final List<ElementControle> dispositions = local is MoyenneTensionLocal
         ? local.dispositionsConstructives
         : local is BasseTensionLocal
-            ? (local.dispositionsConstructives ?? [])
-            : <ElementControle>[];
+        ? (local.dispositionsConstructives ?? [])
+        : <ElementControle>[];
 
-    final conformiteCount = dispositions.where((e) => e.conforme == true && !e.estNA).length;
-    final nonConformeCount = dispositions.where((e) => e.conforme == false && !e.estNA).length;
+    final conformiteCount = dispositions
+        .where((e) => e.conforme == true && !e.estNA)
+        .length;
+    final nonConformeCount = dispositions
+        .where((e) => e.conforme == false && !e.estNA)
+        .length;
     final totalCount = dispositions.where((e) => !e.estNA).length;
-    final pourcentage = totalCount > 0 ? (conformiteCount / totalCount * 100).round() : 0;
+    final pourcentage = totalCount > 0
+        ? (conformiteCount / totalCount * 100).round()
+        : 0;
 
-    final int totalPhotos = (local.photos as List).length +
+    final int totalPhotos =
+        (local.photos as List).length +
         (local.observationsLibres as List).fold<int>(
-            0, (sum, obs) => sum + (obs.photos as List).length);
+          0,
+          (sum, obs) => sum + (obs.photos as List).length,
+        );
 
     final localTypes = HiveService.getLocalTypes();
     final typeLabel = localTypes[local.type] ?? local.type ?? '';
-    final isFlowLong = local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT';
+    final isFlowLong =
+        local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT';
     final inaccessible = !(local.accessible ?? true);
     final aReverifier = local.aReverifier ?? false;
 
     // ── Icône et couleur selon l'état ──
-    final Color cardColor = inaccessible
-        ? Colors.red.shade50
-        : Colors.white;
+    final Color cardColor = inaccessible ? Colors.red.shade50 : Colors.white;
     final Color borderColor = inaccessible
         ? Colors.red.shade200
         : aReverifier
-            ? Colors.orange.shade300
-            : Colors.grey.shade200;
+        ? Colors.orange.shade300
+        : Colors.grey.shade200;
     final Color accentColor = inaccessible
         ? Colors.red
         : aReverifier
-            ? Colors.orange
-            : AppTheme.primaryBlue;
+        ? Colors.orange
+        : AppTheme.primaryBlue;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1332,7 +1381,8 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
         ],
       ),
       child: InkWell(
-        onTap: () => isMoyenneTension ? _voirLocalMT(index) : _voirLocalBT(index),
+        onTap: () =>
+            isMoyenneTension ? _voirLocalMT(index) : _voirLocalBT(index),
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: const EdgeInsets.all(14),
@@ -1354,9 +1404,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
-                      inaccessible
-                          ? Icons.lock_outline
-                          : Icons.domain,
+                      inaccessible ? Icons.lock_outline : Icons.domain,
                       color: Colors.white,
                       size: 22,
                     ),
@@ -1392,8 +1440,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                     children: [
                       if (aReverifier)
                         _buildBadge('À revérifier', Colors.orange),
-                      if (inaccessible)
-                        _buildBadge('Inaccessible', Colors.red),
+                      if (inaccessible) _buildBadge('Inaccessible', Colors.red),
                     ],
                   ),
                 ],
@@ -1409,15 +1456,27 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                   spacing: 12,
                   runSpacing: 6,
                   children: [
-                    _buildMiniStat(Icons.electrical_services_outlined,
-                        '${(local.coffrets as List).length}', 'coffrets'),
-                    _buildMiniStat(Icons.photo_outlined,
-                        '$totalPhotos', 'photos'),
-                    _buildMiniStat(Icons.comment_outlined,
-                        '${(local.observationsLibres as List).length}', 'obs.'),
+                    _buildMiniStat(
+                      Icons.electrical_services_outlined,
+                      '${(local.coffrets as List).length}',
+                      'coffrets',
+                    ),
+                    _buildMiniStat(
+                      Icons.photo_outlined,
+                      '$totalPhotos',
+                      'photos',
+                    ),
+                    _buildMiniStat(
+                      Icons.comment_outlined,
+                      '${(local.observationsLibres as List).length}',
+                      'obs.',
+                    ),
                     if (isFlowLong && local is MoyenneTensionLocal)
-                      _buildMiniStat(Icons.memory_outlined,
-                          '${local.cellules.length}', 'cellules'),
+                      _buildMiniStat(
+                        Icons.memory_outlined,
+                        '${local.cellules.length}',
+                        'cellules',
+                      ),
                   ],
                 ),
 
@@ -1430,7 +1489,9 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
                           child: LinearProgressIndicator(
-                            value: totalCount > 0 ? conformiteCount / totalCount : 0,
+                            value: totalCount > 0
+                                ? conformiteCount / totalCount
+                                : 0,
                             backgroundColor: Colors.grey.shade200,
                             color: _getProgressColor(pourcentage),
                             minHeight: 6,
@@ -1471,22 +1532,42 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
                   TextButton.icon(
-                    onPressed: () =>
-                        isMoyenneTension ? _editerLocalMT(index) : _editerLocalBT(index),
-                    icon: Icon(Icons.edit_outlined,
-                        size: 15, color: AppTheme.primaryBlue),
-                    label: Text('Éditer',
-                        style: TextStyle(fontSize: 12, color: AppTheme.primaryBlue)),
-                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                    onPressed: () => isMoyenneTension
+                        ? _editerLocalMT(index)
+                        : _editerLocalBT(index),
+                    icon: Icon(
+                      Icons.edit_outlined,
+                      size: 15,
+                      color: AppTheme.primaryBlue,
+                    ),
+                    label: Text(
+                      'Éditer',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.primaryBlue,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
                   ),
                   const SizedBox(width: 4),
                   TextButton.icon(
-                    onPressed: () =>
-                        isMoyenneTension ? _supprimerLocalMT(index) : _supprimerLocalBT(index),
-                    icon: const Icon(Icons.delete_outline, size: 15, color: Colors.red),
-                    label: const Text('Supprimer',
-                        style: TextStyle(fontSize: 12, color: Colors.red)),
-                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 8)),
+                    onPressed: () => isMoyenneTension
+                        ? _supprimerLocalMT(index)
+                        : _supprimerLocalBT(index),
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      size: 15,
+                      color: Colors.red,
+                    ),
+                    label: const Text(
+                      'Supprimer',
+                      style: TextStyle(fontSize: 12, color: Colors.red),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
                   ),
                 ],
               ),
@@ -1532,346 +1613,418 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   }
 
   // MODIFIER : _buildCoffretCard pour gérer les brouillons
-  Widget _buildCoffretCard(CoffretArmoire coffret, int index, bool isMoyenneTension) {
-  final pointsConformes = coffret.pointsVerification.where((p) => p.conformite == 'oui').length;
-  final pointsNon = coffret.pointsVerification.where((p) => p.conformite == 'non').length;
-  final totalPoints = coffret.pointsVerification.where((p) => p.conformite != 'na').length;
-  final pourcentage = totalPoints > 0 ? (pointsConformes / totalPoints * 100).round() : 0;
-  final isComplet = coffret.statut == 'complet' || _isCoffretComplet(coffret);
-  final isDraft = coffret.statut != 'complet';
-  final totalPhotos = coffret.photos.length + coffret.photosExternes.length + coffret.photosInternes.length;
+  Widget _buildCoffretCard(
+    CoffretArmoire coffret,
+    int index,
+    bool isMoyenneTension,
+  ) {
+    final pointsConformes = coffret.pointsVerification
+        .where((p) => p.conformite == 'oui')
+        .length;
+    final pointsNon = coffret.pointsVerification
+        .where((p) => p.conformite == 'non')
+        .length;
+    final totalPoints = coffret.pointsVerification
+        .where((p) => p.conformite != 'na')
+        .length;
+    final pourcentage = totalPoints > 0
+        ? (pointsConformes / totalPoints * 100).round()
+        : 0;
+    final isComplet = coffret.statut == 'complet' || _isCoffretComplet(coffret);
+    final isDraft = coffret.statut != 'complet';
+    final totalPhotos =
+        coffret.photos.length +
+        coffret.photosExternes.length +
+        coffret.photosInternes.length;
 
-  // Couleurs selon état
-  final Color accentColor = isDraft ? Colors.amber : isComplet ? Colors.green : Colors.red;
-  final Color cardBg = isDraft ? Colors.amber.shade50 : Colors.white;
-  final Color borderColor = isDraft
-      ? Colors.amber.shade300
-      : isComplet
-          ? Colors.green.shade200
-          : Colors.red.shade200;
+    // Couleurs selon état
+    final Color accentColor = isDraft
+        ? Colors.amber
+        : isComplet
+        ? Colors.green
+        : Colors.red;
+    final Color cardBg = isDraft ? Colors.amber.shade50 : Colors.white;
+    final Color borderColor = isDraft
+        ? Colors.amber.shade300
+        : isComplet
+        ? Colors.green.shade200
+        : Colors.red.shade200;
 
-  // Icône selon type
-  IconData typeIcon = Icons.electrical_services;
-  if (coffret.type == 'TGBT') typeIcon = Icons.developer_board;
-  else if (coffret.type == 'ARMOIRE') typeIcon = Icons.view_module_outlined;
-  else if (coffret.type == 'INVERSEUR') typeIcon = Icons.swap_horiz;
-  else if (coffret.type == 'TUR') typeIcon = Icons.power;
-  else if (coffret.type == 'COFFRET') typeIcon = Icons.inbox_outlined;
+    // Icône selon type
+    IconData typeIcon = Icons.electrical_services;
+    if (coffret.type == 'TGBT')
+      typeIcon = Icons.developer_board;
+    else if (coffret.type == 'ARMOIRE')
+      typeIcon = Icons.view_module_outlined;
+    else if (coffret.type == 'INVERSEUR')
+      typeIcon = Icons.swap_horiz;
+    else if (coffret.type == 'TUR')
+      typeIcon = Icons.power;
+    else if (coffret.type == 'COFFRET')
+      typeIcon = Icons.inbox_outlined;
 
-  return Container(
-    margin: const EdgeInsets.only(bottom: 12),
-    decoration: BoxDecoration(
-      color: cardBg,
-      borderRadius: BorderRadius.circular(14),
-      border: Border.all(color: borderColor, width: isDraft ? 1.5 : 1),
-      boxShadow: [
-        BoxShadow(
-          color: accentColor.withOpacity(0.08),
-          blurRadius: 8,
-          offset: const Offset(0, 3),
-        ),
-      ],
-    ),
-    child: InkWell(
-      onTap: () {
-        if (isDraft) {
-          _ouvrirBrouillon(coffret);
-        } else {
-          final realIndex = isMoyenneTension
-              ? _zone.coffrets.indexWhere((c) => c.qrCode == coffret.qrCode)
-              : _zone.coffretsDirects.indexWhere((c) => c.qrCode == coffret.qrCode);
-          if (realIndex >= 0) _voirCoffret(realIndex, isMoyenneTension);
-        }
-      },
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ── Header ──
-            Row(
-              children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: isDraft
-                          ? [Colors.amber, Colors.amber.shade600]
-                          : [accentColor, accentColor.withOpacity(0.7)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Icon(
-                    isDraft ? Icons.edit_note : typeIcon,
-                    color: Colors.white,
-                    size: 22,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        coffret.nom.isEmpty ? 'Sans nom' : coffret.nom,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        coffret.type,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: accentColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                // Badges
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (isDraft)
-                      _buildCoffretBadge('Brouillon', Colors.amber)
-                    else if (isComplet)
-                      _buildCoffretBadge('Complet', Colors.green)
-                    else
-                      _buildCoffretBadge('Incomplet', Colors.red),
-                    if (coffret.numeroEquipement != null &&
-                        coffret.numeroEquipement!.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      _buildCoffretBadge('#${coffret.numeroEquipement}', Colors.blueGrey),
-                    ],
-                  ],
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 10),
-            const Divider(height: 1),
-            const SizedBox(height: 10),
-
-            // ── Stats ──
-            Row(
-              children: [
-                _buildCoffretStat(Icons.photo_outlined, '$totalPhotos', 'photo(s)'),
-                const SizedBox(width: 14),
-                _buildCoffretStat(Icons.comment_outlined,
-                    '${coffret.observationsLibres.length}', 'obs.'),
-                const SizedBox(width: 14),
-                _buildCoffretStat(Icons.power_input_outlined,
-                    '${coffret.alimentations.length}', 'alim.'),
-                if (coffret.presenceParafoudre) ...[
-                  const SizedBox(width: 14),
-                  _buildCoffretStat(Icons.bolt, '⚡', 'parafoudre'),
-                ],
-              ],
-            ),
-
-            // ── Barre de conformité ──
-            if (totalPoints > 0) ...[
-              const SizedBox(height: 10),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: cardBg,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: borderColor, width: isDraft ? 1.5 : 1),
+        boxShadow: [
+          BoxShadow(
+            color: accentColor.withOpacity(0.08),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: InkWell(
+        onTap: () {
+          if (isDraft) {
+            _ouvrirBrouillon(coffret);
+          } else {
+            final realIndex = isMoyenneTension
+                ? _zone.coffrets.indexWhere((c) => c.qrCode == coffret.qrCode)
+                : _zone.coffretsDirects.indexWhere(
+                    (c) => c.qrCode == coffret.qrCode,
+                  );
+            if (realIndex >= 0) _voirCoffret(realIndex, isMoyenneTension);
+          }
+        },
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── Header ──
               Row(
                 children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: totalPoints > 0 ? pointsConformes / totalPoints : 0,
-                        backgroundColor: Colors.grey.shade200,
-                        color: _getProgressColor(pourcentage),
-                        minHeight: 6,
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isDraft
+                            ? [Colors.amber, Colors.amber.shade600]
+                            : [accentColor, accentColor.withOpacity(0.7)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      isDraft ? Icons.edit_note : typeIcon,
+                      color: Colors.white,
+                      size: 22,
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  Text(
-                    '$pourcentage%',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: _getProgressColor(pourcentage),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          coffret.nom.isEmpty ? 'Sans nom' : coffret.nom,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          coffret.type,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: accentColor,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  if (pointsNon > 0) ...[
-                    const SizedBox(width: 8),
-                    _buildCoffretBadge('$pointsNon NC', Colors.red),
+                  // Badges
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      if (isDraft)
+                        _buildCoffretBadge('Brouillon', Colors.amber)
+                      else if (isComplet)
+                        _buildCoffretBadge('Complet', Colors.green)
+                      else
+                        _buildCoffretBadge('Incomplet', Colors.red),
+                      if (coffret.numeroEquipement != null &&
+                          coffret.numeroEquipement!.isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        _buildCoffretBadge(
+                          '#${coffret.numeroEquipement}',
+                          Colors.blueGrey,
+                        ),
+                      ],
+                    ],
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 10),
+              const Divider(height: 1),
+              const SizedBox(height: 10),
+
+              // ── Stats ──
+              Row(
+                children: [
+                  _buildCoffretStat(
+                    Icons.photo_outlined,
+                    '$totalPhotos',
+                    'photo(s)',
+                  ),
+                  const SizedBox(width: 14),
+                  _buildCoffretStat(
+                    Icons.comment_outlined,
+                    '${coffret.observationsLibres.length}',
+                    'obs.',
+                  ),
+                  const SizedBox(width: 14),
+                  _buildCoffretStat(
+                    Icons.power_input_outlined,
+                    '${coffret.alimentations.length}',
+                    'alim.',
+                  ),
+                  if (coffret.presenceParafoudre) ...[
+                    const SizedBox(width: 14),
+                    _buildCoffretStat(Icons.bolt, '', 'paraf.'),
                   ],
                 ],
               ),
-            ],
 
-            // ── Actions ──
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                TextButton.icon(
-                  onPressed: () => _editerCoffret(coffret, index, isMoyenneTension),
-                  icon: Icon(Icons.edit_outlined, size: 15, color: AppTheme.primaryBlue),
-                  label: Text('Éditer',
-                      style: TextStyle(fontSize: 12, color: AppTheme.primaryBlue)),
-                  style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8)),
-                ),
-                const SizedBox(width: 4),
-                TextButton.icon(
-                  onPressed: () {
-                    if (isDraft) {
-                      _supprimerBrouillon(coffret);
-                    } else {
-                      _supprimerCoffret(coffret, isMoyenneTension);
-                    }
-                  },
-                  icon: const Icon(Icons.delete_outline, size: 15, color: Colors.red),
-                  label: const Text('Supprimer',
-                      style: TextStyle(fontSize: 12, color: Colors.red)),
-                  style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8)),
+              // ── Barre de conformité ──
+              if (totalPoints > 0) ...[
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: totalPoints > 0
+                              ? pointsConformes / totalPoints
+                              : 0,
+                          backgroundColor: Colors.grey.shade200,
+                          color: _getProgressColor(pourcentage),
+                          minHeight: 6,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      '$pourcentage%',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: _getProgressColor(pourcentage),
+                      ),
+                    ),
+                    if (pointsNon > 0) ...[
+                      const SizedBox(width: 8),
+                      _buildCoffretBadge('$pointsNon NC', Colors.red),
+                    ],
+                  ],
                 ),
               ],
-            ),
-          ],
+
+              // ── Actions ──
+              const SizedBox(height: 10),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: () =>
+                        _editerCoffret(coffret, index, isMoyenneTension),
+                    icon: Icon(
+                      Icons.edit_outlined,
+                      size: 15,
+                      color: AppTheme.primaryBlue,
+                    ),
+                    label: Text(
+                      'Éditer',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.primaryBlue,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  TextButton.icon(
+                    onPressed: () {
+                      if (isDraft) {
+                        _supprimerBrouillon(coffret);
+                      } else {
+                        _supprimerCoffret(coffret, isMoyenneTension);
+                      }
+                    },
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      size: 15,
+                      color: Colors.red,
+                    ),
+                    label: const Text(
+                      'Supprimer',
+                      style: TextStyle(fontSize: 12, color: Colors.red),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
-}
-
-Widget _buildCoffretBadge(String label, Color color) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-    decoration: BoxDecoration(
-      color: color.withOpacity(0.12),
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: color.withOpacity(0.4)),
-    ),
-    child: Text(
-      label,
-      style: TextStyle(
-        fontSize: 9,
-        fontWeight: FontWeight.bold,
-        color: color.withOpacity(0.9),
-      ),
-    ),
-  );
-}
-
-Widget _buildCoffretStat(IconData icon, String value, String label) {
-  return Row(
-    mainAxisSize: MainAxisSize.min,
-    children: [
-      Icon(icon, size: 13, color: Colors.grey.shade500),
-      const SizedBox(width: 3),
-      Text(
-        '$value $label',
-        style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
-      ),
-    ],
-  );
-}
-
-// MODIFIER : Éditer un Équipement (brouillon ou complet)
-void _editerCoffret(CoffretArmoire coffret, int index, bool isMoyenneTension) async {
-  // Recalculer le vrai index dans la liste source (sans brouillons)
-  final realIndex = isMoyenneTension
-      ? _zone.coffrets.indexWhere((c) => c.qrCode == coffret.qrCode)
-      : _zone.coffretsDirects.indexWhere((c) => c.qrCode == coffret.qrCode);
-
-  final result = await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => AjouterCoffretScreen(
-        mission: widget.mission,
-        parentType: widget.isMoyenneTension ? 'zone_mt' : 'zone_bt',
-        parentIndex: widget.zoneIndex,
-        isMoyenneTension: widget.isMoyenneTension,
-        isInZone: false,
-        qrCode: coffret.qrCode,
-        coffret: coffret.statut == 'complet' ? coffret : null,
-        coffretIndex: coffret.statut == 'complet' ? realIndex : null,
-      ),
-    ),
-  );
-
-  if (result == true) {
-    _rechargerZone();
+    );
   }
-}
 
-// MODIFIER : Voir un Équipement complet
-void _voirCoffret(int index, bool isMoyenneTension) {
-  Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => DetailCoffretScreen(
-        mission: widget.mission,
-        isMoyenneTension: widget.isMoyenneTension,
-        parentType: widget.isMoyenneTension ? 'zone_mt' : 'zone_bt',
-        parentIndex: widget.zoneIndex,
-        coffretIndex: index,
-        coffret: isMoyenneTension ? _zone.coffrets[index] : _zone.coffretsDirects[index],
+  Widget _buildCoffretBadge(String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.4)),
       ),
-    ),
-  ).then((_) => _rechargerZone());
-}
-
-// MODIFIER : Supprimer un Équipement complet
-void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Confirmer la suppression'),
-      content: const Text('Voulez-vous vraiment supprimer ce coffret ?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Annuler'),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 9,
+          fontWeight: FontWeight.bold,
+          color: color.withOpacity(0.9),
         ),
-        ElevatedButton(
-          onPressed: () async {
-            Navigator.pop(context);
-            final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-            if (isMoyenneTension) {
-              if (widget.zoneIndex < audit.moyenneTensionZones.length) {
-                final realIndex = audit.moyenneTensionZones[widget.zoneIndex].coffrets
-                    .indexWhere((c) => c.qrCode == coffret.qrCode);
-                if (realIndex >= 0) {
-                  audit.moyenneTensionZones[widget.zoneIndex].coffrets.removeAt(realIndex);
-                  await HiveService.saveAuditInstallations(audit);
-                }
-              }
-            } else {
-              if (widget.zoneIndex < audit.basseTensionZones.length) {
-                final realIndex = audit.basseTensionZones[widget.zoneIndex].coffretsDirects
-                    .indexWhere((c) => c.qrCode == coffret.qrCode);
-                if (realIndex >= 0) {
-                  audit.basseTensionZones[widget.zoneIndex].coffretsDirects.removeAt(realIndex);
-                  await HiveService.saveAuditInstallations(audit);
-                }
-              }
-            }
-            _rechargerZone();
-            _showSuccess('Coffret supprimé');
-          },
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          child: const Text('Supprimer'),
+      ),
+    );
+  }
+
+  Widget _buildCoffretStat(IconData icon, String value, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 13, color: Colors.grey.shade500),
+        const SizedBox(width: 3),
+        Text(
+          '$value $label',
+          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
         ),
       ],
-    ),
-  );
-}
+    );
+  }
 
+  // MODIFIER : Éditer un Équipement (brouillon ou complet)
+  void _editerCoffret(
+    CoffretArmoire coffret,
+    int index,
+    bool isMoyenneTension,
+  ) async {
+    // Recalculer le vrai index dans la liste source (sans brouillons)
+    final realIndex = isMoyenneTension
+        ? _zone.coffrets.indexWhere((c) => c.qrCode == coffret.qrCode)
+        : _zone.coffretsDirects.indexWhere((c) => c.qrCode == coffret.qrCode);
+
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AjouterCoffretScreen(
+          mission: widget.mission,
+          parentType: widget.isMoyenneTension ? 'zone_mt' : 'zone_bt',
+          parentIndex: widget.zoneIndex,
+          isMoyenneTension: widget.isMoyenneTension,
+          isInZone: false,
+          qrCode: coffret.qrCode,
+          coffret: coffret.statut == 'complet' ? coffret : null,
+          coffretIndex: coffret.statut == 'complet' ? realIndex : null,
+        ),
+      ),
+    );
+
+    if (result == true) {
+      _rechargerZone();
+    }
+  }
+
+  // MODIFIER : Voir un Équipement complet
+  void _voirCoffret(int index, bool isMoyenneTension) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DetailCoffretScreen(
+          mission: widget.mission,
+          isMoyenneTension: widget.isMoyenneTension,
+          parentType: widget.isMoyenneTension ? 'zone_mt' : 'zone_bt',
+          parentIndex: widget.zoneIndex,
+          coffretIndex: index,
+          coffret: isMoyenneTension
+              ? _zone.coffrets[index]
+              : _zone.coffretsDirects[index],
+        ),
+      ),
+    ).then((_) => _rechargerZone());
+  }
+
+  // MODIFIER : Supprimer un Équipement complet
+  void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirmer la suppression'),
+        content: const Text('Voulez-vous vraiment supprimer ce coffret ?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final audit = await HiveService.getOrCreateAuditInstallations(
+                widget.mission.id,
+              );
+              if (isMoyenneTension) {
+                if (widget.zoneIndex < audit.moyenneTensionZones.length) {
+                  final realIndex = audit
+                      .moyenneTensionZones[widget.zoneIndex]
+                      .coffrets
+                      .indexWhere((c) => c.qrCode == coffret.qrCode);
+                  if (realIndex >= 0) {
+                    audit.moyenneTensionZones[widget.zoneIndex].coffrets
+                        .removeAt(realIndex);
+                    await HiveService.saveAuditInstallations(audit);
+                  }
+                }
+              } else {
+                if (widget.zoneIndex < audit.basseTensionZones.length) {
+                  final realIndex = audit
+                      .basseTensionZones[widget.zoneIndex]
+                      .coffretsDirects
+                      .indexWhere((c) => c.qrCode == coffret.qrCode);
+                  if (realIndex >= 0) {
+                    audit.basseTensionZones[widget.zoneIndex].coffretsDirects
+                        .removeAt(realIndex);
+                    await HiveService.saveAuditInstallations(audit);
+                  }
+                }
+              }
+              _rechargerZone();
+              _showSuccess('Coffret supprimé');
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
 
   // Ouvrir un brouillon pour continuer
   void _ouvrirBrouillon(CoffretArmoire draft) async {
@@ -1889,7 +2042,7 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
         ),
       ),
     );
-    
+
     if (result == true) {
       _rechargerZone();
     }
@@ -1928,14 +2081,15 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
     if (coffret.type.isEmpty) return false;
     if (coffret.domaineTension.isEmpty) return false;
     if (coffret.photos.isEmpty) return false;
-    
+
     for (var point in coffret.pointsVerification) {
       if (point.conformite.isEmpty) return false;
       if (point.conformite == 'non') {
-        if (point.observation == null || point.observation!.trim().isEmpty) return false;
+        if (point.observation == null || point.observation!.trim().isEmpty)
+          return false;
       }
     }
-    
+
     return true;
   }
 
@@ -1945,7 +2099,13 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
     return Colors.red;
   }
 
-  Widget _buildEmptyState(String type, String message, Function? onTap, IconData icon, String buttonText) {
+  Widget _buildEmptyState(
+    String type,
+    String message,
+    Function? onTap,
+    IconData icon,
+    String buttonText,
+  ) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -1979,8 +2139,10 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
   }
 
   Future<void> _refreshZone() async {
-    final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-    
+    final audit = await HiveService.getOrCreateAuditInstallations(
+      widget.mission.id,
+    );
+
     setState(() {
       if (widget.isMoyenneTension) {
         if (widget.zoneIndex < audit.moyenneTensionZones.length) {
@@ -2009,10 +2171,7 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
         ),
         Text(
           title,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
         ),
       ],
     );
@@ -2035,10 +2194,7 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (_zone.description != null && _zone.description!.isNotEmpty) ...[
-            Text(
-              'Description:',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
+            Text('Description:', style: TextStyle(fontWeight: FontWeight.bold)),
             SizedBox(height: 4),
             Text(_zone.description!),
             SizedBox(height: 12),
@@ -2048,8 +2204,10 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
             children: [
               _buildZoneStat('Locaux', _zone.locaux.length),
               _buildZoneStat(
-                'Coffrets', 
-                widget.isMoyenneTension ? _zone.coffrets.length : _zone.coffretsDirects.length
+                'Coffrets',
+                widget.isMoyenneTension
+                    ? _zone.coffrets.length
+                    : _zone.coffretsDirects.length,
               ),
               _buildZoneStat('Photos', totalPhotos),
               _buildZoneStat('Observations', _zone.observationsLibres.length),
@@ -2063,7 +2221,7 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
   @override
   Widget build(BuildContext context) {
     final isMoyenneTension = widget.isMoyenneTension;
-  
+
     final hasCoffrets = _coffretsDirects.isNotEmpty;
 
     return Scaffold(
@@ -2092,12 +2250,15 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
                 unselectedLabelColor: Colors.grey,
                 indicatorColor: AppTheme.primaryBlue,
                 tabs: [
-                  Tab(text: 'OBSERVATIONS (${_zone.observationsLibres.length})'),
+                  Tab(
+                    text: 'OBSERVATIONS (${_zone.observationsLibres.length})',
+                  ),
                   Tab(text: 'PHOTOS (${_zonePhotos.length})'),
                   Tab(text: 'LOCAUX (${_zone.locaux.length})'),
-                  Tab(text: isMoyenneTension 
-                    ? 'ÉQUIPEMENTS (${_coffretsDirects.length})'
-                    : 'ÉQUIPEMENTS DIRECTS (${_coffretsDirects.length})'
+                  Tab(
+                    text: isMoyenneTension
+                        ? 'ÉQUIPEMENTS (${_coffretsDirects.length})'
+                        : 'ÉQUIPEMENTS DIRECTS (${_coffretsDirects.length})',
                   ),
                 ],
               ),
@@ -2108,7 +2269,7 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
                 children: [
                   // Tab OBSERVATIONS
                   _buildObservationsTab(),
-                  
+
                   // Tab PHOTOS
                   _buildPhotosTab(),
 
@@ -2126,7 +2287,9 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
                             );
 
                       final locauxExistants = _zone.locaux;
-                      final nomsExistants = locauxExistants.map((l) => l.nom).toSet();
+                      final nomsExistants = locauxExistants
+                          .map((l) => l.nom)
+                          .toSet();
                       final uniqueDrafts = drafts
                           .where((d) => !nomsExistants.contains(d['nomLocal']))
                           .toList();
@@ -2141,7 +2304,9 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
                               child: _buildEmptyState(
                                 'locaux',
                                 'Aucun local dans cette zone',
-                                widget.isMoyenneTension ? _ajouterLocalMT : _ajouterLocalBT,
+                                widget.isMoyenneTension
+                                    ? _ajouterLocalMT
+                                    : _ajouterLocalBT,
                                 Icons.domain,
                                 'AJOUTER UN LOCAL',
                               ),
@@ -2153,58 +2318,78 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
                       return RefreshIndicator(
                         onRefresh: _refreshZone,
                         child: ListView.builder(
-                          padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
-                          itemCount: (uniqueDrafts.length + locauxExistants.length) as int,
+                          padding: const EdgeInsets.only(
+                            top: 16,
+                            left: 16,
+                            right: 16,
+                            bottom: 72,
+                          ),
+                          itemCount:
+                              (uniqueDrafts.length + locauxExistants.length)
+                                  as int,
                           itemBuilder: (context, index) {
                             if (index < uniqueDrafts.length) {
-                              return _buildLocalDraftCard(uniqueDrafts[index], widget.isMoyenneTension);
+                              return _buildLocalDraftCard(
+                                uniqueDrafts[index],
+                                widget.isMoyenneTension,
+                              );
                             } else {
                               final localIndex = index - uniqueDrafts.length;
-                              return _buildLocalCard(locauxExistants[localIndex], localIndex, widget.isMoyenneTension);
+                              return _buildLocalCard(
+                                locauxExistants[localIndex],
+                                localIndex,
+                                widget.isMoyenneTension,
+                              );
                             }
                           },
                         ),
                       );
                     },
                   ),
-                  
+
                   // Tab COFFRETS
                   !hasCoffrets
-                  ? RefreshIndicator(
-                        onRefresh: _refreshZone,
-                        child: SingleChildScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          child: SizedBox(
-                            height: MediaQuery.of(context).size.height - 200,
-                            child: _buildEmptyState(
-                              'coffrets', 
-                              isMoyenneTension 
-                                ? 'Aucun Équipement dans cette zone' 
-                                : 'Aucun Équipement direct dans cette zone',
-                              isMoyenneTension ? _ajouterCoffretMT : _ajouterCoffretDirectBT,
-                              Icons.electrical_services,
-                              'AJOUTER UN ÉQUIPEMENTS',
-                            )
+                      ? RefreshIndicator(
+                          onRefresh: _refreshZone,
+                          child: SingleChildScrollView(
+                            physics: const AlwaysScrollableScrollPhysics(),
+                            child: SizedBox(
+                              height: MediaQuery.of(context).size.height - 200,
+                              child: _buildEmptyState(
+                                'coffrets',
+                                isMoyenneTension
+                                    ? 'Aucun Équipement dans cette zone'
+                                    : 'Aucun Équipement direct dans cette zone',
+                                isMoyenneTension
+                                    ? _ajouterCoffretMT
+                                    : _ajouterCoffretDirectBT,
+                                Icons.electrical_services,
+                                'AJOUTER UN ÉQUIPEMENTS',
+                              ),
+                            ),
+                          ),
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _refreshZone,
+                          color: AppTheme.primaryBlue,
+                          backgroundColor: Colors.white,
+                          child: ListView.builder(
+                            padding: EdgeInsets.only(
+                              top: 16,
+                              left: 16,
+                              right: 16,
+                              bottom: 72,
+                            ),
+                            itemCount: _coffretsDirects.length,
+                            itemBuilder: (context, index) {
+                              return _buildCoffretCard(
+                                _coffretsDirects[index],
+                                index,
+                                isMoyenneTension,
+                              );
+                            },
                           ),
                         ),
-                      )
-                  
-                  : RefreshIndicator(
-                      onRefresh: _refreshZone,
-                      color: AppTheme.primaryBlue,
-                      backgroundColor: Colors.white,
-                      child: ListView.builder(
-                        padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
-                        itemCount: _coffretsDirects.length,
-                        itemBuilder: (context, index) {
-                          return _buildCoffretCard(
-                            _coffretsDirects[index],
-                            index,
-                            isMoyenneTension,
-                          );
-                        },
-                      ),
-                    ),
                 ],
               ),
             ),
@@ -2219,7 +2404,10 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
     );
   }
 
-  Widget _buildLocalDraftCard(Map<String, dynamic> draftData, bool isMoyenneTension) {
+  Widget _buildLocalDraftCard(
+    Map<String, dynamic> draftData,
+    bool isMoyenneTension,
+  ) {
     final local = draftData['local'];
     final nomLocal = draftData['nomLocal'] as String? ?? 'Sans nom';
     final currentStep = draftData['currentStep'] as int? ?? 0;
@@ -2231,9 +2419,12 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
       typeLabel = localTypes[local.type] ?? local.type ?? 'Local';
     }
 
-    final isFlowLong = local?.type == 'LOCAL_TRANSFORMATEUR' || local?.type == 'LOCAL_MTBT';
+    final isFlowLong =
+        local?.type == 'LOCAL_TRANSFORMATEUR' || local?.type == 'LOCAL_MTBT';
     final totalSteps = isFlowLong ? 4 : 3;
-    final progress = totalSteps > 0 ? (currentStep / totalSteps).clamp(0.0, 1.0) : 0.0;
+    final progress = totalSteps > 0
+        ? (currentStep / totalSteps).clamp(0.0, 1.0)
+        : 0.0;
     final pourcentage = (progress * 100).round();
 
     return Container(
@@ -2244,9 +2435,10 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
         border: Border.all(color: Colors.amber.shade300),
         boxShadow: [
           BoxShadow(
-              color: Colors.amber.withOpacity(0.15),
-              blurRadius: 8,
-              offset: const Offset(0, 3)),
+            color: Colors.amber.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
         ],
       ),
       child: InkWell(
@@ -2270,7 +2462,11 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
                       ),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: const Icon(Icons.edit_note, color: Colors.white, size: 22),
+                    child: const Icon(
+                      Icons.edit_note,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -2280,16 +2476,19 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
                         Text(
                           nomLocal,
                           style: const TextStyle(
-                              fontWeight: FontWeight.w700, fontSize: 15),
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
                           overflow: TextOverflow.ellipsis,
                         ),
                         const SizedBox(height: 2),
                         Text(
                           typeLabel,
                           style: const TextStyle(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.amber),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.amber,
+                          ),
                         ),
                       ],
                     ),
@@ -2309,14 +2508,21 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            Text('Étape $currentStep / $totalSteps',
-                                style: TextStyle(
-                                    fontSize: 11, color: Colors.grey.shade600)),
-                            Text('$pourcentage%',
-                                style: const TextStyle(
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.amber)),
+                            Text(
+                              'Étape $currentStep / $totalSteps',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: Colors.grey.shade600,
+                              ),
+                            ),
+                            Text(
+                              '$pourcentage%',
+                              style: const TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber,
+                              ),
+                            ),
                           ],
                         ),
                         const SizedBox(height: 4),
@@ -2341,11 +2547,18 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
                   TextButton.icon(
                     onPressed: () =>
                         _ouvrirBrouillonLocal(draftData, isMoyenneTension),
-                    icon: const Icon(Icons.play_arrow, size: 15, color: Colors.amber),
-                    label: const Text('Continuer',
-                        style: TextStyle(fontSize: 12, color: Colors.amber)),
+                    icon: const Icon(
+                      Icons.play_arrow,
+                      size: 15,
+                      color: Colors.amber,
+                    ),
+                    label: const Text(
+                      'Continuer',
+                      style: TextStyle(fontSize: 12, color: Colors.amber),
+                    ),
                     style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8)),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
                   ),
                   const SizedBox(width: 4),
                   TextButton.icon(
@@ -2355,15 +2568,18 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
                         builder: (ctx) => AlertDialog(
                           title: const Text('Supprimer le brouillon ?'),
                           content: const Text(
-                              'Ce brouillon sera supprimé définitivement.'),
+                            'Ce brouillon sera supprimé définitivement.',
+                          ),
                           actions: [
                             TextButton(
-                                onPressed: () => Navigator.pop(ctx, false),
-                                child: const Text('Annuler')),
+                              onPressed: () => Navigator.pop(ctx, false),
+                              child: const Text('Annuler'),
+                            ),
                             ElevatedButton(
                               onPressed: () => Navigator.pop(ctx, true),
                               style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.red),
+                                backgroundColor: Colors.red,
+                              ),
                               child: const Text('Supprimer'),
                             ),
                           ],
@@ -2374,11 +2590,18 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
                         _refreshZone();
                       }
                     },
-                    icon: const Icon(Icons.delete_outline, size: 15, color: Colors.red),
-                    label: const Text('Supprimer',
-                        style: TextStyle(fontSize: 12, color: Colors.red)),
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      size: 15,
+                      color: Colors.red,
+                    ),
+                    label: const Text(
+                      'Supprimer',
+                      style: TextStyle(fontSize: 12, color: Colors.red),
+                    ),
                     style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 8)),
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
                   ),
                 ],
               ),
@@ -2389,55 +2612,60 @@ void _supprimerCoffret(CoffretArmoire coffret, bool isMoyenneTension) {
     );
   }
 
-void _ouvrirBrouillonLocal(Map<String, dynamic> draftData, bool isMoyenneTension) async {
-  final draftId = draftData['localId'] as String?;
-  
-  final result = await Navigator.push(
-    context,
-    MaterialPageRoute(
-      builder: (context) => AjouterLocalScreen(
-        mission: widget.mission,
-        isMoyenneTension: isMoyenneTension,
-        zoneIndex: widget.zoneIndex,
-        isInZone: true,
-        local: null,
-        draftId: draftId,
-      ),
-    ),
-  );
-  
-  if (result == true) {
-    _rechargerZone();
-  }
-}
+  void _ouvrirBrouillonLocal(
+    Map<String, dynamic> draftData,
+    bool isMoyenneTension,
+  ) async {
+    final draftId = draftData['localId'] as String?;
 
-void _supprimerBrouillonLocal(String? draftId, String nomLocal) {
-  if (draftId == null) return;
-  
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: const Text('Supprimer le brouillon'),
-      content: Text('Voulez-vous vraiment supprimer le brouillon "$nomLocal" ?'),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Annuler'),
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => AjouterLocalScreen(
+          mission: widget.mission,
+          isMoyenneTension: isMoyenneTension,
+          zoneIndex: widget.zoneIndex,
+          isInZone: true,
+          local: null,
+          draftId: draftId,
         ),
-        ElevatedButton(
-          onPressed: () async {
-            Navigator.pop(context);
-            await HiveService.deleteLocalDraft(draftId);
-            _rechargerZone();
-            _showSuccess('Brouillon supprimé');
-          },
-          style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-          child: const Text('Supprimer'),
+      ),
+    );
+
+    if (result == true) {
+      _rechargerZone();
+    }
+  }
+
+  void _supprimerBrouillonLocal(String? draftId, String nomLocal) {
+    if (draftId == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Supprimer le brouillon'),
+        content: Text(
+          'Voulez-vous vraiment supprimer le brouillon "$nomLocal" ?',
         ),
-      ],
-    ),
-  );
-}
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await HiveService.deleteLocalDraft(draftId);
+              _rechargerZone();
+              _showSuccess('Brouillon supprimé');
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   void dispose() {

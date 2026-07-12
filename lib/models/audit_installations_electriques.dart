@@ -481,6 +481,9 @@ class CoffretArmoire {
   @HiveField(22)
   List<ObservationLibre> observationsParafoudre;
 
+  @HiveField(23)
+  List<ElementControle>? observationsParafoudreEnrichies;
+
   CoffretArmoire({
     required this.qrCode, // Ajouté dans le constructeur
     required this.nom,
@@ -505,13 +508,15 @@ class CoffretArmoire {
     List<String>? photosExternes,
     List<String>? photosInternes,
     List<ObservationLibre>? observationsParafoudre,
+    List<ElementControle>? observationsParafoudreEnrichies,
   })  : alimentations = alimentations ?? [],
         pointsVerification = pointsVerification ?? [],
         observationsLibres = observationsLibres ?? [],
         photos = photos ?? [],
         photosExternes = photosExternes ?? [],
         photosInternes = photosInternes ?? [],
-        observationsParafoudre = observationsParafoudre ?? [];
+        observationsParafoudre = observationsParafoudre ?? [],
+        observationsParafoudreEnrichies = observationsParafoudreEnrichies ?? [];
 }
 
 @HiveType(typeId: 12)
@@ -566,6 +571,9 @@ class PointVerification {
   @HiveField(5)
   List<String> photos; // Photos illustrant ce point spécifique
 
+  @HiveField(6)
+  List<ElementControle>? observations;
+
   PointVerification({
     required this.pointVerification,
     required this.conformite,
@@ -573,7 +581,9 @@ class PointVerification {
     this.referenceNormative,
     this.priorite,
     List<String>? photos,
-  }) : photos = photos ?? [];
+    List<ElementControle>? observations,
+  }) : photos = photos ?? [],
+       observations = observations ?? [];
 }
 
 @HiveType(typeId: 24)

@@ -468,19 +468,32 @@ class WordReportService {
           loc, equip,
           el.observation?.isNotEmpty == true ? el.observation! : el.elementControle,
           el.referenceNormative ?? '',
-          el.priorite?.toString() ?? '',
+          el.conforme == false ? (el.priorite?.toString() ?? '') : 'NA',
         ]);
       }
     }
 
     void addPt(String loc, String equip, PointVerification p) {
       if (p.conformite == 'non') {
-        list.add([
-          loc, equip,
-          p.observation?.isNotEmpty == true ? p.observation! : p.pointVerification,
-          p.referenceNormative ?? '',
-          p.priorite?.toString() ?? '',
-        ]);
+        if (p.observations != null && p.observations!.isNotEmpty) {
+          for (final obs in p.observations!) {
+            list.add([
+              loc,
+              equip,
+              obs.observation?.isNotEmpty == true ? obs.observation! : p.pointVerification,
+              obs.referenceNormative ?? p.referenceNormative ?? '',
+              obs.conforme == false ? (obs.priorite?.toString() ?? '') : 'NA',
+            ]);
+          }
+        } else {
+          list.add([
+            loc,
+            equip,
+            p.observation?.isNotEmpty == true ? p.observation! : p.pointVerification,
+            p.referenceNormative ?? '',
+            p.priorite?.toString() ?? '',
+          ]);
+        }
       }
     }
 
@@ -495,16 +508,31 @@ class WordReportService {
       }
       for (final c in l.coffrets) {
         for (final p in c.pointsVerification) addPt(l.nom, c.nom, p);
+        if (c.presenceParafoudre) {
+          for (final obs in (c.observationsParafoudreEnrichies ?? <ElementControle>[])) {
+            addEl(l.nom, 'Parafoudre ${c.nom}', obs);
+          }
+        }
       }
     }
     for (final z in audit.moyenneTensionZones) {
       for (final c in z.coffrets) {
         for (final p in c.pointsVerification) addPt(z.nom, c.nom, p);
+        if (c.presenceParafoudre) {
+          for (final obs in (c.observationsParafoudreEnrichies ?? <ElementControle>[])) {
+            addEl(z.nom, 'Parafoudre ${c.nom}', obs);
+          }
+        }
       }
       for (final l in z.locaux) {
         for (final el in l.dispositionsConstructives) addEl(l.nom, 'Dispositions constructives', el);
         for (final c in l.coffrets) {
           for (final p in c.pointsVerification) addPt(l.nom, c.nom, p);
+          if (c.presenceParafoudre) {
+            for (final obs in (c.observationsParafoudreEnrichies ?? <ElementControle>[])) {
+              addEl(l.nom, 'Parafoudre ${c.nom}', obs);
+            }
+          }
         }
       }
     }
@@ -521,31 +549,54 @@ class WordReportService {
           loc, equip,
           el.observation?.isNotEmpty == true ? el.observation! : el.elementControle,
           el.referenceNormative ?? '',
-          el.priorite?.toString() ?? '',
+          el.conforme == false ? (el.priorite?.toString() ?? '') : 'NA',
         ]);
       }
     }
 
     void addPt(String loc, String equip, PointVerification p) {
       if (p.conformite == 'non') {
-        list.add([
-          loc, equip,
-          p.observation?.isNotEmpty == true ? p.observation! : p.pointVerification,
-          p.referenceNormative ?? '',
-          p.priorite?.toString() ?? '',
-        ]);
+        if (p.observations != null && p.observations!.isNotEmpty) {
+          for (final obs in p.observations!) {
+            list.add([
+              loc,
+              equip,
+              obs.observation?.isNotEmpty == true ? obs.observation! : p.pointVerification,
+              obs.referenceNormative ?? p.referenceNormative ?? '',
+              obs.conforme == false ? (obs.priorite?.toString() ?? '') : 'NA',
+            ]);
+          }
+        } else {
+          list.add([
+            loc,
+            equip,
+            p.observation?.isNotEmpty == true ? p.observation! : p.pointVerification,
+            p.referenceNormative ?? '',
+            p.priorite?.toString() ?? '',
+          ]);
+        }
       }
     }
 
     for (final z in audit.basseTensionZones) {
       for (final c in z.coffretsDirects) {
         for (final p in c.pointsVerification) addPt(z.nom, c.nom, p);
+        if (c.presenceParafoudre) {
+          for (final obs in (c.observationsParafoudreEnrichies ?? <ElementControle>[])) {
+            addEl(z.nom, 'Parafoudre ${c.nom}', obs);
+          }
+        }
       }
       for (final l in z.locaux) {
         for (final el in (l.dispositionsConstructives ?? <ElementControle>[])) addEl(l.nom, 'Dispositions constructives', el);
         for (final el in (l.conditionsExploitation ?? <ElementControle>[])) addEl(l.nom, 'Conditions d\'exploitation', el);
         for (final c in l.coffrets) {
           for (final p in c.pointsVerification) addPt(l.nom, c.nom, p);
+          if (c.presenceParafoudre) {
+            for (final obs in (c.observationsParafoudreEnrichies ?? <ElementControle>[])) {
+              addEl(l.nom, 'Parafoudre ${c.nom}', obs);
+            }
+          }
         }
       }
     }
@@ -861,18 +912,32 @@ class WordReportService {
                     : p.conformite == 'non'
                         ? _red
                         : _orange),
-            TableCell.text(p.observation ?? '-'),
-            TableCell.text(p.referenceNormative ?? '-'),
-            TableCell.text(p.priorite?.toString() ?? '-'),
+            TableCell.text(
+                p.observations != null && p.observations!.isNotEmpty
+                    ? p.observations!.map((obs) => obs.observation ?? '').join('\n')
+                    : p.observation ?? '-'),
+            TableCell.text(
+                p.observations != null && p.observations!.isNotEmpty
+                    ? p.observations!.map((obs) => obs.referenceNormative ?? '-').join('\n')
+                    : p.referenceNormative ?? '-'),
+            TableCell.text(
+                p.observations != null && p.observations!.isNotEmpty
+                    ? p.observations!.map((obs) => obs.priorite?.toString() ?? '-').join('\n')
+                    : p.priorite?.toString() ?? '-'),
           ]),
       ];
       doc.addTable(Table(rows: pvRows, borders: TableBorders.all()));
     }
 
     // Observations parafoudre
-    if (coffret.presenceParafoudre && coffret.observationsParafoudre.isNotEmpty) {
+    final pfObs = coffret.observationsParafoudreEnrichies ?? [];
+    if (coffret.presenceParafoudre && (pfObs.isNotEmpty || coffret.observationsParafoudre.isNotEmpty)) {
       _subTitle(doc, 'Observations parafoudre');
-      _addObservationsTable(doc, coffret.observationsParafoudre);
+      if (pfObs.isNotEmpty) {
+        _addParafoudreObservationsTable(doc, pfObs);
+      } else {
+        _addObservationsTable(doc, coffret.observationsParafoudre);
+      }
     }
 
     // Observations libres
@@ -1215,6 +1280,21 @@ class WordReportService {
       _headerRow(['N°', 'Observation']),
       for (int i = 0; i < observations.length; i++)
         _dataRow(['${i + 1}', observations[i].texte]),
+    ];
+    doc.addTable(Table(rows: rows, borders: TableBorders.all()));
+  }
+
+  static void _addParafoudreObservationsTable(Document doc, List<ElementControle> observations) {
+    if (observations.isEmpty) return;
+    final rows = <TableRow>[
+      _headerRow(['N°', 'Observation', 'Réf. normative', 'Priorité']),
+      for (int i = 0; i < observations.length; i++)
+        TableRow(cells: [
+          TableCell.text('${i + 1}'),
+          TableCell.text(observations[i].observation?.isNotEmpty == true ? observations[i].observation! : observations[i].elementControle),
+          TableCell.text(observations[i].referenceNormative ?? '-'),
+          TableCell.text(observations[i].priorite?.toString() ?? '-'),
+        ]),
     ];
     doc.addTable(Table(rows: rows, borders: TableBorders.all()));
   }

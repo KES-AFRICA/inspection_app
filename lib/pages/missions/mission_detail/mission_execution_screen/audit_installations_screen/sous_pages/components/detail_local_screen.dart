@@ -44,7 +44,6 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   List<String> _localPhotos = [];
   bool _isLoadingLocalPhotos = false;
 
-  
   // Pour les nouvelles observations
   final _nouvelleObservationController = TextEditingController();
 
@@ -68,7 +67,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   void _loadCoffrets() {
     // Récupérer les coffrets déjà sauvegardés dans le local
     final savedCoffrets = List<CoffretArmoire>.from(_local.coffrets);
-    
+
     // Récupérer les brouillons pour ce local
     final drafts = HiveService.getCoffretDraftsForLocation(
       missionId: widget.mission.id,
@@ -77,19 +76,23 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       isMoyenneTension: widget.isMoyenneTension,
       zoneIndex: widget.zoneIndex,
     );
-    
+
     // Filtrer les brouillons qui ne sont PAS déjà dans les coffrets sauvegardés
     final savedQrCodes = savedCoffrets.map((c) => c.qrCode).toSet();
-    final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).toList();
-    
+    final uniqueDrafts = drafts
+        .where((d) => !savedQrCodes.contains(d.qrCode))
+        .toList();
+
     setState(() {
       _coffrets = [...uniqueDrafts, ...savedCoffrets];
     });
   }
 
   Future<void> _refreshLocal() async {
-    final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-    
+    final audit = await HiveService.getOrCreateAuditInstallations(
+      widget.mission.id,
+    );
+
     setState(() {
       if (widget.isMoyenneTension) {
         if (widget.isInZone && widget.zoneIndex != null) {
@@ -105,7 +108,8 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
           }
         }
       } else {
-        if (widget.zoneIndex != null && widget.zoneIndex! < audit.basseTensionZones.length) {
+        if (widget.zoneIndex != null &&
+            widget.zoneIndex! < audit.basseTensionZones.length) {
           final zone = audit.basseTensionZones[widget.zoneIndex!];
           if (widget.localIndex < zone.locaux.length) {
             _local = zone.locaux[widget.localIndex];
@@ -120,7 +124,6 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       _loadCoffrets();
     });
   }
-  
 
   // ===== Ouvrir un brouillon pour continuer =====
   void _ouvrirBrouillon(CoffretArmoire draft) async {
@@ -139,7 +142,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
         ),
       ),
     );
-    
+
     if (result == true) {
       _rechargerLocal();
     }
@@ -175,7 +178,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   void _chargerPhotosLocal() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      
+
       if (_local.photos.isNotEmpty) {
         setState(() {
           _localPhotos = List.from(_local.photos);
@@ -194,17 +197,20 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
         maxWidth: 1024,
         maxHeight: 1024,
       );
-      
+
       if (photo != null) {
         setState(() => _isLoadingLocalPhotos = true);
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'locaux');
-        
+
+        final savedPath = await _savePhotoToAppDirectory(
+          File(photo.path),
+          'locaux',
+        );
+
         setState(() {
           _localPhotos.add(savedPath);
           _local.photos = _localPhotos;
         });
-        
+
         await _sauvegarderLocal();
         _showSuccess('Photo ajoutée au local');
       }
@@ -223,17 +229,20 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
         maxWidth: 1024,
         maxHeight: 1024,
       );
-      
+
       if (photo != null) {
         setState(() => _isLoadingLocalPhotos = true);
-        
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'locaux');
-        
+
+        final savedPath = await _savePhotoToAppDirectory(
+          File(photo.path),
+          'locaux',
+        );
+
         setState(() {
           _localPhotos.add(savedPath);
           _local.photos = _localPhotos;
         });
-        
+
         await _sauvegarderLocal();
         _showSuccess('Photo ajoutée depuis la galerie');
       }
@@ -247,14 +256,14 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   Future<String> _savePhotoToAppDirectory(File photoFile, String subDir) async {
     final appDir = await getApplicationDocumentsDirectory();
     final photosDir = Directory('${appDir.path}/audit_photos/$subDir');
-    
+
     if (!await photosDir.exists()) {
       await photosDir.create(recursive: true);
     }
-    
+
     final fileName = '${subDir}_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final newPath = '${photosDir.path}/$fileName';
-    
+
     await photoFile.copy(newPath);
     return newPath;
   }
@@ -280,10 +289,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  File(photos[index]),
-                  fit: BoxFit.contain,
-                ),
+                child: Image.file(File(photos[index]), fit: BoxFit.contain),
               ),
             ),
             Positioned(
@@ -338,29 +344,29 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              
+
               try {
                 // Supprimer le fichier physique
                 final file = File(photos[index]);
                 if (await file.exists()) {
                   await file.delete();
                 }
-                
+
                 // Mettre à jour la liste
                 setState(() {
                   photos.removeAt(index);
-                  
+
                   // Si c'est une photo du local, mettre à jour le local
                   if (photos == _localPhotos) {
                     _local.photos = _localPhotos;
                   }
                 });
-                
+
                 // Sauvegarder si c'est une photo du local
                 if (photos == _localPhotos) {
                   await _sauvegarderLocal();
                 }
-                
+
                 _showSuccess('Photo supprimée');
               } catch (e) {
                 _showError('Erreur lors de la suppression: $e');
@@ -374,7 +380,13 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
     );
   }
 
-  Widget _buildPhotosSection(String title, List<String> photos, Function prendrePhoto, Function choisirPhoto, {bool isLoading = false}) {
+  Widget _buildPhotosSection(
+    String title,
+    List<String> photos,
+    Function prendrePhoto,
+    Function choisirPhoto, {
+    bool isLoading = false,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -532,7 +544,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
 
   Widget _buildPhotosTab() {
     return Padding(
-      padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),
+      padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
       child: _buildPhotosSection(
         'Photos du local',
         _localPhotos,
@@ -554,9 +566,12 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
         maxWidth: 1024,
         maxHeight: 1024,
       );
-      
+
       if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations_locaux');
+        final savedPath = await _savePhotoToAppDirectory(
+          File(photo.path),
+          'observations_locaux',
+        );
         setState(() {
           photosList.add(savedPath);
         });
@@ -566,7 +581,9 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
     }
   }
 
-  Future<void> _choisirPhotoObservationDepuisGalerie(List<String> photosList) async {
+  Future<void> _choisirPhotoObservationDepuisGalerie(
+    List<String> photosList,
+  ) async {
     try {
       final XFile? photo = await _picker.pickImage(
         source: ImageSource.gallery,
@@ -574,9 +591,12 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
         maxWidth: 1024,
         maxHeight: 1024,
       );
-      
+
       if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations_locaux');
+        final savedPath = await _savePhotoToAppDirectory(
+          File(photo.path),
+          'observations_locaux',
+        );
         setState(() {
           photosList.add(savedPath);
         });
@@ -602,7 +622,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
         ),
       ),
     );
-    
+
     // Rafraîchir après retour avec un délai pour éviter le conflit
     Future.delayed(Duration(milliseconds: 100), () {
       if (mounted) {
@@ -613,7 +633,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
 
   void _editerObservation(int index) async {
     final observation = _local.observationsLibres[index];
-    
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -630,7 +650,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
         ),
       ),
     );
-    
+
     // Rafraîchir après retour avec un délai
     Future.delayed(Duration(milliseconds: 100), () {
       if (mounted) {
@@ -653,7 +673,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-              
+
               // Supprimer les fichiers photos associés
               final observation = _local.observationsLibres[index];
               for (var photoPath in observation.photos) {
@@ -666,11 +686,11 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                   print('Erreur suppression photo: $e');
                 }
               }
-              
+
               setState(() {
                 _local.observationsLibres.removeAt(index);
               });
-              
+
               await _sauvegarderLocal();
               _showSuccess('Observation supprimée');
             },
@@ -714,13 +734,13 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                 ),
               ],
             ),
-            
+
             SizedBox(height: 4),
             Text(
               '${_formatDate(observation.dateCreation)}',
               style: TextStyle(fontSize: 12, color: Colors.grey),
             ),
-            
+
             if (observation.photos.isNotEmpty) ...[
               SizedBox(height: 8),
               Text(
@@ -735,7 +755,8 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                   itemCount: observation.photos.length,
                   itemBuilder: (context, photoIndex) {
                     return GestureDetector(
-                      onTap: () => _previsualiserPhoto(observation.photos, photoIndex),
+                      onTap: () =>
+                          _previsualiserPhoto(observation.photos, photoIndex),
                       child: Container(
                         width: 80,
                         margin: EdgeInsets.only(right: 8),
@@ -779,9 +800,9 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
 
   Widget _buildObservationsTab() {
     final observations = _local.observationsLibres;
-    
+
     return Padding(
-     padding: EdgeInsets.only(top:16,left: 16,right: 16,bottom: 72),
+      padding: EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
       child: Column(
         children: [
           if (observations.isNotEmpty) ...[
@@ -898,11 +919,13 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   void _rechargerLocal() async {
     if (!mounted) return;
     try {
-      final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-      
+      final audit = await HiveService.getOrCreateAuditInstallations(
+        widget.mission.id,
+      );
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
-        
+
         setState(() {
           if (widget.isMoyenneTension) {
             if (widget.isInZone && widget.zoneIndex != null) {
@@ -918,7 +941,8 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
               }
             }
           } else {
-            if (widget.zoneIndex != null && widget.zoneIndex! < audit.basseTensionZones.length) {
+            if (widget.zoneIndex != null &&
+                widget.zoneIndex! < audit.basseTensionZones.length) {
               final zone = audit.basseTensionZones[widget.zoneIndex!];
               if (widget.localIndex < zone.locaux.length) {
                 _local = zone.locaux[widget.localIndex];
@@ -926,7 +950,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
             }
           }
           _chargerPhotosLocal();
-          _loadCoffrets(); 
+          _loadCoffrets();
         });
       });
     } catch (e) {
@@ -942,14 +966,15 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
     if (coffret.type.isEmpty) return false;
     if (coffret.domaineTension.isEmpty) return false;
     if (coffret.photos.isEmpty) return false;
-    
+
     for (var point in coffret.pointsVerification) {
       if (point.conformite.isEmpty) return false;
       if (point.conformite == 'non') {
-        if (point.observation == null || point.observation!.trim().isEmpty) return false;
+        if (point.observation == null || point.observation!.trim().isEmpty)
+          return false;
       }
     }
-    
+
     return true;
   }
 
@@ -962,7 +987,6 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       ),
     );
   }
-
 
   void _voirCoffret(int index) {
     Navigator.push(
@@ -1029,9 +1053,9 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                 _local.coffrets.removeAt(index);
               });
               await _sauvegarderLocal();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Équipement supprimé')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('Équipement supprimé')));
             },
             child: Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
@@ -1039,12 +1063,13 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       ),
     );
   }
-  
 
   Future<void> _sauvegarderLocal() async {
     try {
-      final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-      
+      final audit = await HiveService.getOrCreateAuditInstallations(
+        widget.mission.id,
+      );
+
       if (widget.isMoyenneTension) {
         if (widget.isInZone && widget.zoneIndex != null) {
           // Local dans une zone MT
@@ -1062,21 +1087,21 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
         }
       } else {
         // Pour basse tension (toujours dans une zone)
-        if (widget.zoneIndex != null && widget.zoneIndex! < audit.basseTensionZones.length) {
+        if (widget.zoneIndex != null &&
+            widget.zoneIndex! < audit.basseTensionZones.length) {
           final zone = audit.basseTensionZones[widget.zoneIndex!];
           if (widget.localIndex < zone.locaux.length) {
             zone.locaux[widget.localIndex] = _local;
           }
         }
       }
-      
+
       await HiveService.saveAuditInstallations(audit);
     } catch (e) {
       print('❌ Erreur sauvegarderLocal: $e');
       throw e;
     }
   }
-
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1089,9 +1114,13 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   }
 
   Widget _buildSection(String title, List<ElementControle> elements) {
-    final conformiteCount = elements.where((e) => e.conforme == true && !e.estNA).length;
+    final conformiteCount = elements
+        .where((e) => e.conforme == true && !e.estNA)
+        .length;
     final totalCount = elements.where((e) => !e.estNA).length;
-    final pourcentage = totalCount > 0 ? (conformiteCount / totalCount * 100).round() : 0;
+    final pourcentage = totalCount > 0
+        ? (conformiteCount / totalCount * 100).round()
+        : 0;
 
     return Card(
       margin: EdgeInsets.only(bottom: 16),
@@ -1138,288 +1167,284 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
     );
   }
 
-Widget _buildClassementTab() {
-  return FutureBuilder<ClassementEmplacement?>(
-    future: Future.value(
-      HiveService.getClassementForLocal(
-        missionId: widget.mission.id,
-        localisation: _local.nom,
+  Widget _buildClassementTab() {
+    return FutureBuilder<ClassementEmplacement?>(
+      future: Future.value(
+        HiveService.getClassementForLocal(
+          missionId: widget.mission.id,
+          localisation: _local.nom,
+        ),
       ),
-    ),
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return const Center(child: CircularProgressIndicator());
-      }
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        }
 
-      final classement = snapshot.data;
+        final classement = snapshot.data;
 
-      if (classement == null) {
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(
-                Icons.security_outlined,
-                size: 64,
-                color: Colors.grey.shade400,
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Aucun classement défini',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: Colors.grey.shade600,
+        if (classement == null) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.security_outlined,
+                  size: 64,
+                  color: Colors.grey.shade400,
                 ),
-              ),
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: _allerAuClassement,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue,
-                  foregroundColor: Colors.white,
+                const SizedBox(height: 16),
+                Text(
+                  'Aucun classement défini',
+                  style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                 ),
-                child: const Text('DÉFINIR LE CLASSEMENT'),
-              ),
-            ],
-          ),
-        );
-      }
-
-      final estComplet =
-          classement.af != null &&
-          classement.be != null &&
-          classement.ae != null &&
-          classement.ad != null &&
-          classement.ag != null;
-
-      return ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Card(
-            margin: const EdgeInsets.only(bottom: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+                const SizedBox(height: 8),
+                ElevatedButton(
+                  onPressed: _allerAuClassement,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: const Text('DÉFINIR LE CLASSEMENT'),
+                ),
+              ],
             ),
-            elevation: 2,
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Ligne 1
-                  Row(
-                    children: [
-                      Container(
-                        width: 40,
-                        height: 40,
-                        decoration: BoxDecoration(
-                          color: estComplet
-                              ? Colors.green.shade50
-                              : Colors.blue.shade50,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Icon(
-                          estComplet
-                              ? Icons.check_circle_outline
-                              : Icons.info_outline,
-                          color: estComplet
-                              ? Colors.green
-                              : AppTheme.primaryBlue,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              _local.nom,
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                            if (classement.zone != null) ...[
-                              const SizedBox(height: 4),
-                              Text(
-                                'Zone: ${classement.zone}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey.shade600,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: estComplet
-                              ? Colors.green.shade100
-                              : Colors.orange.shade100,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          estComplet ? 'Complet' : 'À compléter',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
+          );
+        }
+
+        final estComplet =
+            classement.af != null &&
+            classement.be != null &&
+            classement.ae != null &&
+            classement.ad != null &&
+            classement.ag != null;
+
+        return ListView(
+          padding: const EdgeInsets.all(16),
+          children: [
+            Card(
+              margin: const EdgeInsets.only(bottom: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Ligne 1
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
                             color: estComplet
-                                ? Colors.green.shade800
-                                : Colors.orange.shade800,
+                                ? Colors.green.shade50
+                                : Colors.blue.shade50,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            estComplet
+                                ? Icons.check_circle_outline
+                                : Icons.info_outline,
+                            color: estComplet
+                                ? Colors.green
+                                : AppTheme.primaryBlue,
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // Origine
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Row(
-                      children: [
-                        Text(
-                          'Origine: ',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade700,
-                          ),
-                        ),
+                        const SizedBox(width: 12),
                         Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _local.nom,
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              if (classement.zone != null) ...[
+                                const SizedBox(height: 4),
+                                Text(
+                                  'Zone: ${classement.zone}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 4,
+                          ),
+                          decoration: BoxDecoration(
+                            color: estComplet
+                                ? Colors.green.shade100
+                                : Colors.orange.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                           child: Text(
-                            classement.origineClassement.isNotEmpty
-                                ? classement.origineClassement
-                                : 'Non définie',
+                            estComplet ? 'Complet' : 'À compléter',
                             style: TextStyle(
-                              fontWeight: FontWeight.w600,
-                              color: classement.origineClassement.isNotEmpty
-                                  ? AppTheme.darkBlue
-                                  : Colors.grey,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                              color: estComplet
+                                  ? Colors.green.shade800
+                                  : Colors.orange.shade800,
                             ),
                           ),
                         ),
                       ],
                     ),
-                  ),
 
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 12),
 
-                  // Influences
-                  if (estComplet)
-                    Column(
-                    
-                      children: [
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: Colors.green.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.green.shade100),
-                          ),
-                          child: Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: [
-                              _buildInfluenceChip('AF', classement.af!),
-                              _buildInfluenceChip('BE', classement.be!),
-                              _buildInfluenceChip('AE', classement.ae!),
-                              _buildInfluenceChip('AD', classement.ad!),
-                              _buildInfluenceChip('AG', classement.ag!),
-                            ],
-                          ),
-                        ),
-                        SizedBox(height: 8),
-                        Container(
-                          width: double.infinity,
-                          padding: EdgeInsets.all(8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: Colors.green.shade200),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              Text(
-                                'IP: ${classement.ip ?? "N/A"}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green.shade800,
-                                ),
-                              ),
-                              Text(
-                                'IK: ${classement.ik ?? "N/A"}',
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.green.shade800,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    )
-                  else
+                    // Origine
                     Container(
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: Colors.orange.shade50,
+                        color: Colors.grey.shade50,
                         borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange.shade100),
                       ),
-                      child: const Text(
-                        'Cliquez sur "Modifier le classement" pour renseigner les influences externes',
-                        textAlign: TextAlign.center,
+                      child: Row(
+                        children: [
+                          Text(
+                            'Origine: ',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey.shade700,
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              classement.origineClassement.isNotEmpty
+                                  ? classement.origineClassement
+                                  : 'Non définie',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: classement.origineClassement.isNotEmpty
+                                    ? AppTheme.darkBlue
+                                    : Colors.grey,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 12),
 
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _allerAuClassement,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
-                        foregroundColor: Colors.white,
-                        minimumSize: const Size.fromHeight(48),
+                    // Influences
+                    if (estComplet)
+                      Column(
+                        children: [
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.green.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.green.shade100),
+                            ),
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: [
+                                _buildInfluenceChip('AF', classement.af!),
+                                _buildInfluenceChip('BE', classement.be!),
+                                _buildInfluenceChip('AE', classement.ae!),
+                                _buildInfluenceChip('AD', classement.ad!),
+                                _buildInfluenceChip('AG', classement.ag!),
+                              ],
+                            ),
+                          ),
+                          SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(color: Colors.green.shade200),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                Text(
+                                  'IP: ${classement.ip ?? "N/A"}',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green.shade800,
+                                  ),
+                                ),
+                                Text(
+                                  'IK: ${classement.ik ?? "N/A"}',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.green.shade800,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade50,
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.orange.shade100),
+                        ),
+                        child: const Text(
+                          'Cliquez sur "Modifier le classement" pour renseigner les influences externes',
+                          textAlign: TextAlign.center,
+                        ),
                       ),
-                      child: const Text('MODIFIER LE CLASSEMENT'),
+
+                    const SizedBox(height: 16),
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _allerAuClassement,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.primaryBlue,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(48),
+                        ),
+                        child: const Text('MODIFIER LE CLASSEMENT'),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
-          ),
-        ],
-      );
-    },
-  );
-}
+          ],
+        );
+      },
+    );
+  }
 
   void _allerAuClassement() async {
     final classement = await HiveService.getOrCreateClassementForLocal(
       missionId: widget.mission.id,
       localisation: _local.nom,
-      zone: widget.isInZone && widget.zoneIndex != null 
-          ? 'Zone ${widget.zoneIndex! + 1}' 
+      zone: widget.isInZone && widget.zoneIndex != null
+          ? 'Zone ${widget.zoneIndex! + 1}'
           : null,
       typeLocal: _local.type,
     );
-    
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -1429,7 +1454,7 @@ Widget _buildClassementTab() {
         ),
       ),
     );
-    
+
     // Rafraîchir après retour
     if (result == true) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1440,243 +1465,266 @@ Widget _buildClassementTab() {
     }
   }
 
-Widget _buildInfluenceChip(String type, String code) {
-  final Map<String, Color> colorMap = {
-    'AF': Colors.blue,
-    'BE': Colors.purple,
-    'AE': Colors.orange,
-    'AD': Colors.teal,
-    'AG': Colors.red,
-  };
-  
-  return Container(
-    padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-    decoration: BoxDecoration(
-      color: colorMap[type]!.withOpacity(0.1),
-      borderRadius: BorderRadius.circular(6),
-      border: Border.all(color: colorMap[type]!.withOpacity(0.3)),
-    ),
-    child: Text(
-      '$type: $code',
-      style: TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.w500,
-        color: colorMap[type]!,
+  Widget _buildInfluenceChip(String type, String code) {
+    final Map<String, Color> colorMap = {
+      'AF': Colors.blue,
+      'BE': Colors.purple,
+      'AE': Colors.orange,
+      'AD': Colors.teal,
+      'AG': Colors.red,
+    };
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: colorMap[type]!.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: colorMap[type]!.withOpacity(0.3)),
       ),
-    ),
-  );
-}
-
-Widget _buildElementItem(ElementControle element) {
-  // Déterminer le statut affiché
-  final String statut;
-  final Color statutBg;
-  final Color statutText;
-  final Color borderColor;
-
-  if (element.estNA) {
-    statut = 'NA';
-    statutBg = Colors.grey.shade200;
-    statutText = Colors.grey.shade700;
-    borderColor = Colors.grey.shade300;
-  } else if (element.conforme == true) {
-    statut = 'OUI';
-    statutBg = Colors.green.shade100;
-    statutText = Colors.green;
-    borderColor = Colors.green.shade200;
-  } else if (element.conforme == false) {
-    statut = 'NON';
-    statutBg = Colors.red.shade100;
-    statutText = Colors.red;
-    borderColor = Colors.red.shade200;
-  } else {
-    statut = '-';
-    statutBg = Colors.orange.shade100;
-    statutText = Colors.orange;
-    borderColor = Colors.orange.shade200;
+      child: Text(
+        '$type: $code',
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: colorMap[type]!,
+        ),
+      ),
+    );
   }
 
-  return Container(
-    margin: EdgeInsets.only(bottom: 8),
-    padding: EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.grey.shade50,
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: borderColor),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                element.elementControle,
-                style: TextStyle(fontSize: 14),
-              ),
-            ),
-            SizedBox(width: 8),
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: statutBg,
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                statut,
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: statutText,
-                ),
-              ),
-            ),
-            if (element.priorite != null) ...[
-              SizedBox(width: 8),
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: _getPrioriteColor(element.priorite!).withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: _getPrioriteColor(element.priorite!)),
-                ),
-                child: Text(
-                  'N${element.priorite}',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: _getPrioriteColor(element.priorite!),
-                  ),
-                ),
-              ),
-            ],
-          ],
-        ),
-        
-        // Observation
-        if (element.observation != null && element.observation!.isNotEmpty) ...[
-          SizedBox(height: 8),
-          Text(
-            'Observation: ${element.observation}',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.black,
-              fontStyle: FontStyle.italic,
-              fontWeight: FontWeight.bold
-            ),
-          ),
-        ],
+  Widget _buildElementItem(ElementControle element) {
+    // Déterminer le statut affiché
+    final String statut;
+    final Color statutBg;
+    final Color statutText;
+    final Color borderColor;
 
-                // Référence normative 
-        if (element.referenceNormative != null && element.referenceNormative!.isNotEmpty) ...[
-          SizedBox(height: 4),
+    if (element.estNA) {
+      statut = 'NA';
+      statutBg = Colors.grey.shade200;
+      statutText = Colors.grey.shade700;
+      borderColor = Colors.grey.shade300;
+    } else if (element.conforme == true) {
+      statut = 'OUI';
+      statutBg = Colors.green.shade100;
+      statutText = Colors.green;
+      borderColor = Colors.green.shade200;
+    } else if (element.conforme == false) {
+      statut = 'NON';
+      statutBg = Colors.red.shade100;
+      statutText = Colors.red;
+      borderColor = Colors.red.shade200;
+    } else {
+      statut = '-';
+      statutBg = Colors.orange.shade100;
+      statutText = Colors.orange;
+      borderColor = Colors.orange.shade200;
+    }
+
+    return Container(
+      margin: EdgeInsets.only(bottom: 8),
+      padding: EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderColor),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
           Row(
             children: [
-              Icon(Icons.article_outlined, size: 12, color: Colors.blue),
-              SizedBox(width: 4),
               Expanded(
                 child: Text(
-                  'Référence: ${element.referenceNormative}',
+                  element.elementControle,
+                  style: TextStyle(fontSize: 14),
+                ),
+              ),
+              SizedBox(width: 8),
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: statutBg,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  statut,
                   style: TextStyle(
-                    fontSize: 11,
-                    color: Colors.blue.shade700,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: statutText,
                   ),
                 ),
               ),
-            ],
-          ),
-        ],
-        
-        // Photos (uniquement si l'élément n'est pas conforme)
-        if (element.photos.isNotEmpty) ...[
-          SizedBox(height: 8),
-          Text(
-            "Photos de l'observation(${element.photos.length}):",
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color:element.conforme != null ? Colors.green : Colors.red,
-            ),
-          ),
-          SizedBox(height: 4),
-          SizedBox(
-            height: 60,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: element.photos.length,
-              itemBuilder: (context, photoIndex) {
-                return GestureDetector(
-                  onTap: () => _previsualiserPhoto(element.photos, photoIndex),
-                  child: Container(
-                    width: 60,
-                    margin: EdgeInsets.only(right: 8),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: Colors.red.shade300),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: Image.file(
-                        File(element.photos[photoIndex]),
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey.shade200,
-                            child: Center(
-                              child: Icon(
-                                Icons.broken_image_outlined,
-                                color: Colors.grey.shade400,
-                                size: 20,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+              if (element.priorite != null) ...[
+                SizedBox(width: 8),
+                Container(
+                  padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: _getPrioriteColor(
+                      element.priorite!,
+                    ).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(
+                      color: _getPrioriteColor(element.priorite!),
                     ),
                   ),
-                );
-              },
-            ),
+                  child: Text(
+                    'N${element.priorite}',
+                    style: TextStyle(
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                      color: _getPrioriteColor(element.priorite!),
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
+
+          // Observation
+          if (element.observation != null &&
+              element.observation!.isNotEmpty) ...[
+            SizedBox(height: 8),
+            Text(
+              'Observation: ${element.observation}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.black,
+                fontStyle: FontStyle.italic,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+
+          // Référence normative
+          if (element.referenceNormative != null &&
+              element.referenceNormative!.isNotEmpty) ...[
+            SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.article_outlined, size: 12, color: Colors.blue),
+                SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    'Référence: ${element.referenceNormative}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.blue.shade700,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+
+          // Photos (uniquement si l'élément n'est pas conforme)
+          if (element.photos.isNotEmpty) ...[
+            SizedBox(height: 8),
+            Text(
+              "Photos de l'observation(${element.photos.length}):",
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: element.conforme != null ? Colors.green : Colors.red,
+              ),
+            ),
+            SizedBox(height: 4),
+            SizedBox(
+              height: 60,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: element.photos.length,
+                itemBuilder: (context, photoIndex) {
+                  return GestureDetector(
+                    onTap: () =>
+                        _previsualiserPhoto(element.photos, photoIndex),
+                    child: Container(
+                      width: 60,
+                      margin: EdgeInsets.only(right: 8),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.red.shade300),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: Image.file(
+                          File(element.photos[photoIndex]),
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              color: Colors.grey.shade200,
+                              child: Center(
+                                child: Icon(
+                                  Icons.broken_image_outlined,
+                                  color: Colors.grey.shade400,
+                                  size: 20,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
         ],
-      ],
-    ),
-  );
-}
+      ),
+    );
+  }
+
   Widget _buildCoffretCard(CoffretArmoire coffret, int index) {
-    final pointsConformes =
-        coffret.pointsVerification.where((p) => p.conformite == 'oui').length;
-    final pointsNon =
-        coffret.pointsVerification.where((p) => p.conformite == 'non').length;
-    final totalPoints = coffret.pointsVerification.where((p) => p.conformite != 'na').length;
-    final pourcentage =
-        totalPoints > 0 ? (pointsConformes / totalPoints * 100).round() : 0;
+    final pointsConformes = coffret.pointsVerification
+        .where((p) => p.conformite == 'oui')
+        .length;
+    final pointsNon = coffret.pointsVerification
+        .where((p) => p.conformite == 'non')
+        .length;
+    final totalPoints = coffret.pointsVerification
+        .where((p) => p.conformite != 'na')
+        .length;
+    final pourcentage = totalPoints > 0
+        ? (pointsConformes / totalPoints * 100).round()
+        : 0;
     final isComplet = coffret.statut == 'complet' || _isCoffretComplet(coffret);
     final isDraft = coffret.statut != 'complet';
-    final totalPhotos = coffret.photos.length +
+    final totalPhotos =
+        coffret.photos.length +
         coffret.photosExternes.length +
         coffret.photosInternes.length;
 
-    final Color accentColor =
-        isDraft ? Colors.amber : isComplet ? Colors.green : Colors.red;
+    final Color accentColor = isDraft
+        ? Colors.amber
+        : isComplet
+        ? Colors.green
+        : Colors.red;
     final Color cardBg = isDraft ? Colors.amber.shade50 : Colors.white;
     final Color borderColor = isDraft
         ? Colors.amber.shade300
         : isComplet
-            ? Colors.green.shade200
-            : Colors.red.shade200;
+        ? Colors.green.shade200
+        : Colors.red.shade200;
 
     IconData typeIcon = Icons.electrical_services;
-    if (coffret.type == 'TGBT') typeIcon = Icons.developer_board;
-    else if (coffret.type == 'ARMOIRE') typeIcon = Icons.view_module_outlined;
-    else if (coffret.type == 'INVERSEUR') typeIcon = Icons.swap_horiz;
-    else if (coffret.type == 'TUR') typeIcon = Icons.power;
-    else if (coffret.type == 'COFFRET') typeIcon = Icons.inbox_outlined;
+    if (coffret.type == 'TGBT')
+      typeIcon = Icons.developer_board;
+    else if (coffret.type == 'ARMOIRE')
+      typeIcon = Icons.view_module_outlined;
+    else if (coffret.type == 'INVERSEUR')
+      typeIcon = Icons.swap_horiz;
+    else if (coffret.type == 'TUR')
+      typeIcon = Icons.power;
+    else if (coffret.type == 'COFFRET')
+      typeIcon = Icons.inbox_outlined;
 
     // Vrai index dans _local.coffrets (sans brouillons)
-    final realIndex =
-        _local.coffrets.indexWhere((c) => c.qrCode == coffret.qrCode);
+    final realIndex = _local.coffrets.indexWhere(
+      (c) => c.qrCode == coffret.qrCode,
+    );
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1707,154 +1755,192 @@ Widget _buildElementItem(ElementControle element) {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // ── Header ──
-              Row(children: [
-                Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: isDraft
-                          ? [Colors.amber, Colors.amber.shade600]
-                          : [accentColor, accentColor.withOpacity(0.7)],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+              Row(
+                children: [
+                  Container(
+                    width: 44,
+                    height: 44,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: isDraft
+                            ? [Colors.amber, Colors.amber.shade600]
+                            : [accentColor, accentColor.withOpacity(0.7)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(10),
                     ),
-                    borderRadius: BorderRadius.circular(10),
+                    child: Icon(
+                      isDraft ? Icons.edit_note : typeIcon,
+                      color: Colors.white,
+                      size: 22,
+                    ),
                   ),
-                  child: Icon(
-                    isDraft ? Icons.edit_note : typeIcon,
-                    color: Colors.white,
-                    size: 22,
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          coffret.nom.isEmpty ? 'Sans nom' : coffret.nom,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 15,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                          maxLines: 1,
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          coffret.type,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w500,
+                            color: accentColor,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      Text(
-                        coffret.nom.isEmpty ? 'Sans nom' : coffret.nom,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
+                      if (isDraft)
+                        _buildBadge('Brouillon', Colors.amber)
+                      else if (isComplet)
+                        _buildBadge('Complet', Colors.green)
+                      else
+                        _buildBadge('Incomplet', Colors.red),
+                      if (coffret.numeroEquipement != null &&
+                          coffret.numeroEquipement!.isNotEmpty) ...[
+                        const SizedBox(height: 3),
+                        _buildBadge(
+                          '#${coffret.numeroEquipement}',
+                          Colors.blueGrey,
                         ),
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        coffret.type,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: accentColor,
-                        ),
-                      ),
+                      ],
                     ],
                   ),
-                ),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    if (isDraft)
-                      _buildBadge('Brouillon', Colors.amber)
-                    else if (isComplet)
-                      _buildBadge('Complet', Colors.green)
-                    else
-                      _buildBadge('Incomplet', Colors.red),
-                    if (coffret.numeroEquipement != null &&
-                        coffret.numeroEquipement!.isNotEmpty) ...[
-                      const SizedBox(height: 3),
-                      _buildBadge('#${coffret.numeroEquipement}', Colors.blueGrey),
-                    ],
-                  ],
-                ),
-              ]),
+                ],
+              ),
 
               const SizedBox(height: 10),
               const Divider(height: 1),
               const SizedBox(height: 10),
 
               // ── Stats ──
-              Row(children: [
-                _buildMiniStatCoffret(Icons.photo_outlined, '$totalPhotos', 'photo(s)'),
-                const SizedBox(width: 14),
-                _buildMiniStatCoffret(Icons.comment_outlined,
-                    '${coffret.observationsLibres.length}', 'obs.'),
-                const SizedBox(width: 14),
-                _buildMiniStatCoffret(Icons.power_input_outlined,
-                    '${coffret.alimentations.length}', 'alim.'),
-                if (coffret.presenceParafoudre) ...[
+              Row(
+                children: [
+                  _buildMiniStatCoffret(
+                    Icons.photo_outlined,
+                    '$totalPhotos',
+                    'photo(s)',
+                  ),
                   const SizedBox(width: 14),
-                  _buildMiniStatCoffret(Icons.bolt, '⚡', 'parafoudre'),
+                  _buildMiniStatCoffret(
+                    Icons.comment_outlined,
+                    '${coffret.observationsLibres.length}',
+                    'obs.',
+                  ),
+                  const SizedBox(width: 14),
+                  _buildMiniStatCoffret(
+                    Icons.power_input_outlined,
+                    '${coffret.alimentations.length}',
+                    'alim.',
+                  ),
+                  if (coffret.presenceParafoudre) ...[
+                    const SizedBox(width: 14),
+                    _buildMiniStatCoffret(Icons.bolt, '', 'paraf.'),
+                  ],
                 ],
-              ]),
+              ),
 
               // ── Barre de conformité ──
               if (totalPoints > 0) ...[
                 const SizedBox(height: 10),
-                Row(children: [
-                  Expanded(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: pointsConformes / totalPoints,
-                        backgroundColor: Colors.grey.shade200,
-                        color: _getProgressColor(pourcentage),
-                        minHeight: 6,
+                Row(
+                  children: [
+                    Expanded(
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: pointsConformes / totalPoints,
+                          backgroundColor: Colors.grey.shade200,
+                          color: _getProgressColor(pourcentage),
+                          minHeight: 6,
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Text('$pourcentage%',
+                    const SizedBox(width: 10),
+                    Text(
+                      '$pourcentage%',
                       style: TextStyle(
                         fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: _getProgressColor(pourcentage),
-                      )),
-                  if (pointsNon > 0) ...[
-                    const SizedBox(width: 8),
-                    _buildBadge('$pointsNon NC', Colors.red),
+                      ),
+                    ),
+                    if (pointsNon > 0) ...[
+                      const SizedBox(width: 8),
+                      _buildBadge('$pointsNon NC', Colors.red),
+                    ],
                   ],
-                ]),
+                ),
               ],
 
               // ── Actions ──
               const SizedBox(height: 10),
-              Row(mainAxisAlignment: MainAxisAlignment.end, children: [
-                TextButton.icon(
-                  onPressed: () {
-                    if (isDraft) {
-                      _ouvrirBrouillon(coffret);
-                    } else if (realIndex >= 0) {
-                      _editerCoffretByIndex(realIndex);
-                    }
-                  },
-                  icon: Icon(Icons.edit_outlined,
-                      size: 15, color: AppTheme.primaryBlue),
-                  label: Text('Éditer',
-                      style:
-                          TextStyle(fontSize: 12, color: AppTheme.primaryBlue)),
-                  style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8)),
-                ),
-                const SizedBox(width: 4),
-                TextButton.icon(
-                  onPressed: () {
-                    if (isDraft) {
-                      _supprimerBrouillon(coffret);
-                    } else if (realIndex >= 0) {
-                      _supprimerCoffretByQr(coffret.qrCode);
-                    }
-                  },
-                  icon: const Icon(Icons.delete_outline,
-                      size: 15, color: Colors.red),
-                  label: const Text('Supprimer',
-                      style: TextStyle(fontSize: 12, color: Colors.red)),
-                  style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 8)),
-                ),
-              ]),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      if (isDraft) {
+                        _ouvrirBrouillon(coffret);
+                      } else if (realIndex >= 0) {
+                        _editerCoffretByIndex(realIndex);
+                      }
+                    },
+                    icon: Icon(
+                      Icons.edit_outlined,
+                      size: 15,
+                      color: AppTheme.primaryBlue,
+                    ),
+                    label: Text(
+                      'Éditer',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: AppTheme.primaryBlue,
+                      ),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  TextButton.icon(
+                    onPressed: () {
+                      if (isDraft) {
+                        _supprimerBrouillon(coffret);
+                      } else if (realIndex >= 0) {
+                        _supprimerCoffretByQr(coffret.qrCode);
+                      }
+                    },
+                    icon: const Icon(
+                      Icons.delete_outline,
+                      size: 15,
+                      color: Colors.red,
+                    ),
+                    label: const Text(
+                      'Supprimer',
+                      style: TextStyle(fontSize: 12, color: Colors.red),
+                    ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),
@@ -1863,28 +1949,35 @@ Widget _buildElementItem(ElementControle element) {
   }
 
   Widget _buildBadge(String label, Color color) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-        margin: const EdgeInsets.only(bottom: 3),
-        decoration: BoxDecoration(
-          color: color.withOpacity(0.12),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.4)),
-        ),
-        child: Text(label,
-            style: TextStyle(
-                fontSize: 9,
-                fontWeight: FontWeight.bold,
-                color: color.withOpacity(0.9))),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+    margin: const EdgeInsets.only(bottom: 3),
+    decoration: BoxDecoration(
+      color: color.withOpacity(0.12),
+      borderRadius: BorderRadius.circular(10),
+      border: Border.all(color: color.withOpacity(0.4)),
+    ),
+    child: Text(
+      label,
+      style: TextStyle(
+        fontSize: 9,
+        fontWeight: FontWeight.bold,
+        color: color.withOpacity(0.9),
+      ),
+    ),
+  );
 
   Widget _buildMiniStatCoffret(IconData icon, String value, String label) =>
-      Row(mainAxisSize: MainAxisSize.min, children: [
-        Icon(icon, size: 13, color: Colors.grey.shade500),
-        const SizedBox(width: 3),
-        Text('$value $label',
-            style: TextStyle(fontSize: 11, color: Colors.grey.shade600)),
-      ]);
-
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: Colors.grey.shade500),
+          const SizedBox(width: 3),
+          Text(
+            '$value $label',
+            style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
+          ),
+        ],
+      );
 
   void _voirCoffretByIndex(int realIndex) {
     Navigator.push(
@@ -1942,26 +2035,42 @@ Widget _buildElementItem(ElementControle element) {
             onPressed: () async {
               Navigator.pop(context);
               final audit = await HiveService.getOrCreateAuditInstallations(
-                  widget.mission.id);
+                widget.mission.id,
+              );
               // Trouver et supprimer par QR code dans tous les emplacements possibles
               bool saved = false;
               if (widget.isMoyenneTension) {
                 if (widget.isInZone && widget.zoneIndex != null) {
                   final zone = audit.moyenneTensionZones[widget.zoneIndex!];
                   final local = zone.locaux[widget.localIndex];
-                  final idx = local.coffrets.indexWhere((c) => c.qrCode == qrCode);
-                  if (idx >= 0) { local.coffrets.removeAt(idx); saved = true; }
+                  final idx = local.coffrets.indexWhere(
+                    (c) => c.qrCode == qrCode,
+                  );
+                  if (idx >= 0) {
+                    local.coffrets.removeAt(idx);
+                    saved = true;
+                  }
                 } else {
                   final local = audit.moyenneTensionLocaux[widget.localIndex];
-                  final idx = local.coffrets.indexWhere((c) => c.qrCode == qrCode);
-                  if (idx >= 0) { local.coffrets.removeAt(idx); saved = true; }
+                  final idx = local.coffrets.indexWhere(
+                    (c) => c.qrCode == qrCode,
+                  );
+                  if (idx >= 0) {
+                    local.coffrets.removeAt(idx);
+                    saved = true;
+                  }
                 }
               } else {
                 if (widget.zoneIndex != null) {
                   final zone = audit.basseTensionZones[widget.zoneIndex!];
                   final local = zone.locaux[widget.localIndex];
-                  final idx = local.coffrets.indexWhere((c) => c.qrCode == qrCode);
-                  if (idx >= 0) { local.coffrets.removeAt(idx); saved = true; }
+                  final idx = local.coffrets.indexWhere(
+                    (c) => c.qrCode == qrCode,
+                  );
+                  if (idx >= 0) {
+                    local.coffrets.removeAt(idx);
+                    saved = true;
+                  }
                 }
               }
               if (saved) {
@@ -1977,7 +2086,6 @@ Widget _buildElementItem(ElementControle element) {
     );
   }
 
-
   Color _getProgressColor(int pourcentage) {
     if (pourcentage >= 80) return Colors.green;
     if (pourcentage >= 50) return Colors.orange;
@@ -1986,10 +2094,14 @@ Widget _buildElementItem(ElementControle element) {
 
   Color _getPrioriteColor(int priorite) {
     switch (priorite) {
-      case 1: return Colors.blue;
-      case 2: return Colors.orange;
-      case 3: return Colors.red;
-      default: return Colors.grey;
+      case 1:
+        return Colors.blue;
+      case 2:
+        return Colors.orange;
+      case 3:
+        return Colors.red;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -2019,7 +2131,7 @@ Widget _buildElementItem(ElementControle element) {
             ),
           ),
         ],
-      )
+      ),
     );
   }
 
@@ -2060,10 +2172,7 @@ Widget _buildElementItem(ElementControle element) {
         ),
         Text(
           title,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
         ),
       ],
     );
@@ -2080,14 +2189,15 @@ Widget _buildElementItem(ElementControle element) {
     final List<Cellule> localCellules = _local is MoyenneTensionLocal
         ? (_local as MoyenneTensionLocal).cellules
         : _local is BasseTensionLocal
-            ? (_local as BasseTensionLocal).cellules
-            : [];
+        ? (_local as BasseTensionLocal).cellules
+        : [];
 
-    final List<TransformateurMTBT> localTransformateurs = _local is MoyenneTensionLocal
+    final List<TransformateurMTBT> localTransformateurs =
+        _local is MoyenneTensionLocal
         ? (_local as MoyenneTensionLocal).transformateurs
         : _local is BasseTensionLocal
-            ? (_local as BasseTensionLocal).transformateurs
-            : [];
+        ? (_local as BasseTensionLocal).transformateurs
+        : [];
 
     final isInaccessible = !(_local.accessible ?? true);
 
@@ -2113,43 +2223,54 @@ Widget _buildElementItem(ElementControle element) {
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
               color: Colors.red.shade50,
-              child: Row(children: [
-                Icon(Icons.lock_outline, color: Colors.red.shade700, size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    'Local inaccessible — aucun équipement ne peut être ajouté',
-                    style: TextStyle(
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.lock_outline,
+                    color: Colors.red.shade700,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Local inaccessible — aucun équipement ne peut être ajouté',
+                      style: TextStyle(
                         color: Colors.red.shade700,
                         fontSize: 13,
-                        fontWeight: FontWeight.w500),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
                   ),
-                ),
-              ]),
+                ],
+              ),
             ),
             Expanded(
               child: DefaultTabController(
                 length: 2,
-                child: Column(children: [
-                  Container(
-                    color: Colors.white,
-                    child: TabBar(
-                      labelColor: Colors.red.shade700,
-                      unselectedLabelColor: Colors.grey,
-                      indicatorColor: Colors.red.shade700,
-                      tabs: [
-                        Tab(text: 'OBSERVATIONS (${_local.observationsLibres.length})'),
-                        Tab(text: 'PHOTOS (${_localPhotos.length})'),
-                      ],
+                child: Column(
+                  children: [
+                    Container(
+                      color: Colors.white,
+                      child: TabBar(
+                        labelColor: Colors.red.shade700,
+                        unselectedLabelColor: Colors.grey,
+                        indicatorColor: Colors.red.shade700,
+                        tabs: [
+                          Tab(
+                            text:
+                                'OBSERVATIONS (${_local.observationsLibres.length})',
+                          ),
+                          Tab(text: 'PHOTOS (${_localPhotos.length})'),
+                        ],
+                      ),
                     ),
-                  ),
-                  Expanded(
-                    child: TabBarView(children: [
-                      _buildObservationsTab(),
-                      _buildPhotosTab(),
-                    ]),
-                  ),
-                ]),
+                    Expanded(
+                      child: TabBarView(
+                        children: [_buildObservationsTab(), _buildPhotosTab()],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -2189,12 +2310,19 @@ Widget _buildElementItem(ElementControle element) {
                   Container(
                     color: Colors.white,
                     child: TabBar(
-                      labelColor: widget.isMoyenneTension ? Colors.blue : Colors.blue,
+                      labelColor: widget.isMoyenneTension
+                          ? Colors.blue
+                          : Colors.blue,
                       unselectedLabelColor: Colors.grey,
-                      indicatorColor: widget.isMoyenneTension ? Colors.blue : Colors.blue,
+                      indicatorColor: widget.isMoyenneTension
+                          ? Colors.blue
+                          : Colors.blue,
                       isScrollable: true,
                       tabs: [
-                        Tab(text: 'OBSERVATIONS (${_local.observationsLibres.length})'),
+                        Tab(
+                          text:
+                              'OBSERVATIONS (${_local.observationsLibres.length})',
+                        ),
                         Tab(text: 'PHOTOS (${_localPhotos.length})'),
                         Tab(text: 'VÉRIFICATIONS'),
                         if (isTransformateur) Tab(text: 'CELLULE'),
@@ -2210,52 +2338,107 @@ Widget _buildElementItem(ElementControle element) {
                         _buildObservationsTab(),
                         _buildPhotosTab(),
                         ListView(
-                          padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
+                          padding: const EdgeInsets.only(
+                            top: 16,
+                            left: 16,
+                            right: 16,
+                            bottom: 72,
+                          ),
                           children: [
-                            _buildSection('DISPOSITIONS CONSTRUCTIVES', _local.dispositionsConstructives ?? []),
-                            _buildSection('CONDITIONS D\'EXPLOITATION', _local.conditionsExploitation ?? []),
+                            _buildSection(
+                              'DISPOSITIONS CONSTRUCTIVES',
+                              _local.dispositionsConstructives ?? [],
+                            ),
+                            _buildSection(
+                              'CONDITIONS D\'EXPLOITATION',
+                              _local.conditionsExploitation ?? [],
+                            ),
                           ],
                         ),
                         if (isTransformateur)
                           localCellules.isNotEmpty
-                            ? ListView(
-                                padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
-                                children: localCellules.asMap().entries.map<Widget>((entry) {
-                                  return _buildCelluleDetailCard(entry.value, entry.key);
-                                }).toList(),
-                              )
-                            : const Center(child: Text('Aucune cellule')),
+                              ? ListView(
+                                  padding: const EdgeInsets.only(
+                                    top: 16,
+                                    left: 16,
+                                    right: 16,
+                                    bottom: 72,
+                                  ),
+                                  children: localCellules
+                                      .asMap()
+                                      .entries
+                                      .map<Widget>((entry) {
+                                        return _buildCelluleDetailCard(
+                                          entry.value,
+                                          entry.key,
+                                        );
+                                      })
+                                      .toList(),
+                                )
+                              : const Center(child: Text('Aucune cellule')),
                         if (isTransformateur)
                           localTransformateurs.isNotEmpty
-                            ? ListView(
-                                padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
-                                children: localTransformateurs.asMap().entries.map<Widget>((entry) {
-                                  return _buildTransformateurDetailCard(entry.value, entry.key);
-                                }).toList(),
-                              )
-                            : const Center(child: Text('Aucune information transformateur')),
+                              ? ListView(
+                                  padding: const EdgeInsets.only(
+                                    top: 16,
+                                    left: 16,
+                                    right: 16,
+                                    bottom: 72,
+                                  ),
+                                  children: localTransformateurs
+                                      .asMap()
+                                      .entries
+                                      .map<Widget>((entry) {
+                                        return _buildTransformateurDetailCard(
+                                          entry.value,
+                                          entry.key,
+                                        );
+                                      })
+                                      .toList(),
+                                )
+                              : const Center(
+                                  child: Text(
+                                    'Aucune information transformateur',
+                                  ),
+                                ),
                         RefreshIndicator(
                           onRefresh: _refreshLocal,
                           child: _coffrets.isEmpty
                               ? SingleChildScrollView(
-                                  physics: const AlwaysScrollableScrollPhysics(),
+                                  physics:
+                                      const AlwaysScrollableScrollPhysics(),
                                   child: SizedBox(
-                                    height: MediaQuery.of(context).size.height - 200,
+                                    height:
+                                        MediaQuery.of(context).size.height -
+                                        200,
                                     child: Center(
                                       child: Column(
-                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
-                                          Icon(Icons.electrical_services_outlined, size: 64, color: Colors.grey.shade400),
+                                          Icon(
+                                            Icons.electrical_services_outlined,
+                                            size: 64,
+                                            color: Colors.grey.shade400,
+                                          ),
                                           const SizedBox(height: 16),
-                                          Text('Aucun équipement ajouté',
-                                              style: TextStyle(fontSize: 18, color: Colors.grey.shade600)),
+                                          Text(
+                                            'Aucun équipement ajouté',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              color: Colors.grey.shade600,
+                                            ),
+                                          ),
                                           const SizedBox(height: 8),
                                           ElevatedButton.icon(
                                             onPressed: _ajouterCoffret,
                                             icon: const Icon(Icons.add),
-                                            label: const Text('AJOUTER UN ÉQUIPEMENT'),
+                                            label: const Text(
+                                              'AJOUTER UN ÉQUIPEMENT',
+                                            ),
                                             style: ElevatedButton.styleFrom(
-                                              backgroundColor: AppTheme.primaryBlue,
+                                              backgroundColor:
+                                                  AppTheme.primaryBlue,
                                               foregroundColor: Colors.white,
                                             ),
                                           ),
@@ -2265,10 +2448,18 @@ Widget _buildElementItem(ElementControle element) {
                                   ),
                                 )
                               : ListView.builder(
-                                  padding: const EdgeInsets.only(top: 16, left: 16, right: 16, bottom: 72),
+                                  padding: const EdgeInsets.only(
+                                    top: 16,
+                                    left: 16,
+                                    right: 16,
+                                    bottom: 72,
+                                  ),
                                   itemCount: _coffrets.length,
                                   itemBuilder: (context, index) {
-                                    return _buildCoffretCard(_coffrets[index], index);
+                                    return _buildCoffretCard(
+                                      _coffrets[index],
+                                      index,
+                                    );
                                   },
                                 ),
                         ),
@@ -2299,154 +2490,192 @@ Widget _buildElementItem(ElementControle element) {
   }
 
   Widget _buildCelluleDetailCard(Cellule cellule, int index) {
-  return Container(
-    margin: EdgeInsets.only(bottom: 12),
-    padding: EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.grey.shade50,
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: Colors.grey),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: Colors.blue,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Center(
-                child: Text(
-                  '${index + 1}',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Center(
+                  child: Text(
+                    '${index + 1}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  cellule.type.isNotEmpty ? cellule.type : 'Cellule',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          if (cellule.fonction.isNotEmpty)
+            _buildInfoRow('Fonction', cellule.fonction),
+          if (cellule.marqueModeleAnnee.isNotEmpty)
+            _buildInfoRow('Marque/Modèle', cellule.marqueModeleAnnee),
+          if (cellule.tensionAssignee.isNotEmpty)
+            _buildInfoRow('Tension assignée', cellule.tensionAssignee),
+          if (cellule.pouvoirCoupure.isNotEmpty)
+            _buildInfoRow('Pouvoir de coupure', cellule.pouvoirCoupure),
+          if (cellule.numerotation.isNotEmpty)
+            _buildInfoRow('Numérotation', cellule.numerotation),
+          if (cellule.parafoudres.isNotEmpty)
+            _buildInfoRow('Parafoudres', cellule.parafoudres),
+          if (cellule.elementsVerifies.isNotEmpty) ...[
+            SizedBox(height: 8),
+            Text(
+              'Éléments vérifiés (${cellule.elementsVerifies.length})',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
             ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                cellule.type.isNotEmpty ? cellule.type : 'Cellule',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            SizedBox(height: 4),
+            ...cellule.elementsVerifies.map(
+              (e) => Padding(
+                padding: EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    Icon(
+                      e.conforme == true ? Icons.check_circle : Icons.cancel,
+                      size: 14,
+                      color: e.conforme == true ? Colors.green : Colors.red,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        e.elementControle,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
-        ),
-        SizedBox(height: 12),
-        if (cellule.fonction.isNotEmpty) _buildInfoRow('Fonction', cellule.fonction),
-        if (cellule.marqueModeleAnnee.isNotEmpty) _buildInfoRow('Marque/Modèle', cellule.marqueModeleAnnee),
-        if (cellule.tensionAssignee.isNotEmpty) _buildInfoRow('Tension assignée', cellule.tensionAssignee),
-        if (cellule.pouvoirCoupure.isNotEmpty) _buildInfoRow('Pouvoir de coupure', cellule.pouvoirCoupure),
-        if (cellule.numerotation.isNotEmpty) _buildInfoRow('Numérotation', cellule.numerotation),
-        if (cellule.parafoudres.isNotEmpty) _buildInfoRow('Parafoudres', cellule.parafoudres),
-        if (cellule.elementsVerifies.isNotEmpty) ...[
-          SizedBox(height: 8),
-          Text(
-            'Éléments vérifiés (${cellule.elementsVerifies.length})',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
-          ),
-          SizedBox(height: 4),
-          ...cellule.elementsVerifies.map((e) => Padding(
-            padding: EdgeInsets.only(bottom: 4),
-            child: Row(
-              children: [
-                Icon(
-                  e.conforme == true ? Icons.check_circle : Icons.cancel,
-                  size: 14,
-                  color: e.conforme == true ? Colors.green : Colors.red,
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    e.elementControle,
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
-                  ),
-                ),
-              ],
-            ),
-          )),
         ],
-      ],
-    ),
-  );
-}
+      ),
+    );
+  }
 
-Widget _buildTransformateurDetailCard(TransformateurMTBT transfo, int index) {
-  return Container(
-    margin: EdgeInsets.only(bottom: 12),
-    padding: EdgeInsets.all(16),
-    decoration: BoxDecoration(
-      color: Colors.grey.shade50,
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: Colors.grey),
-    ),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: Colors.orange,
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Center(
-                child: Text(
-                  '${index + 1}',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+  Widget _buildTransformateurDetailCard(TransformateurMTBT transfo, int index) {
+    return Container(
+      margin: EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: Colors.orange,
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Center(
+                  child: Text(
+                    '${index + 1}',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  transfo.typeTransformateur.isNotEmpty
+                      ? transfo.typeTransformateur
+                      : 'Transformateur',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                ),
+              ),
+            ],
+          ),
+          SizedBox(height: 12),
+          if (transfo.marqueAnnee.isNotEmpty)
+            _buildInfoRow('Marque/Année', transfo.marqueAnnee),
+          if (transfo.puissanceAssignee.isNotEmpty)
+            _buildInfoRow('Puissance', transfo.puissanceAssignee),
+          if (transfo.tensionPrimaireSecondaire.isNotEmpty)
+            _buildInfoRow('Tension', transfo.tensionPrimaireSecondaire),
+          if (transfo.relaisBuchholz.isNotEmpty)
+            _buildInfoRow('Relais Buchholz', transfo.relaisBuchholz),
+          if (transfo.typeRefroidissement.isNotEmpty)
+            _buildInfoRow('Refroidissement', transfo.typeRefroidissement),
+          if (transfo.regimeNeutre.isNotEmpty)
+            _buildInfoRow('Régime neutre', transfo.regimeNeutre),
+          if (transfo.elementsVerifies.isNotEmpty) ...[
+            SizedBox(height: 8),
+            Text(
+              'Éléments vérifiés (${transfo.elementsVerifies.length})',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
             ),
-            SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                transfo.typeTransformateur.isNotEmpty ? transfo.typeTransformateur : 'Transformateur',
-                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+            SizedBox(height: 4),
+            ...transfo.elementsVerifies.map(
+              (e) => Padding(
+                padding: EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    Icon(
+                      e.conforme == true ? Icons.check_circle : Icons.cancel,
+                      size: 14,
+                      color: e.conforme == true ? Colors.green : Colors.red,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        e.elementControle,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
-        ),
-        SizedBox(height: 12),
-        if (transfo.marqueAnnee.isNotEmpty) _buildInfoRow('Marque/Année', transfo.marqueAnnee),
-        if (transfo.puissanceAssignee.isNotEmpty) _buildInfoRow('Puissance', transfo.puissanceAssignee),
-        if (transfo.tensionPrimaireSecondaire.isNotEmpty) _buildInfoRow('Tension', transfo.tensionPrimaireSecondaire),
-        if (transfo.relaisBuchholz.isNotEmpty) _buildInfoRow('Relais Buchholz', transfo.relaisBuchholz),
-        if (transfo.typeRefroidissement.isNotEmpty) _buildInfoRow('Refroidissement', transfo.typeRefroidissement),
-        if (transfo.regimeNeutre.isNotEmpty) _buildInfoRow('Régime neutre', transfo.regimeNeutre),
-        if (transfo.elementsVerifies.isNotEmpty) ...[
-          SizedBox(height: 8),
-          Text(
-            'Éléments vérifiés (${transfo.elementsVerifies.length})',
-            style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500, color: Colors.grey),
-          ),
-          SizedBox(height: 4),
-          ...transfo.elementsVerifies.map((e) => Padding(
-            padding: EdgeInsets.only(bottom: 4),
-            child: Row(
-              children: [
-                Icon(
-                  e.conforme == true ? Icons.check_circle : Icons.cancel,
-                  size: 14,
-                  color: e.conforme == true ? Colors.green : Colors.red,
-                ),
-                SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    e.elementControle,
-                    style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
-                  ),
-                ),
-              ],
-            ),
-          )),
         ],
-      ],
-    ),
-  );
-}
+      ),
+    );
+  }
 }

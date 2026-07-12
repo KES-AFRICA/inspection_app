@@ -1858,13 +1858,25 @@ class PdfReportService {
         for (var pv in coffret.pointsVerification) {
           final conf = pv.conformite.toLowerCase().trim();
           if (conf == 'non' || conf == 'non conforme') {
-            list.add(_ObsRecap(
-              localisation: local.nom,
-              coffret: coffret.nom,
-              observation: pv.observation ?? pv.pointVerification,
-              refNorm: pv.referenceNormative ?? '',
-              priorite: pv.priorite?.toString() ?? '',
-            ));
+            if (pv.observations != null && pv.observations!.isNotEmpty) {
+              for (var obs in pv.observations!) {
+                list.add(_ObsRecap(
+                  localisation: local.nom,
+                  coffret: coffret.nom,
+                  observation: obs.observation?.isNotEmpty == true ? obs.observation! : pv.pointVerification,
+                  refNorm: obs.referenceNormative ?? pv.referenceNormative ?? '',
+                  priorite: obs.priorite?.toString() ?? '',
+                ));
+              }
+            } else {
+              list.add(_ObsRecap(
+                localisation: local.nom,
+                coffret: coffret.nom,
+                observation: pv.observation ?? pv.pointVerification,
+                refNorm: pv.referenceNormative ?? '',
+                priorite: pv.priorite?.toString() ?? '',
+              ));
+            }
           }
         }
         for (var obs in coffret.observationsLibres) {
@@ -1876,12 +1888,25 @@ class PdfReportService {
         }
         // Observations parafoudre dans la liste récap
         if (coffret.presenceParafoudre) {
-          for (var obs in coffret.observationsParafoudre) {
-            list.add(_ObsRecap(
-              localisation: local.nom,
-              coffret: '${coffret.nom} (Parafoudre)',
-              observation: obs.texte, refNorm: '', priorite: '',
-            ));
+          final pfEnrichies = coffret.observationsParafoudreEnrichies ?? [];
+          if (pfEnrichies.isNotEmpty) {
+            for (var obs in pfEnrichies) {
+              list.add(_ObsRecap(
+                localisation: local.nom,
+                coffret: '${coffret.nom} (Parafoudre)',
+                observation: obs.observation?.isNotEmpty == true ? obs.observation! : obs.elementControle,
+                refNorm: obs.referenceNormative ?? '',
+                priorite: obs.priorite?.toString() ?? '',
+              ));
+            }
+          } else {
+            for (var obs in coffret.observationsParafoudre) {
+              list.add(_ObsRecap(
+                localisation: local.nom,
+                coffret: '${coffret.nom} (Parafoudre)',
+                observation: obs.texte, refNorm: '', priorite: '',
+              ));
+            }
           }
         }
       }
@@ -1898,13 +1923,25 @@ class PdfReportService {
         for (var pv in coffret.pointsVerification) {
           final conf = pv.conformite.toLowerCase().trim();
           if (conf == 'non' || conf == 'non conforme') {
-            list.add(_ObsRecap(
-              localisation: zone.nom,
-              coffret: coffret.nom,
-              observation: pv.observation ?? pv.pointVerification,
-              refNorm: pv.referenceNormative ?? '',
-              priorite: pv.priorite?.toString() ?? '',
-            ));
+            if (pv.observations != null && pv.observations!.isNotEmpty) {
+              for (var obs in pv.observations!) {
+                list.add(_ObsRecap(
+                  localisation: zone.nom,
+                  coffret: coffret.nom,
+                  observation: obs.observation?.isNotEmpty == true ? obs.observation! : pv.pointVerification,
+                  refNorm: obs.referenceNormative ?? pv.referenceNormative ?? '',
+                  priorite: obs.priorite?.toString() ?? '',
+                ));
+              }
+            } else {
+              list.add(_ObsRecap(
+                localisation: zone.nom,
+                coffret: coffret.nom,
+                observation: pv.observation ?? pv.pointVerification,
+                refNorm: pv.referenceNormative ?? '',
+                priorite: pv.priorite?.toString() ?? '',
+              ));
+            }
           }
         }
         for (var obs in coffret.observationsLibres) {
@@ -1914,12 +1951,25 @@ class PdfReportService {
           ));
         }
         if (coffret.presenceParafoudre) {
-          for (var obs in coffret.observationsParafoudre) {
-            list.add(_ObsRecap(
-              localisation: zone.nom,
-              coffret: '${coffret.nom} (Parafoudre)',
-              observation: obs.texte, refNorm: '', priorite: '',
-            ));
+          final pfEnrichies = coffret.observationsParafoudreEnrichies ?? [];
+          if (pfEnrichies.isNotEmpty) {
+            for (var obs in pfEnrichies) {
+              list.add(_ObsRecap(
+                localisation: zone.nom,
+                coffret: '${coffret.nom} (Parafoudre)',
+                observation: obs.observation?.isNotEmpty == true ? obs.observation! : obs.elementControle,
+                refNorm: obs.referenceNormative ?? '',
+                priorite: obs.priorite?.toString() ?? '',
+              ));
+            }
+          } else {
+            for (var obs in coffret.observationsParafoudre) {
+              list.add(_ObsRecap(
+                localisation: zone.nom,
+                coffret: '${coffret.nom} (Parafoudre)',
+                observation: obs.texte, refNorm: '', priorite: '',
+              ));
+            }
           }
         }
       }
@@ -1938,13 +1988,25 @@ class PdfReportService {
         for (var coffret in local.coffrets) {
           for (var pv in coffret.pointsVerification) {
             if (pv.conformite == 'non' || pv.conformite == 'Non' || pv.conformite == 'Non conforme') {
-              list.add(_ObsRecap(
-                localisation: '${zone.nom} / ${local.nom}',
-                coffret: coffret.nom,
-                observation: pv.observation ?? pv.pointVerification,
-                refNorm: pv.referenceNormative ?? '',
-                priorite: pv.priorite?.toString() ?? '',
-              ));
+              if (pv.observations != null && pv.observations!.isNotEmpty) {
+                for (var obs in pv.observations!) {
+                  list.add(_ObsRecap(
+                    localisation: '${zone.nom} / ${local.nom}',
+                    coffret: coffret.nom,
+                    observation: obs.observation?.isNotEmpty == true ? obs.observation! : pv.pointVerification,
+                    refNorm: obs.referenceNormative ?? pv.referenceNormative ?? '',
+                    priorite: obs.priorite?.toString() ?? '',
+                  ));
+                }
+              } else {
+                list.add(_ObsRecap(
+                  localisation: '${zone.nom} / ${local.nom}',
+                  coffret: coffret.nom,
+                  observation: pv.observation ?? pv.pointVerification,
+                  refNorm: pv.referenceNormative ?? '',
+                  priorite: pv.priorite?.toString() ?? '',
+                ));
+              }
             }
           }
           for (var obs in coffret.observationsLibres) {
@@ -1955,14 +2017,27 @@ class PdfReportService {
             ));
           }
           if (coffret.presenceParafoudre) {
-          for (var obs in coffret.observationsParafoudre) {
-            list.add(_ObsRecap(
-              localisation: zone.nom,
-              coffret: '${coffret.nom} (Parafoudre)',
-              observation: obs.texte, refNorm: '', priorite: '',
-            ));
+            final pfEnrichies = coffret.observationsParafoudreEnrichies ?? [];
+            if (pfEnrichies.isNotEmpty) {
+              for (var obs in pfEnrichies) {
+                list.add(_ObsRecap(
+                  localisation: '${zone.nom} / ${local.nom}',
+                  coffret: '${coffret.nom} (Parafoudre)',
+                  observation: obs.observation?.isNotEmpty == true ? obs.observation! : obs.elementControle,
+                  refNorm: obs.referenceNormative ?? '',
+                  priorite: obs.priorite?.toString() ?? '',
+                ));
+              }
+            } else {
+              for (var obs in coffret.observationsParafoudre) {
+                list.add(_ObsRecap(
+                  localisation: '${zone.nom} / ${local.nom}',
+                  coffret: '${coffret.nom} (Parafoudre)',
+                  observation: obs.texte, refNorm: '', priorite: '',
+                ));
+              }
+            }
           }
-        }
         }
         for (var obs in local.observationsLibres) {
           list.add(_ObsRecap(
@@ -1989,13 +2064,25 @@ class PdfReportService {
       for (var coffret in zone.coffretsDirects) {
         for (var pv in coffret.pointsVerification) {
           if (pv.conformite == 'non' || pv.conformite == 'Non' || pv.conformite == 'Non conforme') {
-            list.add(_ObsRecap(
-              localisation: zone.nom,
-              coffret: coffret.nom,
-              observation: pv.observation ?? pv.pointVerification,
-              refNorm: pv.referenceNormative ?? '',
-              priorite: pv.priorite?.toString() ?? '',
-            ));
+            if (pv.observations != null && pv.observations!.isNotEmpty) {
+              for (var obs in pv.observations!) {
+                list.add(_ObsRecap(
+                  localisation: zone.nom,
+                  coffret: coffret.nom,
+                  observation: obs.observation?.isNotEmpty == true ? obs.observation! : pv.pointVerification,
+                  refNorm: obs.referenceNormative ?? pv.referenceNormative ?? '',
+                  priorite: obs.priorite?.toString() ?? '',
+                ));
+              }
+            } else {
+              list.add(_ObsRecap(
+                localisation: zone.nom,
+                coffret: coffret.nom,
+                observation: pv.observation ?? pv.pointVerification,
+                refNorm: pv.referenceNormative ?? '',
+                priorite: pv.priorite?.toString() ?? '',
+              ));
+            }
           }
         }
         for (var obs in coffret.observationsLibres) {
@@ -2005,12 +2092,25 @@ class PdfReportService {
           ));
         }
         if (coffret.presenceParafoudre) {
-          for (var obs in coffret.observationsParafoudre) {
-            list.add(_ObsRecap(
-              localisation: zone.nom,
-              coffret: '${coffret.nom} (Parafoudre)',
-              observation: obs.texte, refNorm: '', priorite: '',
-            ));
+          final pfEnrichies = coffret.observationsParafoudreEnrichies ?? [];
+          if (pfEnrichies.isNotEmpty) {
+            for (var obs in pfEnrichies) {
+              list.add(_ObsRecap(
+                localisation: zone.nom,
+                coffret: '${coffret.nom} (Parafoudre)',
+                observation: obs.observation?.isNotEmpty == true ? obs.observation! : obs.elementControle,
+                refNorm: obs.referenceNormative ?? '',
+                priorite: obs.priorite?.toString() ?? '',
+              ));
+            }
+          } else {
+            for (var obs in coffret.observationsParafoudre) {
+              list.add(_ObsRecap(
+                localisation: zone.nom,
+                coffret: '${coffret.nom} (Parafoudre)',
+                observation: obs.texte, refNorm: '', priorite: '',
+              ));
+            }
           }
         }
       }
@@ -2046,13 +2146,25 @@ class PdfReportService {
           for (var pv in coffret.pointsVerification) {
             final conf = pv.conformite.toLowerCase().trim();
             if (conf == 'non' || conf == 'non conforme') {
-              list.add(_ObsRecap(
-                localisation: '${zone.nom} / ${local.nom}',
-                coffret: coffret.nom,
-                observation: pv.observation ?? pv.pointVerification,
-                refNorm: pv.referenceNormative ?? '',
-                priorite: pv.priorite?.toString() ?? '',
-              ));
+              if (pv.observations != null && pv.observations!.isNotEmpty) {
+                for (var obs in pv.observations!) {
+                  list.add(_ObsRecap(
+                    localisation: '${zone.nom} / ${local.nom}',
+                    coffret: coffret.nom,
+                    observation: obs.observation?.isNotEmpty == true ? obs.observation! : pv.pointVerification,
+                    refNorm: obs.referenceNormative ?? pv.referenceNormative ?? '',
+                    priorite: obs.priorite?.toString() ?? '',
+                  ));
+                }
+              } else {
+                list.add(_ObsRecap(
+                  localisation: '${zone.nom} / ${local.nom}',
+                  coffret: coffret.nom,
+                  observation: pv.observation ?? pv.pointVerification,
+                  refNorm: pv.referenceNormative ?? '',
+                  priorite: pv.priorite?.toString() ?? '',
+                ));
+              }
             }
           }
           for (var obs in coffret.observationsLibres) {
@@ -2063,15 +2175,27 @@ class PdfReportService {
             ));
           }
           if (coffret.presenceParafoudre) {
-            for (var obs in coffret.observationsParafoudre) {
-              list.add(_ObsRecap(
-                localisation: '${zone.nom} / ${local.nom}',
-                coffret: '${coffret.nom} (Parafoudre)',
-                observation: obs.texte, refNorm: '', priorite: '',
-              ));
+            final pfEnrichies = coffret.observationsParafoudreEnrichies ?? [];
+            if (pfEnrichies.isNotEmpty) {
+              for (var obs in pfEnrichies) {
+                list.add(_ObsRecap(
+                  localisation: '${zone.nom} / ${local.nom}',
+                  coffret: '${coffret.nom} (Parafoudre)',
+                  observation: obs.observation?.isNotEmpty == true ? obs.observation! : obs.elementControle,
+                  refNorm: obs.referenceNormative ?? '',
+                  priorite: obs.priorite?.toString() ?? '',
+                ));
+              }
+            } else {
+              for (var obs in coffret.observationsParafoudre) {
+                list.add(_ObsRecap(
+                  localisation: '${zone.nom} / ${local.nom}',
+                  coffret: '${coffret.nom} (Parafoudre)',
+                  observation: obs.texte, refNorm: '', priorite: '',
+                ));
+              }
             }
           }
-
         }
         for (var obs in local.observationsLibres) {
           list.add(_ObsRecap(
@@ -2722,29 +2846,43 @@ class PdfReportService {
     // ══════════════════════════════════════════════════════════════════════
     // OBSERVATIONS PARAFOUDRE
     // ══════════════════════════════════════════════════════════════════════
-    if (coffret.presenceParafoudre && coffret.observationsParafoudre.isNotEmpty) {
-      widgets.add(pw.SizedBox(height: 4));
-      widgets.add(pw.Container(
-        padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-        decoration: pw.BoxDecoration(
-          color: PdfColor.fromInt(0xFFFFF3E0),
-          border: pw.Border.all(color: PdfColor.fromInt(0xFFE65100), width: 0.5),
-        ),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text('Observations parafoudre :',
-                style: pw.TextStyle(font: _fontBold, fontSize: fsSmall,
-                    color: PdfColor.fromInt(0xFFE65100))),
-            pw.SizedBox(height: 3),
-            ...coffret.observationsParafoudre.map((obs) => pw.Row(children: [
-              pw.Text('•  ', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
-              pw.Expanded(child: pw.Text(obs.texte,
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall))),
-            ])),
-          ],
-        ),
-      ));
+    if (coffret.presenceParafoudre) {
+      final pfEnrichies = coffret.observationsParafoudreEnrichies ?? [];
+      final pfLegacy = coffret.observationsParafoudre;
+      if (pfEnrichies.isNotEmpty || pfLegacy.isNotEmpty) {
+        widgets.add(pw.SizedBox(height: 4));
+        widgets.add(pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromInt(0xFFFFF3E0),
+            border: pw.Border.all(color: PdfColor.fromInt(0xFFE65100), width: 0.5),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('Observations parafoudre :',
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall,
+                      color: PdfColor.fromInt(0xFFE65100))),
+              pw.SizedBox(height: 3),
+              if (pfEnrichies.isNotEmpty)
+                ...pfEnrichies.map((obs) => pw.Row(children: [
+                  pw.Text('•  ', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
+                  pw.Expanded(child: pw.Text(
+                      '${obs.observation?.isNotEmpty == true ? obs.observation! : obs.elementControle}'
+                      '${obs.priorite != null ? ' [P${obs.priorite}]' : ''}'
+                      '${obs.referenceNormative?.isNotEmpty == true ? ' (${obs.referenceNormative})' : ''}',
+                      style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall))),
+                ]))
+              else
+                ...pfLegacy.map((obs) => pw.Row(children: [
+                  pw.Text('•  ', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
+                  pw.Expanded(child: pw.Text(obs.texte,
+                      style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall))),
+                ])),
+            ],
+          ),
+        ));
+      }
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -2911,14 +3049,21 @@ class PdfReportService {
               ),
               pw.Padding(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                child: pw.Text(pv.observation ?? '',
+                child: pw.Text(
+                    pv.observations != null && pv.observations!.isNotEmpty
+                        ? pv.observations!.map((obs) => obs.observation ?? '').where((s) => s.isNotEmpty).join('\n')
+                        : pv.observation ?? '',
                     style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
               ),
               pw.Padding(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                child: pw.Text(pv.referenceNormative ?? '',
+                child: pw.Text(
+                    pv.observations != null && pv.observations!.isNotEmpty
+                        ? pv.observations!.map((obs) => obs.referenceNormative ?? '').where((s) => s.isNotEmpty).join('\n')
+                        : pv.referenceNormative ?? '',
                     style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
               ),
+
             ],
           );
         }),

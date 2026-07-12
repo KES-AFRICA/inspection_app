@@ -416,6 +416,8 @@ class _EssaisDeclenchementScreenState extends ConsumerState<EssaisDeclenchementS
 
   @override
   Widget build(BuildContext context) {
+    // Maintenir le provider en vie pour éviter l'erreur au premier enregistrement
+    ref.watch(mesuresEssaisProvider(widget.mission.id));
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
@@ -967,6 +969,8 @@ class _AjouterEssaiDeclenchementScreenState extends ConsumerState<AjouterEssaiDe
 
   @override
   Widget build(BuildContext context) {
+    // Maintenir le provider en vie pour éviter l'erreur au premier enregistrement
+    ref.watch(mesuresEssaisProvider(widget.mission.id));
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(

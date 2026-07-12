@@ -496,13 +496,15 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       photosExternes: (fields[20] as List?)?.cast<String>(),
       photosInternes: (fields[21] as List?)?.cast<String>(),
       observationsParafoudre: (fields[22] as List?)?.cast<ObservationLibre>(),
+      observationsParafoudreEnrichies:
+          (fields[23] as List?)?.cast<ElementControle>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, CoffretArmoire obj) {
     writer
-      ..writeByte(23)
+      ..writeByte(24)
       ..writeByte(0)
       ..write(obj.qrCode)
       ..writeByte(1)
@@ -548,7 +550,9 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       ..writeByte(21)
       ..write(obj.photosInternes)
       ..writeByte(22)
-      ..write(obj.observationsParafoudre);
+      ..write(obj.observationsParafoudre)
+      ..writeByte(23)
+      ..write(obj.observationsParafoudreEnrichies);
   }
 
   @override
@@ -628,13 +632,14 @@ class PointVerificationAdapter extends TypeAdapter<PointVerification> {
       referenceNormative: fields[3] as String?,
       priorite: fields[4] as int?,
       photos: (fields[5] as List?)?.cast<String>(),
+      observations: (fields[6] as List?)?.cast<ElementControle>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, PointVerification obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.pointVerification)
       ..writeByte(1)
@@ -646,7 +651,9 @@ class PointVerificationAdapter extends TypeAdapter<PointVerification> {
       ..writeByte(4)
       ..write(obj.priorite)
       ..writeByte(5)
-      ..write(obj.photos);
+      ..write(obj.photos)
+      ..writeByte(6)
+      ..write(obj.observations);
   }
 
   @override

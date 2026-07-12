@@ -1151,6 +1151,7 @@ static Future<AuditInstallationsElectriques> getOrCreateAuditInstallations(Strin
   
   try {
     final existing = box.values.firstWhere((audit) => audit.missionId == missionId);
+    _migrateAuditIfNeeded(existing);
     return existing;
   } catch (e) {
     // Créer une nouvelle instance
@@ -1180,9 +1181,83 @@ static Future<void> saveAuditInstallations(AuditInstallationsElectriques audit) 
 static AuditInstallationsElectriques? getAuditInstallationsByMissionId(String missionId) {
   final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
   try {
-    return box.values.firstWhere((audit) => audit.missionId == missionId);
+    final audit = box.values.firstWhere((audit) => audit.missionId == missionId);
+    _migrateAuditIfNeeded(audit);
+    return audit;
   } catch (e) {
     return null;
+  }
+}
+
+static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
+  bool changed = false;
+
+  void migrateCoffret(CoffretArmoire coffret) {
+    if (coffret.observationsParafoudreEnrichies == null) {
+      coffret.observationsParafoudreEnrichies = [];
+      changed = true;
+    }
+    if (coffret.observationsParafoudreEnrichies!.isEmpty && coffret.observationsParafoudre.isNotEmpty) {
+      for (var oldObs in coffret.observationsParafoudre) {
+        coffret.observationsParafoudreEnrichies!.add(ElementControle(
+          elementControle: oldObs.texte,
+          conforme: false,
+          observation: oldObs.texte,
+          photos: List.from(oldObs.photos),
+        ));
+      }
+      changed = true;
+    }
+
+    for (var pv in coffret.pointsVerification) {
+      if (pv.observations == null) {
+        pv.observations = [];
+        changed = true;
+      }
+      if (pv.observations!.isEmpty && pv.observation != null && pv.observation!.isNotEmpty) {
+        pv.observations!.add(ElementControle(
+          elementControle: pv.pointVerification,
+          conforme: false,
+          observation: pv.observation,
+          priorite: pv.priorite,
+          photos: List.from(pv.photos),
+        ));
+        changed = true;
+      }
+    }
+  }
+
+  // Locaux MT
+  for (var local in audit.moyenneTensionLocaux) {
+    for (var coffret in local.coffrets) {
+      migrateCoffret(coffret);
+    }
+  }
+  // Zones MT
+  for (var zone in audit.moyenneTensionZones) {
+    for (var coffret in zone.coffrets) {
+      migrateCoffret(coffret);
+    }
+    for (var local in zone.locaux) {
+      for (var coffret in local.coffrets) {
+        migrateCoffret(coffret);
+      }
+    }
+  }
+  // Zones BT
+  for (var zone in audit.basseTensionZones) {
+    for (var coffret in zone.coffretsDirects) {
+      migrateCoffret(coffret);
+    }
+    for (var local in zone.locaux) {
+      for (var coffret in local.coffrets) {
+        migrateCoffret(coffret);
+      }
+    }
+  }
+
+  if (changed) {
+    audit.save();
   }
 }
 
