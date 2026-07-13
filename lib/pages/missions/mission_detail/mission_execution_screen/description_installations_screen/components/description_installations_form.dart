@@ -293,19 +293,29 @@ class _DescriptionInstallationsFormState
 
   Future<void> _editItem(int index, List<InstallationItem> items) async {
     final item = items[index];
-    final isAutomatic =
-        item.data.containsKey('auditCelluleId') &&
-        item.data['auditCelluleId']!.isNotEmpty;
+    final isCelluleAuto = item.data.containsKey('auditCelluleId') && item.data['auditCelluleId']!.isNotEmpty;
+    final isTransfoAuto = item.data.containsKey('auditTransformateurId') && item.data['auditTransformateurId']!.isNotEmpty;
+    final isAutomatic = isCelluleAuto || isTransfoAuto;
 
     String localisation = 'Créée manuellement';
     if (isAutomatic) {
-      final cellId = item.data['auditCelluleId']!;
-      final locResult = await HiveService.getCelluleLocalisation(
-        widget.mission.id,
-        cellId,
-      );
-      if (!mounted) return;
-      localisation = locResult ?? 'Moyenne Tension';
+      if (isCelluleAuto) {
+        final cellId = item.data['auditCelluleId']!;
+        final locResult = await HiveService.getCelluleLocalisation(
+          widget.mission.id,
+          cellId,
+        );
+        if (!mounted) return;
+        localisation = locResult ?? 'Moyenne Tension';
+      } else {
+        final transfoId = item.data['auditTransformateurId']!;
+        final locResult = await HiveService.getTransformateurLocalisation(
+          widget.mission.id,
+          transfoId,
+        );
+        if (!mounted) return;
+        localisation = locResult ?? 'Basse Tension';
+      }
     }
 
     if (!mounted) return;
@@ -515,9 +525,9 @@ class _DescriptionInstallationsFormState
     int index,
     bool isSmallScreen,
   ) {
-    final isAutomatic =
-        item.data.containsKey('auditCelluleId') &&
-        item.data['auditCelluleId']!.isNotEmpty;
+    final isCelluleAuto = item.data.containsKey('auditCelluleId') && item.data['auditCelluleId']!.isNotEmpty;
+    final isTransfoAuto = item.data.containsKey('auditTransformateurId') && item.data['auditTransformateurId']!.isNotEmpty;
+    final isAutomatic = isCelluleAuto || isTransfoAuto;
 
     return Container(
       margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
@@ -609,10 +619,15 @@ class _DescriptionInstallationsFormState
               // Encart d'Origine / Localisation
               isAutomatic
                   ? FutureBuilder<String?>(
-                      future: HiveService.getCelluleLocalisation(
-                        widget.mission.id,
-                        item.data['auditCelluleId']!,
-                      ),
+                      future: isCelluleAuto
+                          ? HiveService.getCelluleLocalisation(
+                              widget.mission.id,
+                              item.data['auditCelluleId']!,
+                            )
+                          : HiveService.getTransformateurLocalisation(
+                              widget.mission.id,
+                              item.data['auditTransformateurId']!,
+                            ),
                       builder: (context, snapshot) {
                         final loc =
                             snapshot.data ?? 'Moyenne Tension ➔ Chargement...';
