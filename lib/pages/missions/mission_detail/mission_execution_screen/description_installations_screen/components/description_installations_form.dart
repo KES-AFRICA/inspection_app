@@ -7,6 +7,7 @@ import 'package:inspec_app/constants/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 import 'package:inspec_app/services/hive_service.dart';
+
 // ============================================================
 // GAMMES DE CELLULES → TYPES ASSOCIÉS
 // ============================================================
@@ -292,12 +293,17 @@ class _DescriptionInstallationsFormState
 
   Future<void> _editItem(int index, List<InstallationItem> items) async {
     final item = items[index];
-    final isAutomatic = item.data.containsKey('auditCelluleId') && item.data['auditCelluleId']!.isNotEmpty;
-    
+    final isAutomatic =
+        item.data.containsKey('auditCelluleId') &&
+        item.data['auditCelluleId']!.isNotEmpty;
+
     String localisation = 'Créée manuellement';
     if (isAutomatic) {
       final cellId = item.data['auditCelluleId']!;
-      final locResult = await HiveService.getCelluleLocalisation(widget.mission.id, cellId);
+      final locResult = await HiveService.getCelluleLocalisation(
+        widget.mission.id,
+        cellId,
+      );
       if (!mounted) return;
       localisation = locResult ?? 'Moyenne Tension';
     }
@@ -509,8 +515,10 @@ class _DescriptionInstallationsFormState
     int index,
     bool isSmallScreen,
   ) {
-    final isAutomatic = item.data.containsKey('auditCelluleId') && item.data['auditCelluleId']!.isNotEmpty;
-    
+    final isAutomatic =
+        item.data.containsKey('auditCelluleId') &&
+        item.data['auditCelluleId']!.isNotEmpty;
+
     return Container(
       margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
       decoration: BoxDecoration(
@@ -572,7 +580,9 @@ class _DescriptionInstallationsFormState
                   ),
                   IconButton(
                     icon: Icon(
-                      isAutomatic ? Icons.visibility_outlined : Icons.edit_outlined,
+                      isAutomatic
+                          ? Icons.visibility_outlined
+                          : Icons.edit_outlined,
                       color: AppTheme.primaryBlue,
                       size: isSmallScreen ? 18 : 20,
                     ),
@@ -595,18 +605,26 @@ class _DescriptionInstallationsFormState
                   ],
                 ],
               ),
-              
+
               // Encart d'Origine / Localisation
               isAutomatic
                   ? FutureBuilder<String?>(
-                      future: HiveService.getCelluleLocalisation(widget.mission.id, item.data['auditCelluleId']!),
+                      future: HiveService.getCelluleLocalisation(
+                        widget.mission.id,
+                        item.data['auditCelluleId']!,
+                      ),
                       builder: (context, snapshot) {
-                        final loc = snapshot.data ?? 'Moyenne Tension ➔ Chargement...';
+                        final loc =
+                            snapshot.data ?? 'Moyenne Tension ➔ Chargement...';
                         return Padding(
                           padding: const EdgeInsets.only(top: 6, bottom: 10),
                           child: Row(
                             children: [
-                              Icon(Icons.location_on_outlined, size: 14, color: Colors.blue.shade700),
+                              Icon(
+                                Icons.location_on_outlined,
+                                size: 14,
+                                color: Colors.blue.shade700,
+                              ),
                               const SizedBox(width: 4),
                               Expanded(
                                 child: Text(
@@ -628,7 +646,11 @@ class _DescriptionInstallationsFormState
                       padding: const EdgeInsets.only(top: 6, bottom: 10),
                       child: Row(
                         children: [
-                          Icon(Icons.person_outline, size: 14, color: Colors.grey.shade600),
+                          Icon(
+                            Icons.person_outline,
+                            size: 14,
+                            color: Colors.grey.shade600,
+                          ),
                           const SizedBox(width: 4),
                           Expanded(
                             child: Text(
@@ -650,7 +672,8 @@ class _DescriptionInstallationsFormState
                 runSpacing: 6,
                 children: widget.champs
                     .where(
-                      (c) => item.data.containsKey(c) && item.data[c]!.isNotEmpty,
+                      (c) =>
+                          item.data.containsKey(c) && item.data[c]!.isNotEmpty,
                     )
                     .map((champ) {
                       final value = item.data[champ]!;
@@ -839,6 +862,11 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
     final hasValue = currentValue != null && currentValue.isNotEmpty;
     final accent = AppTheme.primaryBlue;
 
+    final effectiveOptions = List<String>.from(options);
+    if (hasValue && !effectiveOptions.contains(currentValue)) {
+      effectiveOptions.add(currentValue);
+    }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -941,7 +969,7 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
               ],
             ),
           ),
-          ...options.map(
+          ...effectiveOptions.map(
             (opt) => DropdownMenuItem<String>(
               value: opt,
               child: Text(
@@ -964,7 +992,7 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
               color: Colors.grey.shade400,
             ),
           ),
-          ...options.map(
+          ...effectiveOptions.map(
             (opt) => Text(
               opt,
               style: TextStyle(
@@ -1059,8 +1087,8 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: Text(
-          widget.isReadOnly 
-              ? 'Consultation Cellule' 
+          widget.isReadOnly
+              ? 'Consultation Cellule'
               : (widget.initialData != null ? 'Modifier' : 'Ajouter'),
           style: TextStyle(
             fontSize: isSmallScreen ? 16 : 18,
@@ -1102,23 +1130,32 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
               if (widget.localisation != null) ...[
                 Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 12,
+                    horizontal: 16,
+                  ),
                   decoration: BoxDecoration(
-                    color: widget.isReadOnly ? Colors.blue.shade50 : Colors.grey.shade100,
+                    color: widget.isReadOnly
+                        ? Colors.blue.shade50
+                        : Colors.grey.shade100,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: widget.isReadOnly ? Colors.blue.shade100 : Colors.grey.shade200,
+                      color: widget.isReadOnly
+                          ? Colors.blue.shade100
+                          : Colors.grey.shade200,
                     ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        widget.isReadOnly ? '📍 PROVENANCE (AUDIT DES INSTALLATIONS)' : '👤 ORIGINE',
+                      'ORIGINE',
                         style: TextStyle(
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
-                          color: widget.isReadOnly ? Colors.blue.shade800 : Colors.grey.shade600,
+                          color: widget.isReadOnly
+                              ? Colors.blue.shade800
+                              : Colors.grey.shade600,
                           letterSpacing: 0.5,
                         ),
                       ),
@@ -1128,7 +1165,9 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
                         style: TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
-                          color: widget.isReadOnly ? Colors.blue.shade900 : Colors.grey.shade800,
+                          color: widget.isReadOnly
+                              ? Colors.blue.shade900
+                              : Colors.grey.shade800,
                         ),
                       ),
                     ],
@@ -1167,7 +1206,9 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
 
                       // Type de cellule → dépend de la gamme
                       if (_isTypeCelluleField(champ)) {
-                        final types = CelluleGammes.getTypesForGamme(_selectedGamme);
+                        final types = CelluleGammes.getTypesForGamme(
+                          _selectedGamme,
+                        );
                         final locked =
                             _selectedGamme == null || _selectedGamme!.isEmpty;
                         return Column(
@@ -1183,7 +1224,9 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
                                 decoration: BoxDecoration(
                                   color: Colors.orange.shade50,
                                   borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: Colors.orange.shade200),
+                                  border: Border.all(
+                                    color: Colors.orange.shade200,
+                                  ),
                                 ),
                                 child: Row(
                                   children: [
@@ -1212,8 +1255,9 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
                                   champ,
                                   currentValue: _selectedValues[champ],
                                   options: types,
-                                  onChanged: (v) =>
-                                      setState(() => _selectedValues[champ] = v),
+                                  onChanged: (v) => setState(
+                                    () => _selectedValues[champ] = v,
+                                  ),
                                 ),
                               ),
                             ),
@@ -1247,7 +1291,11 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
                       }
 
                       // TextField
-                      return _buildTextField(context, champ, _controllers[champ]!);
+                      return _buildTextField(
+                        context,
+                        champ,
+                        _controllers[champ]!,
+                      );
                     }).toList(),
                   ),
                 ),
