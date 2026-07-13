@@ -30,6 +30,7 @@ import '../models/mesures_essais.dart';
 import '../models/jsa.dart';
 import '../models/renseignements_generaux.dart';
 import 'hive_service.dart';
+import 'sequence_progress_service.dart';
 
 // ─────────────────────────────────────────────────────────────
 // RÉSULTATS TYPÉS
@@ -195,10 +196,8 @@ class BackupService {
         'coffret_drafts': _serializeCoffretDrafts([mission.id]),
       };
 
-      // Checksum SHA-256 (calculé avant ajout du champ checksum)
-      final contentForHash = jsonEncode(Map<String, dynamic>.from(payload));
-      payload['checksum'] =
-          sha256.convert(utf8.encode(contentForHash)).toString();
+      // Checksum SHA-256 calculé en arrière-plan via Isolate
+      final payloadWithChecksum = await compute(_computeExportChecksum, payload);
 
       final ts = DateTime.now()
           .toIso8601String()
@@ -209,7 +208,7 @@ class BackupService {
           mission.nomClient.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
       final fileName = 'inspec_${safeClient}_$ts.json';
       final jsonContent =
-          const JsonEncoder.withIndent('  ').convert(payload);
+          const JsonEncoder.withIndent('  ').convert(payloadWithChecksum);
 
       // Sauvegarde locale
       String? savedPath;
@@ -274,11 +273,9 @@ class BackupService {
       'coffret_drafts':
           _serializeCoffretDrafts(missions.map((m) => m.id).toList()),
     };
-    // Checksum SHA-256
-    final contentForHash = jsonEncode(Map<String, dynamic>.from(payload));
-    payload['checksum'] =
-        sha256.convert(utf8.encode(contentForHash)).toString();
-    return payload;
+    // Checksum SHA-256 calculé en arrière-plan via Isolate
+    final payloadWithChecksum = await compute(_computeExportChecksum, payload);
+    return payloadWithChecksum;
   }
 
   // ── Mission + toutes ses données liées ──
@@ -292,6 +289,7 @@ class BackupService {
     final foudres = HiveService.getFoudreObservationsByMissionId(id);
     final classements = _classementsByMission(id);
     final classementZones = _classementZonesByMission(id);
+    final sequenceProgress = await SequenceProgressService.getProgress(id);
 
     // Collecter et encoder toutes les photos de la mission
     Map<String, String> photoIndex = {};
@@ -315,6 +313,7 @@ class BackupService {
       'foudre_observations': foudres.map(_f).toList(),
       'classements_locaux': classements,
       'classements_zones': classementZones,
+      'sequence_progress': sequenceProgress,
     };
   }
 
@@ -800,6 +799,32 @@ class BackupService {
   }
 
 
+  // ── Isolate helper pour calculer le checksum lors de l'export ──
+  static Map<String, dynamic> _computeExportChecksum(Map<String, dynamic> payload) {
+    final contentForHash = jsonEncode(payload);
+    payload['checksum'] = sha256.convert(utf8.encode(contentForHash)).toString();
+    return payload;
+  }
+
+  // ── Isolate helper pour le décodage et la vérification du Checksum ──
+  static Map<String, dynamic> _parseJsonAndVerifyChecksum(String jsonContent) {
+    final payload = jsonDecode(jsonContent) as Map<String, dynamic>;
+    final fileMagic = payload['magic'] as String?;
+    
+    if (fileMagic == _magic) {
+      final checksum = payload['checksum'] as String?;
+      if (checksum != null) {
+        final withoutChecksum = Map<String, dynamic>.from(payload)..remove('checksum');
+        final encoded = jsonEncode(withoutChecksum);
+        final computed = sha256.convert(utf8.encode(encoded)).toString();
+        if (computed != checksum) {
+          throw const FormatException('checksum_invalid');
+        }
+      }
+    }
+    return payload;
+  }
+
   // ═══════════════════════════════════════════════════════════
   // IMPORT
   // ═══════════════════════════════════════════════════════════
@@ -815,7 +840,7 @@ class BackupService {
     int imported = 0;
     int skipped = 0;
 
-    // ─ 1. Lecture et validation ─
+    // ─ 1. Lecture et validation en arrière-plan via compute Isolate ─
     Map<String, dynamic> payload;
     try {
       final file = File(filePath);
@@ -824,8 +849,15 @@ class BackupService {
             success: false, message: 'Fichier introuvable.');
       }
       final content = await file.readAsString(encoding: utf8);
-      payload = jsonDecode(content) as Map<String, dynamic>;
+      payload = await compute(_parseJsonAndVerifyChecksum, content);
     } catch (e) {
+      if (e.toString().contains('checksum_invalid')) {
+        return const ImportResult(
+          success: false,
+          message: 'Intégrité du fichier compromise (checksum invalide). '
+              'Le fichier est peut-être corrompu ou modifié.',
+        );
+      }
       return ImportResult(
         success: false,
         message: 'Fichier JSON invalide ou corrompu.',
@@ -840,25 +872,6 @@ class BackupService {
         success: false,
         message: "Ce fichier n'est pas une sauvegarde Inspec valide.",
       );
-    }
-
-    // ─ 2b. Vérification checksum SHA-256 (V2 uniquement) ─
-    if (fileMagic == _magic) {
-      final checksum = payload['checksum'] as String?;
-      if (checksum != null) {
-        final withoutChecksum =
-            Map<String, dynamic>.from(payload)..remove('checksum');
-        final computed = sha256
-            .convert(utf8.encode(jsonEncode(withoutChecksum)))
-            .toString();
-        if (computed != checksum) {
-          return const ImportResult(
-            success: false,
-            message: 'Intégrité du fichier compromise (checksum invalide). '
-                'Le fichier est peut-être corrompu ou modifié.',
-          );
-        }
-      }
     }
 
     final schemaVersion = payload['schema_version'] as int? ?? 1;
@@ -944,69 +957,86 @@ class BackupService {
     final existing = box.get(missionId);
     if (existing != null && !ecraser) return 'skipped';
 
-    // Mission — put avec l'id comme clé (cohérent avec HiveService.saveMission)
-    final mission = Mission.fromJson(mj);
+    final createdPhotoPaths = <String>[];
 
-    // S'assurer que l'importeur apparaît dans les verificateurs
-    // pour que getMissionsByMatricule la retourne dans sa liste
-    mission.verificateurs ??= [];
-    final dejaPresent = mission.verificateurs!
-        .any((v) => v['matricule'] == importeurMatricule);
-    if (!dejaPresent) {
-      mission.verificateurs!.add({
-        'matricule': importeurMatricule,
-        'nom': importeurNom,
-        'prenom': importeurPrenom,
-        'role': 'importeur',
-      });
+    try {
+      // Mission — put avec l'id comme clé (cohérent avec HiveService.saveMission)
+      final mission = Mission.fromJson(mj);
+
+      // S'assurer que l'importeur apparaît dans les verificateurs
+      // pour que getMissionsByMatricule la retourne dans sa liste
+      mission.verificateurs ??= [];
+      final dejaPresent = mission.verificateurs!
+          .any((v) => v['matricule'] == importeurMatricule);
+      if (!dejaPresent) {
+        mission.verificateurs!.add({
+          'matricule': importeurMatricule,
+          'nom': importeurNom,
+          'prenom': importeurPrenom,
+          'role': 'importeur',
+        });
+      }
+
+      await box.put(missionId, mission);
+
+      // Restaurer les photos en premier
+      final photosMap = data['photos'] as Map<String, dynamic>?;
+      if (photosMap != null && photosMap.isNotEmpty) {
+        final paths = await _restorePhotos(photosMap);
+        createdPhotoPaths.addAll(paths);
+      }
+
+      // Audit
+      final auditData = data['audit'] as Map<String, dynamic>?;
+      if (auditData != null) await _importAudit(auditData);
+
+      // Description installations
+      final descData =
+          data['description_installations'] as Map<String, dynamic>?;
+      if (descData != null) await _importDescription(descData);
+
+      // Mesures et essais
+      final mesuresData = data['mesures_essais'] as Map<String, dynamic>?;
+      if (mesuresData != null) await _importMesures(mesuresData);
+
+      // JSA
+      final jsaData = data['jsa'] as Map<String, dynamic>?;
+      if (jsaData != null) await _importJSA(jsaData);
+
+      // Renseignements généraux
+      final rensData =
+          data['renseignements_generaux'] as Map<String, dynamic>?;
+      if (rensData != null) await _importRenseignements(rensData);
+
+      // Foudre
+      for (final f in data['foudre_observations'] as List<dynamic>? ?? []) {
+        await _importFoudre(f as Map<String, dynamic>);
+      }
+
+      // Classements locaux
+      for (final c in data['classements_locaux'] as List<dynamic>? ?? []) {
+        await _importClassement(c as Map<String, dynamic>);
+      }
+
+      // Classements zones
+      for (final c in data['classements_zones'] as List<dynamic>? ?? []) {
+        await _importClassementZone(c as Map<String, dynamic>);
+      }
+
+      // Progression de séquence (rétrocompatible)
+      final progressData = data['sequence_progress'] as Map<dynamic, dynamic>?;
+      if (progressData != null) {
+        final progressBox = await Hive.openBox('mission_progress');
+        await progressBox.put(missionId, Map<String, dynamic>.from(progressData));
+      }
+
+      return 'imported';
+    } catch (e, st) {
+      if (kDebugMode) print('❌ Exception détectée lors de l\'import: $e\n$st');
+      // Déclencher le rollback automatique
+      await _rollbackMission(missionId, createdPhotoPaths);
+      rethrow;
     }
-
-    await box.put(missionId, mission);
-
-    // Restaurer les photos en premier
-    final photosMap = data['photos'] as Map<String, dynamic>?;
-    if (photosMap != null && photosMap.isNotEmpty) {
-      await _restorePhotos(photosMap);
-    }
-
-    // Audit
-    final auditData = data['audit'] as Map<String, dynamic>?;
-    if (auditData != null) await _importAudit(auditData);
-
-    // Description installations
-    final descData =
-        data['description_installations'] as Map<String, dynamic>?;
-    if (descData != null) await _importDescription(descData);
-
-    // Mesures et essais
-    final mesuresData = data['mesures_essais'] as Map<String, dynamic>?;
-    if (mesuresData != null) await _importMesures(mesuresData);
-
-    // JSA
-    final jsaData = data['jsa'] as Map<String, dynamic>?;
-    if (jsaData != null) await _importJSA(jsaData);
-
-    // Renseignements généraux
-    final rensData =
-        data['renseignements_generaux'] as Map<String, dynamic>?;
-    if (rensData != null) await _importRenseignements(rensData);
-
-    // Foudre
-    for (final f in data['foudre_observations'] as List<dynamic>? ?? []) {
-      await _importFoudre(f as Map<String, dynamic>);
-    }
-
-    // Classements locaux
-    for (final c in data['classements_locaux'] as List<dynamic>? ?? []) {
-      await _importClassement(c as Map<String, dynamic>);
-    }
-
-    // Classements zones
-    for (final c in data['classements_zones'] as List<dynamic>? ?? []) {
-      await _importClassementZone(c as Map<String, dynamic>);
-    }
-
-    return 'imported';
   }
 
   // ── Audit ──
@@ -1791,7 +1821,8 @@ class BackupService {
   }
 
   // ── Restaurer les photos depuis base64 ──
-  static Future<void> _restorePhotos(Map<String, dynamic> photosMap) async {
+  static Future<List<String>> _restorePhotos(Map<String, dynamic> photosMap) async {
+    final createdPaths = <String>[];
     final appDir = await getApplicationDocumentsDirectory();
     for (final entry in photosMap.entries) {
       final originalPath = entry.key as String;
@@ -1811,11 +1842,86 @@ class BackupService {
         final newFile = File('${dir.path}/$fileName');
         if (!await newFile.exists()) {
           await newFile.writeAsBytes(base64Decode(b64));
+          createdPaths.add(newFile.path);
         }
       } catch (e) {
         if (kDebugMode) print('⚠️ Restauration photo: $originalPath — $e');
       }
-    }}
+    }
+    return createdPaths;
+  }
+
+  // ── Rollback atomique d'une mission en cas d'échec d'import ──
+  static Future<void> _rollbackMission(String missionId, List<String> createdPhotoPaths) async {
+    if (kDebugMode) print('🔄 Rollback de l\'import pour la mission: $missionId');
+
+    // 1. Nettoyer les boxes Hive liées
+    Future<void> cleanBox<T>(String boxName, bool Function(T) predicate) async {
+      try {
+        final box = Hive.box<T>(boxName);
+        final toDelete = box.values.where(predicate).map((e) => (e as dynamic).key).toList();
+        for (final k in toDelete) {
+          await box.delete(k);
+        }
+      } catch (e) {
+        if (kDebugMode) print('⚠️ Rollback cleanBox $boxName: $e');
+      }
+    }
+
+    await cleanBox<AuditInstallationsElectriques>('audit_installations_electriques', (a) => a.missionId == missionId);
+    await cleanBox<DescriptionInstallations>('description_installations', (d) => d.missionId == missionId);
+    await cleanBox<ClassementEmplacement>('classement_locaux', (c) => c.missionId == missionId);
+    await cleanBox<ClassementZone>('classement_zones', (z) => z.missionId == missionId);
+    await cleanBox<Foudre>('foudre_observations', (f) => f.missionId == missionId);
+    await cleanBox<MesuresEssais>('mesures_essais', (m) => m.missionId == missionId);
+    await cleanBox<JSA>('jsa', (j) => j.missionId == missionId);
+    await cleanBox<RenseignementsGeneraux>('renseignements_generaux', (r) => r.missionId == missionId);
+
+    // Brouillons
+    try {
+      final coffretDraftsBox = Hive.box('coffret_drafts');
+      final coffretKeys = coffretDraftsBox.keys.where((k) {
+        final data = coffretDraftsBox.get(k);
+        return data is Map && data['missionId'] == missionId;
+      }).toList();
+      for (final k in coffretKeys) await coffretDraftsBox.delete(k);
+    } catch (_) {}
+
+    try {
+      final localDraftsBox = Hive.box('local_drafts');
+      final localKeys = localDraftsBox.keys.where((k) {
+        final data = localDraftsBox.get(k);
+        return data is Map && data['missionId'] == missionId;
+      }).toList();
+      for (final k in localKeys) await localDraftsBox.delete(k);
+    } catch (_) {}
+
+    try {
+      final progressBox = Hive.box('mission_progress');
+      if (progressBox.containsKey(missionId)) {
+        await progressBox.delete(missionId);
+      }
+    } catch (_) {}
+
+    // Supprimer la mission elle-même
+    try {
+      final missionBox = Hive.box<Mission>('missions');
+      await missionBox.delete(missionId);
+    } catch (_) {}
+
+    // 2. Nettoyer les fichiers physiques de photos spécifiquement créés pour cet import
+    for (final path in createdPhotoPaths) {
+      try {
+        final f = File(path);
+        if (await f.exists()) {
+          await f.delete();
+        }
+      } catch (e) {
+        if (kDebugMode) print('⚠️ Rollback photo: $path — $e');
+      }
+    }
+  }
+
   // ─────────────────────────────────────────────────────────
   // SUPPRESSION COMPLÈTE D'UNE MISSION — utilisé par MissionCard
   // ─────────────────────────────────────────────────────────
