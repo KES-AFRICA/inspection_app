@@ -1183,6 +1183,14 @@ static Future<void> saveAuditInstallations(AuditInstallationsElectriques audit) 
     }
   }
 
+  try {
+    await _syncTransformateursToDescription(audit);
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Erreur de synchronisation des transformateurs: $e');
+    }
+  }
+
   await audit.save();
 }
 
@@ -1292,6 +1300,114 @@ static Future<void> _syncCellulesToDescription(AuditInstallationsElectriques aud
   await saveDescriptionInstallations(desc);
 }
 
+static Future<void> _syncTransformateursToDescription(AuditInstallationsElectriques audit) async {
+  final missionId = audit.missionId;
+  final desc = await getOrCreateDescriptionInstallations(missionId);
+
+  // 1. Extraire tous les transformateurs des locaux MT ou HT/BT de l'audit
+  final List<TransformateurMTBT> transfosAudit = [];
+  bool auditModifie = false;
+
+  // Locaux MT directs
+  for (var local in audit.moyenneTensionLocaux) {
+    if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+      for (var transfo in local.transformateurs) {
+        if (transfo.syncId == null || transfo.syncId!.isEmpty) {
+          transfo.syncId = 'transfo_${DateTime.now().microsecondsSinceEpoch}_${transfosAudit.length}';
+          auditModifie = true;
+        }
+        transfosAudit.add(transfo);
+      }
+    }
+  }
+
+  // Locaux des zones MT
+  for (var zone in audit.moyenneTensionZones) {
+    for (var local in zone.locaux) {
+      if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+        for (var transfo in local.transformateurs) {
+          if (transfo.syncId == null || transfo.syncId!.isEmpty) {
+            transfo.syncId = 'transfo_${DateTime.now().microsecondsSinceEpoch}_${transfosAudit.length}';
+            auditModifie = true;
+          }
+          transfosAudit.add(transfo);
+        }
+      }
+    }
+  }
+
+  // Locaux des zones BT
+  for (var zone in audit.basseTensionZones) {
+    for (var local in zone.locaux) {
+      if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+        for (var transfo in local.transformateurs) {
+          if (transfo.syncId == null || transfo.syncId!.isEmpty) {
+            transfo.syncId = 'transfo_${DateTime.now().microsecondsSinceEpoch}_${transfosAudit.length}';
+            auditModifie = true;
+          }
+          transfosAudit.add(transfo);
+        }
+      }
+    }
+  }
+
+  if (auditModifie) {
+    final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
+    await box.put(audit.key, audit);
+  }
+
+  // 2. Mettre à jour / ajouter dans la description des installations
+  final List<InstallationItem> itemsMiseAJour = [];
+
+  // Conserver les items existants qui n'ont pas d'auditTransformateurId (ex: créés manuellement)
+  for (var item in desc.alimentationBasseTension) {
+    final auditTransfoId = item.data['auditTransformateurId'];
+    if (auditTransfoId == null || auditTransfoId.isEmpty) {
+      itemsMiseAJour.add(item);
+    }
+  }
+
+  // Ajouter / Mettre à jour les transformateurs de l'audit
+  for (var transfo in transfosAudit) {
+    final observationsTxt = (transfo.observations ?? [])
+        .map((o) => o.observation ?? '')
+        .where((s) => s.isNotEmpty)
+        .join('\n');
+
+    final itemData = {
+      'auditTransformateurId': transfo.syncId!,
+      'PUISSANCE TRANSFORMATEUR': transfo.puissanceAssignee,
+      'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR': transfo.calibreDisjoncteur ?? '',
+      'SECTION DU CABLE': transfo.sectionCables ?? '',
+      'TENSION': transfo.tensionPrimaireSecondaire,
+      'OBSERVATIONS': observationsTxt,
+    };
+
+    // Chercher si un item existe déjà pour ce transformateur
+    InstallationItem? itemExistant;
+    try {
+      itemExistant = desc.alimentationBasseTension.firstWhere(
+        (item) => item.data['auditTransformateurId'] == transfo.syncId
+      );
+    } catch (_) {}
+
+    if (itemExistant != null) {
+      itemExistant.data = itemData;
+      itemExistant.photoPaths = List.from(transfo.photos);
+      itemsMiseAJour.add(itemExistant);
+    } else {
+      itemsMiseAJour.add(InstallationItem(
+        data: itemData,
+        photoPaths: List.from(transfo.photos),
+        createdAt: DateTime.now(),
+      ));
+    }
+  }
+
+  desc.alimentationBasseTension = itemsMiseAJour;
+  await saveDescriptionInstallations(desc);
+}
+
 /// Trouver la localisation physique d'une cellule par son syncId
 static Future<String?> getCelluleLocalisation(String missionId, String syncId) async {
   try {
@@ -1331,6 +1447,56 @@ static Future<String?> getCelluleLocalisation(String missionId, String syncId) a
             if (cellule.syncId == syncId) {
               final cellName = cellule.type.isNotEmpty ? cellule.type : 'Cellule';
               return 'Basse Tension ➔ ${zone.nom} ➔ ${local.nom} ➔ $cellName';
+            }
+          }
+        }
+      }
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
+/// Trouver la localisation physique d'un transformateur par son syncId
+static Future<String?> getTransformateurLocalisation(String missionId, String syncId) async {
+  try {
+    final audit = await getOrCreateAuditInstallations(missionId);
+    
+    // 1. Chercher dans les locaux MT directs
+    for (var local in audit.moyenneTensionLocaux) {
+      if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+        for (var transfo in local.transformateurs) {
+          if (transfo.syncId == syncId) {
+            final name = transfo.typeTransformateur.isNotEmpty ? transfo.typeTransformateur : 'Transformateur';
+            return 'Moyenne Tension ➔ ${local.nom} ➔ $name';
+          }
+        }
+      }
+    }
+
+    // 2. Chercher dans les zones MT
+    for (var zone in audit.moyenneTensionZones) {
+      for (var local in zone.locaux) {
+        if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+          for (var transfo in local.transformateurs) {
+            if (transfo.syncId == syncId) {
+              final name = transfo.typeTransformateur.isNotEmpty ? transfo.typeTransformateur : 'Transformateur';
+              return 'Moyenne Tension ➔ ${zone.nom} ➔ ${local.nom} ➔ $name';
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Chercher dans les zones BT
+    for (var zone in audit.basseTensionZones) {
+      for (var local in zone.locaux) {
+        if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+          for (var transfo in local.transformateurs) {
+            if (transfo.syncId == syncId) {
+              final name = transfo.typeTransformateur.isNotEmpty ? transfo.typeTransformateur : 'Transformateur';
+              return 'Basse Tension ➔ ${zone.nom} ➔ ${local.nom} ➔ $name';
             }
           }
         }
@@ -1405,9 +1571,27 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
     }
   }
 
+  int transfoCounter = 0;
+  void migrateLocalTransformateurs(dynamic local) {
+    if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+      for (var transfo in local.transformateurs) {
+        if (transfo.syncId == null || transfo.syncId!.isEmpty) {
+          transfo.syncId = 'transfo_${DateTime.now().microsecondsSinceEpoch}_$transfoCounter';
+          transfoCounter++;
+          changed = true;
+        }
+        if (transfo.observations == null) {
+          transfo.observations = [];
+          changed = true;
+        }
+      }
+    }
+  }
+
   // Locaux MT
   for (var local in audit.moyenneTensionLocaux) {
     migrateLocalCellules(local);
+    migrateLocalTransformateurs(local);
     for (var coffret in local.coffrets) {
       migrateCoffret(coffret);
     }
@@ -1419,6 +1603,7 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
     }
     for (var local in zone.locaux) {
       migrateLocalCellules(local);
+      migrateLocalTransformateurs(local);
       for (var coffret in local.coffrets) {
         migrateCoffret(coffret);
       }
@@ -1431,6 +1616,7 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
     }
     for (var local in zone.locaux) {
       migrateLocalCellules(local);
+      migrateLocalTransformateurs(local);
       for (var coffret in local.coffrets) {
         migrateCoffret(coffret);
       }
