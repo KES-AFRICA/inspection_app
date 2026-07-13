@@ -35,6 +35,7 @@ void main() async {
 
   // Lancer l'optimisation progressive en arrière-plan des photos existantes
   ImageCompressHelper.optimizeExistingPhotosProgressively();
+  HiveService.synchronizeAllExistingMissions();
 
   runApp(const ProviderScope(child: MyApp()));
 }

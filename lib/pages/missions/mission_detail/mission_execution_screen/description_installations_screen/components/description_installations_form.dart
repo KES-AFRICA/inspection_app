@@ -375,7 +375,7 @@ class _DescriptionInstallationsFormState
           sectionCableOptions: _sectionCableOptions,
           modeOptions: _modeOptions,
           ouiNonOptions: _ouiNonOptions,
-          isReadOnly: isAutomatic,
+          isReadOnly: isAutomatic ? !_isItemACompleter(item) : false,
           localisation: localisation,
         ),
       ),
@@ -409,23 +409,34 @@ class _DescriptionInstallationsFormState
     }
   }
 
-  Future<void> _deleteItem(int index) async {
+  bool _isItemACompleter(InstallationItem item) {
+    final isCelluleAuto = item.data.containsKey('auditCelluleId') && item.data['auditCelluleId']!.isNotEmpty;
+    final isTransfoAuto = item.data.containsKey('auditTransformateurId') && item.data['auditTransformateurId']!.isNotEmpty;
+    if (!isCelluleAuto && !isTransfoAuto) return false;
+
+    if (isCelluleAuto) {
+      final calibre = item.data['Calibre Du Disjoncteur'] ?? '';
+      final section = item.data['Section Du Cable'] ?? '';
+      final nature = item.data['Nature Du Reseau'] ?? '';
+      return calibre.isEmpty || section.isEmpty || nature.isEmpty;
+    } else {
+      final calibre = item.data['Calibre Du Disjoncteur Sortie Transformateur'] ?? '';
+      final section = item.data['Section Du Cable'] ?? '';
+      return calibre.isEmpty || section.isEmpty;
+    }
+  }
+
+  Future<void> _deleteItem(int index, InstallationItem item) async {
+    final isCelluleAuto = item.data.containsKey('auditCelluleId') && item.data['auditCelluleId']!.isNotEmpty;
+    final isTransfoAuto = item.data.containsKey('auditTransformateurId') && item.data['auditTransformateurId']!.isNotEmpty;
+    final isAutomatic = isCelluleAuto || isTransfoAuto;
+
     final confirm = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Supprimer'),
-        content: const Text('Voulez-vous vraiment supprimer cet élément ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Supprimer'),
-          ),
-        ],
+      barrierDismissible: false,
+      builder: (ctx) => _DeleteDescriptionDialog(
+        isAutomatic: isAutomatic,
+        title: widget.title,
       ),
     );
     if (confirm == true) {
@@ -627,7 +638,7 @@ class _DescriptionInstallationsFormState
                   ),
                   IconButton(
                     icon: Icon(
-                      isAutomatic
+                      (isAutomatic && !_isItemACompleter(item))
                           ? Icons.visibility_outlined
                           : Icons.edit_outlined,
                       color: AppTheme.primaryBlue,
@@ -637,19 +648,17 @@ class _DescriptionInstallationsFormState
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
-                  if (!isAutomatic) ...[
-                    const SizedBox(width: 8),
-                    IconButton(
-                      icon: Icon(
-                        Icons.delete_outline,
-                        color: Colors.red.shade400,
-                        size: isSmallScreen ? 18 : 20,
-                      ),
-                      onPressed: () => _deleteItem(index),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    icon: Icon(
+                      Icons.delete_outline,
+                      color: Colors.red.shade400,
+                      size: isSmallScreen ? 18 : 20,
                     ),
-                  ],
+                    onPressed: () => _deleteItem(index, item),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
                 ],
               ),
 
@@ -718,6 +727,33 @@ class _DescriptionInstallationsFormState
                         ],
                       ),
                     ),
+               if (_isItemACompleter(item))
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: Colors.orange.shade200),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.warning_amber_rounded, color: Colors.orange.shade800, size: 14),
+                        const SizedBox(width: 6),
+                        Text(
+                          'À compléter',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.orange.shade800,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
               const SizedBox(height: 4),
               Wrap(
                 spacing: 8,
@@ -756,6 +792,218 @@ class _DescriptionInstallationsFormState
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DeleteDescriptionDialog extends StatefulWidget {
+  final bool isAutomatic;
+  final String title;
+
+  const _DeleteDescriptionDialog({
+    required this.isAutomatic,
+    required this.title,
+  });
+
+  @override
+  State<_DeleteDescriptionDialog> createState() => _DeleteDescriptionDialogState();
+}
+
+class _DeleteDescriptionDialogState extends State<_DeleteDescriptionDialog> {
+  int _countdown = 3;
+  bool ready = false;
+  java.util.Timer? _timer; // Sous Flutter on utilise l'alias ou directement importé. Dart possède Timer dans dart:async. Mais attendez, comment est importé Timer ?
+  // Pour éviter des soucis d'importation, utilisons directement `Stream.periodic` ou `Future.delayed` si on veut. Ou alors utilisons `Timer` de `dart:async`.
+  // Regardons en haut de fichier s'il y a déjà `import 'dart:async';`.
+  // Si on utilise `java.util.Timer`, c'est une erreur de syntaxe Java. En Dart c'est `Timer` (de dart:async).
+  // Ajoutons `import 'dart:async';` en haut de fichier pour être 100% sûr. Ou alors nous pouvons utiliser un simple Timer.
+  // Déclarons : `dynamic _timer;` ou `dynamic _timer` pour s'affranchir du typage strict si on n'est pas sûr de l'import, ou importons dart:async en haut de fichier.
+  // Regardons les imports en haut de fichier. Il n'y a pas dart:async. Ajoutons l'import.
+  // Mais pour _DeleteDescriptionDialogState, on peut juste déclarer `dynamic _timer;`. C'est plus simple.
+  dynamic _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Stream.periodic(const Duration(seconds: 1)).listen((_) {
+      if (!mounted) return;
+      if (_countdown > 1) {
+        setState(() => _countdown--);
+      } else {
+        setState(() {
+          ready = true;
+          _countdown = 0;
+        });
+        _timer?.cancel();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      title: Row(
+        children: [
+          Icon(Icons.warning_amber_rounded, color: Colors.red.shade600, size: 28),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Confirmer la suppression',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Outfit',
+              ),
+            ),
+          ),
+        ],
+      ),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            widget.isAutomatic
+                ? 'Cette description de type automatique est liée à un équipement d\'Audit des installations.'
+                : 'Cette description a été créée manuellement.',
+            style: const TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.red.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.red.shade100),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(Icons.info_outline, color: Colors.red.shade700, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    widget.isAutomatic
+                        ? 'La suppression retirera la description de cette liste. L\'équipement d\'Audit restera intact et la description sera recréée lors de la prochaine synchronisation.'
+                        : 'Cette action est irréversible. La description sera définitivement effacée.',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.red.shade700,
+                      height: 1.4,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Center(
+            child: AnimatedSwitcher(
+              duration: const Duration(milliseconds: 300),
+              child: ready
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.check_circle_outline,
+                          size: 16,
+                          color: Colors.green.shade600,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Confirmation disponible',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.green.shade600,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    )
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 14,
+                          height: 14,
+                          child: CircularProgressIndicator(
+                            value: (3 - _countdown) / 3,
+                            strokeWidth: 2,
+                            backgroundColor: Colors.grey.shade100,
+                            color: Colors.red.shade500,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Confirmation dans $_countdown s',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                    ),
+            ),
+          ),
+        ],
+      ),
+      actions: [
+        Row(
+          children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(context, false),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: Colors.grey.shade700,
+                  side: BorderSide(color: Colors.grey.shade300),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                ),
+                child: const Text(
+                  'Annuler',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ElevatedButton(
+                onPressed: ready ? () => Navigator.pop(context, true) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red.shade600,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.red.shade200,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
+                  elevation: ready ? 2 : 0,
+                ),
+                child: const Text(
+                  'Supprimer',
+                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
@@ -1129,6 +1377,30 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
     );
   }
 
+  bool _isFieldReadOnly(String champ) {
+    if (widget.isReadOnly) return true;
+
+    final isCelluleAuto = widget.initialData?.containsKey('auditCelluleId') == true &&
+        widget.initialData?['auditCelluleId']?.isNotEmpty == true;
+    final isTransfoAuto = widget.initialData?.containsKey('auditTransformateurId') == true &&
+        widget.initialData?['auditTransformateurId']?.isNotEmpty == true;
+    final isAutomatic = isCelluleAuto || isTransfoAuto;
+
+    if (!isAutomatic) return false;
+
+    if (isCelluleAuto) {
+      if (champ == 'Gamme De Cellule' || champ == 'Type De Cellule' || champ == 'Observations') {
+        return true;
+      }
+      return false;
+    } else {
+      if (champ == 'Puissance Transformateur' || champ == 'Tension' || champ == 'Observations') {
+        return true;
+      }
+      return false;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
@@ -1225,129 +1497,136 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
                 const SizedBox(height: 20),
               ],
 
-              // Champs éditables ou en lecture seule
-              IgnorePointer(
-                ignoring: widget.isReadOnly,
-                child: Opacity(
-                  opacity: widget.isReadOnly ? 0.95 : 1.0,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: widget.champs.map((champ) {
-                      // Gamme → contrôle le type de cellule
-                      if (_isGammeField(champ)) {
-                        return _buildModernDropdown(
-                          context,
-                          champ,
-                          currentValue: _selectedGamme,
-                          options: CelluleGammes.gammes,
-                          onChanged: (v) => setState(() {
-                            _selectedGamme = v;
-                            final curType = _selectedValues['Type De Cellule'];
-                            if (curType != null &&
-                                !CelluleGammes.getTypesForGamme(
-                                  v,
-                                ).contains(curType)) {
-                              _selectedValues['Type De Cellule'] = null;
-                            }
-                          }),
-                        );
-                      }
-
-                      // Type de cellule → dépend de la gamme
-                      if (_isTypeCelluleField(champ)) {
-                        final types = CelluleGammes.getTypesForGamme(
-                          _selectedGamme,
-                        );
-                        final locked =
-                            _selectedGamme == null || _selectedGamme!.isEmpty;
-                        return Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            if (locked)
-                              Container(
-                                margin: const EdgeInsets.only(bottom: 8),
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 12,
-                                  vertical: 8,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.orange.shade50,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(
-                                    color: Colors.orange.shade200,
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      Icons.info_outline,
-                                      size: 14,
-                                      color: Colors.orange.shade700,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Text(
-                                      "Sélectionnez d'abord une gamme de cellule",
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.orange.shade700,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            IgnorePointer(
-                              ignoring: locked,
-                              child: Opacity(
-                                opacity: locked ? 0.4 : 1.0,
-                                child: _buildModernDropdown(
-                                  context,
-                                  champ,
-                                  currentValue: _selectedValues[champ],
-                                  options: types,
-                                  onChanged: (v) => setState(
-                                    () => _selectedValues[champ] = v,
-                                  ),
-                                ),
+              // Champs éditables ou en lecture seule granulaires
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: widget.champs.map((champ) {
+                  final readOnly = _isFieldReadOnly(champ);
+                  
+                  Widget champWidget;
+                  // Gamme → contrôle le type de cellule
+                  if (_isGammeField(champ)) {
+                    champWidget = _buildModernDropdown(
+                      context,
+                      champ,
+                      currentValue: _selectedGamme,
+                      options: CelluleGammes.gammes,
+                      onChanged: (v) => setState(() {
+                        _selectedGamme = v;
+                        final curType = _selectedValues['Type De Cellule'];
+                        if (curType != null &&
+                            !CelluleGammes.getTypesForGamme(
+                              v,
+                            ).contains(curType)) {
+                          _selectedValues['Type De Cellule'] = null;
+                        }
+                      }),
+                    );
+                  }
+                  // Type de cellule → dépend de la gamme
+                  else if (_isTypeCelluleField(champ)) {
+                    final types = CelluleGammes.getTypesForGamme(
+                      _selectedGamme,
+                    );
+                    final locked =
+                        _selectedGamme == null || _selectedGamme!.isEmpty;
+                    champWidget = Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (locked)
+                          Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 8,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(
+                                color: Colors.orange.shade200,
                               ),
                             ),
-                          ],
-                        );
-                      }
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.info_outline,
+                                  size: 14,
+                                  color: Colors.orange.shade700,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  "Sélectionnez d'abord une gamme de cellule",
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.orange.shade700,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        IgnorePointer(
+                          ignoring: locked || readOnly,
+                          child: Opacity(
+                            opacity: (locked || readOnly) ? 0.4 : 1.0,
+                            child: _buildModernDropdown(
+                              context,
+                              champ,
+                              currentValue: _selectedValues[champ],
+                              options: types,
+                              onChanged: (v) => setState(
+                                () => _selectedValues[champ] = v,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  }
+                  // Section de câble avec unité à gauche (préfixe)
+                  else if (_isSectionCableField(champ)) {
+                    champWidget = _buildModernDropdown(
+                      context,
+                      champ,
+                      currentValue: _selectedValues[champ],
+                      options: widget.sectionCableOptions,
+                      unitPrefixLabel: 'mm²',
+                      onChanged: (v) =>
+                          setState(() => _selectedValues[champ] = v),
+                    );
+                  }
+                  // Dropdowns standard
+                  else if (_isDropdownField(champ)) {
+                    champWidget = _buildModernDropdown(
+                      context,
+                      champ,
+                      currentValue: _selectedValues[champ],
+                      options: _optionsFor(champ),
+                      onChanged: (v) =>
+                          setState(() => _selectedValues[champ] = v),
+                    );
+                  }
+                  // TextField
+                  else {
+                    champWidget = _buildTextField(
+                      context,
+                      champ,
+                      _controllers[champ]!,
+                    );
+                  }
 
-                      // Section de câble avec unité à gauche (préfixe)
-                      if (_isSectionCableField(champ)) {
-                        return _buildModernDropdown(
-                          context,
-                          champ,
-                          currentValue: _selectedValues[champ],
-                          options: widget.sectionCableOptions,
-                          unitPrefixLabel: 'mm²',
-                          onChanged: (v) =>
-                              setState(() => _selectedValues[champ] = v),
-                        );
-                      }
+                  if (_isTypeCelluleField(champ)) {
+                    return champWidget; // Déjà enveloppé
+                  }
 
-                      // Dropdowns standard
-                      if (_isDropdownField(champ)) {
-                        return _buildModernDropdown(
-                          context,
-                          champ,
-                          currentValue: _selectedValues[champ],
-                          options: _optionsFor(champ),
-                          onChanged: (v) =>
-                              setState(() => _selectedValues[champ] = v),
-                        );
-                      }
-
-                      // TextField
-                      return _buildTextField(
-                        context,
-                        champ,
-                        _controllers[champ]!,
-                      );
-                    }).toList(),
-                  ),
-                ),
+                  return IgnorePointer(
+                    ignoring: readOnly,
+                    child: Opacity(
+                      opacity: readOnly ? 0.65 : 1.0,
+                      child: champWidget,
+                    ),
+                  );
+                }).toList(),
               ),
 
               if (!widget.isReadOnly) ...[

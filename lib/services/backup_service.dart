@@ -957,6 +957,9 @@ class BackupService {
       warnings.add('Brouillons coffrets partiellement importés: $e');
     }
 
+    // ─ 5. Synchroniser les équipements après import ─
+    await HiveService.synchronizeAllExistingMissions();
+
     return ImportResult(
       success: imported > 0 || warnings.isEmpty,
       message: imported > 0

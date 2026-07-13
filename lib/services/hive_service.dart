@@ -1194,6 +1194,34 @@ static Future<void> saveAuditInstallations(AuditInstallationsElectriques audit) 
   await audit.save();
 }
 
+/// Synchroniser toutes les missions existantes (migration)
+static Future<void> synchronizeAllExistingMissions() async {
+  try {
+    final auditBox = Hive.box<AuditInstallationsElectriques>(_auditBox);
+    final audits = auditBox.values.toList();
+    if (kDebugMode) {
+      print('🔄 Synchronisation automatique de ${audits.length} missions...');
+    }
+    for (final audit in audits) {
+      try {
+        await _syncCellulesToDescription(audit);
+        await _syncTransformateursToDescription(audit);
+      } catch (e, st) {
+        if (kDebugMode) {
+          print('⚠️ Échec synchronisation pour la mission ${audit.missionId}: $e\n$st');
+        }
+      }
+    }
+    if (kDebugMode) {
+      print('✅ Synchronisation de fond terminée.');
+    }
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ synchronizeAllExistingMissions: $e');
+    }
+  }
+}
+
 static Future<void> _syncCellulesToDescription(AuditInstallationsElectriques audit) async {
   final missionId = audit.missionId;
   final desc = await getOrCreateDescriptionInstallations(missionId);
@@ -1263,18 +1291,6 @@ static Future<void> _syncCellulesToDescription(AuditInstallationsElectriques aud
         .where((s) => s.isNotEmpty)
         .join('\n');
 
-    final itemData = {
-      'auditCelluleId': cellule.syncId!,
-      'Gamme De Cellule': cellule.gamme ?? '',
-      'Type De Cellule': cellule.type,
-      'Calibre Du Disjoncteur': cellule.calibreDisjoncteur ?? '',
-      'Section Du Cable': cellule.sectionCables ?? '',
-      'Nature Du Reseau': cellule.natureReseau ?? '',
-      if (cellule.natureReseau == 'Aérien' && cellule.presenceIacm != null)
-        'PRESENCE IACM': cellule.presenceIacm!,
-      'Observations': observationsTxt,
-    };
-
     // Chercher si un item existe déjà pour cette cellule
     InstallationItem? itemExistant;
     try {
@@ -1282,6 +1298,25 @@ static Future<void> _syncCellulesToDescription(AuditInstallationsElectriques aud
         (item) => item.data['auditCelluleId'] == cellule.syncId
       );
     } catch (_) {}
+
+    final itemData = {
+      'auditCelluleId': cellule.syncId!,
+      'Gamme De Cellule': cellule.gamme ?? '',
+      'Type De Cellule': cellule.type,
+      'Calibre Du Disjoncteur': (cellule.calibreDisjoncteur != null && cellule.calibreDisjoncteur!.isNotEmpty)
+          ? cellule.calibreDisjoncteur!
+          : (itemExistant?.data['Calibre Du Disjoncteur'] ?? ''),
+      'Section Du Cable': (cellule.sectionCables != null && cellule.sectionCables!.isNotEmpty)
+          ? cellule.sectionCables!
+          : (itemExistant?.data['Section Du Cable'] ?? ''),
+      'Nature Du Reseau': (cellule.natureReseau != null && cellule.natureReseau!.isNotEmpty)
+          ? cellule.natureReseau!
+          : (itemExistant?.data['Nature Du Reseau'] ?? ''),
+      if ((cellule.natureReseau == 'Aérien' || (cellule.natureReseau == null && itemExistant?.data['Nature Du Reseau'] == 'Aérien')) &&
+          (cellule.presenceIacm != null || itemExistant?.data['PRESENCE IACM'] != null))
+        'PRESENCE IACM': cellule.presenceIacm ?? itemExistant?.data['PRESENCE IACM'] ?? '',
+      'Observations': observationsTxt,
+    };
 
     if (itemExistant != null) {
       itemExistant.data = itemData;
@@ -1294,6 +1329,11 @@ static Future<void> _syncCellulesToDescription(AuditInstallationsElectriques aud
         createdAt: DateTime.now(),
       ));
     }
+  }
+
+  if (auditModifie) {
+    final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
+    await box.put(audit.key, audit);
   }
 
   desc.alimentationMoyenneTension = itemsMiseAJour;
@@ -1374,15 +1414,6 @@ static Future<void> _syncTransformateursToDescription(AuditInstallationsElectriq
         .where((s) => s.isNotEmpty)
         .join('\n');
 
-    final itemData = {
-      'auditTransformateurId': transfo.syncId!,
-      'Puissance Transformateur': transfo.puissanceAssignee,
-      'Calibre Du Disjoncteur Sortie Transformateur': transfo.calibreDisjoncteur ?? '',
-      'Section Du Cable': transfo.sectionCables ?? '',
-      'Tension': transfo.tensionPrimaireSecondaire,
-      'Observations': observationsTxt,
-    };
-
     // Chercher si un item existe déjà pour ce transformateur
     InstallationItem? itemExistant;
     try {
@@ -1390,6 +1421,19 @@ static Future<void> _syncTransformateursToDescription(AuditInstallationsElectriq
         (item) => item.data['auditTransformateurId'] == transfo.syncId
       );
     } catch (_) {}
+
+    final itemData = {
+      'auditTransformateurId': transfo.syncId!,
+      'Puissance Transformateur': transfo.puissanceAssignee,
+      'Calibre Du Disjoncteur Sortie Transformateur': (transfo.calibreDisjoncteur != null && transfo.calibreDisjoncteur!.isNotEmpty)
+          ? transfo.calibreDisjoncteur!
+          : (itemExistant?.data['Calibre Du Disjoncteur Sortie Transformateur'] ?? ''),
+      'Section Du Cable': (transfo.sectionCables != null && transfo.sectionCables!.isNotEmpty)
+          ? transfo.sectionCables!
+          : (itemExistant?.data['Section Du Cable'] ?? ''),
+      'Tension': transfo.tensionPrimaireSecondaire,
+      'Observations': observationsTxt,
+    };
 
     if (itemExistant != null) {
       itemExistant.data = itemData;
