@@ -1466,13 +1466,21 @@ class _SequenceScreenState extends State<SequenceScreen>
   }
 
   Widget _buildSubs(_Item item) {
-    return Padding(
-      padding: const EdgeInsets.only(left: 24, right: 10, bottom: 4),
+    return Container(
+      margin: const EdgeInsets.only(left: 38, right: 12, bottom: 6, top: 2),
+      decoration: BoxDecoration(
+        border: Border(
+          left: BorderSide(
+            color: Colors.grey.shade200,
+            width: 1.5,
+          ),
+        ),
+      ),
+      padding: const EdgeInsets.only(left: 14),
       child: Column(
         children: item.subs.map((sub) {
           bool subComplete = false;
           if (sub.jsaSubIndex != null) {
-            // ← Depuis Hive, pas depuis le widget state
             subComplete = _jsaSubProgress[sub.jsaSubIndex!] ?? false;
           } else if (sub.descSectionIndex != null) {
             subComplete = _descProgress[sub.key] ?? false;
@@ -1482,9 +1490,9 @@ class _SequenceScreenState extends State<SequenceScreen>
 
           final blocked = _blockMessage(item.stepIndex) != null;
           final subColor = blocked
-              ? Colors.grey.shade400
+              ? Colors.grey.shade300
               : subComplete
-              ? Colors.green
+              ? Colors.green.shade600
               : Colors.grey.shade500;
 
           return InkWell(
@@ -1501,34 +1509,22 @@ class _SequenceScreenState extends State<SequenceScreen>
                   },
             borderRadius: BorderRadius.circular(8),
             child: Container(
-              margin: const EdgeInsets.only(bottom: 3),
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+              margin: const EdgeInsets.only(bottom: 2),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
               decoration: BoxDecoration(
                 color: subComplete
-                    ? Colors.green.withOpacity(0.05)
-                    : Colors.grey.shade50,
+                    ? Colors.green.withOpacity(0.04)
+                    : Colors.transparent,
                 borderRadius: BorderRadius.circular(8),
-                border: subComplete
-                    ? Border.all(color: Colors.green.withOpacity(0.2))
-                    : null,
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 4,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: subColor,
-                      shape: BoxShape.circle,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
                   Icon(
-                    subComplete ? Icons.check_circle : sub.icon,
-                    size: 14,
+                    subComplete ? Icons.check_circle_rounded : sub.icon,
+                    size: 15,
                     color: subColor,
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 10),
                   Expanded(
                     child: Text(
                       sub.label,
@@ -1537,19 +1533,19 @@ class _SequenceScreenState extends State<SequenceScreen>
                         color: blocked
                             ? Colors.grey.shade400
                             : subComplete
-                            ? Colors.green.shade700
+                            ? Colors.green.shade800
                             : Colors.grey.shade700,
                         fontWeight: subComplete
-                            ? FontWeight.w500
+                            ? FontWeight.w600
                             : FontWeight.normal,
                       ),
                     ),
                   ),
                   if (!blocked)
                     Icon(
-                      Icons.chevron_right,
+                      Icons.chevron_right_rounded,
                       size: 14,
-                      color: Colors.grey.shade400,
+                      color: Colors.grey.shade300,
                     ),
                 ],
               ),
