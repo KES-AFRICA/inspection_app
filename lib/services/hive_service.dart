@@ -772,7 +772,6 @@ static Future<void> saveDescriptionInstallations(DescriptionInstallations desc) 
     final box = await Hive.openBox<DescriptionInstallations>('description_installations');
     desc.updatedAt = DateTime.now();
     await box.put(desc.key, desc);
-    await box.close();
   } catch (e) {
     if (kDebugMode) print('❌ Erreur saveDescriptionInstallations: $e');
   }
@@ -833,7 +832,6 @@ static Future<bool> addInstallationItemToSection({
 
     desc.updatedAt = DateTime.now(); // METTRE À JOUR LA DATE
     await box.put(desc.key, desc); // SAUVEGARDER CORRECTEMENT
-    await box.close(); // FERMER LA BOX
     
     if (kDebugMode) print('✅ InstallationItem ajouté à la section: $section');
     return true;
