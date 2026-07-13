@@ -46,7 +46,7 @@ class ImageCompressHelper {
         await for (final entity in photosDir.list(recursive: true)) {
           if (entity is File) {
             final path = entity.path.toLowerCase();
-            if (path.endsWith('.jpg') || path.endsWith('.jpeg') || path.endsWith('.png')) {
+            if (path.endsWith('.jpg') || path.endsWith('.jpeg')) {
               final size = await entity.length();
               // Si la photo fait plus de 250 Ko, elle a besoin d'être optimisée
               if (size > 250 * 1024) {
@@ -67,7 +67,7 @@ class ImageCompressHelper {
           if (!await file.exists()) continue;
 
           final originalPath = file.path;
-          final tempPath = '$originalPath.tmp';
+          final tempPath = '${originalPath}_temp.jpg';
 
           try {
             final oldSize = await file.length();

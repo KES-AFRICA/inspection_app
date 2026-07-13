@@ -830,17 +830,27 @@ class BackupService {
   }
 
   // ── Isolate helper pour le décodage et la vérification du Checksum ──
-  static Map<String, dynamic> _parseJsonAndVerifyChecksum(String jsonContent) {
-    final payload = jsonDecode(jsonContent) as Map<String, dynamic>;
+  static Map<String, dynamic> _parseJsonAndVerifyChecksum(String filePath) {
+    final file = File(filePath);
+    if (!file.existsSync()) {
+      throw const FormatException('file_not_found');
+    }
+    final bytes = file.readAsBytesSync();
+    final payload = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
     final fileMagic = payload['magic'] as String?;
     
     if (fileMagic == _magic) {
       final checksum = payload['checksum'] as String?;
       if (checksum != null) {
-        final withoutChecksum = Map<String, dynamic>.from(payload)..remove('checksum');
-        final encoded = jsonEncode(withoutChecksum);
-        final computed = sha256.convert(utf8.encode(encoded)).toString();
-        if (computed != checksum) {
+        final len = bytes.length;
+        if (len > 79) {
+          // Les 79 derniers octets correspondent à : ,"checksum":"[64_hex_chars]"}
+          final bytesToHash = bytes.sublist(0, len - 79);
+          final computed = sha256.convert(bytesToHash).toString();
+          if (computed != checksum) {
+            throw const FormatException('checksum_invalid');
+          }
+        } else {
           throw const FormatException('checksum_invalid');
         }
       }
@@ -871,8 +881,7 @@ class BackupService {
         return const ImportResult(
             success: false, message: 'Fichier introuvable.');
       }
-      final content = await file.readAsString(encoding: utf8);
-      payload = await compute(_parseJsonAndVerifyChecksum, content);
+      payload = await compute(_parseJsonAndVerifyChecksum, filePath);
     } catch (e) {
       if (e.toString().contains('checksum_invalid')) {
         return const ImportResult(
