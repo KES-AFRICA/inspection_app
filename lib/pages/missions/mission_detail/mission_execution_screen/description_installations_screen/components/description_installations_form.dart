@@ -116,6 +116,50 @@ class CelluleGammes {
 }
 
 // ============================================================
+// HELPERS DE NORMALISATION POUR LA RECHERCHE DE CLÉS DE MANIÈRE ROBUSTE
+// ============================================================
+String _normalizeKey(String key) {
+  return key
+      .toLowerCase()
+      .replaceAll('é', 'e')
+      .replaceAll('è', 'e')
+      .replaceAll('ê', 'e')
+      .replaceAll('ë', 'e')
+      .replaceAll('à', 'a')
+      .replaceAll('â', 'a')
+      .replaceAll('ä', 'a')
+      .replaceAll('î', 'i')
+      .replaceAll('ï', 'i')
+      .replaceAll('ô', 'o')
+      .replaceAll('ö', 'o')
+      .replaceAll('û', 'u')
+      .replaceAll('ü', 'u')
+      .replaceAll('ù', 'u')
+      .replaceAll('ç', 'c')
+      .replaceAll('-', ' ')
+      .replaceAll('_', ' ')
+      .replaceAll("'", ' ')
+      .trim();
+}
+
+String? _getValueForField(Map<String, String>? data, String field) {
+  if (data == null) return null;
+  if (data.containsKey(field)) return data[field];
+  final normalizedField = _normalizeKey(field);
+  for (var entry in data.entries) {
+    if (_normalizeKey(entry.key) == normalizedField) {
+      return entry.value;
+    }
+  }
+  return null;
+}
+
+bool _hasField(Map<String, String>? data, String field) {
+  final val = _getValueForField(data, field);
+  return val != null && val.isNotEmpty;
+}
+
+// ============================================================
 // WIDGET PRINCIPAL : LISTE DES ITEMS
 // ============================================================
 class DescriptionInstallationsForm extends ConsumerStatefulWidget {
@@ -686,12 +730,9 @@ class _DescriptionInstallationsFormState
                 spacing: 8,
                 runSpacing: 6,
                 children: widget.champs
-                    .where(
-                      (c) =>
-                          item.data.containsKey(c) && item.data[c]!.isNotEmpty,
-                    )
+                    .where((c) => _hasField(item.data, c))
                     .map((champ) {
-                      final value = item.data[champ]!;
+                      final value = _getValueForField(item.data, champ)!;
                       final unit = _numericFieldsWithUnit[champ] ?? '';
                       return Container(
                         padding: const EdgeInsets.symmetric(
@@ -766,15 +807,15 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
   @override
   void initState() {
     super.initState();
-    _selectedGamme = widget.initialData?['Gamme De Cellule'];
+    _selectedGamme = _getValueForField(widget.initialData, 'Gamme De Cellule');
     for (var champ in widget.champs) {
       if (_isGammeField(champ)) {
         // handled via _selectedGamme
       } else if (_isDropdownField(champ)) {
-        _selectedValues[champ] = widget.initialData?[champ];
+        _selectedValues[champ] = _getValueForField(widget.initialData, champ);
       } else {
         _controllers[champ] = TextEditingController(
-          text: widget.initialData?[champ] ?? '',
+          text: _getValueForField(widget.initialData, champ) ?? '',
         );
       }
     }

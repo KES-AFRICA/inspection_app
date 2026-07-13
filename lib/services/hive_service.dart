@@ -1376,11 +1376,11 @@ static Future<void> _syncTransformateursToDescription(AuditInstallationsElectriq
 
     final itemData = {
       'auditTransformateurId': transfo.syncId!,
-      'PUISSANCE TRANSFORMATEUR': transfo.puissanceAssignee,
-      'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR': transfo.calibreDisjoncteur ?? '',
-      'SECTION DU CABLE': transfo.sectionCables ?? '',
-      'TENSION': transfo.tensionPrimaireSecondaire,
-      'OBSERVATIONS': observationsTxt,
+      'Puissance Transformateur': transfo.puissanceAssignee,
+      'Calibre Du Disjoncteur Sortie Transformateur': transfo.calibreDisjoncteur ?? '',
+      'Section Du Cable': transfo.sectionCables ?? '',
+      'Tension': transfo.tensionPrimaireSecondaire,
+      'Observations': observationsTxt,
     };
 
     // Chercher si un item existe déjà pour ce transformateur
