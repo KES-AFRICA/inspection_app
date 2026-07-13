@@ -325,6 +325,18 @@ class DescriptionInstallationsSequenceScreenState
   bool get isFirstSlide => _currentStep == 0;
   bool get isLastSlide => _currentStep == _sections.length - 1;
 
+  void jumpToSection(int index) {
+    if (index >= 0 && index < _sections.length) {
+      if (_pageController.hasClients) {
+        _pageController.jumpToPage(index);
+      }
+      setState(() {
+        _currentStep = index;
+      });
+      _saveCurrentPosition(index);
+    }
+  }
+
   bool next() {
     FocusScope.of(context).unfocus();
     if (_currentStep < _sections.length - 1) {

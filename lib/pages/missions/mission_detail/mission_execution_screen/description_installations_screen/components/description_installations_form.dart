@@ -502,17 +502,10 @@ class _DescriptionInstallationsFormState
             Positioned(
               bottom: isSmallScreen ? 16 : 20,
               right: isSmallScreen ? 16 : 20,
-              child: FloatingActionButton.extended(
+              child: FloatingActionButton(
                 onPressed: _isSaving ? null : _addItem,
                 backgroundColor: AppTheme.primaryBlue,
-                icon: const Icon(Icons.add, color: Colors.white),
-                label: Text(
-                  items.isEmpty ? 'Ajouter' : 'Ajouter un autre',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: isSmallScreen ? 13 : 14,
-                  ),
-                ),
+                child: const Icon(Icons.add, color: Colors.white),
               ),
             ),
           ],
