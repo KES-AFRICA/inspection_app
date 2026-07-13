@@ -1292,6 +1292,56 @@ static Future<void> _syncCellulesToDescription(AuditInstallationsElectriques aud
   await saveDescriptionInstallations(desc);
 }
 
+/// Trouver la localisation physique d'une cellule par son syncId
+static Future<String?> getCelluleLocalisation(String missionId, String syncId) async {
+  try {
+    final audit = await getOrCreateAuditInstallations(missionId);
+    
+    // 1. Chercher dans les locaux MT directs
+    for (var local in audit.moyenneTensionLocaux) {
+      if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+        for (var cellule in local.cellules) {
+          if (cellule.syncId == syncId) {
+            final cellName = cellule.type.isNotEmpty ? cellule.type : 'Cellule';
+            return 'Moyenne Tension ➔ ${local.nom} ➔ $cellName';
+          }
+        }
+      }
+    }
+
+    // 2. Chercher dans les zones MT
+    for (var zone in audit.moyenneTensionZones) {
+      for (var local in zone.locaux) {
+        if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+          for (var cellule in local.cellules) {
+            if (cellule.syncId == syncId) {
+              final cellName = cellule.type.isNotEmpty ? cellule.type : 'Cellule';
+              return 'Moyenne Tension ➔ ${zone.nom} ➔ ${local.nom} ➔ $cellName';
+            }
+          }
+        }
+      }
+    }
+
+    // 3. Chercher dans les zones BT
+    for (var zone in audit.basseTensionZones) {
+      for (var local in zone.locaux) {
+        if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+          for (var cellule in local.cellules) {
+            if (cellule.syncId == syncId) {
+              final cellName = cellule.type.isNotEmpty ? cellule.type : 'Cellule';
+              return 'Basse Tension ➔ ${zone.nom} ➔ ${local.nom} ➔ $cellName';
+            }
+          }
+        }
+      }
+    }
+    return null;
+  } catch (_) {
+    return null;
+  }
+}
+
 /// Récupérer les données d'audit par missionId
 static AuditInstallationsElectriques? getAuditInstallationsByMissionId(String missionId) {
   final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
@@ -1342,8 +1392,22 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
     }
   }
 
+  int cellCounter = 0;
+  void migrateLocalCellules(dynamic local) {
+    if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+      for (var cellule in local.cellules) {
+        if (cellule.syncId == null || cellule.syncId!.isEmpty) {
+          cellule.syncId = 'cellule_${DateTime.now().microsecondsSinceEpoch}_$cellCounter';
+          cellCounter++;
+          changed = true;
+        }
+      }
+    }
+  }
+
   // Locaux MT
   for (var local in audit.moyenneTensionLocaux) {
+    migrateLocalCellules(local);
     for (var coffret in local.coffrets) {
       migrateCoffret(coffret);
     }
@@ -1354,6 +1418,7 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
       migrateCoffret(coffret);
     }
     for (var local in zone.locaux) {
+      migrateLocalCellules(local);
       for (var coffret in local.coffrets) {
         migrateCoffret(coffret);
       }
@@ -1365,6 +1430,7 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
       migrateCoffret(coffret);
     }
     for (var local in zone.locaux) {
+      migrateLocalCellules(local);
       for (var coffret in local.coffrets) {
         migrateCoffret(coffret);
       }
