@@ -1,4 +1,6 @@
 // lib/.../description_installations_form.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/description_installations.dart';
@@ -812,20 +814,12 @@ class _DeleteDescriptionDialog extends StatefulWidget {
 class _DeleteDescriptionDialogState extends State<_DeleteDescriptionDialog> {
   int _countdown = 3;
   bool ready = false;
-  java.util.Timer? _timer; // Sous Flutter on utilise l'alias ou directement importé. Dart possède Timer dans dart:async. Mais attendez, comment est importé Timer ?
-  // Pour éviter des soucis d'importation, utilisons directement `Stream.periodic` ou `Future.delayed` si on veut. Ou alors utilisons `Timer` de `dart:async`.
-  // Regardons en haut de fichier s'il y a déjà `import 'dart:async';`.
-  // Si on utilise `java.util.Timer`, c'est une erreur de syntaxe Java. En Dart c'est `Timer` (de dart:async).
-  // Ajoutons `import 'dart:async';` en haut de fichier pour être 100% sûr. Ou alors nous pouvons utiliser un simple Timer.
-  // Déclarons : `dynamic _timer;` ou `dynamic _timer` pour s'affranchir du typage strict si on n'est pas sûr de l'import, ou importons dart:async en haut de fichier.
-  // Regardons les imports en haut de fichier. Il n'y a pas dart:async. Ajoutons l'import.
-  // Mais pour _DeleteDescriptionDialogState, on peut juste déclarer `dynamic _timer;`. C'est plus simple.
-  dynamic _timer;
+  StreamSubscription? _timerSubscription;
 
   @override
   void initState() {
     super.initState();
-    _timer = Stream.periodic(const Duration(seconds: 1)).listen((_) {
+    _timerSubscription = Stream.periodic(const Duration(seconds: 1)).listen((_) {
       if (!mounted) return;
       if (_countdown > 1) {
         setState(() => _countdown--);
@@ -834,14 +828,14 @@ class _DeleteDescriptionDialogState extends State<_DeleteDescriptionDialog> {
           ready = true;
           _countdown = 0;
         });
-        _timer?.cancel();
+        _timerSubscription?.cancel();
       }
     });
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
+    _timerSubscription?.cancel();
     super.dispose();
   }
 
