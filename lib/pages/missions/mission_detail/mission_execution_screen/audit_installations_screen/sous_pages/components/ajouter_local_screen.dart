@@ -1157,6 +1157,24 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
     setState(() {});
   }
 
+  /// Positionner la section et le slide (slide index négatif pour signifier le dernier slide)
+  void setSectionAndSlide(int section, int slideIndex) {
+    setState(() {
+      _currentSection = section;
+      _buildSlides();
+      if (slideIndex < 0) {
+        _currentSlide = _totalSlides - 1;
+      } else {
+        _currentSlide = slideIndex;
+      }
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_slideController.hasClients) {
+        _slideController.jumpToPage(_currentSlide);
+      }
+    });
+  }
+
   /// Méthode pour aller au dernier slide de la section courante
   void goToLastSlide() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -2206,6 +2224,10 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   final _transfoBuchholzController = TextEditingController();
   final _transfoRefroidissementController = TextEditingController();
   final _transfoRegimeController = TextEditingController();
+  final _transfoCalibreDisjoncteurController = TextEditingController();
+  String? _transfoSectionCables;
+  List<ElementControle> _transfoObservations = [];
+  String? _transfoSyncId;
   List<ElementControle> _transfoElements = [];
 
   // Controllers d'observation par élément — garantit que le texte persiste
@@ -2292,6 +2314,10 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoBuchholzController.text = '';
     _transfoRefroidissementController.text = '';
     _transfoRegimeController.text = '';
+    _transfoCalibreDisjoncteurController.clear();
+    _transfoSectionCables = null;
+    _transfoObservations = [];
+    _transfoSyncId = null;
     _transfoElements = _transfoElementsParDefaut.map((element) => ElementControle(
       elementControle: element,
       conforme: null,
@@ -2337,6 +2363,13 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoBuchholzController.text = transfo.relaisBuchholz;
     _transfoRefroidissementController.text = transfo.typeRefroidissement;
     _transfoRegimeController.text = transfo.regimeNeutre;
+    
+    // Nouveaux champs
+    _transfoCalibreDisjoncteurController.text = transfo.calibreDisjoncteur ?? '';
+    _transfoSectionCables = transfo.sectionCables;
+    _transfoObservations = List.from(transfo.observations ?? []);
+    _transfoSyncId = transfo.syncId;
+    
     _transfoElements = List.from(transfo.elementsVerifies);
 
     // Initialiser un controller par élément avec le texte d'observation existant
@@ -2597,6 +2630,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   }
   
   void _sauvegarderTransformateur() {
+    final finalSyncId = _transfoSyncId ?? 'transfo_${DateTime.now().microsecondsSinceEpoch}';
     final nouveauTransformateur = TransformateurMTBT(
       typeTransformateur: _transfoTypeController.text.trim(),
       marqueAnnee: _transfoMarqueController.text.trim(),
@@ -2606,6 +2640,10 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       typeRefroidissement: _transfoRefroidissementController.text,
       regimeNeutre: _transfoRegimeController.text,
       elementsVerifies: _transfoElements,
+      calibreDisjoncteur: _transfoCalibreDisjoncteurController.text.trim(),
+      sectionCables: _transfoSectionCables,
+      observations: _transfoObservations,
+      syncId: finalSyncId,
     );
     
     final nouveauxTransformateurs = List<TransformateurMTBT>.from(widget.transformateurs);
@@ -3463,19 +3501,121 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       child: Column(
         children: [
-          _buildTextField(_transfoTypeController, 'Type de transformateur', isSmallScreen, icon: Icons.transform, optional: true),
+          _buildTextField(_transfoTypeController, 'Type de transformateur', isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(_transfoMarqueController, 'Marque / Année de fabrication', isSmallScreen, icon: Icons.branding_watermark, optional: true),
+          _buildTextField(_transfoMarqueController, 'Marque / Année de fabrication', isSmallScreen,optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(_transfoPuissanceController, 'Puissance assignée (kVA)', isSmallScreen, icon: Icons.speed, optional: true),
+          _buildTextField(_transfoPuissanceController, 'Puissance assignée', isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(_transfoTensionController, 'Tension primaire / secondaire', isSmallScreen, icon: Icons.electrical_services, optional: true),
+          _buildTextField(_transfoTensionController, 'Tension primaire / secondaire', isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
           _buildDropdown(_transfoBuchholzController, 'Présence du relais Buchholz', _ouiNonOptions, isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(_transfoRefroidissementController, 'Type de refroidissement', isSmallScreen, icon: Icons.ac_unit, optional: true),
+          _buildTextField(_transfoRefroidissementController, 'Type de refroidissement', isSmallScreen,optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(_transfoRegimeController, 'Régime du neutre', isSmallScreen, icon: Icons.settings_input_antenna, optional: true),
+          _buildTextField(_transfoRegimeController, 'Régime du neutre', isSmallScreen, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Nouveaux champs
+          _buildTextField(
+            _transfoCalibreDisjoncteurController,
+            'Calibre du disjoncteur',
+            isSmallScreen,
+            optional: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+            suffixText: 'A',
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildDropdownVal(
+            _transfoSectionCables,
+            'Section des câbles',
+            _sectionCableOptions,
+            isSmallScreen,
+            (value) => setState(() => _transfoSectionCables = value),
+            optional: true,
+          ),
+          SizedBox(height: isSmallScreen ? 20 : 26),
+
+          // Observations
+          _buildFormSectionHeader('OBSERVATIONS', isSmallScreen),
+          SizedBox(height: isSmallScreen ? 8 : 10),
+
+          if (_transfoObservations.isNotEmpty)
+            Column(
+              children: _transfoObservations.asMap().entries.map((entry) {
+                final index = entry.key;
+                final obsElement = entry.value;
+                return Container(
+                  margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
+                  padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Observation n°${index + 1}',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 12 : 13,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade800,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                            onPressed: () {
+                              setState(() {
+                                _transfoObservations.removeAt(index);
+                              });
+                            },
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ObservationEnrichieWidget(
+                        element: obsElement,
+                        onChanged: () => setState(() {}),
+                        color: Colors.orange,
+                        onSavePhoto: widget.onSavePhoto,
+                        showPriority: false,
+                        sectionType: 'transformateur',
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _transfoObservations.add(ElementControle(
+                    elementControle: 'Observation transformateur n°${_transfoObservations.length + 1}',
+                    conforme: null,
+                    priorite: 3,
+                  ));
+                });
+              },
+              icon: const Icon(Icons.add_circle_outline, color: Colors.white),
+              label: const Text('AJOUTER UNE OBSERVATION', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.orange.shade800,
+                padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -3887,6 +4027,7 @@ Widget _buildPrioriteButton({
     _transfoBuchholzController.dispose();
     _transfoRefroidissementController.dispose();
     _transfoRegimeController.dispose();
+    _transfoCalibreDisjoncteurController.dispose();
     // Libérer les controllers d'observation
     for (final c in _obsControllersCellule.values) c.dispose();
     for (final c in _obsControllersTransfo.values) c.dispose();
@@ -4387,6 +4528,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         _sauvegarderInaccessible();
         return;
       }
+      _etapeElementsKey?.currentState?.setSectionAndSlide(0, 0);
       _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       return;
     }
@@ -4436,7 +4578,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         }
         return;
       }
-      // Formulaire fermé → retour aux éléments
+      // Formulaire fermé → retour aux éléments (dernier slide)
+      _etapeElementsKey?.currentState?.setSectionAndSlide(1, -1);
       _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       return;
     }
@@ -4458,6 +4601,29 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     // Tous les autres steps → page précédente
     if (_currentStep > 0) {
       _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    }
+  }
+
+  void _changerEtapeDirecte(int cible) {
+    if (cible == _currentStep) return;
+
+    // Si on va vers les Éléments de contrôle (_stepElements)
+    if (cible == _stepElements) {
+      if (_currentStep > _stepElements) {
+        // Reculer depuis Cellules/Transfo -> dernier slide
+        _etapeElementsKey?.currentState?.setSectionAndSlide(1, -1);
+      } else {
+        // Avancer depuis Infos/Accessibilité -> premier slide
+        _etapeElementsKey?.currentState?.setSectionAndSlide(0, 0);
+      }
+    }
+
+    if (_mainPageController.hasClients) {
+      _mainPageController.animateToPage(
+        cible,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     }
   }
 
@@ -5518,18 +5684,21 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                   return Expanded(
                     child: Row(
                       children: [
-                        Container(
-                          width: context.iconSizeL,
-                          height: context.iconSizeL,
-                          decoration: BoxDecoration(
-                            color: isActive ? AppTheme.primaryBlue : Colors.grey.shade300,
-                            shape: BoxShape.circle,
-                            boxShadow: isActive ? [BoxShadow(color: AppTheme.primaryBlue.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 2))] : null,
-                          ),
-                          child: Center(
-                            child: isCompleted
-                                ? Icon(Icons.check, color: Colors.white, size: context.iconSizeS)
-                                : Text('${index + 1}', style: TextStyle(color: isActive ? Colors.white : Colors.grey.shade600, fontWeight: FontWeight.bold, fontSize: context.fontSizeS)),
+                        GestureDetector(
+                          onTap: widget.isEdition ? () => _changerEtapeDirecte(index) : null,
+                          child: Container(
+                            width: context.iconSizeL,
+                            height: context.iconSizeL,
+                            decoration: BoxDecoration(
+                              color: isActive ? AppTheme.primaryBlue : Colors.grey.shade300,
+                              shape: BoxShape.circle,
+                              boxShadow: isActive ? [BoxShadow(color: AppTheme.primaryBlue.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 2))] : null,
+                            ),
+                            child: Center(
+                              child: isCompleted
+                                  ? Icon(Icons.check, color: Colors.white, size: context.iconSizeS)
+                                  : Text('${index + 1}', style: TextStyle(color: isActive ? Colors.white : Colors.grey.shade600, fontWeight: FontWeight.bold, fontSize: context.fontSizeS)),
+                            ),
                           ),
                         ),
                         if (index < totalSteps - 1)
