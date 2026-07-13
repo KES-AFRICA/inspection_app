@@ -445,13 +445,17 @@ class TransformateurMTBTAdapter extends TypeAdapter<TransformateurMTBT> {
       regimeNeutre: fields[6] as String,
       elementsVerifies: (fields[7] as List?)?.cast<ElementControle>(),
       photos: (fields[8] as List?)?.cast<String>(),
+      calibreDisjoncteur: fields[9] as String?,
+      sectionCables: fields[10] as String?,
+      observations: (fields[11] as List?)?.cast<ElementControle>(),
+      syncId: fields[12] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TransformateurMTBT obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.typeTransformateur)
       ..writeByte(1)
@@ -469,7 +473,15 @@ class TransformateurMTBTAdapter extends TypeAdapter<TransformateurMTBT> {
       ..writeByte(7)
       ..write(obj.elementsVerifies)
       ..writeByte(8)
-      ..write(obj.photos);
+      ..write(obj.photos)
+      ..writeByte(9)
+      ..write(obj.calibreDisjoncteur)
+      ..writeByte(10)
+      ..write(obj.sectionCables)
+      ..writeByte(11)
+      ..write(obj.observations)
+      ..writeByte(12)
+      ..write(obj.syncId);
   }
 
   @override

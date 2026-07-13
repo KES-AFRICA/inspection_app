@@ -416,6 +416,18 @@ class TransformateurMTBT {
   @HiveField(8)
   List<String> photos; // Chemins des photos du transformateur
 
+  @HiveField(9)
+  String? calibreDisjoncteur;
+
+  @HiveField(10)
+  String? sectionCables;
+
+  @HiveField(11)
+  List<ElementControle>? observations;
+
+  @HiveField(12)
+  String? syncId;
+
   TransformateurMTBT({
     required this.typeTransformateur,
     required this.marqueAnnee,
@@ -426,8 +438,13 @@ class TransformateurMTBT {
     required this.regimeNeutre,
     List<ElementControle>? elementsVerifies,
     List<String>? photos,
+    this.calibreDisjoncteur,
+    this.sectionCables,
+    List<ElementControle>? observations,
+    this.syncId,
   })  : elementsVerifies = elementsVerifies ?? [],
-        photos = photos ?? [];
+        photos = photos ?? [],
+        observations = observations ?? [];
 }
 
 // COFFRETS/ARMOIRES
