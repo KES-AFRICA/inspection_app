@@ -1287,13 +1287,12 @@ class WordReportService {
   static void _addParafoudreObservationsTable(Document doc, List<ElementControle> observations) {
     if (observations.isEmpty) return;
     final rows = <TableRow>[
-      _headerRow(['N°', 'Observation', 'Réf. normative', 'Priorité']),
+      _headerRow(['N°', 'Observation', 'Réf. normative']),
       for (int i = 0; i < observations.length; i++)
         TableRow(cells: [
           TableCell.text('${i + 1}'),
           TableCell.text(observations[i].observation?.isNotEmpty == true ? observations[i].observation! : observations[i].elementControle),
           TableCell.text(observations[i].referenceNormative ?? '-'),
-          TableCell.text(observations[i].priorite?.toString() ?? '-'),
         ]),
     ];
     doc.addTable(Table(rows: rows, borders: TableBorders.all()));

@@ -1147,13 +1147,14 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
                         ObservationEnrichieWidget(
                           element: element,
                           onChanged: () {
+                            element.priorite = null; // S'assurer que le parafoudre n'a pas de priorité
                             setState(() {});
                             final parentState = context.findAncestorStateOfType<_AjouterCoffretScreenState>();
                             parentState?._saveDraft();
                           },
                           color: Colors.orange,
                           onSavePhoto: widget.onSavePhoto,
-                          showPriority: true,
+                          showPriority: false,
                           sectionType: 'parafoudre',
                         ),
                       ],
@@ -2275,6 +2276,9 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   Future<void> _saveDraft() async {
     if (!mounted) return;
     if (widget.isEdition && widget.coffret != null) return;
+    for (var obs in _observationsParafoudre) {
+      obs.priorite = null;
+    }
     String qrCode = _qrCodeController.text.trim();
     if (qrCode.isEmpty) {
       qrCode = 'TEMP_${DateTime.now().millisecondsSinceEpoch}';
@@ -2673,6 +2677,9 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
 
   void _sauvegarder() async {
     if (!_validateAllFields()) { _showError('Veuillez remplir tous les champs obligatoires'); return; }
+    for (var obs in _observationsParafoudre) {
+      obs.priorite = null;
+    }
     try {
       final toutesPhotos = [..._coffretPhotosExterne, ..._coffretPhotosInterne];
       final nouveauCoffret = CoffretArmoire(

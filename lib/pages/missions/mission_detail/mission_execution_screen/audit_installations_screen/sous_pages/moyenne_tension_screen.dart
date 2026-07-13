@@ -1368,11 +1368,9 @@ void _supprimerBrouillonLocal(String? draftId, String nomLocal) {
     }
 
     bool nonClassee = true;
-    if (zone.classementZoneId != null) {
-      final classement = HiveService.getClassementZoneById(zone.classementZoneId!);
-      if (classement != null && classement.estComplet) {
-        nonClassee = false;
-      }
+    final classement = HiveService.getClassementZoneByNom(widget.mission.id, zone.nom);
+    if (classement != null && classement.estComplet) {
+      nonClassee = false;
     }
 
     return Container(
