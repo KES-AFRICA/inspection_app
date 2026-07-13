@@ -30,6 +30,13 @@ class CelluleEntity {
   final String parafoudres;
   final List<ElementControleEntity> elementsVerifies;
   final List<String> photos;
+  final String? gamme;
+  final String? calibreDisjoncteur;
+  final String? sectionCables;
+  final String? natureReseau;
+  final String? presenceIacm;
+  final String? syncId;
+  final List<ElementControleEntity>? observations;
 
   const CelluleEntity({
     required this.fonction,
@@ -41,6 +48,13 @@ class CelluleEntity {
     required this.parafoudres,
     this.elementsVerifies = const [],
     this.photos = const [],
+    this.gamme,
+    this.calibreDisjoncteur,
+    this.sectionCables,
+    this.natureReseau,
+    this.presenceIacm,
+    this.syncId,
+    this.observations,
   });
 }
 
@@ -54,6 +68,10 @@ class TransformateurMTBTEntity {
   final String regimeNeutre;
   final List<ElementControleEntity> elementsVerifies;
   final List<String> photos;
+  final String? calibreDisjoncteur;
+  final String? sectionCables;
+  final String? syncId;
+  final List<ElementControleEntity>? observations;
 
   const TransformateurMTBTEntity({
     required this.typeTransformateur,
@@ -65,6 +83,10 @@ class TransformateurMTBTEntity {
     required this.regimeNeutre,
     this.elementsVerifies = const [],
     this.photos = const [],
+    this.calibreDisjoncteur,
+    this.sectionCables,
+    this.syncId,
+    this.observations,
   });
 }
 

@@ -40,6 +40,13 @@ class AuditInstallationsMapper {
       parafoudres: model.parafoudres,
       elementsVerifies: model.elementsVerifies.map(toElementEntity).toList(),
       photos: List<String>.from(model.photos),
+      gamme: model.gamme,
+      calibreDisjoncteur: model.calibreDisjoncteur,
+      sectionCables: model.sectionCables,
+      natureReseau: model.natureReseau,
+      presenceIacm: model.presenceIacm,
+      syncId: model.syncId,
+      observations: model.observations?.map(toElementEntity).toList(),
     );
   }
 
@@ -54,6 +61,13 @@ class AuditInstallationsMapper {
       parafoudres: entity.parafoudres,
       elementsVerifies: entity.elementsVerifies.map(toElementModel).toList(),
       photos: List<String>.from(entity.photos),
+      gamme: entity.gamme,
+      calibreDisjoncteur: entity.calibreDisjoncteur,
+      sectionCables: entity.sectionCables,
+      natureReseau: entity.natureReseau,
+      presenceIacm: entity.presenceIacm,
+      syncId: entity.syncId,
+      observations: entity.observations?.map(toElementModel).toList(),
     );
   }
 
@@ -69,6 +83,10 @@ class AuditInstallationsMapper {
       regimeNeutre: model.regimeNeutre,
       elementsVerifies: model.elementsVerifies.map(toElementEntity).toList(),
       photos: List<String>.from(model.photos),
+      calibreDisjoncteur: model.calibreDisjoncteur,
+      sectionCables: model.sectionCables,
+      syncId: model.syncId,
+      observations: model.observations?.map(toElementEntity).toList(),
     );
   }
 
@@ -83,6 +101,10 @@ class AuditInstallationsMapper {
       regimeNeutre: entity.regimeNeutre,
       elementsVerifies: entity.elementsVerifies.map(toElementModel).toList(),
       photos: List<String>.from(entity.photos),
+      calibreDisjoncteur: entity.calibreDisjoncteur,
+      sectionCables: entity.sectionCables,
+      syncId: entity.syncId,
+      observations: entity.observations?.map(toElementModel).toList(),
     );
   }
 
