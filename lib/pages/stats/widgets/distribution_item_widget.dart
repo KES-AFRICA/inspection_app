@@ -20,7 +20,7 @@ class DistributionItemWidget extends StatelessWidget {
     final percentage = total > 0 ? (count / total) * 100 : 0;
     
     return Container(
-      margin: EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 16),
       child: Column(
         children: [
           Row(
@@ -29,42 +29,42 @@ class DistributionItemWidget extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: 16,
-                    height: 16,
+                    width: 10,
+                    height: 10,
                     decoration: BoxDecoration(
                       color: color,
-                      borderRadius: BorderRadius.circular(4),
+                      shape: BoxShape.circle,
                     ),
                   ),
-                  SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Text(
                     status,
                     style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w500,
+                      fontSize: 13.5,
+                      fontWeight: FontWeight.w600,
                       color: AppTheme.darkBlue,
                     ),
                   ),
                 ],
               ),
               Text(
-                '${count} (${percentage.toStringAsFixed(1)}%)',
+                '$count (${percentage.toStringAsFixed(1)}%)',
                 style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.bold,
                   color: color,
                 ),
               ),
             ],
           ),
-          SizedBox(height: 8),
+          const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
               value: total > 0 ? count / total : 0,
-              backgroundColor: color.withOpacity(0.2),
+              backgroundColor: color.withOpacity(0.08),
               valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 8,
+              minHeight: 6,
             ),
           ),
         ],

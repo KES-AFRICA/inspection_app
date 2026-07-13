@@ -14,7 +14,7 @@ class RecentMissionItemWidget extends StatelessWidget {
     final normalized = _normalizeStatus(status);
     switch (normalized) {
       case 'En attente': return Colors.orange;
-      case 'En cours': return Colors.blue;
+      case 'En cours': return AppTheme.primaryBlue;
       case 'Terminé': return Colors.green;
       default: return Colors.grey;
     }
@@ -34,25 +34,28 @@ class RecentMissionItemWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final statusColor = _getStatusColor(mission.status);
+    final normalized = _normalizeStatus(mission.status);
+
     return Container(
-      margin: EdgeInsets.only(bottom: 12),
-      padding: EdgeInsets.all(14),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade200),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.shade100, width: 1.5),
       ),
       child: Row(
         children: [
           Container(
             width: 4,
-            height: 40,
+            height: 42,
             decoration: BoxDecoration(
-              color: _getStatusColor(mission.status),
+              color: statusColor,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,37 +63,38 @@ class RecentMissionItemWidget extends StatelessWidget {
                 Text(
                   mission.nomClient,
                   style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14.5,
                     color: AppTheme.darkBlue,
                   ),
                 ),
-                SizedBox(height: 6),
+                const SizedBox(height: 6),
                 Row(
                   children: [
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                       decoration: BoxDecoration(
-                        color: _getStatusColor(mission.status).withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(4),
+                        color: statusColor.withOpacity(0.08),
+                        borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
-                        _normalizeStatus(mission.status),
+                        normalized == 'Terminé' ? 'Terminée' : normalized,
                         style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
-                          color: _getStatusColor(mission.status),
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: statusColor,
                         ),
                       ),
                     ),
-                    SizedBox(width: 8),
-                    Icon(Icons.access_time, size: 12, color: AppTheme.textLight),
-                    SizedBox(width: 4),
+                    const SizedBox(width: 12),
+                    Icon(Icons.access_time, size: 13, color: AppTheme.textLight),
+                    const SizedBox(width: 4),
                     Text(
                       _formatDate(mission.createdAt),
                       style: TextStyle(
                         fontSize: 12,
                         color: AppTheme.textLight,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
                   ],

@@ -18,49 +18,65 @@ class StatsStatusDistribution extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.pie_chart, color: AppTheme.primaryBlue, size: 24),
-                SizedBox(width: 8),
-                Text(
-                  'Répartition des missions',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.darkBlue,
-                  ),
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.015),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withOpacity(0.08),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-              ],
-            ),
-            SizedBox(height: 20),
-            DistributionItemWidget(
-              status: 'En attente',
-              count: pendingMissions,
-              total: totalMissions,
-              color: Colors.orange,
-            ),
-            DistributionItemWidget(
-              status: 'En cours',
-              count: inProgressMissions,
-              total: totalMissions,
-              color: Colors.blue,
-            ),
-            DistributionItemWidget(
-              status: 'Terminé',
-              count: completedMissions,
-              total: totalMissions,
-              color: Colors.green,
-            ),
-          ],
-        ),
+                child: Icon(Icons.pie_chart_outline, color: AppTheme.primaryBlue, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                'Répartition des missions',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.darkBlue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          DistributionItemWidget(
+            status: 'En attente',
+            count: pendingMissions,
+            total: totalMissions,
+            color: Colors.orange,
+          ),
+          DistributionItemWidget(
+            status: 'En cours',
+            count: inProgressMissions,
+            total: totalMissions,
+            color: AppTheme.primaryBlue,
+          ),
+          DistributionItemWidget(
+            status: 'Terminée',
+            count: completedMissions,
+            total: totalMissions,
+            color: Colors.green,
+          ),
+        ],
       ),
     );
   }

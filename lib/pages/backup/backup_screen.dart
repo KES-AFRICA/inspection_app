@@ -307,6 +307,7 @@ class _BackupScreenState extends State<BackupScreen> {
       );
 
   @override
+  @override
   Widget build(BuildContext context) {
     final missions =
         HiveService.getMissionsByMatricule(widget.user.matricule);
@@ -315,57 +316,78 @@ class _BackupScreenState extends State<BackupScreen> {
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
-        title: const Text('Sauvegarde & Restauration'),
+        title: const Text(
+          'Sauvegarde & Restauration',
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+        ),
         backgroundColor: AppTheme.primaryBlue,
         foregroundColor: Colors.white,
         elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // ── Bandeau info ──────────────────────────────────────
+            // ── Bandeau info premium ──────────────────────────────
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [
-                  AppTheme.primaryBlue.withOpacity(0.10),
-                  AppTheme.primaryBlue.withOpacity(0.04),
-                ]),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                    color: AppTheme.primaryBlue.withOpacity(0.2)),
-              ),
-              child: Row(children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryBlue.withOpacity(0.12),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: const Icon(Icons.security,
-                      color: AppTheme.primaryBlue, size: 22),
+                gradient: LinearGradient(
+                  colors: [
+                    AppTheme.primaryBlue.withOpacity(0.08),
+                    AppTheme.lightBlue.withOpacity(0.02),
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: AppTheme.primaryBlue.withOpacity(0.12),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      Icons.security_outlined,
+                      color: AppTheme.primaryBlue,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Protection de vos données',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w700,
-                                fontSize: 14,
-                                color: AppTheme.primaryBlue)),
+                        Text(
+                          'Protection de vos données',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14.5,
+                            color: AppTheme.darkBlue,
+                          ),
+                        ),
                         const SizedBox(height: 3),
                         Text(
-                          '$missionCount mission${missionCount > 1 ? 's' : ''} disponible${missionCount > 1 ? 's' : ''}.',
-                          style: const TextStyle(
-                              fontSize: 12, color: Colors.grey),
+                          '$missionCount mission${missionCount > 1 ? 's' : ''} disponible${missionCount > 1 ? 's' : ''} localement.',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade600,
+                            fontWeight: FontWeight.w500,
+                          ),
                         ),
-                      ]),
-                ),
-              ]),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: 20),
@@ -385,7 +407,7 @@ class _BackupScreenState extends State<BackupScreen> {
               onPressed: _isExporting ? null : _handleExport,
             ),
 
-            const SizedBox(height: 14),
+            const SizedBox(height: 16),
 
             // ── Card Import ───────────────────────────────────────
             _buildActionCard(
@@ -402,44 +424,77 @@ class _BackupScreenState extends State<BackupScreen> {
               onPressed: _isImporting ? null : _handleImport,
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 24),
 
             // ── Bonnes pratiques ──────────────────────────────────
             Container(
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.grey.shade200),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.grey.shade100, width: 1.5),
                 boxShadow: [
                   BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
-                      blurRadius: 8,
-                      offset: const Offset(0, 2))
+                    color: Colors.black.withOpacity(0.015),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
                 ],
               ),
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Row(children: [
-                    Icon(Icons.lightbulb_outline,
-                        color: Colors.amber, size: 16),
-                    SizedBox(width: 8),
-                    Text('Bonnes pratiques',
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.lightbulb_outline,
+                          color: Colors.amber,
+                          size: 16,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        'Bonnes pratiques',
                         style: TextStyle(
-                            fontWeight: FontWeight.w700, fontSize: 13)),
-                  ]),
-                  const SizedBox(height: 12),
-                  _tip(Icons.touch_app_outlined, 'Export rapide',
-                      'Depuis la liste, appuyez sur ⋮ sur une carte mission pour l\'exporter ou la supprimer.'),
-                  _tip(Icons.calendar_today_outlined, 'Fréquence',
-                      'Exportez après chaque journée d\'inspection.'),
-                  _tip(Icons.cloud_upload_outlined, 'Stockage cloud',
-                      'Conservez sur Google Drive, OneDrive ou par email.'),
-                  _tip(Icons.verified_user_outlined, 'Intégrité',
-                      'Chaque export est signé par un checksum SHA-256.'),
-                  _tip(Icons.phone_android_outlined, 'Multi-appareil',
-                      'Sur un nouveau téléphone, importez votre sauvegarde.'),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                          color: AppTheme.darkBlue,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _tip(
+                    Icons.touch_app_outlined,
+                    'Export rapide',
+                    'Depuis la liste, appuyez sur ⋮ sur une carte mission pour l\'exporter ou la supprimer.',
+                  ),
+                  _tip(
+                    Icons.calendar_today_outlined,
+                    'Fréquence',
+                    'Exportez après chaque journée d\'inspection.',
+                  ),
+                  _tip(
+                    Icons.cloud_upload_outlined,
+                    'Stockage cloud',
+                    'Conservez sur Google Drive, OneDrive ou par email.',
+                  ),
+                  _tip(
+                    Icons.verified_user_outlined,
+                    'Intégrité',
+                    'Chaque export est signé par un checksum SHA-256.',
+                  ),
+                  _tip(
+                    Icons.phone_android_outlined,
+                    'Multi-appareil',
+                    'Sur un nouveau téléphone, importez votre sauvegarde.',
+                  ),
                 ],
               ),
             ),
@@ -462,107 +517,149 @@ class _BackupScreenState extends State<BackupScreen> {
       Container(
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: Colors.grey.shade200),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Colors.grey.shade100, width: 1.5),
           boxShadow: [
             BoxShadow(
-                color: Colors.black.withOpacity(0.04),
-                blurRadius: 8,
-                offset: const Offset(0, 2))
+              color: Colors.black.withOpacity(0.015),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
           ],
         ),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(18),
         child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(children: [
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
                 Container(
-                  padding: const EdgeInsets.all(9),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.10),
-                    borderRadius: BorderRadius.circular(9),
+                    color: color.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Icon(icon, color: color, size: 20),
+                  child: Icon(icon, color: color, size: 22),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 14),
                 Expanded(
                   child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(title,
-                            style: const TextStyle(
-                                fontWeight: FontWeight.w700, fontSize: 14)),
-                        const SizedBox(height: 3),
-                        Text(subtitle,
-                            style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.grey.shade600)),
-                      ]),
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14.5,
+                          color: AppTheme.darkBlue,
+                        ),
+                      ),
+                      const SizedBox(height: 3),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 11.5,
+                          color: Colors.grey.shade600,
+                          height: 1.3,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ]),
-              const SizedBox(height: 10),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 10, vertical: 7),
-                decoration: BoxDecoration(
-                  color: color.withOpacity(0.05),
-                  borderRadius: BorderRadius.circular(7),
-                ),
-                child: Row(children: [
-                  Icon(Icons.info_outline, size: 13, color: color),
-                  const SizedBox(width: 7),
+              ],
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.04),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, size: 14, color: color),
+                  const SizedBox(width: 8),
                   Expanded(
-                      child: Text(tip,
-                          style:
-                              TextStyle(fontSize: 11, color: color))),
-                ]),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: onPressed,
-                  icon: isLoading
-                      ? const SizedBox(
-                          width: 15,
-                          height: 15,
-                          child: CircularProgressIndicator(
-                              color: Colors.white, strokeWidth: 2))
-                      : Icon(icon, size: 17),
-                  label: Text(
-                    isLoading ? 'Traitement en cours…' : buttonLabel,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600, fontSize: 13),
+                    child: Text(
+                      tip,
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: color,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
                   ),
-                  style: FilledButton.styleFrom(
-                    backgroundColor: color,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: onPressed,
+                icon: isLoading
+                    ? const SizedBox(
+                        width: 15,
+                        height: 15,
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
+                      )
+                    : Icon(icon, size: 18),
+                label: Text(
+                  isLoading ? 'Traitement en cours…' : buttonLabel,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 13,
+                  ),
+                ),
+                style: FilledButton.styleFrom(
+                  backgroundColor: color,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
               ),
-            ]),
+            ),
+          ],
+        ),
       );
 
   Widget _tip(IconData icon, String label, String text) => Padding(
-        padding: const EdgeInsets.only(bottom: 9),
-        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Icon(icon, size: 14, color: Colors.grey.shade500),
-          const SizedBox(width: 10),
-          Expanded(
-            child: Column(
+        padding: const EdgeInsets.only(bottom: 12),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 15, color: Colors.grey.shade400),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(label,
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 12)),
-                  Text(text,
-                      style: TextStyle(
-                          fontSize: 11, color: Colors.grey.shade600)),
-                ]),
-          ),
-        ]),
+                  Text(
+                    label,
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12.5,
+                      color: AppTheme.darkBlue,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    text,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: Colors.grey.shade600,
+                      height: 1.3,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       );
 }
 

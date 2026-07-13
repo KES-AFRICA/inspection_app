@@ -28,6 +28,7 @@ class _HomeScreenState extends State<HomeScreen> {
   int _currentPageIndex = 0;
   
   // Variables pour la recherche et le filtre
+  final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   String _selectedFilter = 'Tous';
 
@@ -39,13 +40,57 @@ class _HomeScreenState extends State<HomeScreen> {
     super.initState();
     _loadLocalMissions();
   }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
   
+
+  String _normalizeStatus(String status) {
+    final s = status.toLowerCase().trim();
+    if (s.contains('encour') || s.contains('en cours')) return 'En cours';
+    if (s.contains('termine') || s.contains('terminé')) return 'Terminé';
+    if (s.contains('attente')) return 'En attente';
+    return status[0].toUpperCase() + status.substring(1).toLowerCase();
+  }
+
+  void _applyFilters() {
+    List<Mission> result = List.from(_missions);
+
+    // Filtrer par statut sélectionné (via les chips horizontaux)
+    if (_selectedFilter != 'Tous') {
+      result = result.where((m) => _normalizeStatus(m.status) == _selectedFilter).toList();
+    }
+
+    // Filtrer par recherche textuelle (via le TextField)
+    if (_searchQuery.trim().isNotEmpty) {
+      final query = _searchQuery.toLowerCase().trim();
+      result = result.where((m) {
+        final client = m.nomClient.toLowerCase();
+        final site = (m.nomSite ?? '').toLowerCase();
+        final adresse = (m.adresseClient ?? '').toLowerCase();
+        return client.contains(query) || 
+               site.contains(query) || 
+               adresse.contains(query);
+      }).toList();
+    }
+
+    // Tri par défaut : du plus récent au plus ancien
+    result.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+    setState(() {
+      _filteredMissions = result;
+    });
+  }
 
   void _loadLocalMissions() {
     setState(() {
       _missions = HiveService.getMissionsByMatricule(widget.user.matricule);
-      _filteredMissions = _missions;
     });
+    _applyFilters();
   }
 
   void _onNavigationItemSelected(int index) {
@@ -58,13 +103,22 @@ class _HomeScreenState extends State<HomeScreen> {
   void _updateSearchQuery(String query) {
     setState(() {
       _searchQuery = query;
+      if (_searchController.text != query) {
+        _searchController.text = query;
+      }
     });
+    _applyFilters();
   }
 
   void _updateSelectedFilter(String filter) {
+    String finalFilter = filter;
+    if (filter.startsWith('Par statut: ')) {
+      finalFilter = filter.replaceAll('Par statut: ', '');
+    }
     setState(() {
-      _selectedFilter = filter;
+      _selectedFilter = finalFilter;
     });
+    _applyFilters();
   }
 
   void _updateFilteredMissions(List<Mission> missions) {
@@ -74,29 +128,98 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   // IMPLÉMENTATION COMPLÈTE DE LA GESTION DES PÉRIODES STATS
-void _handleStatsPeriodChange(String period) {
-  print('🔄 Changement de période pour les stats: $period');
-  
-  // Utiliser un délai pour éviter les appels pendant le build
-  WidgetsBinding.instance.addPostFrameCallback((_) {
-    if (mounted) {
-      setState(() {
-        _statsSelectedPeriod = period;
-      });
+  void _handleStatsPeriodChange(String period) {
+    print('🔄 Changement de période pour les stats: $period');
+    
+    // Utiliser un délai pour éviter les appels pendant le build
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        setState(() {
+          _statsSelectedPeriod = period;
+        });
 
-      // Sauvegarder la préférence
-      _saveStatsPeriodPreference(period);
-    }
-  });
-}
+        // Sauvegarder la préférence
+        _saveStatsPeriodPreference(period);
+      }
+    });
+  }
 
-void _saveStatsPeriodPreference(String period) {
-  // Sauvegarder dans les préférences locales
-  print('💾 Sauvegarde préférence période: $period');
+  void _saveStatsPeriodPreference(String period) {
+    // Sauvegarder dans les préférences locales
+    print('💾 Sauvegarde préférence période: $period');
   
   // Exemple avec Hive si vous avez un service de préférences :
   // HiveService.saveStatsPeriodPreference(period);
 }
+
+  Widget _buildQuickActionButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onPressed,
+  }) {
+    return Tooltip(
+      message: tooltip,
+      child: InkWell(
+        onTap: onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          width: 46,
+          height: 46,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade200, width: 1),
+          ),
+          child: Icon(icon, color: AppTheme.primaryBlue, size: 20),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String value, String label) {
+    final isSelected = _selectedFilter == value;
+    final themeColor = value == 'Tous'
+        ? AppTheme.primaryBlue
+        : value == 'En attente'
+            ? Colors.orange
+            : value == 'En cours'
+                ? AppTheme.primaryBlue
+                : Colors.green;
+
+    return InkWell(
+      onTap: () => _updateSelectedFilter(value),
+      borderRadius: BorderRadius.circular(20),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 7),
+        decoration: BoxDecoration(
+          color: isSelected ? themeColor : Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isSelected ? themeColor : Colors.grey.shade200,
+            width: 1,
+          ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: themeColor.withOpacity(0.2),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            color: isSelected ? Colors.white : Colors.grey.shade700,
+            fontSize: 12.5,
+            fontWeight: isSelected ? FontWeight.w600 : FontWeight.w500,
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -162,10 +285,10 @@ void _saveStatsPeriodPreference(String period) {
               ],
             ),
       
-            // Floating Action Button (seulement sur la page d'accueil)
+            // Floating Action Button (repositionné à droite)
             if (_currentPageIndex == 0)
               Positioned(
-                left: 16,
+                right: 16,
                 bottom: 16,
                 child: FloatingActionButton.extended(
                   onPressed: () async {
@@ -179,9 +302,20 @@ void _saveStatsPeriodPreference(String period) {
                       _loadLocalMissions();
                     }
                   },
-                  icon: const Icon(Icons.add),
-                  label: const Text('Nouvelle mission'),
-                  backgroundColor: Colors.green,
+                  icon: const Icon(Icons.add, color: Colors.white),
+                  label: const Text(
+                    'Nouvelle mission',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 0.1,
+                    ),
+                  ),
+                  backgroundColor: AppTheme.primaryBlue,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  elevation: 4,
                 ),
               ),
       
@@ -219,37 +353,134 @@ void _saveStatsPeriodPreference(String period) {
   Widget _buildHomeContent() {
     return Column(
       children: [
-        // Indicateurs de filtre/recherche actifs
+        // Panneau de recherche & filtres premium
+        Container(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.02),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              // Barre de recherche + bouton tri rapide
+              Row(
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 46,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(24),
+                        border: Border.all(color: Colors.grey.shade200, width: 1),
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        onChanged: _updateSearchQuery,
+                        decoration: InputDecoration(
+                          hintText: 'Rechercher un client, site...',
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 13.5,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: AppTheme.primaryBlue.withOpacity(0.7),
+                            size: 20,
+                          ),
+                          suffixIcon: _searchQuery.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.close, size: 18, color: Colors.grey.shade600),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    _updateSearchQuery('');
+                                  },
+                                )
+                              : null,
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Bouton Trier
+                  _buildQuickActionButton(
+                    icon: Icons.swap_vert,
+                    tooltip: 'Trier',
+                    onPressed: () => showDialog(
+                      context: context,
+                      builder: (context) => SortDialog(
+                        selectedFilter: _selectedFilter,
+                        missions: _missions,
+                        onFilterApplied: _updateFilteredMissions,
+                        onFilterSelected: _updateSelectedFilter,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Chips de filtrage horizontaux
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: [
+                    _buildFilterChip('Tous', 'Toutes'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('En attente', 'En attente'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('En cours', 'En cours'),
+                    const SizedBox(width: 8),
+                    _buildFilterChip('Terminé', 'Terminées'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Nombre de résultats s'il y a un filtre actif
         if (_selectedFilter != 'Tous' || _searchQuery.isNotEmpty)
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.lightBlue.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
-            ),
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
             child: Row(
               children: [
-                Icon(Icons.info_outline, size: 18, color: AppTheme.primaryBlue),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _selectedFilter != 'Tous' 
-                      ? 'Filtre: $_selectedFilter (${_filteredMissions.length} résultat(s))'
-                      : 'Recherche: "$_searchQuery" (${_filteredMissions.length} résultat(s))',
-                    style: TextStyle(fontSize: 14, color: AppTheme.darkBlue),
+                Icon(Icons.info_outline, size: 14, color: AppTheme.primaryBlue),
+                const SizedBox(width: 6),
+                Text(
+                  '${_filteredMissions.length} résultat(s) trouvé(s)',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: AppTheme.textLight,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.close, size: 18),
+                const Spacer(),
+                TextButton(
                   onPressed: () {
                     setState(() {
                       _selectedFilter = 'Tous';
                       _searchQuery = '';
-                      _filteredMissions = _missions;
+                      _searchController.clear();
                     });
+                    _applyFilters();
                   },
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text(
+                    'Réinitialiser',
+                    style: TextStyle(fontSize: 12, color: Colors.red),
+                  ),
                 ),
               ],
             ),
@@ -270,7 +501,7 @@ void _saveStatsPeriodPreference(String period) {
                       const SizedBox(height: 16),
                       Text(
                         _missions.isEmpty ? 'Aucune mission disponible' : 'Aucun résultat trouvé',
-                        style: TextStyle(fontSize: 16, color: AppTheme.greyDark),
+                        style: TextStyle(fontSize: 16, color: AppTheme.greyDark, fontWeight: FontWeight.w600),
                       ),
                       const SizedBox(height: 8),
                       Text(

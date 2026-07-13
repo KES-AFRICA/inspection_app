@@ -217,6 +217,10 @@ class _StatsScreenState extends State<StatsScreen> {
             periodLabel: _getPeriodLabel(),
             isCustomPeriod: _selectedPeriod == 'custom',
             onResetPeriod: _resetToDefaultPeriod,
+            onPeriodSelected: (period) => _applyPeriodFilter(
+              HiveService.getMissionsByMatricule(widget.user.matricule),
+              period,
+            ),
           ),
 
           Expanded(

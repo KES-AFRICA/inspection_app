@@ -196,257 +196,295 @@ class MissionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor(mission.status);
+    final normalized = _normalizeStatus(mission.status);
+    final progress = normalized == 'Terminé' 
+        ? 1.0 
+        : normalized == 'En cours' 
+            ? 0.5 
+            : 0.0;
 
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 1,
-      shadowColor: Colors.black12,
-      child: InkWell(
-        onTap: () => Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => MissionDetailScreen(mission: mission, user: user),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade100, width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.015),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-        ),
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 14, 8, 14),
-          child: Row(
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: () => Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => MissionDetailScreen(mission: mission, user: user),
+            ),
+          ),
+          child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // ── Contenu principal ─────────────────────────────
-              Expanded(
-                child: Column(
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 8, 14),
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Logo + nom + activité
-                    Row(
-                      children: [
-                        if (mission.logoClient != null) ...[
-                          ClipRRect(
-                            borderRadius: BorderRadius.circular(6),
-                            child: Image.network(
-                              mission.logoClient!,
-                              width: 38,
-                              height: 38,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => Container(
-                                width: 38,
-                                height: 38,
-                                decoration: BoxDecoration(
-                                  color: AppTheme.primaryBlue.withOpacity(0.08),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Icon(
-                                  Icons.business,
-                                  size: 20,
-                                  color: AppTheme.primaryBlue,
-                                ),
-                              ),
+                    // Avatar / Logo client
+                    if (mission.logoClient != null) ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(10),
+                        child: Image.network(
+                          mission.logoClient!,
+                          width: 44,
+                          height: 44,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, __, ___) => Container(
+                            width: 44,
+                            height: 44,
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(10),
                             ),
-                          ),
-                          const SizedBox(width: 10),
-                        ],
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                mission.nomClient,
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w700,
-                                  color: Color(0xFF1A1A2E),
-                                ),
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                              if (mission.activiteClient != null) ...[
-                                const SizedBox(height: 2),
-                                Text(
-                                  mission.activiteClient!,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: AppTheme.textLight,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ],
-                            ],
+                            child: Icon(
+                              Icons.business,
+                              size: 22,
+                              color: AppTheme.primaryBlue,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 12),
+                    ] else ...[
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [AppTheme.primaryBlue.withOpacity(0.12), AppTheme.primaryBlue.withOpacity(0.04)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Center(
+                          child: Text(
+                            mission.nomClient.trim().isNotEmpty
+                                ? mission.nomClient.trim().substring(0, 2).toUpperCase()
+                                : 'MI',
+                            style: TextStyle(
+                              color: AppTheme.primaryBlue,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                    ],
 
-                    const SizedBox(height: 10),
-
-                    // Badge statut
-                    // Badge statut — sans "Terminé" (pastille suffisante)
-                    Builder(
-                      builder: (ctx) {
-                        final label = _badgeLabel(mission.status);
-                        if (label.isEmpty) {
-                          // Terminée : pastille colorée seule
-                          return Row(
-                            mainAxisSize: MainAxisSize.min,
+                    // Détails textuels
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
+                              Expanded(
+                                child: Text(
+                                  mission.nomClient,
+                                  style: const TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: Color(0xFF1E293B),
+                                  ),
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              // Badge de Statut
                               Container(
-                                width: 8,
-                                height: 8,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 3,
+                                ),
                                 decoration: BoxDecoration(
-                                  color: statusColor,
-                                  shape: BoxShape.circle,
+                                  color: statusColor.withOpacity(0.08),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: statusColor.withOpacity(0.15),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Text(
+                                  normalized == 'Terminé' ? 'Terminée' : normalized,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: statusColor,
+                                    fontWeight: FontWeight.w700,
+                                  ),
                                 ),
                               ),
                             ],
-                          );
-                        }
-                        return Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 3,
                           ),
-                          decoration: BoxDecoration(
-                            color: statusColor.withOpacity(0.10),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: statusColor.withOpacity(0.25),
-                            ),
-                          ),
-                          child: Text(
-                            label,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: statusColor,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-
-                    // Adresse
-                    if (mission.adresseClient != null) ...[
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.location_on_outlined,
-                            size: 13,
-                            color: AppTheme.greyDark,
-                          ),
-                          const SizedBox(width: 4),
-                          Expanded(
-                            child: Text(
-                              mission.adresseClient!,
+                          if (mission.activiteClient != null && mission.activiteClient!.isNotEmpty) ...[
+                            const SizedBox(height: 2),
+                            Text(
+                              mission.activiteClient!,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: AppTheme.greyDark,
+                                color: AppTheme.textLight,
+                                fontWeight: FontWeight.w500,
                               ),
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                             ),
-                          ),
-                        ],
-                      ),
-                    ],
+                          ],
 
-                    // Date intervention
-                    if (mission.dateIntervention != null) ...[
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Icon(
-                            Icons.calendar_today_outlined,
-                            size: 13,
-                            color: AppTheme.greyDark,
-                          ),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Intervention : ${_formatDate(mission.dateIntervention!)}',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: AppTheme.greyDark,
+                          const SizedBox(height: 10),
+
+                          // Adresse
+                          if (mission.adresseClient != null && mission.adresseClient!.isNotEmpty) ...[
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on_outlined,
+                                  size: 13,
+                                  color: Colors.grey.shade500,
+                                ),
+                                const SizedBox(width: 4),
+                                Expanded(
+                                  child: Text(
+                                    mission.adresseClient!,
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+                              ],
                             ),
+                            const SizedBox(height: 4),
+                          ],
+
+                          // Date intervention
+                          if (mission.dateIntervention != null) ...[
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today_outlined,
+                                  size: 13,
+                                  color: Colors.grey.shade500,
+                                ),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Intervention : ${_formatDate(mission.dateIntervention!)}',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 4),
+                          ],
+
+                          // Dates création / modification
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.access_time,
+                                size: 12,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Créé ${_formatDate(mission.createdAt)}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Icon(
+                                Icons.update,
+                                size: 12,
+                                color: Colors.grey.shade400,
+                              ),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Modifié ${_formatDate(mission.updatedAt)}',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey.shade400,
+                                ),
+                              ),
+                            ],
                           ),
+
+                          // Nature de la mission (Badge stylisé)
+                          if (mission.natureMission != null && mission.natureMission!.isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.lightBlue.withOpacity(0.08),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                mission.natureMission!,
+                                style: TextStyle(
+                                  fontSize: 10.5,
+                                  color: AppTheme.darkBlue,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
                         ],
                       ),
-                    ],
-
-                    // Dates créé / modifié
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.access_time,
-                          size: 12,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Créé ${_formatDate(mission.createdAt)}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade400,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Icon(
-                          Icons.update,
-                          size: 12,
-                          color: Colors.grey.shade400,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          'Modifié ${_formatDate(mission.updatedAt)}',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.grey.shade400,
-                          ),
-                        ),
-                      ],
                     ),
 
-                    // Nature mission
-                    if (mission.natureMission != null) ...[
-                      const SizedBox(height: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 8,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppTheme.lightBlue.withOpacity(0.15),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: Text(
-                          mission.natureMission!,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: AppTheme.darkBlue,
-                            fontWeight: FontWeight.w600,
-                          ),
+                    // Bouton Options ⋮
+                    GestureDetector(
+                      onTapDown: (details) =>
+                          _showMenu(context, details.globalPosition),
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
+                        child: Icon(
+                          Icons.more_vert,
+                          size: 22,
+                          color: Colors.grey.shade400,
                         ),
                       ),
-                    ],
+                    ),
                   ],
                 ),
               ),
 
-              // ── Bouton ⋮ ──────────────────────────────────────
-              GestureDetector(
-                onTapDown: (details) =>
-                    _showMenu(context, details.globalPosition),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
-                  child: Icon(
-                    Icons.more_vert,
-                    size: 20,
-                    color: Colors.grey.shade500,
+              // Barre de progression de complétion fine
+              if (progress > 0.0)
+                Container(
+                  height: 3,
+                  width: double.infinity,
+                  child: LinearProgressIndicator(
+                    value: progress,
+                    backgroundColor: Colors.grey.shade100,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      progress == 1.0 ? Colors.green : AppTheme.primaryBlue,
+                    ),
                   ),
                 ),
-              ),
             ],
           ),
         ),
