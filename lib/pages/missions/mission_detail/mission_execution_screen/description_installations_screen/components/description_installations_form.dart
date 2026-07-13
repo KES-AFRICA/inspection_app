@@ -3,10 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:get_it/get_it.dart';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
-
+import 'package:inspec_app/services/hive_service.dart';
 // ============================================================
 // GAMMES DE CELLULES → TYPES ASSOCIÉS
 // ============================================================
@@ -292,6 +292,17 @@ class _DescriptionInstallationsFormState
 
   Future<void> _editItem(int index, List<InstallationItem> items) async {
     final item = items[index];
+    final isAutomatic = item.data.containsKey('auditCelluleId') && item.data['auditCelluleId']!.isNotEmpty;
+    
+    String localisation = 'Créée manuellement';
+    if (isAutomatic) {
+      final cellId = item.data['auditCelluleId']!;
+      final locResult = await HiveService.getCelluleLocalisation(widget.mission.id, cellId);
+      if (!mounted) return;
+      localisation = locResult ?? 'Moyenne Tension';
+    }
+
+    if (!mounted) return;
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -304,6 +315,8 @@ class _DescriptionInstallationsFormState
           sectionCableOptions: _sectionCableOptions,
           modeOptions: _modeOptions,
           ouiNonOptions: _ouiNonOptions,
+          isReadOnly: isAutomatic,
+          localisation: localisation,
         ),
       ),
     );
@@ -495,129 +508,184 @@ class _DescriptionInstallationsFormState
     InstallationItem item,
     int index,
     bool isSmallScreen,
-  ) => Container(
-    margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.06),
-          blurRadius: 8,
-          offset: const Offset(0, 2),
-        ),
-      ],
-      border: Border.all(color: Colors.grey.shade100),
-    ),
-    child: InkWell(
-      onTap: () => _editItem(index, items),
-      borderRadius: BorderRadius.circular(14),
-      child: Padding(
-        padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Container(
-                  width: isSmallScreen ? 32 : 36,
-                  height: isSmallScreen ? 32 : 36,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [
-                        AppTheme.primaryBlue,
-                        AppTheme.primaryBlue.withOpacity(0.7),
-                      ],
-                    ),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Center(
-                    child: Text(
-                      '${index + 1}',
-                      style: TextStyle(
-                        fontSize: isSmallScreen ? 13 : 15,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+  ) {
+    final isAutomatic = item.data.containsKey('auditCelluleId') && item.data['auditCelluleId']!.isNotEmpty;
+    
+    return Container(
+      margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: Colors.grey.shade100),
+      ),
+      child: InkWell(
+        onTap: () => _editItem(index, items),
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: isSmallScreen ? 32 : 36,
+                    height: isSmallScreen ? 32 : 36,
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [
+                          AppTheme.primaryBlue,
+                          AppTheme.primaryBlue.withOpacity(0.7),
+                        ],
                       ),
+                      borderRadius: BorderRadius.circular(8),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    widget.title,
-                    style: TextStyle(
-                      fontSize: isSmallScreen ? 13 : 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.grey.shade800,
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(
-                    Icons.edit_outlined,
-                    color: AppTheme.primaryBlue,
-                    size: isSmallScreen ? 18 : 20,
-                  ),
-                  onPressed: () => _editItem(index, items),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-                const SizedBox(width: 8),
-                IconButton(
-                  icon: Icon(
-                    Icons.delete_outline,
-                    color: Colors.red.shade400,
-                    size: isSmallScreen ? 18 : 20,
-                  ),
-                  onPressed: () => _deleteItem(index),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Wrap(
-              spacing: 8,
-              runSpacing: 6,
-              children: widget.champs
-                  .where(
-                    (c) => item.data.containsKey(c) && item.data[c]!.isNotEmpty,
-                  )
-                  .map((champ) {
-                    final value = item.data[champ]!;
-                    final unit = _numericFieldsWithUnit[champ] ?? '';
-                    return Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 5,
-                      ),
-                      decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue.withOpacity(0.06),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(
-                          color: AppTheme.primaryBlue.withOpacity(0.15),
-                        ),
-                      ),
+                    child: Center(
                       child: Text(
-                        unit.isNotEmpty ? '$value $unit' : value,
+                        '${index + 1}',
                         style: TextStyle(
-                          fontSize: isSmallScreen ? 11 : 12,
-                          color: AppTheme.primaryBlue,
-                          fontWeight: FontWeight.w500,
+                          fontSize: isSmallScreen ? 13 : 15,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
-                        overflow: TextOverflow.ellipsis,
                       ),
-                    );
-                  })
-                  .toList(),
-            ),
-          ],
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      widget.title,
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 13 : 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade800,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(
+                      isAutomatic ? Icons.visibility_outlined : Icons.edit_outlined,
+                      color: AppTheme.primaryBlue,
+                      size: isSmallScreen ? 18 : 20,
+                    ),
+                    onPressed: () => _editItem(index, items),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                  if (!isAutomatic) ...[
+                    const SizedBox(width: 8),
+                    IconButton(
+                      icon: Icon(
+                        Icons.delete_outline,
+                        color: Colors.red.shade400,
+                        size: isSmallScreen ? 18 : 20,
+                      ),
+                      onPressed: () => _deleteItem(index),
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                    ),
+                  ],
+                ],
+              ),
+              
+              // Encart d'Origine / Localisation
+              isAutomatic
+                  ? FutureBuilder<String?>(
+                      future: HiveService.getCelluleLocalisation(widget.mission.id, item.data['auditCelluleId']!),
+                      builder: (context, snapshot) {
+                        final loc = snapshot.data ?? 'Moyenne Tension ➔ Chargement...';
+                        return Padding(
+                          padding: const EdgeInsets.only(top: 6, bottom: 10),
+                          child: Row(
+                            children: [
+                              Icon(Icons.location_on_outlined, size: 14, color: Colors.blue.shade700),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  loc,
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 11 : 12,
+                                    color: Colors.blue.shade700,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    )
+                  : Padding(
+                      padding: const EdgeInsets.only(top: 6, bottom: 10),
+                      child: Row(
+                        children: [
+                          Icon(Icons.person_outline, size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              'Origine : Créée manuellement',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 11 : 12,
+                                color: Colors.grey.shade600,
+                                fontStyle: FontStyle.italic,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+              const SizedBox(height: 4),
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                children: widget.champs
+                    .where(
+                      (c) => item.data.containsKey(c) && item.data[c]!.isNotEmpty,
+                    )
+                    .map((champ) {
+                      final value = item.data[champ]!;
+                      final unit = _numericFieldsWithUnit[champ] ?? '';
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 5,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryBlue.withOpacity(0.06),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(
+                            color: AppTheme.primaryBlue.withOpacity(0.15),
+                          ),
+                        ),
+                        child: Text(
+                          unit.isNotEmpty ? '$value $unit' : value,
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 11 : 12,
+                            color: AppTheme.primaryBlue,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    })
+                    .toList(),
+              ),
+            ],
+          ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 // ============================================================
@@ -632,6 +700,8 @@ class _AddEditItemScreen extends StatefulWidget {
   final List<String> sectionCableOptions;
   final List<String> modeOptions;
   final List<String> ouiNonOptions;
+  final bool isReadOnly;
+  final String? localisation;
 
   const _AddEditItemScreen({
     required this.title,
@@ -642,6 +712,8 @@ class _AddEditItemScreen extends StatefulWidget {
     required this.sectionCableOptions,
     required this.modeOptions,
     required this.ouiNonOptions,
+    this.isReadOnly = false,
+    this.localisation,
   });
 
   @override
@@ -987,7 +1059,9 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: Text(
-          widget.initialData != null ? 'Modifier' : 'Ajouter',
+          widget.isReadOnly 
+              ? 'Consultation Cellule' 
+              : (widget.initialData != null ? 'Modifier' : 'Ajouter'),
           style: TextStyle(
             fontSize: isSmallScreen ? 16 : 18,
             fontWeight: FontWeight.w600,
@@ -997,23 +1071,24 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [
-          Container(
-            margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-            child: ElevatedButton.icon(
-              onPressed: _save,
-              icon: const Icon(Icons.check, size: 18),
-              label: const Text('Enregistrer'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white,
-                foregroundColor: AppTheme.primaryBlue,
-                padding: const EdgeInsets.symmetric(horizontal: 14),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(20),
+          if (!widget.isReadOnly)
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+              child: ElevatedButton.icon(
+                onPressed: _save,
+                icon: const Icon(Icons.check, size: 18),
+                label: const Text('Enregistrer'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppTheme.primaryBlue,
+                  padding: const EdgeInsets.symmetric(horizontal: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  elevation: 0,
                 ),
-                elevation: 0,
               ),
             ),
-          ),
         ],
       ),
       body: GestureDetector(
@@ -1023,141 +1098,191 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Champs
-              ...widget.champs.map((champ) {
-                // Gamme → contrôle le type de cellule
-                if (_isGammeField(champ)) {
-                  return _buildModernDropdown(
-                    context,
-                    champ,
-                    currentValue: _selectedGamme,
-                    options: CelluleGammes.gammes,
-                    onChanged: (v) => setState(() {
-                      _selectedGamme = v;
-                      final curType = _selectedValues['Type De Cellule'];
-                      if (curType != null &&
-                          !CelluleGammes.getTypesForGamme(
-                            v,
-                          ).contains(curType)) {
-                        _selectedValues['Type De Cellule'] = null;
-                      }
-                    }),
-                  );
-                }
-
-                // Type de cellule → dépend de la gamme
-                if (_isTypeCelluleField(champ)) {
-                  final types = CelluleGammes.getTypesForGamme(_selectedGamme);
-                  final locked =
-                      _selectedGamme == null || _selectedGamme!.isEmpty;
-                  return Column(
+              // Origine / Localisation
+              if (widget.localisation != null) ...[
+                Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: widget.isReadOnly ? Colors.blue.shade50 : Colors.grey.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: widget.isReadOnly ? Colors.blue.shade100 : Colors.grey.shade200,
+                    ),
+                  ),
+                  child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (locked)
-                        Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 12,
-                            vertical: 8,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.orange.shade50,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.orange.shade200),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.info_outline,
-                                size: 14,
-                                color: Colors.orange.shade700,
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                "Sélectionnez d'abord une gamme de cellule",
-                                style: TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.orange.shade700,
-                                ),
-                              ),
-                            ],
-                          ),
+                      Text(
+                        widget.isReadOnly ? '📍 PROVENANCE (AUDIT DES INSTALLATIONS)' : '👤 ORIGINE',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: widget.isReadOnly ? Colors.blue.shade800 : Colors.grey.shade600,
+                          letterSpacing: 0.5,
                         ),
-                      IgnorePointer(
-                        ignoring: locked,
-                        child: Opacity(
-                          opacity: locked ? 0.4 : 1.0,
-                          child: _buildModernDropdown(
-                            context,
-                            champ,
-                            currentValue: _selectedValues[champ],
-                            options: types,
-                            onChanged: (v) =>
-                                setState(() => _selectedValues[champ] = v),
-                          ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        widget.localisation!,
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: widget.isReadOnly ? Colors.blue.shade900 : Colors.grey.shade800,
                         ),
                       ),
                     ],
-                  );
-                }
-
-                // Section de câble avec unité à gauche (préfixe)
-                if (_isSectionCableField(champ)) {
-                  return _buildModernDropdown(
-                    context,
-                    champ,
-                    currentValue: _selectedValues[champ],
-                    options: widget.sectionCableOptions,
-                    unitPrefixLabel: 'mm²',
-                    onChanged: (v) =>
-                        setState(() => _selectedValues[champ] = v),
-                  );
-                }
-
-                // Dropdowns standard
-                if (_isDropdownField(champ)) {
-                  return _buildModernDropdown(
-                    context,
-                    champ,
-                    currentValue: _selectedValues[champ],
-                    options: _optionsFor(champ),
-                    onChanged: (v) =>
-                        setState(() => _selectedValues[champ] = v),
-                  );
-                }
-
-                // TextField
-                return _buildTextField(context, champ, _controllers[champ]!);
-              }),
-
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _save,
-                  icon: const Icon(Icons.save_outlined),
-                  label: Text(
-                    widget.initialData != null
-                        ? 'Mettre à jour'
-                        : 'Enregistrer',
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                    ),
                   ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(
-                      vertical: isSmallScreen ? 14 : 16,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 0,
+                ),
+                const SizedBox(height: 20),
+              ],
+
+              // Champs éditables ou en lecture seule
+              IgnorePointer(
+                ignoring: widget.isReadOnly,
+                child: Opacity(
+                  opacity: widget.isReadOnly ? 0.95 : 1.0,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: widget.champs.map((champ) {
+                      // Gamme → contrôle le type de cellule
+                      if (_isGammeField(champ)) {
+                        return _buildModernDropdown(
+                          context,
+                          champ,
+                          currentValue: _selectedGamme,
+                          options: CelluleGammes.gammes,
+                          onChanged: (v) => setState(() {
+                            _selectedGamme = v;
+                            final curType = _selectedValues['Type De Cellule'];
+                            if (curType != null &&
+                                !CelluleGammes.getTypesForGamme(
+                                  v,
+                                ).contains(curType)) {
+                              _selectedValues['Type De Cellule'] = null;
+                            }
+                          }),
+                        );
+                      }
+
+                      // Type de cellule → dépend de la gamme
+                      if (_isTypeCelluleField(champ)) {
+                        final types = CelluleGammes.getTypesForGamme(_selectedGamme);
+                        final locked =
+                            _selectedGamme == null || _selectedGamme!.isEmpty;
+                        return Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (locked)
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 12,
+                                  vertical: 8,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade50,
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.orange.shade200),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Icon(
+                                      Icons.info_outline,
+                                      size: 14,
+                                      color: Colors.orange.shade700,
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      "Sélectionnez d'abord une gamme de cellule",
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.orange.shade700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            IgnorePointer(
+                              ignoring: locked,
+                              child: Opacity(
+                                opacity: locked ? 0.4 : 1.0,
+                                child: _buildModernDropdown(
+                                  context,
+                                  champ,
+                                  currentValue: _selectedValues[champ],
+                                  options: types,
+                                  onChanged: (v) =>
+                                      setState(() => _selectedValues[champ] = v),
+                                ),
+                              ),
+                            ),
+                          ],
+                        );
+                      }
+
+                      // Section de câble avec unité à gauche (préfixe)
+                      if (_isSectionCableField(champ)) {
+                        return _buildModernDropdown(
+                          context,
+                          champ,
+                          currentValue: _selectedValues[champ],
+                          options: widget.sectionCableOptions,
+                          unitPrefixLabel: 'mm²',
+                          onChanged: (v) =>
+                              setState(() => _selectedValues[champ] = v),
+                        );
+                      }
+
+                      // Dropdowns standard
+                      if (_isDropdownField(champ)) {
+                        return _buildModernDropdown(
+                          context,
+                          champ,
+                          currentValue: _selectedValues[champ],
+                          options: _optionsFor(champ),
+                          onChanged: (v) =>
+                              setState(() => _selectedValues[champ] = v),
+                        );
+                      }
+
+                      // TextField
+                      return _buildTextField(context, champ, _controllers[champ]!);
+                    }).toList(),
                   ),
                 ),
               ),
+
+              if (!widget.isReadOnly) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _save,
+                    icon: const Icon(Icons.save_outlined),
+                    label: Text(
+                      widget.initialData != null
+                          ? 'Mettre à jour'
+                          : 'Enregistrer',
+                      style: const TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                      foregroundColor: Colors.white,
+                      padding: EdgeInsets.symmetric(
+                        vertical: isSmallScreen ? 14 : 16,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
+              ],
               SizedBox(height: isSmallScreen ? 16 : 20),
             ],
           ),
