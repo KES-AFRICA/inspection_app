@@ -2111,6 +2111,19 @@ class ExportParams {
   });
 }
 
+// Classe sink simple pour accumuler la valeur de hachage finale
+class _DigestSink implements Sink<Digest> {
+  Digest? value;
+
+  @override
+  void add(Digest data) {
+    value = data;
+  }
+
+  @override
+  void close() {}
+}
+
 // Function Isolate globale (ou top-level/static) exécutant l'écriture progressive
 Future<void> _performStreamingExport(ExportParams params) async {
   final file = File(params.filePath);
@@ -2119,8 +2132,8 @@ Future<void> _performStreamingExport(ExportParams params) async {
   }
   final sink = file.openWrite(encoding: utf8);
   
-  final hashOutput = AccumulatorSink<Digest>();
-  final hashInput = sha256.startChunkedConversion(hashOutput);
+  final digestSink = _DigestSink();
+  final hashInput = sha256.startChunkedConversion(digestSink);
 
   // Helper pour écrire et hasher en même temps
   void writeChunk(String chunk) {
@@ -2194,8 +2207,7 @@ Future<void> _performStreamingExport(ExportParams params) async {
   
   // 4. Fermeture de l'accumulateur SHA-256 (calculé sur tout le payload sans la clé checksum)
   hashInput.close();
-  final digest = hashOutput.events.single;
-  final checksum = digest.toString();
+  final checksum = digestSink.value.toString();
   
   // 5. Ajout du checksum et accolade de fermeture finale
   sink.write(',"checksum":${jsonEncode(checksum)}');

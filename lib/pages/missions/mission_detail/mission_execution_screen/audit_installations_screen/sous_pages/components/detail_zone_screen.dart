@@ -14,6 +14,8 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/services/hive_service.dart';
 import 'dart:io';
 
+import 'package:path_provider/path_provider.dart';
+
 class DetailZoneScreen extends StatefulWidget {
   final Mission mission;
   final bool isMoyenneTension;

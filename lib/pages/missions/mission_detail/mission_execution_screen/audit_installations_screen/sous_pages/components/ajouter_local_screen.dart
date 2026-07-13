@@ -12,6 +12,7 @@ import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
+import 'package:path_provider/path_provider.dart';
 import 'dart:convert';
 import 'dart:async';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
@@ -4787,6 +4788,8 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     final appDir = await getApplicationDocumentsDirectory();
     final photosDir = Directory('${appDir.path}/audit_photos/$subDir');
     if (!await photosDir.exists()) await photosDir.create(recursive: true);
+    final fileName = '${subDir}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final newPath = '${photosDir.path}/$fileName';
     await ImageCompressHelper.compressImage(photoFile, newPath);
     return newPath;
   }

@@ -6,6 +6,8 @@ import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'dart:io';
 
+import 'package:path_provider/path_provider.dart';
+
 class ObservationScreen extends StatefulWidget {
   final ObservationLibre? observation; // null pour création, non-null pour édition
   final String title;

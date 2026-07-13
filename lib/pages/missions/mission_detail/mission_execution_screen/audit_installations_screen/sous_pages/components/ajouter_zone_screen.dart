@@ -8,6 +8,8 @@ import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/utils/image_compress_helper.dart';
 import 'dart:io';
 
+import 'package:path_provider/path_provider.dart';
+
 class AjouterZoneScreen extends StatefulWidget {
   final Mission mission;
   final bool isMoyenneTension;
