@@ -5,7 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/models/classement_locaux.dart';
 import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:inspec_app/utils/image_compress_helper.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
@@ -4787,9 +4787,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     final appDir = await getApplicationDocumentsDirectory();
     final photosDir = Directory('${appDir.path}/audit_photos/$subDir');
     if (!await photosDir.exists()) await photosDir.create(recursive: true);
-    final fileName = '${subDir}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final newPath = '${photosDir.path}/$fileName';
-    await photoFile.copy(newPath);
+    await ImageCompressHelper.compressImage(photoFile, newPath);
     return newPath;
   }
 

@@ -103,17 +103,12 @@ class BackupService {
         );
       }
 
-      // Sérialisation sur le thread principal (objets Hive non isolate-safe)
-      final payload = await _buildPayload(missions, matricule);
-
-      // Écriture fichier
       final ts = DateTime.now()
           .toIso8601String()
           .replaceAll(':', '-')
           .replaceAll('.', '-')
           .substring(0, 19);
       final fileName = 'inspec_backup_${matricule}_$ts.json';
-      final jsonContent = const JsonEncoder.withIndent('  ').convert(payload);
 
       // 1. Sauvegarde dans Downloads/Verif Elec/ (même dossier que les rapports)
       File? savedFile;
@@ -128,17 +123,62 @@ class BackupService {
           await verifElecDir.create(recursive: true);
         }
         savedFile = File('${verifElecDir.path}/$fileName');
-        await savedFile.writeAsString(jsonContent, encoding: utf8);
+        
+        // Sérialisation des métadonnées et structures Hive légères (sans les photos)
+        final serializedMissions = <Map<String, dynamic>>[];
+        for (final m in missions) {
+          serializedMissions.add(await _serializeMissionStructureOnly(m));
+        }
+
+        final params = ExportParams(
+          filePath: savedFile.path,
+          magic: _magic,
+          schemaVersion: _schemaVersion,
+          exportedAt: DateTime.now().toIso8601String(),
+          appVersion: '2.0.0',
+          exportType: 'all_missions',
+          matricule: matricule,
+          missionsData: serializedMissions,
+          localDrafts: _serializeLocalDrafts(missions.map((m) => m.id).toList()),
+          coffretDrafts: _serializeCoffretDrafts(missions.map((m) => m.id).toList()),
+        );
+
+        // Lancer l'Isolate d'écriture progressive par flux
+        await compute(_performStreamingExport, params);
         savedPath = savedFile.path;
-        if (kDebugMode) print('✅ Backup sauvegardé: $savedPath');
-      } catch (e) {
-        if (kDebugMode) print('⚠️ Sauvegarde locale échouée: $e');
+        if (kDebugMode) print('✅ Backup sauvegardé de façon progressive: $savedPath');
+      } catch (e, st) {
+        if (kDebugMode) print('⚠️ Sauvegarde locale échouée: $e\n$st');
       }
 
       // 2. Partage via share_plus (email, Drive, WhatsApp, etc.)
       final tempDir = await getTemporaryDirectory();
       final tempFile = File('${tempDir.path}/$fileName');
-      await tempFile.writeAsString(jsonContent, encoding: utf8);
+      
+      // Si la sauvegarde locale a réussi, on copie le fichier
+      if (savedFile != null && savedFile.existsSync()) {
+        await savedFile.copy(tempFile.path);
+      } else {
+        // Fallback de génération directement vers temp
+        final serializedMissions = <Map<String, dynamic>>[];
+        for (final m in missions) {
+          serializedMissions.add(await _serializeMissionStructureOnly(m));
+        }
+        final params = ExportParams(
+          filePath: tempFile.path,
+          magic: _magic,
+          schemaVersion: _schemaVersion,
+          exportedAt: DateTime.now().toIso8601String(),
+          appVersion: '2.0.0',
+          exportType: 'all_missions',
+          matricule: matricule,
+          missionsData: serializedMissions,
+          localDrafts: _serializeLocalDrafts(missions.map((m) => m.id).toList()),
+          coffretDrafts: _serializeCoffretDrafts(missions.map((m) => m.id).toList()),
+        );
+        await compute(_performStreamingExport, params);
+      }
+
       final xFile = XFile(tempFile.path, mimeType: 'application/json');
       await Share.shareXFiles(
         [xFile],
@@ -167,11 +207,9 @@ class BackupService {
   }
 
   // ─────────────────────────────────────────────────────────
-  // CONSTRUCTION DU JSON
+  // EXPORT CIBLÉ D'UNE SEULE MISSION
   // ─────────────────────────────────────────────────────────
 
-  /// Export ciblé d'une seule mission — utilisé par MissionCard (menu ⋮).
-  /// Format V2 avec photos base64 encodées et checksum SHA-256.
   static Future<BackupResult> exporterMission(String missionId) async {
     try {
       final mission = HiveService.getMissionById(missionId);
@@ -182,23 +220,6 @@ class BackupService {
         );
       }
 
-      final serialized = await _serializeMission(mission);
-
-      final payload = <String, dynamic>{
-        'magic': _magic,
-        'schema_version': _schemaVersion,
-        'exported_at': DateTime.now().toIso8601String(),
-        'app_version': '2.0.0',
-        'export_type': 'single_mission',
-        'mission_count': 1,
-        'missions': [serialized],
-        'local_drafts': _serializeLocalDrafts([mission.id]),
-        'coffret_drafts': _serializeCoffretDrafts([mission.id]),
-      };
-
-      // Checksum SHA-256 calculé en arrière-plan via Isolate
-      final payloadWithChecksum = await compute(_computeExportChecksum, payload);
-
       final ts = DateTime.now()
           .toIso8601String()
           .replaceAll(':', '-')
@@ -207,11 +228,10 @@ class BackupService {
       final safeClient =
           mission.nomClient.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
       final fileName = 'inspec_${safeClient}_$ts.json';
-      final jsonContent =
-          const JsonEncoder.withIndent('  ').convert(payloadWithChecksum);
 
       // Sauvegarde locale
       String? savedPath;
+      File? savedFile;
       try {
         final downloadsPath = Platform.isAndroid
             ? await ExternalPath.getExternalStoragePublicDirectory(
@@ -219,18 +239,51 @@ class BackupService {
             : (await getApplicationDocumentsDirectory()).path;
         final dir = Directory('$downloadsPath/Verif Elec');
         if (!await dir.exists()) await dir.create(recursive: true);
-        final file = File('${dir.path}/$fileName');
-        await file.writeAsString(jsonContent, encoding: utf8);
-        savedPath = file.path;
-        if (kDebugMode) print('✅ Backup mission: $savedPath');
-      } catch (e) {
-        if (kDebugMode) print('⚠️ Sauvegarde locale ignorée: $e');
+        savedFile = File('${dir.path}/$fileName');
+
+        final serializedMission = await _serializeMissionStructureOnly(mission);
+
+        final params = ExportParams(
+          filePath: savedFile.path,
+          magic: _magic,
+          schemaVersion: _schemaVersion,
+          exportedAt: DateTime.now().toIso8601String(),
+          appVersion: '2.0.0',
+          exportType: 'single_mission',
+          missionsData: [serializedMission],
+          localDrafts: _serializeLocalDrafts([mission.id]),
+          coffretDrafts: _serializeCoffretDrafts([mission.id]),
+        );
+
+        await compute(_performStreamingExport, params);
+        savedPath = savedFile.path;
+        if (kDebugMode) print('✅ Backup mission sauvegardé par streaming: $savedPath');
+      } catch (e, st) {
+        if (kDebugMode) print('⚠️ Sauvegarde locale ignorée: $e\n$st');
       }
 
       // Partage
       final tempDir = await getTemporaryDirectory();
       final tempFile = File('${tempDir.path}/$fileName');
-      await tempFile.writeAsString(jsonContent, encoding: utf8);
+      
+      if (savedFile != null && savedFile.existsSync()) {
+        await savedFile.copy(tempFile.path);
+      } else {
+        final serializedMission = await _serializeMissionStructureOnly(mission);
+        final params = ExportParams(
+          filePath: tempFile.path,
+          magic: _magic,
+          schemaVersion: _schemaVersion,
+          exportedAt: DateTime.now().toIso8601String(),
+          appVersion: '2.0.0',
+          exportType: 'single_mission',
+          missionsData: [serializedMission],
+          localDrafts: _serializeLocalDrafts([mission.id]),
+          coffretDrafts: _serializeCoffretDrafts([mission.id]),
+        );
+        await compute(_performStreamingExport, params);
+      }
+
       await Share.shareXFiles(
         [XFile(tempFile.path, mimeType: 'application/json')],
         subject: 'Sauvegarde — ${mission.nomClient}',
@@ -253,33 +306,8 @@ class BackupService {
     }
   }
 
-  static Future<Map<String, dynamic>> _buildPayload(
-      List<Mission> missions, String matricule) async {
-    final serializedMissions = <Map<String, dynamic>>[];
-    for (final m in missions) {
-      serializedMissions.add(await _serializeMission(m));
-    }
-    final payload = <String, dynamic>{
-      'magic': _magic,
-      'schema_version': _schemaVersion,
-      'exported_at': DateTime.now().toIso8601String(),
-      'app_version': '2.0.0',
-      'export_type': 'all_missions',
-      'matricule': matricule,
-      'mission_count': missions.length,
-      'missions': serializedMissions,
-      'local_drafts':
-          _serializeLocalDrafts(missions.map((m) => m.id).toList()),
-      'coffret_drafts':
-          _serializeCoffretDrafts(missions.map((m) => m.id).toList()),
-    };
-    // Checksum SHA-256 calculé en arrière-plan via Isolate
-    final payloadWithChecksum = await compute(_computeExportChecksum, payload);
-    return payloadWithChecksum;
-  }
-
-  // ── Mission + toutes ses données liées ──
-  static Future<Map<String, dynamic>> _serializeMission(Mission m) async {
+  // ── Mission + structure de ses données liées (sans charger les photos en Base64) ──
+  static Future<Map<String, dynamic>> _serializeMissionStructureOnly(Mission m) async {
     final id = m.id;
     final audit = HiveService.getAuditInstallationsByMissionId(id);
     final desc = HiveService.getDescriptionInstallationsByMissionId(id);
@@ -291,17 +319,12 @@ class BackupService {
     final classementZones = _classementZonesByMission(id);
     final sequenceProgress = await SequenceProgressService.getProgress(id);
 
-    // Collecter et encoder toutes les photos de la mission
-    Map<String, String> photoIndex = {};
-    if (audit != null) {
-      final paths = _collectAllPhotoPaths(audit);
-      photoIndex = await _exportPhotos(paths);
-    }
+    // Ne pas collecter le base64 ici, seulement collecter la liste de chemins physiques
+    final photoPaths = audit != null ? _collectAllPhotoPaths(audit) : <String>[];
 
     return {
       'mission': m.toJson(),
-      'photo_count': photoIndex.length,
-      'photos': photoIndex,  // Map<chemin_original, base64>
+      'photo_paths': photoPaths, // Utilisé uniquement pour l'Isolate de streaming
       'audit': audit != null ? _serializeAudit(audit) : null,
 
       'description_installations':
@@ -2056,4 +2079,128 @@ class BackupService {
       );
     }
   }
+}
+
+// ─────────────────────────────────────────────────────────────
+// STRUCTURE DE PARAMÈTRES POUR L'ISOLATE D'EXPORT STREAMING
+// ─────────────────────────────────────────────────────────────
+
+class ExportParams {
+  final String filePath;
+  final String magic;
+  final int schemaVersion;
+  final String exportedAt;
+  final String appVersion;
+  final String exportType;
+  final String? matricule;
+  final List<Map<String, dynamic>> missionsData;
+  final List<Map<String, dynamic>> localDrafts;
+  final List<Map<String, dynamic>> coffretDrafts;
+
+  ExportParams({
+    required this.filePath,
+    required this.magic,
+    required this.schemaVersion,
+    required this.exportedAt,
+    required this.appVersion,
+    required this.exportType,
+    this.matricule,
+    required this.missionsData,
+    required this.localDrafts,
+    required this.coffretDrafts,
+  });
+}
+
+// Function Isolate globale (ou top-level/static) exécutant l'écriture progressive
+Future<void> _performStreamingExport(ExportParams params) async {
+  final file = File(params.filePath);
+  if (file.existsSync()) {
+    file.deleteSync();
+  }
+  final sink = file.openWrite(encoding: utf8);
+  
+  final hashOutput = AccumulatorSink<Digest>();
+  final hashInput = sha256.startChunkedConversion(hashOutput);
+
+  // Helper pour écrire et hasher en même temps
+  void writeChunk(String chunk) {
+    sink.write(chunk);
+    hashInput.add(utf8.encode(chunk));
+  }
+
+  // 1. Début du payload
+  writeChunk('{');
+  writeChunk('"magic":${jsonEncode(params.magic)},');
+  writeChunk('"schema_version":${params.schemaVersion},');
+  writeChunk('"exported_at":${jsonEncode(params.exportedAt)},');
+  writeChunk('"app_version":${jsonEncode(params.appVersion)},');
+  writeChunk('"export_type":${jsonEncode(params.exportType)},');
+  if (params.matricule != null) {
+    writeChunk('"matricule":${jsonEncode(params.matricule)},');
+  }
+  writeChunk('"mission_count":${params.missionsData.length},');
+  
+  // 2. Début des missions
+  writeChunk('"missions":[');
+  
+  for (int i = 0; i < params.missionsData.length; i++) {
+    if (i > 0) writeChunk(',');
+    final mData = params.missionsData[i];
+    
+    // Début de l'objet mission
+    writeChunk('{');
+    
+    // a. mission metadata
+    writeChunk('"mission":${jsonEncode(mData['mission'])},');
+    
+    // b. photos list (progressive)
+    final photoPaths = List<String>.from(mData['photo_paths'] ?? []);
+    writeChunk('"photo_count":${photoPaths.length},');
+    writeChunk('"photos":{');
+    
+    for (int j = 0; j < photoPaths.length; j++) {
+      if (j > 0) writeChunk(',');
+      final path = photoPaths[j];
+      final photoFile = File(path);
+      String base64Content = '';
+      if (photoFile.existsSync()) {
+        final bytes = photoFile.readAsBytesSync();
+        base64Content = base64Encode(bytes);
+      }
+      writeChunk('${jsonEncode(path)}:${jsonEncode(base64Content)}');
+    }
+    writeChunk('},'); // fin de "photos"
+    
+    // c. audit
+    writeChunk('"audit":${jsonEncode(mData['audit'])},');
+    
+    // d. autres tables
+    writeChunk('"description_installations":${jsonEncode(mData['description_installations'])},');
+    writeChunk('"mesures_essais":${jsonEncode(mData['mesures_essais'])},');
+    writeChunk('"jsa":${jsonEncode(mData['jsa'])},');
+    writeChunk('"renseignements_generaux":${jsonEncode(mData['renseignements_generaux'])},');
+    writeChunk('"foudre_observations":${jsonEncode(mData['foudre_observations'])},');
+    writeChunk('"classements_locaux":${jsonEncode(mData['classements_locaux'])},');
+    writeChunk('"classements_zones":${jsonEncode(mData['classements_zones'])},');
+    writeChunk('"sequence_progress":${jsonEncode(mData['sequence_progress'])}');
+    
+    writeChunk('}'); // fin de l'objet mission
+  }
+  writeChunk('],'); // fin de "missions"
+  
+  // 3. Drafts
+  writeChunk('"local_drafts":${jsonEncode(params.localDrafts)},');
+  writeChunk('"coffret_drafts":${jsonEncode(params.coffretDrafts)}');
+  
+  // 4. Fermeture de l'accumulateur SHA-256 (calculé sur tout le payload sans la clé checksum)
+  hashInput.close();
+  final digest = hashOutput.events.single;
+  final checksum = digest.toString();
+  
+  // 5. Ajout du checksum et accolade de fermeture finale
+  sink.write(',"checksum":${jsonEncode(checksum)}');
+  sink.write('}');
+  
+  await sink.flush();
+  await sink.close();
 }

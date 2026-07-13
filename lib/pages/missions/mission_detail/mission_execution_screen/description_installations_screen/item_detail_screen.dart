@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/utils/image_compress_helper.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
@@ -151,6 +152,18 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
   Future<void> _takePhoto() async {
     final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
     if (photo != null) {
+      try {
+        final file = File(photo.path);
+        final tempPath = '${photo.path}_compressed.jpg';
+        final compressed = await ImageCompressHelper.compressImage(file, tempPath);
+        if (compressed.path != file.path) {
+          if (await file.exists()) await file.delete();
+          await compressed.rename(photo.path);
+        }
+      } catch (e) {
+        if (kDebugMode) print('⚠️ Échec compression in-place photo: $e');
+      }
+
       setState(() {
         widget.item.addPhoto(photo.path);
       });
@@ -161,6 +174,18 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
   Future<void> _pickFromGallery() async {
     final XFile? photo = await _picker.pickImage(source: ImageSource.gallery);
     if (photo != null) {
+      try {
+        final file = File(photo.path);
+        final tempPath = '${photo.path}_compressed.jpg';
+        final compressed = await ImageCompressHelper.compressImage(file, tempPath);
+        if (compressed.path != file.path) {
+          if (await file.exists()) await file.delete();
+          await compressed.rename(photo.path);
+        }
+      } catch (e) {
+        if (kDebugMode) print('⚠️ Échec compression in-place photo: $e');
+      }
+
       setState(() {
         widget.item.addPhoto(photo.path);
       });

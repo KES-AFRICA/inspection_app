@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
 import 'package:inspec_app/services/normative_reference_service.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:inspec_app/utils/image_compress_helper.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
@@ -2564,9 +2564,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     final appDir = await getApplicationDocumentsDirectory();
     final photosDir = Directory('${appDir.path}/audit_photos/$subDir');
     if (!await photosDir.exists()) await photosDir.create(recursive: true);
-    final fileName = '${subDir}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-    final newPath = '${photosDir.path}/$fileName';
-    await photoFile.copy(newPath);
+    await ImageCompressHelper.compressImage(photoFile, newPath);
     return newPath;
   }
 

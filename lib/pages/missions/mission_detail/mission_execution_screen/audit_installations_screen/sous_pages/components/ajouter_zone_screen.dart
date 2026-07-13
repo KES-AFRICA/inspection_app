@@ -5,7 +5,7 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_zone_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:inspec_app/utils/image_compress_helper.dart';
 import 'dart:io';
 
 class AjouterZoneScreen extends StatefulWidget {
@@ -188,7 +188,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
     final fileName = '${subDir}_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final newPath = '${photosDir.path}/$fileName';
     
-    await photoFile.copy(newPath);
+    await ImageCompressHelper.compressImage(photoFile, newPath);
     return newPath;
   }
 

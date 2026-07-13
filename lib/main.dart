@@ -15,6 +15,8 @@ import 'package:inspec_app/features/auth/domain/usecases/get_current_user_use_ca
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:inspec_app/utils/image_compress_helper.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -30,6 +32,9 @@ void main() async {
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
+
+  // Lancer l'optimisation progressive en arrière-plan des photos existantes
+  ImageCompressHelper.optimizeExistingPhotosProgressively();
 
   runApp(const ProviderScope(child: MyApp()));
 }

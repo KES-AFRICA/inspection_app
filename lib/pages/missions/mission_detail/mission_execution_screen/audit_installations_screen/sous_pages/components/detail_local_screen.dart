@@ -5,7 +5,7 @@ import 'package:inspec_app/models/classement_locaux.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/observation_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/qr_scan_coffret_screen.dart';
-import 'package:path_provider/path_provider.dart';
+import 'package:inspec_app/utils/image_compress_helper.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
@@ -264,7 +264,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
     final fileName = '${subDir}_${DateTime.now().millisecondsSinceEpoch}.jpg';
     final newPath = '${photosDir.path}/$fileName';
 
-    await photoFile.copy(newPath);
+    await ImageCompressHelper.compressImage(photoFile, newPath);
     return newPath;
   }
 
