@@ -15,6 +15,8 @@ import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'dart:async';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/description_installations_form.dart';
+import 'package:flutter/services.dart';
 import 'observation_enrichie_widget.dart';
 
 // Extension pour obtenir la taille de l'écran facilement
@@ -2164,6 +2166,9 @@ class _EtapeCelluleTransformateurMulti extends StatefulWidget {
 }
 
 class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransformateurMulti> {
+  static const List<String> _sectionCableOptions = [
+    '35 mm²', '50 mm²', '70 mm²', '95 mm²', '120 mm²', '150 mm²', '185 mm²', '240 mm²', 'Autre'
+  ];
   // ============================================================
   // ÉTAT LOCAL
   // ============================================================
@@ -2182,6 +2187,15 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   final _cellulePouvoirController = TextEditingController();
   final _celluleNumerotationController = TextEditingController();
   final _celluleParafoudresController = TextEditingController();
+  final _celluleCalibreDisjoncteurController = TextEditingController();
+  
+  String? _celluleGamme;
+  String? _celluleSectionCables;
+  String? _celluleNatureReseau;
+  String? _cellulePresenceIacm;
+  List<ElementControle> _celluleObservations = [];
+  List<String> _cellulePhotos = [];
+  String? _celluleSyncId;
   List<ElementControle> _celluleElements = [];
   
   // Contrôleurs pour le formulaire transformateur
@@ -2255,6 +2269,14 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _cellulePouvoirController.clear();
     _celluleNumerotationController.text = '';
     _celluleParafoudresController.text = '';
+    _celluleCalibreDisjoncteurController.clear();
+    _celluleGamme = null;
+    _celluleSectionCables = null;
+    _celluleNatureReseau = null;
+    _cellulePresenceIacm = null;
+    _celluleObservations = [];
+    _cellulePhotos = [];
+    _celluleSyncId = null;
     _celluleElements = _celluleElementsParDefaut.map((element) => ElementControle(
       elementControle: element,
       conforme: null,
@@ -2285,6 +2307,17 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _cellulePouvoirController.text = cellule.pouvoirCoupure;
     _celluleNumerotationController.text = cellule.numerotation;
     _celluleParafoudresController.text = cellule.parafoudres;
+    
+    // Nouveaux champs
+    _celluleCalibreDisjoncteurController.text = cellule.calibreDisjoncteur ?? '';
+    _celluleGamme = cellule.gamme;
+    _celluleSectionCables = cellule.sectionCables;
+    _celluleNatureReseau = cellule.natureReseau;
+    _cellulePresenceIacm = cellule.presenceIacm;
+    _celluleObservations = List.from(cellule.observations ?? []);
+    _cellulePhotos = List.from(cellule.photos);
+    _celluleSyncId = cellule.syncId;
+    
     _celluleElements = List.from(cellule.elementsVerifies);
 
     // Initialiser un controller par élément avec le texte d'observation existant
@@ -2407,6 +2440,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   }
   
   void _sauvegarderCellule() {
+    final newSyncId = _celluleSyncId ?? 'cellule_${DateTime.now().microsecondsSinceEpoch}';
     final nouvelleCellule = Cellule(
       fonction: _celluleFonctionController.text.trim(),
       type: _celluleTypeController.text.trim(),
@@ -2416,6 +2450,14 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       numerotation: _celluleNumerotationController.text,
       parafoudres: _celluleParafoudresController.text,
       elementsVerifies: _celluleElements,
+      gamme: _celluleGamme,
+      calibreDisjoncteur: _celluleCalibreDisjoncteurController.text.trim(),
+      sectionCables: _celluleSectionCables,
+      natureReseau: _celluleNatureReseau,
+      presenceIacm: _cellulePresenceIacm,
+      observations: _celluleObservations,
+      photos: _cellulePhotos,
+      syncId: newSyncId,
     );
     
     final nouvellesCellules = List<Cellule>.from(widget.cellules);
@@ -2886,10 +2928,20 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
               children: [
                 if (cellule.fonction.isNotEmpty)
                   _buildInfoRow('Fonction', cellule.fonction, isSmallScreen),
+                if (cellule.gamme != null && cellule.gamme!.isNotEmpty)
+                  _buildInfoRow('Gamme', cellule.gamme!, isSmallScreen),
                 if (cellule.marqueModeleAnnee.isNotEmpty)
                   _buildInfoRow('Marque/Modèle', cellule.marqueModeleAnnee, isSmallScreen),
                 if (cellule.tensionAssignee.isNotEmpty)
                   _buildInfoRow('Tension assignée', cellule.tensionAssignee, isSmallScreen),
+                if (cellule.calibreDisjoncteur != null && cellule.calibreDisjoncteur!.isNotEmpty)
+                  _buildInfoRow('Calibre disjoncteur', cellule.calibreDisjoncteur!, isSmallScreen),
+                if (cellule.sectionCables != null && cellule.sectionCables!.isNotEmpty)
+                  _buildInfoRow('Section câbles', cellule.sectionCables!, isSmallScreen),
+                if (cellule.natureReseau != null && cellule.natureReseau!.isNotEmpty)
+                  _buildInfoRow('Nature réseau', '${cellule.natureReseau!}${cellule.presenceIacm == 'Oui' ? ' (IACM)' : ''}', isSmallScreen),
+                if (cellule.observations != null && cellule.observations!.isNotEmpty)
+                  _buildInfoRow('Observations', '${cellule.observations!.length} observation(s)', isSmallScreen, color: Colors.red.shade700),
                 if (cellule.elementsVerifies.isNotEmpty)
                   Padding(
                     padding: EdgeInsets.only(top: isSmallScreen ? 8 : 10),
@@ -3092,24 +3144,251 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   }
   
   Widget _buildCelluleDonneesSlide(bool isSmallScreen) {
+    final typesGamme = CelluleGammes.getTypesForGamme(_celluleGamme);
+    
     return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _buildTextField(_celluleFonctionController, 'Fonction de la cellule', isSmallScreen, icon: Icons.power, optional: true),
+          // Section 1 : Identification
+          _buildFormSectionHeader('IDENTIFICATION', isSmallScreen),
+          SizedBox(height: isSmallScreen ? 8 : 10),
+          _buildTextField(_celluleFonctionController, 'Fonction de la cellule', isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(_celluleTypeController, 'Type de cellule', isSmallScreen, icon: Icons.category, optional: true),
+          _buildTextField(_celluleMarqueController, 'Marque / modèle / année', isSmallScreen, optional: true),
+          
+          SizedBox(height: isSmallScreen ? 20 : 26),
+          
+          // Section 2 : Caractéristiques techniques HTA
+          _buildFormSectionHeader('CARACTÉRISTIQUES ALIMENTATION MT', isSmallScreen),
+          SizedBox(height: isSmallScreen ? 8 : 10),
+          _buildDropdownVal(
+            _celluleGamme,
+            'Gamme de cellule',
+            CelluleGammes.gammes,
+            isSmallScreen,
+            (value) {
+              setState(() {
+                _celluleGamme = value;
+                // Si la nouvelle gamme n'inclut pas le type actuel, vider le type
+                final types = CelluleGammes.getTypesForGamme(value);
+                if (!types.contains(_celluleTypeController.text)) {
+                  _celluleTypeController.clear();
+                }
+              });
+            },
+            optional: true,
+          ),
           SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(_celluleMarqueController, 'Marque / modèle / année', isSmallScreen, icon: Icons.branding_watermark, optional: true),
+          
+          // Type de cellule dépendant de la gamme
+          if (_celluleGamme == null || _celluleGamme!.isEmpty)
+            Container(
+              width: double.infinity,
+              padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: Text(
+                'Sélectionnez d\'abord une gamme pour choisir le type de cellule',
+                style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
+              ),
+            )
+          else
+            _buildDropdownVal(
+              _celluleTypeController.text.isNotEmpty && typesGamme.contains(_celluleTypeController.text)
+                  ? _celluleTypeController.text
+                  : null,
+              'Type de cellule',
+              typesGamme,
+              isSmallScreen,
+              (value) {
+                setState(() {
+                  _celluleTypeController.text = value ?? '';
+                });
+              },
+              optional: true,
+            ),
+          
           SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(_celluleTensionController, 'Tension assignée', isSmallScreen, icon: Icons.electrical_services, optional: true),
+          _buildTextField(
+            _celluleTensionController,
+            'Tension assignée',
+            isSmallScreen,
+            optional: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+            suffixText: 'kV',
+          ),
           SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(_cellulePouvoirController, 'Pouvoir de coupure (kA)', isSmallScreen, icon: Icons.offline_bolt, optional: true),
+          _buildTextField(
+            _cellulePouvoirController,
+            'Pouvoir de coupure',
+            isSmallScreen,
+            optional: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+            suffixText: 'kA',
+          ),
           SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildTextField(
+            _celluleCalibreDisjoncteurController,
+            'Calibre du disjoncteur',
+            isSmallScreen,
+            optional: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+            suffixText: 'A',
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildDropdownVal(
+            _celluleSectionCables,
+            'Section des câbles',
+            _sectionCableOptions,
+            isSmallScreen,
+            (value) => setState(() => _celluleSectionCables = value),
+            optional: true,
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildDropdownVal(
+            _celluleNatureReseau,
+            'Nature du réseau',
+            const ['Souterrain', 'Aérien'],
+            isSmallScreen,
+            (value) {
+              setState(() {
+                _celluleNatureReseau = value;
+                if (value != 'Aérien') {
+                  _cellulePresenceIacm = null;
+                }
+              });
+            },
+            optional: true,
+          ),
+          
+          if (_celluleNatureReseau == 'Aérien') ...[
+            SizedBox(height: isSmallScreen ? 12 : 16),
+            _buildDropdownVal(
+              _cellulePresenceIacm,
+              'Présence d\'une IACM',
+              const ['Oui', 'Non'],
+              isSmallScreen,
+              (value) => setState(() => _cellulePresenceIacm = value),
+              optional: true,
+            ),
+          ],
+          
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
           _buildDropdown(_celluleNumerotationController, 'Numérotation / repérage', _presentAbsentOptions, isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
           _buildDropdown(_celluleParafoudresController, 'Parafoudres installés sur l\'arrivée', _presentAbsentOptions, isSmallScreen, optional: true),
+          
+          SizedBox(height: isSmallScreen ? 20 : 26),
+          
+          // Section 3 : Observations
+          _buildFormSectionHeader('OBSERVATIONS', isSmallScreen),
+          SizedBox(height: isSmallScreen ? 8 : 10),
+          
+          if (_celluleObservations.isNotEmpty)
+            Column(
+              children: _celluleObservations.asMap().entries.map((entry) {
+                final index = entry.key;
+                final obsElement = entry.value;
+                return Container(
+                  margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
+                  padding: EdgeInsets.all(isSmallScreen ? 10 : 12),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Observation n°${index + 1}',
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 12 : 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryBlue,
+                            ),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                            onPressed: () {
+                              setState(() {
+                                _celluleObservations.removeAt(index);
+                              });
+                            },
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      ObservationEnrichieWidget(
+                        element: obsElement,
+                        onChanged: () => setState(() {}),
+                        color: Colors.blue,
+                        onSavePhoto: widget.onSavePhoto,
+                        showPriority: false,
+                        sectionType: 'cellule',
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
+            
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () {
+                setState(() {
+                  _celluleObservations.add(ElementControle(
+                    elementControle: 'Observation cellule n°${_celluleObservations.length + 1}',
+                    conforme: null,
+                    priorite: 1,
+                  ));
+                });
+              },
+              icon: const Icon(Icons.add_circle_outline, color: Colors.white),
+              label: const Text('AJOUTER UNE OBSERVATION', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 12 : 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFormSectionHeader(String title, bool isSmallScreen) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 6 : 8, horizontal: isSmallScreen ? 10 : 12),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade100,
+        borderRadius: BorderRadius.circular(6),
+        border: Border(left: BorderSide(color: AppTheme.primaryBlue, width: 4)),
+      ),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontSize: isSmallScreen ? 13 : 14,
+          fontWeight: FontWeight.bold,
+          color: AppTheme.darkBlue,
+        ),
       ),
     );
   }
@@ -3415,7 +3694,7 @@ Widget _buildPrioriteButton({
   // WIDGETS UTILITAIRES
   // ============================================================
   
-  Widget _buildInfoRow(String label, String value, bool isSmallScreen) {
+  Widget _buildInfoRow(String label, String value, bool isSmallScreen, {Color? color}) {
     if (value.isEmpty) return const SizedBox.shrink();
     return Padding(
       padding: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
@@ -3428,22 +3707,35 @@ Widget _buildPrioriteButton({
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(value, style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.black87), overflow: TextOverflow.ellipsis),
+            child: Text(value, style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: color ?? Colors.black87), overflow: TextOverflow.ellipsis),
           ),
         ],
       ),
     );
   }
   
-  Widget _buildTextField(TextEditingController controller, String label, bool isSmallScreen, {IconData? icon, bool optional = false}) {
+  Widget _buildTextField(
+    TextEditingController controller,
+    String label,
+    bool isSmallScreen, {
+    IconData? icon,
+    bool optional = false,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    String? suffixText,
+  }) {
     final labelText = optional ? label : '$label *';
     return TextFormField(
       controller: controller,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
       style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
       decoration: InputDecoration(
         labelText: labelText,
         labelStyle: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.grey.shade600),
         prefixIcon: icon != null ? Icon(icon, size: isSmallScreen ? 18 : 20) : null,
+        suffixText: suffixText,
+        suffixStyle: TextStyle(fontSize: isSmallScreen ? 12 : 13, fontWeight: FontWeight.bold, color: Colors.grey.shade700),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10)),
         contentPadding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 12 : 14),
       ),
@@ -3464,6 +3756,23 @@ Widget _buildPrioriteButton({
       ),
       items: options.map((option) => DropdownMenuItem(value: option, child: Text(option, style: TextStyle(fontSize: isSmallScreen ? 13 : 14)))).toList(),
       onChanged: (value) => controller.text = value ?? '',
+    );
+  }
+  
+  Widget _buildDropdownVal(String? value, String label, List<String> options, bool isSmallScreen, void Function(String?) onChanged, {bool optional = false}) {
+    final labelText = optional ? label : '$label *';
+    return DropdownButtonFormField<String>(
+      value: value,
+      isExpanded: true,
+      hint: Text('Sélectionnez...', style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.grey.shade500)),
+      decoration: InputDecoration(
+        labelText: labelText,
+        labelStyle: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.grey.shade600),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10)),
+        contentPadding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 12 : 14),
+      ),
+      items: options.map((option) => DropdownMenuItem(value: option, child: Text(option, style: TextStyle(fontSize: isSmallScreen ? 13 : 14)))).toList(),
+      onChanged: onChanged,
     );
   }
   
@@ -3570,6 +3879,7 @@ Widget _buildPrioriteButton({
     _cellulePouvoirController.dispose();
     _celluleNumerotationController.dispose();
     _celluleParafoudresController.dispose();
+    _celluleCalibreDisjoncteurController.dispose();
     _transfoTypeController.dispose();
     _transfoMarqueController.dispose();
     _transfoPuissanceController.dispose();

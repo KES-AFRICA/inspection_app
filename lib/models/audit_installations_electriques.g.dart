@@ -366,13 +366,20 @@ class CelluleAdapter extends TypeAdapter<Cellule> {
       parafoudres: fields[6] as String,
       elementsVerifies: (fields[7] as List?)?.cast<ElementControle>(),
       photos: (fields[8] as List?)?.cast<String>(),
+      gamme: fields[9] as String?,
+      calibreDisjoncteur: fields[10] as String?,
+      sectionCables: fields[11] as String?,
+      natureReseau: fields[12] as String?,
+      observations: (fields[13] as List?)?.cast<ElementControle>(),
+      presenceIacm: fields[14] as String?,
+      syncId: fields[15] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Cellule obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(16)
       ..writeByte(0)
       ..write(obj.fonction)
       ..writeByte(1)
@@ -390,7 +397,21 @@ class CelluleAdapter extends TypeAdapter<Cellule> {
       ..writeByte(7)
       ..write(obj.elementsVerifies)
       ..writeByte(8)
-      ..write(obj.photos);
+      ..write(obj.photos)
+      ..writeByte(9)
+      ..write(obj.gamme)
+      ..writeByte(10)
+      ..write(obj.calibreDisjoncteur)
+      ..writeByte(11)
+      ..write(obj.sectionCables)
+      ..writeByte(12)
+      ..write(obj.natureReseau)
+      ..writeByte(13)
+      ..write(obj.observations)
+      ..writeByte(14)
+      ..write(obj.presenceIacm)
+      ..writeByte(15)
+      ..write(obj.syncId);
   }
 
   @override

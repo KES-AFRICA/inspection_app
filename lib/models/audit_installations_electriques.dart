@@ -343,7 +343,26 @@ class Cellule {
   @HiveField(8)
   List<String> photos; // Chemins des photos de la cellule
 
-  
+  @HiveField(9)
+  String? gamme;
+
+  @HiveField(10)
+  String? calibreDisjoncteur;
+
+  @HiveField(11)
+  String? sectionCables;
+
+  @HiveField(12)
+  String? natureReseau;
+
+  @HiveField(13)
+  List<ElementControle>? observations;
+
+  @HiveField(14)
+  String? presenceIacm;
+
+  @HiveField(15)
+  String? syncId;
 
   Cellule({
     required this.fonction,
@@ -355,8 +374,16 @@ class Cellule {
     required this.parafoudres,
     List<ElementControle>? elementsVerifies,
     List<String>? photos,
+    this.gamme,
+    this.calibreDisjoncteur,
+    this.sectionCables,
+    this.natureReseau,
+    List<ElementControle>? observations,
+    this.presenceIacm,
+    this.syncId,
   })  : elementsVerifies = elementsVerifies ?? [],
-        photos = photos ?? [];
+        photos = photos ?? [],
+        observations = observations ?? [];
 }
 
 @HiveType(typeId: 10)

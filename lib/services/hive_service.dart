@@ -1174,7 +1174,122 @@ static Future<AuditInstallationsElectriques> getOrCreateAuditInstallations(Strin
 static Future<void> saveAuditInstallations(AuditInstallationsElectriques audit) async {
   final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
   audit.updatedAt = DateTime.now();
+  
+  try {
+    await _syncCellulesToDescription(audit);
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Erreur de synchronisation des cellules: $e');
+    }
+  }
+
   await audit.save();
+}
+
+static Future<void> _syncCellulesToDescription(AuditInstallationsElectriques audit) async {
+  final missionId = audit.missionId;
+  final desc = await getOrCreateDescriptionInstallations(missionId);
+
+  // 1. Extraire toutes les cellules des locaux MT ou HT/BT de l'audit
+  final List<Cellule> cellulesAudit = [];
+  bool auditModifie = false;
+
+  // Locaux MT directs
+  for (var local in audit.moyenneTensionLocaux) {
+    if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+      for (var cellule in local.cellules) {
+        if (cellule.syncId == null || cellule.syncId!.isEmpty) {
+          cellule.syncId = 'cellule_${DateTime.now().microsecondsSinceEpoch}_${cellulesAudit.length}';
+          auditModifie = true;
+        }
+        cellulesAudit.add(cellule);
+      }
+    }
+  }
+
+  // Locaux des zones MT
+  for (var zone in audit.moyenneTensionZones) {
+    for (var local in zone.locaux) {
+      if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+        for (var cellule in local.cellules) {
+          if (cellule.syncId == null || cellule.syncId!.isEmpty) {
+            cellule.syncId = 'cellule_${DateTime.now().microsecondsSinceEpoch}_${cellulesAudit.length}';
+            auditModifie = true;
+          }
+          cellulesAudit.add(cellule);
+        }
+      }
+    }
+  }
+
+  // Locaux des zones BT
+  for (var zone in audit.basseTensionZones) {
+    for (var local in zone.locaux) {
+      if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+        for (var cellule in local.cellules) {
+          if (cellule.syncId == null || cellule.syncId!.isEmpty) {
+            cellule.syncId = 'cellule_${DateTime.now().microsecondsSinceEpoch}_${cellulesAudit.length}';
+            auditModifie = true;
+          }
+          cellulesAudit.add(cellule);
+        }
+      }
+    }
+  }
+
+  // 2. Mettre à jour / ajouter dans la description des installations
+  final List<InstallationItem> itemsMiseAJour = [];
+
+  // Conserver les items existants qui n'ont pas d'auditCelluleId (ex: créés manuellement)
+  for (var item in desc.alimentationMoyenneTension) {
+    final auditCelluleId = item.data['auditCelluleId'];
+    if (auditCelluleId == null || auditCelluleId.isEmpty) {
+      itemsMiseAJour.add(item);
+    }
+  }
+
+  // Ajouter / Mettre à jour les cellules de l'audit
+  for (var cellule in cellulesAudit) {
+    final observationsTxt = (cellule.observations ?? [])
+        .map((o) => o.observation ?? '')
+        .where((s) => s.isNotEmpty)
+        .join('\n');
+
+    final itemData = {
+      'auditCelluleId': cellule.syncId!,
+      'Gamme De Cellule': cellule.gamme ?? '',
+      'Type De Cellule': cellule.type,
+      'Calibre Du Disjoncteur': cellule.calibreDisjoncteur ?? '',
+      'Section Du Cable': cellule.sectionCables ?? '',
+      'Nature Du Reseau': cellule.natureReseau ?? '',
+      if (cellule.natureReseau == 'Aérien' && cellule.presenceIacm != null)
+        'PRESENCE IACM': cellule.presenceIacm!,
+      'Observations': observationsTxt,
+    };
+
+    // Chercher si un item existe déjà pour cette cellule
+    InstallationItem? itemExistant;
+    try {
+      itemExistant = desc.alimentationMoyenneTension.firstWhere(
+        (item) => item.data['auditCelluleId'] == cellule.syncId
+      );
+    } catch (_) {}
+
+    if (itemExistant != null) {
+      itemExistant.data = itemData;
+      itemExistant.photoPaths = List.from(cellule.photos);
+      itemsMiseAJour.add(itemExistant);
+    } else {
+      itemsMiseAJour.add(InstallationItem(
+        data: itemData,
+        photoPaths: List.from(cellule.photos),
+        createdAt: DateTime.now(),
+      ));
+    }
+  }
+
+  desc.alimentationMoyenneTension = itemsMiseAJour;
+  await saveDescriptionInstallations(desc);
 }
 
 /// Récupérer les données d'audit par missionId

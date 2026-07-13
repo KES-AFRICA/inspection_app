@@ -176,6 +176,9 @@ class _ObservationEnrichieWidgetState extends State<ObservationEnrichieWidget> {
   }
 
   Widget _buildModernObservationField(BuildContext context) {
+    final hasNoObservation = widget.element.observation == null || widget.element.observation!.trim().isEmpty;
+    final showRequiredBorder = widget.showPriority && hasNoObservation;
+    
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -184,16 +187,8 @@ class _ObservationEnrichieWidgetState extends State<ObservationEnrichieWidget> {
             color: Colors.grey.shade50,
             borderRadius: BorderRadius.circular(context.spacingS),
             border: Border.all(
-              color:
-                  widget.element.observation == null ||
-                      widget.element.observation!.trim().isEmpty
-                  ? Colors.red.shade300
-                  : Colors.transparent,
-              width:
-                  widget.element.observation == null ||
-                      widget.element.observation!.trim().isEmpty
-                  ? 1.5
-                  : 0,
+              color: showRequiredBorder ? Colors.red.shade300 : Colors.grey.shade300,
+              width: showRequiredBorder ? 1.5 : 1,
             ),
           ),
           child: TextFormField(
@@ -204,7 +199,7 @@ class _ObservationEnrichieWidgetState extends State<ObservationEnrichieWidget> {
               widget.onChanged();
             },
             decoration: InputDecoration(
-              hintText: 'Saisissez votre observation... *',
+              hintText: widget.showPriority ? 'Saisissez votre observation... *' : 'Saisissez votre observation...',
               hintStyle: TextStyle(
                 fontSize: context.fontSizeS,
                 color: Colors.grey.shade400,
