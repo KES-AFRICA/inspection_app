@@ -51,11 +51,11 @@ class PdfReportService {
   // ──────────────────────────────────────────────────────────────
   //  TAILLES DE POLICE
   // ──────────────────────────────────────────────────────────────
-  static const double fsH1 = 11.0;
-  static const double fsH2 = 9.5;
-  static const double fsH3 = 9.0;
-  static const double fsBody = 8.0;
-  static const double fsSmall = 7.0;
+  static const double fsH1 = 12.0;
+  static const double fsH2 = 10.5;
+  static const double fsH3 = 10.0;
+  static const double fsBody = 9.0;
+  static const double fsSmall = 7.5;
 
   // ──────────────────────────────────────────────────────────────
   //  IMAGES (chargees une seule fois)
@@ -531,23 +531,23 @@ class PdfReportService {
   ) {
     final sections = <_SommaireEntry>[
       _SommaireEntry('Sommaire', 2, isTitle: true),
-      _SommaireEntry('Rappel des responsabilites de l\'employeur', pages['rappel'] ?? 3, isTitle: true),
-      _SommaireEntry('Mesures de securite autours des installations', pages['mesures_securite'] ?? 4, isTitle: true),
-      _SommaireEntry('Objet de la verification', pages['objet'] ?? 5, isTitle: true),
-      _SommaireEntry('Renseignements generaux de l\'etablissement', pages['renseignements'] ?? 6, isTitle: true),
+      _SommaireEntry('Rappel des responsabilit\u00e9s de l\'employeur', pages['rappel'] ?? 3, isTitle: true),
+      _SommaireEntry('Mesures de s\u00e9curit\u00e9 autour des installations', pages['mesures_securite'] ?? 4, isTitle: true),
+      _SommaireEntry('Objet de la v\u00e9rification', pages['objet'] ?? 5, isTitle: true),
+      _SommaireEntry('Renseignements g\u00e9n\u00e9raux de l\'\u00e9tablissement', pages['renseignements'] ?? 6, isTitle: true),
       _SommaireEntry('Description des installations', pages['description'] ?? 7, isTitle: true),
-      if (audit != null) _SommaireEntry('Liste recapitulative des observations', pages['liste_recap'] ?? 8, isTitle: true),
-      if (audit != null) _SommaireEntry('Audit des installations electriques', pages['audit'] ?? 9, isTitle: true),
+      if (audit != null) _SommaireEntry('Liste r\u00e9capitulative des observations', pages['liste_recap'] ?? 8, isTitle: true),
+      if (audit != null) _SommaireEntry('Audit des installations \u00e9lectriques', pages['audit'] ?? 9, isTitle: true),
       _SommaireEntry('Classement des locaux/zones et emplacements', pages['classement'] ?? 10, isTitle: true),
       _SommaireEntry('Foudre', pages['foudre'] ?? 11, isTitle: true),
       if (mesures != null) ...[
-        _SommaireEntry('Resultats des mesures et essais', pages['mesures'] ?? 12, isTitle: true),
-        _SommaireEntry('Essais de demarrage automatique du groupe electrogene', (pages['mesures'] ?? 12) + 1, isSub: true),
-        _SommaireEntry('Test de fonctionnement de l\'arret d\'urgence', (pages['mesures'] ?? 12) + 2, isSub: true),
+        _SommaireEntry('R\u00e9sultats des mesures et essais', pages['mesures'] ?? 12, isTitle: true),
+        _SommaireEntry('Essais de d\u00e9marrage automatique du groupe \u00e9lectrog\u00e8ne', (pages['mesures'] ?? 12) + 1, isSub: true),
+        _SommaireEntry('Test de fonctionnement de l\'arr\u00eat d\'urgence', (pages['mesures'] ?? 12) + 2, isSub: true),
         _SommaireEntry('Prise de terre', (pages['mesures'] ?? 12) + 3, isSub: true),
         _SommaireEntry('Mesures d\'isolement des circuits BT', (pages['mesures'] ?? 12) + 4, isSub: true),
-        _SommaireEntry('Essais de declenchement des DDR', (pages['mesures'] ?? 12) + 5, isSub: true),
-        _SommaireEntry('Continuite et resistance des conducteurs', (pages['mesures'] ?? 12) + 6, isSub: true),
+        _SommaireEntry('Essais de d\u00e9clenchement des DDR', (pages['mesures'] ?? 12) + 5, isSub: true),
+        _SommaireEntry('Continuit\u00e9 et r\u00e9sistance des conducteurs', (pages['mesures'] ?? 12) + 6, isSub: true),
       ],
       _SommaireEntry('Photos', pages['photos'] ?? 19, isTitle: true),
     ];
@@ -626,215 +626,17 @@ class PdfReportService {
     );
   }
 
-  // ──────────────────────────────────────────────────────────────
-  //  RAPPEL DES RESPONSABILITES
-  // ──────────────────────────────────────────────────────────────
-  
-  static pw.Widget _buildRappelResponsabilites() {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _buildPageHeaderWidget(),
-        pw.SizedBox(height: 10),
-        _sectionBox('RAPPEL DES RESPONSABILITES DE L\'EMPLOYEUR'),
-        pw.SizedBox(height: 12),
-        _bodyText(
-          'KES INSPECTIONS AND PROJECTS a le plaisir de vous transmettre le present rapport de verification de vos installations electriques, etabli a la suite des constats realises sur site.\n'
-          'Ce document presente les observations effectuees par le verificateur a partir des elements et moyens mis a sa disposition.\n'
-          'Il identifie les points de non-conformite constates au regard des exigences reglementaires, et formule, le cas echeant, les recommandations techniques necessaires a leur mise en conformite.',
-        ),
-        pw.SizedBox(height: 12),
-        _subTitle('Responsabilite et accompagnement'),
-        _bodyText(
-          'Dans le cadre de la mission, il appartient a l\'employeur de designer une personne qualifiee et informee des installations, chargee d\'accompagner le verificateur durant l\'intervention.\n'
-          'Cette personne doit pouvoir faciliter l\'acces a l\'ensemble des locaux, appareillages et equipements a controler.\n\n'
-          'L\'employeur reste responsable du bon fonctionnement, de la securite et de la disponibilite des installations tout au long de la verification.\n'
-          'Les informations et documents techniques fournis sous sa responsabilite doivent permettre la realisation des controles dans de bonnes conditions.',
-        ),
-        pw.SizedBox(height: 12),
-        _subTitle('Conditions de realisation'),
-        _bodyText('Afin d\'assurer le bon deroulement des operations, l\'employeur doit :'),
-        _bulletItem('Veiller a ce que la verification soit realisee dans des conditions de securite optimales, en particulier lors des acces en zone electrique ;'),
-        _bulletItem('Mettre en oeuvre les procedures necessaires aux mises hors tension permettant d\'effectuer les mesures et essais en toute securite ;'),
-        _bulletItem('Garantir au verificateur l\'acces a l\'ensemble des equipements a controler, sans risque de chute ou d\'incident.'),
-        pw.SizedBox(height: 8),
-        _bodyText(
-          'Si certaines verifications n\'ont pu etre effectuees (impossibilite d\'acces, absence d\'agents habilites, contraintes d\'exploitation, documentation manquante, etc.), '
-          'KES INSPECTIONS AND PROJECTS en mentionnera la cause dans le rapport.\n\n'
-          'Dans le cas des installations de moyenne ou haute tension, la mise hors tension et les manoeuvres associees relevent exclusivement de la responsabilite de l\'employeur ou de son representant habilite.',
-        ),
-        pw.SizedBox(height: 12),
-        _subTitle('Verifications complementaires'),
-        _bodyText(
-          'Lorsque des elements du poste ou de l\'installation n\'ont pu etre controles lors de la visite initiale, une intervention complementaire pourra etre programmee a la demande de l\'employeur.\n'
-          'Cette mission additionnelle fera alors l\'objet d\'une planification et d\'un rapport specifique.',
-        ),
-        pw.SizedBox(height: 12),
-        _subTitle('Surveillance & maintenance des installations electriques'),
-        _bodyText(
-          'La verification de conformite des installations electriques ne constitue qu\'un des elements concourant a la securite des personnes et des biens. Conformement a la norme et aux textes reglementaires applicables, '
-          'le chef d\'etablissement doit mettre en place une organisation pour les operations de surveillance et la maintenance des installations electriques. '
-          'C\'est dans le cadre de ces operations que les dispositions doivent etre prises afin de remedier aux defectuosites constatees pendant la verification ou celles qui peuvent se manifester apres la verification.',
-        ),
-        pw.SizedBox(height: 12),
-        _subTitle('Formation du personnel intervenant sur les installations et a proximite'),
-        pw.SizedBox(height: 12),
-      ],
-    );
-  }
 
-  // ──────────────────────────────────────────────────────────────
-  //  MESURE DE SECURITE AUTOURS DES INSTALLATIONS
-  // ──────────────────────────────────────────────────────────────
-
-  static pw.Widget _buildMesureSecurite() {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _buildPageHeaderWidget(),
-        pw.SizedBox(height: 10),
-        _sectionBox('MESURES DE SECURITE AUTOURS DES INSTALLATIONS'),
-        pw.SizedBox(height: 5),
-        _bodyText('Suivant la reglementation applicable,'),
-        _bulletItem('Article 5_Arrete 039/MTPS/IMT du 26 Novembre 1984 fixant les mesures generales d\'hygiene et de securite sur les lieux de travail'),
-        _bulletItem('NFC 18-510 : Operations sur les ouvrages et installations electriques et dans un environnement electrique - Prevention du risque electrique'),
-        pw.SizedBox(height: 5),
-        _bodyText('Le personnel doit avoir subi avec succes une formation en habilitation electrique en fonction du domaine de tension.'),
-        pw.SizedBox(height: 5),
-        if (_imgHabilitation != null)
-          pw.Container(width: double.infinity, child: pw.Image(_imgHabilitation!, fit: pw.BoxFit.fitWidth))
-        else
-          pw.Container(height: 60, color: PdfColors.grey200,
-              child: pw.Center(child: pw.Text('image.png (habilitation)', style: pw.TextStyle(font: _fontRegular, fontSize: 8)))),
-        pw.SizedBox(height: 12),
-        _bodyText(
-          'Il est rappele que des dispositions de securite particulieres et parfaitement definies doivent etre prises par le chef de l\'etablissement '
-          'pour toute intervention de maintenance, reglage, nettoyage sur ou a proximite des installations electriques.\n\n'
-          'L\'acces aux locaux et armoires electriques doit etre interdit par les personnes non autorisees.',
-        ),
-        pw.SizedBox(height: 8),
-        pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Expanded(
-              flex: 4,
-              child: _imgAccesGauche != null
-                  ? pw.Container(
-                      height: 80,
-                      width: double.infinity,
-                      child: pw.Image(_imgAccesGauche!, fit: pw.BoxFit.contain),
-                    )
-                  : pw.Container(
-                      height: 80,
-                      width: double.infinity,
-                      color: PdfColors.grey200,
-                      child: pw.Center(child: pw.Text('image copy.png')),
-                    ),
-            ),
-            pw.SizedBox(width: 8),
-            pw.Expanded(
-              flex: 6,
-              child: pw.Row(
-                children: [
-                  pw.Expanded(
-                    child: _imgAccesDroite1 != null
-                        ? pw.Container(
-                            height: 80,
-                            width: double.infinity,
-                            child: pw.Image(_imgAccesDroite1!, fit: pw.BoxFit.contain),
-                          )
-                        : pw.Container(
-                            height: 80,
-                            width: double.infinity,
-                            color: PdfColors.grey200,
-                            child: pw.Center(child: pw.Text('img copy 2')),
-                          ),
-                  ),
-                  pw.Expanded(
-                    child: _imgAccesDroite2 != null
-                        ? pw.Container(
-                            height: 80,
-                            width: double.infinity,
-                            child: pw.Image(_imgAccesDroite2!, fit: pw.BoxFit.contain),
-                          )
-                        : pw.Container(
-                            height: 80,
-                            width: double.infinity,
-                            color: PdfColors.grey200,
-                            child: pw.Center(child: pw.Text('img copy 3')),
-                          ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        pw.SizedBox(height: 12),
-        _bodyText(
-          'En effet, une installation, bien que declaree conforme en phase d\'exploitation, peut lors d\'operations, par exemple d\'entretien, '
-          'necessiter des precautions speciales du fait de la presence a proximite de pieces nues sous tension '
-          '(cas des locaux reserves aux electriciens et dans lesquels la reglementation n\'interdit pas la presence de pieces nues sous tension).',
-        ),
-        pw.SizedBox(height: 12),
-        _subTitle('Technicien en Maintenance Des Installations'),
-        pw.SizedBox(height: 5),
-        _bodyText('Il est fortement recommande a l\'employer de faire participer aux employes, a des seances de formations sur les modules suivants :'),
-        _bulletItem('Connaissance des normes en electricite (NC 244 C15 00...)'),
-        _bulletItem('Maintenance des installations electriques'),
-        pw.SizedBox(height: 12),
-        _subTitle('Engagement de KES INSPECTIONS AND PROJECTS'),
-        _bodyText(
-          'KES INSPECTIONS AND PROJECTS s\'engage a realiser ses verifications dans le strict respect des normes et reglements applicables, '
-          'avec le souci constant de la securite, de la fiabilite technique et de l\'impartialite des constats.',
-        ),
-      ],
-    );
-  }
-
-  // ──────────────────────────────────────────────────────────────
-  //  OBJET DE LA VERIFICATION
-  // ──────────────────────────────────────────────────────────────
-  
-  static pw.Widget _buildObjetVerification() {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _buildPageHeaderWidget(),
-        pw.SizedBox(height: 10),
-        _sectionBox('OBJET DE LA VERIFICATION'),
-        pw.SizedBox(height: 8),
-        _bodyText(
-          'La mission a pour objet de deceler les non-conformites, pouvant affecter la securite des personnes et des biens, et de s\'assurer du bon etat de conservation des installations. '
-          'Afin de presenter l\'etat des lieux de l\'existant, les points sur lesquelles les installations s\'ecartent des normes, textes applicables et de proposer des actions correctives.\n\n'
-          'D\'une maniere generale, la verification a ete etendue a l\'ensemble des installations electriques presentees et accessibles dans l\'etablissement depuis les sources, jusqu\'aux points d\'utilisations.',
-        ),
-        pw.SizedBox(height: 12),
-        _bodyText('Ainsi sont exclus du champ de la verification :'),
-        _bulletItem('Les dispositions administratives, organisationnelles et techniques relatives a l\'information et a la formation du personnel (prescriptions au personnel) lors de l\'exploitation courante, de travaux ou d\'interventions sur les installations ainsi que les mesures de securite qui en decoulent ;'),
-        _bulletItem('Les dispositions administratives relatives aux documents a tenir a la disposition des autorites publiques'),
-        _bulletItem('L\'examen des materiels electriques en presentation ou en demonstration et destines a la vente ;'),
-        _bulletItem('Les materiels stockes ou en reserve ou signales comme n\'etant plus mis en oeuvre. Du fait que les installations sont examinees en tenant compte des contraintes d\'exploitation et de securite propres a chaque etablissement et indiquees en debut de verification au personnel charge de la verification, celle-ci est limitee dans certains cas a l\'etat apparent des installations.'),
-        pw.SizedBox(height: 12),
-        _subTitle('References normatives et reglementaires'),
-        pw.SizedBox(height: 5),
-        _buildNormesTable(),
-        pw.SizedBox(height: 12),
-        _subTitle('Materiel utilise'),
-        pw.SizedBox(height: 5),
-        _buildMaterielTable(),
-      ],
-    );
-  }
 
   static pw.Widget _buildNormesTable() {
     final normes = [
-      'Articles 6, 112, 113_Arrete 039/MTPS/IMT du 26 Novembre 1984 fixant les mesures generales d\'hygiene et de securite sur les lieux de travail',
-      'Cahier de prescription technique applicable au Decret N° 20181969/PM du 15 Mars 2018, fixant les regles de base de securite incendie dans les batiments',
-      'Arrete conjoint 002164 du 21 Juin 2012 MNIMIDT/MINEE',
-      'Loi N°896/PJL/AN du 15/11/2011',
-      'NC 244 C 15 100 - Installation electrique a basse tension',
-      'NF C 15 100 - Installation electrique a basse tension',
-      'Norme NF C 13 100 - Poste de livraison etabli a l\'interieur d\'un batiment et alimente par un reseau de distribution publique de deuxieme categorie',
+      'Articles 6, 112, 113 \u2013 Arr\u00eat\u00e9 039/MTPS/IMT du 26 novembre 1984 fixant les mesures g\u00e9n\u00e9rales d\'hygi\u00e8ne et de s\u00e9curit\u00e9 sur les lieux de travail',
+      'Cahier de prescription technique applicable au D\u00e9cret N\u00b0\u00a020181969/PM du 15 mars 2018, fixant les r\u00e8gles de base de s\u00e9curit\u00e9 incendie dans les b\u00e2timents',
+      'Arr\u00eat\u00e9 conjoint 002164 du 21 juin 2012 MNIMIDT/MINEE',
+      'Loi N\u00b0\u00a0896/PJL/AN du 15/11/2011',
+      'NC 244 C 15 100 \u2013 Installation \u00e9lectrique \u00e0 basse tension',
+      'NF C 15 100 \u2013 Installation \u00e9lectrique \u00e0 basse tension',
+      'Norme NF C 13 100 \u2013 Poste de livraison \u00e9tabli \u00e0 l\'int\u00e9rieur d\'un b\u00e2timent et aliment\u00e9 par un r\u00e9seau de distribution publique de deuxi\u00e8me cat\u00e9gorie',
     ];
     return pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.4),
@@ -851,12 +653,12 @@ class PdfReportService {
 
   static pw.Widget _buildMaterielTable() {
     final materiel = [
-      ['Mesure de la resistance de prises de terre', 'FLUKE - 1630 2 FC'],
+      ['Mesure de la r\u00e9sistance de prises de terre', 'FLUKE \u2013 1630 2 FC'],
       ['Mesure de l\'isolement', 'CHAUVIN ARNOUX CA 6462'],
-      ['Verification de la continuite et de la resistance des conducteurs de protection et des liaisons equipotentielles', 'CHAUVIN ARNOUX CA 6462'],
-      ['Test de declenchement des dispositifs differentiels et Mesure des impedances de boucle', 'CHAUVIN ARNOUX CA 6462'],
-      ['Controleur d\'installation electrique', 'CHAUVIN ARNOUX CA 6116N'],
-      ['Analyseur de reseaux', 'CHAUVIN ARNOUX PEL 103 140631NFH'],
+      ['V\u00e9rification de la continuit\u00e9 et de la r\u00e9sistance des conducteurs de protection et des liaisons \u00e9quipotentielles', 'CHAUVIN ARNOUX CA 6462'],
+      ['Test de d\u00e9clenchement des dispositifs diff\u00e9rentiels et mesure des imp\u00e9dances de boucle', 'CHAUVIN ARNOUX CA 6462'],
+      ['Contr\u00f4leur d\'installation \u00e9lectrique', 'CHAUVIN ARNOUX CA 6116N'],
+      ['Analyseur de r\u00e9seaux', 'CHAUVIN ARNOUX PEL 103 140631NFH'],
     ];
     return pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.4),
@@ -865,7 +667,7 @@ class PdfReportService {
         1: const pw.FlexColumnWidth(2),
       },
       children: [
-        _tableHeaderRow(['Description', 'Appareil / Reference']),
+        _tableHeaderRow(['Description', 'Appareil / R\u00e9f\u00e9rence']),
         ...materiel.asMap().entries.map((e) =>
           _tableDataRow(e.value, alt: e.key.isOdd)),
       ],
@@ -1014,7 +816,7 @@ class PdfReportService {
 
         pw.SizedBox(height: 10),
 
-        _sectionBox('RENSEIGNEMENTS GENERAUX DE L\'ETABLISSEMENT'),
+        _sectionBox('RENSEIGNEMENTS G\u00c9N\u00c9RAUX DE L\'\u00c9TABLISSEMENT'),
 
         pw.SizedBox(height: 8),
 
@@ -3863,26 +3665,42 @@ class PdfReportService {
   static pw.Widget _sectionBox(String title) {
     return pw.Container(
       width: double.infinity,
-      color: accentColor,
-      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: pw.BoxDecoration(
+        color: headerColor,
+        borderRadius: pw.BorderRadius.circular(2),
+      ),
       child: pw.Text(
         _normalizeText(title),
-        style: pw.TextStyle(fontSize: fsH1, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
-        textAlign: pw.TextAlign.center,
+        style: pw.TextStyle(
+          font: _fontBold,
+          fontSize: fsH1,
+          fontWeight: pw.FontWeight.bold,
+          color: PdfColors.white,
+          letterSpacing: 0.5,
+        ),
       ),
     );
   }
 
   static pw.Widget _subTitle(String title) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(top: 5, bottom: 3),
-      child: pw.Text(
-        _normalizeText(title),
-        style: pw.TextStyle(
-          fontSize: fsH3,
-          fontWeight: pw.FontWeight.bold,
-          color: accentColor,
-          decoration: pw.TextDecoration.underline,
+      padding: const pw.EdgeInsets.only(top: 10, bottom: 5),
+      child: pw.Container(
+        padding: const pw.EdgeInsets.only(left: 8, top: 2, bottom: 2),
+        decoration: pw.BoxDecoration(
+          border: pw.Border(
+            left: pw.BorderSide(color: accentColor, width: 2.5),
+          ),
+        ),
+        child: pw.Text(
+          _normalizeText(title),
+          style: pw.TextStyle(
+            font: _fontBold,
+            fontSize: fsH3,
+            fontWeight: pw.FontWeight.bold,
+            color: accentColor,
+          ),
         ),
       ),
     );
@@ -3890,32 +3708,60 @@ class PdfReportService {
 
   static pw.Widget _bodyText(String text) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 2),
+      padding: const pw.EdgeInsets.only(bottom: 4),
       child: pw.Text(
         _normalizeText(text),
-        style: pw.TextStyle(fontSize: fsBody, color: darkGrey, lineSpacing: 1.4)),
-        
+        style: pw.TextStyle(
+          font: _fontRegular,
+          fontSize: fsBody,
+          color: darkGrey,
+          lineSpacing: 2.0,
+        ),
+        textAlign: pw.TextAlign.justify,
+      ),
     );
   }
 
   static pw.Widget _bodyBold(String text) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(bottom: 2),
+      padding: const pw.EdgeInsets.only(bottom: 4),
       child: pw.Text(_normalizeText(text),
-          style: pw.TextStyle(fontSize: fsBody, fontWeight: pw.FontWeight.bold, color: darkGrey)),
+          style: pw.TextStyle(
+            font: _fontBold,
+            fontSize: fsBody,
+            fontWeight: pw.FontWeight.bold,
+            color: darkGrey,
+            lineSpacing: 2.0,
+          )),
     );
   }
 
   static pw.Widget _bulletItem(String text) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(left: 10, bottom: 2),
+      padding: const pw.EdgeInsets.only(left: 14, bottom: 3),
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text(_normalizeText('-  '), style: pw.TextStyle(fontSize: fsBody, color: accentColor)),
+          pw.Container(
+            margin: const pw.EdgeInsets.only(top: 4, right: 8),
+            width: 5,
+            height: 5,
+            decoration: pw.BoxDecoration(
+              color: accentColor,
+              shape: pw.BoxShape.circle,
+            ),
+          ),
           pw.Expanded(
-            child: pw.Text(text,
-                style: pw.TextStyle(fontSize: fsBody, color: darkGrey, lineSpacing: 1.3)),
+            child: pw.Text(
+              _normalizeText(text),
+              style: pw.TextStyle(
+                font: _fontRegular,
+                fontSize: fsBody,
+                color: darkGrey,
+                lineSpacing: 1.8,
+              ),
+              textAlign: pw.TextAlign.justify,
+            ),
           ),
         ],
       ),
@@ -4025,27 +3871,147 @@ class PdfReportService {
         build: (ctx) => _buildSommaire(audit, mesures, pages),
       ));
 
-      // 3. Rappel des responsabilites
-      pdf.addPage(
-        pw.Page(
-          pageTheme: _buildInnerPageTheme(),
-          build: (ctx) => _buildRappelResponsabilites(),
+      // 3. Rappel des responsabilit\u00e9s + Mesures de s\u00e9curit\u00e9 + Objet de la v\u00e9rification
+      pdf.addPage(pw.MultiPage(
+        maxPages: 10,
+        pageTheme: _buildInnerPageTheme(),
+        header: (ctx) => _buildPageHeaderWidget(
+          nomClient: mission.nomClient,
+          nomSite: nomSiteHeader,
+          numeroRapport: numeroRapportDoc,
         ),
-      );
-
-      pdf.addPage(
-        pw.Page(
-          pageTheme: _buildInnerPageTheme(),
-          build: (ctx) => _buildMesureSecurite(),
-        ),
-      );
-
-      pdf.addPage(
-        pw.Page(
-          pageTheme: _buildInnerPageTheme(),
-          build: (ctx) => _buildObjetVerification(),
-        ),
-      );
+        build: (ctx) => [
+          _sectionBox('RAPPEL DES RESPONSABILIT\u00c9S DE L\'EMPLOYEUR'),
+          pw.SizedBox(height: 14),
+          _bodyText(
+            'KES INSPECTIONS AND PROJECTS a le plaisir de vous transmettre le pr\u00e9sent rapport de v\u00e9rification de vos installations \u00e9lectriques, \u00e9tabli \u00e0 la suite des constats r\u00e9alis\u00e9s sur site.\n'
+            'Ce document pr\u00e9sente les observations effectu\u00e9es par le v\u00e9rificateur \u00e0 partir des \u00e9l\u00e9ments et moyens mis \u00e0 sa disposition.\n'
+            'Il identifie les points de non-conformit\u00e9 constat\u00e9s au regard des exigences r\u00e9glementaires, et formule, le cas \u00e9ch\u00e9ant, les recommandations techniques n\u00e9cessaires \u00e0 leur mise en conformit\u00e9.',
+          ),
+          pw.SizedBox(height: 10),
+          _subTitle('Responsabilit\u00e9 et accompagnement'),
+          _bodyText(
+            'Dans le cadre de la mission, il appartient \u00e0 l\'employeur de d\u00e9signer une personne qualifi\u00e9e et inform\u00e9e des installations, charg\u00e9e d\'accompagner le v\u00e9rificateur durant l\'intervention.\n'
+            'Cette personne doit pouvoir faciliter l\'acc\u00e8s \u00e0 l\'ensemble des locaux, appareillages et \u00e9quipements \u00e0 contr\u00f4ler.\n\n'
+            'L\'employeur reste responsable du bon fonctionnement, de la s\u00e9curit\u00e9 et de la disponibilit\u00e9 des installations tout au long de la v\u00e9rification.\n'
+            'Les informations et documents techniques fournis sous sa responsabilit\u00e9 doivent permettre la r\u00e9alisation des contr\u00f4les dans de bonnes conditions.',
+          ),
+          pw.SizedBox(height: 10),
+          _subTitle('Conditions de r\u00e9alisation'),
+          _bodyText('Afin d\'assurer le bon d\u00e9roulement des op\u00e9rations, l\'employeur doit\u00a0:'),
+          _bulletItem('Veiller \u00e0 ce que la v\u00e9rification soit r\u00e9alis\u00e9e dans des conditions de s\u00e9curit\u00e9 optimales, en particulier lors des acc\u00e8s en zone \u00e9lectrique\u00a0;'),
+          _bulletItem('Mettre en \u0153uvre les proc\u00e9dures n\u00e9cessaires aux mises hors tension permettant d\'effectuer les mesures et essais en toute s\u00e9curit\u00e9\u00a0;'),
+          _bulletItem('Garantir au v\u00e9rificateur l\'acc\u00e8s \u00e0 l\'ensemble des \u00e9quipements \u00e0 contr\u00f4ler, sans risque de chute ou d\'incident.'),
+          pw.SizedBox(height: 8),
+          _bodyText(
+            'Si certaines v\u00e9rifications n\'ont pu \u00eatre effectu\u00e9es (impossibilit\u00e9 d\'acc\u00e8s, absence d\'agents habilit\u00e9s, contraintes d\'exploitation, documentation manquante, etc.), '
+            'KES INSPECTIONS AND PROJECTS en mentionnera la cause dans le rapport.\n\n'
+            'Dans le cas des installations de moyenne ou haute tension, la mise hors tension et les man\u0153uvres associ\u00e9es rel\u00e8vent exclusivement de la responsabilit\u00e9 de l\'employeur ou de son repr\u00e9sentant habilit\u00e9.',
+          ),
+          pw.SizedBox(height: 10),
+          _subTitle('V\u00e9rifications compl\u00e9mentaires'),
+          _bodyText(
+            'Lorsque des \u00e9l\u00e9ments du poste ou de l\'installation n\'ont pu \u00eatre contr\u00f4l\u00e9s lors de la visite initiale, une intervention compl\u00e9mentaire pourra \u00eatre programm\u00e9e \u00e0 la demande de l\'employeur.\n'
+            'Cette mission additionnelle fera alors l\'objet d\'une planification et d\'un rapport sp\u00e9cifique.',
+          ),
+          pw.SizedBox(height: 10),
+          _subTitle('Surveillance et maintenance des installations \u00e9lectriques'),
+          _bodyText(
+            'La v\u00e9rification de conformit\u00e9 des installations \u00e9lectriques ne constitue qu\'un des \u00e9l\u00e9ments concourant \u00e0 la s\u00e9curit\u00e9 des personnes et des biens. Conform\u00e9ment \u00e0 la norme et aux textes r\u00e9glementaires applicables, '
+            'le chef d\'\u00e9tablissement doit mettre en place une organisation pour les op\u00e9rations de surveillance et la maintenance des installations \u00e9lectriques. '
+            'C\'est dans le cadre de ces op\u00e9rations que les dispositions doivent \u00eatre prises afin de rem\u00e9dier aux d\u00e9fectuosit\u00e9s constat\u00e9es pendant la v\u00e9rification ou celles qui peuvent se manifester apr\u00e8s la v\u00e9rification.',
+          ),
+          pw.SizedBox(height: 10),
+          _subTitle('Formation du personnel intervenant sur les installations et \u00e0 proximit\u00e9'),
+          _bodyText(
+            'Conform\u00e9ment aux dispositions r\u00e9glementaires en vigueur, l\'employeur doit s\'assurer que le personnel appel\u00e9 \u00e0 intervenir sur ou \u00e0 proximit\u00e9 des installations \u00e9lectriques dispose d\'une habilitation \u00e9lectrique adapt\u00e9e au domaine de tension concern\u00e9 '
+            'et \u00e0 la nature des op\u00e9rations \u00e0 r\u00e9aliser.',
+          ),
+          // ─── MESURES DE S\u00c9CURIT\u00c9 ───
+          pw.SizedBox(height: 20),
+          _sectionBox('MESURES DE S\u00c9CURIT\u00c9 AUTOUR DES INSTALLATIONS'),
+          pw.SizedBox(height: 8),
+          _bodyText('Suivant la r\u00e9glementation applicable\u00a0:'),
+          _bulletItem('Article 5 \u2013 Arr\u00eat\u00e9 039/MTPS/IMT du 26 novembre 1984 fixant les mesures g\u00e9n\u00e9rales d\'hygi\u00e8ne et de s\u00e9curit\u00e9 sur les lieux de travail\u00a0;'),
+          _bulletItem('NFC 18-510\u00a0: Op\u00e9rations sur les ouvrages et installations \u00e9lectriques et dans un environnement \u00e9lectrique \u2013 Pr\u00e9vention du risque \u00e9lectrique.'),
+          pw.SizedBox(height: 5),
+          _bodyText('Le personnel doit avoir suivi avec succ\u00e8s une formation en habilitation \u00e9lectrique en fonction du domaine de tension.'),
+          pw.SizedBox(height: 5),
+          if (_imgHabilitation != null)
+            pw.Container(width: double.infinity, child: pw.Image(_imgHabilitation!, fit: pw.BoxFit.fitWidth))
+          else
+            pw.SizedBox(),
+          pw.SizedBox(height: 12),
+          _bodyText(
+            'Il est rappel\u00e9 que des dispositions de s\u00e9curit\u00e9 particuli\u00e8res et parfaitement d\u00e9finies doivent \u00eatre prises par le chef de l\'\u00e9tablissement '
+            'pour toute intervention de maintenance, r\u00e9glage, nettoyage sur ou \u00e0 proximit\u00e9 des installations \u00e9lectriques.\n\n'
+            'L\'acc\u00e8s aux locaux et armoires \u00e9lectriques doit \u00eatre interdit aux personnes non autoris\u00e9es.',
+          ),
+          pw.SizedBox(height: 8),
+          if (_imgAccesGauche != null || _imgAccesDroite1 != null || _imgAccesDroite2 != null)
+            pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                if (_imgAccesGauche != null)
+                  pw.Expanded(
+                    flex: 4,
+                    child: pw.Container(height: 80, width: double.infinity, child: pw.Image(_imgAccesGauche!, fit: pw.BoxFit.contain)),
+                  ),
+                pw.SizedBox(width: 8),
+                pw.Expanded(
+                  flex: 6,
+                  child: pw.Row(children: [
+                    if (_imgAccesDroite1 != null)
+                      pw.Expanded(child: pw.Container(height: 80, width: double.infinity, child: pw.Image(_imgAccesDroite1!, fit: pw.BoxFit.contain))),
+                    if (_imgAccesDroite2 != null)
+                      pw.Expanded(child: pw.Container(height: 80, width: double.infinity, child: pw.Image(_imgAccesDroite2!, fit: pw.BoxFit.contain))),
+                  ]),
+                ),
+              ],
+            ),
+          pw.SizedBox(height: 12),
+          _bodyText(
+            'En effet, une installation, bien que d\u00e9clar\u00e9e conforme en phase d\'exploitation, peut lors d\'op\u00e9rations, par exemple d\'entretien, '
+            'n\u00e9cessiter des pr\u00e9cautions sp\u00e9ciales du fait de la pr\u00e9sence \u00e0 proximit\u00e9 de pi\u00e8ces nues sous tension '
+            '(cas des locaux r\u00e9serv\u00e9s aux \u00e9lectriciens et dans lesquels la r\u00e9glementation n\'interdit pas la pr\u00e9sence de pi\u00e8ces nues sous tension).',
+          ),
+          pw.SizedBox(height: 10),
+          _subTitle('Technicien en maintenance des installations'),
+          pw.SizedBox(height: 5),
+          _bodyText('Il est fortement recommand\u00e9 \u00e0 l\'employeur de faire participer les employ\u00e9s \u00e0 des s\u00e9ances de formation sur les modules suivants\u00a0:'),
+          _bulletItem('Connaissance des normes en \u00e9lectricit\u00e9 (NC 244 C15 00\u2026)\u00a0;'),
+          _bulletItem('Maintenance des installations \u00e9lectriques.'),
+          pw.SizedBox(height: 10),
+          _subTitle('Engagement de KES INSPECTIONS AND PROJECTS'),
+          _bodyText(
+            'KES INSPECTIONS AND PROJECTS s\'engage \u00e0 r\u00e9aliser ses v\u00e9rifications dans le strict respect des normes et r\u00e8glements applicables, '
+            'avec le souci constant de la s\u00e9curit\u00e9, de la fiabilit\u00e9 technique et de l\'impartialit\u00e9 des constats.',
+          ),
+          // ─── OBJET DE LA V\u00c9RIFICATION ───
+          pw.SizedBox(height: 20),
+          _sectionBox('OBJET DE LA V\u00c9RIFICATION'),
+          pw.SizedBox(height: 10),
+          _bodyText(
+            'La mission a pour objet de d\u00e9celer les non-conformit\u00e9s pouvant affecter la s\u00e9curit\u00e9 des personnes et des biens, et de s\'assurer du bon \u00e9tat de conservation des installations. '
+            'Afin de pr\u00e9senter l\'\u00e9tat des lieux de l\'existant, les points sur lesquels les installations s\'\u00e9cartent des normes et textes applicables, et de proposer des actions correctives.\n\n'
+            'D\'une mani\u00e8re g\u00e9n\u00e9rale, la v\u00e9rification a \u00e9t\u00e9 \u00e9tendue \u00e0 l\'ensemble des installations \u00e9lectriques pr\u00e9sent\u00e9es et accessibles dans l\'\u00e9tablissement, depuis les sources jusqu\'aux points d\'utilisation.',
+          ),
+          pw.SizedBox(height: 10),
+          _bodyText('Ainsi sont exclus du champ de la v\u00e9rification\u00a0:'),
+          _bulletItem('Les dispositions administratives, organisationnelles et techniques relatives \u00e0 l\'information et \u00e0 la formation du personnel (prescriptions au personnel) lors de l\'exploitation courante, de travaux ou d\'interventions sur les installations, ainsi que les mesures de s\u00e9curit\u00e9 qui en d\u00e9coulent\u00a0;'),
+          _bulletItem('Les dispositions administratives relatives aux documents \u00e0 tenir \u00e0 la disposition des autorit\u00e9s publiques\u00a0;'),
+          _bulletItem('L\'examen des mat\u00e9riels \u00e9lectriques en pr\u00e9sentation ou en d\u00e9monstration et destin\u00e9s \u00e0 la vente\u00a0;'),
+          _bulletItem('Les mat\u00e9riels stock\u00e9s ou en r\u00e9serve, ou signal\u00e9s comme n\'\u00e9tant plus mis en \u0153uvre. Du fait que les installations sont examin\u00e9es en tenant compte des contraintes d\'exploitation et de s\u00e9curit\u00e9 propres \u00e0 chaque \u00e9tablissement et indiqu\u00e9es en d\u00e9but de v\u00e9rification au personnel charg\u00e9 de la v\u00e9rification, celle-ci est limit\u00e9e dans certains cas \u00e0 l\'\u00e9tat apparent des installations.'),
+          pw.SizedBox(height: 12),
+          _subTitle('R\u00e9f\u00e9rences normatives et r\u00e9glementaires'),
+          pw.SizedBox(height: 5),
+          _buildNormesTable(),
+          pw.SizedBox(height: 12),
+          _subTitle('Mat\u00e9riel utilis\u00e9'),
+          pw.SizedBox(height: 5),
+          _buildMaterielTable(),
+        ],
+      ));
 
       // 4. Renseignements generaux
       pdf.addPage(

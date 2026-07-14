@@ -241,17 +241,21 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
 
   Widget _buildModernTypeSelector(BuildContext context) {
     
-    final localTypes = HiveService.getLocalTypes();
-    final modifiedTypes = localTypes.map((key, value) {
-      if (key == 'LOCAL_TRANSFORMATEUR') {
-        return MapEntry(key, 'Local Moyenne Tension');
-      }
-      return MapEntry(key, value);
-    });
-    
-    final filteredTypes = HiveService.getLocalTypes(
+    final allTypes = HiveService.getLocalTypes();
+    final filteredMap = HiveService.getLocalTypes(
       isMoyenneTension: widget.isMoyenneTension,
-    ).entries.toList();
+    );
+
+    // Si la valeur actuelle n'est pas dans la liste filtrée (cas d'édition
+    // d'un local créé dans un autre contexte), on l'ajoute pour éviter
+    // l'assertion Flutter sur DropdownButton.
+    if (widget.selectedType != null &&
+        !filteredMap.containsKey(widget.selectedType)) {
+      final label = allTypes[widget.selectedType] ?? widget.selectedType!;
+      filteredMap[widget.selectedType!] = label;
+    }
+
+    final filteredTypes = filteredMap.entries.toList();
 
     return Container(
       decoration: BoxDecoration(
