@@ -18,6 +18,7 @@ import 'package:inspec_app/services/hive_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_image_compress/flutter_image_compress.dart';
 
 // ================================================================
 //  PdfReportService
@@ -3918,12 +3919,32 @@ class PdfReportService {
       try {
         final file = File(entry.filePath);
         if (await file.exists()) {
-          loadedImages.add(pw.MemoryImage(await file.readAsBytes()));
+          final compressedBytes = await FlutterImageCompress.compressWithFile(
+            file.absolute.path,
+            minWidth: 600,
+            minHeight: 800,
+            quality: 70,
+            format: CompressFormat.jpeg,
+          );
+          if (compressedBytes != null) {
+            loadedImages.add(pw.MemoryImage(compressedBytes));
+          } else {
+            loadedImages.add(pw.MemoryImage(await file.readAsBytes()));
+          }
         } else {
           loadedImages.add(null);
         }
       } catch (_) {
-        loadedImages.add(null);
+        try {
+          final file = File(entry.filePath);
+          if (await file.exists()) {
+            loadedImages.add(pw.MemoryImage(await file.readAsBytes()));
+          } else {
+            loadedImages.add(null);
+          }
+        } catch (_) {
+          loadedImages.add(null);
+        }
       }
     }
 
