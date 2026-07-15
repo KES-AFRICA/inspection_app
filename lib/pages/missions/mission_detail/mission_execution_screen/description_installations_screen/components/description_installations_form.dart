@@ -693,11 +693,11 @@ class _DescriptionInstallationsFormState
                                 child: Text(
                                   loc,
                                   style: TextStyle(
-                                    fontSize: isSmallScreen ? 11 : 12,
+                                    fontSize: isSmallScreen ? 9.5 : 10.5,
                                     color: Colors.blue.shade700,
                                     fontWeight: FontWeight.w500,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
+                                  softWrap: true,
                                 ),
                               ),
                             ],
@@ -1124,7 +1124,9 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
       );
       return;
     }
-    final result = <String, String>{};
+    final result = widget.initialData != null
+        ? Map<String, String>.from(widget.initialData!)
+        : <String, String>{};
     for (var champ in widget.champs) {
       if (_isGammeField(champ)) {
         if (_selectedGamme != null && _selectedGamme!.isNotEmpty)

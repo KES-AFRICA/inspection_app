@@ -229,7 +229,9 @@ class _AjouterCarteScreenState extends State<AjouterCarteScreen> {
       return;
     }
     
-    final nouvelleCarte = <String, String>{};
+    final nouvelleCarte = widget.carte != null
+        ? Map<String, String>.from(widget.carte!)
+        : <String, String>{};
     
     for (var champ in widget.champs) {
       if (_isSectionCableField(champ)) {

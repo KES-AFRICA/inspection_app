@@ -57,10 +57,12 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   Future<void> _exportMission(Mission mission) async {
+    _showLoadingDialog(context, "Génération de la sauvegarde... Veuillez patienter.");
     setState(() => _isExporting = true);
     final result = await BackupService.exporterMission(mission.id);
     if (!mounted) return;
     setState(() => _isExporting = false);
+    Navigator.of(context).pop(); // Fermer le loading dialog
 
     if (result.success) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -79,10 +81,12 @@ class _BackupScreenState extends State<BackupScreen> {
   }
 
   Future<void> _exportAll() async {
+    _showLoadingDialog(context, "Génération de la sauvegarde globale... Veuillez patienter.");
     setState(() => _isExporting = true);
     final result = await BackupService.exporterMissions(widget.user.matricule);
     if (!mounted) return;
     setState(() => _isExporting = false);
+    Navigator.of(context).pop(); // Fermer le loading dialog
 
     if (result.success) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -119,6 +123,9 @@ class _BackupScreenState extends State<BackupScreen> {
     final opts = await _showImportOptionsDialog();
     if (opts == null) return;
 
+    if (!mounted) return;
+    _showLoadingDialog(context, "Importation et vérification de la sauvegarde... Veuillez patienter.");
+
     setState(() => _isImporting = true);
     final result = await BackupService.importerMissions(
       filePath,
@@ -129,6 +136,7 @@ class _BackupScreenState extends State<BackupScreen> {
     );
     if (!mounted) return;
     setState(() => _isImporting = false);
+    Navigator.of(context).pop(); // Fermer le loading dialog
     _showImportReport(result);
   }
 
@@ -324,6 +332,41 @@ class _BackupScreenState extends State<BackupScreen> {
             child: const Text('Fermer'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _showLoadingDialog(BuildContext context, String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => PopScope(
+        canPop: false,
+        child: AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          content: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8.0),
+            child: Row(
+              children: [
+                const SizedBox(
+                  width: 24,
+                  height: 24,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+                  ),
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: Text(
+                    message,
+                    style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }

@@ -755,7 +755,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
                   'Vous avez validé $completedSteps étapes sur $totalSteps.',
                   style: TextStyle(
                     color: Colors.white.withOpacity(0.85),
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
