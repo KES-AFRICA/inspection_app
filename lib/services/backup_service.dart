@@ -842,20 +842,73 @@ class BackupService {
     if (fileMagic == _magic) {
       final checksum = payload['checksum'] as String?;
       if (checksum != null) {
+        bool isValid = false;
+
+        // Tentative 1 : Hash par octets bruts (nouveau format de streaming export)
         final len = bytes.length;
         if (len > 79) {
-          // Les 79 derniers octets correspondent à : ,"checksum":"[64_hex_chars]"}
+          // Les 79 derniers octets correspondent à : ,"checksum":"[64_hex_chars]"
           final bytesToHash = bytes.sublist(0, len - 79);
           final computed = sha256.convert(bytesToHash).toString();
-          if (computed != checksum) {
-            throw const FormatException('checksum_invalid');
+          if (computed == checksum) {
+            isValid = true;
           }
-        } else {
+        }
+
+        // Tentative 2 (Fallback sémantique) :
+        // Pour les fichiers générés par d'anciennes versions, formatés/jolis (pretty-print),
+        // ou avec des espaces de formatage.
+        if (!isValid) {
+          final withoutChecksum = Map<String, dynamic>.from(payload)..remove('checksum');
+          final contentForHash = jsonEncode(withoutChecksum);
+          
+          // Cas A : Hash sémantique avec accolade fermante (ancien export non-streaming)
+          final computedSemantic = sha256.convert(utf8.encode(contentForHash)).toString();
+          if (computedSemantic == checksum) {
+            isValid = true;
+          } else {
+            // Cas B : Hash sémantique sans accolade fermante (nouveau format de streaming, mais re-formaté/pretty-printed par un outil tiers)
+            if (contentForHash.endsWith('}')) {
+              final contentWithoutBrace = contentForHash.substring(0, contentForHash.length - 1);
+              final computedStreamingPretty = sha256.convert(utf8.encode(contentWithoutBrace)).toString();
+              if (computedStreamingPretty == checksum) {
+                isValid = true;
+              }
+            }
+          }
+        }
+
+        if (!isValid) {
           throw const FormatException('checksum_invalid');
         }
       }
     }
     return payload;
+  }
+
+  // Helper récursif pour corriger les chemins de photos absolus dans les données importées
+  static dynamic _fixPathsRecursively(dynamic value, String appDirPath) {
+    if (value is String) {
+      if (value.contains('/audit_photos/') || value.contains('\\audit_photos\\')) {
+        final separator = value.contains('\\audit_photos\\') ? '\\' : '/';
+        final keyword = '${separator}audit_photos${separator}';
+        final parts = value.split(keyword);
+        if (parts.length >= 2) {
+          final suffix = parts.sublist(1).join(keyword);
+          return '$appDirPath${separator}audit_photos${separator}$suffix';
+        }
+      }
+      return value;
+    } else if (value is Map) {
+      final newMap = <String, dynamic>{};
+      value.forEach((k, v) {
+        newMap[k.toString()] = _fixPathsRecursively(v, appDirPath);
+      });
+      return newMap;
+    } else if (value is List) {
+      return value.map((item) => _fixPathsRecursively(item, appDirPath)).toList();
+    }
+    return value;
   }
 
   // ═══════════════════════════════════════════════════════════
@@ -882,6 +935,8 @@ class BackupService {
             success: false, message: 'Fichier introuvable.');
       }
       payload = await compute(_parseJsonAndVerifyChecksum, filePath);
+      final appDir = await getApplicationDocumentsDirectory();
+      payload = _fixPathsRecursively(payload, appDir.path) as Map<String, dynamic>;
     } catch (e) {
       if (e.toString().contains('checksum_invalid')) {
         return const ImportResult(
@@ -1122,32 +1177,35 @@ class BackupService {
     }
   }
 
-  static MoyenneTensionLocal _parseMTLocal(Map<String, dynamic> d) =>
-      MoyenneTensionLocal(
-        nom: d['nom'] as String? ?? '',
-        type: d['type'] as String? ?? 'LOCAL_ELECTRIQUE',
-        accessible: d['accessible'] as bool? ?? true,
-        aReverifier: d['aReverifier'] as bool? ?? false,
-        photos: _strList(d['photos']),
-        dispositionsConstructives: _parseElements(d['dispositionsConstructives']),
-        conditionsExploitation: _parseElements(d['conditionsExploitation']),
-        cellule: d['cellule'] != null
-            ? _parseCellule(d['cellule'] as Map<String, dynamic>)
-            : null,
-        transformateur: d['transformateur'] != null
-            ? _parseTransformateur(d['transformateur'] as Map<String, dynamic>)
-            : null,
-        cellules: (d['cellules'] as List<dynamic>?)
-                ?.map((c) => _parseCellule(c as Map<String, dynamic>))
-                .toList() ??
-            [],
-        transformateurs: (d['transformateurs'] as List<dynamic>?)
-                ?.map((t) => _parseTransformateur(t as Map<String, dynamic>))
-                .toList() ??
-            [],
-        coffrets: _parseCoffrets(d['coffrets']),
-        observationsLibres: _parseObs(d['observationsLibres']),
-      );
+  static MoyenneTensionLocal _parseMTLocal(Map<String, dynamic> d) {
+    final local = MoyenneTensionLocal(
+      nom: d['nom'] as String? ?? '',
+      type: d['type'] as String? ?? 'LOCAL_ELECTRIQUE',
+      accessible: d['accessible'] as bool? ?? true,
+      aReverifier: d['aReverifier'] as bool? ?? false,
+      photos: _strList(d['photos']),
+      dispositionsConstructives: _parseElements(d['dispositionsConstructives']),
+      conditionsExploitation: _parseElements(d['conditionsExploitation']),
+      cellule: d['cellule'] != null
+          ? _parseCellule(d['cellule'] as Map<String, dynamic>)
+          : null,
+      transformateur: d['transformateur'] != null
+          ? _parseTransformateur(d['transformateur'] as Map<String, dynamic>)
+          : null,
+      cellules: (d['cellules'] as List<dynamic>?)
+              ?.map((c) => _parseCellule(c as Map<String, dynamic>))
+              .toList() ??
+          [],
+      transformateurs: (d['transformateurs'] as List<dynamic>?)
+              ?.map((t) => _parseTransformateur(t as Map<String, dynamic>))
+              .toList() ??
+          [],
+      coffrets: _parseCoffrets(d['coffrets']),
+      observationsLibres: _parseObs(d['observationsLibres']),
+    );
+    local.migrateFromOldFields();
+    return local;
+  }
 
   static MoyenneTensionZone _parseMTZone(Map<String, dynamic> d) =>
       MoyenneTensionZone(
