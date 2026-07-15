@@ -1487,10 +1487,10 @@ class PdfReportService {
     for (final group in groups) {
       // Séparateur local (style trame)
       final localSeparator = pw.Container(
-        color: lightBlue,
         width: double.infinity,
         padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
         decoration: pw.BoxDecoration(
+          color: lightBlue,
           border: pw.Border.all(color: borderColor, width: 0.4),
         ),
         child: pw.Row(
