@@ -2233,10 +2233,10 @@ class PdfReportService {
       pw.SizedBox(height: 8),
       pw.Container(
         width: double.infinity,
-        color: accentColor,
-        padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+        color: PdfColor.fromInt(0xFFB3B3B3),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
         child: pw.Text(nom.toUpperCase(),
-            style: pw.TextStyle(fontSize: fsH2, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
+            style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: PdfColors.black)),
       ),
     ];
 
@@ -2251,24 +2251,53 @@ class PdfReportService {
 
   static pw.Widget _buildObsZoneTable(String zone, List<ObservationLibre> obs) {
     return pw.Table(
-      border: pw.TableBorder.all(color: borderColor, width: 0.4),
-      columnWidths: {
-        0: const pw.FlexColumnWidth(0.5),
-        1: const pw.FlexColumnWidth(5),
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+      border: pw.TableBorder(
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        top: pw.BorderSide(color: borderColor, width: 0.4),
+        verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+        horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(0.8),
+        1: pw.FlexColumnWidth(6.4),
       },
       children: [
+        // En-tête (avec Items centré et Titre à gauche en majuscule)
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: accentColor),
+          decoration: const pw.BoxDecoration(color: PdfColors.white),
           children: [
-            _cell('Items', isHeader: true, color: PdfColors.white),
-            _cell('OBSERVATIONS RELATIVES A LA ZONE $zone', isHeader: true, color: PdfColors.white),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              alignment: pw.Alignment.center,
+              child: pw.Text('Items',
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black)),
+            ),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+              alignment: pw.Alignment.centerLeft,
+              child: pw.Text('OBSERVATIONS RELATIVES A LA ${zone.toUpperCase()}',
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black)),
+            ),
           ],
         ),
+        // Lignes d'observations
         ...obs.asMap().entries.map((e) => pw.TableRow(
           decoration: pw.BoxDecoration(color: e.key.isEven ? PdfColors.white : tableRowAlt),
           children: [
-            _cell('${e.key + 1}', isHeader: false),
-            _cell(e.value.texte, isHeader: false),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              alignment: pw.Alignment.center,
+              child: pw.Text('${e.key + 1}',
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+              child: pw.Text(e.value.texte,
+                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+            ),
           ],
         )),
       ],
