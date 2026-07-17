@@ -3850,86 +3850,77 @@ class PdfReportService {
   }
 
   static pw.Widget _buildCodificationInfluences() {
+    final titleTable = pw.Table(
+      border: pw.TableBorder(
+        top: pw.BorderSide(color: borderColor, width: 0.4),
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(7.2),
+      },
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: lightBlue),
+          children: [
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+              alignment: pw.Alignment.center,
+              child: pw.Text(
+                "CODIFICATION DES INFLUENCES EXTERNES - INDICES ET DEGRES DE PROTECTION",
+                style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+
+    final dataTable = pw.Table(
+      border: pw.TableBorder(
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+        horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(1),
+        1: pw.FlexColumnWidth(1),
+        2: pw.FlexColumnWidth(1),
+      },
+      children: [
+        _tableHeaderRow(["PENETRATION DE CORPS SOLIDES", "SUBSTANCES CORROSIVES OU POLLUANTES", "MATIERES TRAITEES OU ENTREPOSEES"]),
+        _tableDataRow(["AE1 : Negligeable -> IP 2X", "AF1 : Negligeable", "BE1 : Risques negligeables"], alt: false),
+        _tableDataRow(["AE2 : Petits objets (\u2265 2,5 mm) -> IP 3X", "AF2 : Agents d'origine atmospherique", "BE2 : Risques d'incendie"], alt: true),
+        _tableDataRow(["AE3 : Tres petits objets (1 a 2,5 mm) -> IP 4X", "AF3 : Intermittente ou accidentelle", "BE3 : Risques d'explosion"], alt: false),
+        _tableDataRow(["AE4 : Poussieres -> IP 5X (Protege)", "AF4 : Permanente", "BE4 : Risques de contamination"], alt: true),
+        _tableHeaderRow(["ACCES AUX PARTIES DANGEREUSES", "PENETRATION DE LIQUIDES", "RISQUES DE CHOCS MECANIQUES"]),
+        _tableDataRow(["Non protege -> IP 0X", "AD1 : Negligeable -> IP X0", "AG1 : Faibles (0,225 J) -> IK 02"], alt: false),
+        _tableDataRow(["A : Avec le dos de la main -> IP 1X", "AD2 : Chutes de gouttes d'eau -> IP X1", "AG2 : Moyens (2 J) -> IK 07"], alt: true),
+        _tableDataRow(["B : Avec un doigt -> IP 2X", "AD3 : Chutes de gouttes jusqu'à 15\u00B0 -> IP X2", "AG3 : Importants (5 J) -> IK 08"], alt: false),
+        _tableDataRow(["C : Avec un outil -> IP 3X", "AD4 : Aspersion d'eau -> IP X3", "AG4 : Tres importants (20 J) -> IK 10"], alt: true),
+        _tableDataRow(["D : Avec un fil -> IP 4X", "AD5 : Projections d'eau -> IP X4", ""], alt: false),
+        _tableDataRow(["", "AD6 : Jets d'eau -> IP X5", ""], alt: true),
+        _tableDataRow(["", "AD7 : Paquets d'eau -> IP X6", ""], alt: false),
+        _tableDataRow(["", "AD8 : Immersion -> IP X7", ""], alt: true),
+        _tableDataRow(["", "AD9 : Submersion -> IP X8", ""], alt: false),
+        _tableHeaderRow(["COMPETENCE DES PERSONNES", "VIBRATIONS", ""]),
+        _tableDataRow(["BA1 : Ordinaires", "AH1 : Faibles", ""], alt: false),
+        _tableDataRow(["BA2 : Enfants", "AH2 : Moyennes", ""], alt: true),
+        _tableDataRow(["BA3 : Personnes handicapees", "AH3 : Importantes", ""], alt: false),
+        _tableDataRow(["BA4 : Personnes averties", "", ""], alt: true),
+        _tableDataRow(["BA5 : Personnes qualifiees", "", ""], alt: false),
+      ],
+    );
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        pw.Table(
-          border: pw.TableBorder.all(color: borderColor, width: 0.4),
-          columnWidths: const {
-            0: pw.FlexColumnWidth(1),
-            1: pw.FlexColumnWidth(1),
-            2: pw.FlexColumnWidth(1),
-          },
-          children: [
-            pw.TableRow(
-              decoration: pw.BoxDecoration(color: lightBlue),
-              children: [
-                _cell('CODIFICATION DES INFLUENCES EXTERNES - INDICES ET DEGRES DE PROTECTION', isHeader: true, colspan: 3, centered: true),
-              ],
-            ),
-            _tableHeaderRow(['PENETRATION DE CORPS SOLIDES', 'SUBSTANCES CORROSIVES OU POLLUANTES', 'MATIERES TRAITEES OU ENTREPOSEES']),
-            _tableDataRow(['AE1 : Negligeable -> IP 2X', 'AF1 : Negligeable', 'BE1 : Risques negligeables'], alt: false),
-            _tableDataRow(['AE2 : Petits objets (\u2265 2,5 mm) -> IP 3X', 'AF2 : Agents d\'origine atmospherique', 'BE2 : Risques d\'incendie'], alt: true),
-            _tableDataRow(['AE3 : Tres petits objets (1 a 2,5 mm) -> IP 4X', 'AF3 : Intermittente ou accidentelle', 'BE3 : Risques d\'explosion'], alt: false),
-            _tableDataRow(['AE4 : Poussieres -> IP 5X (Protege)', 'AF4 : Permanente', 'BE4 : Risques de contamination'], alt: true),
-            _tableHeaderRow(['ACCES AUX PARTIES DANGEREUSES', 'PENETRATION DE LIQUIDES', 'RISQUES DE CHOCS MECANIQUES']),
-            _tableDataRow(['Non protege -> IP 0X', 'AD1 : Negligeable -> IP X0', 'AG1 : Faibles (0,225 J) -> IK 02'], alt: false),
-            _tableDataRow(['A : Avec le dos de la main -> IP 1X', 'AD2 : Chutes de gouttes d\'eau -> IP X1', 'AG2 : Moyens (2 J) -> IK 07'], alt: true),
-            _tableDataRow(['B : Avec un doigt -> IP 2X', 'AD3 : Chutes de gouttes jusqu\'à 15\u00B0 -> IP X2', 'AG3 : Importants (5 J) -> IK 08'], alt: false),
-            _tableDataRow(['C : Avec un outil -> IP 3X', 'AD4 : Aspersion d\'eau -> IP X3', 'AG4 : Tres importants (20 J) -> IK 10'], alt: true),
-            _tableDataRow(['D : Avec un fil -> IP 4X', 'AD5 : Projections d\'eau -> IP X4', ''], alt: false),
-            _tableDataRow(['', 'AD6 : Jets d\'eau -> IP X5', ''], alt: true),
-            _tableDataRow(['', 'AD7 : Paquets d\'eau -> IP X6', ''], alt: false),
-            _tableDataRow(['', 'AD8 : Immersion -> IP X7', ''], alt: true),
-            _tableDataRow(['', 'AD9 : Submersion -> IP X8', ''], alt: false),
-            _tableHeaderRow(['COMPETENCE DES PERSONNES', 'VIBRATIONS', '']),
-            _tableDataRow(['BA1 : Ordinaires', 'AH1 : Faibles', ''], alt: false),
-            _tableDataRow(['BA2 : Enfants', 'AH2 : Moyennes', ''], alt: true),
-            _tableDataRow(['BA3 : Personnes handicapees', 'AH3 : Importantes', ''], alt: false),
-            _tableDataRow(['BA4 : Personnes averties', '', ''], alt: true),
-            _tableDataRow(['BA5 : Personnes qualifiees', '', ''], alt: false),
-          ],
-        ),
-        pw.SizedBox(height: 12),
-        pw.Text('Légende :', style: pw.TextStyle(font: _fontBold, fontSize: fsBody)),
-        pw.SizedBox(height: 4),
-        pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text('  •  ', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
-            pw.Expanded(
-              child: pw.RichText(
-                text: pw.TextSpan(
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall, color: darkGrey),
-                  children: [
-                    pw.TextSpan(text: 'IP', style: pw.TextStyle(font: _fontBold, color: headerColor)),
-                    const pw.TextSpan(text: ' : Indice de protection contre la pénétration de corps solides ou l\'accès aux parties dangereuses.'),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        pw.SizedBox(height: 3),
-        pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Text('  •  ', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
-            pw.Expanded(
-              child: pw.RichText(
-                text: pw.TextSpan(
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall, color: darkGrey),
-                  children: [
-                    pw.TextSpan(text: 'IK', style: pw.TextStyle(font: _fontBold, color: headerColor)),
-                    const pw.TextSpan(text: ' : Degré de protection contre les risques de chocs mécaniques.'),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-        pw.SizedBox(height: 8),
-        pw.Text('*(AE4b : Poussières – IP 6X Étanche)', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall, fontStyle: pw.FontStyle.italic)),
+        titleTable,
+        dataTable,
       ],
     );
   }
@@ -4003,7 +3994,8 @@ class PdfReportService {
           _buildPageHeaderWidget(),
           pw.SizedBox(height: 10),
           _sectionBox('RESULTATS DES MESURES ET ESSAIS'),
-          pw.SizedBox(height: 8),
+          pw.SizedBox(height: 10),
+          
           
           // Conditions générales
           _bodyBold("MESURES D'ISOLEMENT"),
