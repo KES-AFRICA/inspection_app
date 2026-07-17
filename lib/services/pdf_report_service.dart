@@ -3555,22 +3555,10 @@ class PdfReportService {
   ) {
     final widgets = <pw.Widget>[];
 
-    // Unified Section Title Box
-    widgets.add(
-      pw.Container(
-        width: double.infinity,
-        decoration: pw.BoxDecoration(
-          border: pw.Border.all(color: borderColor, width: 0.4),
-        ),
-        padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-        alignment: pw.Alignment.center,
-        child: pw.Text(
-          "CLASSEMENT DES LOCAUX ET EMPLACEMENTS EN FONCTION DES INFLUENCES EXTERNES",
-          style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
-          textAlign: pw.TextAlign.center,
-        ),
-      ),
-    );
+    // _sectionBox title like other sections
+    widgets.add(_sectionBox(
+      "CLASSEMENT DES LOCAUX ET EMPLACEMENTS EN FONCTION DES INFLUENCES EXTERNES"
+    ));
     widgets.add(pw.SizedBox(height: 8));
     widgets.add(_bodyText(
       "Dans le cas d'absence de fourniture d'une liste exhaustive des risques "
@@ -3626,7 +3614,7 @@ class PdfReportService {
       return a.localisation.compareTo(b.localisation);
     });
 
-    // Main header table with correct vertical border alignments
+    // Main header table with lightBlue decoration and headerColor texts
     final header = pw.Table(
       border: pw.TableBorder(
         top: pw.BorderSide(color: borderColor, width: 0.4),
@@ -3644,29 +3632,29 @@ class PdfReportService {
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFCCCCCC)), // Gray background for headers
+          decoration: pw.BoxDecoration(color: lightBlue), // LightBlue background matching the report
           children: [
             pw.Container(
               alignment: pw.Alignment.center,
               padding: const pw.EdgeInsets.symmetric(vertical: 8),
-              child: pw.Text('Localisation', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
+              child: pw.Text('Localisation', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
             ),
             pw.Container(
               alignment: pw.Alignment.center,
               padding: const pw.EdgeInsets.symmetric(vertical: 8),
-              child: pw.Text('Zone', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
+              child: pw.Text('Zone', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
             ),
             pw.Container(
               alignment: pw.Alignment.center,
               padding: const pw.EdgeInsets.symmetric(vertical: 8),
-              child: pw.Text('Origine\nclassement', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
+              child: pw.Text('Origine\nclassement', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
             ),
             // Influences externes (double level with vertical inside borders)
             pw.Column(
               children: [
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                  child: pw.Text('Influences externes', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
+                  child: pw.Text('Influences externes', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
                 ),
                 pw.Divider(height: 0.4, color: borderColor),
                 pw.Table(
@@ -3681,11 +3669,11 @@ class PdfReportService {
                   children: [
                     pw.TableRow(
                       children: [
-                        pw.Text('AF', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
-                        pw.Text('BE', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
-                        pw.Text('AE', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
-                        pw.Text('AD', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
-                        pw.Text('AG', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
+                        pw.Text('AF', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                        pw.Text('BE', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                        pw.Text('AE', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                        pw.Text('AD', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                        pw.Text('AG', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
                       ],
                     ),
                   ],
@@ -3697,7 +3685,7 @@ class PdfReportService {
               children: [
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                  child: pw.Text('Indice mini de\nprotection', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
+                  child: pw.Text('Indice mini de\nprotection', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
                 ),
                 pw.Divider(height: 0.4, color: borderColor),
                 pw.Table(
@@ -3709,8 +3697,8 @@ class PdfReportService {
                   children: [
                     pw.TableRow(
                       children: [
-                        pw.Text('IP', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
-                        pw.Text('IK', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
+                        pw.Text('IP', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                        pw.Text('IK', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
                       ],
                     ),
                   ],
@@ -3862,14 +3850,14 @@ class PdfReportService {
       },
       children: [
         pw.TableRow(
-          decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFCCCCCC)), // Gray background
+          decoration: pw.BoxDecoration(color: lightBlue), // Uniform lightBlue background
           children: [
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
               alignment: pw.Alignment.center,
               child: pw.Text(
                 "CODIFICATION DES INFLUENCES EXTERNES – INDICES ET DEGRÉS DE PROTECTION",
-                style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black),
+                style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor), // H3 size, headerColor text
                 textAlign: pw.TextAlign.center,
               ),
             ),
@@ -3878,13 +3866,13 @@ class PdfReportService {
       ],
     );
 
-    pw.TableRow greyHeaderRow(List<String> headers) {
+    pw.TableRow blueHeaderRow(List<String> headers) {
       return pw.TableRow(
-        decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFCCCCCC)), // Matching gray background
+        decoration: pw.BoxDecoration(color: lightBlue), // Matching lightBlue background
         children: headers.map((h) => pw.Container(
           padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
           alignment: pw.Alignment.center,
-          child: pw.Text(h, style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
+          child: pw.Text(h, style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
         )).toList(),
       );
     }
@@ -3903,12 +3891,12 @@ class PdfReportService {
         2: pw.FlexColumnWidth(1),
       },
       children: [
-        greyHeaderRow(["PÉNÉTRATION DE CORPS SOLIDES", "SUBSTANCES CORROSIVES OU POLLUANTES", "MATIÈRES TRAITÉES OU ENTREPOSÉES"]),
+        blueHeaderRow(["PÉNÉTRATION DE CORPS SOLIDES", "SUBSTANCES CORROSIVES OU POLLUANTES", "MATIÈRES TRAITÉES OU ENTREPOSÉES"]),
         _tableDataRow(["AE1 : Negligeable -> IP 2X", "AF1 : Negligeable", "BE1 : Risques negligeables"], alt: false),
         _tableDataRow(["AE2 : Petits objets (\u2265 2,5 mm) -> IP 3X", "AF2 : Agents d'origine atmospherique", "BE2 : Risques d'incendie"], alt: true),
         _tableDataRow(["AE3 : Tres petits objets (1 a 2,5 mm) -> IP 4X", "AF3 : Intermittente ou accidentelle", "BE3 : Risques d'explosion"], alt: false),
         _tableDataRow(["AE4 : Poussieres -> IP 5X (Protege)", "AF4 : Permanente", "BE4 : Risques de contamination"], alt: true),
-        greyHeaderRow(["ACCÈS AUX PARTIES DANGEREUSES", "PÉNÉTRATION DE LIQUIDES", "RISQUES DE CHOCS MÉCANIQUES"]),
+        blueHeaderRow(["ACCÈS AUX PARTIES DANGEREUSES", "PÉNÉTRATION DE LIQUIDES", "RISQUES DE CHOCS MÉCANIQUES"]),
         _tableDataRow(["Non protege -> IP 0X", "AD1 : Negligeable -> IP X0", "AG1 : Faibles (0,225 J) -> IK 02"], alt: false),
         _tableDataRow(["A : Avec le dos de la main -> IP 1X", "AD2 : Chutes de gouttes d'eau -> IP X1", "AG2 : Moyens (2 J) -> IK 07"], alt: true),
         _tableDataRow(["B : Avec un doigt -> IP 2X", "AD3 : Chutes de gouttes jusqu'à 15\u00B0 -> IP X2", "AG3 : Importants (5 J) -> IK 08"], alt: false),
@@ -3918,7 +3906,7 @@ class PdfReportService {
         _tableDataRow(["", "AD7 : Paquets d'eau -> IP X6", ""], alt: false),
         _tableDataRow(["", "AD8 : Immersion -> IP X7", ""], alt: true),
         _tableDataRow(["", "AD9 : Submersion -> IP X8", ""], alt: false),
-        greyHeaderRow(["COMPÉTENCE DES PERSONNES", "VIBRATIONS", ""]),
+        blueHeaderRow(["COMPÉTENCE DES PERSONNES", "VIBRATIONS", ""]),
         _tableDataRow(["BA1 : Ordinaires", "AH1 : Faibles", ""], alt: false),
         _tableDataRow(["BA2 : Enfants", "AH2 : Moyennes", ""], alt: true),
         _tableDataRow(["BA3 : Personnes handicapees", "AH3 : Importantes", ""], alt: false),
@@ -4007,34 +3995,36 @@ class PdfReportService {
           _sectionBox('RESULTATS DES MESURES ET ESSAIS'),
           pw.SizedBox(height: 10),
           
+          _subSectionBar("Conditions de mesure"),
+          pw.SizedBox(height: 10),
           
           // Conditions générales
           _bodyBold("MESURES D'ISOLEMENT"),
-          _bodyText("Les mesures d'isolement par rapport a la terre sont effectuees sous 500 V continu sur les canalisations en aval des DDR defectueux. La valeur est satisfaisante si superieure a 0,5 M.ohms."),
+          _bodyText("Les mésures d'isolement par rapport a la terre sont effectuées sous 500 V continu sur les canalisations en aval des DDR defectueux. La valeur est satisfaisante si supérieure a 0,5 M.ohms."),
           pw.SizedBox(height: 5),
           
           _bodyBold('VERIFICATION DE LA CONTINUITE ET RESISTANCE DES CONDUCTEURS DE PROTECTION'),
-          _bodyText('Correcte si la valeur mesuree satisfait aux prescriptions du guide UTE C 15-105 \u00A7 D6.'),
+          _bodyText('Correcte si la valeur mesurée satisfait aux prescriptions du guide UTE C 15-105 \u00A7 D6.'),
           pw.SizedBox(height: 5),
           
           _bodyBold('ESSAIS DE DECLENCHEMENT DES DISPOSITIFS DIFFERENTIELS RESIDUELS'),
-          _bodyText('La valeur du seuil de declenchement est correcte si elle est comprise entre 0,5 IAn et IAn.'),
+          _bodyText('La valeur du seuil de déclenchement est correcte si elle est comprise entre 0,5 IAn et IAn.'),
           pw.SizedBox(height: 5),
           
           _bodyBold('MESURE DES IMPEDANCES DE BOUCLE (PROTECTION \u00AB CONTACTS INDIRECTS \u00BB)'),
-          _bodyText('Correcte si le temps de coupure, pour le courant de defaut determine, satisfait aux prescriptions du guide UTE C 15-105.'),
+          _bodyText('Correcte si le temps de coupure, pour le courant de défaut déterminé, satisfait aux prescriptions du guide UTE C 15-105.'),
           
           pw.SizedBox(height: 16),
           
-          // Essais de demarrage automatique (sur la même page)
-          _subSectionBar('Essais de demarrage automatique du groupe electrogene'),
+          // Essais de démarrage automatique (sur la même page)
+          _subSectionBar('Essais de démarrage automatique du groupe électrogène'),
           pw.SizedBox(height: 5),
           _resultBox(mesures.essaiDemarrageAuto.observation ?? 'Non satisfaisant'),
           
           pw.SizedBox(height: 16),
           
           // Test de l'arret d'urgence (sur la même page)
-          _subSectionBar("Test de fonctionnement de l'arret d'urgence"),
+          _subSectionBar("Test de fonctionnement de l'arrêt d'urgence"),
           pw.SizedBox(height: 5),
           _resultBox(mesures.testArretUrgence.observation ?? 'Satisfaisant'),
         ],
@@ -4063,10 +4053,10 @@ class PdfReportService {
             _tableHeaderRow([
               'Localisation',
               'Identification de la prise de terre',
-              'Condition de mesure',
+              'Condition de mésure',
               'Nature de la prise de terre',
-              'Méthode de mesure',
-              'Valeur de la mesure',
+              'Méthode de mésure',
+              'Valeur de la mésure',
               'Observation'
             ]),
             if (mesures.prisesTerre.isEmpty)
@@ -4107,7 +4097,7 @@ class PdfReportService {
         ),
         if (mesures.avisMesuresTerre.observation != null && mesures.avisMesuresTerre.observation!.isNotEmpty) ...[
           pw.SizedBox(height: 12),
-          pw.Text('❖ Avis sur les mesures', style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: headerColor)),
+          pw.Text('❖ Avis sur les mésures', style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: headerColor)),
           pw.SizedBox(height: 4),
           ...mesures.avisMesuresTerre.observation!.split('\n').map((line) {
             if (line.trim().isEmpty) return pw.SizedBox();
@@ -4136,7 +4126,7 @@ class PdfReportService {
       pageTheme: _buildInnerPageTheme(),
       build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
         _buildPageHeaderWidget(), pw.SizedBox(height: 10),
-        _subSectionBar("Mesures d'isolement des circuits BT"),
+        _subSectionBar("Mésures d'isolement des circuits BT"),
         pw.SizedBox(height: 8),
         _bodyText('Sans observation'),
       ]),
@@ -4215,7 +4205,7 @@ class PdfReportService {
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
             _buildPageHeaderWidget(), pw.SizedBox(height: 10),
-            _subSectionBar('Essais de declenchement des dispositifs differentiels et mesure d\'isolement'),
+            _subSectionBar('Essais de déclenchement des dispositifs différentiels et mésure d\'isolement'),
             pw.SizedBox(height: 8),
             pw.Table(
               border: pw.TableBorder.all(color: borderColor, width: 0.4),
@@ -4230,10 +4220,10 @@ class PdfReportService {
               },
               children: [
                 _tableHeaderRow([
-                  'Quantite',
-                  'Designation circuit',
+                  'Quantité',
+                  'Désignation circuit',
                   'Type dispositif',
-                  'Reglage In (mA)',
+                  'Réglage IAn (mA)',
                   'Tempo (s)',
                   'Essai',
                   'Isolement (M ohms)'
@@ -4256,13 +4246,13 @@ class PdfReportService {
       pageTheme: _buildInnerPageTheme(),
       build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
         _buildPageHeaderWidget(), pw.SizedBox(height: 10),
-        _subSectionBar('Continuite et resistance des conducteurs de protection et liaisons equipotentielles'),
+        _subSectionBar('Continuité et résistance des conducteurs de protection et liaisons équipotentielles'),
         pw.SizedBox(height: 8),
         pw.Table(
           border: pw.TableBorder.all(color: borderColor, width: 0.4),
           columnWidths: {0: const pw.FlexColumnWidth(2), 1: const pw.FlexColumnWidth(2.5), 2: const pw.FlexColumnWidth(1.5), 3: const pw.FlexColumnWidth(2)},
           children: [
-            _tableHeaderRow(['Localisation', 'Designation Tableau / Equipement', 'Origine Mesure', 'Observation']),
+            _tableHeaderRow(['Localisation', 'Désignation Tableau / Equipement', 'Origine Mésure', 'Observation']),
             if (mesures.continuiteResistances.isEmpty)
               pw.TableRow(children: List.generate(4, (_) => _cell('', isHeader: false)))
             else
