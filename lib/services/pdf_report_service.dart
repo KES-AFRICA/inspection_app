@@ -4136,107 +4136,200 @@ class PdfReportService {
     pdf.addPage(pw.Page(
       pageTheme: _buildInnerPageTheme(),
       build: (ctx) {
-        final ddrRows = <pw.TableRow>[];
+        final widgets = <pw.Widget>[];
 
-        // Groupement sémantique par local puis par coffret
-        final ddrGroups = <String, Map<String, List<EssaiDeclenchementDifferentiel>>>{};
-        for (final es in mesures.essaisDeclenchement) {
-          final local = es.localisation.trim().isEmpty ? 'HORS LOCAL' : es.localisation.trim();
-          final coffret = es.coffret?.trim().isEmpty == true ? 'HORS COFFRET' : es.coffret!.trim();
-          ddrGroups.putIfAbsent(local, () => {});
-          ddrGroups[local]!.putIfAbsent(coffret, () => []);
-          ddrGroups[local]![coffret]!.add(es);
-        }
+        widgets.add(_buildPageHeaderWidget());
+        widgets.add(pw.SizedBox(height: 10));
+        widgets.add(_subSectionBar("Essais de déclenchement des dispositifs différentiels et mésure d'isolement"));
+        widgets.add(pw.SizedBox(height: 8));
 
-        int altIdx = 0;
-        ddrGroups.forEach((localName, coffrets) {
-          // Ligne de groupe de Local
-          ddrRows.add(pw.TableRow(
-            decoration: pw.BoxDecoration(color: lightBlue),
-            children: [
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                child: pw.Text(localName.toUpperCase(), style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor)),
-              ),
-              ...List.generate(6, (_) => pw.Container()),
-            ],
-          ));
-
-          coffrets.forEach((coffretName, items) {
-            // Ligne de groupe de Coffret/Armoire
-            ddrRows.add(pw.TableRow(
-              decoration: const pw.BoxDecoration(color: PdfColors.white),
+        // 1. Table Header of DDR table
+        final headerTable = pw.Table(
+          border: pw.TableBorder(
+            top: pw.BorderSide(color: borderColor, width: 0.4),
+            left: pw.BorderSide(color: borderColor, width: 0.4),
+            right: pw.BorderSide(color: borderColor, width: 0.4),
+            bottom: pw.BorderSide(color: borderColor, width: 0.4),
+            verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+          ),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(0.6), // Quantité
+            1: pw.FlexColumnWidth(2.0), // Désignation circuit
+            2: pw.FlexColumnWidth(1.0), // Type dispositif
+            3: pw.FlexColumnWidth(1.8), // Réglage (divided into IAn and Tempo)
+            4: pw.FlexColumnWidth(0.8), // Essai
+            5: pw.FlexColumnWidth(1.0), // Isolement
+          },
+          children: [
+            pw.TableRow(
+              decoration: pw.BoxDecoration(color: lightBlue),
               children: [
                 pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  child: pw.Text(coffretName, style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: darkGrey)),
+                  alignment: pw.Alignment.center,
+                  padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                  child: pw.Text("Quantité", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
                 ),
-                ...List.generate(6, (_) => pw.Container()),
+                pw.Container(
+                  alignment: pw.Alignment.center,
+                  padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                  child: pw.Text("Désignation circuit", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                ),
+                pw.Container(
+                  alignment: pw.Alignment.center,
+                  padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                  child: pw.Text("Type de dispositif", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                ),
+                // Réglage (double level with vertical inside borders)
+                pw.Column(
+                  children: [
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(vertical: 2),
+                      child: pw.Text("Réglage", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                    ),
+                    pw.Divider(height: 0.4, color: borderColor),
+                    pw.Table(
+                      border: pw.TableBorder(verticalInside: pw.BorderSide(color: borderColor, width: 0.4)),
+                      columnWidths: const {
+                        0: pw.FlexColumnWidth(0.9),
+                        1: pw.FlexColumnWidth(0.9),
+                      },
+                      children: [
+                        pw.TableRow(
+                          children: [
+                            pw.Text("I\u0394n (mA)", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                            pw.Text("Tempo (s)", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+                pw.Container(
+                  alignment: pw.Alignment.center,
+                  padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                  child: pw.Text("Essai", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                ),
+                pw.Container(
+                  alignment: pw.Alignment.center,
+                  padding: const pw.EdgeInsets.symmetric(vertical: 8),
+                  child: pw.Text("Isolement\n(M\u2126)", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                ),
               ],
+            ),
+          ],
+        );
+
+        widgets.add(headerTable);
+
+        if (mesures.essaisDeclenchement.isEmpty) {
+          widgets.add(pw.Table(
+            border: pw.TableBorder(
+              left: pw.BorderSide(color: borderColor, width: 0.4),
+              right: pw.BorderSide(color: borderColor, width: 0.4),
+              bottom: pw.BorderSide(color: borderColor, width: 0.4),
+              verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+            ),
+            columnWidths: const {
+              0: pw.FlexColumnWidth(0.6),
+              1: pw.FlexColumnWidth(2.0),
+              2: pw.FlexColumnWidth(1.0),
+              3: pw.FlexColumnWidth(0.9),
+              4: pw.FlexColumnWidth(0.9),
+              5: pw.FlexColumnWidth(0.8),
+              6: pw.FlexColumnWidth(1.0),
+            },
+            children: [
+              pw.TableRow(
+                children: List.generate(7, (_) => _cell("", isHeader: false)),
+              ),
+            ],
+          ));
+        } else {
+          // Groupement sémantique par local puis par coffret
+          final ddrGroups = <String, Map<String, List<EssaiDeclenchementDifferentiel>>>{};
+          for (final es in mesures.essaisDeclenchement) {
+            final local = es.localisation.trim().isEmpty ? "HORS LOCAL" : es.localisation.trim();
+            final coffret = es.coffret?.trim().isEmpty == true ? "HORS COFFRET" : es.coffret!.trim();
+            ddrGroups.putIfAbsent(local, () => {});
+            ddrGroups[local]!.putIfAbsent(coffret, () => []);
+            ddrGroups[local]![coffret]!.add(es);
+          }
+
+          int altIdx = 0;
+          ddrGroups.forEach((localName, coffrets) {
+            // Local Name group banner: spans the full width without vertical lines
+            widgets.add(pw.Container(
+              width: double.infinity,
+              decoration: pw.BoxDecoration(
+                color: PdfColors.white,
+                border: pw.Border(
+                  left: pw.BorderSide(color: borderColor, width: 0.4),
+                  right: pw.BorderSide(color: borderColor, width: 0.4),
+                  bottom: pw.BorderSide(color: borderColor, width: 0.4),
+                ),
+              ),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: pw.Text(localName.toUpperCase(), style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black)),
             ));
 
-            for (final es in items) {
-              altIdx++;
-              final rowBg = altIdx.isOdd ? tableRowAlt : PdfColors.white;
-              final essaiColor = es.essai == 'B' || es.essai == 'OK' ? conformeColor : (es.essai == 'M' || es.essai == 'NON OK' ? nonConformeColor : null);
+            final localRows = <pw.TableRow>[];
+            coffrets.forEach((coffretName, items) {
+              for (final es in items) {
+                altIdx++;
+                final rowBg = altIdx.isOdd ? tableRowAlt : PdfColors.white;
+                final essaiColor = es.essai == "B" || es.essai == "OK" ? conformeColor : (es.essai == "M" || es.essai == "NON OK" ? nonConformeColor : null);
+                final circuitText = (es.designationCircuit != null && es.designationCircuit!.isNotEmpty)
+                    ? es.designationCircuit!
+                    : es.coffret ?? "";
 
-              ddrRows.add(pw.TableRow(
-                decoration: pw.BoxDecoration(color: rowBg),
-                children: [
-                  _cell('-', isHeader: false, centered: true), // Quantité
-                  _cell(es.designationCircuit ?? '-', isHeader: false),
-                  _cell(es.typeDispositif, isHeader: false, centered: true),
-                  _cell(es.reglageIAn?.toString() ?? '-', isHeader: false, centered: true),
-                  _cell(es.tempo?.toString() ?? '-', isHeader: false, centered: true),
-                  pw.Container(
-                    color: essaiColor,
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                    alignment: pw.Alignment.center,
-                    child: pw.Text(es.essai, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-                  ),
-                  _cell(es.isolement?.toString() ?? '-', isHeader: false, centered: true),
-                ],
-              ));
-            }
-          });
-        });
+                localRows.add(pw.TableRow(
+                  decoration: pw.BoxDecoration(color: rowBg),
+                  children: [
+                    _cell("", isHeader: false, centered: true), // Quantité (empty in reference image)
+                    _cell(circuitText, isHeader: false),
+                    _cell(es.typeDispositif, isHeader: false, centered: true),
+                    _cell(es.reglageIAn?.toString() ?? "-", isHeader: false, centered: true),
+                    _cell(es.tempo?.toString() ?? "-", isHeader: false, centered: true),
+                    pw.Container(
+                      color: essaiColor,
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(es.essai, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                    ),
+                    _cell(es.isolement?.toString() ?? "-", isHeader: false, centered: true),
+                  ],
+                ));
+              }
+            });
 
-        return pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            _buildPageHeaderWidget(), pw.SizedBox(height: 10),
-            _subSectionBar('Essais de déclenchement des dispositifs différentiels et mésure d\'isolement'),
-            pw.SizedBox(height: 8),
-            pw.Table(
-              border: pw.TableBorder.all(color: borderColor, width: 0.4),
+            widgets.add(pw.Table(
+              border: pw.TableBorder(
+                left: pw.BorderSide(color: borderColor, width: 0.4),
+                right: pw.BorderSide(color: borderColor, width: 0.4),
+                bottom: pw.BorderSide(color: borderColor, width: 0.4),
+                verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+                horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+              ),
               columnWidths: const {
-                0: pw.FlexColumnWidth(0.8), // Quantité
-                1: pw.FlexColumnWidth(2.5), // Désignation circuit
-                2: pw.FlexColumnWidth(1.2), // Type dispositif
-                3: pw.FlexColumnWidth(1.0), // Réglage In
-                4: pw.FlexColumnWidth(0.8), // Tempo
+                0: pw.FlexColumnWidth(0.6), // Quantité
+                1: pw.FlexColumnWidth(2.0), // Désignation circuit
+                2: pw.FlexColumnWidth(1.0), // Type dispositif
+                3: pw.FlexColumnWidth(0.9), // IAn
+                4: pw.FlexColumnWidth(0.9), // Tempo
                 5: pw.FlexColumnWidth(0.8), // Essai
                 6: pw.FlexColumnWidth(1.0), // Isolement
               },
-              children: [
-                _tableHeaderRow([
-                  'Quantité',
-                  'Désignation circuit',
-                  'Type dispositif',
-                  'Réglage IAn (mA)',
-                  'Tempo (s)',
-                  'Essai',
-                  'Isolement (M ohms)'
-                ]),
-                if (mesures.essaisDeclenchement.isEmpty)
-                  pw.TableRow(children: List.generate(7, (_) => _cell('', isHeader: false)))
-                else
-                  ...ddrRows,
-              ],
-            ),
-            pw.SizedBox(height: 12),
-            _buildAbreviationsTable(),
-          ],
+              children: localRows,
+            ));
+          });
+        }
+
+        widgets.add(pw.SizedBox(height: 12));
+        widgets.add(_buildAbreviationsTable());
+
+        return pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: widgets,
         );
       },
     ));
@@ -4330,28 +4423,64 @@ class PdfReportService {
   }
 
   static pw.Widget _buildAbreviationsTable() {
-    return pw.Table(
-      border: pw.TableBorder.all(color: borderColor, width: 0.4),
-      columnWidths: {
-        0: const pw.FlexColumnWidth(1),
-        1: const pw.FlexColumnWidth(3),
+    final titleTable = pw.Table(
+      border: pw.TableBorder(
+        top: pw.BorderSide(color: borderColor, width: 0.4),
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(4.0),
       },
       children: [
         pw.TableRow(
           decoration: pw.BoxDecoration(color: lightBlue),
           children: [
-            _cell('Signification des abreviations utilisees', isHeader: true, colspan: 2),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+              alignment: pw.Alignment.center,
+              child: pw.Text(
+                "Signification des abréviations utilisées",
+                style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
           ],
         ),
-        _tableHeaderRow(['Abreviation', 'Signification']),
-        _tableDataRow(['DDR', 'Disjoncteur Differentiel'], alt: false),
-        _tableDataRow(['RD', 'Relais Differentiel'], alt: true),
-        _tableDataRow(['B', 'Bon fonctionnement'], alt: false),
-        _tableDataRow(['NE', 'Non essaye'], alt: true),
-        _tableDataRow(['IDR', 'Interrupteur Differentiel'], alt: false),
-        _tableDataRow(['In', 'Intensite differentielle'], alt: true),
-        _tableDataRow(['M', 'Fonctionnement incorrect'], alt: false),
-        _tableDataRow(['Tempo', 'Temporisation'], alt: true),
+      ],
+    );
+
+    final dataTable = pw.Table(
+      border: pw.TableBorder(
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+        horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(1.0),
+        1: pw.FlexColumnWidth(3.0),
+      },
+      children: [
+        _tableHeaderRow(["Abréviation", "Signification"]),
+        _tableDataRow(["DDR", "Disjoncteur Différentiel"], alt: false),
+        _tableDataRow(["RD", "Relais Différentiel"], alt: true),
+        _tableDataRow(["B", "Bon fonctionnement"], alt: false),
+        _tableDataRow(["NE", "Non essayé"], alt: true),
+        _tableDataRow(["IDR", "Interrupteur Différentiel"], alt: false),
+        _tableDataRow(["I\u0394n", "Intensité différentielle"], alt: true),
+        _tableDataRow(["M", "Fonctionnement incorrect"], alt: false),
+        _tableDataRow(["Tempo", "Temporisation"], alt: true),
+      ],
+    );
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        titleTable,
+        dataTable,
       ],
     );
   }
