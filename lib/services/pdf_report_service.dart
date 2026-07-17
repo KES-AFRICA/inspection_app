@@ -3050,7 +3050,6 @@ class PdfReportService {
       return pw.TableRow(
         children: [
           pw.Container(
-            color: PdfColor.fromInt(0xFFECECEC),
             padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
             alignment: pw.Alignment.centerLeft,
             child: pw.Text(label, style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
@@ -3069,7 +3068,6 @@ class PdfReportService {
       return pw.TableRow(
         children: [
           pw.Container(
-            color: PdfColor.fromInt(0xFFECECEC),
             padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
             alignment: pw.Alignment.centerLeft,
             child: pw.Text(label, style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
@@ -3234,68 +3232,127 @@ class PdfReportService {
     // ══════════════════════════════════════════════════════════════════════
     if (coffret.alimentations.isNotEmpty || coffret.protectionTete != null) {
       widgets.add(pw.SizedBox(height: 3));
-      final alimentRows = <pw.TableRow>[];
+      final List<pw.Widget> tables = <pw.Widget>[];
 
-      // En-tête alimentation
-      alimentRows.add(pw.TableRow(
-        decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
-        children: [
-          _thCell("Origine de la source d'alimentation"),
-          _thCell('Type protection'),
-          _thCell('PDC kA'),
-          _thCell('Calibre'),
-          _thCell('Section de câble'),
-        ],
-      ));
+      if (coffret.alimentations.isNotEmpty) {
+        final alimentRows = <pw.TableRow>[];
 
-      for (final a in coffret.alimentations) {
-        alimentRows.add(pw.TableRow(children: [
-          _valueCell(a.source.isEmpty ? '-' : a.source),
-          _valueCell(a.typeProtection),
-          _valueCell(a.pdcKA),
-          _valueCell(a.calibre),
-          _valueCell(a.sectionCable),
-        ]));
-      }
-
-      if (coffret.protectionTete != null) {
-        final pt = coffret.protectionTete!;
+        // En-tête alimentation
         alimentRows.add(pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
           children: [
-            _thCell('Protection de tête de coffret /Armoire'),
+            _thCell("Origine de la source d'alimentation"),
             _thCell('Type protection'),
             _thCell('PDC kA'),
             _thCell('Calibre'),
             _thCell('Section de câble'),
           ],
         ));
-        alimentRows.add(pw.TableRow(children: [
-          _valueCell('-'),
-          _valueCell(pt.typeProtection),
-          _valueCell(pt.pdcKA),
-          _valueCell(pt.calibre),
-          _valueCell(pt.sectionCable),
-        ]));
+
+        for (final a in coffret.alimentations) {
+          alimentRows.add(pw.TableRow(children: [
+            _valueCell(a.source.isEmpty ? '-' : a.source),
+            _valueCell(a.typeProtection),
+            _valueCell(a.pdcKA),
+            _valueCell(a.calibre),
+            _valueCell(a.sectionCable),
+          ]));
+        }
+
+        tables.add(pw.Table(
+          border: pw.TableBorder(
+            left: pw.BorderSide(color: borderColor, width: 0.4),
+            right: pw.BorderSide(color: borderColor, width: 0.4),
+            bottom: pw.BorderSide(color: borderColor, width: 0.4),
+            top: pw.BorderSide(color: borderColor, width: 0.4),
+            verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+            horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+          ),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(2.2),
+            1: pw.FlexColumnWidth(1.8),
+            2: pw.FlexColumnWidth(0.9),
+            3: pw.FlexColumnWidth(0.9),
+            4: pw.FlexColumnWidth(1.4),
+          },
+          children: alimentRows,
+        ));
       }
 
-      widgets.add(pw.Table(
-        border: pw.TableBorder(
-          left: pw.BorderSide(color: borderColor, width: 0.4),
-          right: pw.BorderSide(color: borderColor, width: 0.4),
-          bottom: pw.BorderSide(color: borderColor, width: 0.4),
-          verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
-          horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
-        ),
-        columnWidths: const {
-          0: pw.FlexColumnWidth(2.2),
-          1: pw.FlexColumnWidth(1.8),
-          2: pw.FlexColumnWidth(0.9),
-          3: pw.FlexColumnWidth(0.9),
-          4: pw.FlexColumnWidth(1.4),
-        },
-        children: alimentRows,
-      ));
+      if (coffret.protectionTete != null) {
+        final pt = coffret.protectionTete!;
+        
+        // Custom rowspan table using nested table to ensure perfect align and border scaling
+        final protectionTeteTable = pw.Table(
+          border: pw.TableBorder(
+            left: pw.BorderSide(color: borderColor, width: 0.4),
+            right: pw.BorderSide(color: borderColor, width: 0.4),
+            bottom: pw.BorderSide(color: borderColor, width: 0.4),
+            top: pw.BorderSide(color: borderColor, width: 0.4),
+            verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+          ),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(2.2),
+            1: pw.FlexColumnWidth(5.0),
+          },
+          children: [
+            pw.TableRow(
+              children: [
+                // Left column: label (spans two rows vertically)
+                pw.Container(
+                  color: PdfColor.fromInt(0xFFE8F0FB),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 6),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    'Protection de tête de coffret\n/Armoire',
+                    style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+                // Right column: nested table containing type, PDC, caliber, section headers and values
+                pw.Table(
+                  border: pw.TableBorder(
+                    horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+                    verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+                  ),
+                  columnWidths: const {
+                    0: pw.FlexColumnWidth(1.8),
+                    1: pw.FlexColumnWidth(0.9),
+                    2: pw.FlexColumnWidth(0.9),
+                    3: pw.FlexColumnWidth(1.4),
+                  },
+                  children: [
+                    pw.TableRow(
+                      decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
+                      children: [
+                        _thCell('Type protection'),
+                        _thCell('PDC kA'),
+                        _thCell('Calibre'),
+                        _thCell('Section de câble'),
+                      ],
+                    ),
+                    pw.TableRow(
+                      children: [
+                        _valueCell(pt.typeProtection),
+                        _valueCell(pt.pdcKA),
+                        _valueCell(pt.calibre),
+                        _valueCell(pt.sectionCable),
+                      ],
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        );
+
+        if (tables.isNotEmpty) {
+          tables.add(pw.SizedBox(height: 3));
+        }
+        tables.add(protectionTeteTable);
+      }
+
+      widgets.addAll(tables);
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -3352,30 +3409,37 @@ class PdfReportService {
         3: pw.FlexColumnWidth(1.4),
       },
       children: [
-        // En-tête en gras — style trame
+        // En-tête en gras — style trame (avec centrage parfait horizontal et vertical)
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
           children: [
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              alignment: pw.Alignment.center,
               child: pw.Text('Points de vérification',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor)),
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                  textAlign: pw.TextAlign.center),
             ),
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               alignment: pw.Alignment.center,
               child: pw.Text('Conformité',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor)),
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                  textAlign: pw.TextAlign.center),
             ),
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              alignment: pw.Alignment.center,
               child: pw.Text('Observation',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor)),
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                  textAlign: pw.TextAlign.center),
             ),
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              alignment: pw.Alignment.center,
               child: pw.Text('Reference normative',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor)),
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                  textAlign: pw.TextAlign.center),
             ),
           ],
         ),
