@@ -2475,105 +2475,159 @@ class PdfReportService {
   }
 
   static pw.Widget _buildDispositionsTable(List<ElementControle> elements, String titre) {
-    // Conformité et éléments vérifiés : 3 lignes fusionnées au centre (comme trame)
-    // Éléments contrôlés + éléments vérifiés : texte en GRAS
-    return pw.Table(
-      border: pw.TableBorder.all(color: borderColor, width: 0.4),
+    final titleTable = pw.Table(
+      border: pw.TableBorder(
+        top: pw.BorderSide(color: borderColor, width: 0.4),
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(4),
-        1: pw.FlexColumnWidth(1.2),
-        2: pw.FlexColumnWidth(2),
+        0: pw.FlexColumnWidth(7.2),
       },
       children: [
-        // Titre fusionné sur 3 colonnes — fond bleu clair
         pw.TableRow(
           decoration: pw.BoxDecoration(color: lightBlue),
           children: [
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-              alignment: pw.Alignment.centerLeft,
-              child: pw.Text(titre,
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor)),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+              alignment: pw.Alignment.center,
+              child: pw.Text(
+                titre,
+                style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+                textAlign: pw.TextAlign.center,
+              ),
             ),
-            pw.Container(), // vide col 2
-            pw.Container(), // vide col 3
           ],
         ),
-        // Sous-titres colonnes en gras
+      ],
+    );
+
+    final headerTable = pw.Table(
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+      border: pw.TableBorder(
+        top: pw.BorderSide(color: borderColor, width: 0.4),
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+        verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(4.0),
+        1: pw.FlexColumnWidth(1.2),
+        2: pw.FlexColumnWidth(2.0),
+      },
+      children: [
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
           children: [
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+              alignment: pw.Alignment.center,
               child: pw.Text('Éléments contrôlés',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor)),
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+                  textAlign: pw.TextAlign.center),
             ),
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
               alignment: pw.Alignment.center,
               child: pw.Text('Conformité',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor)),
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+                  textAlign: pw.TextAlign.center),
             ),
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+              alignment: pw.Alignment.center,
               child: pw.Text('Observations / Anomalies constatées',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor)),
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+                  textAlign: pw.TextAlign.center),
             ),
           ],
         ),
-        ...elements.asMap().entries.map((e) {
-          final el = e.value;
-          String conf;
-          PdfColor confColor;
-          if (el.estNA) {
-            conf = 'NA';
-            confColor = PdfColor.fromInt(0xFFE0E0E0);
-          } else if (el.conforme == null) {
-            conf = '-';
-            confColor = tableRowAlt;
-          } else if (el.conforme == true) {
-            conf = 'Oui';
-            confColor = conformeColor;
-          } else {
-            conf = 'Non';
-            confColor = nonConformeColor;
-          }
-          return pw.TableRow(
-            decoration: pw.BoxDecoration(color: e.key.isEven ? PdfColors.white : tableRowAlt),
-            children: [
-              pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                child: pw.Text(el.elementControle,
-                    style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
-              ),
-              pw.Container(
-                color: confColor,
-                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                alignment: pw.Alignment.center,
-                child: pw.Text(conf,
-                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-              ),
-              pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                child: pw.Text(el.observation ?? '',
-                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-              ),
-            ],
-          );
-        }),
+      ],
+    );
+
+    final rows = <pw.TableRow>[];
+    for (int idx = 0; idx < elements.length; idx++) {
+      final el = elements[idx];
+      String conf;
+      PdfColor confColor;
+      if (el.estNA) {
+        conf = 'NA';
+        confColor = PdfColor.fromInt(0xFFE0E0E0);
+      } else if (el.conforme == null) {
+        conf = '-';
+        confColor = tableRowAlt;
+      } else if (el.conforme == true) {
+        conf = 'Oui';
+        confColor = conformeColor;
+      } else {
+        conf = 'Non';
+        confColor = nonConformeColor;
+      }
+
+      rows.add(pw.TableRow(
+        decoration: pw.BoxDecoration(color: idx.isEven ? PdfColors.white : tableRowAlt),
+        children: [
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            child: pw.Text(el.elementControle,
+                style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
+          ),
+          pw.Container(
+            color: confColor,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(conf,
+                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            child: pw.Text(el.observation ?? '',
+                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+          ),
+        ],
+      ));
+    }
+
+    final dataTable = pw.Table(
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+      border: pw.TableBorder(
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+        verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+        horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(4.0),
+        1: pw.FlexColumnWidth(1.2),
+        2: pw.FlexColumnWidth(2.0),
+      },
+      children: rows,
+    );
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        titleTable,
+        headerTable,
+        dataTable,
       ],
     );
   }
 
   static List<pw.Widget> _buildCelluleSection(Cellule cellule) {
-    String safe(String v) => v.trim().isEmpty ? 'Non renseigne' : v;
+    String safe(String v) => v.trim().isEmpty ? 'Non renseigné' : v;
 
-    // Titre avec fond bleu clair — "CELLULE" fusionné sur toute la largeur
-    final infoTable = pw.Table(
-      border: pw.TableBorder.all(color: borderColor, width: 0.4),
+    final titleTable = pw.Table(
+      border: pw.TableBorder(
+        top: pw.BorderSide(color: borderColor, width: 0.4),
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(2),
-        1: pw.FlexColumnWidth(3),
+        0: pw.FlexColumnWidth(5.0),
       },
       children: [
         pw.TableRow(
@@ -2583,40 +2637,66 @@ class PdfReportService {
               padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
               alignment: pw.Alignment.center,
               child: pw.Text('CELLULE',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor)),
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+                  textAlign: pw.TextAlign.center),
             ),
-            pw.Container(color: lightBlue), // fusion visuelle
           ],
         ),
+      ],
+    );
+
+    final dataTable = pw.Table(
+      border: pw.TableBorder(
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+        verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+        horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(2.0),
+        1: pw.FlexColumnWidth(3.0),
+      },
+      children: [
         _tableDataRow(['Fonction de la cellule', safe(cellule.fonction)], alt: false),
         _tableDataRow(['Type de cellule', safe(cellule.type)], alt: true),
-        _tableDataRow(['Marque / modele / annee', safe(cellule.marqueModeleAnnee)], alt: false),
-        _tableDataRow(['Tension assignee (kV)', safe(cellule.tensionAssignee)], alt: true),
-        _tableDataRow(['Pouvoir de coupure assigne (kA)', safe(cellule.pouvoirCoupure)], alt: false),
-        _tableDataRow(['Numerotation / reperage', safe(cellule.numerotation)], alt: true),
-        _tableDataRow(['Parafoudres installes sur l\'arrivee', safe(cellule.parafoudres)], alt: false),
+        _tableDataRow(['Marque / modèle / année', safe(cellule.marqueModeleAnnee)], alt: false),
+        _tableDataRow(['Tension assignée (kV)', safe(cellule.tensionAssignee)], alt: true),
+        _tableDataRow(['Pouvoir de coupure assigné (kA)', safe(cellule.pouvoirCoupure)], alt: false),
+        _tableDataRow(['Numérotation / repérage', safe(cellule.numerotation)], alt: true),
+        _tableDataRow(["Parafoudres installés sur l'arrivée", safe(cellule.parafoudres)], alt: false),
       ],
     );
 
     return [
       pw.SizedBox(height: 6),
-      infoTable,
-      if (cellule.elementsVerifies.isNotEmpty) ...[
-        pw.SizedBox(height: 3),
-        _buildDispositionsTable(cellule.elementsVerifies, 'VÉRIFICATIONS DE LA CELLULE'),
-      ],
+      pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          titleTable,
+          dataTable,
+          if (cellule.elementsVerifies.isNotEmpty) ...[
+            pw.SizedBox(height: 3),
+            _buildDispositionsTable(cellule.elementsVerifies, 'VÉRIFICATIONS DE LA CELLULE'),
+          ],
+        ],
+      ),
       pw.SizedBox(height: 5),
     ];
   }
 
   static List<pw.Widget> _buildTransformateurSection(TransformateurMTBT transfo) {
-    String safe(String v) => v.trim().isEmpty ? 'Non renseigne' : v;
+    String safe(String v) => v.trim().isEmpty ? 'Non renseigné' : v;
 
-    final infoTable = pw.Table(
-      border: pw.TableBorder.all(color: borderColor, width: 0.4),
+    final titleTable = pw.Table(
+      border: pw.TableBorder(
+        top: pw.BorderSide(color: borderColor, width: 0.4),
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(2),
-        1: pw.FlexColumnWidth(3),
+        0: pw.FlexColumnWidth(5.0),
       },
       children: [
         pw.TableRow(
@@ -2626,28 +2706,50 @@ class PdfReportService {
               padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
               alignment: pw.Alignment.center,
               child: pw.Text('TRANSFORMATEUR MT/BT',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor)),
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+                  textAlign: pw.TextAlign.center),
             ),
-            pw.Container(color: lightBlue),
           ],
         ),
+      ],
+    );
+
+    final dataTable = pw.Table(
+      border: pw.TableBorder(
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+        verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+        horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(2.0),
+        1: pw.FlexColumnWidth(3.0),
+      },
+      children: [
         _tableDataRow(['Type de transformateur', safe(transfo.typeTransformateur)], alt: false),
-        _tableDataRow(['Marque / Annee de fabrication', safe(transfo.marqueAnnee)], alt: true),
-        _tableDataRow(['Puissance assignee (kVA)', safe(transfo.puissanceAssignee)], alt: false),
+        _tableDataRow(['Marque / Année de fabrication', safe(transfo.marqueAnnee)], alt: true),
+        _tableDataRow(['Puissance assignée (kVA)', safe(transfo.puissanceAssignee)], alt: false),
         _tableDataRow(['Tension primaire / secondaire', safe(transfo.tensionPrimaireSecondaire)], alt: true),
-        _tableDataRow(['Presence du relais Buchholz', safe(transfo.relaisBuchholz)], alt: false),
+        _tableDataRow(['Présence du relais Buchholz', safe(transfo.relaisBuchholz)], alt: false),
         _tableDataRow(['Type de refroidissement', safe(transfo.typeRefroidissement)], alt: true),
-        _tableDataRow(['Regime du neutre', safe(transfo.regimeNeutre)], alt: false),
+        _tableDataRow(['Régime du neutre', safe(transfo.regimeNeutre)], alt: false),
       ],
     );
 
     return [
       pw.SizedBox(height: 6),
-      infoTable,
-      if (transfo.elementsVerifies.isNotEmpty) ...[
-        pw.SizedBox(height: 3),
-        _buildDispositionsTable(transfo.elementsVerifies, 'VÉRIFICATIONS DU TRANSFORMATEUR'),
-      ],
+      pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          titleTable,
+          dataTable,
+          if (transfo.elementsVerifies.isNotEmpty) ...[
+            pw.SizedBox(height: 3),
+            _buildDispositionsTable(transfo.elementsVerifies, 'VÉRIFICATIONS DU TRANSFORMATEUR'),
+          ],
+        ],
+      ),
       pw.SizedBox(height: 5),
     ];
   }
