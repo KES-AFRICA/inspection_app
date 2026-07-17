@@ -3555,14 +3555,27 @@ class PdfReportService {
   ) {
     final widgets = <pw.Widget>[];
 
-    widgets.add(_sectionBox(
-      'CLASSEMENT DES LOCAUX/ZONES ET EMPLACEMENTS EN FONCTION DES INFLUENCES EXTERNES'
-    ));
+    // Unified Section Title Box
+    widgets.add(
+      pw.Container(
+        width: double.infinity,
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: borderColor, width: 0.4),
+        ),
+        padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        alignment: pw.Alignment.center,
+        child: pw.Text(
+          "CLASSEMENT DES LOCAUX ET EMPLACEMENTS EN FONCTION DES INFLUENCES EXTERNES",
+          style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+          textAlign: pw.TextAlign.center,
+        ),
+      ),
+    );
     widgets.add(pw.SizedBox(height: 8));
     widgets.add(_bodyText(
-      'Dans le cas d\'absence de fourniture d\'une liste exhaustive des risques '
-      'particuliers, le classement eventuel ci-apres est propose par le verificateur '
-      'et, sauf avis contraire, considere comme valide par le chef d\'etablissement.',
+      "Dans le cas d'absence de fourniture d'une liste exhaustive des risques "
+      "particuliers, le classement éventuel ci-après est proposé par le vérificateur "
+      "et, sauf avis contraire, considéré comme validé par le chef d'établissement.",
     ));
     widgets.add(pw.SizedBox(height: 12));
 
@@ -3571,7 +3584,7 @@ class PdfReportService {
     for (var zone in zonesClassement) {
       rows.add(_ClassementRow(
         localisation: zone.nomZone,
-        zone: '—',
+        zone: '',
         type: 'Zone ${zone.typeZone}',
         origineClassement: zone.origineClassement,
         af: zone.af,
@@ -3593,7 +3606,7 @@ class PdfReportService {
 
       rows.add(_ClassementRow(
         localisation: emp.localisation,
-        zone: emp.zone ?? '—',
+        zone: emp.zone ?? '',
         type: emp.typeEmplacement == 'zone' ? 'Zone' : 'Local',
         origineClassement: emp.origineClassement,
         af: emp.af,
@@ -3613,82 +3626,91 @@ class PdfReportService {
       return a.localisation.compareTo(b.localisation);
     });
 
+    // Main header table with correct vertical border alignments
     final header = pw.Table(
-      border: pw.TableBorder.all(color: borderColor, width: 0.5),
+      border: pw.TableBorder(
+        top: pw.BorderSide(color: borderColor, width: 0.4),
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(2.0), // Localisation
-        1: pw.FlexColumnWidth(1.2), // Zone
-        2: pw.FlexColumnWidth(1.5), // Origine classement
-        3: pw.FlexColumnWidth(2.5), // Influences externes (5 sub-cols)
-        4: pw.FlexColumnWidth(1.2), // Indice mini (2 sub-cols)
+        0: pw.FlexColumnWidth(1.7), // Localisation
+        1: pw.FlexColumnWidth(0.8), // Zone
+        2: pw.FlexColumnWidth(0.9), // Origine classement
+        3: pw.FlexColumnWidth(2.4), // Influences externes (5 sub-cols)
+        4: pw.FlexColumnWidth(1.4), // Indice mini (2 sub-cols)
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: lightBlue),
+          decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFCCCCCC)), // Gray background for headers
           children: [
             pw.Container(
               alignment: pw.Alignment.center,
-              padding: const pw.EdgeInsets.symmetric(vertical: 6),
-              child: pw.Text('Localisation', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+              padding: const pw.EdgeInsets.symmetric(vertical: 8),
+              child: pw.Text('Localisation', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
             ),
             pw.Container(
               alignment: pw.Alignment.center,
-              padding: const pw.EdgeInsets.symmetric(vertical: 6),
-              child: pw.Text('Zone', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+              padding: const pw.EdgeInsets.symmetric(vertical: 8),
+              child: pw.Text('Zone', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
             ),
             pw.Container(
               alignment: pw.Alignment.center,
-              padding: const pw.EdgeInsets.symmetric(vertical: 6),
-              child: pw.Text('Origine\nclassement', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+              padding: const pw.EdgeInsets.symmetric(vertical: 8),
+              child: pw.Text('Origine\nclassement', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
             ),
-            // Influences externes (double niveau)
+            // Influences externes (double level with vertical inside borders)
             pw.Column(
               children: [
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                  child: pw.Text('Influences externes', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                  child: pw.Text('Influences externes', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
                 ),
                 pw.Divider(height: 0.4, color: borderColor),
                 pw.Table(
+                  border: pw.TableBorder(verticalInside: pw.BorderSide(color: borderColor, width: 0.4)),
                   columnWidths: const {
-                    0: pw.FlexColumnWidth(1),
-                    1: pw.FlexColumnWidth(1),
-                    2: pw.FlexColumnWidth(1),
-                    3: pw.FlexColumnWidth(1),
-                    4: pw.FlexColumnWidth(1),
+                    0: pw.FlexColumnWidth(0.48),
+                    1: pw.FlexColumnWidth(0.48),
+                    2: pw.FlexColumnWidth(0.48),
+                    3: pw.FlexColumnWidth(0.48),
+                    4: pw.FlexColumnWidth(0.48),
                   },
                   children: [
                     pw.TableRow(
                       children: [
-                        pw.Text('AF', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
-                        pw.Text('BE', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
-                        pw.Text('AE', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
-                        pw.Text('AD', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
-                        pw.Text('AG', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                        pw.Text('AF', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
+                        pw.Text('BE', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
+                        pw.Text('AE', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
+                        pw.Text('AD', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
+                        pw.Text('AG', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
                       ],
                     ),
                   ],
                 ),
               ],
             ),
-            // Indice mini de protection (double niveau)
+            // Indice mini de protection (double level with vertical inside borders)
             pw.Column(
               children: [
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                  child: pw.Text('Indice mini de\nprotection', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                  child: pw.Text('Indice mini de\nprotection', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
                 ),
                 pw.Divider(height: 0.4, color: borderColor),
                 pw.Table(
+                  border: pw.TableBorder(verticalInside: pw.BorderSide(color: borderColor, width: 0.4)),
                   columnWidths: const {
-                    0: pw.FlexColumnWidth(1),
-                    1: pw.FlexColumnWidth(1),
+                    0: pw.FlexColumnWidth(0.7),
+                    1: pw.FlexColumnWidth(0.7),
                   },
                   children: [
                     pw.TableRow(
                       children: [
-                        pw.Text('IP', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
-                        pw.Text('IK', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                        pw.Text('IP', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
+                        pw.Text('IK', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
                       ],
                     ),
                   ],
@@ -3705,50 +3727,92 @@ class PdfReportService {
     final dataRows = <pw.TableRow>[];
     for (int i = 0; i < rows.length; i++) {
       final r = rows[i];
-      final rowColor = r.isZone
-          ? PdfColor.fromInt(0xFFE8F0FA)
-          : (i.isOdd ? tableRowAlt : PdfColors.white);
+      final rowColor = i.isOdd ? tableRowAlt : PdfColors.white;
+      final zoneText = r.zone == '—' ? '' : r.zone;
 
       dataRows.add(pw.TableRow(
         decoration: pw.BoxDecoration(color: rowColor),
         children: [
-          _cell(r.localisation, isHeader: r.isZone, centered: false),
-          _cell(r.zone, isHeader: false, centered: true),
-          _cell(r.origineClassement, isHeader: false, centered: true),
-          // Sous-table influences
+          // Localisation (uppercase)
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            alignment: pw.Alignment.centerLeft,
+            child: pw.Text(r.localisation.toUpperCase(), style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+          ),
+          // Zone (uppercase, empty if null/empty)
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(zoneText.toUpperCase(), style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+          ),
+          // Origine
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(r.origineClassement, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+          ),
+          // Influences
           pw.Table(
             border: pw.TableBorder(verticalInside: pw.BorderSide(color: borderColor, width: 0.4)),
             columnWidths: const {
-              0: pw.FlexColumnWidth(1),
-              1: pw.FlexColumnWidth(1),
-              2: pw.FlexColumnWidth(1),
-              3: pw.FlexColumnWidth(1),
-              4: pw.FlexColumnWidth(1),
+              0: pw.FlexColumnWidth(0.48),
+              1: pw.FlexColumnWidth(0.48),
+              2: pw.FlexColumnWidth(0.48),
+              3: pw.FlexColumnWidth(0.48),
+              4: pw.FlexColumnWidth(0.48),
             },
             children: [
               pw.TableRow(
                 children: [
-                  pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 3), child: pw.Text(r.af ?? '—', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center)),
-                  pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 3), child: pw.Text(r.be ?? '—', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center)),
-                  pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 3), child: pw.Text(r.ae ?? '—', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center)),
-                  pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 3), child: pw.Text(r.ad ?? '—', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center)),
-                  pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 3), child: pw.Text(r.ag ?? '—', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center)),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                    alignment: pw.Alignment.center,
+                    child: pw.Text(r.af ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                    alignment: pw.Alignment.center,
+                    child: pw.Text(r.be ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                    alignment: pw.Alignment.center,
+                    child: pw.Text(r.ae ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                    alignment: pw.Alignment.center,
+                    child: pw.Text(r.ad ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                    alignment: pw.Alignment.center,
+                    child: pw.Text(r.ag ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                  ),
                 ],
               ),
             ],
           ),
-          // Sous-table IP/IK
+          // IP/IK
           pw.Table(
             border: pw.TableBorder(verticalInside: pw.BorderSide(color: borderColor, width: 0.4)),
             columnWidths: const {
-              0: pw.FlexColumnWidth(1),
-              1: pw.FlexColumnWidth(1),
+              0: pw.FlexColumnWidth(0.7),
+              1: pw.FlexColumnWidth(0.7),
             },
             children: [
               pw.TableRow(
                 children: [
-                  pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 3), child: pw.Text(r.ip ?? '—', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center)),
-                  pw.Padding(padding: const pw.EdgeInsets.symmetric(vertical: 3), child: pw.Text(r.ik ?? '—', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center)),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                    alignment: pw.Alignment.center,
+                    child: pw.Text(r.ip ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
+                    alignment: pw.Alignment.center,
+                    child: pw.Text(r.ik ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                  ),
                 ],
               ),
             ],
@@ -3758,13 +3822,19 @@ class PdfReportService {
     }
 
     widgets.add(pw.Table(
-      border: pw.TableBorder.all(color: borderColor, width: 0.4),
+      border: pw.TableBorder(
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+        horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(2.0),
-        1: pw.FlexColumnWidth(1.2),
-        2: pw.FlexColumnWidth(1.5),
-        3: pw.FlexColumnWidth(2.5),
-        4: pw.FlexColumnWidth(1.2),
+        0: pw.FlexColumnWidth(1.7),
+        1: pw.FlexColumnWidth(0.8),
+        2: pw.FlexColumnWidth(0.9),
+        3: pw.FlexColumnWidth(2.4),
+        4: pw.FlexColumnWidth(1.4),
       },
       children: dataRows,
     ));
