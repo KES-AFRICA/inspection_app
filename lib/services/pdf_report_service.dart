@@ -4681,7 +4681,7 @@ class PdfReportService {
                   pw.Container(width: 350, height: 2, color: accentColor),
                   pw.SizedBox(height: 24),
                   pw.Text(
-                    'ILLUSTRATIONS & PHOTOS',
+                    'PHOTOS',
                     style: pw.TextStyle(
                       font: _fontBold, fontSize: 20,
                       fontWeight: pw.FontWeight.bold,
@@ -4692,7 +4692,7 @@ class PdfReportService {
                   ),
                   pw.SizedBox(height: 12),
                   pw.Text(
-                    mission.nomClient.toUpperCase(),
+                    nomSite?.toUpperCase() ?? mission.nomClient.toUpperCase(),
                     style: pw.TextStyle(
                       font: _fontRegular, fontSize: 13, color: accentColor,
                     ),
