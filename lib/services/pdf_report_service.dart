@@ -2233,10 +2233,10 @@ class PdfReportService {
       pw.SizedBox(height: 8),
       pw.Container(
         width: double.infinity,
-        color: PdfColor.fromInt(0xFFB3B3B3),
+        color: accentColor,
         padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
         child: pw.Text(nom.toUpperCase(),
-            style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: PdfColors.black)),
+            style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: PdfColors.white)),
       ),
     ];
 
