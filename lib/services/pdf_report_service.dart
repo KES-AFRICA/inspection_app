@@ -3862,14 +3862,14 @@ class PdfReportService {
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: lightBlue),
+          decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFCCCCCC)), // Gray background
           children: [
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
               alignment: pw.Alignment.center,
               child: pw.Text(
-                "CODIFICATION DES INFLUENCES EXTERNES - INDICES ET DEGRES DE PROTECTION",
-                style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+                "CODIFICATION DES INFLUENCES EXTERNES – INDICES ET DEGRÉS DE PROTECTION",
+                style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black),
                 textAlign: pw.TextAlign.center,
               ),
             ),
@@ -3877,6 +3877,17 @@ class PdfReportService {
         ),
       ],
     );
+
+    pw.TableRow greyHeaderRow(List<String> headers) {
+      return pw.TableRow(
+        decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFCCCCCC)), // Matching gray background
+        children: headers.map((h) => pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+          alignment: pw.Alignment.center,
+          child: pw.Text(h, style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black), textAlign: pw.TextAlign.center),
+        )).toList(),
+      );
+    }
 
     final dataTable = pw.Table(
       border: pw.TableBorder(
@@ -3892,12 +3903,12 @@ class PdfReportService {
         2: pw.FlexColumnWidth(1),
       },
       children: [
-        _tableHeaderRow(["PENETRATION DE CORPS SOLIDES", "SUBSTANCES CORROSIVES OU POLLUANTES", "MATIERES TRAITEES OU ENTREPOSEES"]),
+        greyHeaderRow(["PÉNÉTRATION DE CORPS SOLIDES", "SUBSTANCES CORROSIVES OU POLLUANTES", "MATIÈRES TRAITÉES OU ENTREPOSÉES"]),
         _tableDataRow(["AE1 : Negligeable -> IP 2X", "AF1 : Negligeable", "BE1 : Risques negligeables"], alt: false),
         _tableDataRow(["AE2 : Petits objets (\u2265 2,5 mm) -> IP 3X", "AF2 : Agents d'origine atmospherique", "BE2 : Risques d'incendie"], alt: true),
         _tableDataRow(["AE3 : Tres petits objets (1 a 2,5 mm) -> IP 4X", "AF3 : Intermittente ou accidentelle", "BE3 : Risques d'explosion"], alt: false),
         _tableDataRow(["AE4 : Poussieres -> IP 5X (Protege)", "AF4 : Permanente", "BE4 : Risques de contamination"], alt: true),
-        _tableHeaderRow(["ACCES AUX PARTIES DANGEREUSES", "PENETRATION DE LIQUIDES", "RISQUES DE CHOCS MECANIQUES"]),
+        greyHeaderRow(["ACCÈS AUX PARTIES DANGEREUSES", "PÉNÉTRATION DE LIQUIDES", "RISQUES DE CHOCS MÉCANIQUES"]),
         _tableDataRow(["Non protege -> IP 0X", "AD1 : Negligeable -> IP X0", "AG1 : Faibles (0,225 J) -> IK 02"], alt: false),
         _tableDataRow(["A : Avec le dos de la main -> IP 1X", "AD2 : Chutes de gouttes d'eau -> IP X1", "AG2 : Moyens (2 J) -> IK 07"], alt: true),
         _tableDataRow(["B : Avec un doigt -> IP 2X", "AD3 : Chutes de gouttes jusqu'à 15\u00B0 -> IP X2", "AG3 : Importants (5 J) -> IK 08"], alt: false),
@@ -3907,7 +3918,7 @@ class PdfReportService {
         _tableDataRow(["", "AD7 : Paquets d'eau -> IP X6", ""], alt: false),
         _tableDataRow(["", "AD8 : Immersion -> IP X7", ""], alt: true),
         _tableDataRow(["", "AD9 : Submersion -> IP X8", ""], alt: false),
-        _tableHeaderRow(["COMPETENCE DES PERSONNES", "VIBRATIONS", ""]),
+        greyHeaderRow(["COMPÉTENCE DES PERSONNES", "VIBRATIONS", ""]),
         _tableDataRow(["BA1 : Ordinaires", "AH1 : Faibles", ""], alt: false),
         _tableDataRow(["BA2 : Enfants", "AH2 : Moyennes", ""], alt: true),
         _tableDataRow(["BA3 : Personnes handicapees", "AH3 : Importantes", ""], alt: false),
