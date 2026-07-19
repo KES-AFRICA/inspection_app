@@ -601,6 +601,18 @@ class PdfReportService {
     // 10. Photos
     entries.add(_SommaireEntry(titre: "PHOTOS", key: 'photos', level: 0, isBold: true, isUppercase: true));
 
+    // 11. Schéma des installations électriques (si Oui)
+    final bool hasSchema = mission.schemaOption?.trim().toLowerCase() == 'oui';
+    if (hasSchema) {
+      entries.add(_SommaireEntry(
+        titre: "SCHEMA DES INSTALLATIONS ELECTRIQUES",
+        key: 'schema_installations',
+        level: 0,
+        isBold: true,
+        isUppercase: true,
+      ));
+    }
+
     return entries;
   }
 
@@ -4967,6 +4979,68 @@ class PdfReportService {
     }
   }
 
+  // ──────────────────────────────────────────────────────────────
+  //  SCHÉMA DES INSTALLATIONS ÉLECTRIQUES
+  // ──────────────────────────────────────────────────────────────
+  
+  static void _addSchemaSection(
+    pw.Document pdf,
+    Mission mission,
+    Map<String, int> trackedPages, {
+    String? nomSite,
+    String? numeroRapport,
+  }) {
+    final hasSchema = mission.schemaOption?.trim().toLowerCase() == 'oui';
+    if (!hasSchema) return;
+
+    pdf.addPage(pw.MultiPage(
+      maxPages: 1,
+      pageTheme: _buildInnerPageTheme(),
+      header: (ctx) => _buildPageHeaderWidget(
+        nomClient: mission.nomClient,
+        nomSite: nomSite,
+        numeroRapport: numeroRapport,
+      ),
+      build: (ctx) => [
+        pw.SizedBox(height: 220),
+        pw.Center(
+          child: pw.Column(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Container(width: 350, height: 2, color: accentColor),
+              pw.SizedBox(height: 24),
+              PageTracker(
+                key: 'schema_installations',
+                registry: trackedPages,
+                child: pw.Text(
+                  'SCH\u00c9MA DES INSTALLATIONS ELECTRIQUES',
+                  style: pw.TextStyle(
+                    font: _fontBold, fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                    color: headerColor,
+                    letterSpacing: 1.0,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.SizedBox(height: 12),
+              pw.Text(
+                (nomSite ?? mission.nomClient).toUpperCase(),
+                style: pw.TextStyle(
+                  font: _fontRegular, fontSize: 13, color: accentColor,
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
+              pw.SizedBox(height: 24),
+              pw.Container(width: 350, height: 2, color: accentColor),
+            ],
+          ),
+        ),
+      ],
+    ));
+  }
+
   static pw.Widget _buildPhotoCell(_PhotoEntry entry, pw.MemoryImage? img, int index, int total) {
     return pw.Container(
       margin: const pw.EdgeInsets.all(4),
@@ -5560,6 +5634,10 @@ class PdfReportService {
 
       // 11. Photos
       await _addPhotosSection(pdf, mission, missionId, audit, trackedPages,
+          nomSite: nomSiteHeader, numeroRapport: numeroRapportDoc);
+
+      // 12. Schéma des installations électriques (si disponible)
+      _addSchemaSection(pdf, mission, trackedPages,
           nomSite: nomSiteHeader, numeroRapport: numeroRapportDoc);
 
       final bytes = await pdf.save();
