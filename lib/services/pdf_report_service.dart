@@ -527,43 +527,173 @@ class PdfReportService {
     );
   }
 
+  static List<_SommaireEntry> _collectSommaireEntries({
+    required Mission mission,
+    required RenseignementsGeneraux? rg,
+    required DescriptionInstallations? desc,
+    required AuditInstallationsElectriques? audit,
+    required MesuresEssais? mesures,
+    required List<Foudre> foudres,
+  }) {
+    final entries = <_SommaireEntry>[];
+
+    // 1. Rappel des responsabilités
+    entries.add(_SommaireEntry(titre: "RAPPEL DES RESPONSABILITES DE L'EMPLOYEUR", key: 'rappel', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "Responsabilité et accompagnement", key: 'rappel', level: 1));
+    entries.add(_SommaireEntry(titre: "Conditions de réalisation", key: 'rappel', level: 1));
+    entries.add(_SommaireEntry(titre: "Vérifications complémentaires", key: 'rappel', level: 1));
+    entries.add(_SommaireEntry(titre: "Surveillance & maintenance des installations électriques", key: 'rappel', level: 1));
+    entries.add(_SommaireEntry(titre: "Formation du personnel intervenant sur les installations et à proximité", key: 'rappel', level: 1));
+    entries.add(_SommaireEntry(titre: "MESURES DE SECURITE AUTOUR DES INSTALLATIONS", key: 'mesures_securite', level: 2, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "TECHNICIEN EN MAINTENANCE DES INSTALLATIONS", key: 'mesures_securite', level: 2, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "Engagement de KES INSPECTIONS AND PROJECTS", key: 'rappel', level: 1));
+
+    // 2. Objet de la vérification
+    entries.add(_SommaireEntry(titre: "OBJET DE LA VERIFICATION", key: 'objet', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "Références normatives et règlementaires", key: 'objet', level: 1));
+    entries.add(_SommaireEntry(titre: "Matériel utilisé", key: 'objet', level: 1));
+
+    // 3. Renseignements généraux
+    entries.add(_SommaireEntry(titre: "RENSEIGNEMENTS GENERAUX DE L'ETABLISSEMENT", key: 'renseignements', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "RENSEIGNEMENTS PRINCIPAUX", key: 'renseignements', level: 1, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "DOCUMENTS NECESSAIRES A LA VERIFICATION", key: 'renseignements', level: 1, isBold: true, isUppercase: true));
+
+    // 4. Description des installations
+    entries.add(_SommaireEntry(titre: "DESCRIPTION DES INSTALLATIONS", key: 'description', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "Caractéristiques de l'alimentation moyenne tension", key: 'description', level: 1));
+    entries.add(_SommaireEntry(titre: "Caractéristiques de l'alimentation basse tension sortie transformateur", key: 'description', level: 1));
+    entries.add(_SommaireEntry(titre: "Caractéristiques du groupe électrogène", key: 'description', level: 1));
+    entries.add(_SommaireEntry(titre: "Alimentation du groupe électrogène en carburant", key: 'description', level: 1));
+    entries.add(_SommaireEntry(titre: "Caractéristiques de l'inverseur", key: 'description', level: 1));
+    entries.add(_SommaireEntry(titre: "Caractéristiques du stabilisateur", key: 'description', level: 1));
+    entries.add(_SommaireEntry(titre: "Caractéristiques des onduleurs", key: 'description', level: 1));
+    entries.add(_SommaireEntry(titre: "Régime de neutre", key: 'description', level: 1));
+    entries.add(_SommaireEntry(titre: "Eclairage de sécurité", key: 'description', level: 1));
+    entries.add(_SommaireEntry(titre: "Modifications apportées aux installations", key: 'description', level: 1));
+    entries.add(_SommaireEntry(titre: "Note de calcul des installations électriques", key: 'description', level: 1));
+    entries.add(_SommaireEntry(titre: "Présence de paratonnerre", key: 'description', level: 1));
+    entries.add(_SommaireEntry(titre: "Registre de sécurité", key: 'description', level: 1));
+
+    // 5. Liste récapitulative
+    if (audit != null) {
+      entries.add(_SommaireEntry(titre: "LISTE RECAPITULATIVE DES OBSERVATIONS", key: 'liste_recap', level: 0, isBold: true, isUppercase: true));
+      entries.add(_SommaireEntry(titre: "Niveau de priorité des observations constatées", key: 'liste_recap', level: 1));
+      entries.add(_SommaireEntry(titre: "Moyenne tension", key: 'liste_recap', level: 1));
+      entries.add(_SommaireEntry(titre: "Basse tension", key: 'liste_recap', level: 1));
+    }
+
+    // 6. Audit des installations
+    if (audit != null) {
+      entries.add(_SommaireEntry(titre: "AUDIT DES INSTALLATIONS ELECTRIQUES", key: 'audit', level: 0, isBold: true, isUppercase: true));
+
+      // Locaux MT directs
+      for (var local in audit.moyenneTensionLocaux) {
+        final localKey = 'audit_local_${local.nom}';
+        entries.add(_SommaireEntry(titre: "LOCAL ${local.nom.toUpperCase()}", key: localKey, level: 1, isUppercase: true));
+        for (var c in local.coffrets) {
+          final parentKey = '${local.nom}_${c.nom}';
+          final numVal = c.numeroEquipement?.isNotEmpty == true ? c.numeroEquipement! : '-';
+          entries.add(_SommaireEntry(titre: numVal, key: 'audit_coffret_$parentKey', level: 2));
+          entries.add(_SommaireEntry(titre: c.nom, key: 'audit_coffret_$parentKey', level: 2));
+        }
+      }
+
+      // Zones MT
+      for (var zone in audit.moyenneTensionZones) {
+        final zoneKey = 'audit_zone_${zone.nom}';
+        entries.add(_SommaireEntry(titre: zone.nom.toUpperCase(), key: zoneKey, level: 1, isUppercase: true));
+        if (zone.observationsLibres.isNotEmpty) {
+          entries.add(_SommaireEntry(titre: "Items", key: zoneKey, level: 2));
+          entries.add(_SommaireEntry(titre: "OBSERVATIONS RELATIVES A LA ${zone.nom.toUpperCase()}", key: zoneKey, level: 2, isUppercase: true));
+        }
+        for (var local in zone.locaux) {
+          final localKey = 'audit_local_${local.nom}';
+          entries.add(_SommaireEntry(titre: "LOCAL ${local.nom.toUpperCase()}", key: localKey, level: 2, isUppercase: true));
+          for (var c in local.coffrets) {
+            final parentKey = '${local.nom}_${c.nom}';
+            final numVal = c.numeroEquipement?.isNotEmpty == true ? c.numeroEquipement! : '-';
+            entries.add(_SommaireEntry(titre: numVal, key: 'audit_coffret_$parentKey', level: 3));
+            entries.add(_SommaireEntry(titre: c.nom, key: 'audit_coffret_$parentKey', level: 3));
+          }
+        }
+        for (var c in zone.coffrets) {
+          final parentKey = '${zone.nom}_${c.nom}';
+          final numVal = c.numeroEquipement?.isNotEmpty == true ? c.numeroEquipement! : '-';
+          entries.add(_SommaireEntry(titre: numVal, key: 'audit_coffret_$parentKey', level: 2));
+          entries.add(_SommaireEntry(titre: c.nom, key: 'audit_coffret_$parentKey', level: 2));
+        }
+      }
+
+      // Zones BT
+      for (var zone in audit.basseTensionZones) {
+        final zoneKey = 'audit_zone_${zone.nom}';
+        entries.add(_SommaireEntry(titre: zone.nom.toUpperCase(), key: zoneKey, level: 1, isUppercase: true));
+        if (zone.observationsLibres.isNotEmpty) {
+          entries.add(_SommaireEntry(titre: "Items", key: zoneKey, level: 2));
+          entries.add(_SommaireEntry(titre: "OBSERVATIONS RELATIVES A LA ${zone.nom.toUpperCase()}", key: zoneKey, level: 2, isUppercase: true));
+        }
+        for (var c in zone.coffretsDirects) {
+          final parentKey = '${zone.nom}_${c.nom}';
+          final numVal = c.numeroEquipement?.isNotEmpty == true ? c.numeroEquipement! : '-';
+          entries.add(_SommaireEntry(titre: numVal, key: 'audit_coffret_$parentKey', level: 2));
+          entries.add(_SommaireEntry(titre: c.nom, key: 'audit_coffret_$parentKey', level: 2));
+        }
+        for (var local in zone.locaux) {
+          final localKey = 'audit_local_${local.nom}';
+          entries.add(_SommaireEntry(titre: "LOCAL ${local.nom.toUpperCase()}", key: localKey, level: 2, isUppercase: true));
+          for (var c in local.coffrets) {
+            final parentKey = '${local.nom}_${c.nom}';
+            final numVal = c.numeroEquipement?.isNotEmpty == true ? c.numeroEquipement! : '-';
+            entries.add(_SommaireEntry(titre: numVal, key: 'audit_coffret_$parentKey', level: 3));
+            entries.add(_SommaireEntry(titre: c.nom, key: 'audit_coffret_$parentKey', level: 3));
+          }
+        }
+      }
+    }
+
+    // 7. Classement
+    entries.add(_SommaireEntry(titre: "CLASSEMENT DES LOCAUX ET EMPLACEMENTS EN FONCTION DES INFLUENCES EXTERNES", key: 'classement', level: 0, isBold: true, isUppercase: true));
+
+    // 8. Foudre
+    entries.add(_SommaireEntry(titre: "FOUDRE", key: 'foudre', level: 0, isBold: true, isUppercase: true));
+
+    // 9. Mesures et essais
+    if (mesures != null) {
+      entries.add(_SommaireEntry(titre: "RESULTATS DES MESURES ET ESSAIS", key: 'mesures', level: 0, isBold: true, isUppercase: true));
+      entries.add(_SommaireEntry(titre: "Conditions de mesure", key: 'mesures_conditions', level: 1));
+      entries.add(_SommaireEntry(titre: "Essais de démarrage automatique du groupe électrogène", key: 'mesures_demarrage', level: 1));
+      entries.add(_SommaireEntry(titre: "Test de fonctionnement de l'arrêt d'urgence", key: 'mesures_arret', level: 1));
+      entries.add(_SommaireEntry(titre: "Prise de terre", key: 'mesures_terre', level: 1));
+      entries.add(_SommaireEntry(titre: "Essais de déclenchement des dispositifs différentiels et mesure d'isolement", key: 'mesures_ddr', level: 1));
+      entries.add(_SommaireEntry(titre: "Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles", key: 'mesures_continuite', level: 1));
+    }
+
+    // 10. Photos
+    entries.add(_SommaireEntry(titre: "PHOTOS", key: 'photos', level: 0, isBold: true, isUppercase: true));
+
+    return entries;
+  }
+
   // ──────────────────────────────────────────────────────────────
   //  SOMMAIRE (format Word avec points de liaison)
   // ──────────────────────────────────────────────────────────────
   
-  static pw.Widget _buildSommaire(
-    AuditInstallationsElectriques? audit,
-    MesuresEssais? mesures,
-    Map<String, int> pages,
-  ) {
-    final sections = <_SommaireEntry>[
-      _SommaireEntry('Sommaire', 2, isTitle: true),
-      _SommaireEntry('Rappel des responsabilit\u00e9s de l\'employeur', pages['rappel'] ?? 3, isTitle: true),
-      _SommaireEntry('Mesures de s\u00e9curit\u00e9 autour des installations', pages['mesures_securite'] ?? 4, isTitle: true),
-      _SommaireEntry('Objet de la v\u00e9rification', pages['objet'] ?? 5, isTitle: true),
-      _SommaireEntry('Renseignements g\u00e9n\u00e9raux de l\'\u00e9tablissement', pages['renseignements'] ?? 6, isTitle: true),
-      _SommaireEntry('Description des installations', pages['description'] ?? 7, isTitle: true),
-      if (audit != null) _SommaireEntry('Liste r\u00e9capitulative des observations', pages['liste_recap'] ?? 8, isTitle: true),
-      if (audit != null) _SommaireEntry('Audit des installations \u00e9lectriques', pages['audit'] ?? 9, isTitle: true),
-      _SommaireEntry('Classement des locaux/zones et emplacements', pages['classement'] ?? 10, isTitle: true),
-      _SommaireEntry('Foudre', pages['foudre'] ?? 11, isTitle: true),
-      if (mesures != null) ...[
-        _SommaireEntry('R\u00e9sultats des mesures et essais', pages['mesures'] ?? 12, isTitle: true),
-        _SommaireEntry('Essais de d\u00e9marrage automatique du groupe \u00e9lectrog\u00e8ne', (pages['mesures'] ?? 12) + 1, isSub: true),
-        _SommaireEntry('Test de fonctionnement de l\'arr\u00eat d\'urgence', (pages['mesures'] ?? 12) + 2, isSub: true),
-        _SommaireEntry('Prise de terre', (pages['mesures'] ?? 12) + 3, isSub: true),
-        _SommaireEntry('Mesures d\'isolement des circuits BT', (pages['mesures'] ?? 12) + 4, isSub: true),
-        _SommaireEntry('Essais de d\u00e9clenchement des DDR', (pages['mesures'] ?? 12) + 5, isSub: true),
-        _SommaireEntry('Continuit\u00e9 et r\u00e9sistance des conducteurs', (pages['mesures'] ?? 12) + 6, isSub: true),
-      ],
-      _SommaireEntry('Photos', pages['photos'] ?? 19, isTitle: true),
-    ];
-
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _buildPageHeaderWidget(),
-        pw.SizedBox(height: 10),
+  static void _addSommairePages(
+    pw.Document pdf,
+    List<_SommaireEntry> entries,
+    Map<String, int> trackedPages, {
+    String? nomClient,
+    String? nomSite,
+    String? numeroRapport,
+  }) {
+    pdf.addPage(pw.MultiPage(
+      pageTheme: _buildInnerPageTheme(),
+      header: (ctx) => _buildPageHeaderWidget(
+        nomClient: nomClient,
+        nomSite: nomSite,
+        numeroRapport: numeroRapport,
+      ),
+      build: (ctx) => [
         pw.Center(
           child: pw.Text(
             'SOMMAIRE',
@@ -575,61 +705,71 @@ class PdfReportService {
             ),
           ),
         ),
-        pw.SizedBox(height: 20),
+        pw.SizedBox(height: 10),
         pw.Container(
           width: double.infinity, height: 1.5, color: accentColor,
         ),
         pw.SizedBox(height: 16),
-        ...sections.asMap().entries.map((e) {
-          final entry = e.value;
-          return pw.Padding(
-            padding: pw.EdgeInsets.only(
-              left: entry.isSub ? 16.0 : 0.0,
-              bottom: entry.isTitle ? 5.0 : 3.0,
-            ),
-            child: _buildSommaireEntryLine(entry),
-          );
-        }),
+        ...entries.map((entry) => _buildSommaireEntryLine(entry, trackedPages)),
       ],
-    );
+    ));
   }
 
-  static pw.Widget _buildSommaireEntryLine(_SommaireEntry entry) {
-    final double fontSize = entry.isSub ? 7.5 : 8.5;
-    final pw.Font font    = entry.isSub ? _fontRegular : _fontBold;
-    final PdfColor color  = entry.isSub ? accentColor : accentColor;
+  static pw.Widget _buildSommaireEntryLine(_SommaireEntry entry, Map<String, int> trackedPages) {
+    final double leftPadding = entry.level * 15.0;
+    
+    // Choose font & size
+    final double fontSize = entry.level == 0 
+        ? 8.5 
+        : (entry.level == 1 ? 8.0 : (entry.level == 2 ? 7.5 : 7.0));
+    final pw.Font font = entry.isBold ? _fontBold : _fontRegular;
+    final PdfColor color = accentColor; // Consistent color
 
-    return pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.end,
-      children: [
-        pw.Text(
-          entry.titre.trimLeft(),
-          style: pw.TextStyle(font: font, fontSize: fontSize, color: color),
-        ),
-        pw.Expanded(
-          child: pw.Text(
-            ' ${'.' * 120}',
-            style: pw.TextStyle(
-              font: _fontRegular,
-              fontSize: fontSize - 1,
-              color: PdfColors.grey500,
-              letterSpacing: 0.8,
+    final titleText = entry.isUppercase ? entry.titre.toUpperCase() : entry.titre;
+
+    return pw.Padding(
+      padding: pw.EdgeInsets.only(left: leftPadding, bottom: 4.0),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.end,
+        children: [
+          pw.Flexible(
+            child: pw.Text(
+              titleText.trim(),
+              style: pw.TextStyle(font: font, fontSize: fontSize, color: color),
+              maxLines: 1,
+              overflow: pw.TextOverflow.clip,
             ),
-            maxLines: 1,
-            overflow: pw.TextOverflow.clip,
-            textAlign: pw.TextAlign.left,
           ),
-        ),
-        pw.SizedBox(width: 4),
-        pw.Text(
-          '${entry.page}',
-          style: pw.TextStyle(
-            font: _fontBold,
-            fontSize: fontSize,
-            color: headerColor,
+          pw.SizedBox(width: 4),
+          pw.Expanded(
+            child: pw.Text(
+              '.' * 150,
+              style: pw.TextStyle(
+                font: _fontRegular,
+                fontSize: fontSize - 1,
+                color: PdfColors.grey500,
+                letterSpacing: 1.5,
+              ),
+              maxLines: 1,
+              overflow: pw.TextOverflow.clip,
+            ),
           ),
-        ),
-      ],
+          pw.SizedBox(width: 6),
+          pw.Container(
+            width: 22.0,
+            alignment: pw.Alignment.centerRight,
+            child: PageNumberText(
+              keyName: entry.key,
+              registry: trackedPages,
+              style: pw.TextStyle(
+                font: _fontBold,
+                fontSize: fontSize,
+                color: headerColor,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -688,6 +828,7 @@ class PdfReportService {
   static pw.Widget _buildRenseignementsGeneraux(
     Mission mission,
     RenseignementsGeneraux? rg,
+    Map<String, int> trackedPages,
   ) {
     final verificateursNoms = rg != null && rg.verificateurs.isNotEmpty
         ? rg.verificateurs
@@ -823,7 +964,11 @@ class PdfReportService {
 
         pw.SizedBox(height: 10),
 
-        _sectionBox('RENSEIGNEMENTS G\u00c9N\u00c9RAUX DE L\'\u00c9TABLISSEMENT'),
+        PageTracker(
+          key: 'renseignements',
+          registry: trackedPages,
+          child: _sectionBox('RENSEIGNEMENTS G\u00c9N\u00c9RAUX DE L\'\u00c9TABLISSEMENT'),
+        ),
 
         pw.SizedBox(height: 8),
 
@@ -1030,9 +1175,13 @@ class PdfReportService {
   //  DESCRIPTION DES INSTALLATIONS (avec ordre des colonnes)
   // ──────────────────────────────────────────────────────────────
   
-  static List<pw.Widget> _buildDescriptionInstallationsMulti(DescriptionInstallations? desc) {
+  static List<pw.Widget> _buildDescriptionInstallationsMulti(DescriptionInstallations? desc, Map<String, int> trackedPages) {
     final widgets = <pw.Widget>[];
-    widgets.add(_sectionBox('DESCRIPTION DES INSTALLATIONS'));
+    widgets.add(PageTracker(
+      key: 'description',
+      registry: trackedPages,
+      child: _sectionBox('DESCRIPTION DES INSTALLATIONS'),
+    ));
     widgets.add(pw.SizedBox(height: 8));
 
     if (desc == null) {
@@ -1241,9 +1390,13 @@ class PdfReportService {
   //  LISTE RECAPITULATIVE DES OBSERVATIONS (BT sur nouvelle page)
   // ──────────────────────────────────────────────────────────────
   
-  static List<pw.Widget> _buildListeRecapitulativeMulti(AuditInstallationsElectriques audit) {
+  static List<pw.Widget> _buildListeRecapitulativeMulti(AuditInstallationsElectriques audit, Map<String, int> trackedPages) {
     final widgets = <pw.Widget>[];
-    widgets.add(_sectionBox('LISTE RECAPITULATIVE DES OBSERVATIONS'));
+    widgets.add(PageTracker(
+      key: 'liste_recap',
+      registry: trackedPages,
+      child: _sectionBox('LISTE RECAPITULATIVE DES OBSERVATIONS'),
+    ));
     widgets.add(pw.SizedBox(height: 8));
 
     // Légende priorités — style trame
@@ -2165,7 +2318,7 @@ class PdfReportService {
   //  AUDIT DES INSTALLATIONS ELECTRIQUES
   // ──────────────────────────────────────────────────────────────
   
-  static List<pw.Widget> _buildAuditContentOrdered(AuditInstallationsElectriques audit) {
+  static List<pw.Widget> _buildAuditContentOrdered(AuditInstallationsElectriques audit, Map<String, int> trackedPages) {
     final widgets = <pw.Widget>[];
 
     // 1. Locaux MT directs (hors zone) — PREMIER local sur la même page que le titre
@@ -2177,47 +2330,47 @@ class PdfReportService {
         final local = audit.moyenneTensionLocaux[i];
         // Pas de NewPage pour le premier local (i == 0)
         if (i > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildLocalMT(local));
+        widgets.addAll(_buildLocalMT(local, trackedPages));
       }
     }
 
     // 2. Zones MT
     for (var zone in audit.moyenneTensionZones) {
       widgets.add(pw.NewPage());
-      widgets.addAll(_buildZone(zone.nom, zone.observationsLibres));
+      widgets.addAll(_buildZone(zone.nom, zone.observationsLibres, trackedPages));
       
       // Locaux dans la zone : premier sur la même page que la zone
       for (int i = 0; i < zone.locaux.length; i++) {
         final local = zone.locaux[i];
         if (i > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildLocalMT(local));
+        widgets.addAll(_buildLocalMT(local, trackedPages));
       }
       
       // Coffrets de la zone
       for (int i = 0; i < zone.coffrets.length; i++) {
         final coffret = zone.coffrets[i];
         if (i > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildCoffret(coffret));
+        widgets.addAll(_buildCoffret(coffret, trackedPages, zone.nom));
       }
     }
 
     // 3. Zones BT
     for (var zone in audit.basseTensionZones) {
       widgets.add(pw.NewPage());
-      widgets.addAll(_buildZone(zone.nom, zone.observationsLibres));
+      widgets.addAll(_buildZone(zone.nom, zone.observationsLibres, trackedPages));
       
       // Coffrets directs de la zone
       for (int i = 0; i < zone.coffretsDirects.length; i++) {
         final coffret = zone.coffretsDirects[i];
         if (i > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildCoffret(coffret));
+        widgets.addAll(_buildCoffret(coffret, trackedPages, zone.nom));
       }
       
       // Locaux BT
       for (int i = 0; i < zone.locaux.length; i++) {
         final local = zone.locaux[i];
         if (i > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildLocalBT(local));
+        widgets.addAll(_buildLocalBT(local, trackedPages));
       }
     }
 
@@ -2228,15 +2381,19 @@ class PdfReportService {
     return widgets;
   }
 
-  static List<pw.Widget> _buildZone(String nom, List<ObservationLibre> obs) {
+  static List<pw.Widget> _buildZone(String nom, List<ObservationLibre> obs, Map<String, int> trackedPages) {
     final widgets = <pw.Widget>[
       pw.SizedBox(height: 8),
-      pw.Container(
-        width: double.infinity,
-        color: accentColor,
-        padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-        child: pw.Text(nom.toUpperCase(),
-            style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: PdfColors.white)),
+      PageTracker(
+        key: 'audit_zone_${nom}',
+        registry: trackedPages,
+        child: pw.Container(
+          width: double.infinity,
+          color: accentColor,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+          child: pw.Text(nom.toUpperCase(),
+              style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: PdfColors.white)),
+        ),
       ),
     ];
 
@@ -2304,9 +2461,13 @@ class PdfReportService {
     );
   }
 
-  static List<pw.Widget> _buildLocalMT(MoyenneTensionLocal local) {
+  static List<pw.Widget> _buildLocalMT(MoyenneTensionLocal local, Map<String, int> trackedPages) {
     final widgets = <pw.Widget>[
-      _localNameBar(local.nom.toUpperCase()),
+      PageTracker(
+        key: 'audit_local_${local.nom}',
+        registry: trackedPages,
+        child: _localNameBar(local.nom.toUpperCase()),
+      ),
       pw.SizedBox(height: 5),
     ];
 
@@ -2411,15 +2572,19 @@ class PdfReportService {
     }
 
     for (var coffret in local.coffrets) {
-      widgets.addAll(_buildCoffret(coffret));
+      widgets.addAll(_buildCoffret(coffret, trackedPages, local.nom));
     }
 
     return widgets;
   }
 
-  static List<pw.Widget> _buildLocalBT(BasseTensionLocal local) {
+  static List<pw.Widget> _buildLocalBT(BasseTensionLocal local, Map<String, int> trackedPages) {
     final widgets = <pw.Widget>[
-      _localNameBar(local.nom.toUpperCase()),
+      PageTracker(
+        key: 'audit_local_${local.nom}',
+        registry: trackedPages,
+        child: _localNameBar(local.nom.toUpperCase()),
+      ),
       pw.SizedBox(height: 5),
     ];
 
@@ -2505,7 +2670,7 @@ class PdfReportService {
     }
 
     for (var coffret in local.coffrets) {
-      widgets.addAll(_buildCoffret(coffret));
+      widgets.addAll(_buildCoffret(coffret, trackedPages, local.nom));
     }
 
     return widgets;
@@ -3057,7 +3222,7 @@ class PdfReportService {
   }
 
 
-  static List<pw.Widget> _buildCoffret(CoffretArmoire coffret) {
+  static List<pw.Widget> _buildCoffret(CoffretArmoire coffret, Map<String, int> trackedPages, String parentName) {
     final widgets = <pw.Widget>[pw.SizedBox(height: 6)];
     String safe(String v) => v.trim().isEmpty ? 'Non renseigné' : v;
 
@@ -3209,7 +3374,11 @@ class PdfReportService {
     widgets.add(pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        titleTable,
+        PageTracker(
+          key: 'audit_coffret_${parentName}_${coffret.nom}',
+          registry: trackedPages,
+          child: titleTable,
+        ),
         topSectionTable,
       ],
     ));
@@ -3552,12 +3721,17 @@ class PdfReportService {
   static List<pw.Widget> _buildClassementEmplacementsMulti(
     List<ClassementEmplacement> emplacements,
     List<ClassementZone> zonesClassement,
+    Map<String, int> trackedPages,
   ) {
     final widgets = <pw.Widget>[];
 
     // _sectionBox title like other sections
-    widgets.add(_sectionBox(
-      "CLASSEMENT DES LOCAUX ET EMPLACEMENTS EN FONCTION DES INFLUENCES EXTERNES"
+    widgets.add(PageTracker(
+      key: 'classement',
+      registry: trackedPages,
+      child: _sectionBox(
+        "CLASSEMENT DES LOCAUX ET EMPLACEMENTS EN FONCTION DES INFLUENCES EXTERNES"
+      ),
     ));
     widgets.add(pw.SizedBox(height: 8));
     widgets.add(_bodyText(
@@ -3928,13 +4102,17 @@ class PdfReportService {
   //  FOUDRE
   // ──────────────────────────────────────────────────────────────
   
-  static pw.Widget _buildFoudre(List<Foudre> foudres) {
+  static pw.Widget _buildFoudre(List<Foudre> foudres, Map<String, int> trackedPages) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
         _buildPageHeaderWidget(),
         pw.SizedBox(height: 10),
-        _sectionBox('FOUDRE'),
+        PageTracker(
+          key: 'foudre',
+          registry: trackedPages,
+          child: _sectionBox('FOUDRE'),
+        ),
         pw.SizedBox(height: 8),
         if (foudres.isEmpty)
           _bodyText('Aucune observation foudre disponible.')
@@ -3983,7 +4161,7 @@ class PdfReportService {
   //  RESULTATS DES MESURES ET ESSAIS
   // ──────────────────────────────────────────────────────────────
   
-  static void _addMesuresEssaisPages(pw.Document pdf, MesuresEssais mesures) {
+  static void _addMesuresEssaisPages(pw.Document pdf, MesuresEssais mesures, Map<String, int> trackedPages) {
     // Page intro avec conditions ET les deux essais
     pdf.addPage(pw.Page(
       pageTheme: _buildInnerPageTheme(),
@@ -3992,10 +4170,18 @@ class PdfReportService {
         children: [
           _buildPageHeaderWidget(),
           pw.SizedBox(height: 10),
-          _sectionBox('RESULTATS DES MESURES ET ESSAIS'),
+          PageTracker(
+            key: 'mesures',
+            registry: trackedPages,
+            child: _sectionBox('RESULTATS DES MESURES ET ESSAIS'),
+          ),
           pw.SizedBox(height: 10),
           
-          _subSectionBar("Conditions de mesure"),
+          PageTracker(
+            key: 'mesures_conditions',
+            registry: trackedPages,
+            child: _subSectionBar("Conditions de mesure"),
+          ),
           pw.SizedBox(height: 10),
           
           // Conditions générales
@@ -4017,14 +4203,22 @@ class PdfReportService {
           pw.SizedBox(height: 16),
           
           // Essais de démarrage automatique (sur la même page)
-          _subSectionBar('Essais de démarrage automatique du groupe électrogène'),
+          PageTracker(
+            key: 'mesures_demarrage',
+            registry: trackedPages,
+            child: _subSectionBar('Essais de démarrage automatique du groupe électrogène'),
+          ),
           pw.SizedBox(height: 5),
           _resultBox(mesures.essaiDemarrageAuto.observation ?? 'Non satisfaisant'),
           
           pw.SizedBox(height: 16),
           
           // Test de l'arret d'urgence (sur la même page)
-          _subSectionBar("Test de fonctionnement de l'arrêt d'urgence"),
+          PageTracker(
+            key: 'mesures_arret',
+            registry: trackedPages,
+            child: _subSectionBar("Test de fonctionnement de l'arrêt d'urgence"),
+          ),
           pw.SizedBox(height: 5),
           _resultBox(mesures.testArretUrgence.observation ?? 'Satisfaisant'),
         ],
@@ -4036,7 +4230,11 @@ class PdfReportService {
       pageTheme: _buildInnerPageTheme(),
       build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
         _buildPageHeaderWidget(), pw.SizedBox(height: 10),
-        _subSectionBar('Prise de terre'),
+        PageTracker(
+          key: 'mesures_terre',
+          registry: trackedPages,
+          child: _subSectionBar('Prise de terre'),
+        ),
         pw.SizedBox(height: 8),
         pw.Table(
           border: pw.TableBorder.all(color: borderColor, width: 0.4),
@@ -4139,8 +4337,11 @@ class PdfReportService {
         final widgets = <pw.Widget>[];
 
         widgets.add(_buildPageHeaderWidget());
-        widgets.add(pw.SizedBox(height: 10));
-        widgets.add(_subSectionBar("Essais de déclenchement des dispositifs différentiels et mésure d'isolement"));
+        widgets.add(PageTracker(
+          key: 'mesures_ddr',
+          registry: trackedPages,
+          child: _subSectionBar("Essais de déclenchement des dispositifs différentiels et mesure d'isolement"),
+        ));
         widgets.add(pw.SizedBox(height: 8));
 
         // 1. Table Header of DDR table
@@ -4339,7 +4540,11 @@ class PdfReportService {
       pageTheme: _buildInnerPageTheme(),
       build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
         _buildPageHeaderWidget(), pw.SizedBox(height: 10),
-        _subSectionBar('Continuité et résistance des conducteurs de protection et liaisons équipotentielles'),
+        PageTracker(
+          key: 'mesures_continuite',
+          registry: trackedPages,
+          child: _subSectionBar('Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles'),
+        ),
         pw.SizedBox(height: 8),
         pw.Table(
           border: pw.TableBorder.all(color: borderColor, width: 0.4),
@@ -4493,7 +4698,8 @@ class PdfReportService {
       pw.Document pdf,
       Mission mission,
       String missionId,
-      AuditInstallationsElectriques? audit, {
+      AuditInstallationsElectriques? audit,
+      Map<String, int> trackedPages, {
       String? nomSite,
       String? numeroRapport,
   }) async {
@@ -4680,15 +4886,19 @@ class PdfReportService {
                 children: [
                   pw.Container(width: 350, height: 2, color: accentColor),
                   pw.SizedBox(height: 24),
-                  pw.Text(
-                    'PHOTOS',
-                    style: pw.TextStyle(
-                      font: _fontBold, fontSize: 20,
-                      fontWeight: pw.FontWeight.bold,
-                      color: headerColor,
-                      letterSpacing: 1.0,
+                  PageTracker(
+                    key: 'photos',
+                    registry: trackedPages,
+                    child: pw.Text(
+                      'PHOTOS',
+                      style: pw.TextStyle(
+                        font: _fontBold, fontSize: 20,
+                        fontWeight: pw.FontWeight.bold,
+                        color: headerColor,
+                        letterSpacing: 1.0,
+                      ),
+                      textAlign: pw.TextAlign.center,
                     ),
-                    textAlign: pw.TextAlign.center,
                   ),
                   pw.SizedBox(height: 12),
                   pw.Text(
@@ -5085,30 +5295,15 @@ class PdfReportService {
           : (mission.nomSite ?? '');
       const String numeroRapportDoc = 'KES/IP/VE/2025/001';
 
-      int pageCounter = 1;
-      final Map<String, int> pages = {};
-
-      pageCounter++;
-      pages['rappel'] = ++pageCounter;
-      pages['mesures_securite'] = ++pageCounter;
-      pages['objet'] = ++pageCounter;
-      pages['renseignements'] = ++pageCounter;
-      pages['description'] = ++pageCounter;
-      if (audit != null) {
-        pages['liste_recap'] = ++pageCounter;
-        pages['audit'] = ++pageCounter;
-        pageCounter += audit.moyenneTensionZones.length;
-        pageCounter += audit.moyenneTensionLocaux.length;
-        pageCounter += audit.basseTensionZones.length;
-      }
-      pages['classement'] = ++pageCounter;
-      pages['foudre'] = ++pageCounter;
-      if (mesures != null) {
-        pages['mesures'] = ++pageCounter;
-        pageCounter += 6;
-        pages['signature'] = ++pageCounter;
-      }
-      pages['photos'] = ++pageCounter;
+      final trackedPages = <String, int>{};
+      final sommaireEntries = _collectSommaireEntries(
+        mission: mission,
+        rg: renseignements,
+        desc: description,
+        audit: audit,
+        mesures: mesures,
+        foudres: foudres,
+      );
 
       final pdf = pw.Document(
         title: 'Rapport d\'Audit Electrique - ${mission.nomClient}',
@@ -5125,12 +5320,16 @@ class PdfReportService {
       );
 
       // 2. SOMMAIRE
-      pdf.addPage(pw.Page(
-        pageTheme: _buildInnerPageTheme(),
-        build: (ctx) => _buildSommaire(audit, mesures, pages),
-      ));
+      _addSommairePages(
+        pdf,
+        sommaireEntries,
+        trackedPages,
+        nomClient: mission.nomClient,
+        nomSite: nomSiteHeader,
+        numeroRapport: numeroRapportDoc,
+      );
 
-      // 3. Rappel des responsabilit\u00e9s + Mesures de s\u00e9curit\u00e9 + Objet de la v\u00e9rification
+      // 3. Rappel des responsabilités + Mesures de sécurité + Objet de la vérification
       pdf.addPage(pw.MultiPage(
         maxPages: 10,
         pageTheme: _buildInnerPageTheme(),
@@ -5140,7 +5339,11 @@ class PdfReportService {
           numeroRapport: numeroRapportDoc,
         ),
         build: (ctx) => [
-          _sectionBox('RAPPEL DES RESPONSABILIT\u00c9S DE L\'EMPLOYEUR'),
+          PageTracker(
+            key: 'rappel',
+            registry: trackedPages,
+            child: _sectionBox('RAPPEL DES RESPONSABILIT\u00c9S DE L\'EMPLOYEUR'),
+          ),
           pw.SizedBox(height: 14),
           _bodyText(
             'KES INSPECTIONS AND PROJECTS a le plaisir de vous transmettre le pr\u00e9sent rapport de v\u00e9rification de vos installations \u00e9lectriques, \u00e9tabli \u00e0 la suite des constats r\u00e9alis\u00e9s sur site.\n'
@@ -5188,7 +5391,11 @@ class PdfReportService {
           ),
           // ─── MESURES DE S\u00c9CURIT\u00c9 ───
           pw.SizedBox(height: 20),
-          _sectionBox('MESURES DE S\u00c9CURIT\u00c9 AUTOUR DES INSTALLATIONS'),
+          PageTracker(
+            key: 'mesures_securite',
+            registry: trackedPages,
+            child: _sectionBox('MESURES DE S\u00c9CURIT\u00c9 AUTOUR DES INSTALLATIONS'),
+          ),
           pw.SizedBox(height: 8),
           _bodyText('Suivant la r\u00e9glementation applicable\u00a0:'),
           _bulletItem('Article 5 \u2013 Arr\u00eat\u00e9 039/MTPS/IMT du 26 novembre 1984 fixant les mesures g\u00e9n\u00e9rales d\'hygi\u00e8ne et de s\u00e9curit\u00e9 sur les lieux de travail\u00a0;'),
@@ -5248,7 +5455,11 @@ class PdfReportService {
           ),
           // ─── OBJET DE LA V\u00c9RIFICATION ───
           pw.SizedBox(height: 20),
-          _sectionBox('OBJET DE LA V\u00c9RIFICATION'),
+          PageTracker(
+            key: 'objet',
+            registry: trackedPages,
+            child: _sectionBox('OBJET DE LA V\u00c9RIFICATION'),
+          ),
           pw.SizedBox(height: 10),
           _bodyText(
             'La mission a pour objet de d\u00e9celer les non-conformit\u00e9s pouvant affecter la s\u00e9curit\u00e9 des personnes et des biens, et de s\'assurer du bon \u00e9tat de conservation des installations. '
@@ -5276,7 +5487,7 @@ class PdfReportService {
       pdf.addPage(
         pw.Page(
           pageTheme: _buildInnerPageTheme(),
-          build: (ctx) => _buildRenseignementsGeneraux(mission, renseignements),
+          build: (ctx) => _buildRenseignementsGeneraux(mission, renseignements, trackedPages),
         ),
       );
 
@@ -5289,7 +5500,7 @@ class PdfReportService {
           nomSite: nomSiteHeader,
           numeroRapport: numeroRapportDoc,
         ),
-        build: (ctx) => _buildDescriptionInstallationsMulti(description),
+        build: (ctx) => _buildDescriptionInstallationsMulti(description, trackedPages),
       ));
 
       // 6. Liste recapitulative des observations
@@ -5302,7 +5513,7 @@ class PdfReportService {
             nomSite: nomSiteHeader,
             numeroRapport: numeroRapportDoc,
           ),
-          build: (ctx) => _buildListeRecapitulativeMulti(audit),
+          build: (ctx) => _buildListeRecapitulativeMulti(audit, trackedPages),
         ));
       }
 
@@ -5324,15 +5535,19 @@ class PdfReportService {
                     children: [
                       pw.Container(width: 350, height: 2, color: accentColor),
                       pw.SizedBox(height: 24),
-                      pw.Text(
-                        'AUDIT DES INSTALLATIONS ELECTRIQUES',
-                        style: pw.TextStyle(
-                          font: _fontBold, fontSize: 20,
-                          fontWeight: pw.FontWeight.bold,
-                          color: headerColor,
-                          letterSpacing: 1.0,
+                       PageTracker(
+                        key: 'audit',
+                        registry: trackedPages,
+                        child: pw.Text(
+                          'AUDIT DES INSTALLATIONS ELECTRIQUES',
+                          style: pw.TextStyle(
+                            font: _fontBold, fontSize: 20,
+                            fontWeight: pw.FontWeight.bold,
+                            color: headerColor,
+                            letterSpacing: 1.0,
+                          ),
+                          textAlign: pw.TextAlign.center,
                         ),
-                        textAlign: pw.TextAlign.center,
                       ),
                       pw.SizedBox(height: 12),
                       pw.Text(
@@ -5360,7 +5575,7 @@ class PdfReportService {
             nomSite: nomSiteHeader,
             numeroRapport: numeroRapportDoc,
           ),
-          build: (ctx) => _buildAuditContentOrdered(audit),
+          build: (ctx) => _buildAuditContentOrdered(audit, trackedPages),
         ));
       }
 
@@ -5373,20 +5588,20 @@ class PdfReportService {
           nomSite: nomSiteHeader,
           numeroRapport: numeroRapportDoc,
         ),
-        build: (ctx) => _buildClassementEmplacementsMulti(classements, classementsZones),
+        build: (ctx) => _buildClassementEmplacementsMulti(classements, classementsZones, trackedPages),
       ));
 
       // 9. Foudre
       pdf.addPage(
         pw.Page(
           pageTheme: _buildInnerPageTheme(),
-          build: (ctx) => _buildFoudre(foudres),
+          build: (ctx) => _buildFoudre(foudres, trackedPages),
         ),
       );
 
       // 10. Resultats des mesures et essais
       if (mesures != null) {
-        _addMesuresEssaisPages(pdf, mesures);
+        _addMesuresEssaisPages(pdf, mesures, trackedPages);
         pdf.addPage(pw.Page(
           pageTheme: _buildInnerPageTheme(),
           build: (ctx) => _buildSignaturePage(renseignements, currentUser?.fullName),
@@ -5394,7 +5609,7 @@ class PdfReportService {
       }
 
       // 11. Photos
-      await _addPhotosSection(pdf, mission, missionId, audit,
+      await _addPhotosSection(pdf, mission, missionId, audit, trackedPages,
           nomSite: nomSiteHeader, numeroRapport: numeroRapportDoc);
 
       final bytes = await pdf.save();
@@ -5488,10 +5703,64 @@ class _PhotoEntry {
 
 class _SommaireEntry {
   final String titre;
-  final int page;
-  final bool isSub;
-  final bool isTitle;
-  _SommaireEntry(this.titre, this.page, {this.isSub = false, this.isTitle = false});
+  final String key;
+  final int level;
+  final bool isBold;
+  final bool isUppercase;
+
+  _SommaireEntry({
+    required this.titre,
+    required this.key,
+    required this.level,
+    this.isBold = false,
+    this.isUppercase = false,
+  });
+}
+
+class PageTracker extends pw.Widget {
+  final String key;
+  final pw.Widget child;
+  final Map<String, int> registry;
+
+  PageTracker({required this.key, required this.child, required this.registry});
+
+  @override
+  void layout(pw.Context context, pw.BoxConstraints constraints, {bool parentUsesSize = false}) {
+    child.layout(context, constraints, parentUsesSize: parentUsesSize);
+    box = child.box;
+    registry[key] = context.pageNumber;
+  }
+
+  @override
+  void paint(pw.Context context) {
+    super.paint(context);
+    child.paint(context);
+  }
+}
+
+class PageNumberText extends pw.Widget {
+  final String keyName;
+  final Map<String, int> registry;
+  final pw.TextStyle style;
+
+  PageNumberText({required this.keyName, required this.registry, required this.style});
+
+  @override
+  void layout(pw.Context context, pw.BoxConstraints constraints, {bool parentUsesSize = false}) {
+    final dummy = pw.Text('99', style: style);
+    dummy.layout(context, constraints, parentUsesSize: parentUsesSize);
+    box = dummy.box;
+  }
+
+  @override
+  void paint(pw.Context context) {
+    super.paint(context);
+    final pageNum = registry[keyName];
+    final textStr = pageNum != null ? pageNum.toString() : '--';
+    final textWidget = pw.Text(textStr, style: style);
+    textWidget.box = box;
+    textWidget.paint(context);
+  }
 }
 
 class _ClassementRow {
