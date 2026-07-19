@@ -654,10 +654,11 @@ class PdfReportService {
     final titleText = entry.isUppercase ? entry.titre.toUpperCase() : entry.titre;
 
     return pw.Padding(
-      padding: pw.EdgeInsets.only(left: leftPadding, bottom: 4.0),
+      padding: const pw.EdgeInsets.only(bottom: 4.0),
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.end,
         children: [
+          if (leftPadding > 0) pw.SizedBox(width: leftPadding),
           pw.Flexible(
             child: pw.Text(
               titleText.trim(),
@@ -668,21 +669,25 @@ class PdfReportService {
           ),
           pw.SizedBox(width: 4),
           pw.Expanded(
-            child: pw.Text(
-              '.' * 150,
-              style: pw.TextStyle(
-                font: _fontRegular,
-                fontSize: fontSize - 1,
-                color: PdfColors.grey500,
-                letterSpacing: 1.5,
+            child: pw.ClipRect(
+              child: pw.Container(
+                width: double.infinity,
+                child: pw.Text(
+                  '.' * 400,
+                  style: pw.TextStyle(
+                    font: _fontRegular,
+                    fontSize: fontSize - 1,
+                    color: PdfColors.grey500,
+                    letterSpacing: 1.5,
+                  ),
+                  maxLines: 1,
+                ),
               ),
-              maxLines: 1,
-              overflow: pw.TextOverflow.clip,
             ),
           ),
           pw.SizedBox(width: 6),
           pw.Container(
-            width: 25.0,
+            width: 30.0,
             alignment: pw.Alignment.centerRight,
             child: PageNumberText(
               keyName: entry.key,
