@@ -563,6 +563,8 @@ class PdfReportService {
 
     // 3. Renseignements généraux
     entries.add(_SommaireEntry(titre: "RENSEIGNEMENTS GENERAUX DE L'ETABLISSEMENT", key: 'renseignements', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "Renseignements principaux", key: 'renseignements_principaux', level: 1));
+    entries.add(_SommaireEntry(titre: "Documents nécessaires à la vérification", key: 'renseignements_documents', level: 1));
 
     // 4. Description des installations
     entries.add(_SommaireEntry(titre: "DESCRIPTION DES INSTALLATIONS", key: 'description', level: 0, isBold: true, isUppercase: true));
@@ -570,6 +572,8 @@ class PdfReportService {
     // 5. Liste récapitulative
     if (audit != null) {
       entries.add(_SommaireEntry(titre: "LISTE RECAPITULATIVE DES OBSERVATIONS", key: 'liste_recap', level: 0, isBold: true, isUppercase: true));
+      entries.add(_SommaireEntry(titre: "Moyenne tension", key: 'liste_recap_mt', level: 1));
+      entries.add(_SommaireEntry(titre: "Basse tension", key: 'liste_recap_bt', level: 1));
     }
 
     // 6. Audit des installations
@@ -578,7 +582,7 @@ class PdfReportService {
     }
 
     // 7. Classement
-    entries.add(_SommaireEntry(titre: "CLASSEMENT DES LOCAUX ET EMPLACEMENTS EN FONCTION DES INFLUENCES EXTERNES", key: 'classement', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "CLASSEMENT DES LOCAUX ET ZONES EN FONCTION DES INFLUENCES EXTERNES", key: 'classement', level: 0, isBold: true, isUppercase: true));
 
     // 8. Foudre
     entries.add(_SommaireEntry(titre: "FOUDRE", key: 'foudre', level: 0, isBold: true, isUppercase: true));
@@ -911,7 +915,11 @@ class PdfReportService {
 
         pw.SizedBox(height: 8),
 
-        _subTitle('RENSEIGNEMENTS PRINCIPAUX'),
+        PageTracker(
+          key: 'renseignements_principaux',
+          registry: trackedPages,
+          child: _subTitle('RENSEIGNEMENTS PRINCIPAUX'),
+        ),
 
         pw.SizedBox(height: 5),
 
@@ -1032,7 +1040,11 @@ class PdfReportService {
 
   pw.SizedBox(height: 16),
 
-  _subTitle('DOCUMENTS NECESSAIRES A LA VERIFICATION'),
+  PageTracker(
+    key: 'renseignements_documents',
+    registry: trackedPages,
+    child: _subTitle('DOCUMENTS NECESSAIRES A LA VERIFICATION'),
+  ),
 
   pw.SizedBox(height: 5),
 
@@ -1365,7 +1377,11 @@ class PdfReportService {
     widgets.add(pw.SizedBox(height: 14));
 
     // ── Moyenne Tension ──
-    widgets.add(_subSectionBar('Moyenne tension'));
+    widgets.add(PageTracker(
+      key: 'liste_recap_mt',
+      registry: trackedPages,
+      child: _subSectionBar('Moyenne tension'),
+    ));
     widgets.add(pw.SizedBox(height: 5));
     final obsMT = _collectObservationsMT(audit);
     widgets.addAll(_buildObsRecapTableMT(obsMT));
@@ -1373,7 +1389,11 @@ class PdfReportService {
     widgets.add(pw.NewPage());
 
     // ── Basse Tension ──
-    widgets.add(_subSectionBar('Basse tension'));
+    widgets.add(PageTracker(
+      key: 'liste_recap_bt',
+      registry: trackedPages,
+      child: _subSectionBar('Basse tension'),
+    ));
     widgets.add(pw.SizedBox(height: 5));
     final obsBT = _collectObservationsBT(audit);
     widgets.addAll(_buildObsRecapTableBT(obsBT));
@@ -3669,7 +3689,7 @@ class PdfReportService {
       key: 'classement',
       registry: trackedPages,
       child: _sectionBox(
-        "CLASSEMENT DES LOCAUX ET EMPLACEMENTS EN FONCTION DES INFLUENCES EXTERNES"
+        "CLASSEMENT ET EMPLACEMENTS DES LOCAUX ET ZONE EN FONCTION DES INFLUENCES EXTERNES"
       ),
     ));
     widgets.add(pw.SizedBox(height: 8));
