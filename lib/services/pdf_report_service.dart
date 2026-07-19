@@ -4708,42 +4708,6 @@ class PdfReportService {
       ),
     ));
 
-    // 2. Index page of photo descriptions
-    pdf.addPage(pw.Page(
-      pageTheme: _buildInnerPageTheme(),
-      build: (ctx) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          _buildPageHeaderWidget(
-            nomClient: mission.nomClient,
-            nomSite: nomSite,
-            numeroRapport: numeroRapport,
-          ),
-          pw.SizedBox(height: 10),
-          _subSectionBar("Index des photos d'anomalies"),
-          pw.SizedBox(height: 8),
-          pw.Table(
-            border: pw.TableBorder.all(color: borderColor, width: 0.4),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(0.4),
-              1: pw.FlexColumnWidth(2),
-              2: pw.FlexColumnWidth(3),
-              3: pw.FlexColumnWidth(1.5),
-            },
-            children: [
-              _tableHeaderRow(['N\u00B0', 'Fichier', 'Localisation / Description', 'Repere']),
-              ...allPhotos.asMap().entries.map((e) => _tableDataRow([
-                '${e.key + 1}',
-                path.basename(e.value.filePath),
-                e.value.description,
-                e.value.repere ?? '-',
-              ], alt: e.key.isOdd)),
-            ],
-          ),
-        ],
-      ),
-    ));
-
     final loadedImages = <pw.MemoryImage?>[];
     for (final entry in allPhotos) {
       try {
