@@ -655,40 +655,48 @@ class PdfReportService {
 
     return pw.Padding(
       padding: const pw.EdgeInsets.only(bottom: 4.0),
-      child: pw.Row(
-        crossAxisAlignment: pw.CrossAxisAlignment.end,
+      child: pw.Stack(
+        alignment: pw.Alignment.bottomRight,
         children: [
-          if (leftPadding > 0) pw.SizedBox(width: leftPadding),
-          pw.Flexible(
-            child: pw.Text(
-              titleText.trim(),
-              style: pw.TextStyle(font: font, fontSize: fontSize, color: color),
-              maxLines: 1,
-              overflow: pw.TextOverflow.clip,
-            ),
-          ),
-          pw.SizedBox(width: 4),
-          pw.Expanded(
-            child: pw.ClipRect(
-              child: pw.Container(
-                width: double.infinity,
-                child: pw.Text(
-                  '.' * 400,
-                  style: pw.TextStyle(
-                    font: _fontRegular,
-                    fontSize: fontSize - 1,
-                    color: PdfColors.grey500,
-                    letterSpacing: 1.5,
+          pw.Padding(
+            padding: const pw.EdgeInsets.only(right: 32.0),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              children: [
+                if (leftPadding > 0) pw.SizedBox(width: leftPadding),
+                pw.Flexible(
+                  child: pw.Text(
+                    titleText.trim(),
+                    style: pw.TextStyle(font: font, fontSize: fontSize, color: color),
+                    maxLines: 1,
+                    overflow: pw.TextOverflow.clip,
                   ),
-                  maxLines: 1,
                 ),
-              ),
+                pw.SizedBox(width: 4),
+                pw.Expanded(
+                  child: pw.ClipRect(
+                    child: pw.Container(
+                      width: double.infinity,
+                      child: pw.Text(
+                        '.' * 400,
+                        style: pw.TextStyle(
+                          font: _fontRegular,
+                          fontSize: fontSize - 1,
+                          color: PdfColors.grey500,
+                          letterSpacing: 1.5,
+                        ),
+                        maxLines: 1,
+                      ),
+                    ),
+                  ),
+                ),
+                pw.SizedBox(width: 4),
+              ],
             ),
           ),
-          pw.SizedBox(width: 6),
-          pw.Container(
-            width: 30.0,
-            alignment: pw.Alignment.centerRight,
+          pw.Positioned(
+            right: 0,
+            bottom: 0,
             child: PageNumberText(
               keyName: entry.key,
               registry: trackedPages,
