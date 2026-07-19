@@ -419,7 +419,8 @@ class PdfReportService {
           width: double.infinity,
           padding: const pw.EdgeInsets.symmetric(vertical: 14, horizontal: 14),
           decoration: pw.BoxDecoration(
-            color: PdfColors.grey500,
+            color: headerColor,
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
           ),
           child: pw.Text(
             'RAPPORT',
@@ -438,29 +439,36 @@ class PdfReportService {
           child: pw.Text(
             '${mission.natureMission!.toUpperCase()} DES INSTALLATIONS ELECTRIQUES',
             style: pw.TextStyle(
-              font: _fontRegular, 
-              fontWeight: pw.FontWeight.bold,
-              fontSize: 16, 
-              color: accentColor
+              font: _fontBold,
+              fontSize: 16,
+              color: accentColor,
             ),
             textAlign: pw.TextAlign.center,
           ),
         ),
-        // pw.SizedBox(height: 20),
-        // pw.Container(
-        //   width: double.infinity,
-        //   child: pw.Text(
-        //     mission.nomClient.toUpperCase(),
-        //     style: pw.TextStyle(font: _fontBold, fontSize: 16, fontWeight: pw.FontWeight.bold, color: accentColor),
-        //     textAlign: pw.TextAlign.center,
-        //   ),
-        // ),
-        pw.SizedBox(height: 20),
+        pw.SizedBox(height: 14),
+        pw.Container(
+          width: double.infinity,
+          child: pw.Text(
+            mission.nomClient.toUpperCase(),
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: 15,
+              color: headerColor,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+        ),
+        pw.SizedBox(height: 8),
         pw.Container(
           width: double.infinity,
           child: pw.Text(
             mission.nomSite!.toUpperCase(),
-            style: pw.TextStyle(font: _fontBold, fontSize: 16, fontWeight: pw.FontWeight.bold, color: accentColor),
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: 14,
+              color: accentColor,
+            ),
             textAlign: pw.TextAlign.center,
           ),
         ),
@@ -544,9 +552,9 @@ class PdfReportService {
     entries.add(_SommaireEntry(titre: "Vérifications complémentaires", key: 'rappel', level: 1));
     entries.add(_SommaireEntry(titre: "Surveillance & maintenance des installations électriques", key: 'rappel', level: 1));
     entries.add(_SommaireEntry(titre: "Formation du personnel intervenant sur les installations et à proximité", key: 'rappel', level: 1));
-    entries.add(_SommaireEntry(titre: "MESURES DE SECURITE AUTOUR DES INSTALLATIONS", key: 'mesures_securite', level: 2, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "TECHNICIEN EN MAINTENANCE DES INSTALLATIONS", key: 'mesures_securite', level: 2, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "Engagement de KES INSPECTIONS AND PROJECTS", key: 'rappel', level: 1));
+    entries.add(_SommaireEntry(titre: "MESURES DE SECURITE AUTOUR DES INSTALLATIONS", key: 'mesures_securite', level: 1, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "Technicien en maintenance des installations", key: 'mesures_securite', level: 1));
+    entries.add(_SommaireEntry(titre: "Engagement de KES INSPECTIONS AND PROJECTS", key: 'mesures_securite', level: 1));
 
     // 2. Objet de la vérification
     entries.add(_SommaireEntry(titre: "OBJET DE LA VERIFICATION", key: 'objet', level: 0, isBold: true, isUppercase: true));
@@ -555,100 +563,18 @@ class PdfReportService {
 
     // 3. Renseignements généraux
     entries.add(_SommaireEntry(titre: "RENSEIGNEMENTS GENERAUX DE L'ETABLISSEMENT", key: 'renseignements', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "RENSEIGNEMENTS PRINCIPAUX", key: 'renseignements', level: 1, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "DOCUMENTS NECESSAIRES A LA VERIFICATION", key: 'renseignements', level: 1, isBold: true, isUppercase: true));
 
     // 4. Description des installations
     entries.add(_SommaireEntry(titre: "DESCRIPTION DES INSTALLATIONS", key: 'description', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "Caractéristiques de l'alimentation moyenne tension", key: 'description', level: 1));
-    entries.add(_SommaireEntry(titre: "Caractéristiques de l'alimentation basse tension sortie transformateur", key: 'description', level: 1));
-    entries.add(_SommaireEntry(titre: "Caractéristiques du groupe électrogène", key: 'description', level: 1));
-    entries.add(_SommaireEntry(titre: "Alimentation du groupe électrogène en carburant", key: 'description', level: 1));
-    entries.add(_SommaireEntry(titre: "Caractéristiques de l'inverseur", key: 'description', level: 1));
-    entries.add(_SommaireEntry(titre: "Caractéristiques du stabilisateur", key: 'description', level: 1));
-    entries.add(_SommaireEntry(titre: "Caractéristiques des onduleurs", key: 'description', level: 1));
-    entries.add(_SommaireEntry(titre: "Régime de neutre", key: 'description', level: 1));
-    entries.add(_SommaireEntry(titre: "Eclairage de sécurité", key: 'description', level: 1));
-    entries.add(_SommaireEntry(titre: "Modifications apportées aux installations", key: 'description', level: 1));
-    entries.add(_SommaireEntry(titre: "Note de calcul des installations électriques", key: 'description', level: 1));
-    entries.add(_SommaireEntry(titre: "Présence de paratonnerre", key: 'description', level: 1));
-    entries.add(_SommaireEntry(titre: "Registre de sécurité", key: 'description', level: 1));
 
     // 5. Liste récapitulative
     if (audit != null) {
       entries.add(_SommaireEntry(titre: "LISTE RECAPITULATIVE DES OBSERVATIONS", key: 'liste_recap', level: 0, isBold: true, isUppercase: true));
-      entries.add(_SommaireEntry(titre: "Niveau de priorité des observations constatées", key: 'liste_recap', level: 1));
-      entries.add(_SommaireEntry(titre: "Moyenne tension", key: 'liste_recap', level: 1));
-      entries.add(_SommaireEntry(titre: "Basse tension", key: 'liste_recap', level: 1));
     }
 
     // 6. Audit des installations
     if (audit != null) {
       entries.add(_SommaireEntry(titre: "AUDIT DES INSTALLATIONS ELECTRIQUES", key: 'audit', level: 0, isBold: true, isUppercase: true));
-
-      // Locaux MT directs
-      for (var local in audit.moyenneTensionLocaux) {
-        final localKey = 'audit_local_${local.nom}';
-        entries.add(_SommaireEntry(titre: "LOCAL ${local.nom.toUpperCase()}", key: localKey, level: 1, isUppercase: true));
-        for (var c in local.coffrets) {
-          final parentKey = '${local.nom}_${c.nom}';
-          final numVal = c.numeroEquipement?.isNotEmpty == true ? c.numeroEquipement! : '-';
-          entries.add(_SommaireEntry(titre: numVal, key: 'audit_coffret_$parentKey', level: 2));
-          entries.add(_SommaireEntry(titre: c.nom, key: 'audit_coffret_$parentKey', level: 2));
-        }
-      }
-
-      // Zones MT
-      for (var zone in audit.moyenneTensionZones) {
-        final zoneKey = 'audit_zone_${zone.nom}';
-        entries.add(_SommaireEntry(titre: zone.nom.toUpperCase(), key: zoneKey, level: 1, isUppercase: true));
-        if (zone.observationsLibres.isNotEmpty) {
-          entries.add(_SommaireEntry(titre: "Items", key: zoneKey, level: 2));
-          entries.add(_SommaireEntry(titre: "OBSERVATIONS RELATIVES A LA ${zone.nom.toUpperCase()}", key: zoneKey, level: 2, isUppercase: true));
-        }
-        for (var local in zone.locaux) {
-          final localKey = 'audit_local_${local.nom}';
-          entries.add(_SommaireEntry(titre: "LOCAL ${local.nom.toUpperCase()}", key: localKey, level: 2, isUppercase: true));
-          for (var c in local.coffrets) {
-            final parentKey = '${local.nom}_${c.nom}';
-            final numVal = c.numeroEquipement?.isNotEmpty == true ? c.numeroEquipement! : '-';
-            entries.add(_SommaireEntry(titre: numVal, key: 'audit_coffret_$parentKey', level: 3));
-            entries.add(_SommaireEntry(titre: c.nom, key: 'audit_coffret_$parentKey', level: 3));
-          }
-        }
-        for (var c in zone.coffrets) {
-          final parentKey = '${zone.nom}_${c.nom}';
-          final numVal = c.numeroEquipement?.isNotEmpty == true ? c.numeroEquipement! : '-';
-          entries.add(_SommaireEntry(titre: numVal, key: 'audit_coffret_$parentKey', level: 2));
-          entries.add(_SommaireEntry(titre: c.nom, key: 'audit_coffret_$parentKey', level: 2));
-        }
-      }
-
-      // Zones BT
-      for (var zone in audit.basseTensionZones) {
-        final zoneKey = 'audit_zone_${zone.nom}';
-        entries.add(_SommaireEntry(titre: zone.nom.toUpperCase(), key: zoneKey, level: 1, isUppercase: true));
-        if (zone.observationsLibres.isNotEmpty) {
-          entries.add(_SommaireEntry(titre: "Items", key: zoneKey, level: 2));
-          entries.add(_SommaireEntry(titre: "OBSERVATIONS RELATIVES A LA ${zone.nom.toUpperCase()}", key: zoneKey, level: 2, isUppercase: true));
-        }
-        for (var c in zone.coffretsDirects) {
-          final parentKey = '${zone.nom}_${c.nom}';
-          final numVal = c.numeroEquipement?.isNotEmpty == true ? c.numeroEquipement! : '-';
-          entries.add(_SommaireEntry(titre: numVal, key: 'audit_coffret_$parentKey', level: 2));
-          entries.add(_SommaireEntry(titre: c.nom, key: 'audit_coffret_$parentKey', level: 2));
-        }
-        for (var local in zone.locaux) {
-          final localKey = 'audit_local_${local.nom}';
-          entries.add(_SommaireEntry(titre: "LOCAL ${local.nom.toUpperCase()}", key: localKey, level: 2, isUppercase: true));
-          for (var c in local.coffrets) {
-            final parentKey = '${local.nom}_${c.nom}';
-            final numVal = c.numeroEquipement?.isNotEmpty == true ? c.numeroEquipement! : '-';
-            entries.add(_SommaireEntry(titre: numVal, key: 'audit_coffret_$parentKey', level: 3));
-            entries.add(_SommaireEntry(titre: c.nom, key: 'audit_coffret_$parentKey', level: 3));
-          }
-        }
-      }
     }
 
     // 7. Classement
@@ -4163,13 +4089,11 @@ class PdfReportService {
   
   static void _addMesuresEssaisPages(pw.Document pdf, MesuresEssais mesures, Map<String, int> trackedPages) {
     // Page intro avec conditions ET les deux essais
-    pdf.addPage(pw.Page(
+    pdf.addPage(pw.MultiPage(
+      maxPages: 10,
       pageTheme: _buildInnerPageTheme(),
-      build: (ctx) => pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          _buildPageHeaderWidget(),
-          pw.SizedBox(height: 10),
+      header: (ctx) => _buildPageHeaderWidget(),
+      build: (ctx) => [
           PageTracker(
             key: 'mesures',
             registry: trackedPages,
@@ -4221,15 +4145,15 @@ class PdfReportService {
           ),
           pw.SizedBox(height: 5),
           _resultBox(mesures.testArretUrgence.observation ?? 'Satisfaisant'),
-        ],
-      ),
+      ],
     ));
     
     // Prise de terre (nouvelle page)
-    pdf.addPage(pw.Page(
+    pdf.addPage(pw.MultiPage(
+      maxPages: 10,
       pageTheme: _buildInnerPageTheme(),
-      build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        _buildPageHeaderWidget(), pw.SizedBox(height: 10),
+      header: (ctx) => _buildPageHeaderWidget(),
+      build: (ctx) => [
         PageTracker(
           key: 'mesures_terre',
           registry: trackedPages,
@@ -4316,7 +4240,7 @@ class PdfReportService {
             );
           }),
         ],
-      ]),
+      ],
     ));
     
     // Mesures d'isolement des circuits BT (nouvelle page)
@@ -4331,12 +4255,13 @@ class PdfReportService {
     ));
     
     // Essais de declenchement des DDR (nouvelle page)
-    pdf.addPage(pw.Page(
+    pdf.addPage(pw.MultiPage(
+      maxPages: 10,
       pageTheme: _buildInnerPageTheme(),
+      header: (ctx) => _buildPageHeaderWidget(),
       build: (ctx) {
         final widgets = <pw.Widget>[];
 
-        widgets.add(_buildPageHeaderWidget());
         widgets.add(PageTracker(
           key: 'mesures_ddr',
           registry: trackedPages,
@@ -4528,18 +4453,16 @@ class PdfReportService {
         widgets.add(pw.SizedBox(height: 12));
         widgets.add(_buildAbreviationsTable());
 
-        return pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: widgets,
-        );
+        return widgets;
       },
     ));
     
     // Continuite (nouvelle page)
-    pdf.addPage(pw.Page(
+    pdf.addPage(pw.MultiPage(
+      maxPages: 10,
       pageTheme: _buildInnerPageTheme(),
-      build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        _buildPageHeaderWidget(), pw.SizedBox(height: 10),
+      header: (ctx) => _buildPageHeaderWidget(),
+      build: (ctx) => [
         PageTracker(
           key: 'mesures_continuite',
           registry: trackedPages,
@@ -4560,7 +4483,7 @@ class PdfReportService {
               }),
           ],
         ),
-      ]),
+      ],
     ));
   }
 
@@ -4869,53 +4792,51 @@ class PdfReportService {
         if (allPhotos.isEmpty) return;
 
     // 1. Photos Cover/Separator Page (similar style to Audit cover page)
-    pdf.addPage(pw.Page(
+    pdf.addPage(pw.MultiPage(
+      maxPages: 1,
       pageTheme: _buildInnerPageTheme(),
-      build: (ctx) => pw.Column(
-        children: [
-          _buildPageHeaderWidget(
-            nomClient: mission.nomClient,
-            nomSite: nomSite,
-            numeroRapport: numeroRapport,
-          ),
-          pw.Expanded(
-            child: pw.Center(
-              child: pw.Column(
-                mainAxisAlignment: pw.MainAxisAlignment.center,
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                children: [
-                  pw.Container(width: 350, height: 2, color: accentColor),
-                  pw.SizedBox(height: 24),
-                  PageTracker(
-                    key: 'photos',
-                    registry: trackedPages,
-                    child: pw.Text(
-                      'PHOTOS',
-                      style: pw.TextStyle(
-                        font: _fontBold, fontSize: 20,
-                        fontWeight: pw.FontWeight.bold,
-                        color: headerColor,
-                        letterSpacing: 1.0,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  pw.SizedBox(height: 12),
-                  pw.Text(
-                    nomSite?.toUpperCase() ?? mission.nomClient.toUpperCase(),
-                    style: pw.TextStyle(
-                      font: _fontRegular, fontSize: 13, color: accentColor,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                  pw.SizedBox(height: 24),
-                  pw.Container(width: 350, height: 2, color: accentColor),
-                ],
-              ),
-            ),
-          ),
-        ],
+      header: (ctx) => _buildPageHeaderWidget(
+        nomClient: mission.nomClient,
+        nomSite: nomSite,
+        numeroRapport: numeroRapport,
       ),
+      build: (ctx) => [
+        pw.SizedBox(height: 220),
+        pw.Center(
+          child: pw.Column(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Container(width: 350, height: 2, color: accentColor),
+              pw.SizedBox(height: 24),
+              PageTracker(
+                key: 'photos',
+                registry: trackedPages,
+                child: pw.Text(
+                  'PHOTOS',
+                  style: pw.TextStyle(
+                    font: _fontBold, fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                    color: headerColor,
+                    letterSpacing: 1.0,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.SizedBox(height: 12),
+              pw.Text(
+                nomSite?.toUpperCase() ?? mission.nomClient.toUpperCase(),
+                style: pw.TextStyle(
+                  font: _fontRegular, fontSize: 13, color: accentColor,
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
+              pw.SizedBox(height: 24),
+              pw.Container(width: 350, height: 2, color: accentColor),
+            ],
+          ),
+        ),
+      ],
     ));
 
     final loadedImages = <pw.MemoryImage?>[];
@@ -5484,12 +5405,11 @@ class PdfReportService {
       ));
 
       // 4. Renseignements generaux
-      pdf.addPage(
-        pw.Page(
-          pageTheme: _buildInnerPageTheme(),
-          build: (ctx) => _buildRenseignementsGeneraux(mission, renseignements, trackedPages),
-        ),
-      );
+      pdf.addPage(pw.MultiPage(
+        maxPages: 200,
+        pageTheme: _buildInnerPageTheme(),
+        build: (ctx) => [_buildRenseignementsGeneraux(mission, renseignements, trackedPages)],
+      ));
 
       // 5. Description des installations
       pdf.addPage(pw.MultiPage(
@@ -5519,52 +5439,50 @@ class PdfReportService {
 
       // 7. Audit des installations electriques (page titre + contenu)
       if (audit != null) {
-        pdf.addPage(pw.Page(
+        pdf.addPage(pw.MultiPage(
+          maxPages: 1,
           pageTheme: _buildInnerPageTheme(),
-          build: (ctx) => pw.Column(
-            children: [
-              _buildPageHeaderWidget(
-                nomSite: nomSiteHeader,
-                numeroRapport: numeroRapportDoc,
-              ),
-              pw.Expanded(
-                child: pw.Center(
-                  child: pw.Column(
-                    mainAxisAlignment: pw.MainAxisAlignment.center,
-                    crossAxisAlignment: pw.CrossAxisAlignment.center,
-                    children: [
-                      pw.Container(width: 350, height: 2, color: accentColor),
-                      pw.SizedBox(height: 24),
-                       PageTracker(
-                        key: 'audit',
-                        registry: trackedPages,
-                        child: pw.Text(
-                          'AUDIT DES INSTALLATIONS ELECTRIQUES',
-                          style: pw.TextStyle(
-                            font: _fontBold, fontSize: 20,
-                            fontWeight: pw.FontWeight.bold,
-                            color: headerColor,
-                            letterSpacing: 1.0,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                      ),
-                      pw.SizedBox(height: 12),
-                      pw.Text(
-                        mission.nomClient.toUpperCase(),
-                        style: pw.TextStyle(
-                          font: _fontRegular, fontSize: 13, color: accentColor,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                      pw.SizedBox(height: 24),
-                      pw.Container(width: 350, height: 2, color: accentColor),
-                    ],
-                  ),
-                ),
-              ),
-            ],
+          header: (ctx) => _buildPageHeaderWidget(
+            nomSite: nomSiteHeader,
+            numeroRapport: numeroRapportDoc,
           ),
+          build: (ctx) => [
+            pw.SizedBox(height: 220),
+            pw.Center(
+              child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Container(width: 350, height: 2, color: accentColor),
+                  pw.SizedBox(height: 24),
+                  PageTracker(
+                    key: 'audit',
+                    registry: trackedPages,
+                    child: pw.Text(
+                      'AUDIT DES INSTALLATIONS ELECTRIQUES',
+                      style: pw.TextStyle(
+                        font: _fontBold, fontSize: 20,
+                        fontWeight: pw.FontWeight.bold,
+                        color: headerColor,
+                        letterSpacing: 1.0,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                  pw.SizedBox(height: 12),
+                  pw.Text(
+                    mission.nomClient.toUpperCase(),
+                    style: pw.TextStyle(
+                      font: _fontRegular, fontSize: 13, color: accentColor,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                  pw.SizedBox(height: 24),
+                  pw.Container(width: 350, height: 2, color: accentColor),
+                ],
+              ),
+            ),
+          ],
         ));
 
         pdf.addPage(pw.MultiPage(
@@ -5592,12 +5510,11 @@ class PdfReportService {
       ));
 
       // 9. Foudre
-      pdf.addPage(
-        pw.Page(
-          pageTheme: _buildInnerPageTheme(),
-          build: (ctx) => _buildFoudre(foudres, trackedPages),
-        ),
-      );
+      pdf.addPage(pw.MultiPage(
+        maxPages: 200,
+        pageTheme: _buildInnerPageTheme(),
+        build: (ctx) => [_buildFoudre(foudres, trackedPages)],
+      ));
 
       // 10. Resultats des mesures et essais
       if (mesures != null) {
@@ -5717,24 +5634,23 @@ class _SommaireEntry {
   });
 }
 
-class PageTracker extends pw.Widget {
+class PageTracker extends pw.SingleChildWidget {
   final String key;
-  final pw.Widget child;
   final Map<String, int> registry;
 
-  PageTracker({required this.key, required this.child, required this.registry});
+  PageTracker({required this.key, required pw.Widget child, required this.registry})
+      : super(child: child);
 
   @override
   void layout(pw.Context context, pw.BoxConstraints constraints, {bool parentUsesSize = false}) {
-    child.layout(context, constraints, parentUsesSize: parentUsesSize);
-    box = child.box;
+    super.layout(context, constraints, parentUsesSize: parentUsesSize);
     registry[key] = context.pageNumber;
   }
 
   @override
   void paint(pw.Context context) {
     super.paint(context);
-    child.paint(context);
+    paintChild(context);
   }
 }
 
@@ -5758,7 +5674,7 @@ class PageNumberText extends pw.Widget {
     final pageNum = registry[keyName];
     final textStr = pageNum != null ? pageNum.toString() : '--';
     final textWidget = pw.Text(textStr, style: style);
-    textWidget.box = box;
+    textWidget.layout(context, pw.BoxConstraints.tight(box!.size));
     textWidget.paint(context);
   }
 }
