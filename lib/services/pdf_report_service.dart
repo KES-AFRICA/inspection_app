@@ -682,7 +682,7 @@ class PdfReportService {
           ),
           pw.SizedBox(width: 6),
           pw.Container(
-            width: 22.0,
+            width: 25.0,
             alignment: pw.Alignment.centerRight,
             child: PageNumberText(
               keyName: entry.key,
@@ -5663,7 +5663,7 @@ class PageNumberText extends pw.Widget {
 
   @override
   void layout(pw.Context context, pw.BoxConstraints constraints, {bool parentUsesSize = false}) {
-    final dummy = pw.Text('99', style: style);
+    final dummy = pw.Text('999', style: style);
     dummy.layout(context, constraints, parentUsesSize: parentUsesSize);
     box = dummy.box;
   }
@@ -5673,7 +5673,12 @@ class PageNumberText extends pw.Widget {
     super.paint(context);
     final pageNum = registry[keyName];
     final textStr = pageNum != null ? pageNum.toString() : '--';
-    final textWidget = pw.Text(textStr, style: style);
+    
+    final textWidget = pw.Text(
+      textStr,
+      style: style,
+      textAlign: pw.TextAlign.right,
+    );
     textWidget.layout(context, pw.BoxConstraints.tight(box!.size));
     textWidget.paint(context);
   }
