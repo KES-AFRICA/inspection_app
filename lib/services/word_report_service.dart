@@ -11,12 +11,13 @@ import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/renseignements_generaux.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/report_data_collector.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 
 // ── Couleurs alignées sur le PDF ──
-const _headerBg = 'E3EBF4';    // bleu clair header
+const _headerBg = '1B365D';    // bleu sombre header KES
 const _altBg    = 'F7F9FC';    // gris alterné
 const _red      = 'F44336';
 const _orange   = 'FF9800';
@@ -41,7 +42,12 @@ class WordReportService {
       final renseignements = HiveService.getRenseignementsGenerauxByMissionId(missionId);
       final currentUser   = HiveService.getCurrentUser();
 
-      final allPhotos = <String>[];
+      // Collecte unique et dédupliquée des photographies via ReportDataCollector
+      final allPhotos = ReportDataCollector.collectAllPhotos(
+        mission: mission,
+        audit: audit,
+        description: description,
+      );
 
       final doc = Document(
         title: 'Rapport d\'Audit Électrique - ${mission.nomClient}',
@@ -67,7 +73,7 @@ class WordReportService {
       _addRenseignementsGeneraux(doc, mission, renseignements);
 
       // 6. Description des installations
-      _addDescriptionInstallations(doc, description, allPhotos);
+      _addDescriptionInstallations(doc, description);
 
       // 7. Liste récapitulative des observations
       if (audit != null) {
@@ -75,7 +81,9 @@ class WordReportService {
       }
 
       // 8. Audit des installations électriques
-      _addAuditInstallations(doc, audit, allPhotos);
+      if (audit != null) {
+        _addAuditInstallations(doc, audit);
+      }
 
       // 9. Classement des emplacements
       _addClassementEmplacements(doc, classements, classementsZones);
@@ -88,16 +96,21 @@ class WordReportService {
 
       // 12. Mesures et essais
       if (mesures != null) {
-        _addMesuresEssais(doc, mesures, allPhotos);
+        _addMesuresEssais(doc, mesures);
       }
 
-      // 13. Page de signature
-      _addSignaturePage(doc, renseignements, currentUser?.fullName);
-
-      // 14. Annexes photos
+      // 13. Photos
       if (allPhotos.isNotEmpty) {
-        _addAnnexesPhotos(doc, allPhotos);
+        await _addAnnexesPhotos(doc, allPhotos);
       }
+
+      // 14. Schéma des installations électriques (si disponible)
+      if (ReportDataCollector.hasSchemaSection(mission)) {
+        _addSchemaSection(doc, mission, renseignements);
+      }
+
+      // 15. Page de signature
+      _addSignaturePage(doc, renseignements, currentUser?.fullName);
 
       final bytes = DocxGenerator().generate(doc);
       final dir = await getTemporaryDirectory();
@@ -107,7 +120,7 @@ class WordReportService {
               .replaceAll(' ', '_');
       final file = File('${dir.path}/$fileName');
       await file.writeAsBytes(bytes);
-      if (kDebugMode) print('✅ Rapport Word généré: ${file.path}');
+      if (kDebugMode) print('✅ Rapport Word généré avec succès: ${file.path}');
       return file;
     } catch (e, st) {
       if (kDebugMode) print('❌ Erreur rapport Word: $e\n$st');
@@ -256,8 +269,8 @@ class WordReportService {
 
     final nomSite = rg?.nomSite.isNotEmpty == true ? rg!.nomSite : (mission.nomSite ?? '');
 
-    // Identification
-    _subTitle(doc, 'Identification de l\'établissement');
+    // Sous-section 1 : Renseignements principaux
+    _subSectionTitle(doc, 'Renseignements principaux');
     final idRows = <TableRow>[
       _headerRow(['Champ', 'Valeur']),
       _dataRow(['Nom du client', mission.nomClient]),
@@ -317,8 +330,8 @@ class WordReportService {
       doc.addTable(Table(rows: accRows, borders: TableBorders.all()));
     }
 
-    // Documents fournis
-    _subTitle(doc, 'Documents fournis par le client');
+    // Sous-section 2 : Documents nécessaires à la vérification
+    _subSectionTitle(doc, 'Documents nécessaires à la vérification');
     final docs = [
       ['Cahier des prescriptions', mission.docCahierPrescriptions],
       ['Notes de calculs', mission.docNotesCalculs],
@@ -346,7 +359,7 @@ class WordReportService {
   //  6. DESCRIPTION DES INSTALLATIONS
   // ═══════════════════════════════════════════════════════════════
   static void _addDescriptionInstallations(
-      Document doc, DescriptionInstallations? description, List<String> allPhotos) {
+      Document doc, DescriptionInstallations? description) {
     _sectionTitle(doc, 'DESCRIPTION DES INSTALLATIONS', level: 1, pageBreak: true);
 
     if (description == null) {
@@ -354,15 +367,10 @@ class WordReportService {
       return;
     }
 
-    void collectPhotos(List<InstallationItem> items) {
-      for (final item in items) allPhotos.addAll(item.photoPaths);
-    }
-
     void addSection(String title, List<InstallationItem> items) {
       if (items.isEmpty) return;
       _subTitle(doc, title);
       _addInstallationItemsTable(doc, items);
-      collectPhotos(items);
     }
 
     addSection('Alimentation Moyenne Tension (MT)', description.alimentationMoyenneTension);
@@ -417,7 +425,8 @@ class WordReportService {
       ]),
     ], borders: TableBorders.all()));
 
-    _subTitle(doc, 'Observations Moyenne Tension');
+    // Sous-section 1 : Moyenne tension
+    _subSectionTitle(doc, 'Moyenne tension');
     final obsMT = _collectObservationsMT(audit);
     if (obsMT.isEmpty) {
       _bodyText(doc, 'Aucune observation de non-conformité.');
@@ -437,7 +446,8 @@ class WordReportService {
       doc.addTable(Table(rows: rows, borders: TableBorders.all()));
     }
 
-    _subTitle(doc, 'Observations Basse Tension');
+    // Sous-section 2 : Basse tension
+    _subSectionTitle(doc, 'Basse tension');
     final obsBT = _collectObservationsBT(audit);
     if (obsBT.isEmpty) {
       _bodyText(doc, 'Aucune observation de non-conformité.');
@@ -607,15 +617,13 @@ class WordReportService {
   //  8. AUDIT DES INSTALLATIONS ÉLECTRIQUES
   // ═══════════════════════════════════════════════════════════════
   static void _addAuditInstallations(
-      Document doc, AuditInstallationsElectriques? audit, List<String> allPhotos) {
+      Document doc, AuditInstallationsElectriques? audit) {
     _sectionTitle(doc, 'AUDIT DES INSTALLATIONS ÉLECTRIQUES', level: 1, pageBreak: true);
 
     if (audit == null) {
       _bodyText(doc, 'Aucune donnée d\'audit disponible.');
       return;
     }
-
-    allPhotos.addAll(audit.photos);
 
     // ── MOYENNE TENSION ──
     if (audit.moyenneTensionLocaux.isNotEmpty || audit.moyenneTensionZones.isNotEmpty) {
@@ -624,14 +632,14 @@ class WordReportService {
       if (audit.moyenneTensionLocaux.isNotEmpty) {
         _subTitle(doc, 'Locaux Moyenne Tension');
         for (int i = 0; i < audit.moyenneTensionLocaux.length; i++) {
-          _addLocalMTDetails(doc, audit.moyenneTensionLocaux[i], i + 1, allPhotos);
+          _addLocalMTDetails(doc, audit.moyenneTensionLocaux[i], i + 1);
         }
       }
 
       if (audit.moyenneTensionZones.isNotEmpty) {
         _subTitle(doc, 'Zones Moyenne Tension');
         for (int i = 0; i < audit.moyenneTensionZones.length; i++) {
-          _addZoneMTDetails(doc, audit.moyenneTensionZones[i], i + 1, allPhotos);
+          _addZoneMTDetails(doc, audit.moyenneTensionZones[i], i + 1);
         }
       }
     }
@@ -640,13 +648,12 @@ class WordReportService {
     if (audit.basseTensionZones.isNotEmpty) {
       _subTitle(doc, 'BASSE TENSION');
       for (int i = 0; i < audit.basseTensionZones.length; i++) {
-        _addZoneBTDetails(doc, audit.basseTensionZones[i], i + 1, allPhotos);
+        _addZoneBTDetails(doc, audit.basseTensionZones[i], i + 1);
       }
     }
   }
 
-  static void _addLocalMTDetails(Document doc, MoyenneTensionLocal local, int idx, List<String> photos) {
-    photos.addAll(local.photos);
+  static void _addLocalMTDetails(Document doc, MoyenneTensionLocal local, int idx) {
     doc.addParagraph(Paragraph.heading('Local MT $idx : ${local.nom} (${local.type})', level: 4));
 
     doc.addTable(Table(rows: [
@@ -663,15 +670,15 @@ class WordReportService {
       _subTitle(doc, 'Conditions d\'exploitation');
       _addElementsTable(doc, local.conditionsExploitation);
     }
-    // Cellules (nouvelle liste)
-    for (final c in local.cellules) _addCelluleDetails(doc, c, photos);
-    // Transformateurs (nouvelle liste)
-    for (final t in local.transformateurs) _addTransformateurDetails(doc, t, photos);
+    // Cellules
+    for (final c in local.cellules) _addCelluleDetails(doc, c);
+    // Transformateurs
+    for (final t in local.transformateurs) _addTransformateurDetails(doc, t);
     // Coffrets
     if (local.coffrets.isNotEmpty) {
       _subTitle(doc, 'Coffrets / Armoires dans le local');
       for (int j = 0; j < local.coffrets.length; j++) {
-        _addCoffretDetails(doc, local.coffrets[j], j + 1, photos);
+        _addCoffretDetails(doc, local.coffrets[j], j + 1);
       }
     }
     if (local.observationsLibres.isNotEmpty) {
@@ -680,8 +687,7 @@ class WordReportService {
     }
   }
 
-  static void _addZoneMTDetails(Document doc, MoyenneTensionZone zone, int idx, List<String> photos) {
-    photos.addAll(zone.photos);
+  static void _addZoneMTDetails(Document doc, MoyenneTensionZone zone, int idx) {
     doc.addParagraph(Paragraph.heading('Zone MT $idx : ${zone.nom}', level: 4));
 
     final infoRows = <TableRow>[_headerRow(['Champ', 'Valeur']), _dataRow(['Nom', zone.nom])];
@@ -691,7 +697,7 @@ class WordReportService {
     if (zone.coffrets.isNotEmpty) {
       _subTitle(doc, 'Coffrets / Armoires dans la zone');
       for (int j = 0; j < zone.coffrets.length; j++) {
-        _addCoffretDetails(doc, zone.coffrets[j], j + 1, photos);
+        _addCoffretDetails(doc, zone.coffrets[j], j + 1);
       }
     }
     if (zone.observationsLibres.isNotEmpty) {
@@ -701,13 +707,12 @@ class WordReportService {
     if (zone.locaux.isNotEmpty) {
       _subTitle(doc, 'Locaux dans la zone');
       for (int j = 0; j < zone.locaux.length; j++) {
-        _addLocalMTDetails(doc, zone.locaux[j], j + 1, photos);
+        _addLocalMTDetails(doc, zone.locaux[j], j + 1);
       }
     }
   }
 
-  static void _addZoneBTDetails(Document doc, BasseTensionZone zone, int idx, List<String> photos) {
-    photos.addAll(zone.photos);
+  static void _addZoneBTDetails(Document doc, BasseTensionZone zone, int idx) {
     doc.addParagraph(Paragraph.heading('Zone BT $idx : ${zone.nom}', level: 3));
 
     final infoRows = <TableRow>[_headerRow(['Champ', 'Valeur']), _dataRow(['Nom', zone.nom])];
@@ -717,7 +722,7 @@ class WordReportService {
     if (zone.coffretsDirects.isNotEmpty) {
       _subTitle(doc, 'Coffrets / Armoires directs');
       for (int j = 0; j < zone.coffretsDirects.length; j++) {
-        _addCoffretDetails(doc, zone.coffretsDirects[j], j + 1, photos);
+        _addCoffretDetails(doc, zone.coffretsDirects[j], j + 1);
       }
     }
     if (zone.observationsLibres.isNotEmpty) {
@@ -727,13 +732,12 @@ class WordReportService {
     if (zone.locaux.isNotEmpty) {
       _subTitle(doc, 'Locaux dans la zone');
       for (int j = 0; j < zone.locaux.length; j++) {
-        _addLocalBTDetails(doc, zone.locaux[j], j + 1, photos);
+        _addLocalBTDetails(doc, zone.locaux[j], j + 1);
       }
     }
   }
 
-  static void _addLocalBTDetails(Document doc, BasseTensionLocal local, int idx, List<String> photos) {
-    photos.addAll(local.photos);
+  static void _addLocalBTDetails(Document doc, BasseTensionLocal local, int idx) {
     doc.addParagraph(Paragraph.heading('Local BT $idx : ${local.nom} (${local.type})', level: 5));
 
     doc.addTable(Table(rows: [
@@ -753,14 +757,14 @@ class WordReportService {
       _subTitle(doc, 'Conditions d\'exploitation');
       _addElementsTable(doc, local.conditionsExploitation!);
     }
-    // Cellules BT (LOCAL_MTBT)
-    for (final c in local.cellules) _addCelluleDetails(doc, c, photos);
-    for (final t in local.transformateurs) _addTransformateurDetails(doc, t, photos);
+    // Cellules BT
+    for (final c in local.cellules) _addCelluleDetails(doc, c);
+    for (final t in local.transformateurs) _addTransformateurDetails(doc, t);
 
     if (local.coffrets.isNotEmpty) {
       _subTitle(doc, 'Coffrets / Armoires');
       for (int k = 0; k < local.coffrets.length; k++) {
-        _addCoffretDetails(doc, local.coffrets[k], k + 1, photos);
+        _addCoffretDetails(doc, local.coffrets[k], k + 1);
       }
     }
     if (local.observationsLibres.isNotEmpty) {
@@ -769,8 +773,7 @@ class WordReportService {
     }
   }
 
-  static void _addCelluleDetails(Document doc, Cellule c, List<String> photos) {
-    photos.addAll(c.photos);
+  static void _addCelluleDetails(Document doc, Cellule c) {
     doc.addParagraph(Paragraph.heading('Cellule : ${c.fonction}', level: 6));
     doc.addTable(Table(rows: [
       _headerRow(['Champ', 'Valeur']),
@@ -789,8 +792,7 @@ class WordReportService {
     }
   }
 
-  static void _addTransformateurDetails(Document doc, TransformateurMTBT t, List<String> photos) {
-    photos.addAll(t.photos);
+  static void _addTransformateurDetails(Document doc, TransformateurMTBT t) {
     doc.addParagraph(Paragraph.heading('Transformateur', level: 6));
     doc.addTable(Table(rows: [
       _headerRow(['Champ', 'Valeur']),
@@ -809,10 +811,7 @@ class WordReportService {
     }
   }
 
-  static void _addCoffretDetails(Document doc, CoffretArmoire coffret, int idx, List<String> photos) {
-    photos.addAll(coffret.photos);
-    photos.addAll(coffret.photosExternes);
-    photos.addAll(coffret.photosInternes);
+  static void _addCoffretDetails(Document doc, CoffretArmoire coffret, int idx) {
 
     doc.addParagraph(Paragraph.heading('Équipement $idx : ${coffret.nom} (${coffret.type})', level: 7));
 
@@ -1057,12 +1056,12 @@ class WordReportService {
   // ═══════════════════════════════════════════════════════════════
   //  12. MESURES ET ESSAIS
   // ═══════════════════════════════════════════════════════════════
-  static void _addMesuresEssais(Document doc, MesuresEssais mesures, List<String> allPhotos) {
+  static void _addMesuresEssais(Document doc, MesuresEssais mesures) {
     _sectionTitle(doc, 'MESURES ET ESSAIS', level: 1, pageBreak: true);
 
     // Conditions de mesure
     if (mesures.conditionMesure.observation?.isNotEmpty == true) {
-      _subTitle(doc, 'Conditions de mesure');
+      _subSectionTitle(doc, 'Conditions de mesure');
       doc.addTable(Table(rows: [
         _headerRow(['Conditions de mesure']),
         TableRow(cells: [TableCell.text(mesures.conditionMesure.observation!)]),
@@ -1071,7 +1070,7 @@ class WordReportService {
 
     // Essais démarrage auto
     if (mesures.essaiDemarrageAuto.observation?.isNotEmpty == true) {
-      _subTitle(doc, 'Essais de démarrage automatique du groupe électrogène');
+      _subSectionTitle(doc, 'Essais de démarrage automatique du groupe électrogène');
       doc.addTable(Table(rows: [
         _headerRow(['Résultat']),
         TableRow(cells: [TableCell.text(mesures.essaiDemarrageAuto.observation!)]),
@@ -1080,7 +1079,7 @@ class WordReportService {
 
     // Test arrêt urgence
     if (mesures.testArretUrgence.observation?.isNotEmpty == true) {
-      _subTitle(doc, 'Test de fonctionnement de l\'arrêt d\'urgence');
+      _subSectionTitle(doc, 'Test de fonctionnement de l\'arrêt d\'urgence');
       doc.addTable(Table(rows: [
         _headerRow(['Résultat']),
         TableRow(cells: [TableCell.text(mesures.testArretUrgence.observation!)]),
@@ -1089,7 +1088,7 @@ class WordReportService {
 
     // Prises de terre
     if (mesures.prisesTerre.isNotEmpty) {
-      _subTitle(doc, 'Prises de terre');
+      _subSectionTitle(doc, 'Prises de terre');
       final rows = <TableRow>[
         _headerRow(['Localisation', 'Identification', 'Condition', 'Nature', 'Méthode', 'Valeur (Ω)', 'Observation']),
         for (final pt in mesures.prisesTerre)
@@ -1131,7 +1130,7 @@ class WordReportService {
 
     // Essais déclenchement différentiels
     if (mesures.essaisDeclenchement.isNotEmpty) {
-      _subTitle(doc, 'Essais de déclenchement des dispositifs différentiels');
+      _subSectionTitle(doc, 'Essais de déclenchement des dispositifs différentiels et mesure d\'isolement');
       final rows = <TableRow>[
         _headerRow(['Localisation', 'Coffret', 'Circuit', 'Type', 'IΔn (mA)', 'Tempo (s)', 'Isolement (MΩ)', 'Essai', 'Observation']),
         for (final e in mesures.essaisDeclenchement)
@@ -1163,7 +1162,7 @@ class WordReportService {
 
     // Continuité et résistance
     if (mesures.continuiteResistances.isNotEmpty) {
-      _subTitle(doc, 'Continuité et résistance des conducteurs de protection');
+      _subSectionTitle(doc, 'Continuité et résistance des conducteurs de protection et des liaisons équipotentielles');
       final rows = <TableRow>[
         _headerRow(['Localisation', 'Désignation tableau', 'Origine mesure', 'Observation']),
         for (final c in mesures.continuiteResistances)
@@ -1198,29 +1197,32 @@ class WordReportService {
   }
 
   // ═══════════════════════════════════════════════════════════════
-  //  14. ANNEXES PHOTOS
+  //  13. PHOTOS
   // ═══════════════════════════════════════════════════════════════
-  static void _addAnnexesPhotos(Document doc, List<String> allPhotos) {
-    _sectionTitle(doc, 'ANNEXES — PHOTOS', level: 1, pageBreak: true);
-    _bodyText(doc, 'Liste des photos prises lors de l\'audit :');
+  static Future<void> _addAnnexesPhotos(Document doc, List<ReportPhotoItem> allPhotos) async {
+    _sectionTitle(doc, 'PHOTOS', level: 1, pageBreak: true);
+    _bodyText(doc, 'Photographies recueillies lors de la mission d\'inspection :');
 
     final rows = <TableRow>[
-      _headerRow(['N°', 'Fichier', 'Description']),
+      _headerRow(['N°', 'Référence', 'Emplacement / Légende']),
     ];
 
     for (int i = 0; i < allPhotos.length; i++) {
-      final fileName = allPhotos[i].split('/').last;
-      String desc = 'Photo d\'audit';
-      if (fileName.contains('zone')) {
-        desc = 'Photo de zone';
-      // ignore: curly_braces_in_flow_control_structures
-      } else if (fileName.contains('local')) desc = 'Photo de local';
-      else if (fileName.contains('coffret')) desc = 'Photo de coffret';
-      else if (fileName.contains('transformateur')) desc = 'Photo de transformateur';
-      else if (fileName.contains('cellule')) desc = 'Photo de cellule';
-      rows.add(_dataRow(['${i + 1}', fileName, desc]));
+      final photo = allPhotos[i];
+      final repTxt = photo.repere?.isNotEmpty == true ? ' [Réf: ${photo.repere}]' : '';
+      doc.addParagraph(Paragraph.caption('Photo ${i + 1} / ${allPhotos.length}$repTxt : ${photo.description}'));
+      rows.add(_dataRow(['${i + 1}', photo.repere ?? '-', '${photo.description}$repTxt']));
     }
     doc.addTable(Table(rows: rows, borders: TableBorders.all()));
+  }
+
+  // ═══════════════════════════════════════════════════════════════
+  //  14. SCHÉMA DES INSTALLATIONS ÉLECTRIQUES
+  // ═══════════════════════════════════════════════════════════════
+  static void _addSchemaSection(Document doc, Mission mission, RenseignementsGeneraux? rg) {
+    _sectionTitle(doc, 'SCHÉMA DES INSTALLATIONS ÉLECTRIQUES', level: 1, pageBreak: true);
+    final nomSite = rg?.nomSite.isNotEmpty == true ? rg!.nomSite : (mission.nomSite ?? mission.nomClient);
+    _bodyText(doc, 'Schéma des installations électriques existantes pour l\'établissement : ${nomSite.toUpperCase()}');
   }
 
   // ═══════════════════════════════════════════════════════════════
@@ -1309,8 +1311,12 @@ class WordReportService {
         pageBreakBefore: pageBreak));
   }
 
+  static void _subSectionTitle(Document doc, String title) {
+    doc.addParagraph(Paragraph.heading(title, level: 2));
+  }
+
   static void _subTitle(Document doc, String title) {
-    doc.addParagraph(Paragraph.heading(title, level: 5));
+    doc.addParagraph(Paragraph.heading(title, level: 3));
   }
 
   static void _bodyText(Document doc, String text) {
