@@ -5,6 +5,7 @@ import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/pages/missions/home_screen.dart';
+import 'package:inspec_app/pages/missions/mission_hub/mission_hub_screen.dart';
 import 'package:inspec_app/pages/missions/sequence/sequence_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/services/pdf_report_service.dart';
@@ -256,7 +257,10 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
                 onPressed: () {
                   Navigator.of(context).pushReplacement(
                     MaterialPageRoute(
-                      builder: (context) => HomeScreen(user: widget.user),
+                      builder: (context) => MissionHubScreen(
+                        mission: _currentMission,
+                        user: widget.user,
+                      ),
                     ),
                   );
                 },

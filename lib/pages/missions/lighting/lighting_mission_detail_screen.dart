@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/models/lighting_inspection.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/pages/missions/lighting/lighting_inspection_form_screen.dart';
@@ -43,242 +44,360 @@ class _LightingMissionDetailScreenState
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
 
     return Scaffold(
-      backgroundColor: isDark ? const Color(0xFF121212) : const Color(0xFFF8F9FC),
+      backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
+        backgroundColor: AppTheme.primaryBlue,
+        elevation: 0,
+        centerTitle: true,
+        leading: Container(
+          margin: EdgeInsets.all(isSmallScreen ? 6 : 8),
+          decoration: BoxDecoration(
+            color: Colors.white.withValues(alpha: 0.2),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: IconButton(
+            icon: Icon(Icons.arrow_back, size: isSmallScreen ? 20 : 24, color: Colors.white),
+            onPressed: () => Navigator.of(context).pop(),
+          ),
+        ),
         title: const Text(
           'Vérification Éclairage',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        elevation: 0,
-        backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        foregroundColor: isDark ? Colors.white : const Color(0xFF1B365D),
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _openCreateForm,
-        backgroundColor: const Color(0xFFE65100),
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text(
-          'Nouvelle inspection',
-          style: TextStyle(fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: AppTheme.white,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
         ),
       ),
+      floatingActionButton: _inspections.isNotEmpty
+          ? FloatingActionButton.extended(
+              onPressed: _openCreateForm,
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: AppTheme.white,
+              icon: const Icon(Icons.add),
+              label: const Text(
+                'Nouvelle inspection',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            )
+          : null,
       body: SafeArea(
-        child: RefreshIndicator(
-          onRefresh: () async => _loadInspections(),
-          child: SingleChildScrollView(
-            physics: const AlwaysScrollableScrollPhysics(),
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ── En-tête synthétique de la Mission ──
-                _buildHeaderCard(isDark),
+        child: SingleChildScrollView(
+          padding: EdgeInsets.all(isSmallScreen ? 12.0 : 16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // ── 1. Carte Client / Site Équivalente à BasseTensionScreen (avec vrai statut Hive) ──
+              _buildHeaderClientCard(isSmallScreen),
 
-                const SizedBox(height: 24),
+              const SizedBox(height: 20),
 
-                Row(
+              // ── 2. Segmentation Nette Visuelle Client vs Liste ──
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                decoration: BoxDecoration(
+                  color: AppTheme.primaryBlue.withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.2),
+                  ),
+                ),
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
                       'INSPECTIONS RÉALISÉES (${_inspections.length})',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w800,
                         letterSpacing: 1.2,
-                        color: isDark
-                            ? Colors.grey.shade400
-                            : const Color(0xFF5A6B82),
+                        color: AppTheme.primaryBlue,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.refresh_rounded, size: 20),
-                      onPressed: _loadInspections,
-                      tooltip: 'Rafraîchir',
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.primaryBlue,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: Text(
+                        '${_inspections.length} local(aux)',
+                        style: const TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.white,
+                        ),
+                      ),
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
+              ),
 
-                // ── Liste des Inspections d'Éclairage ──
-                if (_isLoading)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(40.0),
-                      child: CircularProgressIndicator(),
-                    ),
-                  )
-                else if (_inspections.isEmpty)
-                  _buildEmptyState(isDark)
-                else
-                  ListView.separated(
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: _inspections.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 16),
-                    itemBuilder: (context, index) {
-                      final inspection = _inspections[index];
-                      return _buildInspectionCard(inspection, isDark);
-                    },
+              const SizedBox(height: 14),
+
+              // ── 3. Liste des Inspections Éclairage (Affichage Complet sans tronquage) ──
+              if (_isLoading)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(40.0),
+                    child: CircularProgressIndicator(),
                   ),
-                const SizedBox(height: 80), // Espace FAB
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  /// Card Header général
-  Widget _buildHeaderCard(bool isDark) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E2638) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? const Color(0xFF2C3854) : const Color(0xFFE2E8F0),
-          width: 1.5,
-        ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.3 : 0.04),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE65100).withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(12),
+                )
+              else if (_inspections.isEmpty)
+                _buildEmptyState()
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _inspections.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 10),
+                  itemBuilder: (context, index) {
+                    final inspection = _inspections[index];
+                    return _buildLocalInspectionCard(inspection, isSmallScreen);
+                  },
                 ),
-                child: const Icon(
-                  Icons.lightbulb_rounded,
-                  color: Color(0xFFE65100),
-                  size: 24,
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.mission.nomClient,
-                      style: TextStyle(
-                        fontSize: 17,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : const Color(0xFF1B365D),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      'Site : ${widget.mission.nomSite}',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: isDark
-                            ? Colors.grey.shade300
-                            : Colors.grey.shade700,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              const SizedBox(height: 80), // Espace FAB
             ],
           ),
-        ],
+        ),
       ),
     );
   }
 
-  /// Card Inspection Individuelle
-  Widget _buildInspectionCard(LightingInspection inspection, bool isDark) {
+  /// Carte Client / Site avec récupération du statut exact en temps réel depuis Hive
+  Widget _buildHeaderClientCard(bool isSmallScreen) {
+    // Récupération dynamique de la version fraîche de la mission dans Hive pour éviter tout statut biaisé
+    final currentMission = HiveService.getMissionById(widget.mission.id) ?? widget.mission;
+    final status = currentMission.status;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: EdgeInsets.all(isSmallScreen ? 14.0 : 18.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'CLIENT',
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 1.1,
+                          color: AppTheme.greyDark,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        currentMission.nomClient,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.textDark,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                _buildStatusBadge(status),
+              ],
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 10),
+              child: Divider(height: 1),
+            ),
+            Row(
+              children: [
+                const Icon(Icons.location_on_outlined,
+                    size: 16, color: AppTheme.primaryBlue),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    'Site : ${currentMission.nomSite ?? "Non précisé"}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textLight,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Badge de statut de mission réassorti
+  Widget _buildStatusBadge(String status) {
+    Color bg;
+    Color fg;
+    String label;
+
+    switch (status.toLowerCase()) {
+      case 'terminee':
+      case 'terminée':
+        bg = Colors.green.shade50;
+        fg = Colors.green.shade800;
+        label = 'TERMINÉE';
+        break;
+      case 'en_cours':
+      case 'en cours':
+        bg = AppTheme.primaryBlue.withValues(alpha: 0.1);
+        fg = AppTheme.primaryBlue;
+        label = 'EN COURS';
+        break;
+      default:
+        bg = Colors.orange.shade50;
+        fg = Colors.orange.shade800;
+        label = 'EN ATTENTE';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          fontWeight: FontWeight.bold,
+          color: fg,
+        ),
+      ),
+    );
+  }
+
+  /// Carte d'Inspection avec affichage complet de TOUTES les informations (rien n'est coupé)
+  Widget _buildLocalInspectionCard(
+      LightingInspection inspection, bool isSmallScreen) {
     final isConforme = inspection.nbLuminairesNonConformes == 0;
     final dateFormat = DateFormat('dd/MM/yyyy HH:mm');
 
     return Container(
+      margin: const EdgeInsets.only(bottom: 2),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(18),
+        color: AppTheme.white,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(
-          color: isDark ? const Color(0xFF2D2D2D) : const Color(0xFFE2E8F0),
-          width: 1.5,
+          color: isConforme ? Colors.grey.shade200 : Colors.red.shade200,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(isDark ? 0.2 : 0.03),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.02),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
       child: InkWell(
         onTap: () => _openEditForm(inspection),
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: EdgeInsets.all(isSmallScreen ? 12.0 : 16.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Container(
+                    width: 42,
+                    height: 42,
+                    decoration: BoxDecoration(
+                      color: isConforme
+                          ? Colors.green.shade50
+                          : Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Icon(
+                      Icons.meeting_room_outlined,
+                      color: isConforme ? Colors.green.shade800 : Colors.red.shade800,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          inspection.batimentLocal,
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                            color: isDark
-                                ? Colors.white
-                                : const Color(0xFF1E293B),
-                          ),
-                        ),
-                        const SizedBox(height: 4),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Icon(Icons.style_outlined,
-                                size: 14, color: Colors.grey.shade600),
-                            const SizedBox(width: 4),
-                            Text(
-                              inspection.typeLuminaire,
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: isDark
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade700,
+                            Expanded(
+                              child: Text(
+                                inspection.batimentLocal,
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textDark,
+                                ),
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            Icon(Icons.calendar_today_outlined,
-                                size: 14, color: Colors.grey.shade600),
-                            const SizedBox(width: 4),
-                            Text(
-                              dateFormat.format(inspection.dateVerification),
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: isDark
-                                    ? Colors.grey.shade400
-                                    : Colors.grey.shade700,
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: isConforme
+                                    ? Colors.green.shade700
+                                    : Colors.red.shade700,
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                inspection.status.toUpperCase(),
+                                style: const TextStyle(
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.white,
+                                ),
                               ),
                             ),
                           ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Type : ${inspection.typeLuminaire}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w500,
+                            color: AppTheme.textDark,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Vérifié le ${dateFormat.format(inspection.dateVerification)}',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textLight,
+                          ),
                         ),
                       ],
                     ),
@@ -306,7 +425,8 @@ class _LightingMissionDetailScreenState
                             Icon(Icons.delete_outline,
                                 size: 18, color: Colors.red),
                             SizedBox(width: 8),
-                            Text('Supprimer', style: TextStyle(color: Colors.red)),
+                            Text('Supprimer',
+                                style: TextStyle(color: Colors.red)),
                           ],
                         ),
                       ),
@@ -314,92 +434,51 @@ class _LightingMissionDetailScreenState
                   ),
                 ],
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               const Divider(height: 1),
-              const SizedBox(height: 12),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 12,
+                runSpacing: 4,
                 children: [
                   Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Badge Conformes
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE8F5E9),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.check_circle_outline,
-                                size: 14, color: Color(0xFF2E7D32)),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${inspection.nbLuminairesConformes} conformes',
-                              style: const TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF2E7D32),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Badge Non Conformes
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: inspection.nbLuminairesNonConformes > 0
-                              ? const Color(0xFFFFEBEE)
-                              : const Color(0xFFF1F5F9),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              Icons.error_outline,
-                              size: 14,
-                              color: inspection.nbLuminairesNonConformes > 0
-                                  ? const Color(0xFFC62828)
-                                  : Colors.grey.shade600,
-                            ),
-                            const SizedBox(width: 4),
-                            Text(
-                              '${inspection.nbLuminairesNonConformes} non conformes',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: inspection.nbLuminairesNonConformes > 0
-                                    ? const Color(0xFFC62828)
-                                    : Colors.grey.shade600,
-                              ),
-                            ),
-                          ],
+                      const Icon(Icons.check_circle_outline,
+                          size: 14, color: Colors.green),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${inspection.nbLuminairesConformes} conformes',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green.shade800,
                         ),
                       ),
                     ],
                   ),
-                  // Statut Pill
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: isConforme
-                          ? const Color(0xFF2E7D32)
-                          : const Color(0xFFC62828),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      inspection.status,
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 14,
+                        color: inspection.nbLuminairesNonConformes > 0
+                            ? Colors.red.shade800
+                            : AppTheme.greyDark,
                       ),
-                    ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${inspection.nbLuminairesNonConformes} non conformes',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: inspection.nbLuminairesNonConformes > 0
+                              ? Colors.red.shade800
+                              : AppTheme.greyDark,
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -410,66 +489,63 @@ class _LightingMissionDetailScreenState
     );
   }
 
-  /// Empty state
-  Widget _buildEmptyState(bool isDark) {
+  /// Empty state quand aucune inspection n'existe
+  Widget _buildEmptyState() {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
       decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: isDark ? const Color(0xFF2C2C2C) : const Color(0xFFE2E8F0),
-          width: 1.5,
-        ),
+        color: AppTheme.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: const Color(0xFFE65100).withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              Icons.lightbulb_outline_rounded,
-              size: 48,
-              color: Color(0xFFE65100),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'Aucune inspection d\'éclairage',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: isDark ? Colors.white : const Color(0xFF1E293B),
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Démarrez votre première vérification d\'éclairage pour ce site en cliquant sur le bouton ci-dessous.',
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 13,
-              color: isDark ? Colors.grey.shade400 : Colors.grey.shade600,
-            ),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton.icon(
-            onPressed: _openCreateForm,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFE65100),
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: const Icon(
+                Icons.lightbulb_outline,
+                size: 40,
+                color: AppTheme.primaryBlue,
+              ),
             ),
-            icon: const Icon(Icons.add_rounded),
-            label: const Text('Nouvelle inspection'),
-          ),
-        ],
+            const SizedBox(height: 16),
+            const Text(
+              'Aucune inspection d\'éclairage',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.textDark,
+              ),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Démarrez votre première vérification d\'éclairage pour ce site en cliquant sur le bouton ci-dessous.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 13,
+                color: AppTheme.textLight,
+              ),
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: _openCreateForm,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                foregroundColor: AppTheme.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: const Icon(Icons.add),
+              label: const Text('Nouvelle inspection'),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -505,6 +581,7 @@ class _LightingMissionDetailScreenState
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         title: const Text('Supprimer l\'inspection ?'),
         content: Text(
             'Voulez-vous vraiment supprimer l\'inspection éclairage du local "${inspection.batimentLocal}" ?'),
@@ -513,16 +590,14 @@ class _LightingMissionDetailScreenState
             onPressed: () => Navigator.of(ctx).pop(),
             child: const Text('Annuler'),
           ),
-          TextButton(
+          ElevatedButton(
             onPressed: () async {
               Navigator.of(ctx).pop();
               await HiveService.deleteLightingInspection(inspection.id);
               _loadInspections();
             },
-            child: const Text(
-              'Supprimer',
-              style: TextStyle(color: Colors.red),
-            ),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Supprimer'),
           ),
         ],
       ),
