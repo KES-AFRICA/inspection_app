@@ -10,6 +10,7 @@ import 'package:inspec_app/models/jsa.dart';
 import 'package:inspec_app/models/last_report.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/services/secure_password_service.dart';
+import 'package:inspec_app/models/lighting_inspection.dart';
 import '../models/verificateur.dart';
 import '../models/mission.dart';
 import '../models/renseignements_generaux.dart';
@@ -27,6 +28,7 @@ class HiveService {
   static const String _coffretDraftsBox = 'coffret_drafts';
   static const String _classementZoneBox = 'classement_zones';
   static const String _localDraftsBox = 'local_drafts';
+  static const String _lightingInspectionBox = 'lighting_inspections';
 
   // Initialiser Hive
   static Future<void> init() async {
@@ -69,6 +71,9 @@ class HiveService {
     Hive.registerAdapter(JSAVerificationFinaleAdapter());
     Hive.registerAdapter(ClassementZoneAdapter());
     Hive.registerAdapter(LastReportAdapter());
+    Hive.registerAdapter(LuminaireQuestionAnswerAdapter());
+    Hive.registerAdapter(NonConformingLuminaireAdapter());
+    Hive.registerAdapter(LightingInspectionAdapter());
 
     // Ouvrir toutes les boxes avec le type correct
     await Hive.openBox('meta');
@@ -78,6 +83,7 @@ class HiveService {
     await Hive.openBox<AuditInstallationsElectriques>(_auditBox);
     await Hive.openBox<ClassementEmplacement>(_classementBox);
     await Hive.openBox<Foudre>(_foudreBox); 
+    await Hive.openBox<LightingInspection>(_lightingInspectionBox); 
     await Hive.openBox<MesuresEssais>(_mesuresEssaisBox);
     await Hive.openBox(_currentUserKey);  // Box sans type (dynamic)
     await Hive.openBox<RenseignementsGeneraux>(_renseignementsGenerauxBox);
@@ -7343,6 +7349,43 @@ static String? findCoffretDoublon({
   return null;
 }
 
+  // ═══════════════════════════════════════════════════════════════
+  // MÉTHODES - INSPECTIONS ÉCLAIRAGE
+  // ═══════════════════════════════════════════════════════════════
+
+  static Box<LightingInspection> get _lightingBox =>
+      Hive.box<LightingInspection>(_lightingInspectionBox);
+
+  /// Récupère toutes les inspections d'éclairage pour une mission donnée
+  static List<LightingInspection> getLightingInspectionsByMissionId(
+      String missionId) {
+    return _lightingBox.values
+        .where((inspection) => inspection.missionId == missionId)
+        .toList()
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+  }
+
+  /// Récupère une inspection d'éclairage par son ID
+  static LightingInspection? getLightingInspectionById(String inspectionId) {
+    try {
+      return _lightingBox.values
+          .firstWhere((inspection) => inspection.id == inspectionId);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Sauvegarde ou met à jour une inspection d'éclairage
+  static Future<void> saveLightingInspection(
+      LightingInspection inspection) async {
+    inspection.updatedAt = DateTime.now();
+    await _lightingBox.put(inspection.id, inspection);
+  }
+
+  /// Supprime une inspection d'éclairage par son ID
+  static Future<void> deleteLightingInspection(String inspectionId) async {
+    await _lightingBox.delete(inspectionId);
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════

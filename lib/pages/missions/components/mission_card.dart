@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_detail_screen.dart';
+import 'package:inspec_app/pages/missions/mission_hub/mission_hub_screen.dart';
 import 'package:inspec_app/services/backup_service.dart';
 import '../../../models/mission.dart';
 import '../../../constants/app_theme.dart';
@@ -220,9 +221,9 @@ class MissionCard extends StatelessWidget {
       child: ClipRRect(
         borderRadius: BorderRadius.circular(16),
         child: InkWell(
-          onTap: () => Navigator.of(context).pushReplacement(
+          onTap: () => Navigator.of(context).push(
             MaterialPageRoute(
-              builder: (_) => MissionDetailScreen(mission: mission, user: user),
+              builder: (_) => MissionHubScreen(mission: mission, user: user),
             ),
           ),
           child: Column(
