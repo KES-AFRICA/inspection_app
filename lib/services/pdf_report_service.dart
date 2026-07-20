@@ -355,7 +355,9 @@ class PdfReportService {
   //  PAGE DE COUVERTURE
   // ──────────────────────────────────────────────────────────────
   
-  static pw.Widget _buildCoverPage(Mission mission, RenseignementsGeneraux? rg, pw.Context ctx) {
+  static pw.Widget _buildCoverPage(
+      Mission mission, RenseignementsGeneraux? rg, pw.Context ctx,
+      {String? subTitleOverride}) {
     final dateDebut = rg?.dateDebut ?? mission.dateIntervention;
     final dateFin   = rg?.dateFin;
     String dateIntervention;
@@ -437,7 +439,8 @@ class PdfReportService {
         pw.Container(
           width: double.infinity,
           child: pw.Text(
-            '${mission.natureMission!.toUpperCase()} DES INSTALLATIONS ELECTRIQUES',
+            subTitleOverride ??
+                '${mission.natureMission!.toUpperCase()} DES INSTALLATIONS ELECTRIQUES',
             style: pw.TextStyle(
               font: _fontBold,
               fontSize: 16,
@@ -5665,6 +5668,43 @@ class PdfReportService {
       }
     }
   }
+
+  // ──────────────────────────────────────────────────────────────
+  //  HELPERS PUBLICS REUTILISABLES PAR LES MODULES DEDIES (EX: PdfReportLightService)
+  // ──────────────────────────────────────────────────────────────
+
+  static pw.PageTheme buildCoverPageTheme() => _buildCoverPageTheme();
+  static pw.PageTheme buildInnerPageTheme() => _buildInnerPageTheme();
+  static pw.Widget buildCoverPage(
+          Mission mission, RenseignementsGeneraux? rg, pw.Context ctx,
+          {String? subTitleOverride}) =>
+      _buildCoverPage(mission, rg, ctx, subTitleOverride: subTitleOverride);
+  static pw.Widget buildPageHeaderWidget(
+          {String? nomClient, String? nomSite, String? numeroRapport}) =>
+      _buildPageHeaderWidget(
+          nomClient: nomClient, nomSite: nomSite, numeroRapport: numeroRapport);
+  static void addSommairePages(
+          pw.Document pdf, List<SommaireEntry> entries, Map<String, int> trackedPages,
+          {String? nomClient, String? nomSite, String? numeroRapport}) =>
+      _addSommairePages(pdf, entries, trackedPages,
+          nomClient: nomClient, nomSite: nomSite, numeroRapport: numeroRapport);
+  static pw.Widget sectionBox(String title) => _sectionBox(title);
+  static pw.Widget subTitle(String title) => _subTitle(title);
+  static pw.TableRow tableHeaderRow(List<String> headers) =>
+      _tableHeaderRow(headers);
+  static pw.TableRow tableDataRow(List<String> data, {required bool alt}) =>
+      _tableDataRow(data, alt: alt);
+  static pw.Widget cell(String text,
+          {required bool isHeader,
+          PdfColor? color,
+          int colspan = 1,
+          bool centered = false}) =>
+      _cell(text, isHeader: isHeader, color: color, colspan: colspan, centered: centered);
+  static Future<void> loadImages() => _loadImages();
+  static Future<void> loadFonts() => _loadFonts();
+  static pw.Font get fontRegular => _fontRegular;
+  static pw.Font get fontBold => _fontBold;
+  static String formatDate(DateTime d) => _formatDate(d);
 }
 
 // ================================================================
@@ -5706,14 +5746,14 @@ class _PhotoEntry {
   });
 }
 
-class _SommaireEntry {
+class SommaireEntry {
   final String titre;
   final String key;
   final int level;
   final bool isBold;
   final bool isUppercase;
 
-  _SommaireEntry({
+  SommaireEntry({
     required this.titre,
     required this.key,
     required this.level,
@@ -5721,6 +5761,8 @@ class _SommaireEntry {
     this.isUppercase = false,
   });
 }
+
+typedef _SommaireEntry = SommaireEntry;
 
 class PageTracker extends pw.SingleChildWidget {
   final String key;

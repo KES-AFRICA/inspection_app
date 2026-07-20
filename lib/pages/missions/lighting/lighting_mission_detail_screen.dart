@@ -6,13 +6,15 @@ import 'package:inspec_app/pages/missions/lighting/lighting_inspection_form_scre
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:intl/intl.dart';
 
+import 'package:inspec_app/pages/missions/lighting/lighting_summary_screen.dart';
+
 class LightingMissionDetailScreen extends StatefulWidget {
   final Mission mission;
 
   const LightingMissionDetailScreen({
-    super.key,
+    Key? key,
     required this.mission,
-  });
+  }) : super(key: key);
 
   @override
   State<LightingMissionDetailScreen> createState() =>
@@ -31,9 +33,7 @@ class _LightingMissionDetailScreenState
   }
 
   void _loadInspections() {
-    setState(() {
-      _isLoading = true;
-    });
+    setState(() => _isLoading = true);
     final list =
         HiveService.getLightingInspectionsByMissionId(widget.mission.id);
     setState(() {
@@ -44,8 +44,8 @@ class _LightingMissionDetailScreenState
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isSmallScreen = screenWidth < 360;
+    final mediaQuery = MediaQuery.of(context);
+    final isSmallScreen = mediaQuery.size.width < 360;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -74,15 +74,34 @@ class _LightingMissionDetailScreenState
         ),
       ),
       floatingActionButton: _inspections.isNotEmpty
-          ? FloatingActionButton.extended(
-              onPressed: _openCreateForm,
-              backgroundColor: AppTheme.primaryBlue,
-              foregroundColor: AppTheme.white,
-              icon: const Icon(Icons.add),
-              label: const Text(
-                'Nouvelle inspection',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
+          ? Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                FloatingActionButton(
+                  heroTag: 'pdf_report_btn',
+                  onPressed: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            LightingSummaryScreen(mission: widget.mission),
+                      ),
+                    );
+                  },
+                  backgroundColor: Colors.red.shade700,
+                  foregroundColor: Colors.white,
+                  tooltip: 'Générer le rapport PDF',
+                  child: const Icon(Icons.description),
+                ),
+                const SizedBox(width: 12),
+                FloatingActionButton(
+                  heroTag: 'add_inspection_btn',
+                  onPressed: _openCreateForm,
+                  backgroundColor: AppTheme.primaryBlue,
+                  foregroundColor: AppTheme.white,
+                  tooltip: 'Nouvelle inspection',
+                  child: const Icon(Icons.add),
+                ),
+              ],
             )
           : null,
       body: SafeArea(
