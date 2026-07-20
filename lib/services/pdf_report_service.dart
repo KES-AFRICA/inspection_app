@@ -582,7 +582,7 @@ class PdfReportService {
     }
 
     // 7. Classement
-    entries.add(_SommaireEntry(titre: "CLASSEMENT DES LOCAUX ET ZONES EN FONCTION DES INFLUENCES EXTERNES", key: 'classement', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "CLASSEMENT ET EMPLACEMENTS DES LOCAUX ET ZONES EN FONCTION DES INFLUENCES EXTERNES", key: 'classement', level: 0, isBold: true, isUppercase: true));
 
     // 8. Foudre
     entries.add(_SommaireEntry(titre: "FOUDRE", key: 'foudre', level: 0, isBold: true, isUppercase: true));
