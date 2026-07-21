@@ -369,6 +369,19 @@ class PdfReportService {
       dateIntervention = '';
     }
 
+    pw.MemoryImage? clientLogoMemoryImg;
+    if (mission.logoClient != null && mission.logoClient!.isNotEmpty) {
+      final logoFile = File(mission.logoClient!);
+      if (logoFile.existsSync()) {
+        try {
+          final logoBytes = logoFile.readAsBytesSync();
+          clientLogoMemoryImg = pw.MemoryImage(logoBytes);
+        } catch (e) {
+          if (kDebugMode) print('Erreur chargement logo client PDF: $e');
+        }
+      }
+    }
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -386,25 +399,45 @@ class PdfReportService {
               child: pw.Column(
                 crossAxisAlignment: pw.CrossAxisAlignment.center,
                 children: [
-                  pw.Container(
-                    width: 85, height: 85,
-                    decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: PdfColors.grey400, width: 1),
-                      color: PdfColors.grey200,
-                    ),
-                    child: pw.Center(
-                      child: pw.Column(
-                        mainAxisAlignment: pw.MainAxisAlignment.center,
-                        children: [
-                          pw.Text('LOGO CLIENT',
-                              style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.grey600)),
-                          pw.SizedBox(height: 3),
-                          pw.Text('(a coller ici)',
-                              style: pw.TextStyle(font: _fontRegular, fontSize: 7, color: PdfColors.grey500)),
-                        ],
+                  if (clientLogoMemoryImg != null)
+                    pw.Container(
+                      width: 85,
+                      height: 85,
+                      alignment: pw.Alignment.center,
+                      child: pw.Image(
+                        clientLogoMemoryImg,
+                        width: 85,
+                        height: 85,
+                        fit: pw.BoxFit.contain,
+                      ),
+                    )
+                  else
+                    pw.Container(
+                      width: 85,
+                      height: 85,
+                      decoration: pw.BoxDecoration(
+                        border: pw.Border.all(color: PdfColors.grey400, width: 1),
+                        color: PdfColors.grey200,
+                      ),
+                      child: pw.Center(
+                        child: pw.Column(
+                          mainAxisAlignment: pw.MainAxisAlignment.center,
+                          children: [
+                            pw.Text('LOGO CLIENT',
+                                style: pw.TextStyle(
+                                    font: _fontBold,
+                                    fontSize: 8,
+                                    color: PdfColors.grey600)),
+                            pw.SizedBox(height: 3),
+                            pw.Text('(a coller ici)',
+                                style: pw.TextStyle(
+                                    font: _fontRegular,
+                                    fontSize: 7,
+                                    color: PdfColors.grey500)),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
                   pw.SizedBox(height: 10),
                   pw.Text(
                     "A l'attention de Monsieur le\nDirecteur General",

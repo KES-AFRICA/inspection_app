@@ -4,6 +4,7 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_detail_screen.dart';
 import 'package:inspec_app/pages/missions/lighting/lighting_mission_detail_screen.dart';
+import 'package:inspec_app/pages/missions/logo/client_logo_screen.dart';
 
 class MissionHubScreen extends StatefulWidget {
   final Mission mission;
@@ -88,16 +89,22 @@ class _MissionHubScreenState extends State<MissionHubScreen> {
               ),
               const SizedBox(height: 12),
 
-              // ── Les 2 Grandes Cartes de Volets (Responsive Layout Anti-Overflow) ──
+              // ── Les Cartes de Volets (Responsive Layout Anti-Overflow) ──
               LayoutBuilder(
                 builder: (context, constraints) {
                   if (constraints.maxWidth > 600) {
-                    return Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    return Column(
                       children: [
-                        Expanded(child: _buildElectricCard(context)),
-                        const SizedBox(width: 16),
-                        Expanded(child: _buildLightingCard(context)),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(child: _buildElectricCard(context)),
+                            const SizedBox(width: 16),
+                            Expanded(child: _buildLightingCard(context)),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        _buildClientLogoCard(context),
                       ],
                     );
                   } else {
@@ -106,6 +113,8 @@ class _MissionHubScreenState extends State<MissionHubScreen> {
                         _buildElectricCard(context),
                         const SizedBox(height: 16),
                         _buildLightingCard(context),
+                        const SizedBox(height: 16),
+                        _buildClientLogoCard(context),
                       ],
                     );
                   }
@@ -161,6 +170,33 @@ class _MissionHubScreenState extends State<MissionHubScreen> {
             ),
           ),
         );
+      },
+    );
+  }
+
+  /// Carte 3 : Logo du client
+  Widget _buildClientLogoCard(BuildContext context) {
+    final hasLogo =
+        widget.mission.logoClient != null && widget.mission.logoClient!.isNotEmpty;
+    return _buildInspectionCard(
+      context: context,
+      title: 'Logo du client',
+      subtitle: hasLogo
+          ? 'Identité visuelle configurée. Le logo sera positionné automatiquement sur tous les rapports PDF.'
+          : 'Gestion et personnalisation de l\'identité visuelle du client pour tous les rapports.',
+      badgeText: 'Identité Visuelle',
+      iconBgColor: Colors.indigo.shade100,
+      iconColor: Colors.indigo.shade800,
+      icon: Icons.branding_watermark_rounded,
+      onTap: () async {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => ClientLogoScreen(
+              mission: widget.mission,
+            ),
+          ),
+        );
+        setState(() {}); // Rafraîchir l'état après le retour de l'écran Logo
       },
     );
   }

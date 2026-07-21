@@ -66,12 +66,57 @@ class FileStorageService {
   static Future<List<File>> getReportsForMission(String missionId) async {
     final reportsDir = await getReportsDirectory();
     if (!await reportsDir.exists()) return [];
-    
+
     final files = await reportsDir.list().toList();
-    
+
     return files
         .whereType<File>()
         .where((file) => file.path.contains(missionId))
         .toList();
+  }
+
+  /// Sauvegarder le logo d'un client de façon permanente pour une mission
+  static Future<File> saveClientLogo(String missionId, File sourceFile) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final logosDir = Directory('${appDir.path}/client_logos');
+    if (!await logosDir.exists()) {
+      await logosDir.create(recursive: true);
+    }
+
+    // Nettoyer les anciens logos enregistrés pour cette mission
+    try {
+      if (await logosDir.exists()) {
+        final existingFiles = logosDir.listSync();
+        for (final f in existingFiles) {
+          if (f is File && f.path.contains('logo_$missionId')) {
+            await f.delete();
+          }
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) print('Nettoyage ancien logo: $e');
+    }
+
+    final ext = sourceFile.path.contains('.')
+        ? sourceFile.path.split('.').last
+        : 'png';
+    final destinationFile = File(
+        '${logosDir.path}/logo_${missionId}_${DateTime.now().millisecondsSinceEpoch}.$ext');
+
+    await sourceFile.copy(destinationFile.path);
+    if (kDebugMode) print('✅ Logo client sauvegardé: ${destinationFile.path}');
+    return destinationFile;
+  }
+
+  /// Supprimer le logo d'un client
+  static Future<void> deleteClientLogo(String logoPath) async {
+    try {
+      final file = File(logoPath);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (e) {
+      if (kDebugMode) print('Erreur suppression logo client: $e');
+    }
   }
 }
