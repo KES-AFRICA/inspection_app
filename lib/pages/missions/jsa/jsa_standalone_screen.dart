@@ -7,6 +7,7 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/pages/missions/sequence/steps/jsa_step.dart';
 import 'package:inspec_app/services/file_storage_service.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/pdf_report_jsa_service.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
@@ -189,7 +190,7 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
                 Navigator.pop(context);
-                _showReportPendingDialog('PDF');
+                _generateJsaPdfReport();
               },
             ),
             const Divider(height: 0),
@@ -215,6 +216,42 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _generateJsaPdfReport() async {
+    setState(() {
+      _isGenerating = true;
+    });
+
+    try {
+      final file = await PdfReportJsaService.generateJsaReport(
+        missionId: widget.mission.id,
+      );
+
+      if (file != null && mounted) {
+        setState(() {
+          _pdfFile = file;
+          _pdfFileName = path.basename(file.path);
+          _showPdfPreview = true;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Rapport PDF JSA généré avec succès !'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      } else if (mounted) {
+        _showError('Échec de la génération du rapport PDF JSA.');
+      }
+    } catch (e) {
+      if (mounted) _showError('Erreur de génération : $e');
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isGenerating = false;
+        });
+      }
+    }
   }
 
   void _showReportPendingDialog(String format) {
@@ -421,15 +458,6 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
                 color: Colors.white,
                 fontSize: 17,
                 fontWeight: FontWeight.bold,
-              ),
-            ),
-            Text(
-              '${widget.mission.nomClient}${widget.mission.nomSite != null ? ' • ${widget.mission.nomSite}' : ''}',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white.withValues(alpha: 0.85),
-                fontSize: 12,
               ),
             ),
           ],

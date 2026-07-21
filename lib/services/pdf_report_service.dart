@@ -5737,6 +5737,8 @@ class PdfReportService {
   static Future<void> loadFonts() => _loadFonts();
   static pw.Font get fontRegular => _fontRegular;
   static pw.Font get fontBold => _fontBold;
+  static pw.MemoryImage? get logoKesImage => _logoKesImage;
+  static pw.MemoryImage? get firstPageFooterImage => _firstPageFooterImage;
   static String formatDate(DateTime d) => _formatDate(d);
 }
 
