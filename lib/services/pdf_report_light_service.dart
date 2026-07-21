@@ -14,6 +14,12 @@ class PdfReportLightService {
   /// Intitulé du numéro de rapport pour l'Éclairage
   static const String numeroRapportDoc = 'KES/IP/VECL/2025/001';
 
+  /// Couleurs douces de conformité réutilisées de l'audit électrique
+  static final PdfColor conformeBgColor = PdfColor.fromInt(0xFFE8F5E9);
+  static final PdfColor conformeTextColor = PdfColor.fromInt(0xFF2E7D32);
+  static final PdfColor nonConformeBgColor = PdfColor.fromInt(0xFFFFEBEE);
+  static final PdfColor nonConformeTextColor = PdfColor.fromInt(0xFFC62828);
+
   /// 12 Questions standard d'éclairage
   static const List<String> questionsText = [
     'État général du luminaire',
@@ -291,18 +297,24 @@ class PdfReportLightService {
                 ),
                 pw.Container(
                   padding:
-                      const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                      const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                   decoration: pw.BoxDecoration(
-                    color: isConforme ? PdfColors.green700 : PdfColors.red700,
+                    color: isConforme ? conformeBgColor : nonConformeBgColor,
                     borderRadius:
                         const pw.BorderRadius.all(pw.Radius.circular(3)),
+                    border: pw.Border.all(
+                      color:
+                          isConforme ? conformeTextColor : nonConformeTextColor,
+                      width: 0.5,
+                    ),
                   ),
                   child: pw.Text(
                     inspection.status.toUpperCase(),
                     style: pw.TextStyle(
                       font: PdfReportService.fontBold,
-                      fontSize: 9,
-                      color: PdfColors.white,
+                      fontSize: 8.5,
+                      color:
+                          isConforme ? conformeTextColor : nonConformeTextColor,
                     ),
                   ),
                 ),
@@ -406,10 +418,21 @@ class PdfReportLightService {
                                       centered: true),
                                   PdfReportService.cell(qTitle,
                                       isHeader: false),
-                                  PdfReportService.cell('Non conforme',
-                                      isHeader: false,
-                                      color: PdfColors.red700,
-                                      centered: true),
+                                  pw.Container(
+                                    color: nonConformeBgColor,
+                                    padding: const pw.EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 3),
+                                    alignment: pw.Alignment.center,
+                                    child: pw.Text(
+                                      'Non conforme',
+                                      style: pw.TextStyle(
+                                        font: PdfReportService.fontBold,
+                                        fontSize: PdfReportService.fsSmall,
+                                        color: nonConformeTextColor,
+                                      ),
+                                      textAlign: pw.TextAlign.center,
+                                    ),
+                                  ),
                                   PdfReportService.cell(obs, isHeader: false),
                                 ],
                               );
@@ -430,7 +453,7 @@ class PdfReportLightService {
                 style: pw.TextStyle(
                   font: PdfReportService.fontRegular,
                   fontSize: 9,
-                  color: PdfColors.green800,
+                  color: conformeTextColor,
                 ),
               ),
             ),
@@ -439,10 +462,10 @@ class PdfReportLightService {
     );
   }
 
-  /// Galerie photos des défaillances éclairage
+  /// Galerie photos des défaillances éclairage (2 images par rangée, 6 images grand format par page)
   static List<pw.Widget> _buildLightingPhotosList(
       List<LightingInspection> inspections) {
-    final photoItems = <pw.Widget>[];
+    final rawPhotoCards = <pw.Widget>[];
 
     for (final insp in inspections) {
       for (int lIdx = 0; lIdx < insp.nonConformingLuminaires.length; lIdx++) {
@@ -459,52 +482,48 @@ class PdfReportLightService {
                 final imageBytes = file.readAsBytesSync();
                 final pdfImg = pw.MemoryImage(imageBytes);
 
-                photoItems.add(
+                rawPhotoCards.add(
                   pw.Container(
-                    margin: const pw.EdgeInsets.only(bottom: 12),
-                    padding: const pw.EdgeInsets.all(8),
+                    padding: const pw.EdgeInsets.all(6),
                     decoration: pw.BoxDecoration(
-                      border: pw.Border.all(color: PdfColors.grey300, width: 1),
+                      border:
+                          pw.Border.all(color: PdfColors.grey300, width: 0.8),
                       borderRadius:
                           const pw.BorderRadius.all(pw.Radius.circular(4)),
                       color: PdfColors.white,
                     ),
-                    child: pw.Row(
+                    child: pw.Column(
                       crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      mainAxisSize: pw.MainAxisSize.min,
                       children: [
                         pw.Container(
-                          width: 150,
-                          height: 110,
+                          width: double.infinity,
+                          height: 125,
                           child: pw.ClipRRect(
                             horizontalRadius: 3,
                             verticalRadius: 3,
                             child: pw.Image(pdfImg, fit: pw.BoxFit.cover),
                           ),
                         ),
-                        pw.SizedBox(width: 12),
-                        pw.Expanded(
-                          child: pw.Column(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              pw.Text(
-                                'Localisation : ${insp.batimentLocal.toUpperCase()}',
-                                style: pw.TextStyle(
-                                  font: PdfReportService.fontBold,
-                                  fontSize: 10,
-                                  color: PdfReportService.headerColor,
-                                ),
-                              ),
-                              pw.SizedBox(height: 4),
-                              pw.Text(
-                                'Luminaire $repere (${insp.typeLuminaire})',
-                                style: pw.TextStyle(
-                                  font: PdfReportService.fontBold,
-                                  fontSize: 9,
-                                  color: PdfColors.red800,
-                                ),
-                              ),
-                            ],
+                        pw.SizedBox(height: 5),
+                        pw.Text(
+                          'Localisation : ${insp.batimentLocal.toUpperCase()}',
+                          style: pw.TextStyle(
+                            font: PdfReportService.fontBold,
+                            fontSize: 8.5,
+                            color: PdfReportService.headerColor,
                           ),
+                          maxLines: 1,
+                        ),
+                        pw.SizedBox(height: 2),
+                        pw.Text(
+                          'Luminaire $repere (${insp.typeLuminaire})',
+                          style: pw.TextStyle(
+                            font: PdfReportService.fontBold,
+                            fontSize: 8.0,
+                            color: nonConformeTextColor,
+                          ),
+                          maxLines: 1,
                         ),
                       ],
                     ),
@@ -519,7 +538,7 @@ class PdfReportLightService {
       }
     }
 
-    if (photoItems.isEmpty) {
+    if (rawPhotoCards.isEmpty) {
       return [
         pw.Container(
           padding: const pw.EdgeInsets.all(16),
@@ -539,6 +558,38 @@ class PdfReportLightService {
       ];
     }
 
-    return photoItems;
+    // Regroupement par rangées de 2 images (2 colonnes)
+    final rowWidgets = <pw.Widget>[];
+    for (int i = 0; i < rawPhotoCards.length; i += 2) {
+      final card1 = rawPhotoCards[i];
+      final hasCard2 = i + 1 < rawPhotoCards.length;
+      final card2 = hasCard2 ? rawPhotoCards[i + 1] : pw.Spacer();
+
+      rowWidgets.add(
+        pw.Padding(
+          padding: const pw.EdgeInsets.only(bottom: 10),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Expanded(child: card1),
+              pw.SizedBox(width: 10),
+              pw.Expanded(child: card2),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // Limiter à 6 images par page (3 rangées par page)
+    final finalPhotoList = <pw.Widget>[];
+    for (int rIdx = 0; rIdx < rowWidgets.length; rIdx++) {
+      finalPhotoList.add(rowWidgets[rIdx]);
+      // Toutes les 3 rangées (6 photos), ajouter un saut de page s'il en reste d'autres
+      if ((rIdx + 1) % 3 == 0 && rIdx + 1 < rowWidgets.length) {
+        finalPhotoList.add(pw.NewPage());
+      }
+    }
+
+    return finalPhotoList;
   }
 }

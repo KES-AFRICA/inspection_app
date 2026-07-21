@@ -120,8 +120,9 @@ class _LightingSummaryScreenState extends State<LightingSummaryScreen> {
               title: const Text('PDF', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: const Text('Générer le rapport au format PDF'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
+                await Future.delayed(const Duration(milliseconds: 200));
                 _generateReport('pdf');
               },
             ),
@@ -138,8 +139,9 @@ class _LightingSummaryScreenState extends State<LightingSummaryScreen> {
               title: const Text('Word', style: TextStyle(fontWeight: FontWeight.w600)),
               subtitle: const Text('Générer le rapport au format Word'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-              onTap: () {
+              onTap: () async {
                 Navigator.pop(context);
+                await Future.delayed(const Duration(milliseconds: 200));
                 _generateReport('word');
               },
             ),
@@ -173,6 +175,9 @@ class _LightingSummaryScreenState extends State<LightingSummaryScreen> {
         ),
       ),
     );
+
+    // Laisser le temps à Flutter d'afficher la modale loader à l'écran
+    await Future.delayed(const Duration(milliseconds: 150));
 
     try {
       final file = await PdfReportLightService.generateLightingMissionReport(
