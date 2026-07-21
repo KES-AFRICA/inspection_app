@@ -92,7 +92,7 @@ class PdfReportLightService {
             mission,
             renseignements,
             ctx,
-            subTitleOverride: "DES INSTALLATIONS D'ECLAIRAGE",
+            subTitleOverride: "VERIFICATION DES INSTALLATIONS D'ECLAIRAGE",
           ),
         ),
       );
