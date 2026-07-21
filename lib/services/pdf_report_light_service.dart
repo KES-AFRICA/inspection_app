@@ -16,18 +16,18 @@ class PdfReportLightService {
 
   /// 12 Questions standard d'éclairage
   static const List<String> questionsText = [
-    '1. État général du luminaire',
-    '2. Fixation correcte et stable',
-    '3. Protection contre les contacts directs',
-    '4. Absence d\'échauffement ou de brûlure',
-    '5. Absence de corrosion ou d\'encrassement',
-    '6. Indice IP adapté au local',
-    '7. Conducteurs correctement raccordés',
-    '8. Présence de la mise à la terre',
-    '9. Allumage correct',
-    '10. Extinction correcte',
-    '11. Absence de scintillement',
-    '12. Accessibilité pour la maintenance',
+    'État général du luminaire',
+    'Fixation correcte et stable',
+    'Protection contre les contacts directs',
+    'Absence d\'échauffement ou de brûlure',
+    'Absence de corrosion ou d\'encrassement',
+    'Indice IP adapté au local',
+    'Conducteurs correctement raccordés',
+    'Présence de la mise à la terre',
+    'Allumage correct',
+    'Extinction correcte',
+    'Absence de scintillement',
+    'Accessibilité pour la maintenance',
   ];
 
   /// Génère le document PDF complet pour la mission d'éclairage spécifiée
@@ -351,68 +351,72 @@ class PdfReportLightService {
 
                 return pw.Container(
                   margin: const pw.EdgeInsets.fromLTRB(8, 0, 8, 8),
-                  padding: const pw.EdgeInsets.all(6),
-                  decoration: pw.BoxDecoration(
-                    border: pw.Border.all(color: PdfColors.red300, width: 0.8),
-                    color: PdfColors.red50,
-                    borderRadius:
-                        const pw.BorderRadius.all(pw.Radius.circular(3)),
-                  ),
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text(
-                        'Luminaire $repere (${nonConformAnswers.length} point(s) non conforme(s))',
-                        style: pw.TextStyle(
-                          font: PdfReportService.fontBold,
-                          fontSize: 9,
-                          color: PdfColors.red900,
-                        ),
-                      ),
-                      pw.SizedBox(height: 4),
-                      for (final ans in nonConformAnswers) ...[
-                        pw.Padding(
-                          padding: const pw.EdgeInsets.only(left: 6, bottom: 2),
-                          child: pw.Row(
-                            crossAxisAlignment: pw.CrossAxisAlignment.start,
-                            children: [
-                              pw.Text('• ',
-                                  style: pw.TextStyle(
-                                      font: PdfReportService.fontBold,
-                                      fontSize: 8,
-                                      color: PdfColors.red800)),
-                              pw.Expanded(
-                                child: pw.RichText(
-                                  text: pw.TextSpan(
-                                    children: [
-                                      pw.TextSpan(
-                                        text:
-                                            '${questionsText[ans.questionIndex - 1]} : ',
-                                        style: pw.TextStyle(
-                                          font: PdfReportService.fontBold,
-                                          fontSize: 8,
-                                          color: PdfColors.red800,
-                                        ),
-                                      ),
-                                      pw.TextSpan(
-                                        text: (ans.commentaire != null &&
-                                                ans.commentaire!.trim().isNotEmpty)
-                                            ? ans.commentaire
-                                            : 'Non conforme sans observation',
-                                        style: pw.TextStyle(
-                                          font: PdfReportService.fontRegular,
-                                          fontSize: 8,
-                                          color: PdfColors.grey900,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
+                      // Ligne 1 : Informations du luminaire
+                      pw.Container(
+                        width: double.infinity,
+                        padding: const pw.EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        color: PdfReportService.headerColor,
+                        child: pw.Text(
+                          'Luminaire $repere (${nonConformAnswers.length} point(s) non conforme(s))',
+                          style: pw.TextStyle(
+                            font: PdfReportService.fontBold,
+                            fontSize: 9,
+                            color: PdfColors.white,
                           ),
                         ),
-                      ],
+                      ),
+                      // Ligne 2 et suivantes : Tableau à 4 colonnes (N°, Critère, Conformité, Observation)
+                      pw.Table(
+                        border: pw.TableBorder.all(
+                            color: PdfReportService.borderColor, width: 0.5),
+                        columnWidths: const {
+                          0: pw.FixedColumnWidth(28),
+                          1: pw.FlexColumnWidth(3.5),
+                          2: pw.FlexColumnWidth(2.0),
+                          3: pw.FlexColumnWidth(4.5),
+                        },
+                        children: [
+                          PdfReportService.tableHeaderRow(
+                              ['N°', 'CRITÈRE', 'CONFORMITÉ', 'OBSERVATION']),
+                          for (int aIdx = 0;
+                              aIdx < nonConformAnswers.length;
+                              aIdx++) ...[
+                            () {
+                              final ans = nonConformAnswers[aIdx];
+                              final qTitle =
+                                  questionsText[ans.questionIndex - 1];
+                              final obs = (ans.commentaire != null &&
+                                      ans.commentaire!.trim().isNotEmpty)
+                                  ? ans.commentaire!.trim()
+                                  : 'Non conforme sans observation';
+
+                              return pw.TableRow(
+                                decoration: aIdx.isOdd
+                                    ? pw.BoxDecoration(
+                                        color: PdfReportService.tableRowAlt)
+                                    : null,
+                                children: [
+                                  PdfReportService.cell(
+                                      '${ans.questionIndex}',
+                                      isHeader: false,
+                                      centered: true),
+                                  PdfReportService.cell(qTitle,
+                                      isHeader: false),
+                                  PdfReportService.cell('Non conforme',
+                                      isHeader: false,
+                                      color: PdfColors.red700,
+                                      centered: true),
+                                  PdfReportService.cell(obs, isHeader: false),
+                                ],
+                              );
+                            }(),
+                          ],
+                        ],
+                      ),
                     ],
                   ),
                 );
@@ -447,8 +451,6 @@ class PdfReportLightService {
 
         for (final ans in lum.answers) {
           if (!ans.isConform && ans.photoPaths.isNotEmpty) {
-            final qTitle = questionsText[ans.questionIndex - 1];
-
             for (final path in ans.photoPaths) {
               final file = File(path);
               if (!file.existsSync()) continue;
@@ -485,38 +487,20 @@ class PdfReportLightService {
                             crossAxisAlignment: pw.CrossAxisAlignment.start,
                             children: [
                               pw.Text(
-                                'Local : ${insp.batimentLocal.toUpperCase()}',
+                                'Localisation : ${insp.batimentLocal.toUpperCase()}',
                                 style: pw.TextStyle(
                                   font: PdfReportService.fontBold,
                                   fontSize: 10,
                                   color: PdfReportService.headerColor,
                                 ),
                               ),
-                              pw.SizedBox(height: 3),
+                              pw.SizedBox(height: 4),
                               pw.Text(
                                 'Luminaire $repere (${insp.typeLuminaire})',
                                 style: pw.TextStyle(
                                   font: PdfReportService.fontBold,
                                   fontSize: 9,
                                   color: PdfColors.red800,
-                                ),
-                              ),
-                              pw.SizedBox(height: 3),
-                              pw.Text(
-                                'Critère : $qTitle',
-                                style: pw.TextStyle(
-                                  font: PdfReportService.fontBold,
-                                  fontSize: 9,
-                                  color: PdfColors.grey900,
-                                ),
-                              ),
-                              pw.SizedBox(height: 4),
-                              pw.Text(
-                                'Observation : ${ans.commentaire?.isNotEmpty == true ? ans.commentaire : "Aucun commentaire"}',
-                                style: pw.TextStyle(
-                                  font: PdfReportService.fontRegular,
-                                  fontSize: 8.5,
-                                  color: PdfColors.grey800,
                                 ),
                               ),
                             ],
