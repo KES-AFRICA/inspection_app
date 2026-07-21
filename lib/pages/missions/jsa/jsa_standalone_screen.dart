@@ -19,43 +19,14 @@ class JsaStandaloneScreen extends StatefulWidget {
 
 class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
   final GlobalKey<JsaStepState> _jsaKey = GlobalKey<JsaStepState>();
-  int _currentSubCategoryIndex = 0;
-
-  static const List<String> _subCategoryTitles = [
-    'Opération & Équipe',
-    'Plan d\'urgence',
-    'Dangers',
-    'Exigences (EPC)',
-    'EPI',
-    'Validation finale',
-  ];
-
-  static const List<IconData> _subCategoryIcons = [
-    Icons.engineering_outlined,
-    Icons.emergency_outlined,
-    Icons.warning_amber_outlined,
-    Icons.security_outlined,
-    Icons.health_and_safety_outlined,
-    Icons.verified_outlined,
-  ];
-
-  void _onSubCategoryTap(int index) {
-    setState(() {
-      _currentSubCategoryIndex = index;
-    });
-    _jsaKey.currentState?.navigateToSubCategory(index);
-  }
 
   Future<void> _handleNext() async {
     final jsaState = _jsaKey.currentState;
     if (jsaState != null) {
       final handled = await jsaState.next();
-      if (handled) {
-        setState(() {
-          _currentSubCategoryIndex = jsaState.currentSubCategory;
-        });
-      } else {
-        // Si la validation de la dernière étape est réussie et que JSA est complète
+      if (mounted) setState(() {});
+      if (!handled) {
+        // La validation du dernier slide (slide 5) est demandée
         final isCompleted = HiveService.isJsaCompleted(widget.mission.id);
         if (isCompleted && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -69,6 +40,17 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
             ),
           );
           Navigator.of(context).pop();
+        } else if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Veuillez compléter toutes les sous-sections de la JSA.',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
         }
       }
     }
@@ -78,11 +60,8 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
     final jsaState = _jsaKey.currentState;
     if (jsaState != null) {
       final handled = await jsaState.previous();
-      if (handled) {
-        setState(() {
-          _currentSubCategoryIndex = jsaState.currentSubCategory;
-        });
-      } else {
+      if (mounted) setState(() {});
+      if (!handled) {
         Navigator.of(context).pop();
       }
     }
@@ -90,7 +69,9 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isLastStep = _currentSubCategoryIndex == _subCategoryTitles.length - 1;
+    final jsaState = _jsaKey.currentState;
+    final isLastStep = jsaState?.isLastSlide ?? false;
+    final isFirstStep = jsaState?.isFirstSlide ?? true;
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -126,62 +107,6 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
       ),
       body: Column(
         children: [
-          // ── Barre de navigation des 6 sous-catégories JSA ──
-          Container(
-            color: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: List.generate(_subCategoryTitles.length, (index) {
-                  final isSelected = index == _currentSubCategoryIndex;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: InkWell(
-                      onTap: () => _onSubCategoryTap(index),
-                      borderRadius: BorderRadius.circular(20),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? AppTheme.primaryBlue
-                              : Colors.grey.shade100,
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                            color: isSelected
-                                ? AppTheme.primaryBlue
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              _subCategoryIcons[index],
-                              size: 16,
-                              color: isSelected ? Colors.white : AppTheme.textDark,
-                            ),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${index + 1}. ${_subCategoryTitles[index]}',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: isSelected
-                                    ? FontWeight.bold
-                                    : FontWeight.w500,
-                                color: isSelected ? Colors.white : AppTheme.textDark,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  );
-                }),
-              ),
-            ),
-          ),
-          const Divider(height: 1),
-
           // ── Corps principal JsaStep ──
           Expanded(
             child: JsaStep(
@@ -189,12 +114,11 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
               mission: widget.mission,
               onDataChanged: (data) {},
               onSubStepChanged: () {
-                if (mounted && _jsaKey.currentState != null) {
-                  setState(() {
-                    _currentSubCategoryIndex =
-                        _jsaKey.currentState!.currentSubCategory;
-                  });
-                }
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() {});
+                  }
+                });
               },
             ),
           ),
@@ -219,7 +143,7 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
                     onPressed: _handlePrevious,
                     icon: const Icon(Icons.arrow_back, size: 18),
                     label: Text(
-                      _currentSubCategoryIndex == 0 ? 'RETOUR HUB' : 'PRÉCÉDENT',
+                      isFirstStep ? 'RETOUR HUB' : 'PRÉCÉDENT',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     style: OutlinedButton.styleFrom(
@@ -241,7 +165,7 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
                       size: 18,
                     ),
                     label: Text(
-                      isLastStep ? 'VALIDER LA JSA' : 'SUIVANT',
+                      isLastStep ? 'VALIDER' : 'SUIVANT',
                       style: const TextStyle(
                           fontWeight: FontWeight.bold, letterSpacing: 0.5),
                     ),

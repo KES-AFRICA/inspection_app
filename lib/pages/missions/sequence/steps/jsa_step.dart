@@ -84,14 +84,27 @@ class JsaStepState extends ConsumerState<JsaStep> with AutomaticKeepAliveClientM
   }
 
   Future<void> _loadSavedPosition() async {
-    final savedPosition = await SequenceProgressService.getStepData(
-      widget.mission.id,
-      'jsa_current_subcategory',
-    );
-    if (savedPosition != null && savedPosition is int && savedPosition < totalSubCategories) {
+    final isCompleted = HiveService.isJsaCompleted(widget.mission.id);
+    if (isCompleted) {
+      // Si toutes les étapes sont complétées, toujours ouvrir sur le premier slide (0)
       setState(() {
-        _jsa.currentSubCategory = savedPosition;
+        _jsa.currentSubCategory = 0;
       });
+      _saveCurrentPosition();
+      if (widget.onSubStepChanged != null) widget.onSubStepChanged!();
+      return;
+    }
+
+    // Si une ou plusieurs étapes ne sont pas complétées, trouver la 1ère étape non remplie
+    for (int i = 0; i < totalSubCategories; i++) {
+      if (!isSubCategoryComplete(i)) {
+        setState(() {
+          _jsa.currentSubCategory = i;
+        });
+        _saveCurrentPosition();
+        if (widget.onSubStepChanged != null) widget.onSubStepChanged!();
+        return;
+      }
     }
   }
 
