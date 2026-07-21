@@ -692,13 +692,15 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
                   ),
                 ),
                 if (currentMission.adresseClient != null &&
-                    currentMission.adresseClient!.isNotEmpty)
+                    currentMission.adresseClient!.isNotEmpty) ...[
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         const Text(
                           'ADRESSE',
+                          textAlign: TextAlign.right,
                           style: TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -708,17 +710,17 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
                         const SizedBox(height: 2),
                         Text(
                           currentMission.adresseClient!,
+                          textAlign: TextAlign.right,
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
                             color: AppTheme.textDark,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
                       ],
                     ),
                   ),
+                ],
               ],
             ),
           ],
@@ -756,121 +758,130 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
         child: InkWell(
           onTap: _openForm,
           borderRadius: BorderRadius.circular(16),
-          child: Padding(
-            padding: const EdgeInsets.all(18),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(18),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: Colors.green.shade50,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.green.shade100),
-                      ),
-                      child: Icon(
-                        Icons.shield_outlined,
-                        color: Colors.green.shade700,
-                        size: 24,
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.green.shade50,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.green.shade100),
+                          ),
+                          child: Icon(
+                            Icons.shield_outlined,
+                            color: Colors.green.shade700,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(width: 14),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                'Analyse de Sécurité (JSA)',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.textDark,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Statut : Validée • $dateStr',
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.green.shade800,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(width: 14),
-                    Expanded(
-                      child: Column(
+                    const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
+                      child: Divider(height: 1),
+                    ),
+                    if (operation.isNotEmpty) ...[
+                      Row(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Text(
-                            'Analyse de Sécurité (JSA)',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textDark,
-                            ),
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Icon(Icons.work_outline, size: 15, color: Colors.grey.shade600),
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Statut : Validée • $dateStr',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.green.shade800,
-                              fontWeight: FontWeight.w600,
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Opération : $operation',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey.shade800,
+                              ),
                             ),
                           ),
                         ],
                       ),
-                    ),
-                    Icon(
-                      Icons.edit_outlined,
-                      color: AppTheme.primaryBlue,
-                      size: 20,
-                    ),
-                  ],
-                ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(height: 1),
-                ),
-                if (operation.isNotEmpty) ...[
-                  Row(
-                    children: [
-                      Icon(Icons.work_outline, size: 15, color: Colors.grey.shade600),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: Text(
-                          'Opération : $operation',
+                      const SizedBox(height: 6),
+                    ],
+                    Row(
+                      children: [
+                        Icon(Icons.people_outline, size: 15, color: Colors.grey.shade600),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Équipe d\'inspection : $nbInspecteurs inspecteur(s)',
                           style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: Colors.grey.shade800,
+                            fontSize: 12.5,
+                            color: Colors.grey.shade700,
                           ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                ],
-                Row(
-                  children: [
-                    Icon(Icons.people_outline, size: 15, color: Colors.grey.shade600),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Équipe d\'inspection : $nbInspecteurs inspecteur(s)',
-                      style: TextStyle(
-                        fontSize: 12.5,
-                        color: Colors.grey.shade700,
-                      ),
+                      ],
                     ),
                   ],
                 ),
-                const SizedBox(height: 14),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        'Consulter / Modifier',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryBlue,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        size: 12,
-                        color: AppTheme.primaryBlue,
-                      ),
-                    ],
+              ),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(vertical: 11),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade700,
+                  borderRadius: const BorderRadius.vertical(
+                    bottom: Radius.circular(15),
                   ),
                 ),
-              ],
-            ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      'Consulter / Modifier',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                    SizedBox(width: 6),
+                    Icon(
+                      Icons.arrow_forward_rounded,
+                      size: 16,
+                      color: Colors.white,
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       ),
