@@ -61,14 +61,14 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
   }
 
   Future<void> _markCurrentStepCompleted() async {
-    await SequenceProgressService.markStepCompleted(widget.mission.id, 6);
+    await SequenceProgressService.markStepCompleted(widget.mission.id, 5);
     if (kDebugMode) {
-      print('✅ Étape 6 (Résumé) marquée comme complétée');
+      print('✅ Étape 5 (Résumé) marquée comme complétée');
     }
   }
 
   Future<void> _loadProgress() async {
-    await SequenceProgressService.markStepCompleted(widget.mission.id, 6);
+    await SequenceProgressService.markStepCompleted(widget.mission.id, 5);
     final progress = await SequenceProgressService.getProgress(widget.mission.id);
     setState(() {
       _progress = progress;
@@ -833,13 +833,12 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
             ],
           ),
           const SizedBox(height: 20),
-          _buildStepTimelineTile(0, 'JSA', _progress['completedSteps']?.contains(0) ?? false, Icons.engineering_rounded, false),
-          _buildStepTimelineTile(1, 'Renseignements généraux', _progress['completedSteps']?.contains(1) ?? false, Icons.info_rounded, false),
-          _buildStepTimelineTile(2, 'Documents nécessaires', _progress['completedSteps']?.contains(2) ?? false, Icons.folder_rounded, false),
-          _buildStepTimelineTile(3, 'Description des installations', _progress['completedSteps']?.contains(3) ?? false, Icons.description_rounded, false),
-          _buildStepTimelineTile(4, 'Audit des installations', _progress['completedSteps']?.contains(4) ?? false, Icons.electrical_services_rounded, false),
-          _buildStepTimelineTile(5, 'Schéma des installations', _progress['completedSteps']?.contains(5) ?? false, Icons.schema_rounded, false),
-          _buildStepTimelineTile(6, 'Rapport final généré', true, Icons.summarize_rounded, true),
+          _buildStepTimelineTile(0, 'Renseignements généraux', _progress['completedSteps']?.contains(0) ?? false, Icons.info_rounded, false),
+          _buildStepTimelineTile(1, 'Documents nécessaires', _progress['completedSteps']?.contains(1) ?? false, Icons.folder_rounded, false),
+          _buildStepTimelineTile(2, 'Description des installations', _progress['completedSteps']?.contains(2) ?? false, Icons.description_rounded, false),
+          _buildStepTimelineTile(3, 'Audit des installations', _progress['completedSteps']?.contains(3) ?? false, Icons.electrical_services_rounded, false),
+          _buildStepTimelineTile(4, 'Schéma des installations', _progress['completedSteps']?.contains(4) ?? false, Icons.schema_rounded, false),
+          _buildStepTimelineTile(5, 'Rapport final généré', true, Icons.summarize_rounded, true),
         ],
       ),
     );

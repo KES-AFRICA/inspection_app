@@ -5,6 +5,8 @@ import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_detail_screen.dart';
 import 'package:inspec_app/pages/missions/lighting/lighting_mission_detail_screen.dart';
 import 'package:inspec_app/pages/missions/logo/client_logo_screen.dart';
+import 'package:inspec_app/pages/missions/jsa/jsa_standalone_screen.dart';
+import 'package:inspec_app/services/hive_service.dart';
 
 class MissionHubScreen extends StatefulWidget {
   final Mission mission;
@@ -25,6 +27,7 @@ class _MissionHubScreenState extends State<MissionHubScreen> {
   Widget build(BuildContext context) {
     final screenWidth = MediaQuery.of(context).size.width;
     final isSmallScreen = screenWidth < 360;
+    final isJsaDone = HiveService.isJsaCompleted(widget.mission.id);
 
     return Scaffold(
       backgroundColor: Colors.grey.shade50,
@@ -75,11 +78,10 @@ class _MissionHubScreenState extends State<MissionHubScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
               Text(
-                'VOLETS D\'INSPECTION DISPONIBLES',
+                'MODULES DE LA MISSION',
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w800,
@@ -89,18 +91,20 @@ class _MissionHubScreenState extends State<MissionHubScreen> {
               ),
               const SizedBox(height: 12),
 
-              // ── Les Cartes de Volets (Responsive Layout Anti-Overflow) ──
+              // ── Les Cartes dans l'Ordre Souhaité (JSA -> Elec -> Éclairage -> Logo) ──
               LayoutBuilder(
                 builder: (context, constraints) {
                   if (constraints.maxWidth > 600) {
                     return Column(
                       children: [
+                        _buildJsaCard(context, isJsaDone),
+                        const SizedBox(height: 16),
                         Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Expanded(child: _buildElectricCard(context)),
+                            Expanded(child: _buildElectricCard(context, isJsaDone)),
                             const SizedBox(width: 16),
-                            Expanded(child: _buildLightingCard(context)),
+                            Expanded(child: _buildLightingCard(context, isJsaDone)),
                           ],
                         ),
                         const SizedBox(height: 16),
@@ -110,9 +114,11 @@ class _MissionHubScreenState extends State<MissionHubScreen> {
                   } else {
                     return Column(
                       children: [
-                        _buildElectricCard(context),
+                        _buildJsaCard(context, isJsaDone),
                         const SizedBox(height: 16),
-                        _buildLightingCard(context),
+                        _buildElectricCard(context, isJsaDone),
+                        const SizedBox(height: 16),
+                        _buildLightingCard(context, isJsaDone),
                         const SizedBox(height: 16),
                         _buildClientLogoCard(context),
                       ],
@@ -127,18 +133,52 @@ class _MissionHubScreenState extends State<MissionHubScreen> {
     );
   }
 
-  /// Carte 1 : Vérification électrique
-  Widget _buildElectricCard(BuildContext context) {
+  /// Carte 1 : JSA (Analyse de Sécurité du Travail) - Prérequis Obligatoire
+  Widget _buildJsaCard(BuildContext context, bool isJsaDone) {
+    return _buildInspectionCard(
+      context: context,
+      title: 'JSA - Analyse de Sécurité',
+      subtitle: isJsaDone
+          ? 'Analyse des risques et consignes de sécurité validées. Vous pouvez accéder aux volets d\'inspection.'
+          : 'Analyse des risques, EPI, plan d\'urgence et consignes de sécurité obligatoires avant d\'effectuer les inspections.',
+      badgeText: isJsaDone ? 'JSA Validée' : '1. Prérequis Obligatoire',
+      iconBgColor: isJsaDone ? Colors.green.shade100 : Colors.teal.shade100,
+      iconColor: isJsaDone ? Colors.green.shade800 : Colors.teal.shade800,
+      icon: isJsaDone ? Icons.verified_user_rounded : Icons.health_and_safety_rounded,
+      isDisabled: false,
+      onTap: () async {
+        await Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => JsaStandaloneScreen(
+              mission: widget.mission,
+            ),
+          ),
+        );
+        setState(() {}); // Rafraîchir l'état après validation du JSA
+      },
+    );
+  }
+
+  /// Carte 2 : Vérification électrique
+  Widget _buildElectricCard(BuildContext context, bool isJsaDone) {
     return _buildInspectionCard(
       context: context,
       title: 'Vérification électrique',
-      subtitle:
-          'Audit complet des installations électriques MT/BT, transformateurs, armoires et mesures de sécurité.',
-      badgeText: 'Audit Électrique',
-      iconBgColor: AppTheme.primaryBlue.withValues(alpha: 0.12),
-      iconColor: AppTheme.primaryBlue,
-      icon: Icons.bolt,
+      subtitle: isJsaDone
+          ? 'Audit complet des installations électriques MT/BT, transformateurs, armoires et mesures de sécurité.'
+          : 'Complétez et validez d\'abord la JSA pour déverrouiller le volet de vérification électrique.',
+      badgeText: isJsaDone ? '2. Audit Électrique' : 'Verrouillé - JSA requise',
+      iconBgColor: isJsaDone
+          ? AppTheme.primaryBlue.withValues(alpha: 0.12)
+          : Colors.grey.shade200,
+      iconColor: isJsaDone ? AppTheme.primaryBlue : Colors.grey.shade500,
+      icon: isJsaDone ? Icons.bolt : Icons.lock_outline_rounded,
+      isDisabled: !isJsaDone,
       onTap: () {
+        if (!isJsaDone) {
+          _showLockedDialog('la vérification électrique');
+          return;
+        }
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => MissionDetailScreen(
@@ -151,18 +191,24 @@ class _MissionHubScreenState extends State<MissionHubScreen> {
     );
   }
 
-  /// Carte 2 : Vérification éclairage
-  Widget _buildLightingCard(BuildContext context) {
+  /// Carte 3 : Vérification éclairage
+  Widget _buildLightingCard(BuildContext context, bool isJsaDone) {
     return _buildInspectionCard(
       context: context,
       title: 'Vérification éclairage',
-      subtitle:
-          'Contrôle de conformité des luminaires, détection des non-conformités et état de fonctionnement.',
-      badgeText: 'Module Éclairage',
-      iconBgColor: Colors.amber.shade100,
-      iconColor: Colors.amber.shade900,
-      icon: Icons.lightbulb,
+      subtitle: isJsaDone
+          ? 'Contrôle de conformité des luminaires, détection des non-conformités et état de fonctionnement.'
+          : 'Complétez et validez d\'abord la JSA pour déverrouiller le module éclairage.',
+      badgeText: isJsaDone ? '3. Module Éclairage' : 'Verrouillé - JSA requise',
+      iconBgColor: isJsaDone ? Colors.amber.shade100 : Colors.grey.shade200,
+      iconColor: isJsaDone ? Colors.amber.shade900 : Colors.grey.shade500,
+      icon: isJsaDone ? Icons.lightbulb : Icons.lock_outline_rounded,
+      isDisabled: !isJsaDone,
       onTap: () {
+        if (!isJsaDone) {
+          _showLockedDialog('la vérification éclairage');
+          return;
+        }
         Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => LightingMissionDetailScreen(
@@ -174,7 +220,7 @@ class _MissionHubScreenState extends State<MissionHubScreen> {
     );
   }
 
-  /// Carte 3 : Logo du client
+  /// Carte 4 : Logo du client
   Widget _buildClientLogoCard(BuildContext context) {
     final hasLogo =
         widget.mission.logoClient != null && widget.mission.logoClient!.isNotEmpty;
@@ -184,10 +230,11 @@ class _MissionHubScreenState extends State<MissionHubScreen> {
       subtitle: hasLogo
           ? 'Identité visuelle configurée. Le logo sera positionné automatiquement sur tous les rapports PDF.'
           : 'Gestion et personnalisation de l\'identité visuelle du client pour tous les rapports.',
-      badgeText: 'Identité Visuelle',
+      badgeText: '4. Identité Visuelle',
       iconBgColor: Colors.indigo.shade100,
       iconColor: Colors.indigo.shade800,
       icon: Icons.branding_watermark_rounded,
+      isDisabled: false,
       onTap: () async {
         await Navigator.of(context).push(
           MaterialPageRoute(
@@ -201,6 +248,52 @@ class _MissionHubScreenState extends State<MissionHubScreen> {
     );
   }
 
+  /// Message d'avertissement lorsqu'une carte verrouillée est cliquée
+  void _showLockedDialog(String moduleName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.lock_rounded, color: Colors.amber.shade900, size: 26),
+            ),
+            const SizedBox(width: 12),
+            const Expanded(
+              child: Text(
+                'JSA Obligatoire',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Veuillez d\'abord remplir et valider l\'Analyse de Sécurité (JSA) pour déverrouiller $moduleName.',
+          style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
+        ),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+            child: const Text('COMPRIS', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
   /// Constructeur de Carte d'inspection aligné sur AppTheme Card sans overflow
   Widget _buildInspectionCard({
     required BuildContext context,
@@ -210,11 +303,18 @@ class _MissionHubScreenState extends State<MissionHubScreen> {
     required Color iconBgColor,
     required Color iconColor,
     required IconData icon,
+    required bool isDisabled,
     required VoidCallback onTap,
   }) {
     return Card(
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: isDisabled ? 0.5 : 2,
+      color: isDisabled ? Colors.grey.shade100 : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: isDisabled
+            ? BorderSide(color: Colors.grey.shade300, width: 1)
+            : BorderSide.none,
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
@@ -263,18 +363,20 @@ class _MissionHubScreenState extends State<MissionHubScreen> {
                           title,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.textDark,
+                            color: isDisabled
+                                ? Colors.grey.shade600
+                                : AppTheme.textDark,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Icon(
-                    Icons.chevron_right,
-                    color: AppTheme.greyDark,
+                  Icon(
+                    isDisabled ? Icons.lock_outline_rounded : Icons.chevron_right,
+                    color: isDisabled ? Colors.grey.shade400 : AppTheme.greyDark,
                   ),
                 ],
               ),
@@ -283,10 +385,10 @@ class _MissionHubScreenState extends State<MissionHubScreen> {
                 subtitle,
                 maxLines: 3,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 13,
                   height: 1.35,
-                  color: AppTheme.textLight,
+                  color: isDisabled ? Colors.grey.shade500 : AppTheme.textLight,
                 ),
               ),
             ],

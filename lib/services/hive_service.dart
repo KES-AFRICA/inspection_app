@@ -6135,6 +6135,93 @@ static JSA? getJSAByMissionId(String missionId) {
   }
 }
 
+/// Vérifie si les 6 sous-sections du JSA d'une mission sont intégralement complétées
+static bool isJsaCompleted(String missionId) {
+  final jsa = getJSAByMissionId(missionId);
+  if (jsa == null) return false;
+
+  // 0. Opération & Équipe
+  final sub0 = jsa.operationEffectuer.trim().isNotEmpty &&
+      jsa.inspecteurs.isNotEmpty;
+
+  // 1. Plan Urgence
+  final p = jsa.planUrgence;
+  final sub1 = p.voiesIssuesIdentifiees ||
+      p.zonesRassemblementIdentifiees ||
+      p.consignesSecuriteInternes ||
+      p.personneContactClient.trim().isNotEmpty ||
+      p.personneContactKES.trim().isNotEmpty;
+
+  // 2. Dangers
+  final d = jsa.dangers;
+  final sub2 = d.chocElectrique ||
+      d.bruit ||
+      d.stressThermique ||
+      d.eclairageInadapte ||
+      d.zoneCirculationMalDefinie ||
+      d.solAccidente ||
+      d.emissionGazPoussiere ||
+      d.espaceConfine ||
+      d.autreEnvironnement.trim().isNotEmpty ||
+      d.chuteObjets ||
+      d.coactivite ||
+      d.portCharge ||
+      d.expositionProduitsChimiques ||
+      d.chuteHauteur ||
+      d.electrification ||
+      d.incendiesExplosion ||
+      d.mauvaisesPostures ||
+      d.chutePlainPied ||
+      d.autrePhysique.trim().isNotEmpty;
+
+  // 3. Exigences Générales (EPC)
+  final e = jsa.exigencesGenerales;
+  final sub3 = e.signaletiqueSecurite ||
+      e.ficheDonneeSecuriteDisponible ||
+      e.uneMinuteMaSecurite ||
+      e.balise ||
+      e.zoneTravailPropre ||
+      e.toolboxMeeting ||
+      e.permisTravail ||
+      e.extincteurs ||
+      e.outilsMaterielsIsolants ||
+      e.boitePharmacie ||
+      e.autre.trim().isNotEmpty;
+
+  // 4. Équipements de Protection Individuelle (EPI)
+  final ep = jsa.epi;
+  final sub4 = ep.casqueSecurite ||
+      ep.bouchonsOreille ||
+      ep.lunettesProtection ||
+      ep.harnaisSecurite ||
+      ep.chaussureSecurite ||
+      ep.masqueSecurite ||
+      ep.combinaisonLongueManche ||
+      ep.gantsIsolants ||
+      ep.cacheNez ||
+      ep.gilet ||
+      ep.autre.trim().isNotEmpty;
+
+  // 5. Vérification finale & Signatures
+  final v = jsa.verificationFinale;
+  final sub5 = v.travailTermineNA ||
+      v.travailTermineApplicable ||
+      v.consignationCadenasRetireNA ||
+      v.consignationCadenasRetireApplicable ||
+      v.absenceConsignataireProcedureNA ||
+      v.absenceConsignataireProcedureApplicable ||
+      v.consignataireAbsentProcedureAppliqueeNA ||
+      v.consignataireAbsentProcedureAppliqueeApplicable ||
+      v.materielEnleveZoneNettoyeeNA ||
+      v.materielEnleveZoneNettoyeeApplicable ||
+      v.risquesSupprimesEquipementPretNA ||
+      v.risquesSupprimesEquipementPretApplicable ||
+      v.donneurOrdreSignature.trim().isNotEmpty ||
+      v.chargeAffairesSignature.trim().isNotEmpty;
+
+  return sub0 && sub1 && sub2 && sub3 && sub4 && sub5;
+}
+
 // ===== MÉTHODES POUR LES BROUILLONS DE COFFRET =====
   
   /// Sauvegarder un brouillon de coffret
