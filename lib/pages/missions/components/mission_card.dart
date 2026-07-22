@@ -1,13 +1,14 @@
-import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:inspec_app/constants/app_theme.dart';
+import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
-import 'package:inspec_app/pages/missions/mission_detail/mission_detail_screen.dart';
+import 'package:inspec_app/pages/missions/create_mission_screen.dart';
 import 'package:inspec_app/pages/missions/mission_hub/mission_hub_screen.dart';
 import 'package:inspec_app/services/backup_service.dart';
-import '../../../models/mission.dart';
-import '../../../constants/app_theme.dart';
 
-class MissionCard extends StatelessWidget {
+/// Carte de mission moderne avec micro-interactions, badges dynamiques et menu 3-dots.
+class MissionCard extends StatefulWidget {
   final Mission mission;
   final Verificateur user;
   final VoidCallback? onDeleted;
@@ -19,7 +20,13 @@ class MissionCard extends StatelessWidget {
     this.onDeleted,
   });
 
-  // ── Statut ────────────────────────────────────────────────────
+  @override
+  State<MissionCard> createState() => _MissionCardState();
+}
+
+class _MissionCardState extends State<MissionCard> {
+  bool _isPressed = false;
+
   String _normalizeStatus(String status) {
     final s = status.toLowerCase().trim();
     if (s.contains('encour') || s.contains('en cours')) return 'En cours';
@@ -28,27 +35,36 @@ class MissionCard extends StatelessWidget {
     return status[0].toUpperCase() + status.substring(1).toLowerCase();
   }
 
-  // Statuts affichés : 'En cours' et 'En attente' uniquement.
-  // Les missions terminées n'affichent pas le libellé — juste la pastille verte.
-  String _badgeLabel(String status) {
-    switch (_normalizeStatus(status)) {
-      case 'En cours':
-        return 'En cours';
-      case 'En attente':
-        return 'En attente';
-      default:
-        return ''; // terminée → pas de texte de statut
-    }
-  }
-
   Color _getStatusColor(String status) {
     switch (_normalizeStatus(status)) {
       case 'En attente':
-        return Colors.orange;
+        return const Color(0xFFD97706); // Ambre
       case 'En cours':
         return AppTheme.primaryBlue;
       default:
-        return Colors.green; // terminée
+        return const Color(0xFF16A34A); // Vert émeraude
+    }
+  }
+
+  Color _getStatusBgColor(String status) {
+    switch (_normalizeStatus(status)) {
+      case 'En attente':
+        return const Color(0xFFFEF3C7);
+      case 'En cours':
+        return const Color(0xFFEFF6FF);
+      default:
+        return const Color(0xFFDCFCE7);
+    }
+  }
+
+  IconData _getStatusIcon(String status) {
+    switch (_normalizeStatus(status)) {
+      case 'En attente':
+        return Icons.hourglass_top_rounded;
+      case 'En cours':
+        return Icons.play_circle_fill_rounded;
+      default:
+        return Icons.check_circle_rounded;
     }
   }
 
@@ -57,7 +73,6 @@ class MissionCard extends StatelessWidget {
       '${date.month.toString().padLeft(2, '0')}/'
       '${date.year}';
 
-  // ── Menu ⋮ ───────────────────────────────────────────────────
   void _showMenu(BuildContext context, Offset position) {
     final overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
     showMenu<String>(
@@ -66,21 +81,29 @@ class MissionCard extends StatelessWidget {
         position & const Size(40, 40),
         Offset.zero & overlay.size,
       ),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 6,
       items: [
+        PopupMenuItem<String>(
+          value: 'edit',
+          height: 44,
+          child: Row(
+            children: [
+              Icon(Icons.edit_outlined, size: 18, color: AppTheme.primaryBlue),
+              const SizedBox(width: 10),
+              const Text('Éditer les infos', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(height: 1),
         PopupMenuItem<String>(
           value: 'export',
           height: 44,
           child: Row(
             children: [
-              Icon(
-                Icons.file_upload_outlined,
-                size: 18,
-                color: AppTheme.primaryBlue,
-              ),
+              Icon(Icons.file_upload_outlined, size: 18, color: AppTheme.darkBlue),
               const SizedBox(width: 10),
-              const Text('Exporter', style: TextStyle(fontSize: 13)),
+              const Text('Exporter la mission', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
             ],
           ),
         ),
@@ -90,24 +113,38 @@ class MissionCard extends StatelessWidget {
           height: 44,
           child: Row(
             children: [
-              Icon(Icons.delete_outline, size: 18, color: Colors.red.shade600),
+              Icon(Icons.delete_outline_rounded, size: 18, color: Colors.red.shade600),
               const SizedBox(width: 10),
               Text(
                 'Supprimer',
-                style: TextStyle(fontSize: 13, color: Colors.red.shade600),
+                style: TextStyle(fontSize: 13, color: Colors.red.shade600, fontWeight: FontWeight.w600),
               ),
             ],
           ),
         ),
       ],
     ).then((val) {
+      if (val == 'edit') _handleEdit(context);
       if (val == 'export') _handleExport(context);
       if (val == 'delete') _handleDelete(context);
     });
   }
 
+  Future<void> _handleEdit(BuildContext context) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => CreateMissionScreen(
+          currentUser: widget.user,
+          missionToEdit: widget.mission,
+        ),
+      ),
+    );
+    if (result == true) {
+      widget.onDeleted?.call();
+    }
+  }
+
   Future<void> _handleExport(BuildContext context) async {
-    // Indicateur non bloquant
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Row(
@@ -115,10 +152,7 @@ class MissionCard extends StatelessWidget {
             SizedBox(
               width: 16,
               height: 16,
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 2,
-              ),
+              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
             ),
             SizedBox(width: 12),
             Text('Export en cours…'),
@@ -129,15 +163,14 @@ class MissionCard extends StatelessWidget {
       ),
     );
 
-    final result = await BackupService.exporterMission(mission.id);
+    final result = await BackupService.exporterMission(widget.mission.id);
 
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          result.message ??
-              (result.success ? 'Export réussi.' : 'Erreur export.'),
+          result.message ?? (result.success ? 'Export réussi.' : 'Erreur export.'),
         ),
         backgroundColor: result.success ? Colors.green : Colors.red,
         behavior: SnackBarBehavior.floating,
@@ -150,40 +183,46 @@ class MissionCard extends StatelessWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => _DeleteDialog(missionName: mission.nomClient),
-    );
-    if (confirmed != true || !context.mounted) return;
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Row(
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Row(
           children: [
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(
-                color: Colors.white,
-                strokeWidth: 2,
-              ),
-            ),
-            SizedBox(width: 12),
-            Text('Suppression en cours…'),
+            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+            SizedBox(width: 10),
+            Text('Supprimer la mission', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           ],
         ),
-        duration: Duration(seconds: 30),
-        behavior: SnackBarBehavior.floating,
+        content: Text(
+          'Êtes-vous sûr de vouloir supprimer définitivement la mission "${widget.mission.nomClient}" ?',
+          style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('ANNULER', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('SUPPRIMER', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
       ),
     );
 
-    final result = await BackupService.deleteMissionCompletely(mission.id);
+    if (confirmed != true || !context.mounted) return;
+
+    final result = await BackupService.deleteMissionCompletely(widget.mission.id);
 
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          result.message ??
-              (result.success ? 'Mission supprimée.' : 'Erreur suppression.'),
+          result.message ?? (result.success ? 'Mission supprimée.' : 'Erreur suppression.'),
         ),
         backgroundColor: result.success ? Colors.green : Colors.red,
         behavior: SnackBarBehavior.floating,
@@ -191,550 +230,262 @@ class MissionCard extends StatelessWidget {
       ),
     );
 
-    if (result.success) onDeleted?.call();
+    if (result.success) widget.onDeleted?.call();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final statusColor = _getStatusColor(mission.status);
-    final normalized = _normalizeStatus(mission.status);
-    final progress = normalized == 'Terminé' 
-        ? 1.0 
-        : normalized == 'En cours' 
-            ? 0.5 
-            : 0.0;
+  Widget _buildLogoWidget() {
+    final logoPath = widget.mission.logoClient;
+    if (logoPath != null && logoPath.isNotEmpty) {
+      if (logoPath.startsWith('http')) {
+        return Image.network(
+          logoPath,
+          width: 48,
+          height: 48,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _buildFallbackLogo(),
+        );
+      } else {
+        final file = File(logoPath);
+        if (file.existsSync()) {
+          return Image.file(
+            file,
+            width: 48,
+            height: 48,
+            fit: BoxFit.cover,
+          );
+        }
+      }
+    }
+    return _buildFallbackLogo();
+  }
+
+  Widget _buildFallbackLogo() {
+    final initials = widget.mission.nomClient.trim().isNotEmpty
+        ? (widget.mission.nomClient.trim().length >= 2
+            ? widget.mission.nomClient.trim().substring(0, 2).toUpperCase()
+            : widget.mission.nomClient.trim().substring(0, 1).toUpperCase())
+        : 'MI';
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      width: 48,
+      height: 48,
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade100, width: 1.5),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.015),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppTheme.primaryBlue,
+            AppTheme.darkBlue,
+          ],
+        ),
       ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: InkWell(
-          onTap: () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => MissionHubScreen(mission: mission, user: user),
-            ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 8, 14),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Avatar / Logo client
-                    if (mission.logoClient != null) ...[
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: Image.network(
-                          mission.logoClient!,
-                          width: 44,
-                          height: 44,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => Container(
-                            width: 44,
-                            height: 44,
-                            decoration: BoxDecoration(
-                              color: AppTheme.primaryBlue.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Icon(
-                              Icons.business,
-                              size: 22,
-                              color: AppTheme.primaryBlue,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                    ] else ...[
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          gradient: LinearGradient(
-                            colors: [AppTheme.primaryBlue.withOpacity(0.12), AppTheme.primaryBlue.withOpacity(0.04)],
-                            begin: Alignment.topLeft,
-                            end: Alignment.bottomRight,
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Center(
-                          child: Text(
-                            mission.nomClient.trim().isNotEmpty
-                                ? mission.nomClient.trim().substring(0, 2).toUpperCase()
-                                : 'MI',
-                            style: TextStyle(
-                              color: AppTheme.primaryBlue,
-                              fontWeight: FontWeight.bold,
-                              fontSize: 14,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                    ],
-
-                    // Détails textuels
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: Text(
-                                  mission.nomClient,
-                                  style: const TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w700,
-                                    color: Color(0xFF1E293B),
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              // Badge de Statut
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 3,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: statusColor.withOpacity(0.08),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                    color: statusColor.withOpacity(0.15),
-                                    width: 1,
-                                  ),
-                                ),
-                                child: Text(
-                                  normalized == 'Terminé' ? 'Terminée' : normalized,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: statusColor,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (mission.activiteClient != null && mission.activiteClient!.isNotEmpty) ...[
-                            const SizedBox(height: 2),
-                            Text(
-                              mission.activiteClient!,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppTheme.textLight,
-                                fontWeight: FontWeight.w500,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-
-                          const SizedBox(height: 10),
-
-                          // Adresse
-                          if (mission.adresseClient != null && mission.adresseClient!.isNotEmpty) ...[
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.location_on_outlined,
-                                  size: 13,
-                                  color: Colors.grey.shade500,
-                                ),
-                                const SizedBox(width: 4),
-                                Expanded(
-                                  child: Text(
-                                    mission.adresseClient!,
-                                    style: TextStyle(
-                                      fontSize: 12,
-                                      color: Colors.grey.shade600,
-                                    ),
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                          ],
-
-                          // Date intervention
-                          if (mission.dateIntervention != null) ...[
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.calendar_today_outlined,
-                                  size: 13,
-                                  color: Colors.grey.shade500,
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  'Intervention : ${_formatDate(mission.dateIntervention!)}',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 4),
-                          ],
-
-                          // Dates création / modification
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 4,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.access_time,
-                                    size: 12,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Créé ${_formatDate(mission.createdAt)}',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Icon(
-                                    Icons.update,
-                                    size: 12,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text(
-                                    'Modifié ${_formatDate(mission.updatedAt)}',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Colors.grey.shade400,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-
-                          // Nature de la mission (Badge stylisé)
-                          if (mission.natureMission != null && mission.natureMission!.isNotEmpty) ...[
-                            const SizedBox(height: 8),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppTheme.lightBlue.withOpacity(0.08),
-                                borderRadius: BorderRadius.circular(6),
-                              ),
-                              child: Text(
-                                mission.natureMission!,
-                                style: TextStyle(
-                                  fontSize: 10.5,
-                                  color: AppTheme.darkBlue,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-
-                    // Bouton Options ⋮
-                    GestureDetector(
-                      onTapDown: (details) =>
-                          _showMenu(context, details.globalPosition),
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(4, 0, 4, 0),
-                        child: Icon(
-                          Icons.more_vert,
-                          size: 22,
-                          color: Colors.grey.shade400,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Barre de progression de complétion fine
-              if (progress > 0.0)
-                Container(
-                  height: 3,
-                  width: double.infinity,
-                  child: LinearProgressIndicator(
-                    value: progress,
-                    backgroundColor: Colors.grey.shade100,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      progress == 1.0 ? Colors.green : AppTheme.primaryBlue,
-                    ),
-                  ),
-                ),
-            ],
+      child: Center(
+        child: Text(
+          initials,
+          style: const TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.w900,
+            fontSize: 16,
+            letterSpacing: 0.5,
           ),
         ),
       ),
     );
   }
-}
-
-// ════════════════════════════════════════════════════════════════
-//  DIALOGUE SUPPRESSION — compte à rebours 10 s
-// ════════════════════════════════════════════════════════════════
-class _DeleteDialog extends StatefulWidget {
-  final String missionName;
-  const _DeleteDialog({required this.missionName});
-
-  @override
-  State<_DeleteDialog> createState() => _DeleteDialogState();
-}
-
-class _DeleteDialogState extends State<_DeleteDialog> {
-  int _countdown = 10;
-  Timer? _timer;
-
-  @override
-  void initState() {
-    super.initState();
-    _timer = Timer.periodic(const Duration(seconds: 1), (t) {
-      if (_countdown <= 1) {
-        t.cancel();
-        setState(() => _countdown = 0);
-      } else {
-        setState(() => _countdown--);
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
 
   @override
   Widget build(BuildContext context) {
-    final ready = _countdown == 0;
+    final statusColor = _getStatusColor(widget.mission.status);
+    final statusBgColor = _getStatusBgColor(widget.mission.status);
+    final statusIcon = _getStatusIcon(widget.mission.status);
+    final normalizedStatus = _normalizeStatus(widget.mission.status);
 
-    return AlertDialog(
-      backgroundColor: Colors.white,
-      elevation: 6,
-      shadowColor: Colors.black.withOpacity(0.1),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-      titlePadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
-      contentPadding: const EdgeInsets.fromLTRB(24, 16, 24, 0),
-      actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
-      title: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(
-              Icons.warning_amber_rounded,
-              color: Colors.red.shade700,
-              size: 24,
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Text(
-              'Supprimer la mission',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: AppTheme.darkBlue,
-                fontFamily: 'Outfit',
-              ),
-            ),
-          ),
-        ],
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Vous êtes sur le point de supprimer définitivement la mission de :',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade600),
-          ),
-          const SizedBox(height: 12),
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-          // Nom de la mission
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade200),
-            ),
-            child: Text(
-              widget.missionName,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 15,
-                color: AppTheme.darkBlue,
-              ),
-            ),
+    return AnimatedScale(
+      scale: _isPressed ? 0.985 : 1.0,
+      duration: const Duration(milliseconds: 120),
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        decoration: BoxDecoration(
+          color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: isDarkMode
+                ? const Color(0xFF334155)
+                : statusColor.withValues(alpha: 0.18),
+            width: 1.2,
           ),
-          const SizedBox(height: 16),
-
-          // Avertissement
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.red.shade50,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.red.shade100),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Icon(Icons.info_outline, color: Colors.red.shade700, size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Cette action est irréversible. Toutes les données d\'inspection, photos et rapports associés seront définitivement effacés.',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.red.shade700,
-                      height: 1.4,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-
-          // Compte à rebours
-          Center(
-            child: AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
-              child: ready
-                  ? Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          Icons.check_circle_outline,
-                          size: 18,
-                          color: Colors.green.shade600,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          'Confirmation disponible',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.green.shade600,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    )
-                  : Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            value: (10 - _countdown) / 10,
-                            strokeWidth: 2.5,
-                            backgroundColor: Colors.grey.shade100,
-                            color: Colors.red.shade500,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Text(
-                          'Confirmation dans $_countdown s',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.grey.shade600,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-            ),
-          ),
-          const SizedBox(height: 8),
-        ],
-      ),
-      actions: [
-        Row(
-          children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(context, false),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.grey.shade700,
-                  side: BorderSide(color: Colors.grey.shade300),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                ),
-                child: const Text(
-                  'Annuler',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton(
-                onPressed: ready ? () => Navigator.pop(context, true) : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.red.shade600,
-                  foregroundColor: Colors.white,
-                  disabledBackgroundColor: Colors.red.shade200,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
-                  elevation: ready ? 2 : 0,
-                ),
-                child: const Text(
-                  'Confirmer',
-                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold),
-                ),
-              ),
+          boxShadow: [
+            BoxShadow(
+              color: statusColor.withValues(alpha: 0.08),
+              blurRadius: 16,
+              spreadRadius: 0,
+              offset: const Offset(0, 6),
             ),
           ],
         ),
-      ],
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: InkWell(
+            onTap: () => Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => MissionHubScreen(
+                  mission: widget.mission,
+                  user: widget.user,
+                ),
+              ),
+            ).then((_) => widget.onDeleted?.call()),
+            onTapDown: (_) => setState(() => _isPressed = true),
+            onTapUp: (_) => setState(() => _isPressed = false),
+            onTapCancel: () => setState(() => _isPressed = false),
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // En-tête : Logo/Initiales + Titre/Activité + Menu 3 dots
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Avatar Logo Client
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(14),
+                        child: _buildLogoWidget(),
+                      ),
+                      const SizedBox(width: 14),
+
+                      // Informations Principales Client & Site
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              widget.mission.nomClient,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w900,
+                                color: isDarkMode ? Colors.white : AppTheme.textDark,
+                                letterSpacing: -0.3,
+                              ),
+                            ),
+                            if (widget.mission.nomSite != null &&
+                                widget.mission.nomSite!.isNotEmpty) ...[
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Icon(
+                                    Icons.location_on_rounded,
+                                    size: 13,
+                                    color: AppTheme.primaryBlue,
+                                  ),
+                                  const SizedBox(width: 3),
+                                  Expanded(
+                                    child: Text(
+                                      widget.mission.nomSite!,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.primaryBlue,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+
+                      // Bouton Menu 3-dots (Éditer / Exporter / Supprimer)
+                      GestureDetector(
+                        onTapDown: (details) => _showMenu(context, details.globalPosition),
+                        child: Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: isDarkMode ? const Color(0xFF334155) : Colors.grey.shade100,
+                            shape: BoxShape.circle,
+                          ),
+                          child: Icon(
+                            Icons.more_vert_rounded,
+                            size: 20,
+                            color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 14),
+                  const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                  const SizedBox(height: 12),
+
+                  // Ligne du bas : Badges de Nature & Statut
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      // Badge Nature de la vérification
+                      if (widget.mission.natureMission != null &&
+                          widget.mission.natureMission!.isNotEmpty)
+                        Flexible(
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withValues(alpha: 0.08),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(
+                              widget.mission.natureMission!,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryBlue,
+                              ),
+                            ),
+                          ),
+                        )
+                      else
+                        const SizedBox.shrink(),
+
+                      const SizedBox(width: 8),
+
+                      // Badge de Statut (En cours / En attente / Terminée)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: statusBgColor,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(statusIcon, size: 13, color: statusColor),
+                            const SizedBox(width: 5),
+                            Text(
+                              normalizedStatus == 'Terminé' ? 'Terminée' : normalizedStatus,
+                              style: TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.w800,
+                                color: statusColor,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

@@ -7,8 +7,13 @@ import 'package:inspec_app/services/hive_service.dart';
 
 class CreateMissionScreen extends StatefulWidget {
   final Verificateur currentUser;
+  final Mission? missionToEdit;
 
-  const CreateMissionScreen({super.key, required this.currentUser});
+  const CreateMissionScreen({
+    super.key,
+    required this.currentUser,
+    this.missionToEdit,
+  });
 
   @override
   State<CreateMissionScreen> createState() => _CreateMissionScreenState();
@@ -26,7 +31,21 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
   
   // Sélection pour Nature de vérification
   String? _natureMission;
-  
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.missionToEdit != null) {
+      final m = widget.missionToEdit!;
+      _nomClientCtrl.text = m.nomClient;
+      _activiteClientCtrl.text = m.activiteClient ?? '';
+      _adresseClientCtrl.text = m.adresseClient ?? '';
+      _nomSiteCtrl.text = m.nomSite ?? '';
+      _installationCtrl.text = m.installation ?? '';
+      _natureMission = m.natureMission;
+    }
+  }
+
   // Options pour Nature de vérification
   final List<Map<String, dynamic>> _natureOptions = [
     {
@@ -108,7 +127,10 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final missionId = DateTime.now().millisecondsSinceEpoch.toString();
+      final bool isEditing = widget.missionToEdit != null;
+      final missionId = isEditing
+          ? widget.missionToEdit!.id
+          : DateTime.now().millisecondsSinceEpoch.toString();
       
       final mission = Mission(
         id: missionId,
@@ -118,24 +140,30 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
         nomSite: _nomSiteCtrl.text.trim(),
         installation: _installationCtrl.text.trim(),
         natureMission: _natureMission,
-        createdAt: DateTime.now(),
+        createdAt: isEditing ? widget.missionToEdit!.createdAt : DateTime.now(),
         updatedAt: DateTime.now(),
-        status: 'en_attente',
-        verificateurs: [
-          {
-            'matricule': widget.currentUser.matricule,
-            'nom': widget.currentUser.nom,
-            'prenom': widget.currentUser.prenom,
-          }
-        ],
+        status: isEditing ? widget.missionToEdit!.status : 'en_attente',
+        logoClient: isEditing ? widget.missionToEdit!.logoClient : null,
+        accompagnateurs: isEditing ? widget.missionToEdit!.accompagnateurs : null,
+        verificateurs: isEditing
+            ? widget.missionToEdit!.verificateurs
+            : [
+                {
+                  'matricule': widget.currentUser.matricule,
+                  'nom': widget.currentUser.nom,
+                  'prenom': widget.currentUser.prenom,
+                }
+              ],
       );
       
       await HiveService.saveMission(mission);
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Mission créée avec succès'),
+          SnackBar(
+            content: Text(isEditing
+                ? 'Mission modifiée avec succès'
+                : 'Mission créée avec succès'),
             backgroundColor: Colors.green,
           ),
         );
@@ -440,7 +468,7 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
         backgroundColor: Colors.grey.shade50,
         appBar: AppBar(
           title: Text(
-            'Nouvelle Mission',
+            widget.missionToEdit != null ? 'Éditer la mission' : 'Nouvelle Mission',
             style: TextStyle(fontSize: isSmallScreen ? 18 : 20),
           ),
           backgroundColor: AppTheme.primaryBlue,
@@ -456,7 +484,7 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
                       child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
                     )
                   : Text(
-                      'Créer',
+                      widget.missionToEdit != null ? 'Enregistrer' : 'Créer',
                       style: TextStyle(
                         fontSize: isSmallScreen ? 14 : 16,
                         color: Colors.white,
