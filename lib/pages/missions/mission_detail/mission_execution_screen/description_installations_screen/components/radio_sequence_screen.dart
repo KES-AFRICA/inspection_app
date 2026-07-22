@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:get_it/get_it.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 
@@ -29,8 +28,13 @@ class RadioSequenceScreen extends ConsumerStatefulWidget {
 }
 
 class _RadioSequenceScreenState extends ConsumerState<RadioSequenceScreen> {
+  // Choix unique (pour autres champs)
   String? _selectedValue;
-  String? _tnDetail; // 'C' ou 'S' pour TN-C ou TN-S
+  String? _tnDetail;
+
+  // Choix multiple (pour régime de neutre)
+  final Set<String> _selectedRegimes = {};
+
   bool _isFirstLoad = true;
   bool _isSaving = false;
   bool _showTnOptions = false;
@@ -40,37 +44,89 @@ class _RadioSequenceScreenState extends ConsumerState<RadioSequenceScreen> {
   String? _autreSavedValue;
 
   @override
-  void initState() {
-    super.initState();
+  void dispose() {
+    _autreController.dispose();
+    super.dispose();
   }
 
-  // ✅ SAUVEGARDE INSTANTANÉE
+  // ── SÉLECTION MULTIPLE RÉGIMES DE NEUTRE ────────────────────────────────
+  void _toggleRegime(String regime) {
+    setState(() {
+      if (_selectedRegimes.contains(regime)) {
+        _selectedRegimes.remove(regime);
+        if (regime == 'Autre') {
+          _showAutreField = false;
+        }
+      } else {
+        _selectedRegimes.add(regime);
+        if (regime == 'Autre') {
+          _showAutreField = true;
+        }
+      }
+    });
+
+    _saveMultiRegimes();
+  }
+
+  Future<void> _saveMultiRegimes() async {
+    setState(() => _isSaving = true);
+
+    try {
+      final notifier = ref.read(descriptionInstallationsProvider(widget.mission.id).notifier);
+
+      List<String> listToSave = [];
+      for (var r in ['TT', 'TN-C', 'TN-S', 'IT']) {
+        if (_selectedRegimes.contains(r)) {
+          listToSave.add(r);
+        }
+      }
+
+      final customText = _autreController.text.trim();
+      if (_selectedRegimes.contains('Autre') && customText.isNotEmpty) {
+        listToSave.add(customText);
+        _autreSavedValue = customText;
+      }
+
+      final resultString = listToSave.join(', ');
+      final success = await notifier.updateDescriptionSelection('regime_neutre', resultString);
+
+      if (success && !widget.isComplete && resultString.isNotEmpty) {
+        widget.onComplete('regime_neutre');
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(resultString.isEmpty
+                ? 'Aucun régime sélectionné'
+                : 'Enregistré : $resultString'),
+            backgroundColor: resultString.isEmpty ? Colors.orange : Colors.green,
+            duration: const Duration(milliseconds: 600),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
+      }
+    } finally {
+      setState(() => _isSaving = false);
+    }
+  }
+
+  // ── SÉLECTION UNIQUE (AUTRES CHAMPS) ──────────────────────────────────
   Future<void> _saveSelection(String value) async {
     setState(() => _isSaving = true);
 
     try {
       final notifier = ref.read(descriptionInstallationsProvider(widget.mission.id).notifier);
-      // Si c'est le régime de neutre, gérer le détail TN
-      if (widget.field == 'regime_neutre') {
-        // Sauvegarder la valeur principale
-        final success = await notifier.updateDescriptionSelection(widget.field, value);
+      final success = await notifier.updateDescriptionSelection(widget.field, value);
 
-        // Si la valeur est 'TN', on garde le détail existant
-        // Sinon, on efface le détail
-        if (value != 'TN' && _tnDetail != null) {
-          await notifier.updateDescriptionSelection('regime_neutre_detail', '');
-          setState(() => _tnDetail = null);
-        }
-
-        if (success && !widget.isComplete) {
-          widget.onComplete(widget.field);
-        }
-      } else {
-        final success = await notifier.updateDescriptionSelection(widget.field, value);
-
-        if (success && !widget.isComplete) {
-          widget.onComplete(widget.field);
-        }
+      if (success && !widget.isComplete) {
+        widget.onComplete(widget.field);
       }
 
       if (mounted) {
@@ -93,44 +149,6 @@ class _RadioSequenceScreenState extends ConsumerState<RadioSequenceScreen> {
     }
   }
 
-  @override
-  void dispose() {
-    _autreController.dispose();
-    super.dispose();
-  }
-
-  // ✅ Sauvegarde du détail TN
-  Future<void> _saveTnDetail(String detail) async {
-    setState(() => _isSaving = true);
-
-    try {
-      final notifier = ref.read(descriptionInstallationsProvider(widget.mission.id).notifier);
-      final success = await notifier.updateDescriptionSelection('regime_neutre_detail', detail);
-
-      if (success) {
-        setState(() => _tnDetail = detail);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Détail TN enregistré : TN-$detail'),
-              backgroundColor: Colors.green,
-              duration: const Duration(milliseconds: 500),
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      setState(() => _isSaving = false);
-    }
-  }
-
   void _onValueChanged(String value) {
     setState(() {
       _selectedValue = value;
@@ -139,49 +157,8 @@ class _RadioSequenceScreenState extends ConsumerState<RadioSequenceScreen> {
       if (value != 'TN') _tnDetail = null;
       if (value != 'Autre') _autreSavedValue = null;
     });
-    // "Autre" : on attend que l'utilisateur confirme son texte avant de sauvegarder
     if (value != 'Autre') {
       _saveSelection(value);
-    }
-  }
-
-  Future<void> _saveAutreValue() async {
-    final customValue = _autreController.text.trim();
-    if (customValue.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Veuillez saisir un régime de neutre'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-    setState(() {
-      _isSaving = true;
-      _autreSavedValue = customValue;
-    });
-    try {
-      final notifier = ref.read(descriptionInstallationsProvider(widget.mission.id).notifier);
-      await notifier.updateDescriptionSelection(widget.field, customValue);
-      if (!widget.isComplete) widget.onComplete(widget.field);
-      if (mounted) {
-        FocusScope.of(context).unfocus();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Enregistré : $customValue'),
-            backgroundColor: Colors.green,
-            duration: const Duration(milliseconds: 600),
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
-        );
-      }
-    } finally {
-      setState(() => _isSaving = false);
     }
   }
 
@@ -195,352 +172,307 @@ class _RadioSequenceScreenState extends ConsumerState<RadioSequenceScreen> {
       error: (err, stack) => Center(child: Text('Erreur: $err')),
       data: (desc) {
         if (_isFirstLoad) {
-          String? value;
-          String? detail;
+          if (widget.field == 'regime_neutre') {
+            final value = desc.regimeNeutre;
+            final detail = desc.regimeNeutreDetail;
+            _selectedRegimes.clear();
 
-          switch (widget.field) {
-            case 'regime_neutre':
-              value = desc.regimeNeutre;
-              detail = desc.regimeNeutreDetail;
-              break;
-            case 'eclairage_securite':
-              value = desc.eclairageSecurite;
-              break;
-            case 'modifications_installations':
-              value = desc.modificationsInstallations;
-              break;
-            case 'note_calcul':
-              value = desc.noteCalcul;
-              break;
-            case 'registre_securite':
-              value = desc.registreSecurite;
-              break;
-          }
-
-          final standardOptions = ['IT', 'TT', 'TN'];
-          final isAutre = widget.field == 'regime_neutre' &&
-              value != null &&
-              !standardOptions.contains(value) &&
-              value.isNotEmpty;
-
-          if (isAutre) {
-            _selectedValue = 'Autre';
-            _showAutreField = true;
-            _autreController.text = value ?? '';
-            _autreSavedValue = value;
+            final standard = {'TT', 'TN-C', 'TN-S', 'IT'};
+            if (value != null && value.isNotEmpty) {
+              if (value == 'TN') {
+                if (detail == 'C') _selectedRegimes.add('TN-C');
+                else if (detail == 'S') _selectedRegimes.add('TN-S');
+                else _selectedRegimes.add('TN-C');
+              } else {
+                final parts = value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+                List<String> autres = [];
+                for (var part in parts) {
+                  if (standard.contains(part)) {
+                    _selectedRegimes.add(part);
+                  } else if (part == 'TN') {
+                    if (detail == 'C') _selectedRegimes.add('TN-C');
+                    else if (detail == 'S') _selectedRegimes.add('TN-S');
+                    else _selectedRegimes.add('TN-C');
+                  } else {
+                    autres.add(part);
+                  }
+                }
+                if (autres.isNotEmpty) {
+                  _selectedRegimes.add('Autre');
+                  _showAutreField = true;
+                  _autreController.text = autres.join(', ');
+                  _autreSavedValue = autres.join(', ');
+                }
+              }
+            }
           } else {
-            _selectedValue = value;
+            String? value;
+            switch (widget.field) {
+              case 'eclairage_securite':
+                value = desc.eclairageSecurite;
+                break;
+              case 'modifications_installations':
+                value = desc.modificationsInstallations;
+                break;
+              case 'note_calcul':
+                value = desc.noteCalcul;
+                break;
+              case 'registre_securite':
+                value = desc.registreSecurite;
+                break;
+            }
+
+            final standardOptions = widget.options;
+            final isAutre = value != null && !standardOptions.contains(value) && value.isNotEmpty;
+
+            if (isAutre) {
+              _selectedValue = 'Autre';
+              _showAutreField = true;
+              _autreController.text = value;
+              _autreSavedValue = value;
+            } else {
+              _selectedValue = value;
+            }
           }
-          _tnDetail = detail;
-          _showTnOptions = (value == 'TN');
           _isFirstLoad = false;
         }
 
+        // ── RENDU POUR RÉGIME DE NEUTRE (SELECTION MULTIPLE) ─────────────────
+        if (widget.field == 'regime_neutre') {
+          final regimeListOptions = [
+            {
+              'key': 'TT',
+              'title': 'Régime TT',
+              'desc': 'Neutre directement à la terre, masses à la terre',
+              'color': const Color(0xFF2563EB),
+            },
+            {
+              'key': 'TN-C',
+              'title': 'Régime TN-C',
+              'desc': 'Neutre et conducteur de protection confondus (PEN)',
+              'color': const Color(0xFF0284C7),
+            },
+            {
+              'key': 'TN-S',
+              'title': 'Régime TN-S',
+              'desc': 'Neutre et conducteur de protection séparés (N + PE)',
+              'color': const Color(0xFF059669),
+            },
+            {
+              'key': 'IT',
+              'title': 'Régime IT',
+              'desc': 'Neutre isolé ou impédant, masses reliées à la terre',
+              'color': const Color(0xFFD97706),
+            },
+            {
+              'key': 'Autre',
+              'title': 'Autre régime / Spécifique',
+              'desc': 'Préciser un autre schéma ou régime mixte',
+              'color': const Color(0xFF7C3AED),
+            },
+          ];
+
+          return SingleChildScrollView(
+            padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(height: isSmallScreen ? 10 : 16),
+
+                // Note d'aide
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.checklist_rtl_rounded, color: AppTheme.primaryBlue, size: 22),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Cochez un ou plusieurs régimes de neutre présents sur cette installation.',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: AppTheme.darkBlue,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Cartes à cocher
+                ...regimeListOptions.map((opt) {
+                  final key = opt['key'] as String;
+                  final title = opt['title'] as String;
+                  final description = opt['desc'] as String;
+                  final color = opt['color'] as Color;
+                  final isChecked = _selectedRegimes.contains(key);
+
+                  return Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: isChecked ? color.withValues(alpha: 0.06) : Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: isChecked ? color : Colors.grey.shade300,
+                        width: isChecked ? 2 : 1,
+                      ),
+                    ),
+                    child: CheckboxListTile(
+                      value: isChecked,
+                      onChanged: _isSaving ? null : (_) => _toggleRegime(key),
+                      title: Text(
+                        title,
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: isChecked ? FontWeight.w800 : FontWeight.w600,
+                          color: isChecked ? color : Colors.black87,
+                        ),
+                      ),
+                      subtitle: Text(
+                        description,
+                        style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      ),
+                      activeColor: color,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                  );
+                }),
+
+                // Saisie texte si "Autre" est coché
+                if (_showAutreField) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: const Color(0xFF7C3AED).withValues(alpha: 0.3)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Préciser le régime autre :',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED)),
+                        ),
+                        const SizedBox(height: 8),
+                        TextField(
+                          controller: _autreController,
+                          style: const TextStyle(fontSize: 14),
+                          decoration: InputDecoration(
+                            hintText: 'Ex: TNC-S, TN-C / IT...',
+                            filled: true,
+                            fillColor: Colors.grey.shade50,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: BorderSide(color: Colors.grey.shade300),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(10),
+                              borderSide: const BorderSide(color: Color(0xFF7C3AED), width: 1.5),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          ),
+                          onChanged: (_) => _saveMultiRegimes(),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 16),
+
+                // Résumé enregistré
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.green.shade50,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.green.shade200),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          desc.regimeNeutre?.isNotEmpty == true
+                              ? 'Régimes enregistrés : ${desc.regimeNeutre}'
+                              : 'Aucun régime sélectionné',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.green.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        // ── RENDU PAR DÉFAUT (SELECTION UNIQUE POUR AUTRES CHAMPS) ───────────
         final displayOptions = widget.options;
 
         return SingleChildScrollView(
-      padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
-      child: Column(
-        children: [
-          SizedBox(height: isSmallScreen ? 35 : 40),
+          padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+          child: Column(
+            children: [
+              SizedBox(height: isSmallScreen ? 35 : 40),
 
-          // Options principales
-          ...displayOptions.asMap().entries.map((entry) {
-            final index = entry.key;
-            final option = entry.value;
-            final isSelected = _selectedValue == option;
+              ...displayOptions.asMap().entries.map((entry) {
+                final option = entry.value;
+                final isSelected = _selectedValue == option;
 
-            return Container(
-              margin: EdgeInsets.only(bottom: isSmallScreen ? 10 : 12),
-              decoration: BoxDecoration(
-                color: isSelected
-                    ? AppTheme.primaryBlue.withOpacity(0.05)
-                    : Colors.white,
-                borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-                border: Border.all(
-                  color: isSelected
-                      ? AppTheme.primaryBlue
-                      : Colors.grey.shade300,
-                  width: isSelected ? 2 : 1,
-                ),
-              ),
-              child: RadioListTile<String>(
-                title: Text(
-                  option,
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 14 : 15,
-                    fontWeight: isSelected
-                        ? FontWeight.w600
-                        : FontWeight.normal,
-                    color: isSelected ? AppTheme.primaryBlue : Colors.black87,
-                  ),
-                ),
-                value: option,
-                groupValue: _selectedValue,
-                onChanged: _isSaving
-                    ? null
-                    : (value) {
-                        if (value != null) {
-                          _onValueChanged(value);
-                        }
-                      },
-                activeColor: AppTheme.primaryBlue,
-                controlAffinity: ListTileControlAffinity.leading,
-              ),
-            );
-          }),
-
-          // ✅ Sous-options TN-C / TN-S (apparaissent uniquement si TN est sélectionné)
-          if (_showTnOptions) ...[
-            const SizedBox(height: 20),
-            Container(
-              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-                border: Border.all(
-                  color: AppTheme.primaryBlue.withOpacity(0.3),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.arrow_right,
-                        color: AppTheme.primaryBlue,
-                        size: isSmallScreen ? 20 : 22,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Type de régime TN',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 13 : 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.darkBlue,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildTnOptionButton(
-                          label: 'TN-C',
-                          isSelected: _tnDetail == 'C',
-                          onTap: () => _saveTnDetail('C'),
-                          color: Colors.blue,
-                          isSmallScreen: isSmallScreen,
-                        ),
-                      ),
-                      SizedBox(width: isSmallScreen ? 10 : 12),
-                      Expanded(
-                        child: _buildTnOptionButton(
-                          label: 'TN-S',
-                          isSelected: _tnDetail == 'S',
-                          onTap: () => _saveTnDetail('S'),
-                          color: Colors.green,
-                          isSmallScreen: isSmallScreen,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: EdgeInsets.all(isSmallScreen ? 8 : 10),
-                    decoration: BoxDecoration(
-                      color: Colors.blue.shade50,
-                      borderRadius: BorderRadius.circular(
-                        isSmallScreen ? 8 : 10,
-                      ),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: isSmallScreen ? 14 : 16,
-                          color: Colors.blue,
-                        ),
-                        SizedBox(width: isSmallScreen ? 6 : 8),
-                        Expanded(
-                          child: Text(
-                            'TN-C : Neutre et protection combinés\nTN-S : Neutre et protection séparés',
-                            style: TextStyle(
-                              fontSize: isSmallScreen ? 10 : 11,
-                              color: Colors.blue.shade700,
-                            ),
-                          ),
-                        ),
-                      ],
+                return Container(
+                  margin: EdgeInsets.only(bottom: isSmallScreen ? 10 : 12),
+                  decoration: BoxDecoration(
+                    color: isSelected ? AppTheme.primaryBlue.withValues(alpha: 0.05) : Colors.white,
+                    borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                    border: Border.all(
+                      color: isSelected ? AppTheme.primaryBlue : Colors.grey.shade300,
+                      width: isSelected ? 2 : 1,
                     ),
                   ),
-                ],
-              ),
-            ),
-          ],
-
-          if (_isSaving)
-            Padding(
-              padding: EdgeInsets.only(top: isSmallScreen ? 16 : 20),
-              child: const Center(child: CircularProgressIndicator()),
-            ),
-
-          // Champ libre pour "Autre" (régime de neutre uniquement)
-          if (_showAutreField && widget.field == 'regime_neutre') ...[
-            const SizedBox(height: 20),
-            Container(
-              padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-                border: Border.all(
-                  color: AppTheme.primaryBlue.withOpacity(0.3),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        Icons.edit_outlined,
-                        color: AppTheme.primaryBlue,
-                        size: isSmallScreen ? 18 : 20,
-                      ),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Précisez le régime de neutre',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 13 : 14,
-                          fontWeight: FontWeight.w600,
-                          color: AppTheme.darkBlue,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _autreController,
-                    style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
-                    decoration: InputDecoration(
-                      hintText: 'Ex: IT-T, PEN, BT isolé...',
-                      hintStyle: TextStyle(color: Colors.grey.shade400),
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(color: Colors.grey.shade300),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(
-                          color: AppTheme.primaryBlue,
-                          width: 1.5,
-                        ),
-                      ),
-                      contentPadding: EdgeInsets.symmetric(
-                        horizontal: 14,
-                        vertical: isSmallScreen ? 10 : 12,
-                      ),
-                      suffixIcon: _autreSavedValue != null
-                          ? const Icon(
-                              Icons.check_circle,
-                              color: Colors.green,
-                              size: 20,
-                            )
-                          : null,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: _isSaving ? null : _saveAutreValue,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
-                        foregroundColor: Colors.white,
-                        padding: EdgeInsets.symmetric(
-                          vertical: isSmallScreen ? 10 : 12,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        'Valider',
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 13 : 14,
-                          fontWeight: FontWeight.bold,
-                        ),
+                  child: RadioListTile<String>(
+                    title: Text(
+                      option,
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 14 : 15,
+                        fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                        color: isSelected ? AppTheme.primaryBlue : Colors.black87,
                       ),
                     ),
+                    value: option,
+                    groupValue: _selectedValue,
+                    onChanged: _isSaving
+                        ? null
+                        : (value) {
+                            if (value != null) {
+                              _onValueChanged(value);
+                            }
+                          },
+                    activeColor: AppTheme.primaryBlue,
+                    controlAffinity: ListTileControlAffinity.leading,
                   ),
-                  if (_autreSavedValue != null) ...[
-                    const SizedBox(height: 8),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.check_circle,
-                          color: Colors.green,
-                          size: 14,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Sauvegardé : $_autreSavedValue',
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: Colors.green.shade700,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
+                );
+              }),
+            ],
+          ),
+        );
       },
-    );
-  }
-
-  Widget _buildTnOptionButton({
-    required String label,
-    required bool isSelected,
-    required VoidCallback onTap,
-    required Color color,
-    required bool isSmallScreen,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
-        decoration: BoxDecoration(
-          color: isSelected ? color.withOpacity(0.1) : Colors.white,
-          borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
-          border: Border.all(
-            color: isSelected ? color : Colors.grey.shade300,
-            width: isSelected ? 2 : 1,
-          ),
-        ),
-        child: Center(
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: isSmallScreen ? 14 : 15,
-              fontWeight: FontWeight.w600,
-              color: isSelected ? color : Colors.grey.shade700,
-            ),
-          ),
-        ),
-      ),
     );
   }
 }
