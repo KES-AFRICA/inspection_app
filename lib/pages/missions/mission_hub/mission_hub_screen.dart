@@ -30,6 +30,8 @@ class MissionHubScreen extends StatefulWidget {
 class _MissionHubScreenState extends State<MissionHubScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _animController;
+  double _globalProgress = 0.0;
+  int _completedModulesCount = 0;
 
   @override
   void initState() {
@@ -40,6 +42,49 @@ class _MissionHubScreenState extends State<MissionHubScreen>
     );
 
     _animController.forward();
+    _computeProgress();
+  }
+
+  Future<void> _computeProgress() async {
+    // 1. Module JSA (25%)
+    final isJsaDone = HiveService.isJsaCompleted(widget.mission.id);
+    final jsaVal = isJsaDone ? 0.25 : 0.0;
+
+    // 2. Module Logo Client (25%)
+    final hasLogo = widget.mission.logoClient != null &&
+        widget.mission.logoClient!.isNotEmpty;
+    final logoVal = hasLogo ? 0.25 : 0.0;
+
+    // 3. Module Éclairage (25%)
+    final lightingInspections =
+        HiveService.getLightingInspectionsByMissionId(widget.mission.id);
+    final lightingVal = lightingInspections.isNotEmpty ? 0.25 : 0.0;
+
+    // 4. Module Électrique (25%)
+    double electricVal = 0.0;
+    final seqProgress = await SequenceProgressService.getProgress(widget.mission.id);
+    final completedSteps = (seqProgress['completedSteps'] as List<dynamic>?) ?? [];
+    if (widget.mission.status == 'terminee' || completedSteps.contains(5)) {
+      electricVal = 0.25;
+    } else if (completedSteps.isNotEmpty) {
+      final ratio = (completedSteps.length / 5.0).clamp(0.0, 1.0);
+      electricVal = ratio * 0.25;
+    }
+
+    final totalRatio = (jsaVal + logoVal + lightingVal + electricVal).clamp(0.0, 1.0);
+
+    int count = 0;
+    if (isJsaDone) count++;
+    if (hasLogo) count++;
+    if (lightingInspections.isNotEmpty) count++;
+    if (electricVal >= 0.25 || widget.mission.status == 'terminee') count++;
+
+    if (mounted) {
+      setState(() {
+        _globalProgress = totalRatio;
+        _completedModulesCount = count;
+      });
+    }
   }
 
   @override
@@ -54,12 +99,7 @@ class _MissionHubScreenState extends State<MissionHubScreen>
     final hasLogo = widget.mission.logoClient != null &&
         widget.mission.logoClient!.isNotEmpty;
 
-    // Calcul du pourcentage de progression globale de la mission
-    int completedModules = 0;
-    if (isJsaDone) completedModules++;
-    if (hasLogo) completedModules++;
-    // On considère 4 modules clés au total
-    final progressPercent = (completedModules / 4.0).clamp(0.0, 1.0);
+    final progressPercent = _globalProgress;
 
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final bgColor = isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC);
@@ -89,7 +129,7 @@ class _MissionHubScreenState extends State<MissionHubScreen>
               background: _buildHeroHeaderBackground(
                 context,
                 isJsaDone: isJsaDone,
-                completedModules: completedModules,
+                completedModules: _completedModulesCount,
                 progressPercent: progressPercent,
               ),
             ),
@@ -443,7 +483,7 @@ class _MissionHubScreenState extends State<MissionHubScreen>
             ),
           ),
         );
-        setState(() {}); // Rafraîchir l'état après le retour du JSA
+        await _computeProgress();
       },
     );
   }
@@ -469,12 +509,12 @@ class _MissionHubScreenState extends State<MissionHubScreen>
           ? AppTheme.primaryBlue.withValues(alpha: 0.15)
           : Colors.grey.shade300,
       isLocked: !isJsaDone,
-      onTap: () {
+      onTap: () async {
         if (!isJsaDone) {
           _showLockedBottomSheet('la vérification électrique');
           return;
         }
-        Navigator.of(context).push(
+        await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => MissionDetailScreen(
               mission: widget.mission,
@@ -482,6 +522,7 @@ class _MissionHubScreenState extends State<MissionHubScreen>
             ),
           ),
         );
+        await _computeProgress();
       },
     );
   }
@@ -505,18 +546,19 @@ class _MissionHubScreenState extends State<MissionHubScreen>
       iconColor: isJsaDone ? const Color(0xFFB45309) : Colors.grey.shade500,
       iconBgColor: isJsaDone ? const Color(0xFFFDE68A) : Colors.grey.shade300,
       isLocked: !isJsaDone,
-      onTap: () {
+      onTap: () async {
         if (!isJsaDone) {
           _showLockedBottomSheet('la vérification éclairage');
           return;
         }
-        Navigator.of(context).push(
+        await Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => LightingMissionDetailScreen(
               mission: widget.mission,
             ),
           ),
         );
+        await _computeProgress();
       },
     );
   }
@@ -570,7 +612,7 @@ class _MissionHubScreenState extends State<MissionHubScreen>
             ),
           ),
         );
-        setState(() {}); // Rafraîchir après retour de la gestion logo
+        await _computeProgress();
       },
     );
   }
