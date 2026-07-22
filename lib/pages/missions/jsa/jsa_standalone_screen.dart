@@ -439,6 +439,15 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
     );
   }
 
+  Future<void> _sendEmailWithAttachment() async {
+    if (_pdfFile == null) return;
+    await Share.shareXFiles(
+      [XFile(_pdfFile!.path)],
+      subject: 'Rapport JSA - ${widget.mission.nomClient}',
+      text: 'Veuillez trouver ci-joint le rapport JSA pour ${widget.mission.nomClient}',
+    );
+  }
+
   void _showError(String message) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
@@ -1080,9 +1089,9 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
                     ),
                     const SizedBox(width: 8),
                     _buildCircleActionButton(
-                      icon: Icons.print_rounded,
-                      tooltip: 'Imprimer',
-                      onTap: () => _previewReport(file),
+                      icon: Icons.email_rounded,
+                      tooltip: 'Email',
+                      onTap: _sendEmailWithAttachment,
                     ),
                   ],
                 ),
