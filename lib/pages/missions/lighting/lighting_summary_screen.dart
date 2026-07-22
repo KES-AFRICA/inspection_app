@@ -12,6 +12,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path/path.dart' as path;
+import 'package:inspec_app/widgets/report_generation_loader.dart';
 
 /// Écran de Résumé et Génération de Rapport - Vérification Éclairage
 /// Aligné sur l'expérience utilisateur et l'interface de SummaryStep
@@ -161,31 +162,16 @@ class _LightingSummaryScreenState extends State<LightingSummaryScreen> {
 
     setState(() => _isGenerating = true);
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => const AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Génération du rapport PDF Éclairage...'),
-          ],
-        ),
-      ),
+    final loaderController = ReportGenerationLoaderController();
+    ReportGenerationLoader.show(
+      context,
+      controller: loaderController,
+      message: 'Génération du rapport PDF Éclairage...',
     );
-
-    // Laisser le temps à Flutter d'afficher la modale loader à l'écran
-    await Future.delayed(const Duration(milliseconds: 150));
 
     try {
       final file = await PdfReportLightService.generateLightingMissionReport(
           widget.mission.id);
-
-      if (mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
 
       if (file != null && file.existsSync()) {
         final sanitizedClient =
@@ -203,22 +189,20 @@ class _LightingSummaryScreenState extends State<LightingSummaryScreen> {
         );
         await HiveService.saveLastReport(lastReport);
 
-        setState(() {
-          _pdfFile = savedFile;
-          _pdfFileName = fileName;
-          _showPdfPreview = true;
-        });
+        // Déclencher l'animation de validation (check) puis fermeture auto
+        await loaderController.complete();
 
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Rapport PDF Éclairage généré avec succès !'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 2),
-            ),
-          );
+          setState(() {
+            _pdfFile = savedFile;
+            _pdfFileName = fileName;
+            _showPdfPreview = true;
+          });
         }
       } else {
+        if (mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
         _showError('Erreur lors de la génération du rapport');
       }
     } catch (e) {

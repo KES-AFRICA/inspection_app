@@ -1,4 +1,5 @@
 // lib/pages/missions/sequence/steps/summary_step.dart
+// ignore_for_file: use_build_context_synchronously
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:path/path.dart' as path;
 import 'package:url_launcher/url_launcher.dart';
+import 'package:inspec_app/widgets/report_generation_loader.dart';
 
 class SummaryStep extends ConsumerStatefulWidget {
   final Mission mission;
@@ -102,19 +104,11 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
   Future<void> _generateReport(String reportType) async {
     setState(() => _isGenerating = true);
 
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            Text('Génération du rapport ${reportType.toUpperCase()} en cours...'),
-          ],
-        ),
-      ),
+    final loaderController = ReportGenerationLoaderController();
+    ReportGenerationLoader.show(
+      context,
+      controller: loaderController,
+      message: 'Génération du rapport ${reportType.toUpperCase()} en cours...',
     );
 
     try {
@@ -126,10 +120,6 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
       } else {
         file = await PdfReportService.generateMissionReport(widget.mission.id);
         fileName = 'Rapport_${widget.mission.nomClient}_${DateTime.now().millisecondsSinceEpoch}.pdf';
-      }
-
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
       }
 
       if (file != null && file.existsSync()) {
@@ -144,27 +134,27 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
         );
         final saveReportUseCase = ref.read(saveLastReportUseCaseProvider);
         await saveReportUseCase(lastReport);
+
+        // Déclencher l'animation de validation (check) puis fermeture auto
+        await loaderController.complete();
         
-        setState(() {
-          if (reportType == 'pdf') {
-            _pdfFile = savedFile;
-            _pdfFileName = fileName;
-            _showPdfPreview = true;
-          } else {
-            _wordFile = savedFile;
-            _wordFileName = fileName;
-            _showWordPreview = true;
-          }
-        });
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Rapport ${reportType.toUpperCase()} généré avec succès !'),
-            backgroundColor: Colors.green,
-            duration: const Duration(seconds: 2),
-          ),
-        );
+        if (mounted) {
+          setState(() {
+            if (reportType == 'pdf') {
+              _pdfFile = savedFile;
+              _pdfFileName = fileName;
+              _showPdfPreview = true;
+            } else {
+              _wordFile = savedFile;
+              _wordFileName = fileName;
+              _showWordPreview = true;
+            }
+          });
+        }
       } else {
+        if (Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
         _showError('Erreur lors de la génération');
       }
     } catch (e) {

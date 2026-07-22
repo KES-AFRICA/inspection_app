@@ -16,6 +16,12 @@ class PdfReportJsaService {
   static final PdfColor _borderColor = PdfColors.grey700;
   static final PdfColor _kesBlue = PdfColor.fromInt(0xFF2E74B5);
 
+  // Marges cohérentes avec le rapport de Vérification Électrique
+  static const double _leftMargin = 60.0;
+  static const double _topMargin = 30.0;
+  static const double _rightMargin = 60.0;
+  static const double _bottomMargin = 50.0;
+
   /// Generates the single-page JSA PDF report for a given mission
   static Future<File?> generateJsaReport({
     required String missionId,
@@ -47,18 +53,20 @@ class PdfReportJsaService {
         pw.Page(
           pageTheme: pw.PageTheme(
             pageFormat: PdfPageFormat.a4,
-            margin: const pw.EdgeInsets.fromLTRB(20, 15, 20, 45),
-            buildBackground: (ctx) {
+            margin: const pw.EdgeInsets.fromLTRB(_leftMargin, _topMargin, _rightMargin, _bottomMargin),
+            // Footer en foreground pour qu'il soit toujours visible (identique au rapport Vérification Électrique)
+            buildForeground: (ctx) {
               final footerImg = PdfReportService.firstPageFooterImage;
               if (footerImg == null) return pw.SizedBox();
               return pw.Stack(
+                overflow: pw.Overflow.visible,
                 children: [
                   pw.Positioned(
-                    bottom: -45,
-                    left: -20,
-                    right: -20,
+                    bottom: -_bottomMargin,
+                    left: -_leftMargin,
+                    right: -_rightMargin,
                     child: pw.SizedBox(
-                      height: 70,
+                      height: 80,
                       width: PdfPageFormat.a4.width,
                       child: pw.Image(footerImg, fit: pw.BoxFit.fill),
                     ),
@@ -71,44 +79,48 @@ class PdfReportJsaService {
             return pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.stretch,
               children: [
-                // 1. EN-TÊTE LOGO ET RECAPITULATIF JSA
-                _buildHeaderSection(
-                  mission.nomSite ?? '',
+                // 1. LOGO KES SEUL EN HAUT À GAUCHE
+                _buildLogoSection(),
+                pw.SizedBox(height: 8),
+
+                // 2. TABLEAU D'EN-TÊTE (dans le corps, pas dans le header)
+                _buildInfoTable(
+                  mission.adresseClient ?? '',
                   mission.nomClient,
                   currentUserFullName,
                   dateFormatted,
                 ),
-                pw.SizedBox(height: 4),
+                pw.SizedBox(height: 8),
 
-                // 2. OPÉRATION À EFFECTUER
+                // 3. OPÉRATION À EFFECTUER
                 _buildOperationSection(jsa.operationEffectuer),
-                pw.SizedBox(height: 4),
+                pw.SizedBox(height: 8),
 
-                // 3. TABLEAU INSPECTEURS (Taille dynamique selon les inspecteurs)
+                // 4. TABLEAU INSPECTEURS
                 _buildInspecteursTable(jsa.inspecteurs),
-                pw.SizedBox(height: 4),
+                pw.SizedBox(height: 8),
 
-                // 4. PLAN D'INTERVENTION EN CAS D'URGENCE
+                // 5. PLAN D'INTERVENTION EN CAS D'URGENCE
                 _buildPlanUrgenceTable(jsa.planUrgence),
-                pw.SizedBox(height: 4),
+                pw.SizedBox(height: 8),
 
-                // 5. DANGERS
+                // 6. DANGERS
                 _buildDangersTable(jsa.dangers),
-                pw.SizedBox(height: 4),
+                pw.SizedBox(height: 8),
 
-                // 6. EXIGENCES GENERALES (EPC)
+                // 7. EXIGENCES GENERALES (EPC)
                 _buildEpcTable(jsa.exigencesGenerales),
-                pw.SizedBox(height: 4),
+                pw.SizedBox(height: 8),
 
-                // 7. EQUIPEMENTS DE PROTECTION INDIVIDUELLE (EPI)
+                // 8. EQUIPEMENTS DE PROTECTION INDIVIDUELLE (EPI)
                 _buildEpiTable(jsa.epi),
-                pw.SizedBox(height: 4),
+                pw.SizedBox(height: 8),
 
-                // 8. VERIFICATION FINALE
+                // 9. VERIFICATION FINALE
                 _buildVerificationFinaleTable(jsa.verificationFinale),
-                pw.SizedBox(height: 4),
+                pw.SizedBox(height: 8),
 
-                // 9. NOMS ET SIGNATURE DES RESPONSABLES
+                // 10. NOMS ET SIGNATURE DES RESPONSABLES
                 _buildResponsablesTable(jsa.verificationFinale),
               ],
             );
@@ -156,7 +168,7 @@ class PdfReportJsaService {
   static pw.Widget _buildSectionHeaderBar(String title) {
     return pw.Container(
       width: double.infinity,
-      padding: const pw.EdgeInsets.symmetric(vertical: 2, horizontal: 4),
+      padding: const pw.EdgeInsets.symmetric(vertical: 2.5, horizontal: 4),
       decoration: pw.BoxDecoration(
         color: _greyHeaderBg,
         border: pw.Border.all(color: _borderColor, width: 0.5),
@@ -166,93 +178,90 @@ class PdfReportJsaService {
         textAlign: pw.TextAlign.center,
         style: pw.TextStyle(
           font: PdfReportService.fontBold,
-          fontSize: 7.5,
+          fontSize: 7.0,
           color: PdfColors.black,
         ),
       ),
     );
   }
 
-  /// En-tête avec Logo KES et Tableau Récapitulatif
-  static pw.Widget _buildHeaderSection(
+  /// Logo KES seul — aucun autre élément à côté
+  static pw.Widget _buildLogoSection() {
+    final logo = PdfReportService.logoKesImage;
+    return pw.Align(
+      alignment: pw.Alignment.topLeft,
+      child: pw.Container(
+        width: 85,
+        height: 42,
+        child: logo != null
+            ? pw.Image(logo, fit: pw.BoxFit.contain)
+            : pw.Text('KES LOGO', style: const pw.TextStyle(fontSize: 10)),
+      ),
+    );
+  }
+
+  /// Tableau d'en-tête avec titre JSA et infos — dans le corps du document
+  static pw.Widget _buildInfoTable(
     String site,
     String client,
     String chefEquipe,
     String dateStr,
   ) {
-    final logo = PdfReportService.logoKesImage;
-
-    return pw.Row(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
+    return pw.Table(
+      border: pw.TableBorder.all(color: _borderColor, width: 0.5),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(1.2),
+        1: pw.FlexColumnWidth(1.8),
+      },
       children: [
-        // Logo KES à gauche
-        pw.Container(
-          width: 130,
-          height: 50,
-          child: logo != null
-              ? pw.Image(logo, fit: pw.BoxFit.contain)
-              : pw.Text('KES LOGO', style: const pw.TextStyle(fontSize: 10)),
-        ),
-        pw.SizedBox(width: 8),
-
-        // Tableau d'en-tête à droite
-        pw.Expanded(
-          child: pw.Table(
-            border: pw.TableBorder.all(color: _borderColor, width: 0.5),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(1.2),
-              1: pw.FlexColumnWidth(1.8),
-            },
-            children: [
-              pw.TableRow(
+        pw.TableRow(
+          children: [
+            // Colonne 1 : Titre JSA
+            pw.Container(
+              height: 52,
+              padding: const pw.EdgeInsets.all(3),
+              child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
                 children: [
-                  pw.Container(
-                    height: 48,
-                    padding: const pw.EdgeInsets.all(3),
-                    child: pw.Column(
-                      mainAxisAlignment: pw.MainAxisAlignment.center,
-                      crossAxisAlignment: pw.CrossAxisAlignment.center,
-                      children: [
-                        pw.Text(
-                          'JSA',
-                          style: pw.TextStyle(
-                            font: PdfReportService.fontBold,
-                            fontSize: 16,
-                            color: PdfColors.black,
-                          ),
-                        ),
-                        pw.SizedBox(height: 2),
-                        pw.Text(
-                          'JOB SAFETY ANALYSIS',
-                          style: pw.TextStyle(
-                            font: PdfReportService.fontBold,
-                            fontSize: 7.0,
-                            color: _kesBlue,
-                            fontStyle: pw.FontStyle.italic,
-                          ),
-                        ),
-                      ],
+                  pw.Text(
+                    'JSA',
+                    style: pw.TextStyle(
+                      font: PdfReportService.fontBold,
+                      fontSize: 16,
+                      color: PdfColors.black,
                     ),
                   ),
-                  pw.Table(
-                    border: pw.TableBorder.all(color: _borderColor, width: 0.5),
-                    columnWidths: const {
-                      0: pw.FlexColumnWidth(1.1),
-                      1: pw.FlexColumnWidth(1.9),
-                    },
-                    children: [
-                      _buildHeaderInfoRow('N° Ref:', 'KIP/DG/FOR/QHSE/JSA/01'),
-                      _buildHeaderInfoRow('Date du jour:', dateStr),
-                      _buildHeaderInfoRow('Reference de la mission:', ''),
-                      _buildHeaderInfoRow('Localisation :', site),
-                      _buildHeaderInfoRow('Nom du client :', client),
-                      _buildHeaderInfoRow('Chef d\'équipe:', chefEquipe),
-                    ],
+                  pw.SizedBox(height: 2),
+                  pw.Text(
+                    'JOB SAFETY ANALYSIS',
+                    style: pw.TextStyle(
+                      font: PdfReportService.fontBold,
+                      fontSize: 7.0,
+                      color: _kesBlue,
+                      fontStyle: pw.FontStyle.italic,
+                    ),
                   ),
                 ],
               ),
-            ],
-          ),
+            ),
+            // Colonne 2 : Sous-tableau d'infos
+            pw.Table(
+              border: pw.TableBorder.all(color: _borderColor, width: 0.5),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(1.2),
+                1: pw.FlexColumnWidth(1.8),
+              },
+              children: [
+                _buildHeaderInfoRow('N° Ref:', 'KIP/DG/FOR/QHSE/JSA/01'),
+                _buildHeaderInfoRow('Date du jour:', dateStr),
+                _buildHeaderInfoRow('Reference de la mission:', ''),
+                _buildHeaderInfoRow('Localisation :', site),
+                _buildHeaderInfoRow('Nom du client :', client),
+                _buildHeaderInfoRow('Chef d\'équipe:', chefEquipe),
+              ],
+            ),
+          ],
         ),
       ],
     );
@@ -262,7 +271,7 @@ class PdfReportJsaService {
     return pw.TableRow(
       children: [
         pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1.2),
           child: pw.Text(
             label,
             style: pw.TextStyle(
@@ -272,7 +281,7 @@ class PdfReportJsaService {
           ),
         ),
         pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1.2),
           child: pw.Text(
             value,
             style: pw.TextStyle(
@@ -332,7 +341,7 @@ class PdfReportJsaService {
   /// Tableau 1: INSPECTEURS (Dynamique selon le nombre d'inspecteurs de la mission)
   static pw.Widget _buildInspecteursTable(List<JSAInspecteur> inspecteurs) {
     final total = inspecteurs.length;
-    final rowCount = total == 0 ? 1 : ((total + 1) ~/ 2);
+    final rowCount = total == 0 ? 3 : ((total + 1) ~/ 2).clamp(3, 10);
 
     final tableRows = <pw.TableRow>[];
 
@@ -367,8 +376,7 @@ class PdfReportJsaService {
             _buildCell('${leftIndex + 1}', isHeader: false, fontSize: 6.0, alignCenter: true),
             _buildCell(leftNom, isHeader: false, fontSize: 6.0),
             _buildCell(leftInsp?.signature ?? '', isHeader: false, fontSize: 6.0),
-            _buildCell(rightNom.isNotEmpty ? '${rightIndex + 1}' : (rightIndex < 6 ? '${rightIndex + 1}' : ''),
-                isHeader: false, fontSize: 6.0, alignCenter: true),
+            _buildCell('${rightIndex + 1}', isHeader: false, fontSize: 6.0, alignCenter: true),
             _buildCell(rightNom, isHeader: false, fontSize: 6.0),
             _buildCell(rightInsp?.signature ?? '', isHeader: false, fontSize: 6.0),
           ],
@@ -465,20 +473,28 @@ class PdfReportJsaService {
                     mainAxisAlignment: pw.MainAxisAlignment.center,
                     children: [
                       pw.Text(
-                        'KES: ',
+                        'KES:   ',
+                        style: pw.TextStyle(font: PdfReportService.fontBold, fontSize: 6.0, color: PdfColors.black),
+                      ),
+                      pw.Text(
+                        '656 294 506 / 655 903 178',
                         style: pw.TextStyle(font: PdfReportService.fontBold, fontSize: 6.0, color: _kesBlue),
                       ),
                       pw.Text(
-                        '656 294 506 / 655 903 178 (QHSE)',
-                        style: pw.TextStyle(font: PdfReportService.fontBold, fontSize: 6.0, color: _kesBlue),
+                        ' (QHSE)',
+                        style: pw.TextStyle(font: PdfReportService.fontBold, fontSize: 6.0, color: PdfColors.black),
                       ),
                       pw.Text(
                         '   -   ',
                         style: pw.TextStyle(font: PdfReportService.fontRegular, fontSize: 6.0),
                       ),
                       pw.Text(
-                        '699 429 589 (DG)',
+                        '699 429 589',
                         style: pw.TextStyle(font: PdfReportService.fontBold, fontSize: 6.0, color: _kesBlue),
+                      ),
+                      pw.Text(
+                        ' (DG)',
+                        style: pw.TextStyle(font: PdfReportService.fontBold, fontSize: 6.0, color: PdfColors.black),
                       ),
                     ],
                   ),
@@ -666,7 +682,7 @@ class PdfReportJsaService {
                     children: [
                       _buildCheckboxLine(epc.uneMinuteMaSecurite, '1 minute ma sécurité'),
                       _buildCheckboxLine(epc.toolboxMeeting, 'Toolbox meeting'),
-                      _buildCheckboxLine(epc.outilsMaterielsIsolants, 'Outils / matériels isolants'),
+                      _buildCheckboxLine(epc.outilsMaterielsIsolants, 'Outils / matériels/ équipements isolants'),
                     ],
                   ),
                 ],
@@ -714,7 +730,7 @@ class PdfReportJsaService {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       _buildCheckboxLine(epi.bouchonsOreille, 'Bouchons d\'oreille'),
-                      _buildCheckboxLine(epi.masqueSecurite, 'Masque de sécurité'),
+                      _buildCheckboxLine(epi.masqueSecurite, 'masque de sécurité'),
                       _buildCheckboxLine(epi.cacheNez, 'Cache-nez'),
                     ],
                   ),
@@ -722,7 +738,7 @@ class PdfReportJsaService {
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
                       _buildCheckboxLine(epi.lunettesProtection, 'Lunettes de protection'),
-                      _buildCheckboxLine(epi.combinaisonLongueManche, 'Combinaison longue manche'),
+                      _buildCheckboxLine(epi.combinaisonLongueManche, 'Combinaison : longue manche'),
                       _buildCheckboxLine(epi.gilet, 'Gilet'),
                     ],
                   ),
@@ -742,7 +758,7 @@ class PdfReportJsaService {
             ],
           ),
         ),
-        pw.SizedBox(height: 2),
+        pw.SizedBox(height: 6),
         pw.Center(
           child: pw.Text(
             '« Vous êtes responsable de votre sécurité et celle des autres ; le port des EPI ne remplacera jamais la vigilance et la prudence. »',
@@ -763,6 +779,23 @@ class PdfReportJsaService {
     return pw.Column(
       children: [
         _buildSectionHeaderBar('VERIFICATION FINALE'),
+        // Texte introductif qui s'étend sur toute la largeur
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2.5),
+          decoration: pw.BoxDecoration(
+            border: pw.Border(
+              left: pw.BorderSide(color: _borderColor, width: 0.5),
+              right: pw.BorderSide(color: _borderColor, width: 0.5),
+              bottom: pw.BorderSide(color: _borderColor, width: 0.5),
+            ),
+          ),
+          child: pw.Text(
+            'Le chargé d\'affaires et le donneur d\'ordre certifient que :',
+            style: pw.TextStyle(font: PdfReportService.fontBold, fontSize: 6.0),
+          ),
+        ),
+        // Tableau avec les checkboxes N/A et Applicable
         pw.Table(
           border: pw.TableBorder(
             left: pw.BorderSide(color: _borderColor, width: 0.5),
@@ -772,24 +805,11 @@ class PdfReportJsaService {
             verticalInside: pw.BorderSide(color: _borderColor, width: 0.5),
           ),
           columnWidths: const {
-            0: pw.FixedColumnWidth(22),
-            1: pw.FixedColumnWidth(50),
+            0: pw.FixedColumnWidth(30),
+            1: pw.FixedColumnWidth(55),
             2: pw.FlexColumnWidth(1),
           },
           children: [
-            pw.TableRow(
-              children: [
-                pw.Padding(
-                  padding: const pw.EdgeInsets.all(2.5),
-                  child: pw.Text(
-                    'Le chargé d\'affaires et le donneur d\'ordre certifient que :',
-                    style: pw.TextStyle(font: PdfReportService.fontBold, fontSize: 6.0),
-                  ),
-                ),
-                pw.Container(),
-                pw.Container(),
-              ],
-            ),
             pw.TableRow(
               decoration: pw.BoxDecoration(color: PdfColors.grey100),
               children: [
@@ -852,6 +872,7 @@ class PdfReportJsaService {
             left: pw.BorderSide(color: _borderColor, width: 0.5),
             right: pw.BorderSide(color: _borderColor, width: 0.5),
             bottom: pw.BorderSide(color: _borderColor, width: 0.5),
+            horizontalInside: pw.BorderSide(color: _borderColor, width: 0.5),
             verticalInside: pw.BorderSide(color: _borderColor, width: 0.5),
           ),
           columnWidths: const {
@@ -859,40 +880,42 @@ class PdfReportJsaService {
             1: pw.FlexColumnWidth(1),
           },
           children: [
+            // Ligne 1 : Labels
+            pw.TableRow(
+              children: [
+                pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: pw.Text('Donneur d\'ordre :', style: pw.TextStyle(font: PdfReportService.fontBold, fontSize: 6.0)),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                  child: pw.Text('Chargé d\'affaires :', style: pw.TextStyle(font: PdfReportService.fontBold, fontSize: 6.0)),
+                ),
+              ],
+            ),
+            // Ligne 2 : Signatures (espace pour signer)
             pw.TableRow(
               children: [
                 pw.Container(
-                  height: 32,
-                  padding: const pw.EdgeInsets.all(3),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('Donneur d\'ordre :', style: pw.TextStyle(font: PdfReportService.fontBold, fontSize: 6.0)),
-                      pw.Spacer(),
-                      pw.Text(
-                        vf.donneurOrdreSignature.isNotEmpty
-                            ? vf.donneurOrdreSignature
-                            : '....................................................................................................................................',
-                        style: pw.TextStyle(fontSize: 5.5),
-                      ),
-                    ],
+                  height: 35,
+                  padding: const pw.EdgeInsets.all(4),
+                  alignment: pw.Alignment.bottomLeft,
+                  child: pw.Text(
+                    vf.donneurOrdreSignature.isNotEmpty
+                        ? vf.donneurOrdreSignature
+                        : '....................................................................................................................................',
+                    style: pw.TextStyle(fontSize: 5.5),
                   ),
                 ),
                 pw.Container(
-                  height: 32,
-                  padding: const pw.EdgeInsets.all(3),
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: [
-                      pw.Text('Chargé d\'affaires :', style: pw.TextStyle(font: PdfReportService.fontBold, fontSize: 6.0)),
-                      pw.Spacer(),
-                      pw.Text(
-                        vf.chargeAffairesSignature.isNotEmpty
-                            ? vf.chargeAffairesSignature
-                            : '....................................................................................................................................',
-                        style: pw.TextStyle(fontSize: 5.5),
-                      ),
-                    ],
+                  height: 35,
+                  padding: const pw.EdgeInsets.all(4),
+                  alignment: pw.Alignment.bottomLeft,
+                  child: pw.Text(
+                    vf.chargeAffairesSignature.isNotEmpty
+                        ? vf.chargeAffairesSignature
+                        : '....................................................................................................................................',
+                    style: pw.TextStyle(fontSize: 5.5),
                   ),
                 ),
               ],

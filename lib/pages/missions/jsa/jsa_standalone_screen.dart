@@ -13,6 +13,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:path/path.dart' as path;
+import 'package:inspec_app/widgets/report_generation_loader.dart';
 
 /// Écran Autonome de gestion du module JSA (Analyse de Sécurité du Travail)
 /// Dispose de deux états d'affichage :
@@ -186,7 +187,7 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
                 child: Icon(Icons.picture_as_pdf, color: Colors.red.shade700),
               ),
               title: const Text('PDF', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text('Générer le rapport au format PDF'),
+              subtitle: const Text('Générer un rapport au format PDF'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
                 Navigator.pop(context);
@@ -204,14 +205,14 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
                 child: Icon(Icons.description, color: Colors.blue.shade700),
               ),
               title: const Text('Word', style: TextStyle(fontWeight: FontWeight.w600)),
-              subtitle: const Text('Générer le rapport au format Word'),
+              subtitle: const Text('Générer un rapport au format Word'),
               trailing: const Icon(Icons.arrow_forward_ios, size: 16),
               onTap: () {
                 Navigator.pop(context);
                 _showReportPendingDialog('Word');
               },
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
           ],
         ),
       ),
@@ -219,38 +220,56 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
   }
 
   Future<void> _generateJsaPdfReport() async {
-    setState(() {
-      _isGenerating = true;
-    });
+    setState(() => _isGenerating = true);
+
+    final loaderController = ReportGenerationLoaderController();
+    ReportGenerationLoader.show(
+      context,
+      controller: loaderController,
+      message: 'Génération du rapport JSA en cours...',
+    );
 
     try {
       final file = await PdfReportJsaService.generateJsaReport(
         missionId: widget.mission.id,
       );
 
-      if (file != null && mounted) {
-        setState(() {
-          _pdfFile = file;
-          _pdfFileName = path.basename(file.path);
-          _showPdfPreview = true;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Rapport PDF JSA généré avec succès !'),
-            backgroundColor: Colors.green,
-          ),
+      if (file != null && file.existsSync()) {
+        final fileName = 'Rapport_JSA_${widget.mission.nomClient}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+        final savedFile = await FileStorageService.saveReport(file, fileName);
+
+        final lastReport = LastReport(
+          missionId: '${widget.mission.id}_jsa',
+          filePath: savedFile.path,
+          fileName: fileName,
+          generatedAt: DateTime.now(),
+          reportType: 'pdf',
         );
-      } else if (mounted) {
-        _showError('Échec de la génération du rapport PDF JSA.');
+        await HiveService.saveLastReport(lastReport);
+
+        // Déclencher l'animation de validation (check) puis fermeture auto
+        await loaderController.complete();
+
+        if (mounted) {
+          setState(() {
+            _pdfFile = savedFile;
+            _pdfFileName = fileName;
+            _showPdfPreview = true;
+          });
+        }
+      } else {
+        if (mounted && Navigator.of(context).canPop()) {
+          Navigator.of(context).pop();
+        }
+        _showError('Erreur lors de la génération');
       }
     } catch (e) {
-      if (mounted) _showError('Erreur de génération : $e');
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isGenerating = false;
-        });
+      if (mounted && Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
       }
+      _showError('Erreur: $e');
+    } finally {
+      if (mounted) setState(() => _isGenerating = false);
     }
   }
 
@@ -924,25 +943,20 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
       child: ElevatedButton.icon(
         onPressed: _isGenerating ? null : _showReportTypeDialog,
         icon: _isGenerating
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                    strokeWidth: 2, color: Colors.white))
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
             : Icon(_showPdfPreview ? Icons.refresh : Icons.add),
-        label: Text(_showPdfPreview ? 'RÉGÉNÉRER LE RAPPORT' : 'GÉNÉRER LE RAPPORT'),
+        label: Text(_showPdfPreview ? 'RÉGÉNÉRER' : 'GÉNÉRER'),
         style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: Colors.red,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 12),
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
   }
 
-  /// Carte du rapport disponible (Style SummaryStep & LightingSummaryScreen)
+  /// Carte du rapport disponible — identique à SummaryStep
   Widget _buildReportCard({
     required File file,
     required String? fileName,
@@ -950,17 +964,17 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
     required IconData icon,
     required Color color,
   }) {
-    final cleanFileName = fileName?.split('/').last ?? 'Rapport_JSA.pdf';
-
+    final cleanFileName = fileName?.split('/').last ?? 'Rapport généré';
+    final isPdf = reportType == 'pdf';
     return Container(
       margin: const EdgeInsets.only(bottom: 14),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.shade200, width: 1.5),
+        border: Border.all(color: Colors.grey.shade100, width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.04),
+            color: Colors.black.withOpacity(0.04),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -972,82 +986,103 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
           onTap: () => _previewReport(file),
           borderRadius: BorderRadius.circular(16),
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(14),
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
                   children: [
+                    // Badge Type Fichier Stylisé
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      width: 48,
+                      height: 48,
                       decoration: BoxDecoration(
-                        color: color.withValues(alpha: 0.1),
+                        gradient: LinearGradient(
+                          colors: isPdf
+                              ? [Colors.red.shade600, Colors.red.shade400]
+                              : [Colors.blue.shade600, Colors.blue.shade400],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
                         borderRadius: BorderRadius.circular(12),
+                        boxShadow: [
+                          BoxShadow(
+                            color: color.withOpacity(0.25),
+                            blurRadius: 6,
+                            offset: const Offset(0, 3),
+                          ),
+                        ],
                       ),
-                      child: Icon(icon, color: color, size: 28),
+                      child: Center(
+                        child: Text(
+                          isPdf ? 'PDF' : 'DOCX',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w900,
+                            fontSize: 11,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
                     ),
                     const SizedBox(width: 14),
+
+                    // Détails Fichier
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
                             cleanFileName,
                             style: const TextStyle(
                               fontSize: 14,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.textDark,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black87,
                             ),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
-                          const SizedBox(height: 2),
-                          Text(
-                            'Toucher pour prévisualiser le rapport',
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Colors.grey.shade600,
-                            ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(Icons.visibility_outlined, size: 12, color: Colors.grey.shade500),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Cliquez pour prévisualiser',
+                                style: TextStyle(fontSize: 11, color: Colors.grey.shade500),
+                              ),
+                            ],
                           ),
                         ],
                       ),
                     ),
-                    Icon(
-                      Icons.visibility_outlined,
-                      color: AppTheme.primaryBlue,
-                      size: 22,
-                    ),
                   ],
                 ),
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Divider(height: 1),
-                ),
+                const SizedBox(height: 12),
+                const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                const SizedBox(height: 10),
+
+                // Boutons d'Action Premium alignés à droite
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  mainAxisAlignment: MainAxisAlignment.end,
                   children: [
-                    TextButton.icon(
-                      onPressed: () => _downloadReport(file, cleanFileName),
-                      icon: const Icon(Icons.download_rounded, size: 18),
-                      label: const Text('Sauvegarder'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.primaryBlue,
-                      ),
+                    _buildCircleActionButton(
+                      icon: Icons.download_rounded,
+                      tooltip: 'Télécharger',
+                      onTap: () => _downloadReport(file, cleanFileName),
                     ),
-                    TextButton.icon(
-                      onPressed: () => _shareReport(file),
-                      icon: const Icon(Icons.share_rounded, size: 18),
-                      label: const Text('Partager'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.primaryBlue,
-                      ),
+                    const SizedBox(width: 8),
+                    _buildCircleActionButton(
+                      icon: Icons.share_rounded,
+                      tooltip: 'Partager',
+                      onTap: () => _shareReport(file),
                     ),
-                    TextButton.icon(
-                      onPressed: () => _previewReport(file),
-                      icon: const Icon(Icons.print_rounded, size: 18),
-                      label: const Text('Imprimer'),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.primaryBlue,
-                      ),
+                    const SizedBox(width: 8),
+                    _buildCircleActionButton(
+                      icon: Icons.print_rounded,
+                      tooltip: 'Imprimer',
+                      onTap: () => _previewReport(file),
                     ),
                   ],
                 ),
@@ -1055,6 +1090,27 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildCircleActionButton({
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: IconButton(
+        onPressed: onTap,
+        icon: Icon(icon, size: 16, color: Colors.grey.shade700),
+        padding: EdgeInsets.zero,
+        constraints: const BoxConstraints.tightFor(width: 34, height: 34),
+        tooltip: tooltip,
       ),
     );
   }
