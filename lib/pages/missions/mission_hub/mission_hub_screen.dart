@@ -688,7 +688,7 @@ class _MissionHubScreenState extends State<MissionHubScreen>
                           mission: widget.mission,
                         ),
                       ),
-                    ).then((_) => setState(() {}));
+                    ).then((_) => _computeProgress());
                   },
                   icon: const Icon(Icons.shield_rounded, size: 18),
                   label: const Text(

@@ -255,14 +255,7 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
               child: IconButton(
                 icon: Icon(Icons.arrow_back, size: isSmallScreen ? 20 : 24, color: Colors.white),
                 onPressed: () {
-                  Navigator.of(context).pushReplacement(
-                    MaterialPageRoute(
-                      builder: (context) => MissionHubScreen(
-                        mission: _currentMission,
-                        user: widget.user,
-                      ),
-                    ),
-                  );
+                  Navigator.of(context).pop();
                 },
               ),
             ),
