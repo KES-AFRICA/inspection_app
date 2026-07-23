@@ -341,7 +341,7 @@ class _BackupScreenState extends State<BackupScreen> {
               dense: true,
               leading: const Icon(Icons.merge_type_rounded, color: Colors.blue),
               title: const Text('Fusionner sans écraser', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
-              subtitle: const Text('Les missions existantes seront conservées', style: TextStyle(fontSize: 11)),
+              subtitle: const Text('Renumérote automatiquement les doublons (ex: Mission (1)) sans rien écraser', style: TextStyle(fontSize: 11)),
               onTap: () => Navigator.pop(ctx, 'fusion'),
             ),
             ListTile(
@@ -474,12 +474,16 @@ class _BackupScreenState extends State<BackupScreen> {
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text(
+        title: Text(
           'Sauvegarde & Restauration',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+            color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+          ),
         ),
         backgroundColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-        foregroundColor: isDarkMode ? Colors.white : AppTheme.textDark,
+        foregroundColor: isDarkMode ? Colors.white : AppTheme.darkBlue,
         elevation: 0.5,
       ),
       body: SingleChildScrollView(
@@ -557,8 +561,6 @@ class _BackupScreenState extends State<BackupScreen> {
                     context,
                     title: 'Exporter',
                     subtitle: '${missions.length} mission(s) disponible(s)',
-                    badge: 'Format V3',
-                    badgeColor: Colors.blue,
                     icon: Icons.cloud_upload_rounded,
                     iconColor: AppTheme.primaryBlue,
                     buttonText: 'EXPORTER',
@@ -575,8 +577,6 @@ class _BackupScreenState extends State<BackupScreen> {
                     context,
                     title: 'Importer',
                     subtitle: 'Depuis fichier .json',
-                    badge: 'Rétrocompatible',
-                    badgeColor: Colors.green,
                     icon: Icons.cloud_download_rounded,
                     iconColor: Colors.green.shade600,
                     buttonText: 'IMPORTER',
@@ -766,8 +766,6 @@ class _BackupScreenState extends State<BackupScreen> {
     BuildContext context, {
     required String title,
     required String subtitle,
-    required String badge,
-    required Color badgeColor,
     required IconData icon,
     required Color iconColor,
     required String buttonText,
@@ -794,33 +792,13 @@ class _BackupScreenState extends State<BackupScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: iconColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(icon, color: iconColor, size: 24),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: badgeColor.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  badge,
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.bold,
-                    color: badgeColor,
-                  ),
-                ),
-              ),
-            ],
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: iconColor.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor, size: 24),
           ),
           const SizedBox(height: 14),
           Text(
@@ -834,6 +812,8 @@ class _BackupScreenState extends State<BackupScreen> {
           const SizedBox(height: 2),
           Text(
             subtitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
             style: TextStyle(fontSize: 11.5, color: Colors.grey.shade500),
           ),
           const SizedBox(height: 16),

@@ -1057,9 +1057,9 @@ class BackupService {
       );
     }
 
-    // ─ 2. Validation magic (V1 rétrocompat + V2) ─
+    // ─ 2. Validation magic (V1, V2 et V3) ─
     final fileMagic = payload['magic'] as String?;
-    if (fileMagic != _magic && fileMagic != _magicV1) {
+    if (fileMagic != _magic && fileMagic != _magicV2 && fileMagic != _magicV1) {
       return const ImportResult(
         success: false,
         message: "Ce fichier n'est pas une sauvegarde Inspec valide.",
@@ -1081,13 +1081,13 @@ class BackupService {
     for (final m in missionsData) {
       try {
         final r = await _importMission(
-            m as Map<String, dynamic>,
+            _safeMap(m),
             ecraser: ecraserExistants,
             importeurMatricule: importeurMatricule,
             importeurNom: importeurNom,
             importeurPrenom: importeurPrenom,
           );
-        if (r == 'imported') {
+        if (r.startsWith('imported')) {
           imported++;
         } else {
           skipped++;
@@ -1131,35 +1131,133 @@ class BackupService {
     );
   }
 
+  // ── HELPER DE RÉSOLUTION DES CONFLITS DE NOMS DE CLIENT ──
+
+  static String _generateUniqueClientName(String baseName, Set<String> existingNames) {
+    final clean = baseName.trim();
+    if (clean.isEmpty) return 'Mission Inconnue';
+    if (!existingNames.contains(clean)) return clean;
+
+    String prefix = clean;
+    final regex = RegExp(r'^(.*?)\s*\(\d+\)$');
+    final match = regex.firstMatch(clean);
+    if (match != null) {
+      prefix = match.group(1)!.trim();
+    }
+
+    int counter = 1;
+    while (true) {
+      final candidate = '$prefix ($counter)';
+      if (!existingNames.contains(candidate)) {
+        return candidate;
+      }
+      counter++;
+    }
+  }
+
+  // ── HELPER DE REMAPPAGE DU MISSION_ID ET NOM POUR LES DOUBLONS ──
+
+  static Map<String, dynamic> _remapMissionId(
+      Map<String, dynamic> data, String oldId, String newId, String newClientName) {
+    final copy = Map<String, dynamic>.from(data);
+
+    if (copy.containsKey('mission') && copy['mission'] is Map) {
+      final mj = Map<String, dynamic>.from(copy['mission'] as Map);
+      mj['id'] = newId;
+      mj['nom_client'] = newClientName;
+      copy['mission'] = mj;
+    }
+
+    void remapIdInSubMap(String key) {
+      if (copy.containsKey(key) && copy[key] is Map) {
+        final subMap = Map<String, dynamic>.from(copy[key] as Map);
+        if (subMap.containsKey('missionId')) {
+          subMap['missionId'] = newId;
+        }
+        copy[key] = subMap;
+      }
+    }
+
+    remapIdInSubMap('audit');
+    remapIdInSubMap('description_installations');
+    remapIdInSubMap('mesures_essais');
+    remapIdInSubMap('jsa');
+    remapIdInSubMap('renseignements_generaux');
+
+    void remapIdInList(String key) {
+      if (copy.containsKey(key) && copy[key] is List) {
+        final list = (copy[key] as List).map((item) {
+          if (item is Map) {
+            final itemMap = Map<String, dynamic>.from(item);
+            if (itemMap.containsKey('missionId')) {
+              itemMap['missionId'] = newId;
+            }
+            return itemMap;
+          }
+          return item;
+        }).toList();
+        copy[key] = list;
+      }
+    }
+
+    remapIdInList('foudre_observations');
+    remapIdInList('classements_locaux');
+    remapIdInList('classements_zones');
+    remapIdInList('trash_items');
+    remapIdInList('local_drafts');
+    remapIdInList('coffret_drafts');
+
+    return copy;
+  }
+
   // ─────────────────────────────────────────────────────────
   // IMPORT D'UNE MISSION
   // ─────────────────────────────────────────────────────────
 
   static Future<String> _importMission(
-    Map<String, dynamic> data, {
+    Map<String, dynamic> rawData, {
     required bool ecraser,
     required String importeurMatricule,
     required String importeurNom,
     required String importeurPrenom,
   }) async {
-    final mj = data['mission'] as Map<String, dynamic>?;
-    if (mj == null) return 'skipped';
-    final missionId = mj['id'] as String?;
-    if (missionId == null) return 'skipped';
+    final data = _safeMap(rawData);
+    final mj = _safeMap(data['mission']);
+    if (mj.isEmpty) return 'skipped';
+    
+    final originalMissionId = _safeString(mj['id']);
+    if (originalMissionId.isEmpty) return 'skipped';
 
-    // Vérifier doublon — la clé Hive de la mission EST son id
+    final originalNomClient = _safeString(mj['nom_client'], 'Mission Sans Nom');
+
     final box = Hive.box<Mission>('missions');
-    final existing = box.get(missionId);
-    if (existing != null && !ecraser) return 'skipped';
+    final existingById = box.get(originalMissionId);
+    final existingNames = box.values.map((m) => m.nomClient.trim()).toSet();
 
+    String targetMissionId = originalMissionId;
+    Map<String, dynamic> targetData = data;
+
+    // Stratégie d'importation :
+    if (ecraser && existingById != null) {
+      targetMissionId = originalMissionId;
+      targetData = data;
+    } else {
+      final needNewName = existingNames.contains(originalNomClient.trim());
+      final needNewId = existingById != null;
+
+      if (needNewName || needNewId) {
+        final uniqueNomClient = _generateUniqueClientName(originalNomClient, existingNames);
+        targetMissionId = 'm_${DateTime.now().microsecondsSinceEpoch}_${(100 + existingNames.length)}';
+        targetData = _remapMissionId(data, originalMissionId, targetMissionId, uniqueNomClient);
+      }
+    }
+
+    final targetMj = _safeMap(targetData['mission']);
     final createdPhotoPaths = <String>[];
 
     try {
-      // Mission — put avec l'id comme clé (cohérent avec HiveService.saveMission)
-      final mission = Mission.fromJson(mj);
+      final mission = Mission.fromJson(targetMj);
 
-      // S'assurer que l'importeur apparaît dans les verificateurs
-      // pour que getMissionsByMatricule la retourne dans sa liste
       mission.verificateurs ??= [];
       final dejaPresent = mission.verificateurs!
           .any((v) => v['matricule'] == importeurMatricule);
@@ -1172,66 +1270,57 @@ class BackupService {
         });
       }
 
-      await box.put(missionId, mission);
+      await box.put(targetMissionId, mission);
 
-      // Restaurer les photos en premier
-      final photosMap = data['photos'] as Map<String, dynamic>?;
-      if (photosMap != null && photosMap.isNotEmpty) {
+      // Restaurer les photos
+      final photosMap = _safeMap(targetData['photos']);
+      if (photosMap.isNotEmpty) {
         final paths = await _restorePhotos(photosMap);
         createdPhotoPaths.addAll(paths);
       }
 
-      // Audit
-      final auditData = data['audit'] as Map<String, dynamic>?;
-      if (auditData != null) await _importAudit(auditData);
+      // Sub-modules avec targetMissionId
+      final auditData = _safeMap(targetData['audit']);
+      if (auditData.isNotEmpty) await _importAudit(auditData);
 
-      // Description installations
-      final descData =
-          data['description_installations'] as Map<String, dynamic>?;
-      if (descData != null) await _importDescription(descData);
+      final descData = _safeMap(targetData['description_installations']);
+      if (descData.isNotEmpty) await _importDescription(descData);
 
-      // Mesures et essais
-      final mesuresData = data['mesures_essais'] as Map<String, dynamic>?;
-      if (mesuresData != null) await _importMesures(mesuresData);
+      final mesuresData = _safeMap(targetData['mesures_essais']);
+      if (mesuresData.isNotEmpty) await _importMesures(mesuresData);
 
-      // JSA
-      final jsaData = data['jsa'] as Map<String, dynamic>?;
-      if (jsaData != null) await _importJSA(jsaData);
+      final jsaData = _safeMap(targetData['jsa']);
+      if (jsaData.isNotEmpty) await _importJSA(jsaData);
 
-      // Renseignements généraux
-      final rensData =
-          data['renseignements_generaux'] as Map<String, dynamic>?;
-      if (rensData != null) await _importRenseignements(rensData);
+      final rensData = _safeMap(targetData['renseignements_generaux']);
+      if (rensData.isNotEmpty) await _importRenseignements(rensData);
 
-      // Foudre
-      for (final f in data['foudre_observations'] as List<dynamic>? ?? []) {
-        await _importFoudre(f as Map<String, dynamic>);
+      for (final f in _safeList(targetData['foudre_observations'])) {
+        if (f is Map) await _importFoudre(_safeMap(f));
       }
 
-      // Classements locaux
-      for (final c in data['classements_locaux'] as List<dynamic>? ?? []) {
-        await _importClassement(c as Map<String, dynamic>);
+      for (final c in _safeList(targetData['classements_locaux'])) {
+        if (c is Map) await _importClassement(_safeMap(c));
       }
 
-      // Classements zones
-      for (final c in data['classements_zones'] as List<dynamic>? ?? []) {
-        await _importClassementZone(c as Map<String, dynamic>);
+      for (final c in _safeList(targetData['classements_zones'])) {
+        if (c is Map) await _importClassementZone(_safeMap(c));
       }
 
-      // Progression de séquence (rétrocompatible)
-      final progressData = data['sequence_progress'] as Map<dynamic, dynamic>?;
-      if (progressData != null) {
+      final progressData = targetData['sequence_progress'];
+      if (progressData is Map) {
         final progressBox = await Hive.openBox('mission_progress');
-        await progressBox.put(missionId, Map<String, dynamic>.from(progressData));
+        await progressBox.put(targetMissionId, Map<String, dynamic>.from(progressData));
       }
 
-      // Éléments de Corbeille (rétrocompatible V1 & V2)
-      final trashData = data['trash_items'] as List<dynamic>?;
-      if (trashData != null) {
+      final trashData = _safeList(targetData['trash_items']);
+      if (trashData.isNotEmpty) {
         final trashBox = Hive.box<TrashItem>('trash_items');
         for (final t in trashData) {
-          if (t is Map<String, dynamic>) {
-            final item = TrashItem.fromJson(t);
+          if (t is Map) {
+            final itemMap = _safeMap(t);
+            itemMap['missionId'] = targetMissionId;
+            final item = TrashItem.fromJson(itemMap);
             await trashBox.put(item.id, item);
           }
         }
@@ -1240,8 +1329,7 @@ class BackupService {
       return 'imported';
     } catch (e, st) {
       if (kDebugMode) print('❌ Exception détectée lors de l\'import: $e\n$st');
-      // Déclencher le rollback automatique
-      await _rollbackMission(missionId, createdPhotoPaths);
+      await _rollbackMission(targetMissionId, createdPhotoPaths);
       rethrow;
     }
   }
@@ -2030,19 +2118,66 @@ class BackupService {
     return result;
   }
 
+  // ── HELPER DE CONVERSION ET PARSING SÉCURISÉ (DÉFENSIF) ──
+
+  static Map<String, dynamic> _safeMap(dynamic v) {
+    if (v is Map<String, dynamic>) return v;
+    if (v is Map) {
+      final res = <String, dynamic>{};
+      v.forEach((k, val) => res[k.toString()] = val);
+      return res;
+    }
+    return <String, dynamic>{};
+  }
+
+  static List<dynamic> _safeList(dynamic v) {
+    if (v is List) return v;
+    return <dynamic>[];
+  }
+
+  static String _safeString(dynamic v, [String fallback = '']) {
+    if (v == null) return fallback;
+    return v.toString();
+  }
+
+  static int _safeInt(dynamic v, [int fallback = 0]) {
+    if (v == null) return fallback;
+    if (v is int) return v;
+    if (v is num) return v.toInt();
+    if (v is String) return int.tryParse(v) ?? fallback;
+    return fallback;
+  }
+
+  static double _safeDouble(dynamic v, [double fallback = 0.0]) {
+    if (v == null) return fallback;
+    if (v is double) return v;
+    if (v is num) return v.toDouble();
+    if (v is String) return double.tryParse(v) ?? fallback;
+    return fallback;
+  }
+
+  static bool _safeBool(dynamic v, [bool fallback = false]) {
+    if (v == null) return fallback;
+    if (v is bool) return v;
+    if (v is String) return v.toLowerCase() == 'true' || v == '1';
+    if (v is num) return v != 0;
+    return fallback;
+  }
+
   // ── Restaurer les photos depuis base64 ──
   static Future<List<String>> _restorePhotos(Map<String, dynamic> photosMap) async {
     final createdPaths = <String>[];
     final appDir = await getApplicationDocumentsDirectory();
     for (final entry in photosMap.entries) {
-      final originalPath = entry.key as String;
-      final b64 = entry.value as String? ?? '';
-      if (b64.isEmpty) continue;
+      final originalPath = _safeString(entry.key);
+      final b64 = _safeString(entry.value);
+      if (originalPath.isEmpty || b64.isEmpty) continue;
       try {
-        final fileName = originalPath.split('/').last;
+        final normalizedPath = originalPath.replaceAll('\\', '/');
+        final fileName = normalizedPath.split('/').last;
         // Extraire le sous-dossier depuis le chemin original
         String subDir = 'misc';
-        final parts = originalPath.split('/');
+        final parts = normalizedPath.split('/');
         final idx = parts.indexOf('audit_photos');
         if (idx != -1 && idx + 2 < parts.length) {
           subDir = parts[idx + 1];
