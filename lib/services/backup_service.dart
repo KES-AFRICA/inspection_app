@@ -17,6 +17,8 @@ import 'package:crypto/crypto.dart';
 import 'package:external_path/external_path.dart';
 import 'package:flutter/foundation.dart';
 import 'package:hive/hive.dart';
+import 'package:inspec_app/models/trash_item.dart';
+import 'package:inspec_app/services/trash_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
@@ -85,8 +87,9 @@ class DeleteResult {
 // SERVICE PRINCIPAL
 // ─────────────────────────────────────────────────────────────
 class BackupService {
-  static const int _schemaVersion = 2;
-  static const String _magic   = 'INSPEC_BACKUP_V2';
+  static const int _schemaVersion = 3;
+  static const String _magic   = 'INSPEC_BACKUP_V3';
+  static const String _magicV2 = 'INSPEC_BACKUP_V2';
   static const String _magicV1 = 'INSPEC_BACKUP_V1'; // rétrocompat import
 
   // ═══════════════════════════════════════════════════════════
@@ -318,6 +321,10 @@ class BackupService {
     final classements = _classementsByMission(id);
     final classementZones = _classementZonesByMission(id);
     final sequenceProgress = await SequenceProgressService.getProgress(id);
+    final trashItems = TrashService.getAllTrashItems()
+        .where((t) => t.missionId == id)
+        .map((t) => t.toJson())
+        .toList();
 
     // Ne pas collecter le base64 ici, seulement collecter la liste de chemins physiques
     final photoPaths = audit != null ? _collectAllPhotoPaths(audit) : <String>[];
@@ -337,6 +344,7 @@ class BackupService {
       'classements_locaux': classements,
       'classements_zones': classementZones,
       'sequence_progress': sequenceProgress,
+      'trash_items': trashItems,
     };
   }
 
@@ -1118,6 +1126,18 @@ class BackupService {
       if (progressData != null) {
         final progressBox = await Hive.openBox('mission_progress');
         await progressBox.put(missionId, Map<String, dynamic>.from(progressData));
+      }
+
+      // Éléments de Corbeille (rétrocompatible V1 & V2)
+      final trashData = data['trash_items'] as List<dynamic>?;
+      if (trashData != null) {
+        final trashBox = Hive.box<TrashItem>('trash_items');
+        for (final t in trashData) {
+          if (t is Map<String, dynamic>) {
+            final item = TrashItem.fromJson(t);
+            await trashBox.put(item.id, item);
+          }
+        }
       }
 
       return 'imported';

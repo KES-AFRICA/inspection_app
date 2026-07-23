@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:inspec_app/pages/backup/backup_screen.dart';
+import 'package:inspec_app/pages/trash/corbeille_screen.dart';
+import 'package:inspec_app/services/trash_service.dart';
 import '../../../models/verificateur.dart';
 import '../../../models/mission.dart';
 import '../../../services/hive_service.dart';
@@ -156,6 +158,22 @@ class SidebarMenu extends StatelessWidget {
                 isSelected: currentPageIndex == 1,
                 onTap: () => onNavigationItemSelected(1),
               ),
+              _buildNavigationItem(
+                icon: Icons.delete_outline_rounded,
+                title: 'Corbeille',
+                isSelected: false,
+                badgeCount: TrashService.getTrashCount(),
+                onTap: () {
+                  onClose();
+                  Navigator.of(context).push(
+                    MaterialPageRoute(
+                      builder: (context) => CorbeilleScreen(
+                        onRefreshParent: onRefreshMissions,
+                      ),
+                    ),
+                  ).then((_) => onRefreshMissions?.call());
+                },
+              ),
 
               // Espace vide
               Expanded(child: Container()),
@@ -214,6 +232,7 @@ class SidebarMenu extends StatelessWidget {
     required String title,
     required bool isSelected,
     required VoidCallback onTap,
+    int? badgeCount,
   }) {
     return ListTile(
       leading: Icon(
@@ -227,9 +246,31 @@ class SidebarMenu extends StatelessWidget {
           fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
-      trailing: isSelected
-          ? Icon(Icons.arrow_forward_ios, size: 16, color: AppTheme.primaryBlue)
-          : null,
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (badgeCount != null && badgeCount > 0)
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: Colors.red,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '$badgeCount',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          if (isSelected) ...[
+            const SizedBox(width: 6),
+            Icon(Icons.arrow_forward_ios, size: 16, color: AppTheme.primaryBlue),
+          ],
+        ],
+      ),
       onTap: onTap,
     );
   }

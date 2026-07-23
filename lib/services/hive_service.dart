@@ -15,6 +15,9 @@ import '../models/verificateur.dart';
 import '../models/mission.dart';
 import '../models/renseignements_generaux.dart';
 
+import 'package:inspec_app/models/trash_item.dart';
+import 'package:inspec_app/services/trash_service.dart';
+
 class HiveService {
   static const String _verificateurBox = 'verificateurs';
   static const String _missionBox = 'missions';
@@ -29,6 +32,7 @@ class HiveService {
   static const String _classementZoneBox = 'classement_zones';
   static const String _localDraftsBox = 'local_drafts';
   static const String _lightingInspectionBox = 'lighting_inspections';
+  static const String _trashBox = 'trash_items';
 
   // Initialiser Hive
   static Future<void> init() async {
@@ -74,6 +78,7 @@ class HiveService {
     Hive.registerAdapter(LuminaireQuestionAnswerAdapter());
     Hive.registerAdapter(NonConformingLuminaireAdapter());
     Hive.registerAdapter(LightingInspectionAdapter());
+    Hive.registerAdapter(TrashItemAdapter());
 
     // Ouvrir toutes les boxes avec le type correct
     await Hive.openBox('meta');
@@ -92,11 +97,13 @@ class HiveService {
     await Hive.openBox(_localDraftsBox); 
     await Hive.openBox<ClassementZone>(_classementZoneBox);  
     await Hive.openBox<LastReport>('last_reports');  
+    await Hive.openBox<TrashItem>(_trashBox);
     
     // Box pour les préférences MT (type dynamique)
     await Hive.openBox(_mtPreferenceBox);
-    
-  
+
+    // Auto-purge automatique des éléments corbeille de +90 jours
+    await TrashService.autoPurgeExpiredItems(retentionDays: 90);
   }
 
   // ============================================================
@@ -285,12 +292,15 @@ class HiveService {
 
   static List<Mission> getAllMissions() {
     final box = Hive.box<Mission>(_missionBox);
-    return box.values.toList();
+    final trashedIds = TrashService.getTrashedMissionIds();
+    return box.values.where((m) => !trashedIds.contains(m.id)).toList();
   }
 
   static List<Mission> getMissionsByMatricule(String matricule) {
     final box = Hive.box<Mission>(_missionBox);
+    final trashedIds = TrashService.getTrashedMissionIds();
     return box.values.where((mission) {
+      if (trashedIds.contains(mission.id)) return false;
       if (mission.verificateurs == null) return false;
       return mission.verificateurs!.any((v) => v['matricule'] == matricule);
     }).toList();

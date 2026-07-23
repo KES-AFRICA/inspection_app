@@ -365,8 +365,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: _buildKpiCard(
                       title: 'Total',
                       count: totalMissions,
-                      color: AppTheme.primaryBlue,
-                      bgColor: const Color(0xFFEFF6FF),
+                      color: const Color(0xFF475569),
+                      bgColor: const Color(0xFFF1F5F9),
                       isSelected: _selectedFilter == 'Tous',
                       onTap: () => _updateSelectedFilter('Tous'),
                     ),
@@ -376,8 +376,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: _buildKpiCard(
                       title: 'En cours',
                       count: enCoursCount,
-                      color: AppTheme.primaryBlue,
-                      bgColor: const Color(0xFFDBEAFE),
+                      color: const Color(0xFF2563EB),
+                      bgColor: const Color(0xFFEFF6FF),
                       isSelected: _selectedFilter == 'En cours',
                       onTap: () => _updateSelectedFilter('En cours'),
                     ),
@@ -398,8 +398,8 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: _buildKpiCard(
                       title: 'Terminées',
                       count: termineesCount,
-                      color: const Color(0xFF16A34A),
-                      bgColor: const Color(0xFFDCFCE7),
+                      color: const Color(0xFF059669),
+                      bgColor: const Color(0xFFECFDF5),
                       isSelected: _selectedFilter == 'Terminé',
                       onTap: () => _updateSelectedFilter('Terminé'),
                     ),

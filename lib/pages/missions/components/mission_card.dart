@@ -6,6 +6,7 @@ import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/pages/missions/create_mission_screen.dart';
 import 'package:inspec_app/pages/missions/mission_hub/mission_hub_screen.dart';
 import 'package:inspec_app/services/backup_service.dart';
+import 'package:inspec_app/services/trash_service.dart';
 
 /// Carte de mission moderne avec micro-interactions, badges dynamiques et menu 3-dots.
 class MissionCard extends StatefulWidget {
@@ -38,11 +39,11 @@ class _MissionCardState extends State<MissionCard> {
   Color _getStatusColor(String status) {
     switch (_normalizeStatus(status)) {
       case 'En attente':
-        return const Color(0xFFD97706); // Ambre
+        return const Color(0xFFD97706); // Orange Ambre
       case 'En cours':
-        return AppTheme.primaryBlue;
+        return const Color(0xFF2563EB); // Bleu Royal
       default:
-        return const Color(0xFF16A34A); // Vert émeraude
+        return const Color(0xFF059669); // Vert Émeraude
     }
   }
 
@@ -53,18 +54,18 @@ class _MissionCardState extends State<MissionCard> {
       case 'En cours':
         return const Color(0xFFEFF6FF);
       default:
-        return const Color(0xFFDCFCE7);
+        return const Color(0xFFECFDF5);
     }
   }
 
   IconData _getStatusIcon(String status) {
     switch (_normalizeStatus(status)) {
       case 'En attente':
-        return Icons.hourglass_top_rounded;
+        return Icons.schedule_rounded;
       case 'En cours':
-        return Icons.play_circle_fill_rounded;
+        return Icons.sync_rounded;
       default:
-        return Icons.check_circle_rounded;
+        return Icons.task_alt_rounded;
     }
   }
 
@@ -193,7 +194,7 @@ class _MissionCardState extends State<MissionCard> {
           ],
         ),
         content: Text(
-          'Êtes-vous sûr de vouloir supprimer définitivement la mission "${widget.mission.nomClient}" ?',
+          'La mission "${widget.mission.nomClient}" sera déplacée dans la Corbeille. Vous pourrez la restaurer à tout moment.',
           style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
         ),
         actions: [
@@ -204,11 +205,11 @@ class _MissionCardState extends State<MissionCard> {
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
+              backgroundColor: Colors.orange.shade800,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             ),
-            child: const Text('SUPPRIMER', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text('DÉPLACER À LA CORBEILLE', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -216,15 +217,16 @@ class _MissionCardState extends State<MissionCard> {
 
     if (confirmed != true || !context.mounted) return;
 
-    final result = await BackupService.deleteMissionCompletely(widget.mission.id);
+    final result = await TrashService.moveMissionToTrash(
+      widget.mission,
+      deletedBy: widget.user.nom,
+    );
 
     if (!context.mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          result.message ?? (result.success ? 'Mission supprimée.' : 'Erreur suppression.'),
-        ),
-        backgroundColor: result.success ? Colors.green : Colors.red,
+        content: Text(result.message),
+        backgroundColor: result.success ? Colors.orange.shade800 : Colors.red,
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 3),
       ),
@@ -236,25 +238,46 @@ class _MissionCardState extends State<MissionCard> {
   Widget _buildLogoWidget() {
     final logoPath = widget.mission.logoClient;
     if (logoPath != null && logoPath.isNotEmpty) {
+      Widget imageWidget;
       if (logoPath.startsWith('http')) {
-        return Image.network(
+        imageWidget = Image.network(
           logoPath,
-          width: 48,
-          height: 48,
-          fit: BoxFit.cover,
+          fit: BoxFit.contain,
           errorBuilder: (_, __, ___) => _buildFallbackLogo(),
         );
       } else {
         final file = File(logoPath);
         if (file.existsSync()) {
-          return Image.file(
+          imageWidget = Image.file(
             file,
-            width: 48,
-            height: 48,
-            fit: BoxFit.cover,
+            fit: BoxFit.contain,
           );
+        } else {
+          return _buildFallbackLogo();
         }
       }
+
+      return Container(
+        width: 48,
+        height: 48,
+        padding: const EdgeInsets.all(3),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200, width: 1),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.04),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(9),
+          child: Center(child: imageWidget),
+        ),
+      );
     }
     return _buildFallbackLogo();
   }
@@ -278,6 +301,7 @@ class _MissionCardState extends State<MissionCard> {
             AppTheme.darkBlue,
           ],
         ),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Center(
         child: Text(
@@ -349,10 +373,7 @@ class _MissionCardState extends State<MissionCard> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Avatar Logo Client
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(14),
-                        child: _buildLogoWidget(),
-                      ),
+                      _buildLogoWidget(),
                       const SizedBox(width: 14),
 
                       // Informations Principales Client & Site
