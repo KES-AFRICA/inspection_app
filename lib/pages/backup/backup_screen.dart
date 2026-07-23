@@ -139,27 +139,19 @@ class _BackupScreenState extends State<BackupScreen> {
       final pickerResult = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['json'],
-        withData: true,
+        withData: false, // CRITIQUE: 0 Mo alloués en RAM native
       );
 
       if (pickerResult == null || pickerResult.files.isEmpty) return;
 
-      final file = pickerResult.files.first;
-      String? jsonContent;
-
-      if (file.bytes != null) {
-        jsonContent = String.fromCharCodes(file.bytes!);
-      } else if (file.path != null) {
-        jsonContent = await File(file.path!).readAsString();
-      }
-
-      if (jsonContent == null || jsonContent.isEmpty) {
+      final filePath = pickerResult.files.first.path;
+      if (filePath == null || filePath.isEmpty) {
         if (!mounted) return;
-        _showErrorDialog('Fichier vide ou illisible.', null);
+        _showErrorDialog('Chemin de fichier invalide.', null);
         return;
       }
 
-      final inspect = await BackupService.inspecterSauvegarde(jsonContent);
+      final inspect = await BackupService.inspecterSauvegardeFichier(filePath);
       if (!inspect.isValid) {
         if (!mounted) return;
         _showErrorDialog(
@@ -175,15 +167,71 @@ class _BackupScreenState extends State<BackupScreen> {
 
       final ecraser = (mode == 'ecraser');
 
-      _showLoadingDialog(context, "Importation des données... Veuillez patienter.");
+      double progress = 0.05;
+      String progressText = "Initialisation de l'importation...";
+
+      StateSetter? dialogSetState;
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (ctx) => StatefulBuilder(
+          builder: (context, setSt) {
+            dialogSetState = setSt;
+            final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+            return AlertDialog(
+              backgroundColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              title: const Row(
+                children: [
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  ),
+                  SizedBox(width: 14),
+                  Text('Importation en cours', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                ],
+              ),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LinearProgressIndicator(
+                    value: progress > 0 ? progress : null,
+                    borderRadius: BorderRadius.circular(8),
+                    minHeight: 8,
+                  ),
+                  const SizedBox(height: 14),
+                  Text(
+                    progressText,
+                    style: TextStyle(
+                      fontSize: 12.5,
+                      color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      );
+
       setState(() => _isImporting = true);
 
-      final result = await BackupService.importerSauvegarde(
-        jsonContent: jsonContent,
+      final result = await BackupService.importerSauvegardeFichier(
+        filePath: filePath,
         ecraser: ecraser,
         importeurMatricule: widget.user.matricule,
         importeurNom: widget.user.nom,
         importeurPrenom: widget.user.prenom,
+        onProgress: (stage, prg) {
+          if (mounted) {
+            dialogSetState?.call(() {
+              progressText = stage;
+              progress = prg;
+            });
+          }
+        },
       );
 
       if (!mounted) return;
@@ -197,9 +245,9 @@ class _BackupScreenState extends State<BackupScreen> {
             : '';
 
         _showSuccessDialog(
-          'Importation terminée',
-          '${result.importedMissions} mission(s) importée(s) sur $total.'
-          '${result.skippedMissions > 0 ? " (${result.skippedMissions} ignorée(s) car déjà existante(s))" : ""}'
+          'Importation terminée avec succès',
+          '${result.importedMissions} mission(s) restaurée(s) sur $total.'
+          '${result.skippedMissions > 0 ? " (${result.skippedMissions} conservée(s) sans écraser)" : ""}'
           '$warningsText',
         );
       } else {

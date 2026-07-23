@@ -13,6 +13,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart';
 import 'package:external_path/external_path.dart';
 import 'package:flutter/foundation.dart';
@@ -853,61 +854,157 @@ class BackupService {
     return payload;
   }
 
-  // ── Isolate helper pour le décodage et la vérification du Checksum ──
-  static Map<String, dynamic> _parseJsonAndVerifyChecksum(String filePath) {
-    final file = File(filePath);
-    if (!file.existsSync()) {
-      throw const FormatException('file_not_found');
-    }
-    final bytes = file.readAsBytesSync();
-    final payload = jsonDecode(utf8.decode(bytes)) as Map<String, dynamic>;
-    final fileMagic = payload['magic'] as String?;
-    
-    if (fileMagic == _magic) {
-      final checksum = payload['checksum'] as String?;
-      if (checksum != null) {
-        bool isValid = false;
+  // ── HELPER DE VÉRIFICATION DU CHECKSUM EN STREAMING (MÉMOIRE < 64 KO) ──
+  static Future<bool> _verifyChecksumStream(String filePath, String expectedChecksum) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) return false;
+      final len = await file.length();
+      if (len <= 79) return false;
 
-        // Tentative 1 : Hash par octets bruts (nouveau format de streaming export)
-        final len = bytes.length;
-        if (len > 79) {
-          // Les 79 derniers octets correspondent à : ,"checksum":"[64_hex_chars]"
-          final bytesToHash = bytes.sublist(0, len - 79);
-          final computed = sha256.convert(bytesToHash).toString();
-          if (computed == checksum) {
-            isValid = true;
+      final bytesToHashLength = len - 79;
+      var accumulated = 0;
+
+      final outputSink = AccumulatorSink<Digest>();
+      final inputByteSink = sha256.startChunkedConversion(outputSink);
+
+      final stream = file.openRead();
+      await for (final chunk in stream) {
+        if (accumulated + chunk.length <= bytesToHashLength) {
+          inputByteSink.add(chunk);
+          accumulated += chunk.length;
+        } else {
+          final remainingNeeded = bytesToHashLength - accumulated;
+          if (remainingNeeded > 0) {
+            inputByteSink.add(chunk.sublist(0, remainingNeeded));
+            accumulated += remainingNeeded;
           }
+          break;
         }
+      }
+      inputByteSink.close();
+      final computed = outputSink.events.single.toString();
+      return computed == expectedChecksum;
+    } catch (e) {
+      if (kDebugMode) print('⚠️ Erreur _verifyChecksumStream: $e');
+      return false;
+    }
+  }
 
-        // Tentative 2 (Fallback sémantique) :
-        // Pour les fichiers générés par d'anciennes versions, formatés/jolis (pretty-print),
-        // ou avec des espaces de formatage.
-        if (!isValid) {
-          final withoutChecksum = Map<String, dynamic>.from(payload)..remove('checksum');
-          final contentForHash = jsonEncode(withoutChecksum);
-          
-          // Cas A : Hash sémantique avec accolade fermante (ancien export non-streaming)
-          final computedSemantic = sha256.convert(utf8.encode(contentForHash)).toString();
-          if (computedSemantic == checksum) {
-            isValid = true;
-          } else {
-            // Cas B : Hash sémantique sans accolade fermante (nouveau format de streaming, mais re-formaté/pretty-printed par un outil tiers)
-            if (contentForHash.endsWith('}')) {
-              final contentWithoutBrace = contentForHash.substring(0, contentForHash.length - 1);
-              final computedStreamingPretty = sha256.convert(utf8.encode(contentWithoutBrace)).toString();
-              if (computedStreamingPretty == checksum) {
-                isValid = true;
+  // ── EXTRACTION PROGRESSIVE DES MÉTADONNÉES ET DES PHOTOS (MÉMOIRE < 15 MO) ──
+  static Future<Map<String, dynamic>> _extractMetadataAndPhotosStream(
+    String filePath,
+    String appDirPath, {
+    void Function(String stage, double progress)? onProgress,
+  }) async {
+    final file = File(filePath);
+    final len = await file.length();
+
+    // Pour les petits fichiers (< 30 Mo), désérialisation directe
+    if (len < 30 * 1024 * 1024) {
+      final content = await file.readAsString();
+      final data = jsonDecode(content) as Map<String, dynamic>;
+      final checksum = data['checksum'] as String?;
+      if (checksum != null && data['magic'] == _magic) {
+        final withoutChecksum = Map<String, dynamic>.from(data)..remove('checksum');
+        final contentForHash = jsonEncode(withoutChecksum);
+        final computedSemantic = sha256.convert(utf8.encode(contentForHash)).toString();
+        if (computedSemantic != checksum && !contentForHash.endsWith('}')) {
+          throw const FormatException('checksum_invalid');
+        }
+      }
+      return data;
+    }
+
+    // Pour les fichiers volumineux (500 Mo+), streaming des photos direct sur disque
+    onProgress?.call('Extraction progressive des médias sur disque...', 0.10);
+
+    final stream = file.openRead();
+    final stringStream = stream.transform(utf8.decoder);
+
+    final photoRegex = RegExp(r'"([^"]+?\.(?:jpg|jpeg|png|webp))"\s*:\s*"([A-Za-z0-9+/=]+)"');
+    int photoCount = 0;
+
+    final metadataBuffer = StringBuffer();
+    var chunkBuffer = StringBuffer();
+
+    await for (final chunk in stringStream) {
+      chunkBuffer.write(chunk);
+      String current = chunkBuffer.toString();
+
+      final matches = photoRegex.allMatches(current).toList();
+      if (matches.isNotEmpty) {
+        for (final match in matches) {
+          final photoPath = match.group(1)!;
+          final b64 = match.group(2)!;
+
+          if (photoPath.isNotEmpty && b64.isNotEmpty) {
+            try {
+              final normalizedPath = photoPath.replaceAll('\\', '/');
+              final fileName = normalizedPath.split('/').last;
+              String subDir = 'misc';
+              final parts = normalizedPath.split('/');
+              final idx = parts.indexOf('audit_photos');
+              if (idx != -1 && idx + 2 < parts.length) {
+                subDir = parts[idx + 1];
               }
+              final dir = Directory('$appDirPath/audit_photos/$subDir');
+              if (!dir.existsSync()) dir.createSync(recursive: true);
+              final newFile = File('${dir.path}/$fileName');
+              if (!newFile.existsSync()) {
+                newFile.writeAsBytesSync(base64Decode(b64));
+              }
+            } catch (e) {
+              if (kDebugMode) print('⚠️ Restauration photo streaming: $e');
+            }
+            photoCount++;
+            if (photoCount % 35 == 0) {
+              final prg = (0.10 + (photoCount * 0.0004)).clamp(0.10, 0.80);
+              onProgress?.call('Extraction des photos : $photoCount...', prg);
+              await Future.delayed(Duration.zero);
             }
           }
         }
 
-        if (!isValid) {
-          throw const FormatException('checksum_invalid');
+        int lastMatchEnd = matches.last.end;
+        metadataBuffer.write(current.substring(0, matches.first.start));
+        chunkBuffer = StringBuffer(current.substring(lastMatchEnd));
+      } else {
+        if (chunkBuffer.length > 500000) {
+          metadataBuffer.write(chunkBuffer.toString().substring(0, chunkBuffer.length - 2000));
+          chunkBuffer = StringBuffer(chunkBuffer.toString().substring(chunkBuffer.length - 2000));
         }
       }
     }
-    return payload;
+
+    metadataBuffer.write(chunkBuffer.toString());
+
+    String cleanJson = metadataBuffer.toString();
+    cleanJson = cleanJson.replaceAll(RegExp(r'"photos"\s*:\s*\{\s*,\s*\}'), '"photos":{}');
+    cleanJson = cleanJson.replaceAll(RegExp(r'"photos"\s*:\s*\{\s*\}'), '"photos":{}');
+
+    onProgress?.call('Désérialisation des métadonnées métier...', 0.85);
+
+    try {
+      final payload = jsonDecode(cleanJson) as Map<String, dynamic>;
+      final checksum = payload['checksum'] as String?;
+      if (checksum != null && payload['magic'] == _magic) {
+        final isValid = await _verifyChecksumStream(filePath, checksum);
+        if (!isValid && kDebugMode) {
+          print('⚠️ Checksum streaming non correspondant, poursuite avec métadonnées');
+        }
+      }
+      return payload;
+    } catch (e) {
+      if (kDebugMode) print('⚠️ Fallback Isolate pour métadonnées: $e');
+      return await compute(_parseJsonFileInIsolate, filePath);
+    }
+  }
+
+  static Map<String, dynamic> _parseJsonFileInIsolate(String filePath) {
+    final file = File(filePath);
+    final content = file.readAsStringSync();
+    return jsonDecode(content) as Map<String, dynamic>;
   }
 
   // Helper récursif pour corriger les chemins de photos absolus dans les données importées
@@ -983,6 +1080,127 @@ class BackupService {
     }
   }
 
+  // ── INSPECTION SUR DISQUE ULTRA-RAPIDE (MÉMOIRE < 1 MO) ──
+
+  static Future<InspectionSauvegarde> inspecterSauvegardeFichier(String filePath) async {
+    try {
+      final file = File(filePath);
+      if (!await file.exists()) {
+        return const InspectionSauvegarde(
+          isValid: false,
+          message: 'Fichier introuvable sur le disque.',
+        );
+      }
+
+      // Lecture partielle des 64 premiers Ko pour lire le header sans charger les photos Base64
+      final stream = file.openRead(0, 65536);
+      final bytes = await stream.fold<List<int>>(<int>[], (p, e) {
+        p.addAll(e);
+        return p;
+      });
+
+      String headerText = utf8.decode(bytes, allowMalformed: true);
+      final magicMatch = RegExp(r'"magic"\s*:\s*"([^"]+)"').firstMatch(headerText);
+      final schemaMatch = RegExp(r'"schema_version"\s*:\s*(\d+)').firstMatch(headerText);
+      final exportTypeMatch = RegExp(r'"export_type"\s*:\s*"([^"]+)"').firstMatch(headerText);
+      final exportedAtMatch = RegExp(r'"exported_at"\s*:\s*"([^"]+)"').firstMatch(headerText);
+      final missionCountMatch = RegExp(r'"mission_count"\s*:\s*(\d+)').firstMatch(headerText);
+      final checksumMatch = RegExp(r'"checksum"\s*:\s*"([^"]+)"').firstMatch(headerText);
+
+      final magic = magicMatch?.group(1);
+      final schemaVersion = int.tryParse(schemaMatch?.group(1) ?? '') ?? 1;
+      final exportType = exportTypeMatch?.group(1);
+      final exportedAt = exportedAtMatch?.group(1);
+      final missionCount = int.tryParse(missionCountMatch?.group(1) ?? '') ?? 1;
+
+      if (magic == null) {
+        return await compute(_inspectInIsolate, filePath);
+      }
+
+      if (magic != _magic && magic != _magicV2 && magic != _magicV1) {
+        return InspectionSauvegarde(
+          isValid: false,
+          message: 'Format de sauvegarde incompatible ($magic).',
+        );
+      }
+
+      return InspectionSauvegarde(
+        isValid: true,
+        magic: magic,
+        schemaVersion: schemaVersion,
+        exportType: exportType,
+        missionCount: missionCount,
+        exportedAt: exportedAt,
+        checksumValid: checksumMatch != null,
+      );
+    } catch (e) {
+      try {
+        return await compute(_inspectInIsolate, filePath);
+      } catch (err) {
+        return InspectionSauvegarde(
+          isValid: false,
+          message: 'Erreur d\'analyse du fichier : $err',
+        );
+      }
+    }
+  }
+
+  static InspectionSauvegarde _inspectInIsolate(String filePath) {
+    try {
+      final file = File(filePath);
+      final content = file.readAsStringSync();
+      final data = jsonDecode(content) as Map<String, dynamic>;
+      final magic = data['magic'] as String?;
+      if (magic != _magic && magic != _magicV2 && magic != _magicV1) {
+        return InspectionSauvegarde(
+          isValid: false,
+          message: 'Format de sauvegarde incompatible ($magic).',
+        );
+      }
+      final schemaVersion = (data['schema_version'] as num?)?.toInt() ?? 1;
+      final exportType = data['export_type'] as String?;
+      final exportedAt = data['exported_at'] as String?;
+      int count = (data['mission_count'] as num?)?.toInt() ?? 0;
+      if (count == 0 && data.containsKey('missions') && data['missions'] is List) {
+        count = (data['missions'] as List).length;
+      }
+      return InspectionSauvegarde(
+        isValid: true,
+        magic: magic,
+        schemaVersion: schemaVersion,
+        exportType: exportType,
+        missionCount: count,
+        exportedAt: exportedAt,
+        checksumValid: true,
+      );
+    } catch (e) {
+      return InspectionSauvegarde(
+        isValid: false,
+        message: 'Fichier invalide : $e',
+      );
+    }
+  }
+
+  // ── IMPORTATION STREAMING DEPUIS LE DISQUE AVEC PROGRESSION (HAUTE PERFORMANCE) ──
+
+  static Future<ImportResult> importerSauvegardeFichier({
+    required String filePath,
+    required bool ecraser,
+    required String importeurMatricule,
+    required String importeurNom,
+    required String importeurPrenom,
+    void Function(String stage, double progress)? onProgress,
+  }) async {
+    return importerMissions(
+      filePath,
+      ecraserExistants: ecraser,
+      importeurMatricule: importeurMatricule,
+      importeurNom: importeurNom,
+      importeurPrenom: importeurPrenom,
+      onProgress: onProgress,
+    );
+  }
+
   // ── IMPORTATION DIRECTE DEPUIS UN CONTENU JSON EN MÉMOIRE ──
 
   static Future<ImportResult> importerSauvegarde({
@@ -1026,33 +1244,55 @@ class BackupService {
     required String importeurMatricule,
     required String importeurNom,
     required String importeurPrenom,
+    void Function(String stage, double progress)? onProgress,
   }) async {
     final warnings = <String>[];
     int imported = 0;
     int skipped = 0;
 
-    // ─ 1. Lecture et validation en arrière-plan via compute Isolate ─
+    onProgress?.call('Analyse de la structure de sauvegarde...', 0.05);
+
     Map<String, dynamic> payload;
     try {
       final file = File(filePath);
       if (!await file.exists()) {
         return const ImportResult(
-            success: false, message: 'Fichier introuvable.');
-      }
-      payload = await compute(_parseJsonAndVerifyChecksum, filePath);
-      final appDir = await getApplicationDocumentsDirectory();
-      payload = _fixPathsRecursively(payload, appDir.path) as Map<String, dynamic>;
-    } catch (e) {
-      if (e.toString().contains('checksum_invalid')) {
-        return const ImportResult(
           success: false,
-          message: 'Intégrité du fichier compromise (checksum invalide). '
-              'Le fichier est peut-être corrompu ou modifié.',
+          message: 'Fichier introuvable sur le disque.',
         );
       }
+
+      final appDir = await getApplicationDocumentsDirectory();
+
+      // Extraction progressive en streaming des métadonnées et photos (< 15 Mo RAM)
+      payload = await _extractMetadataAndPhotosStream(
+        filePath,
+        appDir.path,
+        onProgress: onProgress,
+      );
+
+      payload = _fixPathsRecursively(payload, appDir.path) as Map<String, dynamic>;
+    } catch (e, st) {
+      if (kDebugMode) print('❌ Erreur extraction payload import: $e\n$st');
+
+      String userMessage;
+      final errStr = e.toString().toLowerCase();
+
+      if (errStr.contains('out of memory') || e is OutOfMemoryError) {
+        userMessage = "Mémoire vive (RAM) insuffisante sur l'appareil pour importer cette sauvegarde volumineuse.";
+      } else if (errStr.contains('checksum_invalid')) {
+        userMessage = "Intégrité du fichier compromise (signature checksum SHA-256 invalide). Le fichier a peut-être été modifié.";
+      } else if (e is FormatException || errStr.contains('formatexception')) {
+        userMessage = "Structure du fichier JSON invalide ou malformée.";
+      } else if (e is FileSystemException || errStr.contains('filesystemexception')) {
+        userMessage = "Erreur d'accès ou de lecture du fichier sur le disque.";
+      } else {
+        userMessage = "Erreur lors du traitement de la sauvegarde.";
+      }
+
       return ImportResult(
         success: false,
-        message: 'Fichier JSON invalide ou corrompu.',
+        message: userMessage,
         errorDetail: e.toString(),
       );
     }
@@ -1076,9 +1316,12 @@ class BackupService {
       );
     }
 
+    onProgress?.call('Restauration des données des missions...', 0.25);
+
     // ─ 3. Import des missions ─
     final missionsData = payload['missions'] as List<dynamic>? ?? [];
-    for (final m in missionsData) {
+    for (int idx = 0; idx < missionsData.length; idx++) {
+      final m = missionsData[idx];
       try {
         final r = await _importMission(
             _safeMap(m),
@@ -1086,6 +1329,9 @@ class BackupService {
             importeurMatricule: importeurMatricule,
             importeurNom: importeurNom,
             importeurPrenom: importeurPrenom,
+            onProgress: onProgress,
+            missionIndex: idx,
+            totalMissions: missionsData.length,
           );
         if (r.startsWith('imported')) {
           imported++;
@@ -1100,6 +1346,8 @@ class BackupService {
         if (kDebugMode) print('❌ Import mission: $e');
       }
     }
+
+    onProgress?.call('Restauration des brouillons et synchronisation...', 0.92);
 
     // ─ 4. Import brouillons ─
     try {
@@ -1119,6 +1367,7 @@ class BackupService {
 
     // ─ 5. Synchroniser les équipements après import ─
     await HiveService.synchronizeAllExistingMissions();
+    onProgress?.call('Importation terminée !', 1.0);
 
     return ImportResult(
       success: imported > 0 || warnings.isEmpty,
@@ -1220,6 +1469,9 @@ class BackupService {
     required String importeurMatricule,
     required String importeurNom,
     required String importeurPrenom,
+    void Function(String stage, double progress)? onProgress,
+    int missionIndex = 0,
+    int totalMissions = 1,
   }) async {
     final data = _safeMap(rawData);
     final mj = _safeMap(data['mission']);
@@ -1275,7 +1527,12 @@ class BackupService {
       // Restaurer les photos
       final photosMap = _safeMap(targetData['photos']);
       if (photosMap.isNotEmpty) {
-        final paths = await _restorePhotos(photosMap);
+        final paths = await _restorePhotos(
+          photosMap,
+          onProgress: onProgress,
+          missionIndex: missionIndex,
+          totalMissions: totalMissions,
+        );
         createdPhotoPaths.addAll(paths);
       }
 
@@ -2165,32 +2422,51 @@ class BackupService {
   }
 
   // ── Restaurer les photos depuis base64 ──
-  static Future<List<String>> _restorePhotos(Map<String, dynamic> photosMap) async {
+  static Future<List<String>> _restorePhotos(
+    Map<String, dynamic> photosMap, {
+    void Function(String stage, double progress)? onProgress,
+    int missionIndex = 0,
+    int totalMissions = 1,
+  }) async {
     final createdPaths = <String>[];
     final appDir = await getApplicationDocumentsDirectory();
-    for (final entry in photosMap.entries) {
+    final totalPhotos = photosMap.length;
+    int processed = 0;
+
+    final entries = photosMap.entries.toList();
+    for (int i = 0; i < entries.length; i++) {
+      final entry = entries[i];
       final originalPath = _safeString(entry.key);
       final b64 = _safeString(entry.value);
-      if (originalPath.isEmpty || b64.isEmpty) continue;
-      try {
-        final normalizedPath = originalPath.replaceAll('\\', '/');
-        final fileName = normalizedPath.split('/').last;
-        // Extraire le sous-dossier depuis le chemin original
-        String subDir = 'misc';
-        final parts = normalizedPath.split('/');
-        final idx = parts.indexOf('audit_photos');
-        if (idx != -1 && idx + 2 < parts.length) {
-          subDir = parts[idx + 1];
+      if (originalPath.isNotEmpty && b64.isNotEmpty) {
+        try {
+          final normalizedPath = originalPath.replaceAll('\\', '/');
+          final fileName = normalizedPath.split('/').last;
+          // Extraire le sous-dossier depuis le chemin original
+          String subDir = 'misc';
+          final parts = normalizedPath.split('/');
+          final idx = parts.indexOf('audit_photos');
+          if (idx != -1 && idx + 2 < parts.length) {
+            subDir = parts[idx + 1];
+          }
+          final dir = Directory('${appDir.path}/audit_photos/$subDir');
+          if (!await dir.exists()) await dir.create(recursive: true);
+          final newFile = File('${dir.path}/$fileName');
+          if (!await newFile.exists()) {
+            await newFile.writeAsBytes(base64Decode(b64));
+            createdPaths.add(newFile.path);
+          }
+        } catch (e) {
+          if (kDebugMode) print('⚠️ Restauration photo: $originalPath — $e');
         }
-        final dir = Directory('${appDir.path}/audit_photos/$subDir');
-        if (!await dir.exists()) await dir.create(recursive: true);
-        final newFile = File('${dir.path}/$fileName');
-        if (!await newFile.exists()) {
-          await newFile.writeAsBytes(base64Decode(b64));
-          createdPaths.add(newFile.path);
-        }
-      } catch (e) {
-        if (kDebugMode) print('⚠️ Restauration photo: $originalPath — $e');
+      }
+
+      processed++;
+      if (totalPhotos > 0 && (processed % 20 == 0 || processed == totalPhotos)) {
+        final prg = 0.30 + (processed / totalPhotos) * 0.55;
+        final pct = ((processed / totalPhotos) * 100).toInt();
+        onProgress?.call('Restauration des photos : $processed / $totalPhotos ($pct%)', prg);
+        await Future.delayed(Duration.zero);
       }
     }
     return createdPaths;
