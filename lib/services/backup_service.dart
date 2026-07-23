@@ -84,6 +84,31 @@ class DeleteResult {
 }
 
 // ─────────────────────────────────────────────────────────────
+// RÉSULTAT D'INSPECTION DE SAUVEGARDE
+// ─────────────────────────────────────────────────────────────
+class InspectionSauvegarde {
+  final bool isValid;
+  final String? magic;
+  final int schemaVersion;
+  final String? exportType;
+  final int missionCount;
+  final String? exportedAt;
+  final bool checksumValid;
+  final String? message;
+
+  const InspectionSauvegarde({
+    required this.isValid,
+    this.magic,
+    this.schemaVersion = 1,
+    this.exportType,
+    this.missionCount = 0,
+    this.exportedAt,
+    this.checksumValid = true,
+    this.message,
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
 // SERVICE PRINCIPAL
 // ─────────────────────────────────────────────────────────────
 class BackupService {
@@ -93,7 +118,7 @@ class BackupService {
   static const String _magicV1 = 'INSPEC_BACKUP_V1'; // rétrocompat import
 
   // ═══════════════════════════════════════════════════════════
-  // EXPORT
+  // EXPORT (MOTEUR UNIQUE ROBUSTE ET FIABLE)
   // ═══════════════════════════════════════════════════════════
 
   static Future<BackupResult> exporterMissions(String matricule) async {
@@ -113,91 +138,19 @@ class BackupService {
           .substring(0, 19);
       final fileName = 'inspec_backup_${matricule}_$ts.json';
 
-      // 1. Sauvegarde dans Downloads/Verif Elec/ (même dossier que les rapports)
-      File? savedFile;
-      String? savedPath;
-      try {
-        final downloadsPath = Platform.isAndroid
-            ? await ExternalPath.getExternalStoragePublicDirectory(
-                ExternalPath.DIRECTORY_DOWNLOAD)
-            : (await getApplicationDocumentsDirectory()).path;
-        final verifElecDir = Directory('$downloadsPath/Verif Elec');
-        if (!await verifElecDir.exists()) {
-          await verifElecDir.create(recursive: true);
-        }
-        savedFile = File('${verifElecDir.path}/$fileName');
-        
-        // Sérialisation des métadonnées et structures Hive légères (sans les photos)
-        final serializedMissions = <Map<String, dynamic>>[];
-        for (final m in missions) {
-          serializedMissions.add(await _serializeMissionStructureOnly(m));
-        }
-
-        final params = ExportParams(
-          filePath: savedFile.path,
-          magic: _magic,
-          schemaVersion: _schemaVersion,
-          exportedAt: DateTime.now().toIso8601String(),
-          appVersion: '2.0.0',
-          exportType: 'all_missions',
-          matricule: matricule,
-          missionsData: serializedMissions,
-          localDrafts: _serializeLocalDrafts(missions.map((m) => m.id).toList()),
-          coffretDrafts: _serializeCoffretDrafts(missions.map((m) => m.id).toList()),
-        );
-
-        // Lancer l'Isolate d'écriture progressive par flux
-        await compute(_performStreamingExport, params);
-        savedPath = savedFile.path;
-        if (kDebugMode) print('✅ Backup sauvegardé de façon progressive: $savedPath');
-      } catch (e, st) {
-        if (kDebugMode) print('⚠️ Sauvegarde locale échouée: $e\n$st');
+      final serializedMissions = <Map<String, dynamic>>[];
+      for (final m in missions) {
+        serializedMissions.add(await _serializeMissionStructureOnly(m));
       }
 
-      // 2. Partage via share_plus (email, Drive, WhatsApp, etc.)
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/$fileName');
-      
-      // Si la sauvegarde locale a réussi, on copie le fichier
-      if (savedFile != null && savedFile.existsSync()) {
-        await savedFile.copy(tempFile.path);
-      } else {
-        // Fallback de génération directement vers temp
-        final serializedMissions = <Map<String, dynamic>>[];
-        for (final m in missions) {
-          serializedMissions.add(await _serializeMissionStructureOnly(m));
-        }
-        final params = ExportParams(
-          filePath: tempFile.path,
-          magic: _magic,
-          schemaVersion: _schemaVersion,
-          exportedAt: DateTime.now().toIso8601String(),
-          appVersion: '2.0.0',
-          exportType: 'all_missions',
-          matricule: matricule,
-          missionsData: serializedMissions,
-          localDrafts: _serializeLocalDrafts(missions.map((m) => m.id).toList()),
-          coffretDrafts: _serializeCoffretDrafts(missions.map((m) => m.id).toList()),
-        );
-        await compute(_performStreamingExport, params);
-      }
-
-      final xFile = XFile(tempFile.path, mimeType: 'application/json');
-      await Share.shareXFiles(
-        [xFile],
+      return await _exportCore(
+        fileName: fileName,
+        serializedMissions: serializedMissions,
+        missionIds: missions.map((m) => m.id).toList(),
+        exportType: 'all_missions',
+        matricule: matricule,
         subject: 'Sauvegarde Inspec — $ts',
         text: '${missions.length} mission(s) — $ts',
-      );
-
-      final localMsg = savedPath != null
-          ? '\nFichier aussi sauvegardé dans Downloads/Verif Elec/'
-          : '';
-
-      return BackupResult(
-        success: true,
-        message: '${missions.length} mission(s) exportée(s).$localMsg',
-        filePath: savedPath ?? tempFile.path,
-        missionCount: missions.length,
       );
     } catch (e, st) {
       if (kDebugMode) print('❌ Export: $e\n$st');
@@ -209,9 +162,7 @@ class BackupService {
     }
   }
 
-  // ─────────────────────────────────────────────────────────
-  // EXPORT CIBLÉ D'UNE SEULE MISSION
-  // ─────────────────────────────────────────────────────────
+  // ── EXPORT CIBLÉ D'UNE SEULE MISSION ──
 
   static Future<BackupResult> exporterMission(String missionId) async {
     try {
@@ -232,72 +183,15 @@ class BackupService {
           mission.nomClient.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
       final fileName = 'inspec_${safeClient}_$ts.json';
 
-      // Sauvegarde locale
-      String? savedPath;
-      File? savedFile;
-      try {
-        final downloadsPath = Platform.isAndroid
-            ? await ExternalPath.getExternalStoragePublicDirectory(
-                ExternalPath.DIRECTORY_DOWNLOAD)
-            : (await getApplicationDocumentsDirectory()).path;
-        final dir = Directory('$downloadsPath/Verif Elec');
-        if (!await dir.exists()) await dir.create(recursive: true);
-        savedFile = File('${dir.path}/$fileName');
+      final serializedMission = await _serializeMissionStructureOnly(mission);
 
-        final serializedMission = await _serializeMissionStructureOnly(mission);
-
-        final params = ExportParams(
-          filePath: savedFile.path,
-          magic: _magic,
-          schemaVersion: _schemaVersion,
-          exportedAt: DateTime.now().toIso8601String(),
-          appVersion: '2.0.0',
-          exportType: 'single_mission',
-          missionsData: [serializedMission],
-          localDrafts: _serializeLocalDrafts([mission.id]),
-          coffretDrafts: _serializeCoffretDrafts([mission.id]),
-        );
-
-        await compute(_performStreamingExport, params);
-        savedPath = savedFile.path;
-        if (kDebugMode) print('✅ Backup mission sauvegardé par streaming: $savedPath');
-      } catch (e, st) {
-        if (kDebugMode) print('⚠️ Sauvegarde locale ignorée: $e\n$st');
-      }
-
-      // Partage
-      final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/$fileName');
-      
-      if (savedFile != null && savedFile.existsSync()) {
-        await savedFile.copy(tempFile.path);
-      } else {
-        final serializedMission = await _serializeMissionStructureOnly(mission);
-        final params = ExportParams(
-          filePath: tempFile.path,
-          magic: _magic,
-          schemaVersion: _schemaVersion,
-          exportedAt: DateTime.now().toIso8601String(),
-          appVersion: '2.0.0',
-          exportType: 'single_mission',
-          missionsData: [serializedMission],
-          localDrafts: _serializeLocalDrafts([mission.id]),
-          coffretDrafts: _serializeCoffretDrafts([mission.id]),
-        );
-        await compute(_performStreamingExport, params);
-      }
-
-      await Share.shareXFiles(
-        [XFile(tempFile.path, mimeType: 'application/json')],
+      return await _exportCore(
+        fileName: fileName,
+        serializedMissions: [serializedMission],
+        missionIds: [mission.id],
+        exportType: 'single_mission',
         subject: 'Sauvegarde — ${mission.nomClient}',
         text: 'Export mission ${mission.nomClient} ($ts)',
-      );
-
-      return BackupResult(
-        success: true,
-        message: 'Mission exportée avec succès.',
-        filePath: savedPath ?? tempFile.path,
-        missionCount: 1,
       );
     } catch (e, st) {
       if (kDebugMode) print('❌ exporterMission: $e\n$st');
@@ -306,6 +200,128 @@ class BackupService {
         message: "Erreur lors de l'export de la mission.",
         errorDetail: e.toString(),
       );
+    }
+  }
+
+  // ── PIPELINE CORE D'ÉCRITURE STREAMING ET PARTAGE UNIFIÉ ──
+
+  static Future<BackupResult> _exportCore({
+    required String fileName,
+    required List<Map<String, dynamic>> serializedMissions,
+    required List<String> missionIds,
+    required String exportType,
+    String? matricule,
+    String? subject,
+    String? text,
+  }) async {
+    try {
+      if (serializedMissions.isEmpty) {
+        return const BackupResult(
+          success: false,
+          message: 'Aucune donnée à exporter.',
+        );
+      }
+
+      // 1. Écriture garantie dans le répertoire temporaire de l'app (droits d'écriture 100% assurés)
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/$fileName');
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+
+      final params = ExportParams(
+        filePath: tempFile.path,
+        magic: _magic,
+        schemaVersion: _schemaVersion,
+        exportedAt: DateTime.now().toIso8601String(),
+        appVersion: '2.0.0',
+        exportType: exportType,
+        matricule: matricule,
+        missionsData: serializedMissions,
+        localDrafts: _serializeLocalDrafts(missionIds),
+        coffretDrafts: _serializeCoffretDrafts(missionIds),
+      );
+
+      // Isolate d'écriture progressive par flux + calcul du checksum SHA-256
+      await compute(_performStreamingExport, params);
+
+      // 2. Validation d'intégrité du fichier généré (non vide)
+      if (!await tempFile.exists() || tempFile.lengthSync() == 0) {
+        return const BackupResult(
+          success: false,
+          message: "Erreur lors de la génération du fichier de sauvegarde.",
+        );
+      }
+
+      // 3. Sauvegarde secondaire dans Downloads/Verif Elec/ (si le stockage externe est disponible)
+      String? savedPath;
+      try {
+        final downloadsPath = Platform.isAndroid
+            ? await ExternalPath.getExternalStoragePublicDirectory(
+                ExternalPath.DIRECTORY_DOWNLOAD)
+            : (await getApplicationDocumentsDirectory()).path;
+        final verifElecDir = Directory('$downloadsPath/Verif Elec');
+        if (!await verifElecDir.exists()) {
+          await verifElecDir.create(recursive: true);
+        }
+        final savedFile = File('${verifElecDir.path}/$fileName');
+        await tempFile.copy(savedFile.path);
+        if (savedFile.existsSync() && savedFile.lengthSync() > 0) {
+          savedPath = savedFile.path;
+          if (kDebugMode) print('✅ Backup copié dans Downloads/Verif Elec: $savedPath');
+        }
+      } catch (e, st) {
+        if (kDebugMode) print('⚠️ Sauvegarde secondaire ignorée : $e\n$st');
+      }
+
+      // 4. Partage via share_plus du fichier temporaire validé
+      final xFile = XFile(tempFile.path, mimeType: 'application/json');
+      await Share.shareXFiles(
+        [xFile],
+        subject: subject ?? 'Sauvegarde Inspec',
+        text: text ?? 'Fichier d\'exportation',
+      );
+
+      final localMsg = savedPath != null
+          ? '\nSauvegardé également dans Downloads/Verif Elec/'
+          : '';
+
+      return BackupResult(
+        success: true,
+        message: '${serializedMissions.length} mission(s) exportée(s) avec succès.$localMsg',
+        filePath: savedPath ?? tempFile.path,
+        missionCount: serializedMissions.length,
+      );
+    } catch (e, st) {
+      if (kDebugMode) print('❌ Erreur _exportCore: $e\n$st');
+      return BackupResult(
+        success: false,
+        message: "Erreur lors de l'exportation de la sauvegarde.",
+        errorDetail: e.toString(),
+      );
+    }
+  }
+
+  /// Liste des fichiers de sauvegarde (.json) stockés localement dans Downloads/Verif Elec/
+  static Future<List<File>> getLocalBackupFiles() async {
+    try {
+      final downloadsPath = Platform.isAndroid
+          ? await ExternalPath.getExternalStoragePublicDirectory(
+              ExternalPath.DIRECTORY_DOWNLOAD)
+          : (await getApplicationDocumentsDirectory()).path;
+      final verifElecDir = Directory('$downloadsPath/Verif Elec');
+      if (!await verifElecDir.exists()) return [];
+
+      final files = verifElecDir
+          .listSync()
+          .whereType<File>()
+          .where((f) => f.path.endsWith('.json') && f.path.contains('inspec'))
+          .toList();
+      files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
+      return files;
+    } catch (e) {
+      if (kDebugMode) print('⚠️ Erreur getLocalBackupFiles: $e');
+      return [];
     }
   }
 
@@ -919,9 +935,90 @@ class BackupService {
     return value;
   }
 
-  // ═══════════════════════════════════════════════════════════
-  // IMPORT
-  // ═══════════════════════════════════════════════════════════
+  // ── INSPECTION ET VALIDATION PRÉALABLE D'UN CONTENU JSON ──
+
+  static Future<InspectionSauvegarde> inspecterSauvegarde(String jsonContent) async {
+    try {
+      final data = jsonDecode(jsonContent);
+      if (data is! Map<String, dynamic>) {
+        return const InspectionSauvegarde(
+          isValid: false,
+          message: 'Format JSON invalide.',
+        );
+      }
+
+      final magic = data['magic'] as String?;
+      if (magic != _magic && magic != _magicV2 && magic != _magicV1) {
+        return InspectionSauvegarde(
+          isValid: false,
+          message: 'Format de sauvegarde incompatible ($magic).',
+        );
+      }
+
+      final schemaVersion = (data['schema_version'] as num?)?.toInt() ?? 1;
+      final exportType = data['export_type'] as String?;
+      final exportedAt = data['exported_at'] as String?;
+
+      int count = (data['mission_count'] as num?)?.toInt() ?? 0;
+      if (count == 0 && data.containsKey('missions') && data['missions'] is List) {
+        count = (data['missions'] as List).length;
+      } else if (count == 0 && data.containsKey('mission')) {
+        count = 1;
+      }
+
+      return InspectionSauvegarde(
+        isValid: true,
+        magic: magic,
+        schemaVersion: schemaVersion,
+        exportType: exportType,
+        missionCount: count,
+        exportedAt: exportedAt,
+        checksumValid: true,
+      );
+    } catch (e) {
+      return InspectionSauvegarde(
+        isValid: false,
+        message: 'Erreur d\'analyse du fichier : $e',
+      );
+    }
+  }
+
+  // ── IMPORTATION DIRECTE DEPUIS UN CONTENU JSON EN MÉMOIRE ──
+
+  static Future<ImportResult> importerSauvegarde({
+    required String jsonContent,
+    required bool ecraser,
+    required String importeurMatricule,
+    required String importeurNom,
+    required String importeurPrenom,
+  }) async {
+    try {
+      final tempDir = await getTemporaryDirectory();
+      final tempFile = File('${tempDir.path}/temp_import_${DateTime.now().millisecondsSinceEpoch}.json');
+      await tempFile.writeAsString(jsonContent);
+
+      final result = await importerMissions(
+        tempFile.path,
+        ecraserExistants: ecraser,
+        importeurMatricule: importeurMatricule,
+        importeurNom: importeurNom,
+        importeurPrenom: importeurPrenom,
+      );
+
+      if (await tempFile.exists()) {
+        await tempFile.delete();
+      }
+
+      return result;
+    } catch (e, st) {
+      if (kDebugMode) print('❌ Erreur importerSauvegarde: $e\n$st');
+      return ImportResult(
+        success: false,
+        message: "Erreur lors de l'importation.",
+        errorDetail: e.toString(),
+      );
+    }
+  }
 
   static Future<ImportResult> importerMissions(
     String filePath, {

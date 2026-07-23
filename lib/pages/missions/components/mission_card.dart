@@ -146,32 +146,35 @@ class _MissionCardState extends State<MissionCard> {
   }
 
   Future<void> _handleExport(BuildContext context) async {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         content: Row(
           children: [
-            SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+            CircularProgressIndicator(color: AppTheme.primaryBlue),
+            const SizedBox(width: 16),
+            const Expanded(
+              child: Text(
+                'Génération de l\'exportation…',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13.5),
+              ),
             ),
-            SizedBox(width: 12),
-            Text('Export en cours…'),
           ],
         ),
-        duration: Duration(seconds: 30),
-        behavior: SnackBarBehavior.floating,
       ),
     );
 
     final result = await BackupService.exporterMission(widget.mission.id);
 
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+    Navigator.of(context, rootNavigator: true).pop(); // Fermer le dialogue de chargement
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
-          result.message ?? (result.success ? 'Export réussi.' : 'Erreur export.'),
+          result.message ?? (result.success ? 'Exportation réussie.' : 'Erreur exportation.'),
         ),
         backgroundColor: result.success ? Colors.green : Colors.red,
         behavior: SnackBarBehavior.floating,
