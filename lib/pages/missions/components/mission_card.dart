@@ -184,35 +184,117 @@ class _MissionCardState extends State<MissionCard> {
   }
 
   Future<void> _handleDelete(BuildContext context) async {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
     final confirmed = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Row(
+        backgroundColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+        contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        title: Row(
           children: [
-            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
-            SizedBox(width: 10),
-            Text('Supprimer la mission', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.delete_sweep_rounded, color: Colors.red, size: 28),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Supprimer la mission',
+                style: TextStyle(
+                  fontSize: 17,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white : const Color(0xFF1E293B),
+                ),
+              ),
+            ),
           ],
         ),
-        content: Text(
-          'La mission "${widget.mission.nomClient}" sera déplacée dans la Corbeille. Vous pourrez la restaurer à tout moment.',
-          style: TextStyle(color: Colors.grey.shade700, fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('ANNULER', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.orange.shade800,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Container(
+              padding: const EdgeInsets.all(14),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: RichText(
+                text: TextSpan(
+                  style: TextStyle(
+                    fontSize: 13.5,
+                    height: 1.45,
+                    color: isDarkMode ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                  ),
+                  children: [
+                    const TextSpan(text: 'La mission '),
+                    TextSpan(
+                      text: '"${widget.mission.nomClient}"',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const TextSpan(
+                      text: ' sera déplacée dans la Corbeille. Vous pourrez la restaurer à tout moment.',
+                    ),
+                  ],
+                ),
+              ),
             ),
-            child: const Text('DÉPLACER À LA CORBEILLE', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        actions: [
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    side: BorderSide(
+                      color: isDarkMode ? const Color(0xFF475569) : const Color(0xFFCBD5E1),
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: Text(
+                    'Annuler',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white70 : const Color(0xFF64748B),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange.shade800,
+                    foregroundColor: Colors.white,
+                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 13),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  child: const Text(
+                    'Déplacer',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),

@@ -457,24 +457,73 @@ class _BackupScreenState extends State<BackupScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+        contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         title: Row(
           children: [
-            const Icon(Icons.check_circle_rounded, color: Colors.green, size: 26),
-            const SizedBox(width: 10),
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.check_circle_rounded, color: Colors.green, size: 28),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: isDarkMode ? Colors.white : const Color(0xFF1E293B),
+                ),
+              ),
+            ),
           ],
         ),
-        content: Text(content, style: const TextStyle(fontSize: 13)),
-        actions: [
-          ElevatedButton(
-            onPressed: () => Navigator.pop(ctx),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.primaryBlue,
-              foregroundColor: Colors.white,
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 6),
+            Container(
+              padding: const EdgeInsets.all(14),
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(
+                  color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                ),
+              ),
+              child: Text(
+                content,
+                style: TextStyle(
+                  fontSize: 13,
+                  height: 1.45,
+                  color: isDarkMode ? const Color(0xFFCBD5E1) : const Color(0xFF475569),
+                ),
+              ),
             ),
-            child: const Text('OK', style: TextStyle(fontWeight: FontWeight.bold)),
+          ],
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+        actions: [
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppTheme.primaryBlue,
+                foregroundColor: Colors.white,
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text('Compris', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            ),
           ),
         ],
       ),
@@ -488,26 +537,70 @@ class _BackupScreenState extends State<BackupScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+        contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         title: Row(
           children: [
-            const Icon(Icons.error_outline_rounded, color: Colors.red, size: 26),
-            const SizedBox(width: 10),
-            Expanded(child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16))),
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.error_outline_rounded, color: Colors.red, size: 28),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                  color: isDarkMode ? Colors.white : const Color(0xFF1E293B),
+                ),
+              ),
+            ),
           ],
         ),
         content: detail != null
-            ? SingleChildScrollView(
-                child: Text(
-                  detail,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ? Container(
+                constraints: const BoxConstraints(maxHeight: 220),
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isDarkMode ? const Color(0xFF7F1D1D) : const Color(0xFFFCA5A5),
+                  ),
+                ),
+                child: SingleChildScrollView(
+                  child: Text(
+                    detail,
+                    style: TextStyle(
+                      fontSize: 12,
+                      height: 1.4,
+                      color: isDarkMode ? const Color(0xFFFCA5A5) : const Color(0xFF991B1B),
+                    ),
+                  ),
                 ),
               )
             : null,
+        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Fermer', style: TextStyle(fontWeight: FontWeight.bold)),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.pop(ctx),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                foregroundColor: isDarkMode ? Colors.white : const Color(0xFF1E293B),
+                elevation: 0,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+              ),
+              child: const Text('Fermer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14)),
+            ),
           ),
         ],
       ),

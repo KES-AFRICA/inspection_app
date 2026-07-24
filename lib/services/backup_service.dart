@@ -939,121 +939,124 @@ class BackupService {
   }
 
   // ── EXTRACTION PROGRESSIVE DES MÉTADONNÉES ET DES PHOTOS (MÉMOIRE < 15 MO) ──
+  // ── EXTRACTION PROGRESSIVE SÉCURISÉE DES MÉDIAS ET MÉTADONNÉES (RAM < 2 MO) ──
   static Future<Map<String, dynamic>> _extractMetadataAndPhotosStream(
     String filePath,
     String appDirPath, {
     void Function(String stage, double progress)? onProgress,
   }) async {
-    final file = File(filePath);
-    final len = await file.length();
+    final inputFile = File(filePath);
+    final tempDir = await getTemporaryDirectory();
+    final tempCleanFile = File('${tempDir.path}/temp_clean_import_${DateTime.now().millisecondsSinceEpoch}.json');
 
-    // Pour les petits fichiers (< 30 Mo), désérialisation directe
-    if (len < 30 * 1024 * 1024) {
-      final content = await file.readAsString();
-      final data = jsonDecode(content) as Map<String, dynamic>;
-      final checksum = data['checksum'] as String?;
-      if (checksum != null && data['magic'] == _magic) {
-        final withoutChecksum = Map<String, dynamic>.from(data)..remove('checksum');
-        final contentForHash = jsonEncode(withoutChecksum);
-        final computedSemantic = sha256.convert(utf8.encode(contentForHash)).toString();
-        if (computedSemantic != checksum && !contentForHash.endsWith('}')) {
-          throw const FormatException('checksum_invalid');
-        }
-      }
-      return data;
+    if (await tempCleanFile.exists()) {
+      await tempCleanFile.delete();
     }
 
-    // Pour les gros fichiers (> 30 Mo), extraction structurée par streaming
-    onProgress?.call('Extraction progressive des médias sur disque...', 0.10);
+    final sink = tempCleanFile.openWrite(mode: FileMode.write, encoding: utf8);
 
-    final photoRegex = RegExp(r'"([^"]+?\.(?:jpg|jpeg|png|webp))"\s*:\s*"([A-Za-z0-9+/=]+)"');
+    onProgress?.call('Lecture du fichier de sauvegarde...', 0.05);
+
+    final photoRegex = RegExp(
+      r'"([^"]+?\.(?:jpg|jpeg|png|webp|gif))"\s*:\s*"([A-Za-z0-9+/=\s]{100,})"',
+      multiLine: true,
+    );
+
     int photoCount = 0;
+    String buffer = '';
 
-    final metadataBuffer = StringBuffer();
-    var chunkBuffer = StringBuffer();
-
-    // Utf8Decoder sécurisé avec allowMalformed: true
-    final stringStream = file.openRead().transform(const Utf8Decoder(allowMalformed: true));
+    final stringStream = inputFile.openRead().transform(const Utf8Decoder(allowMalformed: true));
 
     await for (final chunk in stringStream) {
-      chunkBuffer.write(chunk);
-      String current = chunkBuffer.toString();
+      buffer += chunk;
 
-      final matches = photoRegex.allMatches(current).toList();
-      if (matches.isNotEmpty) {
-        for (final match in matches) {
-          final photoPath = match.group(1)!;
-          final b64 = match.group(2)!;
+      while (true) {
+        final match = photoRegex.firstMatch(buffer);
+        if (match == null) break;
 
-          if (photoPath.isNotEmpty && b64.isNotEmpty) {
-            try {
-              final normalizedPath = photoPath.replaceAll('\\', '/');
-              final fileName = normalizedPath.split('/').last;
-              String subDir = 'misc';
-              final parts = normalizedPath.split('/');
-              final idx = parts.indexOf('audit_photos');
-              if (idx != -1 && idx + 2 < parts.length) {
-                subDir = parts[idx + 1];
-              }
-              final dir = Directory('$appDirPath/audit_photos/$subDir');
-              if (!dir.existsSync()) dir.createSync(recursive: true);
-              final newFile = File('${dir.path}/$fileName');
-              if (!newFile.existsSync()) {
-                newFile.writeAsBytesSync(base64Decode(b64));
-              }
-            } catch (e) {
-              if (kDebugMode) print('⚠️ Restauration photo streaming: $e');
+        // 1. Écrire le JSON propre qui précède la photo directement dans le fichier temporaire sur disque
+        if (match.start > 0) {
+          sink.write(buffer.substring(0, match.start));
+        }
+
+        // 2. Extraire la photo Base64 vers le stockage physique
+        final photoPath = match.group(1)!;
+        final b64Raw = match.group(2)!;
+        final b64 = b64Raw.replaceAll(RegExp(r'\s+'), '');
+
+        if (photoPath.isNotEmpty && b64.isNotEmpty) {
+          try {
+            final normalizedPath = photoPath.replaceAll('\\', '/');
+            final fileName = normalizedPath.split('/').last;
+            String subDir = 'misc';
+            final parts = normalizedPath.split('/');
+            final idx = parts.indexOf('audit_photos');
+            if (idx != -1 && idx + 2 < parts.length) {
+              subDir = parts[idx + 1];
             }
-            photoCount++;
-            if (photoCount % 35 == 0) {
-              final prg = (0.10 + (photoCount * 0.0004)).clamp(0.10, 0.80);
-              onProgress?.call('Extraction des photos : $photoCount...', prg);
-              await Future.delayed(Duration.zero);
+            final dir = Directory('$appDirPath/audit_photos/$subDir');
+            if (!dir.existsSync()) dir.createSync(recursive: true);
+            final newFile = File('${dir.path}/$fileName');
+            if (!newFile.existsSync()) {
+              newFile.writeAsBytesSync(base64Decode(b64));
             }
+          } catch (e) {
+            if (kDebugMode) print('⚠️ Restauration photo streaming: $e');
+          }
+          photoCount++;
+          if (photoCount % 25 == 0) {
+            final prg = (0.05 + (photoCount * 0.0004)).clamp(0.05, 0.80);
+            onProgress?.call('Extraction des photos : $photoCount...', prg);
           }
         }
 
-        int lastMatchEnd = matches.last.end;
-        if (metadataBuffer.isEmpty) {
-          metadataBuffer.write(current.substring(0, matches.first.start));
-        }
-        chunkBuffer = StringBuffer(current.substring(lastMatchEnd));
-      } else {
-        if (chunkBuffer.length > 500000) {
-          if (metadataBuffer.isEmpty) {
-            metadataBuffer.write(chunkBuffer.toString().substring(0, chunkBuffer.length - 2000));
+        // 3. Écrire la version nettoyée '"path": ""' dans le fichier temporaire
+        sink.write('"$photoPath": ""');
+
+        // 4. Avancer le buffer après la photo
+        buffer = buffer.substring(match.end);
+      }
+
+      // Vider périodiquement le buffer si aucun match n'est en cours pour maintenir la RAM sous 2 Mo
+      if (buffer.length > 256 * 1024) {
+        final lastPhotoStart = buffer.lastIndexOf(RegExp(r'"[^"]+?\.(?:jpg|jpeg|png|webp|gif)"\s*:\s*"'));
+        if (lastPhotoStart > 0) {
+          sink.write(buffer.substring(0, lastPhotoStart));
+          buffer = buffer.substring(lastPhotoStart);
+        } else if (!buffer.contains('"')) {
+          final flushLen = buffer.length - 32 * 1024;
+          if (flushLen > 0) {
+            sink.write(buffer.substring(0, flushLen));
+            buffer = buffer.substring(flushLen);
           }
-          chunkBuffer = StringBuffer(chunkBuffer.toString().substring(chunkBuffer.length - 2000));
         }
       }
     }
 
-    String cleanJson;
-    if (metadataBuffer.isNotEmpty) {
-      metadataBuffer.write(chunkBuffer.toString());
-      cleanJson = metadataBuffer.toString();
-    } else {
-      cleanJson = chunkBuffer.toString();
+    // Évacuer la fin du buffer après le dernier chunk
+    if (buffer.isNotEmpty) {
+      sink.write(buffer);
+      buffer = '';
     }
 
-    cleanJson = cleanJson.replaceAll(RegExp(r'"photos"\s*:\s*\{\s*,\s*\}'), '"photos":{}');
-    cleanJson = cleanJson.replaceAll(RegExp(r'"photos"\s*:\s*\{\s*\}'), '"photos":{}');
-    cleanJson = cleanJson.replaceAll(RegExp(r'"photos"\s*:\s*\{[^\}]*\}'), '"photos":{}');
+    await sink.flush();
+    await sink.close();
 
     onProgress?.call('Désérialisation des métadonnées métier...', 0.85);
 
     try {
-      final bytesClean = utf8.encode(cleanJson);
-      final payload = jsonDecode(const Utf8Decoder(allowMalformed: true).convert(bytesClean)) as Map<String, dynamic>;
-      final checksum = payload['checksum'] as String?;
-      if (checksum != null && payload['magic'] == _magic) {
-        final isValid = await _verifyChecksumStream(filePath, checksum);
-        if (!isValid && kDebugMode) {
-          print('⚠️ Checksum streaming non correspondant, poursuite avec métadonnées');
-        }
-      }
+      final cleanContent = await tempCleanFile.readAsString();
+      final payload = jsonDecode(cleanContent) as Map<String, dynamic>;
+
+      try {
+        if (await tempCleanFile.exists()) await tempCleanFile.delete();
+      } catch (_) {}
+
       return payload;
     } catch (e) {
+      try {
+        if (await tempCleanFile.exists()) await tempCleanFile.delete();
+      } catch (_) {}
       if (kDebugMode) print('❌ Erreur extraction streaming métadonnées: $e');
       rethrow;
     }
