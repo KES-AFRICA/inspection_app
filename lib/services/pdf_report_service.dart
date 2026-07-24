@@ -6,7 +6,6 @@ import 'package:flutter/services.dart' show rootBundle;
 import 'package:inspec_app/models/classement_zone.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
-import 'package:path/path.dart' as path;
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/classement_locaux.dart';
 import 'package:inspec_app/models/description_installations.dart';
@@ -3237,13 +3236,18 @@ class PdfReportService {
     pw.MemoryImage? photoInterne;
     for (final src in [...coffret.photosInternes, ...coffret.photos]) {
       if (src.isEmpty) continue;
-      try {
-        final f = File(src);
-        if (f.existsSync()) {
-          photoInterne = pw.MemoryImage(f.readAsBytesSync());
-          break;
-        }
-      } catch (_) {}
+      if (_coffretPhotoCache.containsKey(src)) {
+        photoInterne = _coffretPhotoCache[src];
+        if (photoInterne != null) break;
+      } else {
+        try {
+          final f = File(src);
+          if (f.existsSync()) {
+            photoInterne = pw.MemoryImage(f.readAsBytesSync());
+            break;
+          }
+        } catch (_) {}
+      }
     }
 
     // Helper functions for characteristics
@@ -4694,6 +4698,78 @@ class PdfReportService {
     );
   }
 
+  static final Map<String, pw.MemoryImage?> _coffretPhotoCache = {};
+
+  static Future<pw.MemoryImage?> _loadAndOptimizeImage(
+    String path, {
+    int maxWidth = 600,
+    int maxHeight = 800,
+    int quality = 65,
+  }) async {
+    final trimmed = path.trim();
+    if (trimmed.isEmpty) return null;
+
+    try {
+      final file = File(trimmed);
+      if (!await file.exists()) return null;
+
+      try {
+        final compressedBytes = await FlutterImageCompress.compressWithFile(
+          file.absolute.path,
+          minWidth: maxWidth,
+          minHeight: maxHeight,
+          quality: quality,
+          format: CompressFormat.jpeg,
+        );
+        if (compressedBytes != null && compressedBytes.isNotEmpty) {
+          return pw.MemoryImage(compressedBytes);
+        }
+      } catch (_) {}
+
+      final bytes = await file.readAsBytes();
+      if (bytes.isEmpty) return null;
+      return pw.MemoryImage(bytes);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  static Future<void> _preloadCoffretPhotos(AuditInstallationsElectriques? audit) async {
+    _coffretPhotoCache.clear();
+    if (audit == null) return;
+
+    final coffretPhotoPaths = <String>{};
+
+    void collectFromCoffret(CoffretArmoire c) {
+      for (final p in [...c.photosInternes, ...c.photos]) {
+        if (p.trim().isNotEmpty) coffretPhotoPaths.add(p.trim());
+      }
+    }
+
+    for (var local in audit.moyenneTensionLocaux) {
+      for (var c in local.coffrets) collectFromCoffret(c);
+    }
+    for (var zone in audit.moyenneTensionZones) {
+      for (var c in zone.coffrets) collectFromCoffret(c);
+      for (var local in zone.locaux) {
+        for (var c in local.coffrets) collectFromCoffret(c);
+      }
+    }
+    for (var zone in audit.basseTensionZones) {
+      for (var c in zone.coffretsDirects) collectFromCoffret(c);
+      for (var local in zone.locaux) {
+        for (var c in local.coffrets) collectFromCoffret(c);
+      }
+    }
+
+    for (final path in coffretPhotoPaths) {
+      final img = await _loadAndOptimizeImage(path, maxWidth: 300, maxHeight: 300, quality: 60);
+      if (img != null) {
+        _coffretPhotoCache[path] = img;
+      }
+    }
+  }
+
   // ──────────────────────────────────────────────────────────────
   //  PHOTOS (grille 2×2)
   // ──────────────────────────────────────────────────────────────
@@ -4901,45 +4977,17 @@ class PdfReportService {
       ],
     ));
 
-    final loadedImages = <pw.MemoryImage?>[];
-    for (final entry in allPhotos) {
-      try {
-        final file = File(entry.filePath);
-        if (await file.exists()) {
-          final compressedBytes = await FlutterImageCompress.compressWithFile(
-            file.absolute.path,
-            minWidth: 600,
-            minHeight: 800,
-            quality: 70,
-            format: CompressFormat.jpeg,
-          );
-          if (compressedBytes != null) {
-            loadedImages.add(pw.MemoryImage(compressedBytes));
-          } else {
-            loadedImages.add(pw.MemoryImage(await file.readAsBytes()));
-          }
-        } else {
-          loadedImages.add(null);
-        }
-      } catch (_) {
-        try {
-          final file = File(entry.filePath);
-          if (await file.exists()) {
-            loadedImages.add(pw.MemoryImage(await file.readAsBytes()));
-          } else {
-            loadedImages.add(null);
-          }
-        } catch (_) {
-          loadedImages.add(null);
-        }
-      }
-    }
-
+    // 2. Render Photos Page-by-Page in Chunks of 4 (Lazy Memory Batching)
     for (int gi = 0; gi < allPhotos.length; gi += 4) {
       final groupEnd = (gi + 4).clamp(0, allPhotos.length);
       final group = allPhotos.sublist(gi, groupEnd);
-      final imgs = loadedImages.sublist(gi, groupEnd);
       final startIdx = gi;
+
+      // Load & Optimize ONLY the 4 photos required for THIS page
+      final pageImgs = <pw.MemoryImage?>[];
+      for (final entry in group) {
+        pageImgs.add(await _loadAndOptimizeImage(entry.filePath, maxWidth: 600, maxHeight: 800, quality: 65));
+      }
 
       pdf.addPage(pw.Page(
         pageTheme: _buildInnerPageTheme(),
@@ -4948,7 +4996,7 @@ class PdfReportService {
           for (int ci = 0; ci < 4; ci++) {
             if (ci < group.length) {
               final entry = group[ci];
-              final img = imgs[ci];
+              final img = pageImgs[ci];
               final globalIdx = startIdx + ci + 1;
               cells.add(_buildPhotoCell(entry, img, globalIdx, allPhotos.length));
             } else {
@@ -5324,6 +5372,7 @@ class PdfReportService {
       
       final description = HiveService.getDescriptionInstallationsByMissionId(missionId);
       final audit = HiveService.getAuditInstallationsByMissionId(missionId);
+      await _preloadCoffretPhotos(audit);
       final classements = HiveService.getEmplacementsByMissionId(missionId);
       final classementsZones = HiveService.getClassementsZonesByMissionId(missionId);
       final mesures = HiveService.getMesuresEssaisByMissionId(missionId);
@@ -5670,6 +5719,8 @@ class PdfReportService {
         print('❌ Erreur generation PDF: $e\n$stack');
       }
       return null;
+    } finally {
+      _coffretPhotoCache.clear();
     }
   }
 

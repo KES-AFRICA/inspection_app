@@ -116,7 +116,7 @@ class PdfReportLightService {
       // 3. RENSEIGNEMENTS GÉNÉRAUX (RENSEIGNEMENTS PRINCIPAUX UNIQUEMENT)
       pdf.addPage(
         pw.MultiPage(
-          maxPages: 5,
+          maxPages: 10000,
           pageTheme: PdfReportService.buildInnerPageTheme(),
           header: (ctx) => PdfReportService.buildPageHeaderWidget(
             nomClient: mission.nomClient,
@@ -145,7 +145,7 @@ class PdfReportLightService {
       // 4. AUDIT DES INSTALLATIONS D'ÉCLAIRAGE (TABLEAUX DE SYNTHÈSE PAR LOCAL, SANS PHOTOS)
       pdf.addPage(
         pw.MultiPage(
-          maxPages: 100,
+          maxPages: 10000,
           pageTheme: PdfReportService.buildInnerPageTheme(),
           header: (ctx) => PdfReportService.buildPageHeaderWidget(
             nomClient: mission.nomClient,
@@ -187,7 +187,7 @@ class PdfReportLightService {
       // 5. PHOTOGRAPHIES DÉDIÉES AUX DÉFAILLANCES D'ÉCLAIRAGE
       pdf.addPage(
         pw.MultiPage(
-          maxPages: 100,
+          maxPages: 10000,
           pageTheme: PdfReportService.buildInnerPageTheme(),
           header: (ctx) => PdfReportService.buildPageHeaderWidget(
             nomClient: mission.nomClient,

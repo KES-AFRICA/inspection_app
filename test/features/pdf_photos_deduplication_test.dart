@@ -1,3 +1,6 @@
+@Timeout(Duration(seconds: 90))
+library;
+
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';

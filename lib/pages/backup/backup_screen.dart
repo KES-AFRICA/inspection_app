@@ -181,15 +181,27 @@ class _BackupScreenState extends State<BackupScreen> {
             return AlertDialog(
               backgroundColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              title: const Row(
+              title: Row(
                 children: [
                   SizedBox(
                     width: 20,
                     height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      color: AppTheme.primaryBlue,
+                    ),
                   ),
-                  SizedBox(width: 14),
-                  Text('Importation en cours', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Text(
+                      'Importation en cours',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: isDarkMode ? Colors.white : const Color(0xFF1E293B),
+                      ),
+                    ),
+                  ),
                 ],
               ),
               content: Column(
@@ -344,82 +356,222 @@ class _BackupScreenState extends State<BackupScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        titlePadding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
+        contentPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         title: Row(
           children: [
-            Icon(Icons.verified_user_rounded, color: Colors.green.shade600, size: 24),
-            const SizedBox(width: 10),
-            const Expanded(
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(Icons.verified_user_rounded, color: Colors.green.shade600, size: 26),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
               child: Text(
                 'Sauvegarde Détectée',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 17,
+                  color: isDarkMode ? Colors.white : const Color(0xFF1E293B),
+                ),
               ),
             ),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                borderRadius: BorderRadius.circular(12),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: isDarkMode ? const Color(0xFF334155) : const Color(0xFFE2E8F0),
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    _buildInfoRow('Format', 'V${info.schemaVersion} (${info.magic})', isDarkMode),
+                    _buildInfoRow('Type d\'export', info.exportType ?? 'Standard', isDarkMode),
+                    _buildInfoRow('Missions', '${info.missionCount}', isDarkMode),
+                    if (info.exportedAt != null)
+                      _buildInfoRow('Créé le', info.exportedAt!.substring(0, 16).replaceAll('T', ' à '), isDarkMode),
+                    _buildInfoRow('Signature SHA-256', info.checksumValid ? '✅ Valide' : '⚠️ Non vérifiée', isDarkMode),
+                  ],
+                ),
               ),
-              child: Column(
-                children: [
-                  _buildInfoRow('Format', 'V${info.schemaVersion} (${info.magic})'),
-                  _buildInfoRow('Type d\'export', info.exportType ?? 'Standard'),
-                  _buildInfoRow('Nombre de missions', '${info.missionCount}'),
-                  if (info.exportedAt != null)
-                    _buildInfoRow('Date de création', info.exportedAt!.substring(0, 16).replaceAll('T', ' à ')),
-                  _buildInfoRow('Signature SHA-256', info.checksumValid ? '✅ Valide' : '⚠️ Non vérifiée'),
-                ],
+              const SizedBox(height: 16),
+              Text(
+                'Mode d\'importation :',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: isDarkMode ? Colors.white70 : const Color(0xFF334155),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'Mode d\'importation :',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-            ),
-            const SizedBox(height: 8),
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              dense: true,
-              leading: const Icon(Icons.merge_type_rounded, color: Colors.blue),
-              title: const Text('Fusionner sans écraser', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
-              subtitle: const Text('Renumérote automatiquement les doublons (ex: Mission (1)) sans rien écraser', style: TextStyle(fontSize: 11)),
-              onTap: () => Navigator.pop(ctx, 'fusion'),
-            ),
-            ListTile(
-              contentPadding: const EdgeInsets.symmetric(horizontal: 8),
-              dense: true,
-              leading: const Icon(Icons.sync_problem_rounded, color: Colors.orange),
-              title: const Text('Remplacer les doublons', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5)),
-              subtitle: const Text('Écrase les missions ayant le même identifiant', style: TextStyle(fontSize: 11)),
-              onTap: () => Navigator.pop(ctx, 'ecraser'),
-            ),
-          ],
+              const SizedBox(height: 10),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => Navigator.pop(ctx, 'fusion'),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.25)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: AppTheme.primaryBlue.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: Icon(Icons.merge_type_rounded, color: AppTheme.primaryBlue, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Fusionner sans écraser',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: isDarkMode ? Colors.white : AppTheme.primaryBlue,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Renumérote les doublons sans rien supprimer',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right_rounded, color: AppTheme.primaryBlue.withValues(alpha: 0.6)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+              Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => Navigator.pop(ctx, 'ecraser'),
+                  borderRadius: BorderRadius.circular(14),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.orange.withValues(alpha: 0.25)),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.15),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.sync_problem_rounded, color: Colors.orange, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Remplacer les doublons',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                  color: isDarkMode ? Colors.white : Colors.orange.shade800,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                'Écrase les missions de même identifiant',
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Icon(Icons.chevron_right_rounded, color: Colors.orange.withValues(alpha: 0.6)),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, null),
-            child: Text('Annuler', style: TextStyle(color: Colors.grey.shade600)),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton(
+              onPressed: () => Navigator.pop(ctx, null),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 13),
+                side: BorderSide(color: isDarkMode ? const Color(0xFF475569) : const Color(0xFFCBD5E1)),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: Text(
+                'Annuler',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.white70 : const Color(0xFF64748B),
+                ),
+              ),
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(String label, String value) {
+  Widget _buildInfoRow(String label, String value, bool isDarkMode) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 3.5),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: TextStyle(fontSize: 11.5, color: Colors.grey.shade600)),
-          Text(value, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11.5,
+              color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+            ),
+          ),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              color: isDarkMode ? Colors.white : const Color(0xFF1E293B),
+            ),
+          ),
         ],
       ),
     );
