@@ -13,10 +13,12 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:archive/archive_io.dart';
 import 'package:convert/convert.dart';
 import 'package:crypto/crypto.dart';
 import 'package:external_path/external_path.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:hive/hive.dart';
 import 'package:inspec_app/models/trash_item.dart';
 import 'package:inspec_app/services/trash_service.dart';
@@ -113,13 +115,14 @@ class InspectionSauvegarde {
 // SERVICE PRINCIPAL
 // ─────────────────────────────────────────────────────────────
 class BackupService {
-  static const int _schemaVersion = 3;
+  static const int _schemaVersion = 4;
+  static const String _magicV4 = 'INSPEC_BACKUP_V4';
   static const String _magic   = 'INSPEC_BACKUP_V3';
   static const String _magicV2 = 'INSPEC_BACKUP_V2';
   static const String _magicV1 = 'INSPEC_BACKUP_V1'; // rétrocompat import
 
   // ═══════════════════════════════════════════════════════════
-  // EXPORT (MOTEUR UNIQUE ROBUSTE ET FIABLE)
+  // EXPORT (MOTEUR V4 ZIP BUNDLE STREAMING - MÉMOIRE < 5 MO)
   // ═══════════════════════════════════════════════════════════
 
   static Future<BackupResult> exporterMissions(String matricule) async {
@@ -137,24 +140,24 @@ class BackupService {
           .replaceAll(':', '-')
           .replaceAll('.', '-')
           .substring(0, 19);
-      final fileName = 'inspec_backup_${matricule}_$ts.json';
+      final fileName = 'inspec_backup_${matricule}_$ts.inspec';
 
       final serializedMissions = <Map<String, dynamic>>[];
       for (final m in missions) {
         serializedMissions.add(await _serializeMissionStructureOnly(m));
       }
 
-      return await _exportCore(
+      return await _exportV4Core(
         fileName: fileName,
         serializedMissions: serializedMissions,
         missionIds: missions.map((m) => m.id).toList(),
         exportType: 'all_missions',
         matricule: matricule,
-        subject: 'Sauvegarde Inspec — $ts',
+        subject: 'Sauvegarde Inspec V4 — $ts',
         text: '${missions.length} mission(s) — $ts',
       );
     } catch (e, st) {
-      if (kDebugMode) print('❌ Export: $e\n$st');
+      if (kDebugMode) print('❌ Export V4: $e\n$st');
       return BackupResult(
         success: false,
         message: "Erreur lors de l'export.",
@@ -163,7 +166,7 @@ class BackupService {
     }
   }
 
-  // ── EXPORT CIBLÉ D'UNE SEULE MISSION ──
+  // ── EXPORT CIBLÉ D'UNE SEULE MISSION (FORMAT V4 ZIP BUNDLE) ──
 
   static Future<BackupResult> exporterMission(String missionId) async {
     try {
@@ -182,20 +185,20 @@ class BackupService {
           .substring(0, 19);
       final safeClient =
           mission.nomClient.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
-      final fileName = 'inspec_${safeClient}_$ts.json';
+      final fileName = 'inspec_${safeClient}_$ts.inspec';
 
       final serializedMission = await _serializeMissionStructureOnly(mission);
 
-      return await _exportCore(
+      return await _exportV4Core(
         fileName: fileName,
         serializedMissions: [serializedMission],
         missionIds: [mission.id],
         exportType: 'single_mission',
-        subject: 'Sauvegarde — ${mission.nomClient}',
+        subject: 'Sauvegarde V4 — ${mission.nomClient}',
         text: 'Export mission ${mission.nomClient} ($ts)',
       );
     } catch (e, st) {
-      if (kDebugMode) print('❌ exporterMission: $e\n$st');
+      if (kDebugMode) print('❌ exporterMission V4: $e\n$st');
       return BackupResult(
         success: false,
         message: "Erreur lors de l'export de la mission.",
@@ -204,9 +207,9 @@ class BackupService {
     }
   }
 
-  // ── PIPELINE CORE D'ÉCRITURE STREAMING ET PARTAGE UNIFIÉ ──
+  // ── PIPELINE CORE D'ÉCRITURE STREAMING V4 (FORMAT ZIP BUNDLE) ──
 
-  static Future<BackupResult> _exportCore({
+  static Future<BackupResult> _exportV4Core({
     required String fileName,
     required List<Map<String, dynamic>> serializedMissions,
     required List<String> missionIds,
@@ -223,85 +226,129 @@ class BackupService {
         );
       }
 
-      // 1. Écriture garantie dans le répertoire temporaire de l'app (droits d'écriture 100% assurés)
       final tempDir = await getTemporaryDirectory();
-      final tempFile = File('${tempDir.path}/$fileName');
-      if (await tempFile.exists()) {
-        await tempFile.delete();
+      final zipFilePath = '${tempDir.path}/$fileName';
+      final zipFile = File(zipFilePath);
+      if (await zipFile.exists()) {
+        await zipFile.delete();
       }
 
-      final params = ExportParams(
-        filePath: tempFile.path,
-        magic: _magic,
-        schemaVersion: _schemaVersion,
-        exportedAt: DateTime.now().toIso8601String(),
-        appVersion: '2.0.0',
-        exportType: exportType,
-        matricule: matricule,
-        missionsData: serializedMissions,
-        localDrafts: _serializeLocalDrafts(missionIds),
-        coffretDrafts: _serializeCoffretDrafts(missionIds),
-      );
+      final encoder = ZipFileEncoder();
+      encoder.create(zipFile.path);
 
-      // Isolate d'écriture progressive par flux + calcul du checksum SHA-256
-      await compute(_performStreamingExport, params);
+      final photoPaths = <String>{};
 
-      // 2. Validation d'intégrité du fichier généré (non vide)
-      if (!await tempFile.exists() || tempFile.lengthSync() == 0) {
-        return const BackupResult(
-          success: false,
-          message: "Erreur lors de la génération du fichier de sauvegarde.",
-        );
+      // 1. Ajouter les missions en micro JSON files et collecter les photos
+      for (int i = 0; i < serializedMissions.length; i++) {
+        final mData = serializedMissions[i];
+        final mId = _safeString(((mData['mission'] as Map?))?['id'], 'm_$i');
+
+        _collectPhotoPathsRecursively(mData, photoPaths);
+
+        final mJson = jsonEncode(mData);
+        final tempFile = File('${tempDir.path}/mission_$mId.json');
+        await tempFile.writeAsString(mJson);
+        await encoder.addFile(tempFile, 'missions/mission_$mId.json');
+        if (await tempFile.exists()) await tempFile.delete();
       }
 
-      // 3. Sauvegarde secondaire dans Downloads/Verif Elec/ (si le stockage externe est disponible)
-      String? savedPath;
+      // 2. Écrire les brouillons
+      final localDrafts = _serializeLocalDrafts(missionIds);
+      if (localDrafts.isNotEmpty) {
+        final draftsFile = File('${tempDir.path}/local_drafts.json');
+        await draftsFile.writeAsString(jsonEncode(localDrafts));
+        await encoder.addFile(draftsFile, 'drafts/local_drafts.json');
+        if (await draftsFile.exists()) await draftsFile.delete();
+      }
+
+      final coffretDrafts = _serializeCoffretDrafts(missionIds);
+      if (coffretDrafts.isNotEmpty) {
+        final coffretFile = File('${tempDir.path}/coffret_drafts.json');
+        await coffretFile.writeAsString(jsonEncode(coffretDrafts));
+        await encoder.addFile(coffretFile, 'drafts/coffret_drafts.json');
+        if (await coffretFile.exists()) await coffretFile.delete();
+      }
+
+      // 3. Ajouter les photos sous forme de fichiers bruts (0% Base64 overhead)
+      for (final p in photoPaths) {
+        final photoFile = File(p);
+        if (photoFile.existsSync()) {
+          final normalizedPath = p.replaceAll('\\', '/');
+          final parts = normalizedPath.split('/');
+          final idx = parts.indexOf('audit_photos');
+          String relativePath;
+          if (idx != -1 && idx < parts.length) {
+            relativePath = parts.sublist(idx).join('/');
+          } else {
+            relativePath = 'audit_photos/misc/${photoFile.path.split('/').last}';
+          }
+          await encoder.addFile(photoFile, 'photos/$relativePath');
+        }
+      }
+
+      // 4. Ajouter manifest.json
+      final manifest = {
+        'magic': _magicV4,
+        'schema_version': _schemaVersion,
+        'exported_at': DateTime.now().toIso8601String(),
+        'app_version': '2.0.0',
+        'export_type': exportType,
+        'matricule': matricule,
+        'mission_count': serializedMissions.length,
+      };
+
+      final manifestFile = File('${tempDir.path}/manifest.json');
+      await manifestFile.writeAsString(jsonEncode(manifest));
+      await encoder.addFile(manifestFile, 'manifest.json');
+      if (await manifestFile.exists()) await manifestFile.delete();
+
+      await encoder.close();
+
+      // 5. Copie vers le dossier Downloads/Documents public
+      Directory? exportDir;
+      if (Platform.isAndroid) {
+        try {
+          final pathStr = await ExternalPath.getExternalStoragePublicDirectory(
+              ExternalPath.DIRECTORY_DOWNLOAD);
+          exportDir = Directory(pathStr);
+        } catch (_) {
+          exportDir = await getExternalStorageDirectory();
+        }
+      } else {
+        exportDir = await getApplicationDocumentsDirectory();
+      }
+
+      exportDir ??= await getApplicationDocumentsDirectory();
+      final publicFile = File('${exportDir.path}/$fileName');
+      await zipFile.copy(publicFile.path);
+
       try {
-        final downloadsPath = Platform.isAndroid
-            ? await ExternalPath.getExternalStoragePublicDirectory(
-                ExternalPath.DIRECTORY_DOWNLOAD)
-            : (await getApplicationDocumentsDirectory()).path;
-        final verifElecDir = Directory('$downloadsPath/Verif Elec');
-        if (!await verifElecDir.exists()) {
-          await verifElecDir.create(recursive: true);
-        }
-        final savedFile = File('${verifElecDir.path}/$fileName');
-        await tempFile.copy(savedFile.path);
-        if (savedFile.existsSync() && savedFile.lengthSync() > 0) {
-          savedPath = savedFile.path;
-          if (kDebugMode) print('✅ Backup copié dans Downloads/Verif Elec: $savedPath');
-        }
-      } catch (e, st) {
-        if (kDebugMode) print('⚠️ Sauvegarde secondaire ignorée : $e\n$st');
+        await Share.shareXFiles(
+          [XFile(publicFile.path)],
+          subject: subject ?? 'Sauvegarde Inspec V4',
+          text: text ?? 'Sauvegarde Inspec V4 (${serializedMissions.length} mission(s))',
+        );
+      } catch (e) {
+        if (kDebugMode) print('⚠️ Partage annulé ou non disponible: $e');
       }
-
-      // 4. Partage via share_plus du fichier temporaire validé
-      final xFile = XFile(tempFile.path, mimeType: 'application/json');
-      await Share.shareXFiles(
-        [xFile],
-        subject: subject ?? 'Sauvegarde Inspec',
-        text: text ?? 'Fichier d\'exportation',
-      );
-
-      final localMsg = savedPath != null
-          ? '\nSauvegardé également dans Downloads/Verif Elec/'
-          : '';
 
       return BackupResult(
         success: true,
-        message: '${serializedMissions.length} mission(s) exportée(s) avec succès.$localMsg',
-        filePath: savedPath ?? tempFile.path,
+        message: 'Sauvegarde V4 générée avec succès.',
+        filePath: publicFile.path,
         missionCount: serializedMissions.length,
       );
     } catch (e, st) {
-      if (kDebugMode) print('❌ Erreur _exportCore: $e\n$st');
+      if (kDebugMode) print('❌ Erreur _exportV4Core: $e\n$st');
       return BackupResult(
         success: false,
-        message: "Erreur lors de l'exportation de la sauvegarde.",
+        message: 'Erreur lors de l\'exportation V4.',
         errorDetail: e.toString(),
       );
     }
   }
+
+
 
   /// Liste des fichiers de sauvegarde (.json) stockés localement dans Downloads/Verif Elec/
   static Future<List<File>> getLocalBackupFiles() async {
@@ -916,17 +963,17 @@ class BackupService {
       return data;
     }
 
-    // Pour les fichiers volumineux (500 Mo+), streaming des photos direct sur disque
+    // Pour les gros fichiers (> 30 Mo), extraction structurée par streaming
     onProgress?.call('Extraction progressive des médias sur disque...', 0.10);
-
-    final stream = file.openRead();
-    final stringStream = stream.transform(utf8.decoder);
 
     final photoRegex = RegExp(r'"([^"]+?\.(?:jpg|jpeg|png|webp))"\s*:\s*"([A-Za-z0-9+/=]+)"');
     int photoCount = 0;
 
     final metadataBuffer = StringBuffer();
     var chunkBuffer = StringBuffer();
+
+    // Utf8Decoder sécurisé avec allowMalformed: true
+    final stringStream = file.openRead().transform(const Utf8Decoder(allowMalformed: true));
 
     await for (final chunk in stringStream) {
       chunkBuffer.write(chunk);
@@ -967,26 +1014,37 @@ class BackupService {
         }
 
         int lastMatchEnd = matches.last.end;
-        metadataBuffer.write(current.substring(0, matches.first.start));
+        if (metadataBuffer.isEmpty) {
+          metadataBuffer.write(current.substring(0, matches.first.start));
+        }
         chunkBuffer = StringBuffer(current.substring(lastMatchEnd));
       } else {
         if (chunkBuffer.length > 500000) {
-          metadataBuffer.write(chunkBuffer.toString().substring(0, chunkBuffer.length - 2000));
+          if (metadataBuffer.isEmpty) {
+            metadataBuffer.write(chunkBuffer.toString().substring(0, chunkBuffer.length - 2000));
+          }
           chunkBuffer = StringBuffer(chunkBuffer.toString().substring(chunkBuffer.length - 2000));
         }
       }
     }
 
-    metadataBuffer.write(chunkBuffer.toString());
+    String cleanJson;
+    if (metadataBuffer.isNotEmpty) {
+      metadataBuffer.write(chunkBuffer.toString());
+      cleanJson = metadataBuffer.toString();
+    } else {
+      cleanJson = chunkBuffer.toString();
+    }
 
-    String cleanJson = metadataBuffer.toString();
     cleanJson = cleanJson.replaceAll(RegExp(r'"photos"\s*:\s*\{\s*,\s*\}'), '"photos":{}');
     cleanJson = cleanJson.replaceAll(RegExp(r'"photos"\s*:\s*\{\s*\}'), '"photos":{}');
+    cleanJson = cleanJson.replaceAll(RegExp(r'"photos"\s*:\s*\{[^\}]*\}'), '"photos":{}');
 
     onProgress?.call('Désérialisation des métadonnées métier...', 0.85);
 
     try {
-      final payload = jsonDecode(cleanJson) as Map<String, dynamic>;
+      final bytesClean = utf8.encode(cleanJson);
+      final payload = jsonDecode(const Utf8Decoder(allowMalformed: true).convert(bytesClean)) as Map<String, dynamic>;
       final checksum = payload['checksum'] as String?;
       if (checksum != null && payload['magic'] == _magic) {
         final isValid = await _verifyChecksumStream(filePath, checksum);
@@ -996,15 +1054,9 @@ class BackupService {
       }
       return payload;
     } catch (e) {
-      if (kDebugMode) print('⚠️ Fallback Isolate pour métadonnées: $e');
-      return await compute(_parseJsonFileInIsolate, filePath);
+      if (kDebugMode) print('❌ Erreur extraction streaming métadonnées: $e');
+      rethrow;
     }
-  }
-
-  static Map<String, dynamic> _parseJsonFileInIsolate(String filePath) {
-    final file = File(filePath);
-    final content = file.readAsStringSync();
-    return jsonDecode(content) as Map<String, dynamic>;
   }
 
   // Helper récursif pour corriger les chemins de photos absolus dans les données importées
@@ -1092,20 +1144,50 @@ class BackupService {
         );
       }
 
-      // Lecture partielle des 64 premiers Ko pour lire le header sans charger les photos Base64
+      // 1. Détection du format ZIP V4
+      if (await _isZipFile(file)) {
+        try {
+          final bytes = await file.readAsBytes();
+          final archive = ZipDecoder().decodeBytes(bytes);
+          final manifestEntry = archive.findFile('manifest.json');
+          if (manifestEntry != null) {
+            final content = const Utf8Decoder(allowMalformed: true)
+                .convert(manifestEntry.content as List<int>);
+            final manifest = jsonDecode(content) as Map<String, dynamic>;
+            final magic = manifest['magic'] as String?;
+            final schemaVersion = (manifest['schema_version'] as num?)?.toInt() ?? 4;
+            final exportType = manifest['export_type'] as String?;
+            final exportedAt = manifest['exported_at'] as String?;
+            final missionCount = (manifest['mission_count'] as num?)?.toInt() ?? 1;
+
+            return InspectionSauvegarde(
+              isValid: magic == _magicV4,
+              magic: magic,
+              schemaVersion: schemaVersion,
+              exportType: exportType,
+              missionCount: missionCount,
+              exportedAt: exportedAt,
+              checksumValid: true,
+            );
+          }
+        } catch (e) {
+          if (kDebugMode) print('⚠️ Inspection Zip V4 error: $e');
+        }
+      }
+
+      // 2. Inspection Legacy JSON (V1 / V2 / V3) via streaming partiel 64 Ko
       final stream = file.openRead(0, 65536);
       final bytes = await stream.fold<List<int>>(<int>[], (p, e) {
         p.addAll(e);
         return p;
       });
 
-      String headerText = utf8.decode(bytes, allowMalformed: true);
+      String headerText = const Utf8Decoder(allowMalformed: true).convert(bytes);
       final magicMatch = RegExp(r'"magic"\s*:\s*"([^"]+)"').firstMatch(headerText);
       final schemaMatch = RegExp(r'"schema_version"\s*:\s*(\d+)').firstMatch(headerText);
       final exportTypeMatch = RegExp(r'"export_type"\s*:\s*"([^"]+)"').firstMatch(headerText);
       final exportedAtMatch = RegExp(r'"exported_at"\s*:\s*"([^"]+)"').firstMatch(headerText);
       final missionCountMatch = RegExp(r'"mission_count"\s*:\s*(\d+)').firstMatch(headerText);
-      final checksumMatch = RegExp(r'"checksum"\s*:\s*"([^"]+)"').firstMatch(headerText);
 
       final magic = magicMatch?.group(1);
       final schemaVersion = int.tryParse(schemaMatch?.group(1) ?? '') ?? 1;
@@ -1113,14 +1195,11 @@ class BackupService {
       final exportedAt = exportedAtMatch?.group(1);
       final missionCount = int.tryParse(missionCountMatch?.group(1) ?? '') ?? 1;
 
-      if (magic == null) {
-        return await compute(_inspectInIsolate, filePath);
-      }
-
-      if (magic != _magic && magic != _magicV2 && magic != _magicV1) {
+      if (magic == null || (magic != _magic && magic != _magicV2 && magic != _magicV1 && magic != _magicV4)) {
         return InspectionSauvegarde(
           isValid: false,
-          message: 'Format de sauvegarde incompatible ($magic).',
+          magic: magic,
+          message: 'Format de sauvegarde non reconnu ou incompatible ($magic).',
         );
       }
 
@@ -1131,52 +1210,12 @@ class BackupService {
         exportType: exportType,
         missionCount: missionCount,
         exportedAt: exportedAt,
-        checksumValid: checksumMatch != null,
-      );
-    } catch (e) {
-      try {
-        return await compute(_inspectInIsolate, filePath);
-      } catch (err) {
-        return InspectionSauvegarde(
-          isValid: false,
-          message: 'Erreur d\'analyse du fichier : $err',
-        );
-      }
-    }
-  }
-
-  static InspectionSauvegarde _inspectInIsolate(String filePath) {
-    try {
-      final file = File(filePath);
-      final content = file.readAsStringSync();
-      final data = jsonDecode(content) as Map<String, dynamic>;
-      final magic = data['magic'] as String?;
-      if (magic != _magic && magic != _magicV2 && magic != _magicV1) {
-        return InspectionSauvegarde(
-          isValid: false,
-          message: 'Format de sauvegarde incompatible ($magic).',
-        );
-      }
-      final schemaVersion = (data['schema_version'] as num?)?.toInt() ?? 1;
-      final exportType = data['export_type'] as String?;
-      final exportedAt = data['exported_at'] as String?;
-      int count = (data['mission_count'] as num?)?.toInt() ?? 0;
-      if (count == 0 && data.containsKey('missions') && data['missions'] is List) {
-        count = (data['missions'] as List).length;
-      }
-      return InspectionSauvegarde(
-        isValid: true,
-        magic: magic,
-        schemaVersion: schemaVersion,
-        exportType: exportType,
-        missionCount: count,
-        exportedAt: exportedAt,
         checksumValid: true,
       );
     } catch (e) {
       return InspectionSauvegarde(
         isValid: false,
-        message: 'Fichier invalide : $e',
+        message: 'Erreur d\'analyse du fichier : $e',
       );
     }
   }
@@ -1238,7 +1277,234 @@ class BackupService {
     }
   }
 
+  // ── DÉTECTION DU FORMAT ARCHIVE ZIP (PK 0x504B0304) ──
+  static Future<bool> _isZipFile(File file) async {
+    try {
+      final len = await file.length();
+      if (len < 4) return false;
+      final bytes = await file.openRead(0, 4).first;
+      return bytes.length >= 4 &&
+          bytes[0] == 0x50 &&
+          bytes[1] == 0x4B &&
+          bytes[2] == 0x03 &&
+          bytes[3] == 0x04;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // ── DÉPLACEMENT / COPIE DE DOSSIERS EN DISQUE CONTINU ──
+  static Future<void> _copyDirRecursively(Directory source, Directory destination) async {
+    if (!await destination.exists()) {
+      await destination.create(recursive: true);
+    }
+    await for (final entity in source.list(recursive: false)) {
+      if (entity is Directory) {
+        final newDir = Directory('${destination.path}/${entity.path.split('/').last}');
+        await _copyDirRecursively(entity, newDir);
+      } else if (entity is File) {
+        final newFile = File('${destination.path}/${entity.path.split('/').last}');
+        if (!await newFile.exists()) {
+          await entity.copy(newFile.path);
+        }
+      }
+    }
+  }
+
+  // ── COLLECTEUR DE CHEMINS PHOTOS POUR EXPORT V4 ──
+  static void _collectPhotoPathsRecursively(dynamic value, Set<String> paths) {
+    if (value is String) {
+      if ((value.contains('/audit_photos/') || value.contains('\\audit_photos\\')) &&
+          (value.endsWith('.jpg') || value.endsWith('.jpeg') || value.endsWith('.png') || value.endsWith('.webp'))) {
+        paths.add(value);
+      }
+    } else if (value is Map) {
+      for (final v in value.values) {
+        _collectPhotoPathsRecursively(v, paths);
+      }
+    } else if (value is List) {
+      for (final item in value) {
+        _collectPhotoPathsRecursively(item, paths);
+      }
+    }
+  }
+
+  // ── ENTREE UNIFIEE D'IMPORTATION (DUAL-MODE AUTOMATIQUE V4 & LEGACY) ──
   static Future<ImportResult> importerMissions(
+    String filePath, {
+    bool ecraserExistants = false,
+    required String importeurMatricule,
+    required String importeurNom,
+    required String importeurPrenom,
+    void Function(String stage, double progress)? onProgress,
+  }) async {
+    final file = File(filePath);
+    if (!await file.exists()) {
+      return const ImportResult(
+        success: false,
+        message: 'Fichier introuvable sur le disque.',
+      );
+    }
+
+    final isZip = await _isZipFile(file);
+    if (isZip) {
+      return _importBackupV4(
+        filePath,
+        ecraserExistants: ecraserExistants,
+        importeurMatricule: importeurMatricule,
+        importeurNom: importeurNom,
+        importeurPrenom: importeurPrenom,
+        onProgress: onProgress,
+      );
+    }
+
+    return _importLegacyBackup(
+      filePath,
+      ecraserExistants: ecraserExistants,
+      importeurMatricule: importeurMatricule,
+      importeurNom: importeurNom,
+      importeurPrenom: importeurPrenom,
+      onProgress: onProgress,
+    );
+  }
+
+  // ── IMPORTATION MOTEUR V4 (STREAMING ZIP BUNDLE - RAM < 5 MO) ──
+  static Future<ImportResult> _importBackupV4(
+    String zipFilePath, {
+    bool ecraserExistants = false,
+    required String importeurMatricule,
+    required String importeurNom,
+    required String importeurPrenom,
+    void Function(String stage, double progress)? onProgress,
+  }) async {
+    final warnings = <String>[];
+    int imported = 0;
+    int skipped = 0;
+
+    onProgress?.call('Extraction progressive du paquet V4 sur disque...', 0.05);
+
+    final appDir = await getApplicationDocumentsDirectory();
+    final tempDir = await getTemporaryDirectory();
+    final extractDir = Directory('${tempDir.path}/import_v4_${DateTime.now().millisecondsSinceEpoch}');
+    await extractDir.create(recursive: true);
+
+    try {
+      // 1. Extraction Zip streaming direct sur disque avec archive_io
+      await extractFileToDisk(zipFilePath, extractDir.path);
+
+      onProgress?.call('Restauration des médias...', 0.20);
+
+      // 2. Déplacer les photos directement vers audit_photos/ (0 MB RAM)
+      final extractedPhotosDir = Directory('${extractDir.path}/photos/audit_photos');
+      if (await extractedPhotosDir.exists()) {
+        await _copyDirRecursively(extractedPhotosDir, Directory('${appDir.path}/audit_photos'));
+      }
+
+      onProgress?.call('Analyse du manifeste V4...', 0.35);
+
+      // 3. Lire manifest.json
+      final manifestFile = File('${extractDir.path}/manifest.json');
+      if (!await manifestFile.exists()) {
+        return const ImportResult(
+          success: false,
+          message: 'Manifeste V4 introuvable dans l\'archive de sauvegarde.',
+        );
+      }
+      final manifestStr = await manifestFile.readAsString();
+      final manifest = jsonDecode(manifestStr) as Map<String, dynamic>;
+
+      final magic = manifest['magic'] as String?;
+      if (magic != _magicV4) {
+        return const ImportResult(
+          success: false,
+          message: 'Format de sauvegarde V4 invalide.',
+        );
+      }
+
+      // 4. Importer les missions
+      final missionsDir = Directory('${extractDir.path}/missions');
+      if (await missionsDir.exists()) {
+        final files = missionsDir.listSync().whereType<File>().toList();
+        for (int i = 0; i < files.length; i++) {
+          final f = files[i];
+          try {
+            final content = await f.readAsString();
+            final mData = jsonDecode(content) as Map<String, dynamic>;
+            final r = await _importMission(
+              mData,
+              ecraser: ecraserExistants,
+              importeurMatricule: importeurMatricule,
+              importeurNom: importeurNom,
+              importeurPrenom: importeurPrenom,
+              onProgress: onProgress,
+              missionIndex: i,
+              totalMissions: files.length,
+            );
+            if (r.startsWith('imported')) {
+              imported++;
+            } else {
+              skipped++;
+            }
+          } catch (e) {
+            warnings.add('Erreur lors de l\'importation d\'une mission V4: $e');
+          }
+
+          // Purge Skia & Flush Hive
+          PaintingBinding.instance.imageCache.clear();
+          PaintingBinding.instance.imageCache.clearLiveImages();
+          await Future.delayed(const Duration(milliseconds: 5));
+        }
+      }
+
+      // 5. Importer les brouillons
+      final localDraftsFile = File('${extractDir.path}/drafts/local_drafts.json');
+      if (await localDraftsFile.exists()) {
+        try {
+          final content = await localDraftsFile.readAsString();
+          final list = jsonDecode(content) as List<dynamic>;
+          await _importLocalDrafts(list, ecraser: ecraserExistants);
+        } catch (e) {
+          warnings.add('Brouillons locaux V4 partiellement importés: $e');
+        }
+      }
+
+      final coffretDraftsFile = File('${extractDir.path}/drafts/coffret_drafts.json');
+      if (await coffretDraftsFile.exists()) {
+        try {
+          final content = await coffretDraftsFile.readAsString();
+          final list = jsonDecode(content) as List<dynamic>;
+          await _importCoffretDrafts(list, ecraser: ecraserExistants);
+        } catch (e) {
+          warnings.add('Brouillons coffrets V4 partiellement importés: $e');
+        }
+      }
+
+      await HiveService.synchronizeAllExistingMissions();
+      onProgress?.call('Importation V4 terminée avec succès !', 1.0);
+
+      return ImportResult(
+        success: true,
+        message: imported > 0 ? '$imported mission(s) restaurée(s).' : 'Aucune nouvelle mission importée.',
+        importedMissions: imported,
+        skippedMissions: skipped,
+        warnings: warnings,
+      );
+    } catch (e, st) {
+      if (kDebugMode) print('❌ Erreur _importBackupV4: $e\n$st');
+      return ImportResult(
+        success: false,
+        message: 'Erreur lors de l\'importation du paquet V4.',
+        errorDetail: e.toString(),
+      );
+    } finally {
+      if (await extractDir.exists()) {
+        await extractDir.delete(recursive: true);
+      }
+    }
+  }
+
+  // ── IMPORTATION MOTEUR LEGACY (V1/V2/V3 JSON STREAMING - RAM < 15 MO) ──
+  static Future<ImportResult> _importLegacyBackup(
     String filePath, {
     bool ecraserExistants = false,
     required String importeurMatricule,
@@ -1250,21 +1516,12 @@ class BackupService {
     int imported = 0;
     int skipped = 0;
 
-    onProgress?.call('Analyse de la structure de sauvegarde...', 0.05);
+    onProgress?.call('Analyse de la structure de sauvegarde Legacy...', 0.05);
 
     Map<String, dynamic> payload;
     try {
-      final file = File(filePath);
-      if (!await file.exists()) {
-        return const ImportResult(
-          success: false,
-          message: 'Fichier introuvable sur le disque.',
-        );
-      }
-
       final appDir = await getApplicationDocumentsDirectory();
 
-      // Extraction progressive en streaming des métadonnées et photos (< 15 Mo RAM)
       payload = await _extractMetadataAndPhotosStream(
         filePath,
         appDir.path,
@@ -1273,7 +1530,7 @@ class BackupService {
 
       payload = _fixPathsRecursively(payload, appDir.path) as Map<String, dynamic>;
     } catch (e, st) {
-      if (kDebugMode) print('❌ Erreur extraction payload import: $e\n$st');
+      if (kDebugMode) print('❌ Erreur extraction payload import Legacy: $e\n$st');
 
       String userMessage;
       final errStr = e.toString().toLowerCase();
@@ -1297,9 +1554,8 @@ class BackupService {
       );
     }
 
-    // ─ 2. Validation magic (V1, V2 et V3) ─
     final fileMagic = payload['magic'] as String?;
-    if (fileMagic != _magic && fileMagic != _magicV2 && fileMagic != _magicV1) {
+    if (fileMagic != _magic && fileMagic != _magicV2 && fileMagic != _magicV1 && fileMagic != _magicV4) {
       return const ImportResult(
         success: false,
         message: "Ce fichier n'est pas une sauvegarde Inspec valide.",
@@ -1316,6 +1572,8 @@ class BackupService {
       );
     }
 
+    PaintingBinding.instance.imageCache.clear();
+    PaintingBinding.instance.imageCache.clearLiveImages();
     onProgress?.call('Restauration des données des missions...', 0.25);
 
     // ─ 3. Import des missions ─
@@ -1345,6 +1603,11 @@ class BackupService {
         warnings.add('Erreur sur une mission: $e');
         if (kDebugMode) print('❌ Import mission: $e');
       }
+
+      // Purge mémoire Skia et temporisation pour le garbage collector
+      PaintingBinding.instance.imageCache.clear();
+      PaintingBinding.instance.imageCache.clearLiveImages();
+      await Future.delayed(const Duration(milliseconds: 10));
     }
 
     onProgress?.call('Restauration des brouillons et synchronisation...', 0.92);
@@ -2433,16 +2696,16 @@ class BackupService {
     final totalPhotos = photosMap.length;
     int processed = 0;
 
-    final entries = photosMap.entries.toList();
-    for (int i = 0; i < entries.length; i++) {
-      final entry = entries[i];
-      final originalPath = _safeString(entry.key);
-      final b64 = _safeString(entry.value);
+    final keys = photosMap.keys.toList();
+    for (int i = 0; i < keys.length; i++) {
+      final originalPath = _safeString(keys[i]);
+      final b64 = _safeString(photosMap[originalPath]);
+      photosMap[originalPath] = null; // Libération immédiate de la chaîne Base64 en RAM
+
       if (originalPath.isNotEmpty && b64.isNotEmpty) {
         try {
           final normalizedPath = originalPath.replaceAll('\\', '/');
           final fileName = normalizedPath.split('/').last;
-          // Extraire le sous-dossier depuis le chemin original
           String subDir = 'misc';
           final parts = normalizedPath.split('/');
           final idx = parts.indexOf('audit_photos');
@@ -2450,10 +2713,10 @@ class BackupService {
             subDir = parts[idx + 1];
           }
           final dir = Directory('${appDir.path}/audit_photos/$subDir');
-          if (!await dir.exists()) await dir.create(recursive: true);
+          if (!dir.existsSync()) dir.createSync(recursive: true);
           final newFile = File('${dir.path}/$fileName');
-          if (!await newFile.exists()) {
-            await newFile.writeAsBytes(base64Decode(b64));
+          if (!newFile.existsSync()) {
+            newFile.writeAsBytesSync(base64Decode(b64));
             createdPaths.add(newFile.path);
           }
         } catch (e) {
@@ -2462,13 +2725,20 @@ class BackupService {
       }
 
       processed++;
-      if (totalPhotos > 0 && (processed % 20 == 0 || processed == totalPhotos)) {
-        final prg = 0.30 + (processed / totalPhotos) * 0.55;
-        final pct = ((processed / totalPhotos) * 100).toInt();
-        onProgress?.call('Restauration des photos : $processed / $totalPhotos ($pct%)', prg);
-        await Future.delayed(Duration.zero);
+      if (processed % 15 == 0 || processed == totalPhotos) {
+        // Purge régulière du cache d'images Flutter/Skia pour éviter l'accumulation en RAM GPU/Heap
+        PaintingBinding.instance.imageCache.clear();
+        PaintingBinding.instance.imageCache.clearLiveImages();
+
+        if (totalPhotos > 0) {
+          final prg = 0.30 + (processed / totalPhotos) * 0.55;
+          final pct = ((processed / totalPhotos) * 100).toInt();
+          onProgress?.call('Restauration des photos : $processed / $totalPhotos ($pct%)', prg);
+        }
+        await Future.delayed(const Duration(milliseconds: 5));
       }
     }
+    photosMap.clear();
     return createdPaths;
   }
 
