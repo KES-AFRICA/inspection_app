@@ -258,15 +258,11 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
           });
         }
       } else {
-        if (mounted && Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        }
+        loaderController.dismiss();
         _showError('Erreur lors de la génération');
       }
     } catch (e) {
-      if (mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
+      loaderController.dismiss();
       _showError('Erreur: $e');
     } finally {
       if (mounted) setState(() => _isGenerating = false);

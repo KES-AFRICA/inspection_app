@@ -41,6 +41,7 @@ dependencies:
   analyzer: ^6.4.1
   file_picker: ^11.0.2
   archive: ^4.0.9
+  syncfusion_flutter_pdf: ^33.2.13
 
 dev_dependencies:
   flutter_test:

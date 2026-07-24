@@ -3,9 +3,6 @@
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:get_it/get_it.dart';
-import 'package:inspec_app/features/mission/domain/usecases/get_renseignements_generaux_use_case.dart';
-import 'package:inspec_app/features/mission/domain/usecases/update_mission_status_use_case.dart';
 import 'package:inspec_app/models/last_report.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
@@ -19,7 +16,6 @@ import 'package:inspec_app/services/pdf_report_service.dart';
 import 'package:inspec_app/services/word_report_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:printing/printing.dart';
 import 'package:path/path.dart' as path;
 import 'package:url_launcher/url_launcher.dart';
@@ -152,15 +148,11 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
           });
         }
       } else {
-        if (Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        }
+        loaderController.dismiss();
         _showError('Erreur lors de la génération');
       }
     } catch (e) {
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
+      loaderController.dismiss();
       _showError('Erreur: $e');
     } finally {
       setState(() => _isGenerating = false);

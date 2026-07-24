@@ -18,6 +18,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:inspec_app/services/pdf/pdf_chunk_merger.dart';
 
 // ================================================================
 //  PdfReportService
@@ -145,9 +146,25 @@ class PdfReportService {
   static Future<void> _loadImages() async {
     if (_imagesLoaded) return;
     
-    Future<pw.MemoryImage?> tryLoad(String asset) async {
+    Future<pw.MemoryImage?> tryLoad(String asset, {int? maxWidth, int? maxHeight}) async {
       try {
-        return pw.MemoryImage((await rootBundle.load(asset)).buffer.asUint8List());
+        final data = await rootBundle.load(asset);
+        final bytes = data.buffer.asUint8List();
+        if (maxWidth != null || maxHeight != null) {
+          try {
+            final compressed = await FlutterImageCompress.compressWithList(
+              bytes,
+              minWidth: maxWidth ?? 400,
+              minHeight: maxHeight ?? 400,
+              quality: 85,
+              format: CompressFormat.png,
+            );
+            if (compressed.isNotEmpty) {
+              return pw.MemoryImage(compressed);
+            }
+          } catch (_) {}
+        }
+        return pw.MemoryImage(bytes);
       } catch (e) {
         if (kDebugMode) print('Image non trouvee: $asset');
         return null;
@@ -157,7 +174,7 @@ class PdfReportService {
     _watermarkImage       = await tryLoad('assets/images/filigranne_image.png');
     _firstPageFooterImage = await tryLoad('assets/images/firstpage_footer.png');
     _otherPageFooterImage = await tryLoad('assets/images/otherpage_footer.png');
-    _logoKesImage         = await tryLoad('assets/images/logo.png');
+    _logoKesImage         = await tryLoad('assets/images/logo.png', maxWidth: 400, maxHeight: 150);
     _imgHabilitation      = await tryLoad('assets/images/image.png');
     _imgAccesGauche       = await tryLoad('assets/images/image copy.png');
     _imgAccesDroite1      = await tryLoad('assets/images/image copy 2.png');
@@ -194,6 +211,7 @@ class PdfReportService {
   static pw.PageTheme _buildCoverPageTheme() {
     return pw.PageTheme(
       pageFormat: PdfPageFormat.a4,
+      theme: pw.ThemeData.withFont(base: _fontRegular, bold: _fontBold),
       margin: pw.EdgeInsets.only(
         left:   kLeftMargin,
         top:    kTopMargin,
@@ -206,9 +224,10 @@ class PdfReportService {
   }
 
   /// Thème pages intérieures (footer otherPage)
-  static pw.PageTheme _buildInnerPageTheme() {
+  static pw.PageTheme _buildInnerPageTheme({int pageOffset = 0, int? overrideTotalPages}) {
     return pw.PageTheme(
       pageFormat: PdfPageFormat.a4,
+      theme: pw.ThemeData.withFont(base: _fontRegular, bold: _fontBold),
       margin: pw.EdgeInsets.only(
         left:   kLeftMargin,
         top:    kTopMargin,
@@ -216,7 +235,12 @@ class PdfReportService {
         bottom: kBottomMargin + 40,
       ),
       buildBackground: (ctx) => _buildWatermarkBackground(),
-      buildForeground: (ctx) => _buildFooterAbsolute(isFirstPage: false, ctx: ctx),
+      buildForeground: (ctx) => _buildFooterAbsolute(
+        isFirstPage: false,
+        ctx: ctx,
+        pageOffset: pageOffset,
+        overrideTotalPages: overrideTotalPages,
+      ),
     );
   }
 
@@ -235,10 +259,15 @@ class PdfReportService {
   static pw.Widget _buildFooterAbsolute({
     required bool isFirstPage,
     required pw.Context ctx,
+    int pageOffset = 0,
+    int? overrideTotalPages,
   }) {
     final footerImg = isFirstPage ? _firstPageFooterImage : _otherPageFooterImage;
     final double footerImgHeight = isFirstPage ? 80.0 : 50.0;
     const double descente = kBottomMargin + 40;
+
+    final pageNum = ctx.pageNumber + pageOffset;
+    final totalPagesStr = overrideTotalPages != null ? '$overrideTotalPages' : '${ctx.pagesCount}';
 
     return pw.Stack(
       overflow: pw.Overflow.visible,
@@ -266,7 +295,7 @@ class PdfReportService {
             bottom: -descente + 20,
             left:   -kLeftMargin + kLeftMargin,
             child: pw.Text(
-              'Page ${ctx.pageNumber} / ${ctx.pagesCount}',
+              'Page $pageNum / $totalPagesStr',
               style: pw.TextStyle(
                 font: _fontRegular,
                 fontSize: 7.5,
@@ -664,6 +693,7 @@ class PdfReportService {
     String? numeroRapport,
   }) {
     pdf.addPage(pw.MultiPage(
+      maxPages: 10000,
       pageTheme: _buildInnerPageTheme(),
       header: (ctx) => _buildPageHeaderWidget(
         nomClient: nomClient,
@@ -925,7 +955,7 @@ class PdfReportService {
     }
 
     // Documents personnalisés
-    final autresDocs = mission.autresDocuments ?? [];
+    final autresDocs = mission.autresDocuments;
 
     for (var doc in autresDocs) {
       rows.add(
@@ -2311,14 +2341,7 @@ class PdfReportService {
 
 
 
-  static pw.Widget _badgePriorite(String p, PdfColor color) {
-    return pw.Container(
-      width: 14, height: 14,
-      decoration: pw.BoxDecoration(color: color, shape: pw.BoxShape.circle),
-      alignment: pw.Alignment.center,
-      child: pw.Text(p, style: pw.TextStyle(fontSize: fsSmall, fontWeight: pw.FontWeight.bold)),
-    );
-  }
+
 
   // ──────────────────────────────────────────────────────────────
   //  AUDIT DES INSTALLATIONS ELECTRIQUES
@@ -2391,7 +2414,7 @@ class PdfReportService {
     final widgets = <pw.Widget>[
       pw.SizedBox(height: 8),
       PageTracker(
-        key: 'audit_zone_${nom}',
+        key: 'audit_zone_$nom',
         registry: trackedPages,
         child: pw.Container(
           width: double.infinity,
@@ -4175,7 +4198,7 @@ class PdfReportService {
   static void _addMesuresEssaisPages(pw.Document pdf, MesuresEssais mesures, Map<String, int> trackedPages) {
     // Page intro avec conditions ET les deux essais
     pdf.addPage(pw.MultiPage(
-      maxPages: 10,
+      maxPages: 10000,
       pageTheme: _buildInnerPageTheme(),
       header: (ctx) => _buildPageHeaderWidget(),
       build: (ctx) => [
@@ -4235,7 +4258,7 @@ class PdfReportService {
     
     // Prise de terre (nouvelle page)
     pdf.addPage(pw.MultiPage(
-      maxPages: 10,
+      maxPages: 10000,
       pageTheme: _buildInnerPageTheme(),
       header: (ctx) => _buildPageHeaderWidget(),
       build: (ctx) => [
@@ -4341,7 +4364,7 @@ class PdfReportService {
     
     // Essais de declenchement des DDR (nouvelle page)
     pdf.addPage(pw.MultiPage(
-      maxPages: 10,
+      maxPages: 10000,
       pageTheme: _buildInnerPageTheme(),
       header: (ctx) => _buildPageHeaderWidget(),
       build: (ctx) {
@@ -4544,7 +4567,7 @@ class PdfReportService {
     
     // Continuite (nouvelle page)
     pdf.addPage(pw.MultiPage(
-      maxPages: 10,
+      maxPages: 10000,
       pageTheme: _buildInnerPageTheme(),
       header: (ctx) => _buildPageHeaderWidget(),
       build: (ctx) => [
@@ -4734,48 +4757,7 @@ class PdfReportService {
     }
   }
 
-  static Future<void> _preloadCoffretPhotos(AuditInstallationsElectriques? audit) async {
-    _coffretPhotoCache.clear();
-    if (audit == null) return;
-
-    final coffretPhotoPaths = <String>{};
-
-    void collectFromCoffret(CoffretArmoire c) {
-      for (final p in [...c.photosInternes, ...c.photos]) {
-        if (p.trim().isNotEmpty) coffretPhotoPaths.add(p.trim());
-      }
-    }
-
-    for (var local in audit.moyenneTensionLocaux) {
-      for (var c in local.coffrets) collectFromCoffret(c);
-    }
-    for (var zone in audit.moyenneTensionZones) {
-      for (var c in zone.coffrets) collectFromCoffret(c);
-      for (var local in zone.locaux) {
-        for (var c in local.coffrets) collectFromCoffret(c);
-      }
-    }
-    for (var zone in audit.basseTensionZones) {
-      for (var c in zone.coffretsDirects) collectFromCoffret(c);
-      for (var local in zone.locaux) {
-        for (var c in local.coffrets) collectFromCoffret(c);
-      }
-    }
-
-    for (final path in coffretPhotoPaths) {
-      final img = await _loadAndOptimizeImage(path, maxWidth: 300, maxHeight: 300, quality: 60);
-      if (img != null) {
-        _coffretPhotoCache[path] = img;
-      }
-    }
-  }
-
-  // ──────────────────────────────────────────────────────────────
-  //  PHOTOS (grille 2×2)
-  // ──────────────────────────────────────────────────────────────
-  
-  static Future<void> _addPhotosSection(
-      pw.Document pdf,
+  static Future<List<File>> _addPhotosSectionChunked(
       Mission mission,
       String missionId,
       AuditInstallationsElectriques? audit,
@@ -4784,6 +4766,8 @@ class PdfReportService {
       String? nomSite,
       String? numeroRapport,
   }) async {
+    final chunkFiles = <File>[];
+    final tempDir = await getTemporaryDirectory();
     final allPhotos = <_PhotoEntry>[];
     final seenPaths = <String>{};
 
@@ -4817,7 +4801,9 @@ class PdfReportService {
     }
 
     // 1. Photos Description des installations
-    if (description != null) {
+    if (description != null) { {
+        
+      }
       void addItems(List<InstallationItem>? items, String categoryLabel) {
         if (items == null) return;
         for (var item in items) {
@@ -4927,11 +4913,16 @@ class PdfReportService {
       }
     }
 
-    if (allPhotos.isEmpty) return;
+    if (allPhotos.isEmpty) return chunkFiles;
 
-    // 1. Photos Cover/Separator Page (similar style to Audit cover page)
-    pdf.addPage(pw.MultiPage(
-      maxPages: 1,
+    final coverDoc = pw.Document(
+      title: 'Photos - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: true,
+    );
+
+    coverDoc.addPage(pw.MultiPage(
+      maxPages: 10000,
       pageTheme: _buildInnerPageTheme(),
       header: (ctx) => _buildPageHeaderWidget(
         nomClient: mission.nomClient,
@@ -4977,72 +4968,145 @@ class PdfReportService {
       ],
     ));
 
-    // 2. Render Photos Page-by-Page in Chunks of 4 (Lazy Memory Batching)
-    for (int gi = 0; gi < allPhotos.length; gi += 4) {
-      final groupEnd = (gi + 4).clamp(0, allPhotos.length);
-      final group = allPhotos.sublist(gi, groupEnd);
-      final startIdx = gi;
+    final coverBytes = await coverDoc.save();
+    final coverFile = File('${tempDir.path}/pdf_chunk_photos_cover_$missionId.pdf');
+    await coverFile.writeAsBytes(coverBytes);
+    chunkFiles.add(coverFile);
 
-      // Load & Optimize ONLY the 4 photos required for THIS page
-      final pageImgs = <pw.MemoryImage?>[];
-      for (final entry in group) {
-        pageImgs.add(await _loadAndOptimizeImage(entry.filePath, maxWidth: 600, maxHeight: 800, quality: 65));
+    const photosPerChunk = 40;
+    int photoChunkIdx = 0;
+
+    for (int pStart = 0; pStart < allPhotos.length; pStart += photosPerChunk) {
+      photoChunkIdx++;
+      final pEnd = (pStart + photosPerChunk).clamp(0, allPhotos.length);
+      final photoGroup = allPhotos.sublist(pStart, pEnd);
+
+      final photoDoc = pw.Document(
+        title: 'Photos Batch $photoChunkIdx - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: true,
+      );
+
+      for (int gi = 0; gi < photoGroup.length; gi += 4) {
+        final groupEnd = (gi + 4).clamp(0, photoGroup.length);
+        final pageGroup = photoGroup.sublist(gi, groupEnd);
+        final startIdx = pStart + gi;
+
+        final pageImgs = <pw.MemoryImage?>[];
+        for (final entry in pageGroup) {
+          pageImgs.add(await _loadAndOptimizeImage(entry.filePath, maxWidth: 600, maxHeight: 800, quality: 65));
+        }
+
+        photoDoc.addPage(pw.Page(
+          pageTheme: _buildInnerPageTheme(),
+          build: (ctx) {
+            final cells = <pw.Widget>[];
+            for (int ci = 0; ci < 4; ci++) {
+              if (ci < pageGroup.length) {
+                final entry = pageGroup[ci];
+                final img = pageImgs[ci];
+                final globalIdx = startIdx + ci + 1;
+                cells.add(_buildPhotoCell(entry, img, globalIdx, allPhotos.length));
+              } else {
+                cells.add(pw.Container(
+                  margin: const pw.EdgeInsets.all(3),
+                  color: PdfColors.grey100,
+                ));
+              }
+            }
+
+            return pw.Column(
+              children: [
+                _buildPageHeaderWidget(
+                  nomClient: mission.nomClient,
+                  nomSite: nomSite,
+                  numeroRapport: numeroRapport,
+                ),
+                pw.SizedBox(height: 6),
+                pw.Expanded(
+                  child: pw.Column(
+                    children: [
+                      pw.Expanded(
+                        child: pw.Row(
+                          children: [
+                            pw.Expanded(child: cells[0]),
+                            pw.Expanded(child: cells[1]),
+                          ],
+                        ),
+                      ),
+                      pw.Expanded(
+                        child: pw.Row(
+                          children: [
+                            pw.Expanded(child: cells[2]),
+                            pw.Expanded(child: cells[3]),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ));
       }
 
-      pdf.addPage(pw.Page(
-        pageTheme: _buildInnerPageTheme(),
-        build: (ctx) {
-          final cells = <pw.Widget>[];
-          for (int ci = 0; ci < 4; ci++) {
-            if (ci < group.length) {
-              final entry = group[ci];
-              final img = pageImgs[ci];
-              final globalIdx = startIdx + ci + 1;
-              cells.add(_buildPhotoCell(entry, img, globalIdx, allPhotos.length));
-            } else {
-              cells.add(pw.Container(
-                margin: const pw.EdgeInsets.all(3),
-                color: PdfColors.grey100,
-              ));
-            }
-          }
+      final chunkBytes = await photoDoc.save();
+      final photoChunkFile = File('${tempDir.path}/pdf_chunk_photos_${missionId}_$photoChunkIdx.pdf');
+      await photoChunkFile.writeAsBytes(chunkBytes);
+      chunkFiles.add(photoChunkFile);
+    }
 
-          return pw.Column(
-            children: [
-              _buildPageHeaderWidget(
-                nomClient: mission.nomClient,
-                nomSite: nomSite,
-                numeroRapport: numeroRapport,
-              ),
-              pw.SizedBox(height: 6),
-              pw.Expanded(
-                child: pw.Column(
-                  children: [
-                    pw.Expanded(
-                      child: pw.Row(
-                        children: [
-                          pw.Expanded(child: cells[0]),
-                          pw.Expanded(child: cells[1]),
-                        ],
-                      ),
-                    ),
-                    pw.Expanded(
-                      child: pw.Row(
-                        children: [
-                          pw.Expanded(child: cells[2]),
-                          pw.Expanded(child: cells[3]),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          );
-        },
-      ));
+    return chunkFiles;
+  }
+
+  static Future<void> _preloadCoffretPhotos(AuditInstallationsElectriques? audit) async {
+    _coffretPhotoCache.clear();
+    if (audit == null) return;
+
+    final coffretPhotoPaths = <String>{};
+
+    void collectFromCoffret(CoffretArmoire c) {
+      for (final p in [...c.photosInternes, ...c.photos]) {
+        if (p.trim().isNotEmpty) coffretPhotoPaths.add(p.trim());
+      }
+    }
+
+    for (var local in audit.moyenneTensionLocaux) {
+      for (var c in local.coffrets) {
+        collectFromCoffret(c);
+      }
+    }
+    for (var zone in audit.moyenneTensionZones) {
+      for (var c in zone.coffrets) {
+        collectFromCoffret(c);
+      }
+      for (var local in zone.locaux) {
+        for (var c in local.coffrets) {
+          collectFromCoffret(c);
+        }
+      }
+    }
+    for (var zone in audit.basseTensionZones) {
+      for (var c in zone.coffretsDirects) {
+        collectFromCoffret(c);
+      }
+      for (var local in zone.locaux) {
+        for (var c in local.coffrets) {
+          collectFromCoffret(c);
+        }
+      }
+    }
+
+    for (final path in coffretPhotoPaths) {
+      final img = await _loadAndOptimizeImage(path, maxWidth: 300, maxHeight: 300, quality: 60);
+      if (img != null) {
+        _coffretPhotoCache[path] = img;
+      }
     }
   }
+
+
 
   // ──────────────────────────────────────────────────────────────
   //  SCHÉMA DES INSTALLATIONS ÉLECTRIQUES
@@ -5059,7 +5123,7 @@ class PdfReportService {
     if (!hasSchema) return;
 
     pdf.addPage(pw.MultiPage(
-      maxPages: 1,
+      maxPages: 10000,
       pageTheme: _buildInnerPageTheme(),
       header: (ctx) => _buildPageHeaderWidget(
         nomClient: mission.nomClient,
@@ -5421,7 +5485,7 @@ class PdfReportService {
 
       // 3. Rappel des responsabilités + Mesures de sécurité + Objet de la vérification
       pdf.addPage(pw.MultiPage(
-        maxPages: 10,
+        maxPages: 10000,
         pageTheme: _buildInnerPageTheme(),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
@@ -5575,14 +5639,14 @@ class PdfReportService {
 
       // 4. Renseignements generaux
       pdf.addPage(pw.MultiPage(
-        maxPages: 200,
+        maxPages: 10000,
         pageTheme: _buildInnerPageTheme(),
         build: (ctx) => [_buildRenseignementsGeneraux(mission, renseignements, trackedPages)],
       ));
 
       // 5. Description des installations
       pdf.addPage(pw.MultiPage(
-          maxPages: 200,
+        maxPages: 10000,
         pageTheme: _buildInnerPageTheme(),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
@@ -5595,7 +5659,7 @@ class PdfReportService {
       // 6. Liste recapitulative des observations
       if (audit != null) {
         pdf.addPage(pw.MultiPage(
-          maxPages: 200,
+          maxPages: 10000,
           pageTheme: _buildInnerPageTheme(),
           header: (ctx) => _buildPageHeaderWidget(
             nomClient: mission.nomClient,
@@ -5609,7 +5673,7 @@ class PdfReportService {
       // 7. Audit des installations electriques (page titre + contenu)
       if (audit != null) {
         pdf.addPage(pw.MultiPage(
-          maxPages: 1,
+          maxPages: 10000,
           pageTheme: _buildInnerPageTheme(),
           header: (ctx) => _buildPageHeaderWidget(
             nomSite: nomSiteHeader,
@@ -5655,7 +5719,7 @@ class PdfReportService {
         ));
 
         pdf.addPage(pw.MultiPage(
-          maxPages: 200,
+          maxPages: 10000,
           pageTheme: _buildInnerPageTheme(),
           header: (ctx) => _buildPageHeaderWidget(
             nomClient: mission.nomClient,
@@ -5668,7 +5732,7 @@ class PdfReportService {
 
       // 8. Classement des emplacements
       pdf.addPage(pw.MultiPage(
-          maxPages: 200,
+        maxPages: 10000,
         pageTheme: _buildInnerPageTheme(),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
@@ -5680,7 +5744,7 @@ class PdfReportService {
 
       // 9. Foudre
       pdf.addPage(pw.MultiPage(
-        maxPages: 200,
+        maxPages: 10000,
         pageTheme: _buildInnerPageTheme(),
         build: (ctx) => [_buildFoudre(foudres, trackedPages)],
       ));
@@ -5694,25 +5758,51 @@ class PdfReportService {
         ));
       }
 
-      // 11. Photos
-      await _addPhotosSection(pdf, mission, missionId, audit, description, trackedPages,
-          nomSite: nomSiteHeader, numeroRapport: numeroRapportDoc);
-
       // 12. Schéma des installations électriques (si disponible)
       _addSchemaSection(pdf, mission, trackedPages,
           nomSite: nomSiteHeader, numeroRapport: numeroRapportDoc);
 
-      final bytes = await pdf.save();
       final dir = await getTemporaryDirectory();
+      final mainChunkBytes = await pdf.save();
+      final mainChunkFile = File('${dir.path}/pdf_chunk_main_$missionId.pdf');
+      await mainChunkFile.writeAsBytes(mainChunkBytes);
+
+      final allChunkFiles = <File>[mainChunkFile];
+
+      // 11. Photos Chunked
+      final photoChunkFiles = await _addPhotosSectionChunked(
+        mission,
+        missionId,
+        audit,
+        description,
+        trackedPages,
+        nomSite: nomSiteHeader,
+        numeroRapport: numeroRapportDoc,
+      );
+      allChunkFiles.addAll(photoChunkFiles);
+
       final fileName = 'Rapport_${mission.nomClient}_${_formatDate(DateTime.now())}.pdf'
           .replaceAll(RegExp(r'[<>:"/\\|?*\s]'), '_');
-      final file = File('${dir.path}/$fileName');
-      await file.writeAsBytes(bytes);
-      
-      if (kDebugMode) {
-        print('✅ Rapport PDF genere avec succes: ${file.path}');
+      final outputFile = File('${dir.path}/$fileName');
+
+      if (allChunkFiles.length == 1) {
+        await mainChunkFile.copy(outputFile.path);
+      } else {
+        await PdfMergerService.mergePdfFiles(allChunkFiles, outputFile);
       }
-      return file;
+
+      for (final f in allChunkFiles) {
+        if (await f.exists()) {
+          try {
+            await f.delete();
+          } catch (_) {}
+        }
+      }
+
+      if (kDebugMode) {
+        print('✅ Rapport PDF genere avec succes: ${outputFile.path}');
+      }
+      return outputFile;
       
     } catch (e, stack) {
       if (kDebugMode) {
@@ -5853,14 +5943,15 @@ typedef _SommaireEntry = SommaireEntry;
 class PageTracker extends pw.SingleChildWidget {
   final String key;
   final Map<String, int> registry;
+  final int offset;
 
-  PageTracker({required this.key, required pw.Widget child, required this.registry})
+  PageTracker({required this.key, required pw.Widget child, required this.registry, this.offset = 0})
       : super(child: child);
 
   @override
   void layout(pw.Context context, pw.BoxConstraints constraints, {bool parentUsesSize = false}) {
     super.layout(context, constraints, parentUsesSize: parentUsesSize);
-    registry[key] = context.pageNumber;
+    registry[key] = context.pageNumber + offset;
   }
 
   @override

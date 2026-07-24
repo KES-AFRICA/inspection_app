@@ -148,50 +148,71 @@ class _ReportGenerationLoaderState extends State<ReportGenerationLoader>
       }
     });
 
-    // Enregistrer le callback de complétion
+    // Enregistrer les callbacks de complétion et de fermeture
     widget.controller._onComplete = _handleComplete;
+    widget.controller._onDismiss = _handleDismiss;
+  }
+
+  void _handleDismiss() {
+    if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
   }
 
   Future<void> _handleComplete() async {
     if (_isCompleted) return;
     _isCompleted = true;
 
-    // Arrêter la boucle de progression
-    _progressController.stop();
-    _rotationController.stop();
+    try {
+      // Arrêter la boucle de progression
+      _progressController.stop();
+      _rotationController.stop();
 
-    // Animer le pourcentage vers 100%
-    final currentPercent = _displayPercent;
-    _percentAnim = Tween<double>(begin: currentPercent, end: 100).animate(
-      CurvedAnimation(parent: _percentController, curve: Curves.easeOut),
-    );
-    _percentAnim.addListener(() {
-      setState(() {
-        _displayPercent = _percentAnim.value;
+      // Animer le pourcentage vers 100%
+      final currentPercent = _displayPercent;
+      _percentAnim = Tween<double>(begin: currentPercent, end: 100).animate(
+        CurvedAnimation(parent: _percentController, curve: Curves.easeOut),
+      );
+      _percentAnim.addListener(() {
+        if (mounted) {
+          setState(() {
+            _displayPercent = _percentAnim.value;
+          });
+        }
       });
-    });
 
-    _percentController.forward();
-    await _percentController.animateTo(1.0);
+      try {
+        await _percentController.forward(from: 0.0).orCancel;
+      } catch (_) {}
 
-    // Petit délai avant la transition check
-    await Future.delayed(const Duration(milliseconds: 200));
+      // Petit délai avant la transition check
+      await Future.delayed(const Duration(milliseconds: 150));
 
-    // Pulsation puis transition vers le check
-    await _pulseController.forward();
-    await _pulseController.reverse();
+      if (mounted) {
+        // Pulsation puis transition vers le check
+        try {
+          await _pulseController.forward().orCancel;
+          await _pulseController.reverse().orCancel;
+        } catch (_) {}
 
-    setState(() => _showCheck = true);
+        if (mounted) {
+          setState(() => _showCheck = true);
+        }
 
-    // Dessiner le check
-    await _checkController.forward();
+        // Dessiner le check
+        try {
+          await _checkController.forward().orCancel;
+        } catch (_) {}
 
-    // Pause de confirmation visuelle
-    await Future.delayed(const Duration(milliseconds: 600));
-
-    // Fermer le dialog
-    if (mounted) {
-      Navigator.of(context, rootNavigator: true).pop();
+        // Pause de confirmation visuelle
+        await Future.delayed(const Duration(milliseconds: 400));
+      }
+    } catch (_) {
+      // Ignorer toute interruption d'animation
+    } finally {
+      if (mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+      }
     }
   }
 
@@ -280,7 +301,7 @@ class _ReportGenerationLoaderState extends State<ReportGenerationLoader>
                             )
                           : Text(
                               '$percent%',
-                              key: ValueKey('percent_$percent'),
+                              key: const ValueKey('percent_text'),
                               style: TextStyle(
                                 fontSize: 26,
                                 fontWeight: FontWeight.w800,
@@ -330,12 +351,20 @@ class _ReportGenerationLoaderState extends State<ReportGenerationLoader>
 /// ```
 class ReportGenerationLoaderController {
   Future<void> Function()? _onComplete;
+  void Function()? _onDismiss;
 
   /// Déclenche l'animation de complétion (cercle → check → fermeture).
   /// Retourne un Future qui se résout lorsque le dialog est fermé.
   Future<void> complete() async {
     if (_onComplete != null) {
       await _onComplete!();
+    }
+  }
+
+  /// Ferme immédiatement le dialogue de chargement sans animation.
+  void dismiss() {
+    if (_onDismiss != null) {
+      _onDismiss!();
     }
   }
 }

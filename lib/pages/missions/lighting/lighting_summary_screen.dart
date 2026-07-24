@@ -200,15 +200,11 @@ class _LightingSummaryScreenState extends State<LightingSummaryScreen> {
           });
         }
       } else {
-        if (mounted && Navigator.of(context).canPop()) {
-          Navigator.of(context).pop();
-        }
+        loaderController.dismiss();
         _showError('Erreur lors de la génération du rapport');
       }
     } catch (e) {
-      if (mounted && Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
+      loaderController.dismiss();
       _showError('Erreur: $e');
     } finally {
       setState(() => _isGenerating = false);
