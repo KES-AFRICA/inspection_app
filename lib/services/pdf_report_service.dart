@@ -646,7 +646,7 @@ class PdfReportService {
 
     // 5. Liste récapitulative
     if (audit != null) {
-      entries.add(_SommaireEntry(titre: "LISTE RECAPITULATIVE DES OBSERVATIONS", key: 'liste_recap', level: 0, isBold: true, isUppercase: true));
+      entries.add(_SommaireEntry(titre: "SYNTHESE RECAPITULATIVE DES OBSERVATIONS", key: 'liste_recap', level: 0, isBold: true, isUppercase: true));
       entries.add(_SommaireEntry(titre: "Moyenne tension", key: 'liste_recap_mt', level: 1));
       entries.add(_SommaireEntry(titre: "Basse tension", key: 'liste_recap_bt', level: 1));
     }
@@ -1485,12 +1485,6 @@ class PdfReportService {
   
   static List<pw.Widget> _buildListeRecapitulativeMulti(AuditInstallationsElectriques audit, Map<String, int> trackedPages) {
     final widgets = <pw.Widget>[];
-    widgets.add(PageTracker(
-      key: 'liste_recap',
-      registry: trackedPages,
-      child: _sectionBox('LISTE RECAPITULATIVE DES OBSERVATIONS'),
-    ));
-    widgets.add(pw.SizedBox(height: 8));
 
     // Légende priorités — style trame
     widgets.add(pw.Container(
@@ -5671,19 +5665,25 @@ class PdfReportService {
             'avec le souci constant de la s\u00e9curit\u00e9, de la fiabilit\u00e9 technique et de l\'impartialit\u00e9 des constats.',
           ),
 
-          pw.SizedBox(height: 20),
+          // ─── RÉSUMÉ EXÉCUTIF (Démarre sur une nouvelle page juste après Mesures de Sécurité) ───
+          pw.NewPage(),
           PageTracker(
             key: 'resume_executif',
             registry: trackedPages,
             child: _sectionBox('RESUME EXECUTIF'),
           ),
+          pw.SizedBox(height: 14),
+          pw.Container(width: double.infinity, height: 80),
 
-          pw.SizedBox(height: 20),
+          // ─── ANALYSE STATISTIQUE (Démarre sur une nouvelle page juste après Résumé Exécutif) ───
+          pw.NewPage(),
           PageTracker(
             key: 'analyse_statistique',
             registry: trackedPages,
             child: _sectionBox('ANALYSE STATISTIQUE'),
           ),
+          pw.SizedBox(height: 14),
+          pw.Container(width: double.infinity, height: 80),
         ],
       ));
 
@@ -5706,8 +5706,54 @@ class PdfReportService {
         build: (ctx) => _buildDescriptionInstallationsMulti(description, trackedPages),
       ));
 
-      // 6. Liste recapitulative des observations
+      // 6. Synthèse récapitulative des observations (page de section + contenu)
       if (audit != null) {
+        pdf.addPage(pw.MultiPage(
+          maxPages: 10000,
+          pageTheme: _buildInnerPageTheme(),
+          header: (ctx) => _buildPageHeaderWidget(
+            nomSite: nomSiteHeader,
+            numeroRapport: numeroRapportDoc,
+          ),
+          build: (ctx) => [
+            pw.SizedBox(height: 220),
+            pw.Center(
+              child: pw.Column(
+                mainAxisAlignment: pw.MainAxisAlignment.center,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Container(width: 350, height: 2, color: accentColor),
+                  pw.SizedBox(height: 24),
+                  PageTracker(
+                    key: 'liste_recap',
+                    registry: trackedPages,
+                    child: pw.Text(
+                      'SYNTHÈSE RÉCAPITULATIVE DES OBSERVATIONS',
+                      style: pw.TextStyle(
+                        font: _fontBold, fontSize: 20,
+                        fontWeight: pw.FontWeight.bold,
+                        color: headerColor,
+                        letterSpacing: 1.0,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                  pw.SizedBox(height: 12),
+                  pw.Text(
+                    mission.nomClient.toUpperCase(),
+                    style: pw.TextStyle(
+                      font: _fontRegular, fontSize: 13, color: accentColor,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                  pw.SizedBox(height: 24),
+                  pw.Container(width: 350, height: 2, color: accentColor),
+                ],
+              ),
+            ),
+          ],
+        ));
+
         pdf.addPage(pw.MultiPage(
           maxPages: 10000,
           pageTheme: _buildInnerPageTheme(),
