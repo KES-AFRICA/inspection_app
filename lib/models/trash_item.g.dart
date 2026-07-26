@@ -1,5 +1,10 @@
-// GENERATED CODE - MANUAL HIVE ADAPTER FOR TRASHITEM
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
 part of 'trash_item.dart';
+
+// **************************************************************************
+// TypeAdapterGenerator
+// **************************************************************************
 
 class TrashItemAdapter extends TypeAdapter<TrashItem> {
   @override

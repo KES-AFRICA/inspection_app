@@ -75,6 +75,7 @@ class RenseignementsGenerauxNotifier
     List<String>? compteRendu,
     List<Map<String, String>>? accompagnateurs,
     List<Map<String, String>>? verificateurs,
+    String? formationHabilitationElectrique,
   }) async {
     final currentData = state.value;
     if (currentData == null) return;
@@ -91,6 +92,9 @@ class RenseignementsGenerauxNotifier
     if (compteRendu != null) currentData.compteRendu = compteRendu;
     if (accompagnateurs != null) currentData.accompagnateurs = accompagnateurs;
     if (verificateurs != null) currentData.verificateurs = verificateurs;
+    if (formationHabilitationElectrique != null) {
+      currentData.formationHabilitationElectrique = formationHabilitationElectrique;
+    }
     currentData.updatedAt = DateTime.now();
 
     // Notifier le changement d'état

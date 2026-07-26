@@ -125,6 +125,9 @@ class Mission extends HiveObject {
   @HiveField(39)
   String? installation;
 
+  @HiveField(40)
+  List<String>? perimetreMission;
+
   Mission({
     required this.id,
     required this.nomClient,
@@ -165,6 +168,7 @@ class Mission extends HiveObject {
     this.schemaOption,
     List<String>? autresDocuments,
     this.installation,
+    this.perimetreMission,
   }) : autresDocuments = autresDocuments ?? [];
 
   factory Mission.fromJson(Map<String, dynamic> json) {
@@ -225,6 +229,9 @@ class Mission extends HiveObject {
           ? List<String>.from(json['autres_documents'])
           : [],
       installation: json['installation'] as String?,
+      perimetreMission: json['perimetre_mission'] != null
+          ? List<String>.from(json['perimetre_mission'])
+          : null,
     );
   }
 
@@ -269,6 +276,7 @@ class Mission extends HiveObject {
       'schema_option': schemaOption,
       'autres_documents': autresDocuments,
       'installation': installation,
+      'perimetre_mission': perimetreMission,
     };
   }
 

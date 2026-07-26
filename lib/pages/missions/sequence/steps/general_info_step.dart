@@ -52,6 +52,7 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
   // Sélections
   String? _verificationType;
   String? _registreControle;
+  String _formationHabilitationElectrique = 'Inconnu';
   List<String> _compteRenduDestinataires = [];
 
   // Listes
@@ -120,6 +121,30 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
       'description': 'Le registre de contrôle n\'a pas été fourni',
       'icon': Icons.cancel,
       'color': Colors.red,
+    },
+  ];
+
+  final List<Map<String, dynamic>> _habilitationOptions = [
+    {
+      'value': 'Oui',
+      'title': 'Oui',
+      'description': 'Les techniciens disposent d\'une formation en habilitation électrique',
+      'icon': Icons.check_circle_outline,
+      'color': Colors.green,
+    },
+    {
+      'value': 'Non',
+      'title': 'Non',
+      'description': 'Les techniciens ne disposent pas de formation en habilitation électrique',
+      'icon': Icons.cancel_outlined,
+      'color': Colors.red,
+    },
+    {
+      'value': 'Inconnu',
+      'title': 'Inconnu',
+      'description': 'Information non précisée ou inconnue',
+      'icon': Icons.help_outline,
+      'color': Colors.black87,
     },
   ];
 
@@ -214,6 +239,7 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
       compteRendu: _compteRenduDestinataires,
       accompagnateurs: List.from(_accompagnateurs),
       verificateurs: List.from(_verificateurs),
+      formationHabilitationElectrique: _formationHabilitationElectrique,
     );
 
     final currentData = ref
@@ -378,6 +404,94 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
           return InkWell(
             onTap: () async {
               setState(() => _registreControle = option['value']);
+              await _saveData();
+              Navigator.pop(context);
+            },
+            child: Container(
+              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+              decoration: BoxDecoration(
+                color: isSelected
+                    ? (option['color'] as Color).withOpacity(0.05)
+                    : Colors.transparent,
+                border: isSelected
+                    ? Border(left: BorderSide(color: option['color'], width: 4))
+                    : null,
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: isSmallScreen ? 40 : 48,
+                    height: isSmallScreen ? 40 : 48,
+                    decoration: BoxDecoration(
+                      color: (option['color'] as Color).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(
+                        isSmallScreen ? 10 : 12,
+                      ),
+                    ),
+                    child: Icon(
+                      option['icon'],
+                      color: option['color'],
+                      size: isSmallScreen ? 20 : 24,
+                    ),
+                  ),
+                  SizedBox(width: isSmallScreen ? 12 : 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          option['title'],
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 14 : 16,
+                            fontWeight: FontWeight.w600,
+                            color: isSelected
+                                ? option['color']
+                                : Colors.black87,
+                          ),
+                        ),
+                        SizedBox(height: isSmallScreen ? 2 : 4),
+                        Text(
+                          option['description'],
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 11 : 13,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  if (isSelected)
+                    Icon(
+                      Icons.check_circle,
+                      color: option['color'],
+                      size: isSmallScreen ? 20 : 24,
+                    ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  void _showHabilitationPicker() {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) => AppBottomSheet(
+        title: 'Habilitation Électrique',
+        children: _habilitationOptions.map((option) {
+          final isSelected = _formationHabilitationElectrique == option['value'];
+          return InkWell(
+            onTap: () async {
+              setState(() => _formationHabilitationElectrique = option['value']);
               await _saveData();
               Navigator.pop(context);
             },
@@ -1225,6 +1339,7 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
           _compteRenduDestinataires = List.from(data.compteRendu);
           _accompagnateurs = List.from(data.accompagnateurs);
           _verificateurs = List.from(data.verificateurs);
+          _formationHabilitationElectrique = data.habilitationElectriqueEffective;
 
           if (_etablissementController.text.isNotEmpty)
             _etablissementTouched = true;
@@ -1644,6 +1759,21 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
                         : null,
                     isRequired: true,
                     showError: _hasAttemptedValidation,
+                  ),
+                  SizedBox(height: isSmallScreen ? 20 : 24),
+
+                  // Habilitation électrique du personnel d'intervention
+                  _buildDisplayField(
+                    label: 'Formation en habilitation électrique',
+                    value: _formationHabilitationElectrique,
+                    hint: 'Sélectionnez la formation des techniciens',
+                    icon: Icons.electrical_services_outlined,
+                    onTap: _showHabilitationPicker,
+                    color: _formationHabilitationElectrique == 'Oui'
+                        ? Colors.green
+                        : (_formationHabilitationElectrique == 'Non'
+                            ? Colors.red
+                            : Colors.black87),
                   ),
                   SizedBox(height: isSmallScreen ? 20 : 24),
 

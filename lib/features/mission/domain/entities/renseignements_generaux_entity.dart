@@ -15,6 +15,7 @@ class RenseignementsGenerauxEntity {
   final List<Map<String, String>> verificateurs;
   final DateTime updatedAt;
   final String nomSite;
+  final String formationHabilitationElectrique;
 
   const RenseignementsGenerauxEntity({
     required this.missionId,
@@ -31,5 +32,6 @@ class RenseignementsGenerauxEntity {
     this.verificateurs = const [],
     required this.updatedAt,
     required this.nomSite,
+    this.formationHabilitationElectrique = 'Inconnu',
   });
 }

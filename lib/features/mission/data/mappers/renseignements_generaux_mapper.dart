@@ -23,6 +23,7 @@ class RenseignementsGenerauxMapper {
       ),
       updatedAt: model.updatedAt,
       nomSite: model.nomSite,
+      formationHabilitationElectrique: model.habilitationElectriqueEffective,
     );
   }
 
@@ -46,6 +47,7 @@ class RenseignementsGenerauxMapper {
       ),
       updatedAt: entity.updatedAt,
       nomSite: entity.nomSite,
+      formationHabilitationElectrique: entity.formationHabilitationElectrique,
     );
   }
 }

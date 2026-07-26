@@ -58,13 +58,14 @@ class MissionAdapter extends TypeAdapter<Mission> {
       schemaOption: fields[37] as String?,
       autresDocuments: (fields[38] as List?)?.cast<String>(),
       installation: fields[39] as String?,
+      perimetreMission: (fields[40] as List?)?.cast<String>(),
     )..renseignementsGenerauxId = fields[34] as String?;
   }
 
   @override
   void write(BinaryWriter writer, Mission obj) {
     writer
-      ..writeByte(40)
+      ..writeByte(41)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -144,7 +145,9 @@ class MissionAdapter extends TypeAdapter<Mission> {
       ..writeByte(38)
       ..write(obj.autresDocuments)
       ..writeByte(39)
-      ..write(obj.installation);
+      ..write(obj.installation)
+      ..writeByte(40)
+      ..write(obj.perimetreMission);
   }
 
   @override

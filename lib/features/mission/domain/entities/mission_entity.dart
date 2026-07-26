@@ -40,6 +40,7 @@ class MissionEntity {
   final String? schemaOption;
   final List<String> autresDocuments;
   final String? installation;
+  final List<String>? perimetreMission;
 
   const MissionEntity({
     required this.id,
@@ -82,6 +83,7 @@ class MissionEntity {
     this.schemaOption,
     this.autresDocuments = const [],
     this.installation,
+    this.perimetreMission,
   });
 
   bool get isEnAttente => status.toLowerCase() == 'en_attente';

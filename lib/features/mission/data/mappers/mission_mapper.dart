@@ -45,6 +45,7 @@ class MissionMapper {
       schemaOption: model.schemaOption,
       autresDocuments: model.autresDocuments,
       installation: model.installation,
+      perimetreMission: model.perimetreMission,
     );
   }
   static Mission toModel(MissionEntity entity) {
@@ -88,6 +89,9 @@ class MissionMapper {
       schemaOption: entity.schemaOption,
       autresDocuments: List<String>.from(entity.autresDocuments),
       installation: entity.installation,
+      perimetreMission: entity.perimetreMission != null
+          ? List<String>.from(entity.perimetreMission!)
+          : null,
     );
     
     // renseignementsGenerauxId n'est pas présent dans le constructeur de Mission

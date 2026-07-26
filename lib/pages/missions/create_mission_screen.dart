@@ -32,6 +32,17 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
   // Sélection pour Nature de vérification
   String? _natureMission;
 
+  // Sélection pour Périmètre de la mission
+  List<String> _selectedPerimetres = [];
+
+  static const List<String> _perimetreOptions = [
+    'Vérification électrique',
+    'Audit foudre',
+    'Analyse du risque foudre et étude technique foudre',
+    'Vérification thermographique',
+    'Vérification des prises de terre',
+  ];
+
   @override
   void initState() {
     super.initState();
@@ -43,6 +54,9 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
       _nomSiteCtrl.text = m.nomSite ?? '';
       _installationCtrl.text = m.installation ?? '';
       _natureMission = m.natureMission;
+      if (m.perimetreMission != null) {
+        _selectedPerimetres = List<String>.from(m.perimetreMission!);
+      }
     }
   }
 
@@ -140,6 +154,7 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
         nomSite: _nomSiteCtrl.text.trim(),
         installation: _installationCtrl.text.trim(),
         natureMission: _natureMission,
+        perimetreMission: _selectedPerimetres.isEmpty ? null : List<String>.from(_selectedPerimetres),
         createdAt: isEditing ? widget.missionToEdit!.createdAt : DateTime.now(),
         updatedAt: DateTime.now(),
         status: isEditing ? widget.missionToEdit!.status : 'en_attente',
@@ -326,6 +341,117 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
             ),
             SizedBox(height: isSmallScreen ? 6 : 8),
           ],
+        ),
+      ),
+    );
+  }
+
+  void _showPerimetrePicker() {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setBottomSheetState) => Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle
+              Container(
+                margin: EdgeInsets.only(top: isSmallScreen ? 8 : 12),
+                width: isSmallScreen ? 30 : 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              // Title
+              Padding(
+                padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                child: Text(
+                  'Périmètre de la mission',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 18 : 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const Divider(height: 0),
+              // Options
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: _perimetreOptions.map((option) {
+                      final isSelected = _selectedPerimetres.contains(option);
+                      return CheckboxListTile(
+                        value: isSelected,
+                        activeColor: AppTheme.primaryBlue,
+                        title: Text(
+                          option,
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 14 : 15,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                            color: isSelected ? AppTheme.primaryBlue : Colors.black87,
+                          ),
+                        ),
+                        onChanged: (bool? checked) {
+                          setState(() {
+                            if (checked == true) {
+                              if (!_selectedPerimetres.contains(option)) {
+                                _selectedPerimetres.add(option);
+                              }
+                            } else {
+                              _selectedPerimetres.remove(option);
+                            }
+                          });
+                          setBottomSheetState(() {});
+                        },
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              // Validate button
+              Padding(
+                padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                child: SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryBlue,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      'Valider',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -582,6 +708,30 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
                   icon: Icons.verified_outlined,
                   onTap: _showNaturePicker,
                   color: _natureMission != null ? Colors.blue : null,
+                ),
+                SizedBox(height: isSmallScreen ? 24 : 28),
+
+                // Section Périmètre de la mission
+                Text(
+                  'PÉRIMÈTRE DE LA MISSION',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.darkBlue,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+                SizedBox(height: isSmallScreen ? 12 : 16),
+
+                _buildDisplayField(
+                  label: 'Périmètre de la mission',
+                  value: _selectedPerimetres.isEmpty
+                      ? null
+                      : _selectedPerimetres.join(', '),
+                  hint: 'Sélectionnez le périmètre de la mission',
+                  icon: Icons.assignment_turned_in_outlined,
+                  onTap: _showPerimetrePicker,
+                  color: _selectedPerimetres.isNotEmpty ? Colors.blue : null,
                 ),
                 
                 SizedBox(height: isSmallScreen ? 32 : 40),

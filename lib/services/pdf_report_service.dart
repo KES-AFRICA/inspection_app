@@ -609,7 +609,16 @@ class PdfReportService {
   }) {
     final entries = <_SommaireEntry>[];
 
-    // 1. Rappel des responsabilités
+    // 1. Objet de la vérification
+    entries.add(_SommaireEntry(titre: "OBJET DE LA VERIFICATION", key: 'objet', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "Références normatives et règlementaires", key: 'objet', level: 1));
+    entries.add(_SommaireEntry(titre: "Matériel utilisé", key: 'objet', level: 1));
+
+    // 2. Périmètre de la mission
+    entries.add(_SommaireEntry(titre: "PERIMETRE DE LA MISSION", key: 'perimetre', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "Prestations vendues dans le cadre de cette mission", key: 'perimetre', level: 1));
+
+    // 3. Rappel des responsabilités
     entries.add(_SommaireEntry(titre: "RAPPEL DES RESPONSABILITES DE L'EMPLOYEUR", key: 'rappel', level: 0, isBold: true, isUppercase: true));
     entries.add(_SommaireEntry(titre: "Responsabilité et accompagnement", key: 'rappel', level: 1));
     entries.add(_SommaireEntry(titre: "Conditions de réalisation", key: 'rappel', level: 1));
@@ -620,15 +629,17 @@ class PdfReportService {
     entries.add(_SommaireEntry(titre: "Technicien en maintenance des installations", key: 'mesures_securite', level: 1));
     entries.add(_SommaireEntry(titre: "Engagement de KES INSPECTIONS AND PROJECTS", key: 'mesures_securite', level: 1));
 
-    // 2. Objet de la vérification
-    entries.add(_SommaireEntry(titre: "OBJET DE LA VERIFICATION", key: 'objet', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "Références normatives et règlementaires", key: 'objet', level: 1));
-    entries.add(_SommaireEntry(titre: "Matériel utilisé", key: 'objet', level: 1));
+    // 4. Résumé Exécutif (Immédiatement après MESURES DE SÉCURITÉ)
+    entries.add(_SommaireEntry(titre: "RESUME EXECUTIF", key: 'resume_executif', level: 0, isBold: true, isUppercase: true));
 
-    // 3. Renseignements généraux
+    // 5. Analyse Statistique (Immédiatement après Résumé Exécutif)
+    entries.add(_SommaireEntry(titre: "ANALYSE STATISTIQUE", key: 'analyse_statistique', level: 0, isBold: true, isUppercase: true));
+
+    // 6. Renseignements généraux
     entries.add(_SommaireEntry(titre: "RENSEIGNEMENTS GENERAUX DE L'ETABLISSEMENT", key: 'renseignements', level: 0, isBold: true, isUppercase: true));
     entries.add(_SommaireEntry(titre: "Renseignements principaux", key: 'renseignements_principaux', level: 1));
     entries.add(_SommaireEntry(titre: "Documents nécessaires à la vérification", key: 'renseignements_documents', level: 1));
+    entries.add(_SommaireEntry(titre: "Habilitation électrique du personnel d'intervention", key: 'renseignements_habilitation', level: 1));
 
     // 4. Description des installations
     entries.add(_SommaireEntry(titre: "DESCRIPTION DES INSTALLATIONS", key: 'description', level: 0, isBold: true, isUppercase: true));
@@ -1196,6 +1207,60 @@ class PdfReportService {
         ),
     ],
   ),
+  pw.SizedBox(height: 16),
+  PageTracker(
+    key: 'renseignements_habilitation',
+    registry: trackedPages,
+    child: _subTitle('HABILITATION ÉLECTRIQUE DU PERSONNEL D\'INTERVENTION'),
+  ),
+  pw.SizedBox(height: 6),
+  () {
+    final habVal = rg?.habilitationElectriqueEffective ?? 'Inconnu';
+    PdfColor habColor;
+    if (habVal == 'Oui') {
+      habColor = PdfColor.fromInt(0xFF2E7D32); // Vert
+    } else if (habVal == 'Non') {
+      habColor = PdfColor.fromInt(0xFFC62828); // Rouge
+    } else {
+      habColor = PdfColors.black; // Noir (Inconnu)
+    }
+
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: borderColor, width: 0.4),
+        color: tableRowAlt,
+      ),
+      child: pw.Row(
+        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.Expanded(
+            flex: 7,
+            child: pw.Text(
+              'Les techniciens disposent-ils d\'une formation en habilitation électrique ?',
+              style: pw.TextStyle(
+                font: _fontRegular,
+                fontSize: fsBody,
+                color: darkGrey,
+              ),
+            ),
+          ),
+          pw.SizedBox(width: 8),
+          pw.Text(
+            habVal,
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: fsBody,
+              fontWeight: pw.FontWeight.bold,
+              color: habColor,
+            ),
+          ),
+        ],
+      ),
+    );
+  }(),
       ],
     );
   }
@@ -3257,7 +3322,7 @@ class PdfReportService {
 
     // ── Photo interne ──────────────────────────────────────────────────────
     pw.MemoryImage? photoInterne;
-    for (final src in [...coffret.photosInternes, ...coffret.photos]) {
+    for (final src in [...coffret.photosInternes, ...coffret.photos, ...coffret.photosExternes]) {
       if (src.isEmpty) continue;
       if (_coffretPhotoCache.containsKey(src)) {
         photoInterne = _coffretPhotoCache[src];
@@ -3267,6 +3332,7 @@ class PdfReportService {
           final f = File(src);
           if (f.existsSync()) {
             photoInterne = pw.MemoryImage(f.readAsBytesSync());
+            _coffretPhotoCache[src] = photoInterne;
             break;
           }
         } catch (_) {}
@@ -4723,6 +4789,14 @@ class PdfReportService {
 
   static final Map<String, pw.MemoryImage?> _coffretPhotoCache = {};
 
+  static Future<pw.MemoryImage?> loadAndOptimizeImage(
+    String path, {
+    int maxWidth = 600,
+    int maxHeight = 800,
+    int quality = 65,
+  }) =>
+      _loadAndOptimizeImage(path, maxWidth: maxWidth, maxHeight: maxHeight, quality: quality);
+
   static Future<pw.MemoryImage?> _loadAndOptimizeImage(
     String path, {
     int maxWidth = 600,
@@ -4915,64 +4989,6 @@ class PdfReportService {
 
     if (allPhotos.isEmpty) return chunkFiles;
 
-    final coverDoc = pw.Document(
-      title: 'Photos - ${mission.nomClient}',
-      author: 'KES INSPECTIONS AND PROJECTS',
-      compress: true,
-    );
-
-    coverDoc.addPage(pw.MultiPage(
-      maxPages: 10000,
-      pageTheme: _buildInnerPageTheme(),
-      header: (ctx) => _buildPageHeaderWidget(
-        nomClient: mission.nomClient,
-        nomSite: nomSite,
-        numeroRapport: numeroRapport,
-      ),
-      build: (ctx) => [
-        pw.SizedBox(height: 220),
-        pw.Center(
-          child: pw.Column(
-            mainAxisAlignment: pw.MainAxisAlignment.center,
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              pw.Container(width: 350, height: 2, color: accentColor),
-              pw.SizedBox(height: 24),
-              PageTracker(
-                key: 'photos',
-                registry: trackedPages,
-                child: pw.Text(
-                  'PHOTOS',
-                  style: pw.TextStyle(
-                    font: _fontBold, fontSize: 20,
-                    fontWeight: pw.FontWeight.bold,
-                    color: headerColor,
-                    letterSpacing: 1.0,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-              ),
-              pw.SizedBox(height: 12),
-              pw.Text(
-                nomSite?.toUpperCase() ?? mission.nomClient.toUpperCase(),
-                style: pw.TextStyle(
-                  font: _fontRegular, fontSize: 13, color: accentColor,
-                ),
-                textAlign: pw.TextAlign.center,
-              ),
-              pw.SizedBox(height: 24),
-              pw.Container(width: 350, height: 2, color: accentColor),
-            ],
-          ),
-        ),
-      ],
-    ));
-
-    final coverBytes = await coverDoc.save();
-    final coverFile = File('${tempDir.path}/pdf_chunk_photos_cover_$missionId.pdf');
-    await coverFile.writeAsBytes(coverBytes);
-    chunkFiles.add(coverFile);
-
     const photosPerChunk = 40;
     int photoChunkIdx = 0;
 
@@ -5067,7 +5083,7 @@ class PdfReportService {
     final coffretPhotoPaths = <String>{};
 
     void collectFromCoffret(CoffretArmoire c) {
-      for (final p in [...c.photosInternes, ...c.photos]) {
+      for (final p in [...c.photosInternes, ...c.photos, ...c.photosExternes]) {
         if (p.trim().isNotEmpty) coffretPhotoPaths.add(p.trim());
       }
     }
@@ -5493,6 +5509,53 @@ class PdfReportService {
           numeroRapport: numeroRapportDoc,
         ),
         build: (ctx) => [
+
+          // ─── OBJET DE LA V\u00c9RIFICATION ───
+          pw.SizedBox(height: 20),
+          PageTracker(
+            key: 'objet',
+            registry: trackedPages,
+            child: _sectionBox('OBJET DE LA V\u00c9RIFICATION'),
+          ),
+          pw.SizedBox(height: 10),
+          _bodyText(
+            'La mission a pour objet de d\u00e9celer les non-conformit\u00e9s pouvant affecter la s\u00e9curit\u00e9 des personnes et des biens, et de s\'assurer du bon \u00e9tat de conservation des installations. '
+            'Afin de pr\u00e9senter l\'\u00e9tat des lieux de l\'existant, les points sur lesquels les installations s\'\u00e9cartent des normes et textes applicables, et de proposer des actions correctives.\n\n'
+            'D\'une mani\u00e8re g\u00e9n\u00e9rale, la v\u00e9rification a \u00e9t\u00e9 \u00e9tendue \u00e0 l\'ensemble des installations \u00e9lectriques pr\u00e9sent\u00e9es et accessibles dans l\'\u00e9tablissement, depuis les sources jusqu\'aux points d\'utilisation.',
+          ),
+          pw.SizedBox(height: 10),
+          _bodyText('Ainsi sont exclus du champ de la v\u00e9rification\u00a0:'),
+          _bulletItem('Les dispositions administratives, organisationnelles et techniques relatives \u00e0 l\'information et \u00e0 la formation du personnel (prescriptions au personnel) lors de l\'exploitation courante, de travaux ou d\'interventions sur les installations, ainsi que les mesures de s\u00e9curit\u00e9 qui en d\u00e9coulent\u00a0;'),
+          _bulletItem('Les dispositions administratives relatives aux documents \u00e0 tenir \u00e0 la disposition des autorit\u00e9s publiques\u00a0;'),
+          _bulletItem('L\'examen des mat\u00e9riels \u00e9lectriques en pr\u00e9sentation ou en d\u00e9monstration et destin\u00e9s \u00e0 la vente\u00a0;'),
+          _bulletItem('Les mat\u00e9riels stock\u00e9s ou en r\u00e9serve, ou signal\u00e9s comme n\'\u00e9tant plus mis en \u0153uvre. Du fait que les installations sont examin\u00e9es en tenant compte des contraintes d\'exploitation et de s\u00e9curit\u00e9 propres \u00e0 chaque \u00e9tablissement et indiqu\u00e9es en d\u00e9but de v\u00e9rification au personnel charg\u00e9 de la v\u00e9rification, celle-ci est limit\u00e9e dans certains cas \u00e0 l\'\u00e9tat apparent des installations.'),
+          pw.SizedBox(height: 12),
+          _subTitle('R\u00e9f\u00e9rences normatives et r\u00e9glementaires'),
+          pw.SizedBox(height: 5),
+          _buildNormesTable(),
+          pw.SizedBox(height: 12),
+          _subTitle('Mat\u00e9riel utilis\u00e9'),
+          pw.SizedBox(height: 5),
+          _buildMaterielTable(),
+
+          // ─── PÉRIMÈTRE DE LA MISSION (Sur sa propre page immédiatement après OBJET DE LA VÉRIFICATION) ───
+          pw.NewPage(),
+          PageTracker(
+            key: 'perimetre',
+            registry: trackedPages,
+            child: _sectionBox('PERIMETRE DE LA MISSION'),
+          ),
+          pw.SizedBox(height: 14),
+          _subTitle('Prestations vendues dans le cadre de cette mission'),
+          pw.SizedBox(height: 10),
+          if (mission.perimetreMission != null && mission.perimetreMission!.isNotEmpty)
+            ...mission.perimetreMission!.map((p) => _bulletItem(p))
+          else ...[
+            _bulletItem('Vérification électrique'),
+          ],
+
+          // ─── RAPPEL DES RESPONSABILITÉS DE L'EMPLOYEUR ───
+          pw.NewPage(),
           PageTracker(
             key: 'rappel',
             registry: trackedPages,
@@ -5607,33 +5670,20 @@ class PdfReportService {
             'KES INSPECTIONS AND PROJECTS s\'engage \u00e0 r\u00e9aliser ses v\u00e9rifications dans le strict respect des normes et r\u00e8glements applicables, '
             'avec le souci constant de la s\u00e9curit\u00e9, de la fiabilit\u00e9 technique et de l\'impartialit\u00e9 des constats.',
           ),
-          // ─── OBJET DE LA V\u00c9RIFICATION ───
+
           pw.SizedBox(height: 20),
           PageTracker(
-            key: 'objet',
+            key: 'resume_executif',
             registry: trackedPages,
-            child: _sectionBox('OBJET DE LA V\u00c9RIFICATION'),
+            child: _sectionBox('RESUME EXECUTIF'),
           ),
-          pw.SizedBox(height: 10),
-          _bodyText(
-            'La mission a pour objet de d\u00e9celer les non-conformit\u00e9s pouvant affecter la s\u00e9curit\u00e9 des personnes et des biens, et de s\'assurer du bon \u00e9tat de conservation des installations. '
-            'Afin de pr\u00e9senter l\'\u00e9tat des lieux de l\'existant, les points sur lesquels les installations s\'\u00e9cartent des normes et textes applicables, et de proposer des actions correctives.\n\n'
-            'D\'une mani\u00e8re g\u00e9n\u00e9rale, la v\u00e9rification a \u00e9t\u00e9 \u00e9tendue \u00e0 l\'ensemble des installations \u00e9lectriques pr\u00e9sent\u00e9es et accessibles dans l\'\u00e9tablissement, depuis les sources jusqu\'aux points d\'utilisation.',
+
+          pw.SizedBox(height: 20),
+          PageTracker(
+            key: 'analyse_statistique',
+            registry: trackedPages,
+            child: _sectionBox('ANALYSE STATISTIQUE'),
           ),
-          pw.SizedBox(height: 10),
-          _bodyText('Ainsi sont exclus du champ de la v\u00e9rification\u00a0:'),
-          _bulletItem('Les dispositions administratives, organisationnelles et techniques relatives \u00e0 l\'information et \u00e0 la formation du personnel (prescriptions au personnel) lors de l\'exploitation courante, de travaux ou d\'interventions sur les installations, ainsi que les mesures de s\u00e9curit\u00e9 qui en d\u00e9coulent\u00a0;'),
-          _bulletItem('Les dispositions administratives relatives aux documents \u00e0 tenir \u00e0 la disposition des autorit\u00e9s publiques\u00a0;'),
-          _bulletItem('L\'examen des mat\u00e9riels \u00e9lectriques en pr\u00e9sentation ou en d\u00e9monstration et destin\u00e9s \u00e0 la vente\u00a0;'),
-          _bulletItem('Les mat\u00e9riels stock\u00e9s ou en r\u00e9serve, ou signal\u00e9s comme n\'\u00e9tant plus mis en \u0153uvre. Du fait que les installations sont examin\u00e9es en tenant compte des contraintes d\'exploitation et de s\u00e9curit\u00e9 propres \u00e0 chaque \u00e9tablissement et indiqu\u00e9es en d\u00e9but de v\u00e9rification au personnel charg\u00e9 de la v\u00e9rification, celle-ci est limit\u00e9e dans certains cas \u00e0 l\'\u00e9tat apparent des installations.'),
-          pw.SizedBox(height: 12),
-          _subTitle('R\u00e9f\u00e9rences normatives et r\u00e9glementaires'),
-          pw.SizedBox(height: 5),
-          _buildNormesTable(),
-          pw.SizedBox(height: 12),
-          _subTitle('Mat\u00e9riel utilis\u00e9'),
-          pw.SizedBox(height: 5),
-          _buildMaterielTable(),
         ],
       ));
 
@@ -5761,6 +5811,54 @@ class PdfReportService {
       // 12. Schéma des installations électriques (si disponible)
       _addSchemaSection(pdf, mission, trackedPages,
           nomSite: nomSiteHeader, numeroRapport: numeroRapportDoc);
+
+      // 13. Page de garde Photos (si des photos sont présentes)
+      pdf.addPage(pw.MultiPage(
+        maxPages: 10000,
+        pageTheme: _buildInnerPageTheme(),
+        header: (ctx) => _buildPageHeaderWidget(
+          nomClient: mission.nomClient,
+          nomSite: nomSiteHeader,
+          numeroRapport: numeroRapportDoc,
+        ),
+        build: (ctx) => [
+          pw.SizedBox(height: 220),
+          pw.Center(
+            child: pw.Column(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                pw.Container(width: 350, height: 2, color: accentColor),
+                pw.SizedBox(height: 24),
+                PageTracker(
+                  key: 'photos',
+                  registry: trackedPages,
+                  child: pw.Text(
+                    'PHOTOS',
+                    style: pw.TextStyle(
+                      font: _fontBold, fontSize: 20,
+                      fontWeight: pw.FontWeight.bold,
+                      color: headerColor,
+                      letterSpacing: 1.0,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+                pw.SizedBox(height: 12),
+                pw.Text(
+                  nomSiteHeader.isNotEmpty ? nomSiteHeader.toUpperCase() : mission.nomClient.toUpperCase(),
+                  style: pw.TextStyle(
+                    font: _fontRegular, fontSize: 13, color: accentColor,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+                pw.SizedBox(height: 24),
+                pw.Container(width: 350, height: 2, color: accentColor),
+              ],
+            ),
+          ),
+        ],
+      ));
 
       final dir = await getTemporaryDirectory();
       final mainChunkBytes = await pdf.save();

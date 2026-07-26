@@ -184,6 +184,8 @@ class PdfReportLightService {
         ),
       );
 
+      final lightingPhotosWidgets = await _buildLightingPhotosList(inspections);
+
       // 5. PHOTOGRAPHIES DÉDIÉES AUX DÉFAILLANCES D'ÉCLAIRAGE
       pdf.addPage(
         pw.MultiPage(
@@ -201,7 +203,7 @@ class PdfReportLightService {
               child: PdfReportService.sectionBox('PHOTOGRAPHIES'),
             ),
             pw.SizedBox(height: 14),
-            ..._buildLightingPhotosList(inspections),
+            ...lightingPhotosWidgets,
           ],
         ),
       );
@@ -463,8 +465,8 @@ class PdfReportLightService {
   }
 
   /// Galerie photos des défaillances éclairage (2 images par rangée, 6 images grand format par page)
-  static List<pw.Widget> _buildLightingPhotosList(
-      List<LightingInspection> inspections) {
+  static Future<List<pw.Widget>> _buildLightingPhotosList(
+      List<LightingInspection> inspections) async {
     final rawPhotoCards = <pw.Widget>[];
 
     for (final insp in inspections) {
@@ -479,8 +481,13 @@ class PdfReportLightService {
               if (!file.existsSync()) continue;
 
               try {
-                final imageBytes = file.readAsBytesSync();
-                final pdfImg = pw.MemoryImage(imageBytes);
+                final pdfImg = await PdfReportService.loadAndOptimizeImage(
+                  path,
+                  maxWidth: 600,
+                  maxHeight: 600,
+                  quality: 65,
+                );
+                if (pdfImg == null) continue;
 
                 rawPhotoCards.add(
                   pw.Container(

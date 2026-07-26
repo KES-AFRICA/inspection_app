@@ -36,13 +36,14 @@ class RenseignementsGenerauxAdapter
           ?.toList(),
       updatedAt: fields[12] as DateTime,
       nomSite: fields[13] as String,
+      formationHabilitationElectrique: fields[14] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, RenseignementsGeneraux obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)
@@ -70,7 +71,9 @@ class RenseignementsGenerauxAdapter
       ..writeByte(12)
       ..write(obj.updatedAt)
       ..writeByte(13)
-      ..write(obj.nomSite);
+      ..write(obj.nomSite)
+      ..writeByte(14)
+      ..write(obj.formationHabilitationElectrique);
   }
 
   @override

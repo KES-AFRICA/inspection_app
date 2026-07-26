@@ -47,6 +47,9 @@ class RenseignementsGeneraux extends HiveObject {
   @HiveField(13)
   String nomSite;
 
+  @HiveField(14)
+  String? formationHabilitationElectrique;
+
   RenseignementsGeneraux({
     required this.missionId,
     required this.etablissement,
@@ -62,9 +65,16 @@ class RenseignementsGeneraux extends HiveObject {
     List<Map<String, String>>? verificateurs,
     required this.updatedAt,
     required this.nomSite,
-  }) : compteRendu = compteRendu ?? [],  
+    String? formationHabilitationElectrique,
+  }) : formationHabilitationElectrique = formationHabilitationElectrique ?? 'Inconnu',
+       compteRendu = compteRendu ?? [],  
        accompagnateurs = accompagnateurs ?? [],  
        verificateurs = verificateurs ?? [];  
+
+  String get habilitationElectriqueEffective =>
+      (formationHabilitationElectrique == null || formationHabilitationElectrique!.trim().isEmpty)
+          ? 'Inconnu'
+          : formationHabilitationElectrique!;
 
   factory RenseignementsGeneraux.create(String missionId) {
     return RenseignementsGeneraux(
@@ -74,6 +84,7 @@ class RenseignementsGeneraux extends HiveObject {
       activite: '',
       updatedAt: DateTime.now(),
       nomSite: '',
+      formationHabilitationElectrique: 'Inconnu',
       compteRendu: [],  
       accompagnateurs: [],  
       verificateurs: [], 
@@ -96,6 +107,7 @@ class RenseignementsGeneraux extends HiveObject {
       'verificateurs': verificateurs,
       'updatedAt': updatedAt.toIso8601String(),
       'nomSite': nomSite,
+      'formationHabilitationElectrique': habilitationElectriqueEffective,
     };
   }
 }
