@@ -2624,13 +2624,13 @@ class PdfReportService {
 
     final auditWidgets = <pw.Widget>[];
     if (local.dispositionsConstructives.isNotEmpty) {
-      auditWidgets.add(_buildDispositionsTable(local.dispositionsConstructives, 'DISPOSITIONS CONSTRUCTIVES DU LOCAL'));
+      auditWidgets.add(_buildDispositionsTable(local.dispositionsConstructives, 'DISPOSITIONS CONSTRUCTIVES DU LOCAL TECHNIQUE MOYENNE TENSION'));
     }
     if (local.conditionsExploitation.isNotEmpty) {
       if (auditWidgets.isNotEmpty) {
         auditWidgets.add(pw.SizedBox(height: 12));
       }
-      auditWidgets.add(_buildDispositionsTable(local.conditionsExploitation, 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ'));
+      auditWidgets.add(_buildDispositionsTable(local.conditionsExploitation, 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ DU LOCAL MOYENNE TENSION'));
     }
     if (auditWidgets.isNotEmpty) {
       widgets.add(pw.Column(
@@ -2742,13 +2742,13 @@ class PdfReportService {
 
     final auditWidgets = <pw.Widget>[];
     if (local.dispositionsConstructives != null && local.dispositionsConstructives!.isNotEmpty) {
-      auditWidgets.add(_buildDispositionsTable(local.dispositionsConstructives!, 'DISPOSITIONS CONSTRUCTIVES DU LOCAL'));
+      auditWidgets.add(_buildDispositionsTable(local.dispositionsConstructives!, 'DISPOSITIONS CONSTRUCTIVES DU LOCAL TECHNIQUE MOYENNE TENSION'));
     }
     if (local.conditionsExploitation != null && local.conditionsExploitation!.isNotEmpty) {
       if (auditWidgets.isNotEmpty) {
         auditWidgets.add(pw.SizedBox(height: 12));
       }
-      auditWidgets.add(_buildDispositionsTable(local.conditionsExploitation!, 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ'));
+      auditWidgets.add(_buildDispositionsTable(local.conditionsExploitation!, 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ DU LOCAL MOYENNE TENSION'));
     }
     if (auditWidgets.isNotEmpty) {
       widgets.add(pw.Column(
