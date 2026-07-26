@@ -224,7 +224,7 @@ class PdfReportService {
   }
 
   /// Thème pages intérieures (footer otherPage)
-  static pw.PageTheme _buildInnerPageTheme({int pageOffset = 0, int? overrideTotalPages}) {
+  static pw.PageTheme _buildInnerPageTheme({int pageOffset = 0, int? overrideTotalPages, bool showWatermark = true}) {
     return pw.PageTheme(
       pageFormat: PdfPageFormat.a4,
       theme: pw.ThemeData.withFont(base: _fontRegular, bold: _fontBold),
@@ -234,7 +234,7 @@ class PdfReportService {
         right:  kRightMargin,
         bottom: kBottomMargin + 40,
       ),
-      buildBackground: (ctx) => _buildWatermarkBackground(),
+      buildBackground: (ctx) => showWatermark ? _buildWatermarkBackground() : pw.SizedBox(),
       buildForeground: (ctx) => _buildFooterAbsolute(
         isFirstPage: false,
         ctx: ctx,
@@ -2427,18 +2427,21 @@ class PdfReportService {
       widgets.add(pw.NewPage());
       widgets.addAll(_buildZone(zone.nom, zone.observationsLibres, trackedPages));
       
-      // Locaux dans la zone : premier sur la même page que la zone
+      int elementIndex = 0;
+      // Locaux dans la zone : le premier sur la même page que la zone (élément 0)
       for (int i = 0; i < zone.locaux.length; i++) {
         final local = zone.locaux[i];
-        if (i > 0) widgets.add(pw.NewPage());
+        if (elementIndex > 0) widgets.add(pw.NewPage());
         widgets.addAll(_buildLocalMT(local, trackedPages));
+        elementIndex++;
       }
       
       // Coffrets de la zone
       for (int i = 0; i < zone.coffrets.length; i++) {
         final coffret = zone.coffrets[i];
-        if (i > 0) widgets.add(pw.NewPage());
+        if (elementIndex > 0) widgets.add(pw.NewPage());
         widgets.addAll(_buildCoffret(coffret, trackedPages, zone.nom));
+        elementIndex++;
       }
     }
 
@@ -2447,18 +2450,21 @@ class PdfReportService {
       widgets.add(pw.NewPage());
       widgets.addAll(_buildZone(zone.nom, zone.observationsLibres, trackedPages));
       
-      // Coffrets directs de la zone
+      int elementIndex = 0;
+      // Coffrets directs de la zone : le premier sur la même page que la zone (élément 0)
       for (int i = 0; i < zone.coffretsDirects.length; i++) {
         final coffret = zone.coffretsDirects[i];
-        if (i > 0) widgets.add(pw.NewPage());
+        if (elementIndex > 0) widgets.add(pw.NewPage());
         widgets.addAll(_buildCoffret(coffret, trackedPages, zone.nom));
+        elementIndex++;
       }
       
       // Locaux BT
       for (int i = 0; i < zone.locaux.length; i++) {
         final local = zone.locaux[i];
-        if (i > 0) widgets.add(pw.NewPage());
+        if (elementIndex > 0) widgets.add(pw.NewPage());
         widgets.addAll(_buildLocalBT(local, trackedPages));
+        elementIndex++;
       }
     }
 
@@ -2485,10 +2491,8 @@ class PdfReportService {
       ),
     ];
 
-    if (obs.isNotEmpty) {
-      widgets.add(pw.SizedBox(height: 5));
-      widgets.add(_buildObsZoneTable(nom, obs));
-    }
+    widgets.add(pw.SizedBox(height: 5));
+    widgets.add(_buildObsZoneTable(nom, obs));
     
     widgets.add(pw.SizedBox(height: 5));
     return widgets;
@@ -2659,8 +2663,9 @@ class PdfReportService {
       }
     }
 
-    for (var coffret in local.coffrets) {
-      widgets.addAll(_buildCoffret(coffret, trackedPages, local.nom));
+    for (int i = 0; i < local.coffrets.length; i++) {
+      if (i > 0) widgets.add(pw.NewPage());
+      widgets.addAll(_buildCoffret(local.coffrets[i], trackedPages, local.nom));
     }
 
     return widgets;
@@ -2757,8 +2762,9 @@ class PdfReportService {
       widgets.add(pw.NewPage());
     }
 
-    for (var coffret in local.coffrets) {
-      widgets.addAll(_buildCoffret(coffret, trackedPages, local.nom));
+    for (int i = 0; i < local.coffrets.length; i++) {
+      if (i > 0) widgets.add(pw.NewPage());
+      widgets.addAll(_buildCoffret(local.coffrets[i], trackedPages, local.nom));
     }
 
     return widgets;
@@ -2876,7 +2882,7 @@ class PdfReportService {
         conf = 'Oui';
         confColor = conformeColor;
       } else {
-        conf = 'Non';
+        conf = 'Sans objet';
         confColor = nonConformeColor;
       }
 
@@ -3060,7 +3066,7 @@ class PdfReportService {
         conf = 'Oui';
         confColor = conformeColor;
       } else {
-        conf = 'Non';
+        conf = 'Sans objet';
         confColor = nonConformeColor;
       }
 
@@ -3249,7 +3255,7 @@ class PdfReportService {
         conf = 'Oui';
         confColor = conformeColor;
       } else {
-        conf = 'Non';
+        conf = 'Sans objet';
         confColor = nonConformeColor;
       }
 
@@ -3743,7 +3749,7 @@ class PdfReportService {
           final confColor = isNA
               ? PdfColor.fromInt(0xFFE0E0E0)
               : (isConf ? conformeColor : nonConformeColor);
-          final confText = isNA ? 'N/A' : (isConf ? 'Oui' : 'Non');
+          final confText = isNA ? 'N/A' : (isConf ? 'Oui' : 'Sans objet');
           return pw.TableRow(
             decoration: pw.BoxDecoration(color: e.key.isEven ? PdfColors.white : tableRowAlt),
             children: [
@@ -4418,7 +4424,6 @@ class PdfReportService {
         _buildPageHeaderWidget(), pw.SizedBox(height: 10),
         _subSectionBar("Mésures d'isolement des circuits BT"),
         pw.SizedBox(height: 8),
-        _bodyText('Sans observation'),
       ]),
     ));
     
@@ -4839,32 +4844,32 @@ class PdfReportService {
     final allPhotos = <_PhotoEntry>[];
     final seenPaths = <String>{};
 
-    void addUniquePhotos(List<String>? paths, String desc, {String? repere}) {
+    void addUniquePhotos(List<String>? paths, String desc, {String? repere, bool isObservation = false}) {
       if (paths == null || paths.isEmpty) return;
       for (var p in paths) {
         final trimmed = p.trim();
         if (trimmed.isEmpty) continue;
         if (!seenPaths.contains(trimmed)) {
           seenPaths.add(trimmed);
-          allPhotos.add(_PhotoEntry(filePath: trimmed, description: desc, repere: repere));
+          allPhotos.add(_PhotoEntry(filePath: trimmed, description: desc, repere: repere, isObservation: isObservation));
         }
       }
     }
 
     void processCoffret(CoffretArmoire c, String prefix) {
       final repVal = c.repere?.isNotEmpty == true ? c.repere : c.numeroEquipement;
-      addUniquePhotos(c.photosExternes, '$prefix - Coffret : ${c.nom} (Extérieur)', repere: repVal);
-      addUniquePhotos(c.photosInternes, '$prefix - Coffret : ${c.nom} (Intérieur)', repere: repVal);
-      addUniquePhotos(c.photos, '$prefix - Coffret : ${c.nom}', repere: repVal);
+      // Exigence VIII : Uniquement photos intérieures dans la section Photos (photosExternes affichées dans l'audit)
+      final photosInt = c.photosInternes.isNotEmpty ? c.photosInternes : c.photos;
+      addUniquePhotos(photosInt, '$prefix - Coffret : ${c.nom} (Intérieur)', repere: repVal);
       for (var pv in c.pointsVerification) {
-        addUniquePhotos(pv.photos, '$prefix - Coffret : ${c.nom} - Point : ${pv.pointVerification}', repere: repVal);
+        addUniquePhotos(pv.photos, '$prefix - Coffret : ${c.nom} - Point : ${pv.pointVerification}', repere: repVal, isObservation: true);
       }
       for (var obs in c.observationsLibres) {
-        addUniquePhotos(obs.photos, '$prefix - Coffret : ${c.nom} - Obs libre : ${obs.texte}', repere: repVal);
+        addUniquePhotos(obs.photos, '$prefix - Coffret : ${c.nom} - Obs libre : ${obs.texte}', repere: repVal, isObservation: true);
       }
       final pfEnrichies = c.observationsParafoudreEnrichies ?? [];
       for (var obs in pfEnrichies) {
-        addUniquePhotos(obs.photos, '$prefix - Coffret : ${c.nom} - Parafoudre : ${obs.elementControle}', repere: repVal);
+        addUniquePhotos(obs.photos, '$prefix - Coffret : ${c.nom} - Parafoudre : ${obs.elementControle}', repere: repVal, isObservation: true);
       }
     }
 
@@ -4903,20 +4908,20 @@ class PdfReportService {
           addUniquePhotos(ce.photos, '${local.nom} - CE : ${ce.elementControle}');
         }
         for (var obs in local.observationsLibres) {
-          addUniquePhotos(obs.photos, '${local.nom} - Obs libre : ${obs.texte}');
+          addUniquePhotos(obs.photos, '${local.nom} - Obs libre : ${obs.texte}', isObservation: true);
         }
         for (var i = 0; i < local.cellules.length; i++) {
           final cellule = local.cellules[i];
           addUniquePhotos(cellule.photos, '${local.nom} - Cellule ${i + 1} (${cellule.fonction})');
           for (var ev in cellule.elementsVerifies) {
-            addUniquePhotos(ev.photos, '${local.nom} - Cellule ${i + 1} - Vérif : ${ev.elementControle}');
+            addUniquePhotos(ev.photos, '${local.nom} - Cellule ${i + 1} - Vérif : ${ev.elementControle}', isObservation: ev.conforme == false);
           }
         }
         for (var i = 0; i < local.transformateurs.length; i++) {
           final transfo = local.transformateurs[i];
           addUniquePhotos(transfo.photos, '${local.nom} - Transformateur ${i + 1}');
           for (var ev in transfo.elementsVerifies) {
-            addUniquePhotos(ev.photos, '${local.nom} - Transformateur ${i + 1} - Vérif : ${ev.elementControle}');
+            addUniquePhotos(ev.photos, '${local.nom} - Transformateur ${i + 1} - Vérif : ${ev.elementControle}', isObservation: ev.conforme == false);
           }
         }
         for (var c in local.coffrets) {
@@ -4928,7 +4933,7 @@ class PdfReportService {
       for (var zone in audit.moyenneTensionZones) {
         addUniquePhotos(zone.photos, zone.nom);
         for (var obs in zone.observationsLibres) {
-          addUniquePhotos(obs.photos, '${zone.nom} - Obs libre : ${obs.texte}');
+          addUniquePhotos(obs.photos, '${zone.nom} - Obs libre : ${obs.texte}', isObservation: true);
         }
         for (var c in zone.coffrets) {
           processCoffret(c, zone.nom);
@@ -4936,13 +4941,13 @@ class PdfReportService {
         for (var local in zone.locaux) {
           addUniquePhotos(local.photos, '${zone.nom} - Local ${local.nom}');
           for (var dc in local.dispositionsConstructives) {
-            addUniquePhotos(dc.photos, '${zone.nom} - Local ${local.nom} - DC : ${dc.elementControle}');
+            addUniquePhotos(dc.photos, '${zone.nom} - Local ${local.nom} - DC : ${dc.elementControle}', isObservation: dc.conforme == false);
           }
           for (var ce in local.conditionsExploitation) {
-            addUniquePhotos(ce.photos, '${zone.nom} - Local ${local.nom} - CE : ${ce.elementControle}');
+            addUniquePhotos(ce.photos, '${zone.nom} - Local ${local.nom} - CE : ${ce.elementControle}', isObservation: ce.conforme == false);
           }
           for (var obs in local.observationsLibres) {
-            addUniquePhotos(obs.photos, '${zone.nom} - Local ${local.nom} - Obs libre : ${obs.texte}');
+            addUniquePhotos(obs.photos, '${zone.nom} - Local ${local.nom} - Obs libre : ${obs.texte}', isObservation: true);
           }
           for (var c in local.coffrets) {
             processCoffret(c, '${zone.nom} - Local ${local.nom}');
@@ -4954,7 +4959,7 @@ class PdfReportService {
       for (var zone in audit.basseTensionZones) {
         addUniquePhotos(zone.photos, zone.nom);
         for (var obs in zone.observationsLibres) {
-          addUniquePhotos(obs.photos, '${zone.nom} - Obs libre : ${obs.texte}');
+          addUniquePhotos(obs.photos, '${zone.nom} - Obs libre : ${obs.texte}', isObservation: true);
         }
         for (var c in zone.coffretsDirects) {
           processCoffret(c, zone.nom);
@@ -4963,16 +4968,16 @@ class PdfReportService {
           addUniquePhotos(local.photos, '${zone.nom} - Local ${local.nom}');
           if (local.dispositionsConstructives != null) {
             for (var dc in local.dispositionsConstructives!) {
-              addUniquePhotos(dc.photos, '${zone.nom} - Local ${local.nom} - DC : ${dc.elementControle}');
+              addUniquePhotos(dc.photos, '${zone.nom} - Local ${local.nom} - DC : ${dc.elementControle}', isObservation: dc.conforme == false);
             }
           }
           if (local.conditionsExploitation != null) {
             for (var ce in local.conditionsExploitation!) {
-              addUniquePhotos(ce.photos, '${zone.nom} - Local ${local.nom} - CE : ${ce.elementControle}');
+              addUniquePhotos(ce.photos, '${zone.nom} - Local ${local.nom} - CE : ${ce.elementControle}', isObservation: ce.conforme == false);
             }
           }
           for (var obs in local.observationsLibres) {
-            addUniquePhotos(obs.photos, '${zone.nom} - Local ${local.nom} - Obs libre : ${obs.texte}');
+            addUniquePhotos(obs.photos, '${zone.nom} - Local ${local.nom} - Obs libre : ${obs.texte}', isObservation: true);
           }
           for (var c in local.coffrets) {
             processCoffret(c, '${zone.nom} - Local ${local.nom}');
@@ -5134,7 +5139,7 @@ class PdfReportService {
 
     pdf.addPage(pw.MultiPage(
       maxPages: 10000,
-      pageTheme: _buildInnerPageTheme(),
+      pageTheme: _buildInnerPageTheme(showWatermark: false),
       header: (ctx) => _buildPageHeaderWidget(
         nomClient: mission.nomClient,
         nomSite: nomSite,
@@ -5181,10 +5186,15 @@ class PdfReportService {
   }
 
   static pw.Widget _buildPhotoCell(_PhotoEntry entry, pw.MemoryImage? img, int index, int total) {
+    final isObs = entry.isObservation;
+    final cardBorderColor = isObs ? PdfColors.red700 : borderColor;
+    final cardBorderWidth = isObs ? 1.5 : 0.8;
+    final captionBgColor = isObs ? PdfColor.fromInt(0xFFFFEBEE) : PdfColor.fromInt(0xFFF0F4FA);
+
     return pw.Container(
       margin: const pw.EdgeInsets.all(4),
       decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: borderColor, width: 0.8),
+        border: pw.Border.all(color: cardBorderColor, width: cardBorderWidth),
         borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
         boxShadow: [pw.BoxShadow(color: PdfColors.grey400, blurRadius: 2, offset: const PdfPoint(1, 1))],
       ),
@@ -5194,15 +5204,29 @@ class PdfReportService {
         child: pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.stretch,
           children: [
-            // Bande de titre
+            // Bande de titre (avec badge ANOMALIE si isObs)
             pw.Container(
-              color: headerColor,
+              color: isObs ? PdfColors.red800 : headerColor,
               padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
               child: pw.Row(
                 mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
                 children: [
-                  pw.Text('Photo $index / $total',
-                      style: pw.TextStyle(font: _fontBold, fontSize: 6, color: PdfColors.white)),
+                  pw.Row(children: [
+                    pw.Text('Photo $index / $total',
+                        style: pw.TextStyle(font: _fontBold, fontSize: 6, color: PdfColors.white)),
+                    if (isObs) ...[
+                      pw.SizedBox(width: 4),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                        decoration: const pw.BoxDecoration(
+                          color: PdfColors.white,
+                          borderRadius: pw.BorderRadius.all(pw.Radius.circular(2)),
+                        ),
+                        child: pw.Text('ANOMALIE',
+                            style: pw.TextStyle(font: _fontBold, fontSize: 5, color: PdfColors.red700)),
+                      ),
+                    ],
+                  ]),
                   if (entry.repere != null && entry.repere!.isNotEmpty)
                     pw.Text('Réf : ${entry.repere}',
                         style: pw.TextStyle(font: _fontBold, fontSize: 6, color: PdfColors.yellow)),
@@ -5221,7 +5245,7 @@ class PdfReportService {
                           children: [
                             pw.Container(
                               width: 24, height: 24,
-                              decoration: pw.BoxDecoration(
+                              decoration: const pw.BoxDecoration(
                                   color: PdfColors.grey300, shape: pw.BoxShape.circle),
                               child: pw.Center(
                                 child: pw.Text('?',
@@ -5240,11 +5264,11 @@ class PdfReportService {
             ),
             // Légende en bas
             pw.Container(
-              color: PdfColor.fromInt(0xFFF0F4FA),
+              color: captionBgColor,
               padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
               child: pw.Text(
                 entry.description,
-                style: pw.TextStyle(font: _fontRegular, fontSize: 5.5, color: darkGrey),
+                style: pw.TextStyle(font: isObs ? _fontBold : _fontRegular, fontSize: 5.5, color: isObs ? PdfColors.red900 : darkGrey),
                 maxLines: 2,
                 overflow: pw.TextOverflow.clip,
               ),
@@ -5710,7 +5734,7 @@ class PdfReportService {
       if (audit != null) {
         pdf.addPage(pw.MultiPage(
           maxPages: 10000,
-          pageTheme: _buildInnerPageTheme(),
+          pageTheme: _buildInnerPageTheme(showWatermark: false),
           header: (ctx) => _buildPageHeaderWidget(
             nomSite: nomSiteHeader,
             numeroRapport: numeroRapportDoc,
@@ -5770,7 +5794,7 @@ class PdfReportService {
       if (audit != null) {
         pdf.addPage(pw.MultiPage(
           maxPages: 10000,
-          pageTheme: _buildInnerPageTheme(),
+          pageTheme: _buildInnerPageTheme(showWatermark: false),
           header: (ctx) => _buildPageHeaderWidget(
             nomSite: nomSiteHeader,
             numeroRapport: numeroRapportDoc,
@@ -5854,14 +5878,10 @@ class PdfReportService {
         ));
       }
 
-      // 12. Schéma des installations électriques (si disponible)
-      _addSchemaSection(pdf, mission, trackedPages,
-          nomSite: nomSiteHeader, numeroRapport: numeroRapportDoc);
-
-      // 13. Page de garde Photos (si des photos sont présentes)
+      // 11. Page de garde Photos (si des photos sont présentes)
       pdf.addPage(pw.MultiPage(
         maxPages: 10000,
-        pageTheme: _buildInnerPageTheme(),
+        pageTheme: _buildInnerPageTheme(showWatermark: false),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
           nomSite: nomSiteHeader,
@@ -5905,6 +5925,10 @@ class PdfReportService {
           ),
         ],
       ));
+
+      // 12. Schéma des installations électriques (si disponible, PLACÉ EN FIN DE RAPPORT APRÈS PHOTOS)
+      _addSchemaSection(pdf, mission, trackedPages,
+          nomSite: nomSiteHeader, numeroRapport: numeroRapportDoc);
 
       final dir = await getTemporaryDirectory();
       final mainChunkBytes = await pdf.save();
@@ -6059,10 +6083,12 @@ class _PhotoEntry {
   final String filePath;
   final String description;
   final String? repere;
+  final bool isObservation;
   _PhotoEntry({
     required this.filePath,
     required this.description,
     this.repere,
+    this.isObservation = false,
   });
 }
 
