@@ -589,16 +589,265 @@ class DispositionsConstructivesRegistry {
     "Extincteur CO₂ disponible et vérifié (date de validité à jour)",
   ];
 
-  /// Assure l'exhaustivité des points de contrôle pour un local Groupe Électrogène (auto-migration silencieuse).
+  /// Registre spécifique des métadonnées pour le local Groupe Électrogène
+  static final Map<String, DispositionMetadata> _geRegistry = {
+    // --- DISPOSITIONS CONSTRUCTIVES GROUPE ÉLECTROGENE ---
+    "Sol du local imperméable et formé comme une cuvette étanche, le seuil des baies étant surélevé d'au moins 0,10 mètre et toutes dispositions doivent être prises pour que le combustible accidentellement répandu ne puisse se déverser par les orifices placés dans le sol.": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    'Signalisation visible "Local électrique – Accès réservé au personnel habilité"': DispositionMetadata(
+      referenceNormative: "NF C 15-100-7-729:2024 – § 729",
+      familleRisque: "Accès non autorisé / risque électrique",
+      criticite: "Majeure",
+    ),
+    "Dimensions": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      familleRisque: "Protection mécanique / pénétration corps solides-liquides",
+      criticite: "Majeure",
+    ),
+    "Parois, plancher et plafond en matériaux non combustibles coupe-feu de degré 2 heures": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      familleRisque: "Incendie / propagation du feu",
+      criticite: "Majeure",
+    ),
+    "Présence d'une porte pleine coupe-feu de degré 1 heure, ouvrant vers l'extérieur, munie d'un dispositif antipanique": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      familleRisque: "Incendie / propagation du feu",
+      criticite: "Majeure",
+    ),
+    "Absence de communication directe avec les locaux à risque": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      familleRisque: "Protection mécanique / pénétration corps solides-liquides",
+      criticite: "Majeure",
+    ),
+    "Absence de stockage d'objets non électriques": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      familleRisque: "Incendie / propagation du feu",
+      criticite: "Majeure",
+    ),
+    "Présence d'une rétention adaptée au stockage et aux fuites de combustible": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "Présence d'un dispositif d'arrêt d'urgence accessible et identifié": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 462, § 465 et § 537",
+      familleRisque: "Sécurité des interventions / arrêt d'urgence",
+      criticite: "Critique",
+    ),
+    "Canalisations du combustible": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "Absence de canalisations étrangères": DispositionMetadata(
+      referenceNormative: "NF C 15-100-7-729:2024 – § 729",
+      familleRisque: "Sécurité d'exploitation",
+      criticite: "Majeure",
+    ),
+    "Éclairage normal": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 559",
+      familleRisque: "Sécurité d'exploitation",
+      criticite: "Majeure",
+    ),
+    "Éclairage de secours conforme": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – Partie 5-56",
+      familleRisque: "Évacuation / continuité des installations de sécurité",
+      criticite: "Majeure",
+    ),
+    "Ventilation": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      familleRisque: "Échauffement / conditions d'environnement",
+      criticite: "Majeure",
+    ),
+    "Moyens d'extinction adaptés aux risques électriques et de carburant": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "État et étanchéité des conduites et raccords de combustible": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "Évacuation des gaz d'échappement vers l'extérieur sans risque pour les occupants": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "Protection des parties chaudes et du conduit d'échappement": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "Ventilation suffisante pour le refroidissement et la combustion": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      familleRisque: "Échauffement / conditions d'environnement",
+      criticite: "Majeure",
+    ),
+    "Mise à la terre de toutes les masses métalliques": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 542 et § 543",
+      familleRisque: "Électrisation / défaut de mise à la terre",
+      criticite: "Critique",
+    ),
+    "Mise à la terre du châssis du groupe électrogène": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 542 et § 543",
+      familleRisque: "Électrisation / défaut de mise à la terre",
+      criticite: "Critique",
+    ),
+
+    // --- CONDITIONS D'EXPLOITATION GROUPE ÉLECTROGENE ---
+    "Accès réservé au personnel habilité (habilitation électrique à jour)": DispositionMetadata(
+      referenceNormative: "NF C 18-510",
+      familleRisque: "Sécurité des interventions / risque électrique",
+      criticite: "Majeure",
+    ),
+    "Présence d'un dispositif de mise hors tension générale du local": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 462, § 465 et § 537",
+      familleRisque: "Sécurité des interventions / arrêt d'urgence",
+      criticite: "Critique",
+    ),
+    "Présence et accessibilité des EPI électriques (gants, visière, tapis)": DispositionMetadata(
+      referenceNormative: "NF C 18-510",
+      familleRisque: "Sécurité des interventions / risque électrique",
+      criticite: "Majeure",
+    ),
+    "Zone dégagée et propre, sans obstruction des voies d'accès": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 513",
+      familleRisque: "Accès / exploitation / intervention",
+      criticite: "Majeure",
+    ),
+    "Absence de stockage de matériaux inflammables": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      familleRisque: "Incendie / propagation du feu",
+      criticite: "Majeure",
+    ),
+    "Présence d'un plan d'intervention et de consignation affiché": DispositionMetadata(
+      referenceNormative: "NF C 18-510",
+      familleRisque: "Sécurité des interventions / risque électrique",
+      criticite: "Majeure",
+    ),
+    "Disponibilité des consignes de démarrage, arrêt normal et arrêt d'urgence": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 462, § 465 et § 537",
+      familleRisque: "Sécurité des interventions / arrêt d'urgence",
+      criticite: "Critique",
+    ),
+    "Disponibilité du schéma de raccordement et de l'inverseur de sources": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551",
+      familleRisque: "Défaillance de la source de remplacement / continuité de service",
+      criticite: "Majeure",
+    ),
+    "Contrôle du niveau de carburant, huile et liquide de refroidissement": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "Absence de fuite de carburant ou d'huile lors de l'exploitation": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "Essai périodique du démarrage automatique du groupe électrogène": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551",
+      familleRisque: "Défaillance de la source de remplacement / continuité de service",
+      criticite: "Majeure",
+    ),
+    "Traçabilité des essais périodiques et opérations de maintenance": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 561",
+      familleRisque: "Évacuation / sécurité incendie",
+      criticite: "Majeure",
+    ),
+    "Vérification du fonctionnement des alarmes et sécurités moteur": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551",
+      familleRisque: "Défaillance de la source de remplacement / continuité de service",
+      criticite: "Majeure",
+    ),
+    "Matériel de consignation (cadenas, étiquettes, détecteur de tension) disponible": DispositionMetadata(
+      referenceNormative: "NF C 18-510",
+      familleRisque: "Sécurité des interventions / risque électrique",
+      criticite: "Majeure",
+    ),
+    "Extincteur CO₂ disponible et vérifié (date de validité à jour)": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      familleRisque: "Erreur d'exploitation / maintenance",
+      criticite: "Majeure",
+    ),
+  };
+
+  static final Map<String, String> _geDispositionsTitleAliases = {
+    _normalizeKey("Parois, plancher et plafond en matériaux non combustibles"):
+        "Parois, plancher et plafond en matériaux non combustibles coupe-feu de degré 2 heures",
+    _normalizeKey("Parois, plancher et plafond en materiaux non combustibles"):
+        "Parois, plancher et plafond en matériaux non combustibles coupe-feu de degré 2 heures",
+    _normalizeKey("Présence d'une porte pleine, ouvrant vers l'extérieur, munie d'un dispositif anti-panique"):
+        "Présence d'une porte pleine coupe-feu de degré 1 heure, ouvrant vers l'extérieur, munie d'un dispositif antipanique",
+    _normalizeKey("Présence d'une porte pleine, ouvrant vers l'exterieur, munie d'un dispositif anti-panique"):
+        "Présence d'une porte pleine coupe-feu de degré 1 heure, ouvrant vers l'extérieur, munie d'un dispositif antipanique",
+    _normalizeKey("Présence de canalisations étrangères"):
+        "Absence de canalisations étrangères",
+    _normalizeKey("Présence de stockage d'objets non électriques"):
+        "Absence de stockage d'objets non électriques",
+    _normalizeKey("Ventilation / Climatisation"):
+        "Ventilation",
+  };
+
+  static final Map<String, String> _geConditionsTitleAliases = {
+    _normalizeKey("Présence de stockage de matériaux inflammables"):
+        "Absence de stockage de matériaux inflammables",
+    _normalizeKey("Presence de stockage de materiaux inflammables"):
+        "Absence de stockage de matériaux inflammables",
+    _normalizeKey("Identification et condamnation des accès aux parties sous tension"):
+        "Accès réservé au personnel habilité (habilitation électrique à jour)",
+    _normalizeKey("Disponibilité et mise à jour du schéma unifilaire de l'installation"):
+        "Disponibilité du schéma de raccordement et de l'inverseur de sources",
+    _normalizeKey("Affichage des consignes de manœuvre, secours et premiers soins"):
+        "Présence d'un plan d'intervention et de consignation affiché",
+    _normalizeKey("Disponibilité du matériel de mise à la terre et en court-circuit"):
+        "Matériel de consignation (cadenas, étiquettes, détecteur de tension) disponible",
+  };
+
+  /// Assure l'exhaustivité et l'ordonnancement exact des points de contrôle pour un local Groupe Électrogène.
   static void ensureCompleteGELocalChecklists({
     required List<ElementControle> dispositionsConstructives,
     required List<ElementControle> conditionsExploitation,
   }) {
-    final existingDispKeys = dispositionsConstructives
-        .map((e) => _normalizeKey(e.elementControle))
-        .toSet();
+    // --- 1. MIGRATION DES DISPOSITIONS CONSTRUCTIVES GE ---
+    final existingDispMap = <String, ElementControle>{};
+    for (final el in dispositionsConstructives) {
+      final normKey = _normalizeKey(el.elementControle);
+      String targetTitle = el.elementControle;
+
+      if (_geDispositionsTitleAliases.containsKey(normKey)) {
+        targetTitle = _geDispositionsTitleAliases[normKey]!;
+      } else {
+        for (final refTitle in allGEDispositionsPoints) {
+          if (_normalizeKey(refTitle) == normKey) {
+            targetTitle = refTitle;
+            break;
+          }
+        }
+      }
+
+      el.elementControle = targetTitle;
+      final targetKey = _normalizeKey(targetTitle);
+
+      if (!existingDispMap.containsKey(targetKey) ||
+          (el.conforme != null && existingDispMap[targetKey]?.conforme == null) ||
+          (el.observation?.isNotEmpty == true && existingDispMap[targetKey]?.observation?.isEmpty == true)) {
+        existingDispMap[targetKey] = el;
+      }
+    }
+
+    dispositionsConstructives.clear();
     for (final refTitle in allGEDispositionsPoints) {
-      if (!existingDispKeys.contains(_normalizeKey(refTitle))) {
+      final targetKey = _normalizeKey(refTitle);
+      if (existingDispMap.containsKey(targetKey)) {
+        final el = existingDispMap[targetKey]!;
+        el.elementControle = refTitle;
+        dispositionsConstructives.add(el);
+      } else {
         dispositionsConstructives.add(
           ElementControle(
             elementControle: refTitle,
@@ -610,11 +859,41 @@ class DispositionsConstructivesRegistry {
       }
     }
 
-    final existingCondKeys = conditionsExploitation
-        .map((e) => _normalizeKey(e.elementControle))
-        .toSet();
+    // --- 2. MIGRATION DES CONDITIONS D'EXPLOITATION GE ---
+    final existingCondMap = <String, ElementControle>{};
+    for (final el in conditionsExploitation) {
+      final normKey = _normalizeKey(el.elementControle);
+      String targetTitle = el.elementControle;
+
+      if (_geConditionsTitleAliases.containsKey(normKey)) {
+        targetTitle = _geConditionsTitleAliases[normKey]!;
+      } else {
+        for (final refTitle in allGEConditionsPoints) {
+          if (_normalizeKey(refTitle) == normKey) {
+            targetTitle = refTitle;
+            break;
+          }
+        }
+      }
+
+      el.elementControle = targetTitle;
+      final targetKey = _normalizeKey(targetTitle);
+
+      if (!existingCondMap.containsKey(targetKey) ||
+          (el.conforme != null && existingCondMap[targetKey]?.conforme == null) ||
+          (el.observation?.isNotEmpty == true && existingCondMap[targetKey]?.observation?.isEmpty == true)) {
+        existingCondMap[targetKey] = el;
+      }
+    }
+
+    conditionsExploitation.clear();
     for (final refTitle in allGEConditionsPoints) {
-      if (!existingCondKeys.contains(_normalizeKey(refTitle))) {
+      final targetKey = _normalizeKey(refTitle);
+      if (existingCondMap.containsKey(targetKey)) {
+        final el = existingCondMap[targetKey]!;
+        el.elementControle = refTitle;
+        conditionsExploitation.add(el);
+      } else {
         conditionsExploitation.add(
           ElementControle(
             elementControle: refTitle,
@@ -809,7 +1088,19 @@ class DispositionsConstructivesRegistry {
   }
 
   /// Récupère la métadonnée par le libellé de l'élément de contrôle (avec recherche insensible aux majuscules/espaces)
-  static DispositionMetadata? getMetadata(String elementControle) {
+  static DispositionMetadata? getMetadata(String elementControle, {String? localType}) {
+    if (localType == 'LOCAL_GROUPE_ELECTROGENE') {
+      if (_geRegistry.containsKey(elementControle)) {
+        return _geRegistry[elementControle];
+      }
+      final normKey = _normalizeKey(elementControle);
+      for (final entry in _geRegistry.entries) {
+        if (_normalizeKey(entry.key) == normKey) {
+          return entry.value;
+        }
+      }
+    }
+
     if (_registry.containsKey(elementControle)) {
       return _registry[elementControle];
     }
@@ -819,6 +1110,19 @@ class DispositionsConstructivesRegistry {
         return entry.value;
       }
     }
+
+    if (localType != 'LOCAL_GROUPE_ELECTROGENE') {
+      if (_geRegistry.containsKey(elementControle)) {
+        return _geRegistry[elementControle];
+      }
+      final normKey = _normalizeKey(elementControle);
+      for (final entry in _geRegistry.entries) {
+        if (_normalizeKey(entry.key) == normKey) {
+          return entry.value;
+        }
+      }
+    }
+
     return null;
   }
 

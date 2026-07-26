@@ -2628,13 +2628,21 @@ class PdfReportService {
       conditionsExploitation: local.conditionsExploitation,
     );
     if (local.dispositionsConstructives.isNotEmpty) {
-      widgets.addAll(_buildDispositionsTable(local.dispositionsConstructives, 'DISPOSITIONS CONSTRUCTIVES DU LOCAL TECHNIQUE MOYENNE TENSION'));
+      widgets.addAll(_buildDispositionsTable(
+        local.dispositionsConstructives,
+        'DISPOSITIONS CONSTRUCTIVES DU LOCAL TECHNIQUE MOYENNE TENSION',
+        localType: local.type,
+      ));
     }
     if (local.conditionsExploitation.isNotEmpty) {
       if (local.dispositionsConstructives.isNotEmpty) {
         widgets.add(pw.SizedBox(height: 12));
       }
-      widgets.addAll(_buildDispositionsTable(local.conditionsExploitation, 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ DU LOCAL MOYENNE TENSION'));
+      widgets.addAll(_buildDispositionsTable(
+        local.conditionsExploitation,
+        'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ DU LOCAL MOYENNE TENSION',
+        localType: local.type,
+      ));
     }
 
     final hasEquipments = local.cellules.isNotEmpty || local.transformateurs.isNotEmpty;
@@ -2749,13 +2757,21 @@ class PdfReportService {
         : 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ';
 
     if (local.dispositionsConstructives != null && local.dispositionsConstructives!.isNotEmpty) {
-      widgets.addAll(_buildDispositionsTable(local.dispositionsConstructives!, dispTitle));
+      widgets.addAll(_buildDispositionsTable(
+        local.dispositionsConstructives!,
+        dispTitle,
+        localType: local.type,
+      ));
     }
     if (local.conditionsExploitation != null && local.conditionsExploitation!.isNotEmpty) {
       if (local.dispositionsConstructives != null && local.dispositionsConstructives!.isNotEmpty) {
         widgets.add(pw.SizedBox(height: 12));
       }
-      widgets.addAll(_buildDispositionsTable(local.conditionsExploitation!, condTitle));
+      widgets.addAll(_buildDispositionsTable(
+        local.conditionsExploitation!,
+        condTitle,
+        localType: local.type,
+      ));
     }
 
     final hasAudit = (local.dispositionsConstructives != null && local.dispositionsConstructives!.isNotEmpty) ||
@@ -2798,7 +2814,11 @@ class PdfReportService {
     );
   }
 
-  static List<pw.Widget> _buildDispositionsTable(List<ElementControle> elements, String titre) {
+  static List<pw.Widget> _buildDispositionsTable(
+    List<ElementControle> elements,
+    String titre, {
+    String? localType,
+  }) {
     const tableColumnWidths = <int, pw.TableColumnWidth>{
       0: pw.FlexColumnWidth(2.6), // Point de vérification
       1: pw.FlexColumnWidth(1.0), // Conformité
@@ -2917,9 +2937,10 @@ class PdfReportService {
 
       // Condition d'affichage : Renseignement uniquement si la conformité est "Non" (conforme == false)
       final isNonConforme = el.conforme == false && !el.estNA;
-      final refNorm = isNonConforme ? (el.referenceNormativeEffective ?? '') : '';
-      final familleRisque = isNonConforme ? (el.familleRisqueEffective ?? '') : '';
-      final criticite = isNonConforme ? (el.criticiteEffective ?? '') : '';
+      final meta = DispositionsConstructivesRegistry.getMetadata(el.elementControle, localType: localType);
+      final refNorm = isNonConforme ? (el.referenceNormative ?? meta?.referenceNormative ?? '') : '';
+      final familleRisque = isNonConforme ? (el.familleRisque ?? meta?.familleRisque ?? '') : '';
+      final criticite = isNonConforme ? (el.criticite ?? meta?.criticite ?? '') : '';
 
       rows.add(pw.TableRow(
         decoration: pw.BoxDecoration(color: idx.isEven ? PdfColors.white : tableRowAlt),
