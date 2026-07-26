@@ -17,6 +17,7 @@ import '../models/renseignements_generaux.dart';
 
 import 'package:inspec_app/models/trash_item.dart';
 import 'package:inspec_app/services/trash_service.dart';
+import 'dispositions_constructives_registry.dart';
 
 class HiveService {
   static const String _verificateurBox = 'verificateurs';
@@ -2111,46 +2112,8 @@ static Map<String, String> getLocalTypes({bool? isMoyenneTension}) {
 static List<String> getDispositionsConstructivesForLocal(String localType) {
   switch (localType) {
     case 'LOCAL_TRANSFORMATEUR':
-      return [
-        'Le local est exclusivement réservé à l\'usage électrique',
-        'Signalisation visible "Local électrique – Accès réservé au personnel habilité"',
-        'Dimensions',
-        'Parois, plancher et plafond en matériaux non combustibles',
-        'Présence d\'une porte pleine, ouvrant vers l\'extérieur, munie d\'un dispositif anti-panique',
-        'Verrouillage empêchant tout accès non autorisé',
-        'Absence de communication directe avec les locaux à risque',
-        'Revêtement de sol isolant ou antidérapant',
-        'Éclairage normal',
-        'Éclairage de secours conforme',
-        'Ventilation / Climatisation',
-        'Présence de canalisations étrangères',
-        'Présence d\'un revêtement diélectrique ou isolant au sol',
-        'Absence de stockage d\'objets non électriques',
-        'Mise à la terre de toutes les masses métalliques',
-        'Présence de la terre du neutre',
-        'Présence de la terre des masses',
-      ];
-    
     case 'LOCAL_MTBT':
-      return [
-        'Le local est exclusivement réservé à l\'usage électrique',
-        'Signalisation visible \"Local électrique – Accès réservé au personnel habilité\"',
-        'Dimensions',
-        'Parois, plancher et plafond en matériaux non combustibles',
-        'Présence d\'une porte pleine, ouvrant vers l\'extérieur, munie d\'un dispositif anti-panique',
-        'Verrouillage empêchant tout accès non autorisé',
-        'Absence de communication directe avec les locaux à risque',
-        'Revêtement de sol isolant ou antidérapant',
-        'Éclairage normal',
-        'Éclairage de secours conforme',
-        'Ventilation / Climatisation',
-        'Présence de canalisations étrangères',
-        'Présence d\'un revêtement diélectrique ou isolant au sol',
-        'Absence de stockage d\'objets non électriques',
-        'Mise à la terre de toutes les masses métalliques',
-        'Présence de la terre du neutre',
-        'Présence de la terre des masses',
-      ];
+      return List<String>.from(DispositionsConstructivesRegistry.allDispositionsConstructives);
     
     case 'LOCAL_GROUPE_ELECTROGENE':
       return [
@@ -2174,6 +2137,7 @@ static List<String> getDispositionsConstructivesForLocal(String localType) {
     case 'LOCAL_TGBT':
     case 'LOCAL_ONDULEUR':
     case 'LOCAL_ELECTRIQUE':
+    default:
       return [
         'Le local est exclusivement réservé à l\'usage électrique',
         'Signalisation visible "Local électrique – Accès réservé au personnel habilité"',
@@ -2193,14 +2157,14 @@ static List<String> getDispositionsConstructivesForLocal(String localType) {
         'Présence de la terre du neutre',
         'Présence de la terre des masses',
       ];
-    
-    default:
-      return [];
   }
 }
 
 /// Obtenir les conditions d'exploitation pour un type de local
 static List<String> getConditionsExploitationForLocal(String localType) {
+  if (localType == 'LOCAL_TRANSFORMATEUR' || localType == 'LOCAL_MTBT') {
+    return List<String>.from(DispositionsConstructivesRegistry.allConditionsExploitation);
+  }
   return [
     'Accès réservé au personnel habilité (habilitation électrique à jour)',
     'Présence d\'un plan d\'intervention et de consignation affiché',

@@ -1,4 +1,5 @@
 /// Source de vérité unique pour les métadonnées des Dispositions Constructives et Conditions d'Exploitation du Local
+import '../models/audit_installations_electriques.dart';
 class DispositionMetadata {
   final String referenceNormative;
   final String familleRisque;
@@ -222,6 +223,94 @@ class DispositionsConstructivesRegistry {
       criticite: "Majeure",
     ),
   };
+
+  /// Liste officielle des 25 points de vérification des Dispositions Constructives
+  static const List<String> allDispositionsConstructives = [
+    "Le local est exclusivement réservé à l'usage électrique",
+    'Signalisation visible "Local électrique – Accès réservé au personnel habilité"',
+    "Dimensions",
+    "Parois, plancher et plafond en matériaux non combustibles",
+    "Présence d'une porte pleine, ouvrant vers l'extérieur, munie d'un dispositif anti-panique",
+    "Verrouillage empêchant tout accès non autorisé",
+    "Absence de communication directe avec les locaux à risque",
+    "Absence de stockage d'objets non électriques",
+    "Accessibilité du local et dégagement permanent des accès",
+    "État et continuité des liaisons équipotentielles du local",
+    "Présence et lisibilité des consignes de sécurité et plaques de danger",
+    "Présence de canalisations étrangères",
+    "Présence d'un dispositif empêchant l'entrée d'eau et les infiltrations",
+    "Obturation coupe-feu des traversées de câbles et canalisations",
+    "Absence de traces d'humidité, corrosion ou condensation",
+    "Éclairage normal",
+    "Éclairage de secours conforme",
+    "Ventilation / Climatisation",
+    "Compatibilité de la ventilation avec les équipements installés",
+    "Présence d'un éclairage de sécurité permettant les manœuvres et l'évacuation",
+    "Revêtement de sol isolant ou antidérapant",
+    "Présence d'un revêtement diélectrique ou isolant au sol",
+    "Mise à la terre de toutes les masses métalliques",
+    "Présence de la terre du neutre",
+    "Présence de la terre des masses",
+  ];
+
+  /// Liste officielle des 16 points de vérification des Conditions d'Exploitation et de Sécurité
+  static const List<String> allConditionsExploitation = [
+    "Accès réservé au personnel habilité (habilitation électrique à jour)",
+    "Présence d'un dispositif de mise hors tension générale du local",
+    "Présence et accessibilité des EPI électriques (gants, visière, tapis)",
+    "Zone dégagée et propre, sans obstruction des voies d'accès",
+    "Absence de stockage de matériaux inflammables",
+    "Identification et condamnation des accès aux parties sous tension",
+    "Présence d'un plan d'intervention et de consignation affiché",
+    "Disponibilité et mise à jour du schéma unifilaire de l'installation",
+    "Affichage des consignes de manœuvre, secours et premiers soins",
+    "Disponibilité du matériel de mise à la terre et en court-circuit",
+    "Disponibilité d'un dispositif de vérification d'absence de tension adapté à la MT",
+    "Contrôle périodique et traçabilité des EPI et équipements de sécurité",
+    "Matériel de consignation (cadenas, étiquettes, détecteur de tension) disponible",
+    "Extincteur CO₂ disponible et vérifié (date de validité à jour)",
+    "Tenue d'un registre des opérations, incidents et maintenances",
+    "Présence d'une procédure de consignation et déconsignation",
+  ];
+
+  /// Assure l'exhaustivité des points de contrôle pour un local (auto-migration silencieuse).
+  /// Les points manquants sont ajoutés à leur position de référence avec estNA = true ("Sans objet").
+  static void ensureCompleteLocalChecklists({
+    required List<ElementControle> dispositionsConstructives,
+    required List<ElementControle> conditionsExploitation,
+  }) {
+    final existingDispKeys = dispositionsConstructives
+        .map((e) => _normalizeKey(e.elementControle))
+        .toSet();
+    for (final refTitle in allDispositionsConstructives) {
+      if (!existingDispKeys.contains(_normalizeKey(refTitle))) {
+        dispositionsConstructives.add(
+          ElementControle(
+            elementControle: refTitle,
+            conforme: null,
+            estNA: true,
+            priorite: 3,
+          ),
+        );
+      }
+    }
+
+    final existingCondKeys = conditionsExploitation
+        .map((e) => _normalizeKey(e.elementControle))
+        .toSet();
+    for (final refTitle in allConditionsExploitation) {
+      if (!existingCondKeys.contains(_normalizeKey(refTitle))) {
+        conditionsExploitation.add(
+          ElementControle(
+            elementControle: refTitle,
+            conforme: null,
+            estNA: true,
+            priorite: 3,
+          ),
+        );
+      }
+    }
+  }
 
   /// Récupère la métadonnée par le libellé de l'élément de contrôle (avec recherche insensible aux majuscules/espaces)
   static DispositionMetadata? getMetadata(String elementControle) {

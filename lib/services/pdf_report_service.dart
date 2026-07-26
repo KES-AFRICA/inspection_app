@@ -19,6 +19,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:inspec_app/services/pdf/pdf_chunk_merger.dart';
+import 'dispositions_constructives_registry.dart';
 
 // ================================================================
 //  PdfReportService
@@ -2623,6 +2624,10 @@ class PdfReportService {
     }
 
     final auditWidgets = <pw.Widget>[];
+    DispositionsConstructivesRegistry.ensureCompleteLocalChecklists(
+      dispositionsConstructives: local.dispositionsConstructives,
+      conditionsExploitation: local.conditionsExploitation,
+    );
     if (local.dispositionsConstructives.isNotEmpty) {
       auditWidgets.add(_buildDispositionsTable(local.dispositionsConstructives, 'DISPOSITIONS CONSTRUCTIVES DU LOCAL TECHNIQUE MOYENNE TENSION'));
     }
@@ -2742,13 +2747,13 @@ class PdfReportService {
 
     final auditWidgets = <pw.Widget>[];
     if (local.dispositionsConstructives != null && local.dispositionsConstructives!.isNotEmpty) {
-      auditWidgets.add(_buildDispositionsTable(local.dispositionsConstructives!, 'DISPOSITIONS CONSTRUCTIVES DU LOCAL TECHNIQUE MOYENNE TENSION'));
+      auditWidgets.add(_buildDispositionsTable(local.dispositionsConstructives!, 'DISPOSITIONS CONSTRUCTIVES DU LOCAL'));
     }
     if (local.conditionsExploitation != null && local.conditionsExploitation!.isNotEmpty) {
       if (auditWidgets.isNotEmpty) {
         auditWidgets.add(pw.SizedBox(height: 12));
       }
-      auditWidgets.add(_buildDispositionsTable(local.conditionsExploitation!, 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ DU LOCAL MOYENNE TENSION'));
+      auditWidgets.add(_buildDispositionsTable(local.conditionsExploitation!, 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ'));
     }
     if (auditWidgets.isNotEmpty) {
       widgets.add(pw.Column(
