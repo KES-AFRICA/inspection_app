@@ -1,5 +1,6 @@
 // audit_installations_electriques.dart
 import 'package:hive/hive.dart';
+import '../services/dispositions_constructives_registry.dart';
 
 part 'audit_installations_electriques.g.dart';
 
@@ -300,6 +301,12 @@ class ElementControle {
   @HiveField(6)
   bool estNA;
 
+  @HiveField(7)
+  String? familleRisque;
+
+  @HiveField(8)
+  String? criticite;
+
   ElementControle({
     required this.elementControle,
     required this.conforme,
@@ -308,9 +315,31 @@ class ElementControle {
     List<String>? photos,
     this.referenceNormative,
     bool? estNA,
+    this.familleRisque,
+    this.criticite,
   })  : photos = photos ?? [],
         estNA = estNA ?? false;
 
+  String? get referenceNormativeEffective {
+    if (referenceNormative != null && referenceNormative!.isNotEmpty) {
+      return referenceNormative;
+    }
+    return DispositionsConstructivesRegistry.getMetadata(elementControle)?.referenceNormative;
+  }
+
+  String? get familleRisqueEffective {
+    if (familleRisque != null && familleRisque!.isNotEmpty) {
+      return familleRisque;
+    }
+    return DispositionsConstructivesRegistry.getMetadata(elementControle)?.familleRisque;
+  }
+
+  String? get criticiteEffective {
+    if (criticite != null && criticite!.isNotEmpty) {
+      return criticite;
+    }
+    return DispositionsConstructivesRegistry.getMetadata(elementControle)?.criticite;
+  }
 }
 
 @HiveType(typeId: 9)

@@ -11,8 +11,10 @@ class AuditInstallationsMapper {
       observation: model.observation,
       priorite: model.priorite,
       photos: List<String>.from(model.photos),
-      referenceNormative: model.referenceNormative,
+      referenceNormative: model.referenceNormativeEffective,
       estNA: model.estNA,
+      familleRisque: model.familleRisqueEffective,
+      criticite: model.criticiteEffective,
     );
   }
 
@@ -25,6 +27,8 @@ class AuditInstallationsMapper {
       photos: List<String>.from(entity.photos),
       referenceNormative: entity.referenceNormative,
       estNA: entity.estNA,
+      familleRisque: entity.familleRisque,
+      criticite: entity.criticite,
     );
   }
 

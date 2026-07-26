@@ -8,6 +8,8 @@ class ElementControleEntity {
   final List<String> photos;
   final String? referenceNormative;
   final bool estNA;
+  final String? familleRisque;
+  final String? criticite;
 
   const ElementControleEntity({
     required this.elementControle,
@@ -17,6 +19,8 @@ class ElementControleEntity {
     this.photos = const [],
     this.referenceNormative,
     this.estNA = false,
+    this.familleRisque,
+    this.criticite,
   });
 }
 

@@ -312,13 +312,15 @@ class ElementControleAdapter extends TypeAdapter<ElementControle> {
       photos: (fields[4] as List?)?.cast<String>(),
       referenceNormative: fields[5] as String?,
       estNA: fields[6] as bool?,
+      familleRisque: fields[7] as String?,
+      criticite: fields[8] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ElementControle obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.elementControle)
       ..writeByte(1)
@@ -332,7 +334,11 @@ class ElementControleAdapter extends TypeAdapter<ElementControle> {
       ..writeByte(5)
       ..write(obj.referenceNormative)
       ..writeByte(6)
-      ..write(obj.estNA);
+      ..write(obj.estNA)
+      ..writeByte(7)
+      ..write(obj.familleRisque)
+      ..writeByte(8)
+      ..write(obj.criticite);
   }
 
   @override
