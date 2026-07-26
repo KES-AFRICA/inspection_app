@@ -2873,7 +2873,7 @@ class PdfReportService {
       String conf;
       PdfColor confColor;
       if (el.estNA) {
-        conf = 'NA';
+        conf = 'Sans objet';
         confColor = PdfColor.fromInt(0xFFE0E0E0);
       } else if (el.conforme == null) {
         conf = '-';
@@ -2882,7 +2882,7 @@ class PdfReportService {
         conf = 'Oui';
         confColor = conformeColor;
       } else {
-        conf = 'Sans objet';
+        conf = 'Non';
         confColor = nonConformeColor;
       }
 
@@ -3057,7 +3057,7 @@ class PdfReportService {
       String conf;
       PdfColor confColor;
       if (el.estNA) {
-        conf = 'NA';
+        conf = 'Sans objet';
         confColor = PdfColor.fromInt(0xFFE0E0E0);
       } else if (el.conforme == null) {
         conf = '-';
@@ -3066,7 +3066,7 @@ class PdfReportService {
         conf = 'Oui';
         confColor = conformeColor;
       } else {
-        conf = 'Sans objet';
+        conf = 'Non';
         confColor = nonConformeColor;
       }
 
@@ -3246,7 +3246,7 @@ class PdfReportService {
       String conf;
       PdfColor confColor;
       if (el.estNA) {
-        conf = 'NA';
+        conf = 'Sans objet';
         confColor = PdfColor.fromInt(0xFFE0E0E0);
       } else if (el.conforme == null) {
         conf = '-';
@@ -3255,7 +3255,7 @@ class PdfReportService {
         conf = 'Oui';
         confColor = conformeColor;
       } else {
-        conf = 'Sans objet';
+        conf = 'Non';
         confColor = nonConformeColor;
       }
 
@@ -3745,11 +3745,11 @@ class PdfReportService {
           final pv = e.value;
           final conf = pv.conformite.toLowerCase().trim();
           final isConf = conf == 'oui';
-          final isNA = conf == 'na' || conf == 'non_applicable';
+          final isNA = conf == 'na' || conf == 'non_applicable' || conf == 'sans_objet' || conf == 'n/a';
           final confColor = isNA
               ? PdfColor.fromInt(0xFFE0E0E0)
               : (isConf ? conformeColor : nonConformeColor);
-          final confText = isNA ? 'N/A' : (isConf ? 'Oui' : 'Sans objet');
+          final confText = isNA ? 'Sans objet' : (isConf ? 'Oui' : 'Non');
           return pw.TableRow(
             decoration: pw.BoxDecoration(color: e.key.isEven ? PdfColors.white : tableRowAlt),
             children: [
