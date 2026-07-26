@@ -19,6 +19,7 @@ import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/description_installations_form.dart';
 import 'package:flutter/services.dart';
 import 'observation_enrichie_widget.dart';
+import 'package:inspec_app/services/dispositions_constructives_registry.dart';
 
 // Extension pour obtenir la taille de l'écran facilement
 extension ScreenSize on BuildContext {
@@ -2245,32 +2246,9 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   int _currentSlide = 0;
   
   // Éléments vérifiés par défaut
-  static const List<String> _celluleElementsParDefaut = [
-    'Schéma unifilaire affiché dans le local',
-    'Cellule correctement posée et fixée',
-    'Jonctions inter-cellules',
-    'Canalisations et câbles d\'arrivée / départ',
-    'Respect des distances de sécurité',
-    'Commande manuelle / motorisée',
-    'Voyants de position (O / F / T)',
-    'Verrouillage mécanique',
-    'Terre de protection (PE) reliée à chaque cellule'
-  ];
+  static List<String> get _celluleElementsParDefaut => DispositionsConstructivesRegistry.allCellulePoints;
   
-  static const List<String> _transfoElementsParDefaut = [
-    'Adapté au local et à la ventilation',
-    'Plaque signalétique (puissance, tension, couplage)',
-    'Mise à la terre du neutre et de la carcasse',
-    'Raccordement des câbles MT et BT',
-    'Protection contre les contacts directs',
-    'Bac de rétention (pour transfo à huile)',
-    'Protection contre les surintensités',
-    'Essais diélectriques',
-    'Distance entre transformateur',
-    'Protection MT',
-    'Protection BT (disjoncteur général, fusibles, relais thermique)',
-    'Écran de câble MT relié à la terre'
-  ];
+  static List<String> get _transfoElementsParDefaut => DispositionsConstructivesRegistry.allTransformateurPoints;
   
   static const List<String> _presentAbsentOptions = ['Présent', 'Absent'];
   
@@ -2350,6 +2328,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _celluleSyncId = cellule.syncId;
     
     _celluleElements = List.from(cellule.elementsVerifies);
+    DispositionsConstructivesRegistry.ensureCompleteCelluleChecklist(_celluleElements);
 
     // Initialiser un controller par élément avec le texte d'observation existant
     for (final c in _obsControllersCellule.values) c.dispose();
@@ -2376,6 +2355,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoSyncId = transfo.syncId;
     
     _transfoElements = List.from(transfo.elementsVerifies);
+    DispositionsConstructivesRegistry.ensureCompleteTransformateurChecklist(_transfoElements);
 
     // Initialiser un controller par élément avec le texte d'observation existant
     for (final c in _obsControllersTransfo.values) c.dispose();
@@ -4409,7 +4389,16 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     }
     
     // CHARGEMENT DES CELLULES ET TRANSFORMATEURS
-    if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+    if (local.type == 'LOCAL_GROUPE_ELECTROGENE') {
+      DispositionsConstructivesRegistry.ensureCompleteGELocalChecklists(
+        dispositionsConstructives: _dispositionsConstructives,
+        conditionsExploitation: _conditionsExploitation,
+      );
+    } else if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+      DispositionsConstructivesRegistry.ensureCompleteLocalChecklists(
+        dispositionsConstructives: _dispositionsConstructives,
+        conditionsExploitation: _conditionsExploitation,
+      );
       if (local is MoyenneTensionLocal) {
         local.migrateFromOldFields();
         _cellules = List.from(local.cellules);
@@ -4417,6 +4406,12 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       } else if (local is BasseTensionLocal) {
         _cellules = List.from(local.cellules);
         _transformateurs = List.from(local.transformateurs);
+      }
+      for (final cellule in _cellules) {
+        DispositionsConstructivesRegistry.ensureCompleteCelluleChecklist(cellule.elementsVerifies);
+      }
+      for (final transfo in _transformateurs) {
+        DispositionsConstructivesRegistry.ensureCompleteTransformateurChecklist(transfo.elementsVerifies);
       }
     }
     

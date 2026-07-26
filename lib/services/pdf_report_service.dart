@@ -2623,46 +2623,34 @@ class PdfReportService {
       return widgets; // Pas d'éléments à afficher
     }
 
-    final auditWidgets = <pw.Widget>[];
     DispositionsConstructivesRegistry.ensureCompleteLocalChecklists(
       dispositionsConstructives: local.dispositionsConstructives,
       conditionsExploitation: local.conditionsExploitation,
     );
     if (local.dispositionsConstructives.isNotEmpty) {
-      auditWidgets.add(_buildDispositionsTable(local.dispositionsConstructives, 'DISPOSITIONS CONSTRUCTIVES DU LOCAL TECHNIQUE MOYENNE TENSION'));
+      widgets.addAll(_buildDispositionsTable(local.dispositionsConstructives, 'DISPOSITIONS CONSTRUCTIVES DU LOCAL TECHNIQUE MOYENNE TENSION'));
     }
     if (local.conditionsExploitation.isNotEmpty) {
-      if (auditWidgets.isNotEmpty) {
-        auditWidgets.add(pw.SizedBox(height: 12));
+      if (local.dispositionsConstructives.isNotEmpty) {
+        widgets.add(pw.SizedBox(height: 12));
       }
-      auditWidgets.add(_buildDispositionsTable(local.conditionsExploitation, 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ DU LOCAL MOYENNE TENSION'));
-    }
-    if (auditWidgets.isNotEmpty) {
-      widgets.add(pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: auditWidgets,
-      ));
+      widgets.addAll(_buildDispositionsTable(local.conditionsExploitation, 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ DU LOCAL MOYENNE TENSION'));
     }
 
     final hasEquipments = local.cellules.isNotEmpty || local.transformateurs.isNotEmpty;
     final hasCoffrets = local.coffrets.isNotEmpty;
 
-    if (auditWidgets.isNotEmpty && (hasEquipments || hasCoffrets)) {
+    if ((local.dispositionsConstructives.isNotEmpty || local.conditionsExploitation.isNotEmpty) && (hasEquipments || hasCoffrets)) {
       widgets.add(pw.NewPage());
     }
 
     if (hasEquipments) {
-      final equipmentWidgets = <pw.Widget>[];
       for (final cellule in local.cellules) {
-        equipmentWidgets.addAll(_buildCelluleSection(cellule));
+        widgets.addAll(_buildCelluleSection(cellule));
       }
       for (final transfo in local.transformateurs) {
-        equipmentWidgets.addAll(_buildTransformateurSection(transfo));
+        widgets.addAll(_buildTransformateurSection(transfo));
       }
-      widgets.add(pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: equipmentWidgets,
-      ));
       if (hasCoffrets) {
         widgets.add(pw.NewPage());
       }
@@ -2745,25 +2733,35 @@ class PdfReportService {
       return widgets; // Pas d'éléments à afficher
     }
 
-    final auditWidgets = <pw.Widget>[];
-    if (local.dispositionsConstructives != null && local.dispositionsConstructives!.isNotEmpty) {
-      auditWidgets.add(_buildDispositionsTable(local.dispositionsConstructives!, 'DISPOSITIONS CONSTRUCTIVES DU LOCAL'));
-    }
-    if (local.conditionsExploitation != null && local.conditionsExploitation!.isNotEmpty) {
-      if (auditWidgets.isNotEmpty) {
-        auditWidgets.add(pw.SizedBox(height: 12));
-      }
-      auditWidgets.add(_buildDispositionsTable(local.conditionsExploitation!, 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ'));
-    }
-    if (auditWidgets.isNotEmpty) {
-      widgets.add(pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: auditWidgets,
-      ));
+    final isGE = local.type == 'LOCAL_GROUPE_ELECTROGENE';
+    if (isGE && local.dispositionsConstructives != null && local.conditionsExploitation != null) {
+      DispositionsConstructivesRegistry.ensureCompleteGELocalChecklists(
+        dispositionsConstructives: local.dispositionsConstructives!,
+        conditionsExploitation: local.conditionsExploitation!,
+      );
     }
 
+    final dispTitle = isGE
+        ? 'DISPOSITIONS CONSTRUCTIVES DU LOCAL TECHNIQUE GROUPE ÉLECTROGENE'
+        : 'DISPOSITIONS CONSTRUCTIVES DU LOCAL';
+    final condTitle = isGE
+        ? 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ LOCAL GROUPE ÉLECTROGENE'
+        : 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ';
+
+    if (local.dispositionsConstructives != null && local.dispositionsConstructives!.isNotEmpty) {
+      widgets.addAll(_buildDispositionsTable(local.dispositionsConstructives!, dispTitle));
+    }
+    if (local.conditionsExploitation != null && local.conditionsExploitation!.isNotEmpty) {
+      if (local.dispositionsConstructives != null && local.dispositionsConstructives!.isNotEmpty) {
+        widgets.add(pw.SizedBox(height: 12));
+      }
+      widgets.addAll(_buildDispositionsTable(local.conditionsExploitation!, condTitle));
+    }
+
+    final hasAudit = (local.dispositionsConstructives != null && local.dispositionsConstructives!.isNotEmpty) ||
+        (local.conditionsExploitation != null && local.conditionsExploitation!.isNotEmpty);
     final hasCoffrets = local.coffrets.isNotEmpty;
-    if (auditWidgets.isNotEmpty && hasCoffrets) {
+    if (hasAudit && hasCoffrets) {
       widgets.add(pw.NewPage());
     }
 
@@ -2800,7 +2798,7 @@ class PdfReportService {
     );
   }
 
-  static pw.Widget _buildDispositionsTable(List<ElementControle> elements, String titre) {
+  static List<pw.Widget> _buildDispositionsTable(List<ElementControle> elements, String titre) {
     const tableColumnWidths = <int, pw.TableColumnWidth>{
       0: pw.FlexColumnWidth(2.6), // Point de vérification
       1: pw.FlexColumnWidth(1.0), // Conformité
@@ -2985,17 +2983,15 @@ class PdfReportService {
       children: rows,
     );
 
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        titleTable,
-        headerTable,
-        dataTable,
-      ],
-    );
+    return [
+      titleTable,
+      headerTable,
+      dataTable,
+    ];
   }
 
   static List<pw.Widget> _buildCelluleSection(Cellule cellule) {
+    DispositionsConstructivesRegistry.ensureCompleteCelluleChecklist(cellule.elementsVerifies);
     String safe(String v) => v.trim().isEmpty ? 'Non renseigné' : v;
 
     pw.TableRow tableDataRowInfo(String label, String value, {required bool alt}) {
@@ -3016,6 +3012,15 @@ class PdfReportService {
       );
     }
 
+    const tableColumnWidths = <int, pw.TableColumnWidth>{
+      0: pw.FlexColumnWidth(2.3),
+      1: pw.FlexColumnWidth(0.9),
+      2: pw.FlexColumnWidth(1.2),
+      3: pw.FlexColumnWidth(1.2),
+      4: pw.FlexColumnWidth(0.8),
+      5: pw.FlexColumnWidth(1.1),
+    };
+
     final titleTable = pw.Table(
       border: pw.TableBorder(
         top: pw.BorderSide(color: borderColor, width: 0.4),
@@ -3024,7 +3029,7 @@ class PdfReportService {
         bottom: pw.BorderSide(color: borderColor, width: 0.4),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(7.2),
+        0: pw.FlexColumnWidth(7.5),
       },
       children: [
         pw.TableRow(
@@ -3033,7 +3038,7 @@ class PdfReportService {
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
               alignment: pw.Alignment.center,
-              child: pw.Text('CELLULE',
+              child: pw.Text('CELLULE MOYENNE TENSION',
                   style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
                   textAlign: pw.TextAlign.center),
             ),
@@ -3053,7 +3058,7 @@ class PdfReportService {
       ),
       columnWidths: const {
         0: pw.FlexColumnWidth(4.0),
-        1: pw.FlexColumnWidth(3.2),
+        1: pw.FlexColumnWidth(3.5),
       },
       children: [
         tableDataRowInfo('Fonction de la cellule', safe(cellule.fonction), alt: false),
@@ -3074,31 +3079,48 @@ class PdfReportService {
         bottom: pw.BorderSide(color: borderColor, width: 0.4),
         verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
       ),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(4.0),
-        1: pw.FlexColumnWidth(1.2),
-        2: pw.FlexColumnWidth(2.0),
-      },
+      columnWidths: tableColumnWidths,
       children: [
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
           children: [
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
               alignment: pw.Alignment.center,
-              child: pw.Text('Éléments vérifiés',
+              child: pw.Text('Point de vérification',
                   style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
                   textAlign: pw.TextAlign.center),
             ),
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
               alignment: pw.Alignment.center,
               child: pw.Text('Conformité',
                   style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
                   textAlign: pw.TextAlign.center),
             ),
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+              alignment: pw.Alignment.center,
+              child: pw.Text('Référence normative',
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                  textAlign: pw.TextAlign.center),
+            ),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+              alignment: pw.Alignment.center,
+              child: pw.Text('Famille de risque',
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                  textAlign: pw.TextAlign.center),
+            ),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+              alignment: pw.Alignment.center,
+              child: pw.Text('Criticité',
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                  textAlign: pw.TextAlign.center),
+            ),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
               alignment: pw.Alignment.center,
               child: pw.Text('Observations',
                   style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
@@ -3128,23 +3150,53 @@ class PdfReportService {
         confColor = nonConformeColor;
       }
 
+      final isNonConforme = el.conforme == false && !el.estNA;
+      final refNorm = isNonConforme ? (el.referenceNormativeEffective ?? '') : '';
+      final familleRisque = isNonConforme ? (el.familleRisqueEffective ?? '') : '';
+      final criticite = isNonConforme ? (el.criticiteEffective ?? '') : '';
+
       dataRows.add(pw.TableRow(
         decoration: pw.BoxDecoration(color: idx.isEven ? PdfColors.white : tableRowAlt),
         children: [
           pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
             child: pw.Text(el.elementControle,
-                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
           ),
           pw.Container(
             color: confColor,
-            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
             alignment: pw.Alignment.center,
             child: pw.Text(conf,
                 style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
           ),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(refNorm,
+                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall - 0.5),
+                textAlign: pw.TextAlign.center),
+          ),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(familleRisque,
+                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall - 0.5),
+                textAlign: pw.TextAlign.center),
+          ),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(criticite,
+                style: pw.TextStyle(
+                  font: criticite == 'Critique' ? _fontBold : _fontRegular,
+                  fontSize: fsSmall - 0.5,
+                  color: criticite == 'Critique' ? PdfColors.red900 : darkGrey,
+                ),
+                textAlign: pw.TextAlign.center),
+          ),
           pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
             child: pw.Text(el.observation ?? '',
                 style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
           ),
@@ -3161,30 +3213,22 @@ class PdfReportService {
         verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
         horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
       ),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(4.0),
-        1: pw.FlexColumnWidth(1.2),
-        2: pw.FlexColumnWidth(2.0),
-      },
+      columnWidths: tableColumnWidths,
       children: dataRows,
     );
 
     return [
       pw.SizedBox(height: 6),
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          titleTable,
-          infoTable,
-          headerTable,
-          dataTable,
-        ],
-      ),
+      titleTable,
+      infoTable,
+      headerTable,
+      dataTable,
       pw.SizedBox(height: 5),
     ];
   }
 
   static List<pw.Widget> _buildTransformateurSection(TransformateurMTBT transfo) {
+    DispositionsConstructivesRegistry.ensureCompleteTransformateurChecklist(transfo.elementsVerifies);
     String safe(String v) => v.trim().isEmpty ? 'Non renseigné' : v;
 
     pw.TableRow tableDataRowInfo(String label, String value, {required bool alt}) {
@@ -3205,6 +3249,15 @@ class PdfReportService {
       );
     }
 
+    const tableColumnWidths = <int, pw.TableColumnWidth>{
+      0: pw.FlexColumnWidth(2.3),
+      1: pw.FlexColumnWidth(0.9),
+      2: pw.FlexColumnWidth(1.2),
+      3: pw.FlexColumnWidth(1.2),
+      4: pw.FlexColumnWidth(0.8),
+      5: pw.FlexColumnWidth(1.1),
+    };
+
     final titleTable = pw.Table(
       border: pw.TableBorder(
         top: pw.BorderSide(color: borderColor, width: 0.4),
@@ -3213,7 +3266,7 @@ class PdfReportService {
         bottom: pw.BorderSide(color: borderColor, width: 0.4),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(7.2),
+        0: pw.FlexColumnWidth(7.5),
       },
       children: [
         pw.TableRow(
@@ -3242,7 +3295,7 @@ class PdfReportService {
       ),
       columnWidths: const {
         0: pw.FlexColumnWidth(4.0),
-        1: pw.FlexColumnWidth(3.2),
+        1: pw.FlexColumnWidth(3.5),
       },
       children: [
         tableDataRowInfo('Type de transformateur', safe(transfo.typeTransformateur), alt: false),
@@ -3263,31 +3316,48 @@ class PdfReportService {
         bottom: pw.BorderSide(color: borderColor, width: 0.4),
         verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
       ),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(4.0),
-        1: pw.FlexColumnWidth(1.2),
-        2: pw.FlexColumnWidth(2.0),
-      },
+      columnWidths: tableColumnWidths,
       children: [
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
           children: [
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
               alignment: pw.Alignment.center,
-              child: pw.Text('Éléments vérifiés',
+              child: pw.Text('Point de vérification',
                   style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
                   textAlign: pw.TextAlign.center),
             ),
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
               alignment: pw.Alignment.center,
               child: pw.Text('Conformité',
                   style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
                   textAlign: pw.TextAlign.center),
             ),
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+              alignment: pw.Alignment.center,
+              child: pw.Text('Référence normative',
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                  textAlign: pw.TextAlign.center),
+            ),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+              alignment: pw.Alignment.center,
+              child: pw.Text('Famille de risque',
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                  textAlign: pw.TextAlign.center),
+            ),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+              alignment: pw.Alignment.center,
+              child: pw.Text('Criticité',
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                  textAlign: pw.TextAlign.center),
+            ),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
               alignment: pw.Alignment.center,
               child: pw.Text('Observations',
                   style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
@@ -3317,23 +3387,53 @@ class PdfReportService {
         confColor = nonConformeColor;
       }
 
+      final isNonConforme = el.conforme == false && !el.estNA;
+      final refNorm = isNonConforme ? (el.referenceNormativeEffective ?? '') : '';
+      final familleRisque = isNonConforme ? (el.familleRisqueEffective ?? '') : '';
+      final criticite = isNonConforme ? (el.criticiteEffective ?? '') : '';
+
       dataRows.add(pw.TableRow(
         decoration: pw.BoxDecoration(color: idx.isEven ? PdfColors.white : tableRowAlt),
         children: [
           pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
             child: pw.Text(el.elementControle,
-                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
           ),
           pw.Container(
             color: confColor,
-            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
             alignment: pw.Alignment.center,
             child: pw.Text(conf,
                 style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
           ),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(refNorm,
+                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall - 0.5),
+                textAlign: pw.TextAlign.center),
+          ),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(familleRisque,
+                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall - 0.5),
+                textAlign: pw.TextAlign.center),
+          ),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(criticite,
+                style: pw.TextStyle(
+                  font: criticite == 'Critique' ? _fontBold : _fontRegular,
+                  fontSize: fsSmall - 0.5,
+                  color: criticite == 'Critique' ? PdfColors.red900 : darkGrey,
+                ),
+                textAlign: pw.TextAlign.center),
+          ),
           pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
             child: pw.Text(el.observation ?? '',
                 style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
           ),
@@ -3350,25 +3450,16 @@ class PdfReportService {
         verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
         horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
       ),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(4.0),
-        1: pw.FlexColumnWidth(1.2),
-        2: pw.FlexColumnWidth(2.0),
-      },
+      columnWidths: tableColumnWidths,
       children: dataRows,
     );
 
     return [
       pw.SizedBox(height: 6),
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          titleTable,
-          infoTable,
-          headerTable,
-          dataTable,
-        ],
-      ),
+      titleTable,
+      infoTable,
+      headerTable,
+      dataTable,
       pw.SizedBox(height: 5),
     ];
   }

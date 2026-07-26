@@ -222,7 +222,410 @@ class DispositionsConstructivesRegistry {
       familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
+
+    // --- III. CELLULE MOYENNE TENSION ---
+    "Schéma unifilaire affiché dans le local": DispositionMetadata(
+      referenceNormative: "NF C 13-100:2015 – §134",
+      familleRisque: "Erreur de manœuvre",
+      criticite: "Majeure",
+    ),
+    "Verrouillage mécanique": DispositionMetadata(
+      referenceNormative: "NF C 13-100:2015 – §464.1",
+      familleRisque: "Électrocution",
+      criticite: "Critique",
+    ),
+    "Fonctionnement des interverrouillages électriques et mécaniques": DispositionMetadata(
+      referenceNormative: "NF C 13-100:2015 – § 511",
+      familleRisque: "Non-conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Etat et serrage apparent des connexions accessibles": DispositionMetadata(
+      referenceNormative: "Norme NF C 13-100 art 413",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Identification et lisibilité des plaques signalétiques": DispositionMetadata(
+      referenceNormative: "NF C 13-100:2015 – § 514",
+      familleRisque: "Erreur d'exploitation",
+      criticite: "Majeure",
+    ),
+    "Cellule correctement posée et fixée": DispositionMetadata(
+      referenceNormative: "NF C 13-100:2015 – § 411.3",
+      familleRisque: "Électrocution",
+      criticite: "Critique",
+    ),
+    "Jonctions inter-cellules": DispositionMetadata(
+      referenceNormative: "Norme NF C 13-200 art 542-544",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Canalisations et câbles d'arrivée / départ": DispositionMetadata(
+      referenceNormative: "NF C 13-100:2015 – §514",
+      familleRisque: "Erreur d'exploitation",
+      criticite: "Majeure",
+    ),
+    "État général de l'enveloppe, absence de corrosion et déformation": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 414",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "État des isolateurs et absence de traces d'amorçage": DispositionMetadata(
+      referenceNormative: "NF EN 62271-102",
+      familleRisque: "Électrocution",
+      criticite: "Critique",
+    ),
+    "Respect des distances de sécurité": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 414",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Voyants de position (O / F / T)": DispositionMetadata(
+      referenceNormative: "NF C 13-200:2009 – § 133.4",
+      familleRisque: "Erreur de comptage",
+      criticite: "Majeure",
+    ),
+    "Présence et état des dispositifs de détection / indication de tension": DispositionMetadata(
+      referenceNormative: "NF C 13-200:2009 – § 538",
+      familleRisque: "Défaillance de protection",
+      criticite: "Critique",
+    ),
+    "Terre de protection (PE) reliée à chaque cellule": DispositionMetadata(
+      referenceNormative: "NF C 13-100:2015 – Partie 5-54",
+      familleRisque: "Électrocution",
+      criticite: "Critique",
+    ),
+    "Fonctionnement du sectionneur de terre et indication de position": DispositionMetadata(
+      referenceNormative: "NF EN 62271-102",
+      familleRisque: "Électrocution",
+      criticite: "Critique",
+    ),
+    "Continuité du circuit de terre de la cellule": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 413",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Conformité du pouvoir de coupure aux caractéristiques du réseau": DispositionMetadata(
+      referenceNormative: "NF C 13-100:2015 – § 312",
+      familleRisque: "Défaillance d'exploitation",
+      criticite: "Majeure",
+    ),
+    "Etat des fusibles, disjoncteurs et relais de protection": DispositionMetadata(
+      referenceNormative: "Norme NF C 13-200 art 431-432",
+      familleRisque: "Électrisation / électrocution / défaut d'isolement",
+      criticite: "Critique",
+    ),
+    "Réglage et coordination des protections MT": DispositionMetadata(
+      referenceNormative: "Norme NF C 13-100 art 542",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Commande manuelle / motorisée": DispositionMetadata(
+      referenceNormative: "NF EN IEC 60974-4 – § 5",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Absence d'échauffement anormal contrôlée par thermographie infrarouge": DispositionMetadata(
+      referenceNormative: "Norme NF C 13-100 art 32",
+      familleRisque: "Brûlure / incendie",
+      criticite: "Majeure",
+    ),
+
+    // --- IV. TRANSFORMATEUR MT/BT ---
+    "Adapté au local et à la ventilation": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      familleRisque: "Protection mécanique / pénétration corps solides-liquides",
+      criticite: "Majeure",
+    ),
+    "Vérification de la ventilation et des distances de dégagement": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      familleRisque: "Protection mécanique / pénétration corps solides-liquides",
+      criticite: "Majeure",
+    ),
+    "État et dimensionnement du bac de rétention pour transformateur à huile": DispositionMetadata(
+      referenceNormative: "NF C 15-211:2024 – § 3",
+      familleRisque: "Sécurité patients / continuité de service",
+      criticite: "Critique",
+    ),
+    "Plaque signalétique (puissance, tension, couplage)": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 538",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Raccordement des câbles MT et BT": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 544",
+      familleRisque: "Électrisation / défaut de continuité de protection",
+      criticite: "Critique",
+    ),
+    "État général du transformateur et absence de fuite d'huile": DispositionMetadata(
+      referenceNormative: "Norme NF C 13-200 art 422",
+      familleRisque: "Incendie",
+      criticite: "Majeure",
+    ),
+    "État des traversées / isolateurs MT et BT": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 414",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "État des connexions et serrage des bornes MT et BT": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 526",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Bac de rétention (pour transfo à huile)": DispositionMetadata(
+      referenceNormative: "NF C 13-200:2009 – Partie 5",
+      familleRisque: "Incendie",
+      criticite: "Critique",
+    ),
+    "Niveau d'huile conforme pour transformateur immergé": DispositionMetadata(
+      referenceNormative: "NF C 13-200:2009 – Partie 5",
+      familleRisque: "Incendie",
+      criticite: "Critique",
+    ),
+    "Essais diélectriques": DispositionMetadata(
+      referenceNormative: "Norme NF C 13-200 art 426.8",
+      familleRisque: "Incendie",
+      criticite: "Majeure",
+    ),
+    "Écran de câble MT relié à la terre": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 544",
+      familleRisque: "Électrisation / défaut de continuité de protection",
+      criticite: "Critique",
+    ),
+    "Distance entre transformateur": DispositionMetadata(
+      referenceNormative: "Norme NF C 13-100 art 432",
+      familleRisque: "Incendie",
+      criticite: "Majeure",
+    ),
+    "État et fonctionnement des dispositifs de surveillance de température": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 465",
+      familleRisque: "Sécurité des interventions / arrêt d'urgence",
+      criticite: "Majeure",
+    ),
+    "Compatibilité de la puissance du transformateur avec la charge": DispositionMetadata(
+      referenceNormative: "NF C 15-211:2024 – § 3",
+      familleRisque: "Sécurité patients / continuité de service",
+      criticite: "Critique",
+    ),
+    "Mise à la terre du neutre et de la carcasse": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 542",
+      familleRisque: "Électrisation / défaut d'évacuation des courants de défaut",
+      criticite: "Critique",
+    ),
+    "Continuité de la mise à la terre de la cuve et des masses": DispositionMetadata(
+      referenceNormative: "NF C 13-100:2015 – § 412.1",
+      familleRisque: "Électrocution",
+      criticite: "Critique",
+    ),
+    "Protection contre les contacts directs": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 414",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Protection contre les surintensités": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 430",
+      familleRisque: "Incendie / échauffement / détérioration des conducteurs",
+      criticite: "Critique",
+    ),
+    "Protection MT": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      familleRisque: "Protection mécanique / pénétration corps solides-liquides",
+      criticite: "Majeure",
+    ),
+    "Protection BT (disjoncteur général, fusibles, relais thermique)": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 430",
+      familleRisque: "Incendie / échauffement / détérioration des conducteurs",
+      criticite: "Critique",
+    ),
+    "Fonctionnement des protections DGPT2 / Buchholz lorsqu'elles existent": DispositionMetadata(
+      referenceNormative: "NF C 13-100:2015 – § 112",
+      familleRisque: "Perturbation réseau",
+      criticite: "Critique",
+    ),
+    "Protection contre les surtensions côté MT et BT": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 414",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Contrôle thermographique des connexions, et protections": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 6.6.4.3.2",
+      familleRisque: "Incendie / échauffement",
+      criticite: "Majeure",
+    ),
+    "Mesure de la résistance d'isolement des enroulements": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 538",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Contrôle du rapport de transformation et du couplage": DispositionMetadata(
+      referenceNormative: "NF C 13-100:2015 – § 134",
+      familleRisque: "Non-conformité réglementaire",
+      criticite: "Mineure",
+    ),
+
+    // --- V. DISPOSITIONS CONSTRUCTIVES & CONDITIONS GROUPE ÉLECTROGENE (Nouveaux points spécifiques) ---
+    "Sol du local imperméable et formé comme une cuvette étanche, le seuil des baies étant surélevé d'au moins 0,10 mètre et toutes dispositions doivent être prises pour que le combustible accidentellement répandu ne puisse se déverser par les orifices placés dans le sol.": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "Présence d'une rétention adaptée au stockage et aux fuites de combustible": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "Canalisations du combustible": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "Moyens d'extinction adaptés aux risques électriques et de carburant": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "État et étanchéité des conduites et raccords de combustible": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "Évacuation des gaz d'échappement vers l'extérieur sans risque pour les occupants": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "Protection des parties chaudes et du conduit d'échappement": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "Ventilation suffisante pour le refroidissement et la combustion": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      familleRisque: "Échauffement / conditions d'environnement",
+      criticite: "Majeure",
+    ),
+    "Mise à la terre du châssis du groupe électrogène": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 542 et § 543",
+      familleRisque: "Électrisation / défaut de mise à la terre",
+      criticite: "Critique",
+    ),
+    "Disponibilité des consignes de démarrage, arrêt normal et arrêt d'urgence": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 462, § 465 et § 537",
+      familleRisque: "Sécurité des interventions / arrêt d'urgence",
+      criticite: "Critique",
+    ),
+    "Disponibilité du schéma de raccordement et de l'inverseur de sources": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551",
+      familleRisque: "Défaillance de la source de remplacement / continuité de service",
+      criticite: "Majeure",
+    ),
+    "Contrôle du niveau de carburant, huile et liquide de refroidissement": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "Absence de fuite de carburant ou d'huile lors de l'exploitation": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      familleRisque: "Incendie / brûlure / fuite de combustible",
+      criticite: "Critique",
+    ),
+    "Essai périodique du démarrage automatique du groupe électrogène": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551",
+      familleRisque: "Défaillance de la source de remplacement / continuité de service",
+      criticite: "Majeure",
+    ),
+    "Traçabilité des essais périodiques et opérations de maintenance": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 561",
+      familleRisque: "Évacuation / sécurité incendie",
+      criticite: "Majeure",
+    ),
+    "Vérification du fonctionnement des alarmes et sécurités moteur": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551",
+      familleRisque: "Défaillance de la source de remplacement / continuité de service",
+      criticite: "Majeure",
+    ),
   };
+
+  /// Liste officielle des 21 points de vérification des Dispositions Constructives du Groupe Électrogène
+  static const List<String> allGEDispositionsPoints = [
+    "Sol du local imperméable et formé comme une cuvette étanche, le seuil des baies étant surélevé d'au moins 0,10 mètre et toutes dispositions doivent être prises pour que le combustible accidentellement répandu ne puisse se déverser par les orifices placés dans le sol.",
+    'Signalisation visible "Local électrique – Accès réservé au personnel habilité"',
+    "Dimensions",
+    "Parois, plancher et plafond en matériaux non combustibles coupe-feu de degré 2 heures",
+    "Présence d'une porte pleine coupe-feu de degré 1 heure, ouvrant vers l'extérieur, munie d'un dispositif antipanique",
+    "Absence de communication directe avec les locaux à risque",
+    "Absence de stockage d'objets non électriques",
+    "Présence d'une rétention adaptée au stockage et aux fuites de combustible",
+    "Présence d'un dispositif d'arrêt d'urgence accessible et identifié",
+    "Canalisations du combustible",
+    "Absence de canalisations étrangères",
+    "Éclairage normal",
+    "Éclairage de secours conforme",
+    "Ventilation",
+    "Moyens d'extinction adaptés aux risques électriques et de carburant",
+    "État et étanchéité des conduites et raccords de combustible",
+    "Évacuation des gaz d'échappement vers l'extérieur sans risque pour les occupants",
+    "Protection des parties chaudes et du conduit d'échappement",
+    "Ventilation suffisante pour le refroidissement et la combustion",
+    "Mise à la terre de toutes les masses métalliques",
+    "Mise à la terre du châssis du groupe électrogène",
+  ];
+
+  /// Liste officielle des 15 points de vérification des Conditions d'Exploitation du Groupe Électrogène
+  static const List<String> allGEConditionsPoints = [
+    "Accès réservé au personnel habilité (habilitation électrique à jour)",
+    "Présence d'un dispositif de mise hors tension générale du local",
+    "Présence et accessibilité des EPI électriques (gants, visière, tapis)",
+    "Zone dégagée et propre, sans obstruction des voies d'accès",
+    "Absence de stockage de matériaux inflammables",
+    "Présence d'un plan d'intervention et de consignation affiché",
+    "Disponibilité des consignes de démarrage, arrêt normal et arrêt d'urgence",
+    "Disponibilité du schéma de raccordement et de l'inverseur de sources",
+    "Contrôle du niveau de carburant, huile et liquide de refroidissement",
+    "Absence de fuite de carburant ou d'huile lors de l'exploitation",
+    "Essai périodique du démarrage automatique du groupe électrogène",
+    "Traçabilité des essais périodiques et opérations de maintenance",
+    "Vérification du fonctionnement des alarmes et sécurités moteur",
+    "Matériel de consignation (cadenas, étiquettes, détecteur de tension) disponible",
+    "Extincteur CO₂ disponible et vérifié (date de validité à jour)",
+  ];
+
+  /// Assure l'exhaustivité des points de contrôle pour un local Groupe Électrogène (auto-migration silencieuse).
+  static void ensureCompleteGELocalChecklists({
+    required List<ElementControle> dispositionsConstructives,
+    required List<ElementControle> conditionsExploitation,
+  }) {
+    final existingDispKeys = dispositionsConstructives
+        .map((e) => _normalizeKey(e.elementControle))
+        .toSet();
+    for (final refTitle in allGEDispositionsPoints) {
+      if (!existingDispKeys.contains(_normalizeKey(refTitle))) {
+        dispositionsConstructives.add(
+          ElementControle(
+            elementControle: refTitle,
+            conforme: null,
+            estNA: true,
+            priorite: 3,
+          ),
+        );
+      }
+    }
+
+    final existingCondKeys = conditionsExploitation
+        .map((e) => _normalizeKey(e.elementControle))
+        .toSet();
+    for (final refTitle in allGEConditionsPoints) {
+      if (!existingCondKeys.contains(_normalizeKey(refTitle))) {
+        conditionsExploitation.add(
+          ElementControle(
+            elementControle: refTitle,
+            conforme: null,
+            estNA: true,
+            priorite: 3,
+          ),
+        );
+      }
+    }
+  }
 
   /// Liste officielle des 25 points de vérification des Dispositions Constructives
   static const List<String> allDispositionsConstructives = [
@@ -273,6 +676,61 @@ class DispositionsConstructivesRegistry {
     "Présence d'une procédure de consignation et déconsignation",
   ];
 
+  /// Liste officielle des 21 points de vérification de la Cellule Moyenne Tension
+  static const List<String> allCellulePoints = [
+    "Schéma unifilaire affiché dans le local",
+    "Verrouillage mécanique",
+    "Fonctionnement des interverrouillages électriques et mécaniques",
+    "Etat et serrage apparent des connexions accessibles",
+    "Identification et lisibilité des plaques signalétiques",
+    "Cellule correctement posée et fixée",
+    "Jonctions inter-cellules",
+    "Canalisations et câbles d'arrivée / départ",
+    "État général de l'enveloppe, absence de corrosion et déformation",
+    "État des isolateurs et absence de traces d'amorçage",
+    "Respect des distances de sécurité",
+    "Voyants de position (O / F / T)",
+    "Présence et état des dispositifs de détection / indication de tension",
+    "Terre de protection (PE) reliée à chaque cellule",
+    "Fonctionnement du sectionneur de terre et indication de position",
+    "Continuité du circuit de terre de la cellule",
+    "Conformité du pouvoir de coupure aux caractéristiques du réseau",
+    "Etat des fusibles, disjoncteurs et relais de protection",
+    "Réglage et coordination des protections MT",
+    "Commande manuelle / motorisée",
+    "Absence d'échauffement anormal contrôlée par thermographie infrarouge",
+  ];
+
+  /// Liste officielle des 26 points de vérification du Transformateur MT/BT
+  static const List<String> allTransformateurPoints = [
+    "Adapté au local et à la ventilation",
+    "Vérification de la ventilation et des distances de dégagement",
+    "État et dimensionnement du bac de rétention pour transformateur à huile",
+    "Plaque signalétique (puissance, tension, couplage)",
+    "Raccordement des câbles MT et BT",
+    "État général du transformateur et absence de fuite d'huile",
+    "État des traversées / isolateurs MT et BT",
+    "État des connexions et serrage des bornes MT et BT",
+    "Bac de rétention (pour transfo à huile)",
+    "Niveau d'huile conforme pour transformateur immergé",
+    "Essais diélectriques",
+    "Écran de câble MT relié à la terre",
+    "Distance entre transformateur",
+    "État et fonctionnement des dispositifs de surveillance de température",
+    "Compatibilité de la puissance du transformateur avec la charge",
+    "Mise à la terre du neutre et de la carcasse",
+    "Continuité de la mise à la terre de la cuve et des masses",
+    "Protection contre les contacts directs",
+    "Protection contre les surintensités",
+    "Protection MT",
+    "Protection BT (disjoncteur général, fusibles, relais thermique)",
+    "Fonctionnement des protections DGPT2 / Buchholz lorsqu'elles existent",
+    "Protection contre les surtensions côté MT et BT",
+    "Contrôle thermographique des connexions, et protections",
+    "Mesure de la résistance d'isolement des enroulements",
+    "Contrôle du rapport de transformation et du couplage",
+  ];
+
   /// Assure l'exhaustivité des points de contrôle pour un local (auto-migration silencieuse).
   /// Les points manquants sont ajoutés à leur position de référence avec estNA = true ("Sans objet").
   static void ensureCompleteLocalChecklists({
@@ -301,6 +759,44 @@ class DispositionsConstructivesRegistry {
     for (final refTitle in allConditionsExploitation) {
       if (!existingCondKeys.contains(_normalizeKey(refTitle))) {
         conditionsExploitation.add(
+          ElementControle(
+            elementControle: refTitle,
+            conforme: null,
+            estNA: true,
+            priorite: 3,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Assure l'exhaustivité des points de contrôle pour une cellule (auto-migration silencieuse).
+  static void ensureCompleteCelluleChecklist(List<ElementControle> elementsVerifies) {
+    final existingKeys = elementsVerifies
+        .map((e) => _normalizeKey(e.elementControle))
+        .toSet();
+    for (final refTitle in allCellulePoints) {
+      if (!existingKeys.contains(_normalizeKey(refTitle))) {
+        elementsVerifies.add(
+          ElementControle(
+            elementControle: refTitle,
+            conforme: null,
+            estNA: true,
+            priorite: 3,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Assure l'exhaustivité des points de contrôle pour un transformateur (auto-migration silencieuse).
+  static void ensureCompleteTransformateurChecklist(List<ElementControle> elementsVerifies) {
+    final existingKeys = elementsVerifies
+        .map((e) => _normalizeKey(e.elementControle))
+        .toSet();
+    for (final refTitle in allTransformateurPoints) {
+      if (!existingKeys.contains(_normalizeKey(refTitle))) {
+        elementsVerifies.add(
           ElementControle(
             elementControle: refTitle,
             conforme: null,

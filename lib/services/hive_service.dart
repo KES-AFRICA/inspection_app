@@ -2116,23 +2116,7 @@ static List<String> getDispositionsConstructivesForLocal(String localType) {
       return List<String>.from(DispositionsConstructivesRegistry.allDispositionsConstructives);
     
     case 'LOCAL_GROUPE_ELECTROGENE':
-      return [
-        'Sol du local imperméable et formé comme une cuvette étanche, le seuil des baies étant surélevé d\'au moins 0,10 mètre et toutes dispositions doivent être prises pour que le combustible accidentellement répandu ne puisse se déverser par les orifices placés dans le sol.',
-        'Canalisations du combustible',
-        'Signalisation visible "Local électrique – Accès réservé au personnel habilité"',
-        'Dimensions',
-        'Parois, plancher et plafond en matériaux non combustibles coupe-feu de degré 2 heures',
-        'Présence d\'une porte pleine coupe-feu de degré 1 heure, ouvrant vers l\'extérieur, munie d\'un dispositif antipanique',
-        'Verrouillage empêchant tout accès non autorisé',
-        'Absence de communication directe avec les locaux à risque',
-        'Éclairage normal',
-        'Éclairage de secours conforme',
-        'Ventilation',
-        'Absence de canalisations étrangères',
-        'Moyens d\'extinction adaptés aux risques électriques et de carburant',
-        'Absence de stockage d\'objets non électriques',
-        'Mise à la terre de toutes les masses métalliques',
-      ];
+      return List<String>.from(DispositionsConstructivesRegistry.allGEDispositionsPoints);
     
     case 'LOCAL_TGBT':
     case 'LOCAL_ONDULEUR':
@@ -2164,6 +2148,8 @@ static List<String> getDispositionsConstructivesForLocal(String localType) {
 static List<String> getConditionsExploitationForLocal(String localType) {
   if (localType == 'LOCAL_TRANSFORMATEUR' || localType == 'LOCAL_MTBT') {
     return List<String>.from(DispositionsConstructivesRegistry.allConditionsExploitation);
+  } else if (localType == 'LOCAL_GROUPE_ELECTROGENE') {
+    return List<String>.from(DispositionsConstructivesRegistry.allGEConditionsPoints);
   }
   return [
     'Accès réservé au personnel habilité (habilitation électrique à jour)',
