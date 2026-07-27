@@ -491,13 +491,13 @@ class PdfReportService {
             ),
           ],
         ),
-        pw.SizedBox(height: 34),
+        pw.SizedBox(height: 55),
         pw.Container(
           width: double.infinity,
           padding: const pw.EdgeInsets.symmetric(vertical: 14, horizontal: 14),
           decoration: pw.BoxDecoration(
             color: headerColor,
-            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
           ),
           child: pw.Text(
             'RAPPORT',
@@ -510,25 +510,19 @@ class PdfReportService {
             textAlign: pw.TextAlign.center,
           ),
         ),
-        pw.SizedBox(height: 28),
+        pw.SizedBox(height: 35),
         pw.Container(
           width: double.infinity,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 45),
           child: pw.Text(
             subTitleOverride ??
-                '${mission.natureMission!.toUpperCase()} DES INSTALLATIONS ELECTRIQUES',
-            style: pw.TextStyle(
-              font: _fontBold,
-              fontSize: 16,
-              color: accentColor,
-            ),
-            textAlign: pw.TextAlign.center,
-          ),
-        ),
-        pw.SizedBox(height: 14),
-        pw.Container(
-          width: double.infinity,
-          child: pw.Text(
-            mission.nomClient.toUpperCase(),
+                (() {
+                  final nature = (mission.natureMission ?? '').toUpperCase();
+                  final prefix = (nature.startsWith('VERIFICATION') || nature.startsWith('VÉRIFICATION'))
+                      ? nature
+                      : 'VERIFICATION $nature';
+                  return '$prefix\nDES INSTALLATIONS ELECTRIQUES';
+                })(),
             style: pw.TextStyle(
               font: _fontBold,
               fontSize: 15,
@@ -537,22 +531,41 @@ class PdfReportService {
             textAlign: pw.TextAlign.center,
           ),
         ),
-        pw.SizedBox(height: 8),
+        pw.SizedBox(height: 45),
         pw.Container(
           width: double.infinity,
-          child: pw.Text(
-            mission.nomSite!.toUpperCase(),
-            style: pw.TextStyle(
-              font: _fontBold,
-              fontSize: 14,
-              color: accentColor,
-            ),
-            textAlign: pw.TextAlign.center,
+          child: pw.Column(
+            children: [
+              pw.Text(
+                mission.nomClient.toUpperCase(),
+                style: pw.TextStyle(
+                  font: _fontBold,
+                  fontSize: 16,
+                  color: headerColor,
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
+              if (mission.nomSite != null &&
+                  mission.nomSite!.isNotEmpty &&
+                  mission.nomSite!.toUpperCase() != mission.nomClient.toUpperCase()) ...[
+                pw.SizedBox(height: 6),
+                pw.Text(
+                  mission.nomSite!.toUpperCase(),
+                  style: pw.TextStyle(
+                    font: _fontBold,
+                    fontSize: 15,
+                    color: headerColor,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ],
+            ],
           ),
         ),
-        pw.SizedBox(height: 150),
+        pw.SizedBox(height: 205),
         pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          crossAxisAlignment: pw.CrossAxisAlignment.end,
+          mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
           children: [
             pw.Expanded(
               child: pw.Column(
@@ -567,7 +580,7 @@ class PdfReportService {
                 ],
               ),
             ),
-            pw.SizedBox(width: 10),
+            pw.SizedBox(width: 15),
             if (clientQrMemoryImg != null)
               pw.Container(
                 width: 80,
@@ -582,7 +595,8 @@ class PdfReportService {
               )
             else
               pw.Container(
-                width: 80, height: 80,
+                width: 80,
+                height: 80,
                 decoration: pw.BoxDecoration(
                   border: pw.Border.all(color: PdfColors.grey400, width: 1),
                   color: PdfColors.grey200,
@@ -608,18 +622,18 @@ class PdfReportService {
 
   static pw.Widget _coverInfoRow(String label, String value) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.symmetric(vertical: 2),
+      padding: const pw.EdgeInsets.symmetric(vertical: 2.5),
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           pw.SizedBox(
-            width: 100,
+            width: 125,
             child: pw.Text(label,
                 style: pw.TextStyle(fontSize: fsBody, fontWeight: pw.FontWeight.bold, color: headerColor)),
           ),
-          pw.Text(': ', style: pw.TextStyle(fontSize: fsBody, fontWeight: pw.FontWeight.bold)),
+          pw.Text(': ', style: pw.TextStyle(fontSize: fsBody, fontWeight: pw.FontWeight.bold, color: headerColor)),
           pw.Expanded(
-            child: pw.Text(value, style: pw.TextStyle(fontSize: fsBody)),
+            child: pw.Text(value, style: pw.TextStyle(fontSize: fsBody, color: PdfColors.black)),
           ),
         ],
       ),
@@ -643,7 +657,6 @@ class PdfReportService {
 
     // 2. Périmètre de la mission
     entries.add(_SommaireEntry(titre: "PERIMETRE DE LA MISSION", key: 'perimetre', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "Prestations vendues dans le cadre de cette mission", key: 'perimetre', level: 1));
 
     // 3. Rappel des responsabilités
     entries.add(_SommaireEntry(titre: "RAPPEL DES RESPONSABILITES DE L'EMPLOYEUR", key: 'rappel', level: 0, isBold: true, isUppercase: true));
@@ -876,6 +889,173 @@ class PdfReportService {
         ...materiel.asMap().entries.map((e) =>
           _tableDataRow(e.value, alt: e.key.isOdd)),
       ],
+    );
+  }
+
+  static pw.Widget _buildPerimetreTable(Mission mission, RenseignementsGeneraux? rg) {
+    // 1. Périmètre normalisé
+    final rawPerimetres = (mission.perimetreMission != null && mission.perimetreMission!.isNotEmpty)
+        ? mission.perimetreMission!
+        : <String>['Vérification électrique'];
+
+    const mapping = {
+      'Vérification thermographique': 'Vérification thermographie infrarouge',
+      'Vérification des prises de terre': 'Cartographie des prises de terre',
+    };
+
+    final perimetres = <String>[];
+    for (final item in rawPerimetres) {
+      final normalized = mapping[item] ?? item;
+      if (!perimetres.contains(normalized)) {
+        perimetres.add(normalized);
+      }
+    }
+    if (perimetres.isEmpty) {
+      perimetres.add('Vérification électrique');
+    }
+
+    // 2. Préparation des dates et de la durée
+    final dateDebut = rg?.dateDebut ?? mission.dateIntervention;
+    final dateFin   = rg?.dateFin;
+    String dateInterventionStr;
+    if (dateDebut != null && dateFin != null && !dateDebut.isAtSameMomentAs(dateFin)) {
+      dateInterventionStr = 'Du ${_formatDate(dateDebut)} au ${_formatDate(dateFin)}';
+    } else if (dateDebut != null) {
+      dateInterventionStr = _formatDate(dateDebut);
+    } else {
+      dateInterventionStr = _formatDate(DateTime.now());
+    }
+
+    int dureeJours = 1;
+    if (rg != null && rg.dureeJours > 0) {
+      dureeJours = rg.dureeJours;
+    } else if (dateDebut != null && dateFin != null) {
+      dureeJours = dateFin.difference(dateDebut).inDays + 1;
+      if (dureeJours < 1) dureeJours = 1;
+    }
+
+    // 3. Préparation accompagnateurs / responsables
+    String accompagnateursStr = '';
+    if (mission.accompagnateurs != null && mission.accompagnateurs!.isNotEmpty) {
+      accompagnateursStr = mission.accompagnateurs!.join(', ');
+    } else if (rg != null && rg.accompagnateurs.isNotEmpty) {
+      accompagnateursStr = rg.accompagnateurs
+          .map((a) => '${a['prenom'] ?? ''} ${a['nom'] ?? ''}'.trim())
+          .where((s) => s.isNotEmpty)
+          .join(', ');
+    } else {
+      accompagnateursStr = 'Non spécifié';
+    }
+
+    // 4. Compte rendu fait à
+    String compteRenduStr = accompagnateursStr;
+    if (rg != null && rg.compteRendu.isNotEmpty) {
+      compteRenduStr = rg.compteRendu.join(', ');
+    }
+
+    // 5. Vérificateurs
+    List<String> verificateursList = [];
+    if (mission.verificateurs != null && mission.verificateurs!.isNotEmpty) {
+      verificateursList = mission.verificateurs!
+          .map((v) => '${v['prenom'] ?? ''} ${v['nom'] ?? ''}'.trim().toUpperCase())
+          .where((s) => s.isNotEmpty)
+          .toList();
+    } else if (rg != null && rg.verificateurs.isNotEmpty) {
+      verificateursList = rg.verificateurs
+          .map((v) => '${v['prenom'] ?? ''} ${v['nom'] ?? ''}'.trim().toUpperCase())
+          .where((s) => s.isNotEmpty)
+          .toList();
+    }
+    if (verificateursList.isEmpty) {
+      verificateursList = ['Non spécifié'];
+    }
+
+    final tableBorderColor = PdfColor.fromHex('#94A3B8');
+    final labelStyle = pw.TextStyle(
+      font: _fontBold,
+      fontSize: 9,
+      fontWeight: pw.FontWeight.bold,
+      color: headerColor,
+    );
+    final valueStyle = pw.TextStyle(
+      font: _fontRegular,
+      fontSize: 9,
+      color: PdfColors.black,
+    );
+
+    final tableRows = <pw.TableRow>[];
+
+    // Partie A: Missions (Périmètre)
+    for (int i = 0; i < perimetres.length; i++) {
+      final isFirst = i == 0;
+      final isOdd = i.isOdd;
+      final bg = isOdd ? PdfColor.fromHex('#F8FAFC') : PdfColors.white;
+
+      tableRows.add(
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: bg),
+          children: [
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+              child: isFirst
+                  ? pw.Text('Missions', style: labelStyle)
+                  : pw.SizedBox.shrink(),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+              child: pw.Text(perimetres[i], style: valueStyle),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Partie B: Informations générales
+    final infoRowsData = [
+      {'label': 'Nature', 'widget': pw.Text(mission.natureMission ?? 'Périodique réglementaire', style: valueStyle)},
+      {'label': 'Dates d\'intervention', 'widget': pw.Text(dateInterventionStr, style: valueStyle)},
+      {'label': 'Durée', 'widget': pw.Text('$dureeJours jour(s)', style: valueStyle)},
+      {'label': 'Accompagnateur / Responsable', 'widget': pw.Text(accompagnateursStr, style: valueStyle)},
+      {'label': 'Compte rendu de fin de visite fait à', 'widget': pw.Text(compteRenduStr, style: valueStyle)},
+      {
+        'label': 'Vérificateur(s)',
+        'widget': pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: verificateursList.map((v) => pw.Text(v, style: valueStyle)).toList(),
+        ),
+      },
+    ];
+
+    for (int i = 0; i < infoRowsData.length; i++) {
+      final idx = perimetres.length + i;
+      final isOdd = idx.isOdd;
+      final bg = isOdd ? PdfColor.fromHex('#F8FAFC') : PdfColors.white;
+      final rowData = infoRowsData[i];
+
+      tableRows.add(
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: bg),
+          children: [
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+              child: pw.Text(rowData['label'] as String, style: labelStyle),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+              child: rowData['widget'] as pw.Widget,
+            ),
+          ],
+        ),
+      );
+    }
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: tableBorderColor, width: 0.6),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(2.2),
+        1: pw.FlexColumnWidth(4.8),
+      },
+      children: tableRows,
     );
   }
 
@@ -5756,13 +5936,7 @@ class PdfReportService {
             child: _sectionBox('PERIMETRE DE LA MISSION'),
           ),
           pw.SizedBox(height: 14),
-          _subTitle('Prestations vendues dans le cadre de cette mission'),
-          pw.SizedBox(height: 10),
-          if (mission.perimetreMission != null && mission.perimetreMission!.isNotEmpty)
-            ...mission.perimetreMission!.map((p) => _bulletItem(p))
-          else ...[
-            _bulletItem('Vérification électrique'),
-          ],
+          _buildPerimetreTable(mission, renseignements),
 
           // ─── RAPPEL DES RESPONSABILITÉS DE L'EMPLOYEUR ───
           pw.NewPage(),

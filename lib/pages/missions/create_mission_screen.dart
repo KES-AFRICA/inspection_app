@@ -37,11 +37,29 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
 
   static const List<String> _perimetreOptions = [
     'Vérification électrique',
-    'Audit foudre',
     'Analyse du risque foudre et étude technique foudre',
-    'Vérification thermographique',
-    'Vérification des prises de terre',
+    'Audit foudre',
+    'Vérification thermographie infrarouge',
+    'Cartographie des prises de terre',
+    'Reconstitution des schémas des installations existantes',
+    'Élaboration des schémas et note de calcul pour la mise en conformité des installations',
   ];
+
+  static List<String> normalizePerimetreList(List<String> rawList) {
+    const mapping = {
+      'Vérification thermographique': 'Vérification thermographie infrarouge',
+      'Vérification des prises de terre': 'Cartographie des prises de terre',
+    };
+
+    final result = <String>[];
+    for (final item in rawList) {
+      final normalized = mapping[item] ?? item;
+      if (!result.contains(normalized)) {
+        result.add(normalized);
+      }
+    }
+    return result;
+  }
 
   @override
   void initState() {
@@ -55,7 +73,7 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
       _installationCtrl.text = m.installation ?? '';
       _natureMission = m.natureMission;
       if (m.perimetreMission != null) {
-        _selectedPerimetres = List<String>.from(m.perimetreMission!);
+        _selectedPerimetres = normalizePerimetreList(m.perimetreMission!);
       }
     }
   }
