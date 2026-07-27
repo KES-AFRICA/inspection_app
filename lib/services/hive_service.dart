@@ -2139,18 +2139,12 @@ static List<String> getConditionsExploitationForLocal(String localType) {
 
 /// Obtenir les points de vérification pour un type de coffret
 static List<String> getPointsVerificationForCoffret(String coffretType) {
-  final pointsBase = DispositionsConstructivesRegistry.allCoffretPoints;
-
-  // Personnaliser selon le type de coffret
   switch (coffretType) {
     case 'INVERSEUR':
-      return [
-        ...pointsBase,
-        'Dispositif de connexion',
-      ];
+      return List<String>.from(DispositionsConstructivesRegistry.allInverseurPoints);
     
     default:
-      return List<String>.from(pointsBase);
+      return List<String>.from(DispositionsConstructivesRegistry.allCoffretPoints);
   }
 }
 

@@ -3834,9 +3834,13 @@ class PdfReportService {
     // POINTS DE VÉRIFICATION
     // ══════════════════════════════════════════════════════════════════════
     if (coffret.pointsVerification.isNotEmpty) {
-      DispositionsConstructivesRegistry.ensureCompleteCoffretChecklist(coffret.pointsVerification);
+      if (coffret.type == 'INVERSEUR') {
+        DispositionsConstructivesRegistry.ensureCompleteInverseurChecklist(coffret.pointsVerification);
+      } else {
+        DispositionsConstructivesRegistry.ensureCompleteCoffretChecklist(coffret.pointsVerification);
+      }
       widgets.add(pw.SizedBox(height: 3));
-      widgets.add(_buildPointsVerificationTable(coffret.pointsVerification));
+      widgets.add(_buildPointsVerificationTable(coffret.pointsVerification, coffretType: coffret.type));
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -3869,7 +3873,7 @@ class PdfReportService {
   );
 
 
-  static pw.Widget _buildPointsVerificationTable(List<PointVerification> points) {
+  static pw.Widget _buildPointsVerificationTable(List<PointVerification> points, {String? coffretType}) {
     return pw.Table(
       border: pw.TableBorder(
         left: pw.BorderSide(color: borderColor, width: 0.4),
@@ -3911,7 +3915,7 @@ class PdfReportService {
               : (isConf ? conformeColor : nonConformeColor);
           final confText = isNA ? 'Sans objet' : (isConf ? 'Oui' : 'Non');
 
-          final meta = DispositionsConstructivesRegistry.getCoffretMetadata(pv.pointVerification);
+          final meta = DispositionsConstructivesRegistry.getCoffretMetadata(pv.pointVerification, coffretType: coffretType);
           final refNorm = isNonConf ? (meta?.referenceNormative ?? pv.referenceNormative ?? '') : '';
           final familleRisque = isNonConf ? (meta?.familleRisque ?? '') : '';
           final criticite = isNonConf ? (meta?.criticite ?? '') : '';

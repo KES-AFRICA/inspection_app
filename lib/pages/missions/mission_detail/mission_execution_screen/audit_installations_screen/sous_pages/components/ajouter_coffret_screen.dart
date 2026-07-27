@@ -2457,7 +2457,9 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
               )))
           : null,
     )));
-    if (_selectedType != 'INVERSEUR') {
+    if (_selectedType == 'INVERSEUR') {
+      DispositionsConstructivesRegistry.ensureCompleteInverseurChecklist(_pointsVerification);
+    } else {
       DispositionsConstructivesRegistry.ensureCompleteCoffretChecklist(_pointsVerification);
     }
     // Observations multiples

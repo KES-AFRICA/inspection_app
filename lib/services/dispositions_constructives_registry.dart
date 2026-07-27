@@ -1511,8 +1511,20 @@ class DispositionsConstructivesRegistry {
         "Présence et conformité du dispositif de protection contre les surtensions (parafoudre)",
   };
 
-  /// Obtenir la métadonnée normative pour un point de coffret
-  static DispositionMetadata? getCoffretMetadata(String pointVerification) {
+  /// Obtenir la métadonnée normative pour un point de coffret ou d'inverseur
+  static DispositionMetadata? getCoffretMetadata(String pointVerification, {String? coffretType}) {
+    if (coffretType == 'INVERSEUR') {
+      if (_inverseurRegistry.containsKey(pointVerification)) {
+        return _inverseurRegistry[pointVerification];
+      }
+      final normKey = _normalizeKey(pointVerification);
+      for (final entry in _inverseurRegistry.entries) {
+        if (_normalizeKey(entry.key) == normKey) {
+          return entry.value;
+        }
+      }
+    }
+
     if (_coffretRegistry.containsKey(pointVerification)) {
       return _coffretRegistry[pointVerification];
     }
@@ -1522,7 +1534,292 @@ class DispositionsConstructivesRegistry {
         return entry.value;
       }
     }
+
+    if (_inverseurRegistry.containsKey(pointVerification)) {
+      return _inverseurRegistry[pointVerification];
+    }
+    for (final entry in _inverseurRegistry.entries) {
+      if (_normalizeKey(entry.key) == normKey) {
+        return entry.value;
+      }
+    }
+
     return null;
+  }
+
+  /// Liste officielle des 31 points de vérification pour l'Inverseur de Source
+  static const List<String> allInverseurPoints = [
+    "Emplacement / Dégagement autour",
+    "Protection IP/IK adaptée au local d'installation",
+    "Interverrouillage empêchant le couplage intempestif des deux sources",
+    "Identification complète des circuits",
+    "Respect code couleur des câbles",
+    "Identification claire des deux sources et de la source prioritaire",
+    "Signalisation de la position des sources et de l'état de l'inverseur",
+    "Etat du coffret / Armoire",
+    "Câblage",
+    "Répartiteur de circuit",
+    "Dispositif de connexion",
+    "Serrage et état des connexions contrôlés",
+    "Répartition des circuits",
+    "Continuité du conducteur de protection (PE)",
+    "Protection contre les contacts directs (capots, caches, bornes protégées)",
+    "Présence et fonctionnement des dispositifs de protection",
+    "Adéquation des dispositifs de protection",
+    "Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés",
+    "Section des câbles de départs adaptée au courant nominal des disjoncteurs associés",
+    "Calibre des disjoncteurs / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)",
+    "Coordination entre disjoncteurs et contacteurs",
+    "Coordination entre disjoncteurs",
+    "Protection contre les contacts indirects",
+    "Sélectivité et coordination des protections (montée sélective des calibres)",
+    "Pouvoir de coupure et courant assigné adaptés à l'installation",
+    "Protection contre les retours de tension vers une source indisponible",
+    "Présence et fonctionnement des dispositifs de coupure / arrêt d'urgence",
+    "Fonctionnement du transfert automatique et du retour à la source normale",
+    "Temps de transfert compatible avec les équipements alimentés",
+    "Commande manuelle de secours fonctionnelle",
+    "Absence d'échauffement anormal par thermographie infrarouge",
+  ];
+
+  /// Registre spécifique des métadonnées pour Inverseur de Source
+  static final Map<String, DispositionMetadata> _inverseurRegistry = {
+    "Emplacement / Dégagement autour": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 513",
+      familleRisque: "Accès / exploitation / intervention",
+      criticite: "Majeure",
+    ),
+    "Protection IP/IK adaptée au local d'installation": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      familleRisque: "Protection mécanique / pénétration corps solides-liquides",
+      criticite: "Majeure",
+    ),
+    "Interverrouillage empêchant le couplage intempestif des deux sources": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et § 536",
+      familleRisque: "Couplage intempestif / retour de tension / perte de continuité",
+      criticite: "Critique",
+    ),
+    "Identification complète des circuits": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      familleRisque: "Erreur d'exploitation / maintenance",
+      criticite: "Majeure",
+    ),
+    "Respect code couleur des câbles": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      familleRisque: "Erreur d'exploitation / maintenance",
+      criticite: "Majeure",
+    ),
+    "Identification claire des deux sources et de la source prioritaire": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      familleRisque: "Erreur d'exploitation / maintenance",
+      criticite: "Majeure",
+    ),
+    "Signalisation de la position des sources et de l'état de l'inverseur": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      familleRisque: "Erreur d'exploitation / maintenance",
+      criticite: "Majeure",
+    ),
+    "Etat du coffret / Armoire": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – Annexe 41B",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Câblage": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – Partie 5-52",
+      familleRisque: "Dégradation des canalisations / échauffement / court-circuit",
+      criticite: "Majeure",
+    ),
+    "Répartiteur de circuit": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 526 et § 533",
+      familleRisque: "Échauffement / surcharge / incendie",
+      criticite: "Critique",
+    ),
+    "Dispositif de connexion": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 465",
+      familleRisque: "Sécurité des interventions / arrêt d'urgence",
+      criticite: "Majeure",
+    ),
+    "Serrage et état des connexions contrôlés": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 526",
+      familleRisque: "Échauffement / mauvais contact / incendie",
+      criticite: "Majeure",
+    ),
+    "Répartition des circuits": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 314",
+      familleRisque: "Continuité de service / surcharge / exploitation",
+      criticite: "Majeure",
+    ),
+    "Continuité du conducteur de protection (PE)": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 543 et § 6.4.3.2",
+      familleRisque: "Électrisation / défaut de continuité de protection",
+      criticite: "Critique",
+    ),
+    "Protection contre les contacts directs (capots, caches, bornes protégées)": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 411 et Annexe 41A",
+      familleRisque: "Électrisation / électrocution",
+      criticite: "Critique",
+    ),
+    "Présence et fonctionnement des dispositifs de protection": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 430 à § 436 et § 533",
+      familleRisque: "Surintensité / court-circuit / incendie",
+      criticite: "Critique",
+    ),
+    "Adéquation des dispositifs de protection": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 430 à § 436 et § 533",
+      familleRisque: "Surintensité / court-circuit / incendie",
+      criticite: "Critique",
+    ),
+    "Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 523, § 524 et § 433",
+      familleRisque: "Incendie / échauffement / surcharge des conducteurs",
+      criticite: "Critique",
+    ),
+    "Section des câbles de départs adaptée au courant nominal des disjoncteurs associés": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 523, § 524 et § 433",
+      familleRisque: "Incendie / échauffement / surcharge des conducteurs",
+      criticite: "Critique",
+    ),
+    "Calibre des disjoncteurs / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 523, § 524 et § 433",
+      familleRisque: "Incendie / échauffement / surcharge des conducteurs",
+      criticite: "Critique",
+    ),
+    "Coordination entre disjoncteurs et contacteurs": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 536",
+      familleRisque: "Défaut de coordination / perte de sélectivité",
+      criticite: "Majeure",
+    ),
+    "Coordination entre disjoncteurs": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 536",
+      familleRisque: "Défaut de coordination / perte de sélectivité",
+      criticite: "Majeure",
+    ),
+    "Protection contre les contacts indirects": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 411",
+      familleRisque: "Électrisation / électrocution",
+      criticite: "Critique",
+    ),
+    "Sélectivité et coordination des protections (montée sélective des calibres)": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 536",
+      familleRisque: "Défaut de coordination / perte de sélectivité",
+      criticite: "Majeure",
+    ),
+    "Pouvoir de coupure et courant assigné adaptés à l'installation": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 434",
+      familleRisque: "Court-circuit / destruction de l'appareillage / incendie",
+      criticite: "Critique",
+    ),
+    "Protection contre les retours de tension vers une source indisponible": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et § 536",
+      familleRisque: "Couplage intempestif / retour de tension / perte de continuité",
+      criticite: "Critique",
+    ),
+    "Présence et fonctionnement des dispositifs de coupure / arrêt d'urgence": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 462, § 465 et § 537",
+      familleRisque: "Sécurité des interventions / arrêt d'urgence",
+      criticite: "Critique",
+    ),
+    "Fonctionnement du transfert automatique et du retour à la source normale": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et § 536",
+      familleRisque: "Couplage intempestif / retour de tension / perte de continuité",
+      criticite: "Critique",
+    ),
+    "Temps de transfert compatible avec les équipements alimentés": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et § 536",
+      familleRisque: "Couplage intempestif / retour de tension / perte de continuité",
+      criticite: "Critique",
+    ),
+    "Commande manuelle de secours fonctionnelle": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 551 et § 536",
+      familleRisque: "Couplage intempestif / retour de tension / perte de continuité",
+      criticite: "Critique",
+    ),
+    "Absence d'échauffement anormal par thermographie infrarouge": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 6.6.4.3.2",
+      familleRisque: "Incendie / échauffement",
+      criticite: "Majeure",
+    ),
+  };
+
+  /// Table d'alias pour l'Inverseur de Source
+  static final Map<String, String> _inverseurTitleAliases = {
+    _normalizeKey("Protection IP/IK adaptée au local"):
+        "Protection IP/IK adaptée au local d'installation",
+    _normalizeKey("Compatibilité du degré IP/IK avec l'environnement d'installation"):
+        "Protection IP/IK adaptée au local d'installation",
+    _normalizeKey("Interverrouillage mécanique et électrique entre les deux sources"):
+        "Interverrouillage empêchant le couplage intempestif des deux sources",
+    _normalizeKey("Repérage des conducteurs / code couleur"):
+        "Respect code couleur des câbles",
+    _normalizeKey("Identification claire de la source prioritaire et de la source de secours"):
+        "Identification claire des deux sources et de la source prioritaire",
+    _normalizeKey("Signalisation claire de la position de l'inverseur (Normal / Secours)"):
+        "Signalisation de la position des sources et de l'état de l'inverseur",
+    _normalizeKey("Etat du coffret / Armoire"):
+        "Etat du coffret / Armoire",
+    _normalizeKey("Propreté et état général du coffret"):
+        "Etat du coffret / Armoire",
+    _normalizeKey("Serrage des connexions de puissance"):
+        "Serrage et état des connexions contrôlés",
+    _normalizeKey("Contrôle thermographique des connexions, et protections"):
+        "Absence d'échauffement anormal par thermographie infrarouge",
+    _normalizeKey("Thermographie infrarouge des connexions"):
+        "Absence d'échauffement anormal par thermographie infrarouge",
+  };
+
+  /// Assure l'exhaustivité, la migration et l'ordonnancement exact (1 à 31) pour l'Inverseur de Source
+  static void ensureCompleteInverseurChecklist(List<PointVerification> points) {
+    final existingMap = <String, PointVerification>{};
+    for (final pt in points) {
+      final normKey = _normalizeKey(pt.pointVerification);
+      String targetTitle = pt.pointVerification;
+
+      if (_inverseurTitleAliases.containsKey(normKey)) {
+        targetTitle = _inverseurTitleAliases[normKey]!;
+      } else {
+        for (final refTitle in allInverseurPoints) {
+          if (_normalizeKey(refTitle) == normKey) {
+            targetTitle = refTitle;
+            break;
+          }
+        }
+      }
+
+      pt.pointVerification = targetTitle;
+      final targetKey = _normalizeKey(targetTitle);
+
+      final confNorm = pt.conformite.toLowerCase().trim();
+      final isExistingNA = confNorm == 'na' || confNorm == 'non_applicable' || confNorm == 'sans_objet' || confNorm == 'n/a' || confNorm == 'sans objet';
+
+      if (!existingMap.containsKey(targetKey) ||
+          (!isExistingNA && (existingMap[targetKey]?.conformite == 'Sans objet' || existingMap[targetKey]?.conformite == 'non_applicable')) ||
+          ((pt.observation?.isNotEmpty == true || pt.observations?.isNotEmpty == true) &&
+              existingMap[targetKey]?.observation?.isEmpty == true)) {
+        existingMap[targetKey] = pt;
+      }
+    }
+
+    points.clear();
+    for (final refTitle in allInverseurPoints) {
+      final targetKey = _normalizeKey(refTitle);
+      final meta = getCoffretMetadata(refTitle, coffretType: 'INVERSEUR');
+      if (existingMap.containsKey(targetKey)) {
+        final pt = existingMap[targetKey]!;
+        pt.pointVerification = refTitle;
+        if (meta != null) {
+          pt.referenceNormative = meta.referenceNormative;
+        }
+        points.add(pt);
+      } else {
+        points.add(
+          PointVerification(
+            pointVerification: refTitle,
+            referenceNormative: meta?.referenceNormative,
+            conformite: 'Sans objet',
+          ),
+        );
+      }
+    }
   }
 
   /// Assure l'exhaustivité, la migration et l'ordonnancement exact (1 à 29) des points de vérification d'un coffret / armoire / TGBT
