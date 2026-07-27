@@ -18,6 +18,7 @@ import '../models/renseignements_generaux.dart';
 import 'package:inspec_app/models/trash_item.dart';
 import 'package:inspec_app/services/trash_service.dart';
 import 'dispositions_constructives_registry.dart';
+import 'installation_description_sync_service.dart';
 
 class HiveService {
   static const String _verificateurBox = 'verificateurs';
@@ -1191,18 +1192,10 @@ static Future<void> saveAuditInstallations(AuditInstallationsElectriques audit) 
   audit.updatedAt = DateTime.now();
   
   try {
-    await _syncCellulesToDescription(audit);
+    await InstallationDescriptionSyncService.syncAuditToDescription(audit);
   } catch (e) {
     if (kDebugMode) {
-      print('❌ Erreur de synchronisation des cellules: $e');
-    }
-  }
-
-  try {
-    await _syncTransformateursToDescription(audit);
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Erreur de synchronisation des transformateurs: $e');
+      print('❌ Erreur de synchronisation Audit ↔ Description: $e');
     }
   }
 
@@ -1219,8 +1212,7 @@ static Future<void> synchronizeAllExistingMissions() async {
     }
     for (final audit in audits) {
       try {
-        await _syncCellulesToDescription(audit);
-        await _syncTransformateursToDescription(audit);
+        await InstallationDescriptionSyncService.syncAuditToDescription(audit);
       } catch (e, st) {
         if (kDebugMode) {
           print('⚠️ Échec synchronisation pour la mission ${audit.missionId}: $e\n$st');
@@ -1238,233 +1230,11 @@ static Future<void> synchronizeAllExistingMissions() async {
 }
 
 static Future<void> _syncCellulesToDescription(AuditInstallationsElectriques audit) async {
-  final missionId = audit.missionId;
-  final desc = await getOrCreateDescriptionInstallations(missionId);
-
-  // 1. Extraire toutes les cellules des locaux MT ou HT/BT de l'audit
-  final List<Cellule> cellulesAudit = [];
-  bool auditModifie = false;
-
-  // Locaux MT directs
-  for (var local in audit.moyenneTensionLocaux) {
-    if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
-      for (var cellule in local.cellules) {
-        if (cellule.syncId == null || cellule.syncId!.isEmpty) {
-          cellule.syncId = 'cellule_${DateTime.now().microsecondsSinceEpoch}_${cellulesAudit.length}';
-          auditModifie = true;
-        }
-        cellulesAudit.add(cellule);
-      }
-    }
-  }
-
-  // Locaux des zones MT
-  for (var zone in audit.moyenneTensionZones) {
-    for (var local in zone.locaux) {
-      if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
-        for (var cellule in local.cellules) {
-          if (cellule.syncId == null || cellule.syncId!.isEmpty) {
-            cellule.syncId = 'cellule_${DateTime.now().microsecondsSinceEpoch}_${cellulesAudit.length}';
-            auditModifie = true;
-          }
-          cellulesAudit.add(cellule);
-        }
-      }
-    }
-  }
-
-  // Locaux des zones BT
-  for (var zone in audit.basseTensionZones) {
-    for (var local in zone.locaux) {
-      if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
-        for (var cellule in local.cellules) {
-          if (cellule.syncId == null || cellule.syncId!.isEmpty) {
-            cellule.syncId = 'cellule_${DateTime.now().microsecondsSinceEpoch}_${cellulesAudit.length}';
-            auditModifie = true;
-          }
-          cellulesAudit.add(cellule);
-        }
-      }
-    }
-  }
-
-  // 2. Mettre à jour / ajouter dans la description des installations
-  final List<InstallationItem> itemsMiseAJour = [];
-
-  // Conserver les items existants qui n'ont pas d'auditCelluleId (ex: créés manuellement)
-  for (var item in desc.alimentationMoyenneTension) {
-    final auditCelluleId = item.data['auditCelluleId'];
-    if (auditCelluleId == null || auditCelluleId.isEmpty) {
-      itemsMiseAJour.add(item);
-    }
-  }
-
-  // Ajouter / Mettre à jour les cellules de l'audit
-  for (var cellule in cellulesAudit) {
-    final observationsTxt = (cellule.observations ?? [])
-        .map((o) => o.observation ?? '')
-        .where((s) => s.isNotEmpty)
-        .join('\n');
-
-    // Chercher si un item existe déjà pour cette cellule
-    InstallationItem? itemExistant;
-    try {
-      itemExistant = desc.alimentationMoyenneTension.firstWhere(
-        (item) => item.data['auditCelluleId'] == cellule.syncId
-      );
-    } catch (_) {}
-
-    final itemData = {
-      'auditCelluleId': cellule.syncId!,
-      'Gamme De Cellule': cellule.gamme ?? '',
-      'Type De Cellule': cellule.type,
-      'Calibre Du Disjoncteur': (cellule.calibreDisjoncteur != null && cellule.calibreDisjoncteur!.isNotEmpty)
-          ? cellule.calibreDisjoncteur!
-          : (itemExistant?.data['Calibre Du Disjoncteur'] ?? ''),
-      'Section Du Cable': (cellule.sectionCables != null && cellule.sectionCables!.isNotEmpty)
-          ? cellule.sectionCables!
-          : (itemExistant?.data['Section Du Cable'] ?? ''),
-      'Nature Du Reseau': (cellule.natureReseau != null && cellule.natureReseau!.isNotEmpty)
-          ? cellule.natureReseau!
-          : (itemExistant?.data['Nature Du Reseau'] ?? ''),
-      if ((cellule.natureReseau == 'Aérien' || (cellule.natureReseau == null && itemExistant?.data['Nature Du Reseau'] == 'Aérien')) &&
-          (cellule.presenceIacm != null || itemExistant?.data['PRESENCE IACM'] != null))
-        'PRESENCE IACM': cellule.presenceIacm ?? itemExistant?.data['PRESENCE IACM'] ?? '',
-      'Observations': observationsTxt,
-    };
-
-    if (itemExistant != null) {
-      itemExistant.data = itemData;
-      itemExistant.photoPaths = List.from(cellule.photos);
-      itemsMiseAJour.add(itemExistant);
-    } else {
-      itemsMiseAJour.add(InstallationItem(
-        data: itemData,
-        photoPaths: List.from(cellule.photos),
-        createdAt: DateTime.now(),
-      ));
-    }
-  }
-
-  if (auditModifie) {
-    final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
-    await box.put(audit.key, audit);
-  }
-
-  desc.alimentationMoyenneTension = itemsMiseAJour;
-  await saveDescriptionInstallations(desc);
+  await InstallationDescriptionSyncService.syncAuditToDescription(audit);
 }
 
 static Future<void> _syncTransformateursToDescription(AuditInstallationsElectriques audit) async {
-  final missionId = audit.missionId;
-  final desc = await getOrCreateDescriptionInstallations(missionId);
-
-  // 1. Extraire tous les transformateurs des locaux MT ou HT/BT de l'audit
-  final List<TransformateurMTBT> transfosAudit = [];
-  bool auditModifie = false;
-
-  // Locaux MT directs
-  for (var local in audit.moyenneTensionLocaux) {
-    if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
-      for (var transfo in local.transformateurs) {
-        if (transfo.syncId == null || transfo.syncId!.isEmpty) {
-          transfo.syncId = 'transfo_${DateTime.now().microsecondsSinceEpoch}_${transfosAudit.length}';
-          auditModifie = true;
-        }
-        transfosAudit.add(transfo);
-      }
-    }
-  }
-
-  // Locaux des zones MT
-  for (var zone in audit.moyenneTensionZones) {
-    for (var local in zone.locaux) {
-      if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
-        for (var transfo in local.transformateurs) {
-          if (transfo.syncId == null || transfo.syncId!.isEmpty) {
-            transfo.syncId = 'transfo_${DateTime.now().microsecondsSinceEpoch}_${transfosAudit.length}';
-            auditModifie = true;
-          }
-          transfosAudit.add(transfo);
-        }
-      }
-    }
-  }
-
-  // Locaux des zones BT
-  for (var zone in audit.basseTensionZones) {
-    for (var local in zone.locaux) {
-      if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
-        for (var transfo in local.transformateurs) {
-          if (transfo.syncId == null || transfo.syncId!.isEmpty) {
-            transfo.syncId = 'transfo_${DateTime.now().microsecondsSinceEpoch}_${transfosAudit.length}';
-            auditModifie = true;
-          }
-          transfosAudit.add(transfo);
-        }
-      }
-    }
-  }
-
-  if (auditModifie) {
-    final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
-    await box.put(audit.key, audit);
-  }
-
-  // 2. Mettre à jour / ajouter dans la description des installations
-  final List<InstallationItem> itemsMiseAJour = [];
-
-  // Conserver les items existants qui n'ont pas d'auditTransformateurId (ex: créés manuellement)
-  for (var item in desc.alimentationBasseTension) {
-    final auditTransfoId = item.data['auditTransformateurId'];
-    if (auditTransfoId == null || auditTransfoId.isEmpty) {
-      itemsMiseAJour.add(item);
-    }
-  }
-
-  // Ajouter / Mettre à jour les transformateurs de l'audit
-  for (var transfo in transfosAudit) {
-    final observationsTxt = (transfo.observations ?? [])
-        .map((o) => o.observation ?? '')
-        .where((s) => s.isNotEmpty)
-        .join('\n');
-
-    // Chercher si un item existe déjà pour ce transformateur
-    InstallationItem? itemExistant;
-    try {
-      itemExistant = desc.alimentationBasseTension.firstWhere(
-        (item) => item.data['auditTransformateurId'] == transfo.syncId
-      );
-    } catch (_) {}
-
-    final itemData = {
-      'auditTransformateurId': transfo.syncId!,
-      'Puissance Transformateur': transfo.puissanceAssignee,
-      'Calibre Du Disjoncteur Sortie Transformateur': (transfo.calibreDisjoncteur != null && transfo.calibreDisjoncteur!.isNotEmpty)
-          ? transfo.calibreDisjoncteur!
-          : (itemExistant?.data['Calibre Du Disjoncteur Sortie Transformateur'] ?? ''),
-      'Section Du Cable': (transfo.sectionCables != null && transfo.sectionCables!.isNotEmpty)
-          ? transfo.sectionCables!
-          : (itemExistant?.data['Section Du Cable'] ?? ''),
-      'Tension': transfo.tensionPrimaireSecondaire,
-      'Observations': observationsTxt,
-    };
-
-    if (itemExistant != null) {
-      itemExistant.data = itemData;
-      itemExistant.photoPaths = List.from(transfo.photos);
-      itemsMiseAJour.add(itemExistant);
-    } else {
-      itemsMiseAJour.add(InstallationItem(
-        data: itemData,
-        photoPaths: List.from(transfo.photos),
-        createdAt: DateTime.now(),
-      ));
-    }
-  }
-
-  desc.alimentationBasseTension = itemsMiseAJour;
-  await saveDescriptionInstallations(desc);
+  await InstallationDescriptionSyncService.syncAuditToDescription(audit);
 }
 
 /// Trouver la localisation physique d'une cellule par son syncId

@@ -2633,7 +2633,7 @@ class PdfReportService {
     }
     if (local.conditionsExploitation.isNotEmpty) {
       if (local.dispositionsConstructives.isNotEmpty) {
-        widgets.add(pw.SizedBox(height: 12));
+        widgets.add(pw.NewPage());
       }
       widgets.addAll(_buildDispositionsTable(
         local.conditionsExploitation,
@@ -2642,27 +2642,17 @@ class PdfReportService {
       ));
     }
 
-    final hasEquipments = local.cellules.isNotEmpty || local.transformateurs.isNotEmpty;
-    final hasCoffrets = local.coffrets.isNotEmpty;
-
-    if ((local.dispositionsConstructives.isNotEmpty || local.conditionsExploitation.isNotEmpty) && (hasEquipments || hasCoffrets)) {
+    for (int i = 0; i < local.cellules.length; i++) {
       widgets.add(pw.NewPage());
+      widgets.addAll(_buildCelluleSection(local.cellules[i]));
     }
-
-    if (hasEquipments) {
-      for (final cellule in local.cellules) {
-        widgets.addAll(_buildCelluleSection(cellule));
-      }
-      for (final transfo in local.transformateurs) {
-        widgets.addAll(_buildTransformateurSection(transfo));
-      }
-      if (hasCoffrets) {
-        widgets.add(pw.NewPage());
-      }
+    for (int i = 0; i < local.transformateurs.length; i++) {
+      widgets.add(pw.NewPage());
+      widgets.addAll(_buildTransformateurSection(local.transformateurs[i]));
     }
 
     for (int i = 0; i < local.coffrets.length; i++) {
-      if (i > 0) widgets.add(pw.NewPage());
+      widgets.add(pw.NewPage());
       widgets.addAll(_buildCoffret(local.coffrets[i], trackedPages, local.nom));
     }
 
@@ -2769,7 +2759,7 @@ class PdfReportService {
     }
     if (local.conditionsExploitation != null && local.conditionsExploitation!.isNotEmpty) {
       if (local.dispositionsConstructives != null && local.dispositionsConstructives!.isNotEmpty) {
-        widgets.add(pw.SizedBox(height: 12));
+        widgets.add(pw.NewPage());
       }
       widgets.addAll(_buildDispositionsTable(
         local.conditionsExploitation!,
@@ -2778,15 +2768,8 @@ class PdfReportService {
       ));
     }
 
-    final hasAudit = (local.dispositionsConstructives != null && local.dispositionsConstructives!.isNotEmpty) ||
-        (local.conditionsExploitation != null && local.conditionsExploitation!.isNotEmpty);
-    final hasCoffrets = local.coffrets.isNotEmpty;
-    if (hasAudit && hasCoffrets) {
-      widgets.add(pw.NewPage());
-    }
-
     for (int i = 0; i < local.coffrets.length; i++) {
-      if (i > 0) widgets.add(pw.NewPage());
+      widgets.add(pw.NewPage());
       widgets.addAll(_buildCoffret(local.coffrets[i], trackedPages, local.nom));
     }
 
@@ -3082,8 +3065,8 @@ class PdfReportService {
         horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(4.0),
-        1: pw.FlexColumnWidth(3.5),
+        0: pw.FlexColumnWidth(4.4),
+        1: pw.FlexColumnWidth(3.1),
       },
       children: [
         tableDataRowInfo('Fonction de la cellule', safe(cellule.fonction), alt: false),
@@ -3319,8 +3302,8 @@ class PdfReportService {
         horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(4.0),
-        1: pw.FlexColumnWidth(3.5),
+        0: pw.FlexColumnWidth(4.4),
+        1: pw.FlexColumnWidth(3.1),
       },
       children: [
         tableDataRowInfo('Type de transformateur', safe(transfo.typeTransformateur), alt: false),
