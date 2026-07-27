@@ -1127,6 +1127,417 @@ class PdfReportService {
   }
 
   // ──────────────────────────────────────────────────────────────
+  //  ANALYSE STATISTIQUE
+  // ──────────────────────────────────────────────────────────────
+
+  static String _formatPercent(double val) {
+    return '${val.toStringAsFixed(1).replaceAll('.', ',')} %';
+  }
+
+  static pw.Widget _buildCalloutBox(String title, String body) {
+    final borderColor = PdfColor.fromHex('#D97706');
+    final bgColor = PdfColor.fromHex('#FFFBEB');
+    final titleColor = PdfColor.fromHex('#B45309');
+
+    return pw.Container(
+      width: double.infinity,
+      padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 10),
+      decoration: pw.BoxDecoration(
+        color: bgColor,
+        border: pw.Border.all(color: borderColor, width: 1.0),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            title,
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: 9.5,
+              fontWeight: pw.FontWeight.bold,
+              color: titleColor,
+            ),
+          ),
+          pw.SizedBox(height: 4),
+          pw.Text(
+            body,
+            style: pw.TextStyle(
+              font: _fontRegular,
+              fontSize: 8.5,
+              color: PdfColor.fromHex('#334155'),
+              lineSpacing: 1.5,
+            ),
+            textAlign: pw.TextAlign.justify,
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildBarChart(int critique, int majeure, int mineure) {
+    final maxVal = [critique, majeure, mineure, 1].reduce((a, b) => a > b ? a : b);
+    final yMax = ((maxVal * 1.25) / 10).ceil() * 10 > 0
+        ? ((maxVal * 1.25) / 10).ceil() * 10
+        : 10;
+    final yMid = (yMax / 2).round();
+
+    const double chartHeight = 100.0;
+    const double barWidth = 46.0;
+
+    double calcBarHeight(int val) {
+      if (yMax == 0) return 0;
+      final h = (val / yMax) * chartHeight;
+      return h < 2 && val > 0 ? 2 : h;
+    }
+
+    final hCritique = calcBarHeight(critique);
+    final hMajeure = calcBarHeight(majeure);
+    final hMineure = calcBarHeight(mineure);
+
+    final colorCritique = PdfColor.fromHex('#DC2626');
+    final colorMajeure = PdfColor.fromHex('#EA580C');
+    final colorMineure = PdfColor.fromHex('#16A34A');
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+      child: pw.Column(
+        children: [
+          pw.Text(
+            'R\u00e9partition des non-conformit\u00e9s par criticit\u00e9',
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: 10,
+              fontWeight: pw.FontWeight.bold,
+              color: headerColor,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+          pw.SizedBox(height: 10),
+
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            crossAxisAlignment: pw.CrossAxisAlignment.end,
+            children: [
+              // Axe Y - valeurs
+              pw.Container(
+                height: chartHeight + 20,
+                margin: const pw.EdgeInsets.only(right: 6),
+                child: pw.Column(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text('$yMax', style: pw.TextStyle(font: _fontRegular, fontSize: 8, color: PdfColors.grey700)),
+                    pw.Text('$yMid', style: pw.TextStyle(font: _fontRegular, fontSize: 8, color: PdfColors.grey700)),
+                    pw.Text('0', style: pw.TextStyle(font: _fontRegular, fontSize: 8, color: PdfColors.grey700)),
+                  ],
+                ),
+              ),
+
+              // Ligne d'axe Y
+              pw.Container(
+                height: chartHeight + 2,
+                width: 0.8,
+                color: PdfColors.grey400,
+              ),
+              pw.SizedBox(width: 20),
+
+              // Barres (Critique, Majeure, Mineure)
+              pw.Container(
+                height: chartHeight + 28,
+                child: pw.Row(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    // Critique
+                    pw.Column(
+                      mainAxisAlignment: pw.MainAxisAlignment.end,
+                      children: [
+                        pw.Text('$critique', style: pw.TextStyle(font: _fontBold, fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
+                        pw.SizedBox(height: 2),
+                        pw.Container(
+                          width: barWidth,
+                          height: hCritique,
+                          decoration: pw.BoxDecoration(
+                            color: colorCritique,
+                            borderRadius: const pw.BorderRadius.vertical(top: pw.Radius.circular(2)),
+                          ),
+                        ),
+                        pw.Container(height: 0.8, width: barWidth + 14, color: PdfColors.grey600),
+                        pw.SizedBox(height: 4),
+                        pw.Text('Critique', style: pw.TextStyle(font: _fontBold, fontSize: 8.5, color: headerColor)),
+                      ],
+                    ),
+                    pw.SizedBox(width: 28),
+
+                    // Majeure
+                    pw.Column(
+                      mainAxisAlignment: pw.MainAxisAlignment.end,
+                      children: [
+                        pw.Text('$majeure', style: pw.TextStyle(font: _fontBold, fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
+                        pw.SizedBox(height: 2),
+                        pw.Container(
+                          width: barWidth,
+                          height: hMajeure,
+                          decoration: pw.BoxDecoration(
+                            color: colorMajeure,
+                            borderRadius: const pw.BorderRadius.vertical(top: pw.Radius.circular(2)),
+                          ),
+                        ),
+                        pw.Container(height: 0.8, width: barWidth + 14, color: PdfColors.grey600),
+                        pw.SizedBox(height: 4),
+                        pw.Text('Majeure', style: pw.TextStyle(font: _fontBold, fontSize: 8.5, color: headerColor)),
+                      ],
+                    ),
+                    pw.SizedBox(width: 28),
+
+                    // Mineure
+                    pw.Column(
+                      mainAxisAlignment: pw.MainAxisAlignment.end,
+                      children: [
+                        pw.Text('$mineure', style: pw.TextStyle(font: _fontBold, fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
+                        pw.SizedBox(height: 2),
+                        pw.Container(
+                          width: barWidth,
+                          height: hMineure,
+                          decoration: pw.BoxDecoration(
+                            color: colorMineure,
+                            borderRadius: const pw.BorderRadius.vertical(top: pw.Radius.circular(2)),
+                          ),
+                        ),
+                        pw.Container(height: 0.8, width: barWidth + 14, color: PdfColors.grey600),
+                        pw.SizedBox(height: 4),
+                        pw.Text('Mineure', style: pw.TextStyle(font: _fontBold, fontSize: 8.5, color: headerColor)),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildCriticiteTable(
+    int critique,
+    int majeure,
+    int mineure,
+    int total,
+    double pctCritique,
+    double pctMajeure,
+    double pctMineure,
+  ) {
+    final tableBorderColor = PdfColor.fromHex('#CBD5E1');
+    final headerStyle = pw.TextStyle(
+      font: _fontBold,
+      fontSize: 8.5,
+      fontWeight: pw.FontWeight.bold,
+      color: PdfColors.white,
+    );
+    final labelStyle = pw.TextStyle(
+      font: _fontRegular,
+      fontSize: 8.5,
+      color: PdfColors.black,
+    );
+    final boldStyle = pw.TextStyle(
+      font: _fontBold,
+      fontSize: 8.5,
+      fontWeight: pw.FontWeight.bold,
+      color: PdfColors.black,
+    );
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: tableBorderColor, width: 0.6),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(3.5),
+        1: pw.FlexColumnWidth(3.0),
+        2: pw.FlexColumnWidth(3.5),
+      },
+      children: [
+        // En-tête
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: headerColor),
+          children: [
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+              child: pw.Text('CRITICIT\u00c9', style: headerStyle, textAlign: pw.TextAlign.left),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+              child: pw.Text('NOMBRE', style: headerStyle, textAlign: pw.TextAlign.center),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+              child: pw.Text('PART DU TOTAL', style: headerStyle, textAlign: pw.TextAlign.center),
+            ),
+          ],
+        ),
+        // Critique
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.white),
+          children: [
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              child: pw.Text('Critique', style: labelStyle),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              child: pw.Text('$critique', style: labelStyle, textAlign: pw.TextAlign.center),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              child: pw.Text(_formatPercent(pctCritique), style: labelStyle, textAlign: pw.TextAlign.center),
+            ),
+          ],
+        ),
+        // Majeure
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfColor.fromHex('#F8FAFC')),
+          children: [
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              child: pw.Text('Majeure', style: labelStyle),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              child: pw.Text('$majeure', style: labelStyle, textAlign: pw.TextAlign.center),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              child: pw.Text(_formatPercent(pctMajeure), style: labelStyle, textAlign: pw.TextAlign.center),
+            ),
+          ],
+        ),
+        // Mineure
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.white),
+          children: [
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              child: pw.Text('Mineure', style: labelStyle),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              child: pw.Text('$mineure', style: labelStyle, textAlign: pw.TextAlign.center),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+              child: pw.Text(_formatPercent(pctMineure), style: labelStyle, textAlign: pw.TextAlign.center),
+            ),
+          ],
+        ),
+        // TOTAL
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfColor.fromHex('#F1F5F9')),
+          children: [
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+              child: pw.Text('TOTAL', style: boldStyle),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+              child: pw.Text('$total', style: boldStyle, textAlign: pw.TextAlign.center),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 5, horizontal: 8),
+              child: pw.Text(total > 0 ? '100 %' : '0 %', style: boldStyle, textAlign: pw.TextAlign.center),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static List<pw.Widget> _buildAnalyseStatistique(
+    Mission mission,
+    AuditInstallationsElectriques? audit,
+    List<Foudre> foudres,
+    Map<String, int> trackedPages,
+    String numeroRapportDoc,
+  ) {
+    final widgets = <pw.Widget>[];
+
+    final allObs = <_ObsRecap>[
+      if (audit != null) ..._collectObservationsMT(audit),
+      if (audit != null) ..._collectObservationsBT(audit),
+      for (var f in foudres)
+        _ObsRecap(
+          localisation: 'Foudre',
+          coffret: 'Foudre',
+          observation: f.observation,
+          refNorm: '',
+          priorite: f.niveauPriorite.toString(),
+        ),
+    ];
+
+    int critique = 0;
+    int majeure = 0;
+    int mineure = 0;
+
+    for (final obs in allObs) {
+      final p = obs.priorite.trim();
+      if (p == '3' || p.toLowerCase().contains('critique')) {
+        critique++;
+      } else if (p == '2' || p.toLowerCase().contains('majeur')) {
+        majeure++;
+      } else {
+        mineure++;
+      }
+    }
+
+    final total = critique + majeure + mineure;
+    final pctCritique = total > 0 ? (critique / total) * 100 : 0.0;
+    final pctMajeure = total > 0 ? (majeure / total) * 100 : 0.0;
+    final pctMineure = total > 0 ? (mineure / total) * 100 : 0.0;
+
+    // Entête de section
+    widgets.add(PageTracker(
+      key: 'analyse_statistique',
+      registry: trackedPages,
+      child: _sectionBox('ANALYSE STATISTIQUE'),
+    ));
+    widgets.add(pw.SizedBox(height: 10));
+
+    // I. Sous-section : Non-conformités de l'année passée
+    widgets.add(_subTitle('Non-conformit\u00e9s de l\'ann\u00e9e pass\u00e9e'));
+    widgets.add(pw.SizedBox(height: 5));
+    widgets.add(_buildCalloutBox(
+      'Donn\u00e9e non disponible',
+      'Le pr\u00e9sent rapport porte sur la premi\u00e8re visite de v\u00e9rification p\u00e9riodique disposant d\'une check-list num\u00e9rique structur\u00e9e pour ce site (Rapport n\u00b0 $numeroRapportDoc). Aucun rapport ant\u00e9rieur exploitable au m\u00eame format n\'a \u00e9t\u00e9 fourni pour extraire le nombre de non-conformit\u00e9s de l\'ann\u00e9e pass\u00e9e. Si un rapport ant\u00e9rieur existe, merci de le transmettre : cette section et la comparaison ci-dessous seront compl\u00e9t\u00e9es automatiquement.',
+    ));
+    widgets.add(pw.SizedBox(height: 10));
+
+    // II. Sous-section : Comparaison avec celles de cette année
+    widgets.add(_subTitle('Comparaison avec celles de cette ann\u00e9e'));
+    widgets.add(pw.SizedBox(height: 5));
+    widgets.add(_bodyText(
+      'Non calculable en l\'absence de donn\u00e9es de r\u00e9f\u00e9rence de l\'ann\u00e9e pr\u00e9c\u00e9dente (voir ci-dessus). \u00c0 titre indicatif, les non-conformit\u00e9s de la pr\u00e9sente visite se r\u00e9partissent comme suit :',
+    ));
+    widgets.add(pw.SizedBox(height: 8));
+
+    // III & IV. Graphique & Tableau des criticités
+    widgets.add(_buildBarChart(critique, majeure, mineure));
+    widgets.add(pw.SizedBox(height: 8));
+    widgets.add(_buildCriticiteTable(critique, majeure, mineure, total, pctCritique, pctMajeure, pctMineure));
+    widgets.add(pw.SizedBox(height: 10));
+
+    // V. Sous-section : Taux de mise en conformité
+    widgets.add(_subTitle('Taux de mise en conformit\u00e9'));
+    widgets.add(pw.SizedBox(height: 5));
+    widgets.add(_buildCalloutBox(
+      'Donn\u00e9e partiellement disponible',
+      'Le taux de mise en conformit\u00e9 (\u00e9volution entre deux visites successives : non-conformit\u00e9s sold\u00e9es / non-conformit\u00e9s totales de l\'ann\u00e9e pr\u00e9c\u00e9dente) ne peut pas \u00eatre calcul\u00e9 sans le rapport de l\'ann\u00e9e pass\u00e9e. Il pourra \u00eatre renseign\u00e9 d\u00e8s r\u00e9ception de ce document de r\u00e9f\u00e9rence.',
+    ));
+    widgets.add(pw.SizedBox(height: 8));
+    widgets.add(_bodyText(
+      'Le taux de conformit\u00e9 global mesur\u00e9 lors de la pr\u00e9sente visite (part des points de v\u00e9rification jug\u00e9s conformes sur l\'ensemble des points contr\u00f4l\u00e9s) n\u00e9cessite l\'export du d\u00e9tail base de donn\u00e9es de la check-list pour \u00eatre calcul\u00e9 avec pr\u00e9cision (d\u00e9nominateur exact des points \u00ab Sans objet \u00bb exclus). Il est recommand\u00e9 de le g\u00e9n\u00e9rer directement depuis l\'outil de check-list utilis\u00e9 sur le terrain.',
+    ));
+
+    return widgets;
+  }
+
+  // ──────────────────────────────────────────────────────────────
   //  RENSEIGNEMENTS GENERAUX
   // ──────────────────────────────────────────────────────────────
   
@@ -6134,13 +6545,7 @@ class PdfReportService {
 
           // ─── ANALYSE STATISTIQUE (Démarre sur une nouvelle page juste après Résumé Exécutif) ───
           pw.NewPage(),
-          PageTracker(
-            key: 'analyse_statistique',
-            registry: trackedPages,
-            child: _sectionBox('ANALYSE STATISTIQUE'),
-          ),
-          pw.SizedBox(height: 14),
-          pw.Container(width: double.infinity, height: 80),
+          ..._buildAnalyseStatistique(mission, audit, foudres, trackedPages, numeroRapportDoc),
         ],
       ));
 
