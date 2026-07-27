@@ -320,26 +320,35 @@ class ElementControle {
   })  : photos = photos ?? [],
         estNA = estNA ?? false;
 
-  String? get referenceNormativeEffective {
-    if (referenceNormative != null && referenceNormative!.isNotEmpty) {
-      return referenceNormative;
+  String? referenceNormativeEffectiveFor({String? localType}) {
+    final meta = DispositionsConstructivesRegistry.getMetadata(elementControle, localType: localType);
+    if (meta?.referenceNormative != null && meta!.referenceNormative!.isNotEmpty) {
+      return meta.referenceNormative;
     }
-    return DispositionsConstructivesRegistry.getMetadata(elementControle)?.referenceNormative;
+    return referenceNormative;
   }
 
-  String? get familleRisqueEffective {
-    if (familleRisque != null && familleRisque!.isNotEmpty) {
-      return familleRisque;
+  String? get referenceNormativeEffective => referenceNormativeEffectiveFor();
+
+  String? familleRisqueEffectiveFor({String? localType}) {
+    final meta = DispositionsConstructivesRegistry.getMetadata(elementControle, localType: localType);
+    if (meta?.familleRisque != null && meta!.familleRisque!.isNotEmpty) {
+      return meta.familleRisque;
     }
-    return DispositionsConstructivesRegistry.getMetadata(elementControle)?.familleRisque;
+    return familleRisque;
   }
 
-  String? get criticiteEffective {
-    if (criticite != null && criticite!.isNotEmpty) {
-      return criticite;
+  String? get familleRisqueEffective => familleRisqueEffectiveFor();
+
+  String? criticiteEffectiveFor({String? localType}) {
+    final meta = DispositionsConstructivesRegistry.getMetadata(elementControle, localType: localType);
+    if (meta?.criticite != null && meta!.criticite!.isNotEmpty) {
+      return meta.criticite;
     }
-    return DispositionsConstructivesRegistry.getMetadata(elementControle)?.criticite;
+    return criticite;
   }
+
+  String? get criticiteEffective => criticiteEffectiveFor();
 }
 
 @HiveType(typeId: 9)

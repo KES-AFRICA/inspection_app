@@ -1198,14 +1198,23 @@ class DispositionsConstructivesRegistry {
     dispositionsConstructives.clear();
     for (final refTitle in allBTDispositionsPoints) {
       final targetKey = _normalizeKey(refTitle);
+      final meta = getMetadata(refTitle, localType: 'LOCAL_BT');
       if (existingDispMap.containsKey(targetKey)) {
         final el = existingDispMap[targetKey]!;
         el.elementControle = refTitle;
+        if (meta != null) {
+          el.referenceNormative = meta.referenceNormative;
+          el.familleRisque = meta.familleRisque;
+          el.criticite = meta.criticite;
+        }
         dispositionsConstructives.add(el);
       } else {
         dispositionsConstructives.add(
           ElementControle(
             elementControle: refTitle,
+            referenceNormative: meta?.referenceNormative,
+            familleRisque: meta?.familleRisque,
+            criticite: meta?.criticite,
             conforme: null,
             estNA: true,
             priorite: 3,
@@ -1244,17 +1253,327 @@ class DispositionsConstructivesRegistry {
     conditionsExploitation.clear();
     for (final refTitle in allBTConditionsPoints) {
       final targetKey = _normalizeKey(refTitle);
+      final meta = getMetadata(refTitle, localType: 'LOCAL_BT');
       if (existingCondMap.containsKey(targetKey)) {
         final el = existingCondMap[targetKey]!;
         el.elementControle = refTitle;
+        if (meta != null) {
+          el.referenceNormative = meta.referenceNormative;
+          el.familleRisque = meta.familleRisque;
+          el.criticite = meta.criticite;
+        }
         conditionsExploitation.add(el);
       } else {
         conditionsExploitation.add(
           ElementControle(
             elementControle: refTitle,
+            referenceNormative: meta?.referenceNormative,
+            familleRisque: meta?.familleRisque,
+            criticite: meta?.criticite,
             conforme: null,
             estNA: true,
             priorite: 3,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Liste officielle des 29 points de vérification pour les Coffrets / Armoires / TGBT
+  static const List<String> allCoffretPoints = [
+    "Emplacement / Dégagement autour",
+    "Compatibilité du degré IP/IK avec l'environnement d'installation",
+    "Présence d'écrans ou plastrons empêchant l'accès aux parties actives",
+    "Continuité de la mise à la terre des portes et parties métalliques",
+    "Réserve disponible et obturation des emplacements non utilisés",
+    "Présence d'une coupure générale clairement identifiée et accessible",
+    "Identification complète des circuits",
+    "Respect code couleur des câbles",
+    "Présence et lisibilité du schéma unifilaire et du repérage des départs",
+    "Etat du Coffret / Armoire / TGBT",
+    "Câblage",
+    "Répartiteur de circuit",
+    "Absence de surcharge des répartiteurs, borniers et jeux de barres",
+    "État, fixation et protection des jeux de barres",
+    "Contrôle thermographique des connexions, et protections",
+    "Répartition des circuits",
+    "Continuité du conducteur de protection (PE)",
+    "Contrôle du courant dans le conducteur neutre",
+    "Protection contre les contacts directs (capots, caches, bornes protégées)",
+    "Présence et fonctionnement des dispositifs de protection",
+    "Adéquation des dispositifs de protection",
+    "Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés",
+    "Coordination entre disjoncteurs et contacteurs",
+    "Coordination entre disjoncteurs",
+    "Protection contre les contacts indirects",
+    "Sélectivité et coordination des protections (montée sélective des calibres)",
+    "Présence et conformité du dispositif de protection contre les surtensions (parafoudre)",
+    "Coordination du parafoudre avec les protections amont et aval",
+    "Présence de double alimentation électrique",
+  ];
+
+  /// Registre spécifique des métadonnées pour Coffret / Armoire / TGBT
+  static final Map<String, DispositionMetadata> _coffretRegistry = {
+    "Emplacement / Dégagement autour": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 513",
+      familleRisque: "Accès / exploitation / intervention",
+      criticite: "Majeure",
+    ),
+    "Compatibilité du degré IP/IK avec l'environnement d'installation": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      familleRisque: "Contact électrique / influences externes / protection mécanique",
+      criticite: "Majeure",
+    ),
+    "Présence d'écrans ou plastrons empêchant l'accès aux parties actives": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 411 et Annexe 41A",
+      familleRisque: "Électrisation / électrocution",
+      criticite: "Critique",
+    ),
+    "Continuité de la mise à la terre des portes et parties métalliques": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-7-729:2024 – § 729",
+      familleRisque: "Sécurité d'exploitation",
+      criticite: "Majeure",
+    ),
+    "Réserve disponible et obturation des emplacements non utilisés": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 411 et Annexe 41A",
+      familleRisque: "Électrisation / contact avec parties actives",
+      criticite: "Critique",
+    ),
+    "Présence d'une coupure générale clairement identifiée et accessible": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 462, § 465 et § 537",
+      familleRisque: "Sécurité des interventions / arrêt d'urgence",
+      criticite: "Critique",
+    ),
+    "Identification complète des circuits": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      familleRisque: "Erreur d'exploitation / maintenance",
+      criticite: "Majeure",
+    ),
+    "Respect code couleur des câbles": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      familleRisque: "Erreur d'exploitation / maintenance",
+      criticite: "Majeure",
+    ),
+    "Présence et lisibilité du schéma unifilaire et du repérage des départs": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      familleRisque: "Erreur d'exploitation / maintenance",
+      criticite: "Majeure",
+    ),
+    "Etat du Coffret / Armoire / TGBT": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – Annexe 41B",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Câblage": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – Partie 5-52",
+      familleRisque: "Dégradation des canalisations / échauffement / court-circuit",
+      criticite: "Majeure",
+    ),
+    "Répartiteur de circuit": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 526 et § 533",
+      familleRisque: "Échauffement / surcharge / incendie",
+      criticite: "Critique",
+    ),
+    "Absence de surcharge des répartiteurs, borniers et jeux de barres": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 526 et § 533",
+      familleRisque: "Échauffement / surcharge / incendie",
+      criticite: "Critique",
+    ),
+    "État, fixation et protection des jeux de barres": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 526 et § 533",
+      familleRisque: "Échauffement / surcharge / incendie",
+      criticite: "Critique",
+    ),
+    "Contrôle thermographique des connexions, et protections": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 6.6.4.3.2",
+      familleRisque: "Incendie / échauffement",
+      criticite: "Majeure",
+    ),
+    "Répartition des circuits": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 314",
+      familleRisque: "Continuité de service / surcharge / exploitation",
+      criticite: "Majeure",
+    ),
+    "Continuité du conducteur de protection (PE)": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 543 et § 6.4.3.2",
+      familleRisque: "Électrisation / défaut de continuité de protection",
+      criticite: "Critique",
+    ),
+    "Contrôle du courant dans le conducteur neutre": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 524.2",
+      familleRisque: "Échauffement du neutre / harmoniques",
+      criticite: "Majeure",
+    ),
+    "Protection contre les contacts directs (capots, caches, bornes protégées)": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 411 et Annexe 41A",
+      familleRisque: "Électrisation / électrocution",
+      criticite: "Critique",
+    ),
+    "Présence et fonctionnement des dispositifs de protection": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 430 à § 436 et § 533",
+      familleRisque: "Surintensité / court-circuit / incendie",
+      criticite: "Critique",
+    ),
+    "Adéquation des dispositifs de protection": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 430 à § 436 et § 533",
+      familleRisque: "Surintensité / court-circuit / incendie",
+      criticite: "Critique",
+    ),
+    "Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 523, § 524 et § 433",
+      familleRisque: "Incendie / échauffement / surcharge des conducteurs",
+      criticite: "Critique",
+    ),
+    "Coordination entre disjoncteurs et contacteurs": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 536",
+      familleRisque: "Défaut de coordination / perte de sélectivité",
+      criticite: "Majeure",
+    ),
+    "Coordination entre disjoncteurs": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 536",
+      familleRisque: "Défaut de coordination / perte de sélectivité",
+      criticite: "Majeure",
+    ),
+    "Protection contre les contacts indirects": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 411",
+      familleRisque: "Électrisation / électrocution",
+      criticite: "Critique",
+    ),
+    "Sélectivité et coordination des protections (montée sélective des calibres)": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 536",
+      familleRisque: "Défaut de coordination / perte de sélectivité",
+      criticite: "Majeure",
+    ),
+    "Présence et conformité du dispositif de protection contre les surtensions (parafoudre)": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 443 et § 534",
+      familleRisque: "Surtension / foudre / détérioration des équipements",
+      criticite: "Majeure",
+    ),
+    "Coordination du parafoudre avec les protections amont et aval": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 443 et § 534",
+      familleRisque: "Surtension / foudre / détérioration des équipements",
+      criticite: "Majeure",
+    ),
+    "Présence de double alimentation électrique": const DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 465",
+      familleRisque: "Sécurité des interventions / arrêt d'urgence",
+      criticite: "Majeure",
+    ),
+  };
+
+  /// Table d'alias pour les points de vérification Coffrets / Armoires / TGBT
+  static final Map<String, String> _coffretTitleAliases = {
+    _normalizeKey("Dégagement autour de l'équipement"):
+        "Emplacement / Dégagement autour",
+    _normalizeKey("Dégagement autour du coffret / armoire"):
+        "Emplacement / Dégagement autour",
+    _normalizeKey("Protection IP/IK adaptée au local d'installation"):
+        "Compatibilité du degré IP/IK avec l'environnement d'installation",
+    _normalizeKey("Protection IP/IK adaptée au local"):
+        "Compatibilité du degré IP/IK avec l'environnement d'installation",
+    _normalizeKey("Présence d'écrans ou plastrons (IP2X/IP4X)"):
+        "Présence d'écrans ou plastrons empêchant l'accès aux parties actives",
+    _normalizeKey("Continuité de masse des portes et parties métalliques"):
+        "Continuité de la mise à la terre des portes et parties métalliques",
+    _normalizeKey("Continuité de masse"):
+        "Continuité de la mise à la terre des portes et parties métalliques",
+    _normalizeKey("Obturation des réservations et espaces libres"):
+        "Réserve disponible et obturation des emplacements non utilisés",
+    _normalizeKey("Présence d'un organe de coupure générale accessible"):
+        "Présence d'une coupure générale clairement identifiée et accessible",
+    _normalizeKey("Présence d'un organe de coupure générale"):
+        "Présence d'une coupure générale clairement identifiée et accessible",
+    _normalizeKey("Présence et fonctionnement des dispositifs de coupure / arrêt d'urgence"):
+        "Présence d'une coupure générale clairement identifiée et accessible",
+    _normalizeKey("Identification des départ/circuits"):
+        "Identification complète des circuits",
+    _normalizeKey("Identification des départs"):
+        "Identification complète des circuits",
+    _normalizeKey("Repérage des conducteurs / code couleur"):
+        "Respect code couleur des câbles",
+    _normalizeKey("Schéma électrique / unifilaire disponible sur site"):
+        "Présence et lisibilité du schéma unifilaire et du repérage des départs",
+    _normalizeKey("Schéma électrique disponible"):
+        "Présence et lisibilité du schéma unifilaire et du repérage des départs",
+    _normalizeKey("Etat du coffret / Armoire"):
+        "Etat du Coffret / Armoire / TGBT",
+    _normalizeKey("Etat du coffret"):
+        "Etat du Coffret / Armoire / TGBT",
+    _normalizeKey("Propreté et état général du coffret"):
+        "Etat du Coffret / Armoire / TGBT",
+    _normalizeKey("État des connexions et échauffement visuel"):
+        "Contrôle thermographique des connexions, et protections",
+    _normalizeKey("Section des câbles de départs adaptée au courant nominal des disjoncteurs associés"):
+        "Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés",
+    _normalizeKey("Présence d'un parafoudre et état du voyant de d'état"):
+        "Présence et conformité du dispositif de protection contre les surtensions (parafoudre)",
+    _normalizeKey("Présence d'un parafoudre"):
+        "Présence et conformité du dispositif de protection contre les surtensions (parafoudre)",
+  };
+
+  /// Obtenir la métadonnée normative pour un point de coffret
+  static DispositionMetadata? getCoffretMetadata(String pointVerification) {
+    if (_coffretRegistry.containsKey(pointVerification)) {
+      return _coffretRegistry[pointVerification];
+    }
+    final normKey = _normalizeKey(pointVerification);
+    for (final entry in _coffretRegistry.entries) {
+      if (_normalizeKey(entry.key) == normKey) {
+        return entry.value;
+      }
+    }
+    return null;
+  }
+
+  /// Assure l'exhaustivité, la migration et l'ordonnancement exact (1 à 29) des points de vérification d'un coffret / armoire / TGBT
+  static void ensureCompleteCoffretChecklist(List<PointVerification> points) {
+    final existingMap = <String, PointVerification>{};
+    for (final pt in points) {
+      final normKey = _normalizeKey(pt.pointVerification);
+      String targetTitle = pt.pointVerification;
+
+      if (_coffretTitleAliases.containsKey(normKey)) {
+        targetTitle = _coffretTitleAliases[normKey]!;
+      } else {
+        for (final refTitle in allCoffretPoints) {
+          if (_normalizeKey(refTitle) == normKey) {
+            targetTitle = refTitle;
+            break;
+          }
+        }
+      }
+
+      pt.pointVerification = targetTitle;
+      final targetKey = _normalizeKey(targetTitle);
+
+      final confNorm = pt.conformite.toLowerCase().trim();
+      final isExistingNA = confNorm == 'na' || confNorm == 'non_applicable' || confNorm == 'sans_objet' || confNorm == 'n/a' || confNorm == 'sans objet';
+
+      if (!existingMap.containsKey(targetKey) ||
+          (!isExistingNA && (existingMap[targetKey]?.conformite == 'Sans objet' || existingMap[targetKey]?.conformite == 'non_applicable')) ||
+          ((pt.observation?.isNotEmpty == true || pt.observations?.isNotEmpty == true) &&
+              existingMap[targetKey]?.observation?.isEmpty == true)) {
+        existingMap[targetKey] = pt;
+      }
+    }
+
+    points.clear();
+    for (final refTitle in allCoffretPoints) {
+      final targetKey = _normalizeKey(refTitle);
+      final meta = getCoffretMetadata(refTitle);
+      if (existingMap.containsKey(targetKey)) {
+        final pt = existingMap[targetKey]!;
+        pt.pointVerification = refTitle;
+        if (meta != null) {
+          pt.referenceNormative = meta.referenceNormative;
+        }
+        points.add(pt);
+      } else {
+        points.add(
+          PointVerification(
+            pointVerification: refTitle,
+            referenceNormative: meta?.referenceNormative,
+            conformite: 'Sans objet',
           ),
         );
       }
@@ -1442,6 +1761,20 @@ class DispositionsConstructivesRegistry {
     }
   }
 
+  /// Vérifie si le type de local correspond à un local de la famille Basse Tension (BT, TGBT, Onduleur, Électrique...)
+  static bool isBTLocal(String? localType) {
+    if (localType == null) return true;
+    return localType == 'LOCAL_BT' ||
+        localType == 'LOCAL_TGBT' ||
+        localType == 'LOCAL_ONDULEUR' ||
+        localType == 'LOCAL_ELECTRIQUE' ||
+        localType == 'LOCAL_SERVEUR' ||
+        localType == 'LOCAL_BATTERIES' ||
+        localType == 'LOCAL_CHAUTERIE' ||
+        localType == 'LOCAL_AUTRE' ||
+        (!['LOCAL_TRANSFORMATEUR', 'LOCAL_MTBT', 'LOCAL_GROUPE_ELECTROGENE'].contains(localType));
+  }
+
   /// Récupère la métadonnée par le libellé de l'élément de contrôle (avec recherche insensible aux majuscules/espaces)
   static DispositionMetadata? getMetadata(String elementControle, {String? localType}) {
     if (localType == 'LOCAL_GROUPE_ELECTROGENE') {
@@ -1456,7 +1789,7 @@ class DispositionsConstructivesRegistry {
       }
     }
 
-    if (localType == 'LOCAL_BT') {
+    if (isBTLocal(localType)) {
       if (_btRegistry.containsKey(elementControle)) {
         return _btRegistry[elementControle];
       }
@@ -1490,7 +1823,7 @@ class DispositionsConstructivesRegistry {
       }
     }
 
-    if (localType != 'LOCAL_BT') {
+    if (!isBTLocal(localType)) {
       if (_btRegistry.containsKey(elementControle)) {
         return _btRegistry[elementControle];
       }

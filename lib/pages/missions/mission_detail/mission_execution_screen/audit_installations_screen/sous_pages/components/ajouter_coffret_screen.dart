@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
+import 'package:inspec_app/services/dispositions_constructives_registry.dart';
 import 'package:inspec_app/services/normative_reference_service.dart';
 import 'package:inspec_app/utils/image_compress_helper.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
@@ -2456,6 +2457,9 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
               )))
           : null,
     )));
+    if (_selectedType != 'INVERSEUR') {
+      DispositionsConstructivesRegistry.ensureCompleteCoffretChecklist(_pointsVerification);
+    }
     // Observations multiples
     if (coffret.observationsLibres.isNotEmpty) {
       _observationsLibresCoffret.clear();

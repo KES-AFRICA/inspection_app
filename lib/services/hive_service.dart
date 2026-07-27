@@ -2139,29 +2139,7 @@ static List<String> getConditionsExploitationForLocal(String localType) {
 
 /// Obtenir les points de vérification pour un type de coffret
 static List<String> getPointsVerificationForCoffret(String coffretType) {
-  final pointsBase = [
-    'Emplacement / Dégagement autour',
-    'Protection IP/IK adaptée au local d\'installation',
-    'Etat du coffret / Armoire',
-    'Identification complète des circuits',
-    'Protection contre les contacts directs (capots, caches, bornes protégées)',
-    'Présence et fonctionnement des dispositifs de coupure / arrêt d\'urgence',
-    'Présence et fonctionnement des dispositifs de protection',
-    'Câblage',
-    'Répartiteur de circuit',
-    'Répartition des circuits',
-    'Adéquation des dispositifs de protection',
-    'Section des câbles d\'alimentation adaptée au courant nominal des disjoncteurs associés',
-    'Section des câbles de départs adaptée au courant nominal des disjoncteurs associés',
-    'Calibre des disjoncteurs / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)',
-    'Coordination entre disjoncteurs et contacteurs',
-    'Coordination entre disjoncteurs',
-    'Protection contre les contacts indirects',
-    'Sélectivité et coordination des protections (montée sélective des calibres)',
-    'Continuité du conducteur de protection (PE)',
-    'Respect code couleur des câbles',
-    'Présence de double alimentation électrique',
-  ];
+  final pointsBase = DispositionsConstructivesRegistry.allCoffretPoints;
 
   // Personnaliser selon le type de coffret
   switch (coffretType) {
@@ -2172,7 +2150,7 @@ static List<String> getPointsVerificationForCoffret(String coffretType) {
       ];
     
     default:
-      return pointsBase;
+      return List<String>.from(pointsBase);
   }
 }
 

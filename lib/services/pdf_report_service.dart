@@ -2945,9 +2945,9 @@ class PdfReportService {
       // Condition d'affichage : Renseignement uniquement si la conformité est "Non" (conforme == false)
       final isNonConforme = el.conforme == false && !el.estNA;
       final meta = DispositionsConstructivesRegistry.getMetadata(el.elementControle, localType: localType);
-      final refNorm = isNonConforme ? (el.referenceNormative ?? meta?.referenceNormative ?? '') : '';
-      final familleRisque = isNonConforme ? (el.familleRisque ?? meta?.familleRisque ?? '') : '';
-      final criticite = isNonConforme ? (el.criticite ?? meta?.criticite ?? '') : '';
+      final refNorm = isNonConforme ? (meta?.referenceNormative ?? el.referenceNormative ?? '') : '';
+      final familleRisque = isNonConforme ? (meta?.familleRisque ?? el.familleRisque ?? '') : '';
+      final criticite = isNonConforme ? (meta?.criticite ?? el.criticite ?? '') : '';
 
       rows.add(pw.TableRow(
         decoration: pw.BoxDecoration(color: idx.isEven ? PdfColors.white : tableRowAlt),
@@ -3834,6 +3834,7 @@ class PdfReportService {
     // POINTS DE VÉRIFICATION
     // ══════════════════════════════════════════════════════════════════════
     if (coffret.pointsVerification.isNotEmpty) {
+      DispositionsConstructivesRegistry.ensureCompleteCoffretChecklist(coffret.pointsVerification);
       widgets.add(pw.SizedBox(height: 3));
       widgets.add(_buildPointsVerificationTable(coffret.pointsVerification));
     }
@@ -3874,59 +3875,51 @@ class PdfReportService {
         left: pw.BorderSide(color: borderColor, width: 0.4),
         right: pw.BorderSide(color: borderColor, width: 0.4),
         bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        top: pw.BorderSide(color: borderColor, width: 0.4),
         verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
         horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(2.8),
-        1: pw.FlexColumnWidth(1.4),
+        0: pw.FlexColumnWidth(2.5),
+        1: pw.FlexColumnWidth(1.0),
         2: pw.FlexColumnWidth(1.6),
-        3: pw.FlexColumnWidth(1.4),
+        3: pw.FlexColumnWidth(1.6),
+        4: pw.FlexColumnWidth(1.0),
+        5: pw.FlexColumnWidth(1.7),
       },
       children: [
-        // En-tête en gras — style trame (avec centrage parfait horizontal et vertical)
         pw.TableRow(
           decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
           children: [
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              alignment: pw.Alignment.center,
-              child: pw.Text('Points de vérification',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
-                  textAlign: pw.TextAlign.center),
-            ),
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              alignment: pw.Alignment.center,
-              child: pw.Text('Conformité',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
-                  textAlign: pw.TextAlign.center),
-            ),
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              alignment: pw.Alignment.center,
-              child: pw.Text('Observation',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
-                  textAlign: pw.TextAlign.center),
-            ),
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              alignment: pw.Alignment.center,
-              child: pw.Text('Reference normative',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
-                  textAlign: pw.TextAlign.center),
-            ),
+            _thCell('POINTS DE VÉRIFICATION'),
+            _thCell('CONFORMITÉ'),
+            _thCell('RÉFÉRENCE NORMATIVE'),
+            _thCell('FAMILLE DE RISQUE'),
+            _thCell('CRITICITÉ'),
+            _thCell('OBSERVATIONS'),
           ],
         ),
         ...points.asMap().entries.map((e) {
           final pv = e.value;
           final conf = pv.conformite.toLowerCase().trim();
           final isConf = conf == 'oui';
-          final isNA = conf == 'na' || conf == 'non_applicable' || conf == 'sans_objet' || conf == 'n/a';
+          final isNA = conf == 'na' || conf == 'non_applicable' || conf == 'sans_objet' || conf == 'n/a' || conf == 'sans objet';
+          final isNonConf = !isConf && !isNA;
+
           final confColor = isNA
               ? PdfColor.fromInt(0xFFE0E0E0)
               : (isConf ? conformeColor : nonConformeColor);
           final confText = isNA ? 'Sans objet' : (isConf ? 'Oui' : 'Non');
+
+          final meta = DispositionsConstructivesRegistry.getCoffretMetadata(pv.pointVerification);
+          final refNorm = isNonConf ? (meta?.referenceNormative ?? pv.referenceNormative ?? '') : '';
+          final familleRisque = isNonConf ? (meta?.familleRisque ?? '') : '';
+          final criticite = isNonConf ? (meta?.criticite ?? '') : '';
+
+          final obsText = pv.observations != null && pv.observations!.isNotEmpty
+              ? pv.observations!.map((obs) => obs.observation ?? '').where((s) => s.isNotEmpty).join('\n')
+              : (pv.observation ?? '');
+
           return pw.TableRow(
             decoration: pw.BoxDecoration(color: e.key.isEven ? PdfColors.white : tableRowAlt),
             children: [
@@ -3944,18 +3937,30 @@ class PdfReportService {
               ),
               pw.Padding(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                child: pw.Text(
-                    pv.observations != null && pv.observations!.isNotEmpty
-                        ? pv.observations!.map((obs) => obs.observation ?? '').where((s) => s.isNotEmpty).join('\n')
-                        : pv.observation ?? '',
+                child: pw.Text(refNorm,
                     style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
               ),
               pw.Padding(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                child: pw.Text(
-                    pv.observations != null && pv.observations!.isNotEmpty
-                        ? pv.observations!.map((obs) => obs.referenceNormative ?? '').where((s) => s.isNotEmpty).join('\n')
-                        : pv.referenceNormative ?? '',
+                child: pw.Text(familleRisque,
+                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                alignment: pw.Alignment.center,
+                child: pw.Text(criticite,
+                    style: pw.TextStyle(
+                        font: _fontBold,
+                        fontSize: fsSmall,
+                        color: criticite == 'Critique'
+                            ? PdfColor.fromInt(0xFFD32F2F)
+                            : (criticite == 'Majeure'
+                                ? PdfColor.fromInt(0xFFE65100)
+                                : PdfColors.black))),
+              ),
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                child: pw.Text(obsText,
                     style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
               ),
             ],
