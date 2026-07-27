@@ -6,7 +6,9 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/services/file_storage_service.dart';
 import 'package:inspec_app/services/hive_service.dart';
 
-/// Écran de gestion du Logo Client au niveau d'une Mission
+enum AssetType { logo, qrCode }
+
+/// Écran de gestion du Logo et du QR Code Client au niveau d'une Mission
 class ClientLogoScreen extends StatefulWidget {
   final Mission mission;
 
@@ -21,29 +23,40 @@ class ClientLogoScreen extends StatefulWidget {
 
 class _ClientLogoScreenState extends State<ClientLogoScreen> {
   File? _logoFile;
+  File? _qrCodeFile;
   bool _isLoading = false;
   final ImagePicker _picker = ImagePicker();
 
   @override
   void initState() {
     super.initState();
-    _loadLogo();
+    _loadAssets();
   }
 
-  void _loadLogo() {
+  void _loadAssets() {
     if (widget.mission.logoClient != null &&
         widget.mission.logoClient!.isNotEmpty) {
       final file = File(widget.mission.logoClient!);
       if (file.existsSync()) {
-        setState(() {
-          _logoFile = file;
-        });
+        _logoFile = file;
       }
     }
+    if (widget.mission.qrCodeClient != null &&
+        widget.mission.qrCodeClient!.isNotEmpty) {
+      final file = File(widget.mission.qrCodeClient!);
+      if (file.existsSync()) {
+        _qrCodeFile = file;
+      }
+    }
+    setState(() {});
   }
 
-  /// Affichage de la BottomSheet de choix de la source d'image
-  void _showImageSourceDialog() {
+  /// BottomSheet de choix de la source d'image pour Logo ou QR Code
+  void _showImageSourceDialog(AssetType assetType) {
+    final title = assetType == AssetType.logo
+        ? 'Importer un logo client'
+        : 'Importer un QR Code';
+
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -63,9 +76,9 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Importer un logo client',
-              style: TextStyle(
+            Text(
+              title,
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: AppTheme.textDark,
@@ -86,7 +99,7 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
                     color: AppTheme.primaryBlue,
                     onTap: () {
                       Navigator.pop(context);
-                      _pickAndSaveLogo(ImageSource.camera);
+                      _pickAndSaveAsset(ImageSource.camera, assetType);
                     },
                   ),
                 ),
@@ -98,7 +111,7 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
                     color: Colors.indigo.shade600,
                     onTap: () {
                       Navigator.pop(context);
-                      _pickAndSaveLogo(ImageSource.gallery);
+                      _pickAndSaveAsset(ImageSource.gallery, assetType);
                     },
                   ),
                 ),
@@ -148,8 +161,8 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
     );
   }
 
-  /// Sélection et sauvegarde du logo
-  Future<void> _pickAndSaveLogo(ImageSource source) async {
+  /// Sélection et sauvegarde de l'asset (Logo ou QR Code)
+  Future<void> _pickAndSaveAsset(ImageSource source, AssetType assetType) async {
     try {
       final pickedFile = await _picker.pickImage(
         source: source,
@@ -163,35 +176,60 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
       setState(() => _isLoading = true);
 
       final sourceFile = File(pickedFile.path);
-      final savedFile = await FileStorageService.saveClientLogo(
-        widget.mission.id,
-        sourceFile,
-      );
 
-      widget.mission.logoClient = savedFile.path;
-      await widget.mission.save();
-      await HiveService.saveMission(widget.mission);
-
-      setState(() {
-        _logoFile = savedFile;
-        _isLoading = false;
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Logo client mis à jour avec succès !'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
+      if (assetType == AssetType.logo) {
+        final savedFile = await FileStorageService.saveClientLogo(
+          widget.mission.id,
+          sourceFile,
         );
+        widget.mission.logoClient = savedFile.path;
+        await widget.mission.save();
+        await HiveService.saveMission(widget.mission);
+
+        setState(() {
+          _logoFile = savedFile;
+          _isLoading = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Logo client mis à jour avec succès !'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        final savedFile = await FileStorageService.saveClientQrCode(
+          widget.mission.id,
+          sourceFile,
+        );
+        widget.mission.qrCodeClient = savedFile.path;
+        await widget.mission.save();
+        await HiveService.saveMission(widget.mission);
+
+        setState(() {
+          _qrCodeFile = savedFile;
+          _isLoading = false;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('QR Code de la mission mis à jour avec succès !'),
+              backgroundColor: Colors.green,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur d\'importation du logo: $e'),
+            content: Text('Erreur d\'importation: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -199,8 +237,13 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
     }
   }
 
-  /// Confirmation et suppression du logo
-  Future<void> _confirmDeleteLogo() async {
+  /// Suppression confirmée de l'asset
+  Future<void> _confirmDeleteAsset(AssetType assetType) async {
+    final title = assetType == AssetType.logo ? 'Supprimer le logo ?' : 'Supprimer le QR Code ?';
+    final message = assetType == AssetType.logo
+        ? 'Voulez-vous vraiment supprimer le logo client associé à la mission "${widget.mission.nomClient}" ?'
+        : 'Voulez-vous vraiment supprimer le QR Code associé à la mission "${widget.mission.nomClient}" ?';
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -219,16 +262,16 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
                   color: Colors.red.shade700, size: 26),
             ),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Text(
-                'Supprimer le logo ?',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                title,
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
             ),
           ],
         ),
         content: Text(
-          'Voulez-vous vraiment supprimer le logo client associé à la mission "${widget.mission.nomClient}" ?',
+          message,
           style: TextStyle(fontSize: 14, color: Colors.grey.shade700),
         ),
         actions: [
@@ -255,34 +298,54 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
     );
 
     if (confirmed == true) {
-      if (widget.mission.logoClient != null) {
-        await FileStorageService.deleteClientLogo(widget.mission.logoClient!);
-      }
+      if (assetType == AssetType.logo) {
+        if (widget.mission.logoClient != null) {
+          await FileStorageService.deleteClientLogo(widget.mission.logoClient!);
+        }
+        widget.mission.logoClient = null;
+        await widget.mission.save();
+        await HiveService.saveMission(widget.mission);
 
-      widget.mission.logoClient = null;
-      await widget.mission.save();
-      await HiveService.saveMission(widget.mission);
+        setState(() {
+          _logoFile = null;
+        });
 
-      setState(() {
-        _logoFile = null;
-      });
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Logo client supprimé'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      } else {
+        if (widget.mission.qrCodeClient != null) {
+          await FileStorageService.deleteClientQrCode(widget.mission.qrCodeClient!);
+        }
+        widget.mission.qrCodeClient = null;
+        await widget.mission.save();
+        await HiveService.saveMission(widget.mission);
 
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Logo client supprimé'),
-            backgroundColor: Colors.orange,
-            duration: Duration(seconds: 2),
-          ),
-        );
+        setState(() {
+          _qrCodeFile = null;
+        });
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('QR Code supprimé'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
       }
     }
   }
 
-  /// Ouverture du logo en Plein Écran avec Zoom
-  void _openFullScreenViewer() {
-    if (_logoFile == null) return;
-
+  /// Ouverture d'un fichier image en Plein Écran
+  void _openFullScreenViewer(File file, String title) {
     showDialog(
       context: context,
       builder: (context) => Dialog.fullscreen(
@@ -293,7 +356,7 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
               child: InteractiveViewer(
                 minScale: 0.5,
                 maxScale: 4.0,
-                child: Image.file(_logoFile!, fit: BoxFit.contain),
+                child: Image.file(file, fit: BoxFit.contain),
               ),
             ),
             Positioned(
@@ -309,7 +372,7 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
               left: 20,
               right: 20,
               child: Text(
-                'Logo Client - ${widget.mission.nomClient}',
+                '$title - ${widget.mission.nomClient}',
                 textAlign: TextAlign.center,
                 style: const TextStyle(
                   color: Colors.white70,
@@ -335,7 +398,7 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
         title: Column(
           children: [
             const Text(
-              'Logo du Client',
+              'Logo & QR Code du client',
               style: TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -366,11 +429,35 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
 
                   const SizedBox(height: 24),
 
-                  // 2. Zone d'affichage du logo ou État vide
+                  // 2. Section Logo Client
+                  _buildSectionHeader(
+                    title: '1. Logo du Client',
+                    subtitle: 'Image de marque positionnée sur la page de garde des rapports',
+                    icon: Icons.branding_watermark_rounded,
+                    iconColor: Colors.indigo.shade700,
+                  ),
+                  const SizedBox(height: 12),
                   if (_logoFile == null)
-                    _buildEmptyState()
+                    _buildEmptyCard(AssetType.logo)
                   else
-                    _buildLogoCard(),
+                    _buildAssetCard(_logoFile!, AssetType.logo),
+
+                  const SizedBox(height: 32),
+
+                  // 3. Section QR Code Client / Mission
+                  _buildSectionHeader(
+                    title: '2. QR Code du Client / de la Mission',
+                    subtitle: 'Code de traçabilité intégré en bas de la page de garde',
+                    icon: Icons.qr_code_2_rounded,
+                    iconColor: Colors.teal.shade700,
+                  ),
+                  const SizedBox(height: 12),
+                  if (_qrCodeFile == null)
+                    _buildEmptyCard(AssetType.qrCode)
+                  else
+                    _buildAssetCard(_qrCodeFile!, AssetType.qrCode),
+
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
@@ -401,7 +488,7 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
               borderRadius: BorderRadius.circular(12),
             ),
             child: const Icon(
-              Icons.branding_watermark_rounded,
+              Icons.perm_media_rounded,
               color: AppTheme.primaryBlue,
               size: 26,
             ),
@@ -412,7 +499,7 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Text(
-                  'Identité Visuelle Client',
+                  'Ressources Graphiques du Rapport',
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.bold,
@@ -421,7 +508,7 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
                 ),
                 const SizedBox(height: 3),
                 Text(
-                  'Le logo sera positionné automatiquement sur les rapports PDF.',
+                  'Le logo et le QR Code sont automatiquement intégrés sur tous vos rapports générés (PDF & Word).',
                   style: TextStyle(
                     fontSize: 12,
                     color: Colors.grey.shade600,
@@ -436,11 +523,62 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
     );
   }
 
-  /// État vide "Sans logo"
-  Widget _buildEmptyState() {
+  Widget _buildSectionHeader({
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color iconColor,
+  }) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: iconColor.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, color: iconColor, size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.textDark,
+                ),
+              ),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// Carte d'affichage d'état vide
+  Widget _buildEmptyCard(AssetType assetType) {
+    final label = assetType == AssetType.logo ? 'Ajouter un logo' : 'Ajouter un QR Code';
+    final desc = assetType == AssetType.logo
+        ? 'Aucun logo client importé pour le moment'
+        : 'Aucun QR Code importé pour le moment';
+    final icon = assetType == AssetType.logo
+        ? Icons.add_photo_alternate_rounded
+        : Icons.qr_code_scanner_rounded;
+
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 24),
+      padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 24),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -456,54 +594,43 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withValues(alpha: 0.08),
+              color: Colors.grey.shade100,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
-              Icons.add_photo_alternate_rounded,
-              size: 54,
-              color: AppTheme.primaryBlue,
+            child: Icon(
+              icon,
+              size: 40,
+              color: Colors.grey.shade400,
             ),
           ),
-          const SizedBox(height: 20),
-          const Text(
-            'Aucun logo client enregistré',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: AppTheme.textDark,
-            ),
-          ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 14),
           Text(
-            'Importez le logo de l\'entreprise "${widget.mission.nomClient}" pour personnaliser les rapports d\'inspection Électrique et Éclairage.',
-            textAlign: TextAlign.center,
+            desc,
             style: TextStyle(
               fontSize: 13,
+              fontWeight: FontWeight.w500,
               color: Colors.grey.shade600,
-              height: 1.4,
             ),
+            textAlign: TextAlign.center,
           ),
-          const SizedBox(height: 28),
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton.icon(
-              onPressed: _showImageSourceDialog,
-              icon: const Icon(Icons.add_a_photo_rounded, size: 20),
-              label: const Text(
-                'IMPORTER LE LOGO',
-                style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 0.5),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: () => _showImageSourceDialog(assetType),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
+              elevation: 2,
+            ),
+            icon: const Icon(Icons.file_upload_rounded, size: 20),
+            label: Text(
+              label,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
             ),
           ),
         ],
@@ -511,10 +638,11 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
     );
   }
 
-  /// Carte du logo enregistré
-  Widget _buildLogoCard() {
+  /// Carte d'affichage d'un asset configuré (Logo ou QR Code)
+  Widget _buildAssetCard(File file, AssetType assetType) {
+    final title = assetType == AssetType.logo ? 'Logo Client' : 'QR Code Mission';
+
     return Container(
-      width: double.infinity,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -529,76 +657,47 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
       ),
       child: Column(
         children: [
-          // En-tête de la carte
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.green.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.green.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle_rounded,
-                          size: 14, color: Colors.green.shade700),
-                      const SizedBox(width: 4),
-                      Text(
-                        'Logo Actif',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.green.shade800,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Spacer(),
-                Text(
-                  '1 image associée',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade500),
-                ),
-              ],
-            ),
-          ),
-
-          const Divider(height: 0),
-
-          // Zone d'aperçu de l'image cliquable
+          // Visualiseur d'image avec geste de clic pour le plein écran
           InkWell(
-            onTap: _openFullScreenViewer,
+            onTap: () => _openFullScreenViewer(file, title),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             child: Container(
+              height: 180,
               width: double.infinity,
-              height: 220,
-              padding: const EdgeInsets.all(20),
-              color: Colors.grey.shade50,
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade100,
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+              ),
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  Image.file(
-                    _logoFile!,
-                    fit: BoxFit.contain,
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      file,
+                      fit: BoxFit.contain,
+                      width: double.infinity,
+                      height: double.infinity,
+                    ),
                   ),
                   Positioned(
-                    bottom: 0,
-                    right: 0,
+                    bottom: 8,
+                    right: 8,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                       decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.6),
-                        borderRadius: BorderRadius.circular(8),
+                        color: Colors.black.withValues(alpha: 0.65),
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: const Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(Icons.zoom_in_rounded, color: Colors.white, size: 14),
                           SizedBox(width: 4),
                           Text(
                             'Plein écran',
-                            style: TextStyle(color: Colors.white, fontSize: 10),
+                            style: TextStyle(color: Colors.white, fontSize: 11),
                           ),
                         ],
                       ),
@@ -609,43 +708,39 @@ class _ClientLogoScreenState extends State<ClientLogoScreen> {
             ),
           ),
 
-          const Divider(height: 0),
-
-          // Actions : Remplacer et Supprimer
+          // Barre d'actions
           Padding(
-            padding: const EdgeInsets.all(14.0),
+            padding: const EdgeInsets.all(16),
             child: Row(
               children: [
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: _showImageSourceDialog,
-                    icon: const Icon(Icons.refresh_rounded, size: 18),
-                    label: const Text('REMPLACER'),
+                    onPressed: () => _showImageSourceDialog(assetType),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.primaryBlue,
+                      side: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
                       padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: const BorderSide(color: AppTheme.primaryBlue),
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
+                    icon: const Icon(Icons.refresh_rounded, size: 18),
+                    label: const Text('Remplacer', style: TextStyle(fontWeight: FontWeight.bold)),
                   ),
                 ),
                 const SizedBox(width: 12),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: _confirmDeleteLogo,
-                    icon: const Icon(Icons.delete_outline_rounded, size: 18),
-                    label: const Text('SUPPRIMER'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red.shade700,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: BorderSide(color: Colors.red.shade300),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
+                OutlinedButton.icon(
+                  onPressed: () => _confirmDeleteAsset(assetType),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red.shade700,
+                    side: BorderSide(color: Colors.red.shade300, width: 1.5),
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 18),
+                  label: const Text('Supprimer', style: TextStyle(fontWeight: FontWeight.bold)),
                 ),
               ],
             ),

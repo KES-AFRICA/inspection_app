@@ -59,13 +59,14 @@ class MissionAdapter extends TypeAdapter<Mission> {
       autresDocuments: (fields[38] as List?)?.cast<String>(),
       installation: fields[39] as String?,
       perimetreMission: (fields[40] as List?)?.cast<String>(),
+      qrCodeClient: fields[41] as String?,
     )..renseignementsGenerauxId = fields[34] as String?;
   }
 
   @override
   void write(BinaryWriter writer, Mission obj) {
     writer
-      ..writeByte(41)
+      ..writeByte(42)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -147,7 +148,9 @@ class MissionAdapter extends TypeAdapter<Mission> {
       ..writeByte(39)
       ..write(obj.installation)
       ..writeByte(40)
-      ..write(obj.perimetreMission);
+      ..write(obj.perimetreMission)
+      ..writeByte(41)
+      ..write(obj.qrCodeClient);
   }
 
   @override

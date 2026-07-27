@@ -411,6 +411,19 @@ class PdfReportService {
       }
     }
 
+    pw.MemoryImage? clientQrMemoryImg;
+    if (mission.qrCodeClient != null && mission.qrCodeClient!.isNotEmpty) {
+      final qrFile = File(mission.qrCodeClient!);
+      if (qrFile.existsSync()) {
+        try {
+          final qrBytes = qrFile.readAsBytesSync();
+          clientQrMemoryImg = pw.MemoryImage(qrBytes);
+        } catch (e) {
+          if (kDebugMode) print('Erreur chargement QR Code client PDF: $e');
+        }
+      }
+    }
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -555,25 +568,38 @@ class PdfReportService {
               ),
             ),
             pw.SizedBox(width: 10),
-            pw.Container(
-              width: 80, height: 80,
-              decoration: pw.BoxDecoration(
-                border: pw.Border.all(color: PdfColors.grey400, width: 1),
-                color: PdfColors.grey200,
-              ),
-              child: pw.Center(
-                child: pw.Column(
-                  mainAxisAlignment: pw.MainAxisAlignment.center,
-                  children: [
-                    pw.Text('QR CODE',
-                        style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.grey600)),
-                    pw.SizedBox(height: 3),
-                    pw.Text('(a coller ici)',
-                        style: pw.TextStyle(font: _fontRegular, fontSize: 7, color: PdfColors.grey500)),
-                  ],
+            if (clientQrMemoryImg != null)
+              pw.Container(
+                width: 80,
+                height: 80,
+                alignment: pw.Alignment.center,
+                child: pw.Image(
+                  clientQrMemoryImg,
+                  width: 80,
+                  height: 80,
+                  fit: pw.BoxFit.contain,
+                ),
+              )
+            else
+              pw.Container(
+                width: 80, height: 80,
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: PdfColors.grey400, width: 1),
+                  color: PdfColors.grey200,
+                ),
+                child: pw.Center(
+                  child: pw.Column(
+                    mainAxisAlignment: pw.MainAxisAlignment.center,
+                    children: [
+                      pw.Text('QR CODE',
+                          style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.grey600)),
+                      pw.SizedBox(height: 3),
+                      pw.Text('(a coller ici)',
+                          style: pw.TextStyle(font: _fontRegular, fontSize: 7, color: PdfColors.grey500)),
+                    ],
+                  ),
                 ),
               ),
-            ),
           ],
         ),
       ],

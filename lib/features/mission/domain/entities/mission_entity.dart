@@ -5,6 +5,7 @@ class MissionEntity {
   final String? activiteClient;
   final String? adresseClient;
   final String? logoClient;
+  final String? qrCodeClient;
   final List<String>? accompagnateurs;
   final List<Map<String, dynamic>>? verificateurs;
   final String? dgResponsable;
@@ -48,6 +49,7 @@ class MissionEntity {
     this.activiteClient,
     this.adresseClient,
     this.logoClient,
+    this.qrCodeClient,
     this.accompagnateurs,
     this.verificateurs,
     this.dgResponsable,

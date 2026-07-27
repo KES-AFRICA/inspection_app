@@ -563,25 +563,44 @@ class _MissionHubScreenState extends State<MissionHubScreen>
     );
   }
 
-  /// Carte 4 : Logo du Client (avec prévisualisation réelle s'il existe)
+  /// Carte 4 : Logo & QR Code du Client (avec prévisualisation réelle s'ils existent)
   Widget _buildClientLogoCard(BuildContext context, bool hasLogo) {
     final logoPath = widget.mission.logoClient;
     final logoFile = (hasLogo && logoPath != null) ? File(logoPath) : null;
+    final qrPath = widget.mission.qrCodeClient;
+    final qrFile = (qrPath != null && qrPath.isNotEmpty) ? File(qrPath) : null;
+
+    final hasQr = qrFile != null && qrFile.existsSync();
+    final hasLogoFile = logoFile != null && logoFile.existsSync();
+
+    String subtitleText = 'Gestion et personnalisation du logo et du QR Code pour tous les rapports.';
+    if (hasLogoFile && hasQr) {
+      subtitleText = 'Logo et QR Code configurés. Ils seront positionnés automatiquement sur tous les rapports (PDF & Word).';
+    } else if (hasLogoFile) {
+      subtitleText = 'Logo configuré, QR Code manquant. Le logo apparaîtra automatiquement sur la page de garde.';
+    } else if (hasQr) {
+      subtitleText = 'QR Code configuré, Logo manquant. Le QR Code apparaîtra automatiquement sur la page de garde.';
+    }
+
+    String badgeTxt = '4. Logo & QR Code';
+    if (hasLogoFile && hasQr) {
+      badgeTxt = '4. Configuré (Logo + QR)';
+    } else if (hasLogoFile || hasQr) {
+      badgeTxt = '4. Partiellement Configuré';
+    }
 
     return _PremiumModuleCard(
-      title: 'Logo du client',
-      subtitle: hasLogo
-          ? 'Identité visuelle configurée. Le logo sera positionné automatiquement sur tous les rapports PDF.'
-          : 'Gestion et personnalisation de l\'identité visuelle du client pour tous les rapports.',
-      badgeText: hasLogo ? '4. Logo Configuré' : '4. Identité Visuelle',
-      badgeColor: hasLogo ? const Color(0xFF4F46E5) : const Color(0xFF6366F1),
+      title: 'Logo & QR Code du client',
+      subtitle: subtitleText,
+      badgeText: badgeTxt,
+      badgeColor: (hasLogoFile || hasQr) ? const Color(0xFF4F46E5) : const Color(0xFF6366F1),
       badgeBgColor: const Color(0xFFEEF2FF),
       gradientColors: const [Color(0xFFF5F3FF), Colors.white],
-      icon: Icons.branding_watermark_rounded,
+      icon: Icons.perm_media_rounded,
       iconColor: const Color(0xFF4338CA),
       iconBgColor: const Color(0xFFE0E7FF),
       isLocked: false,
-      customPreviewWidget: (hasLogo && logoFile != null && logoFile.existsSync())
+      customPreviewWidget: (hasLogoFile && logoFile != null)
           ? Container(
               width: 46,
               height: 46,

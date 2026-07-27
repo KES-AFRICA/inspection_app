@@ -119,4 +119,49 @@ class FileStorageService {
       if (kDebugMode) print('Erreur suppression logo client: $e');
     }
   }
+
+  /// Sauvegarder le QR Code d'un client / de la mission
+  static Future<File> saveClientQrCode(String missionId, File sourceFile) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final qrDir = Directory('${appDir.path}/client_qrcodes');
+    if (!await qrDir.exists()) {
+      await qrDir.create(recursive: true);
+    }
+
+    // Nettoyer les anciens QR codes enregistrés pour cette mission
+    try {
+      if (await qrDir.exists()) {
+        final existingFiles = qrDir.listSync();
+        for (final f in existingFiles) {
+          if (f is File && f.path.contains('qrcode_$missionId')) {
+            await f.delete();
+          }
+        }
+      }
+    } catch (e) {
+      if (kDebugMode) print('Nettoyage ancien QR Code: $e');
+    }
+
+    final ext = sourceFile.path.contains('.')
+        ? sourceFile.path.split('.').last
+        : 'png';
+    final destinationFile = File(
+        '${qrDir.path}/qrcode_${missionId}_${DateTime.now().millisecondsSinceEpoch}.$ext');
+
+    await sourceFile.copy(destinationFile.path);
+    if (kDebugMode) print('✅ QR Code client sauvegardé: ${destinationFile.path}');
+    return destinationFile;
+  }
+
+  /// Supprimer le QR Code d'un client
+  static Future<void> deleteClientQrCode(String qrCodePath) async {
+    try {
+      final file = File(qrCodePath);
+      if (await file.exists()) {
+        await file.delete();
+      }
+    } catch (e) {
+      if (kDebugMode) print('Erreur suppression QR Code client: $e');
+    }
+  }
 }

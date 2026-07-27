@@ -128,6 +128,9 @@ class Mission extends HiveObject {
   @HiveField(40)
   List<String>? perimetreMission;
 
+  @HiveField(41)
+  String? qrCodeClient;
+
   Mission({
     required this.id,
     required this.nomClient,
@@ -169,6 +172,7 @@ class Mission extends HiveObject {
     List<String>? autresDocuments,
     this.installation,
     this.perimetreMission,
+    this.qrCodeClient,
   }) : autresDocuments = autresDocuments ?? [];
 
   factory Mission.fromJson(Map<String, dynamic> json) {
@@ -178,6 +182,7 @@ class Mission extends HiveObject {
       activiteClient: json['activite_client'],
       adresseClient: json['adresse_client'],
       logoClient: json['logo_client'],
+      qrCodeClient: json['qr_code_client'],
       accompagnateurs: json['accompagnateurs'] != null
           ? List<String>.from(json['accompagnateurs'])
           : null,
@@ -242,6 +247,7 @@ class Mission extends HiveObject {
       'activite_client': activiteClient,
       'adresse_client': adresseClient,
       'logo_client': logoClient,
+      'qr_code_client': qrCodeClient,
       'accompagnateurs': accompagnateurs,
       'verificateurs': verificateurs,
       'dg_responsable': dgResponsable,
