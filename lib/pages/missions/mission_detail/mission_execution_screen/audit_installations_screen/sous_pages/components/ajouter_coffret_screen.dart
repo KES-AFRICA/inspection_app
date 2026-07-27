@@ -2622,9 +2622,22 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     if (!widget.isEdition) {
       final points = HiveService.getPointsVerificationForCoffret(type);
       _pointsVerification = points.map((point) {
-        final reference = NormativeReferenceService.getReferenceForPoint(point);
-        return PointVerification(pointVerification: point, conformite: '', observation: null, referenceNormative: null, priorite: null);
+        final meta = DispositionsConstructivesRegistry.getCoffretMetadata(point, coffretType: type);
+        return PointVerification(
+          pointVerification: point,
+          conformite: 'Sans objet',
+          observation: null,
+          referenceNormative: meta?.referenceNormative,
+          priorite: null,
+        );
       }).toList();
+
+      if (type == 'INVERSEUR') {
+        DispositionsConstructivesRegistry.ensureCompleteInverseurChecklist(_pointsVerification);
+      } else {
+        DispositionsConstructivesRegistry.ensureCompleteCoffretChecklist(_pointsVerification);
+      }
+
       _hasObservation.clear();
       for (int i = 0; i < _pointsVerification.length; i++) _hasObservation[i] = false;
       _alimentations.clear(); _protectionTete = null;
