@@ -934,7 +934,7 @@ class PdfReportService {
       if (dureeJours < 1) dureeJours = 1;
     }
 
-    // 3. Préparation accompagnateurs / responsables
+    // 3. Accompagnateurs
     String accompagnateursStr = '';
     if (mission.accompagnateurs != null && mission.accompagnateurs!.isNotEmpty) {
       accompagnateursStr = mission.accompagnateurs!.join(', ');
@@ -970,92 +970,159 @@ class PdfReportService {
       verificateursList = ['Non spécifié'];
     }
 
-    final tableBorderColor = PdfColor.fromHex('#94A3B8');
+    // Bordures sombres (#475569 slate dark, épaisseur 0.8 pt) pour une visibilité parfaite
+    final gridColor = PdfColor.fromHex('#475569');
+    const double borderWidth = 0.8;
+    const double leftColWidth = 175.0;
+
     final labelStyle = pw.TextStyle(
       font: _fontBold,
-      fontSize: 9,
+      fontSize: 9.5,
       fontWeight: pw.FontWeight.bold,
       color: headerColor,
     );
     final valueStyle = pw.TextStyle(
-      font: _fontRegular,
-      fontSize: 9,
-      color: PdfColors.black,
+      font: _fontBold,
+      fontSize: 9.5,
+      fontWeight: pw.FontWeight.bold,
+      color: headerColor,
     );
 
-    final tableRows = <pw.TableRow>[];
-
-    // Partie A: Missions (Périmètre)
-    for (int i = 0; i < perimetres.length; i++) {
-      final isFirst = i == 0;
-      final isOdd = i.isOdd;
+    pw.Widget buildInfoRow(String label, pw.Widget contentWidget, {required bool isLast, required bool isOdd}) {
       final bg = isOdd ? PdfColor.fromHex('#F8FAFC') : PdfColors.white;
-
-      tableRows.add(
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: bg),
+      return pw.Container(
+        decoration: pw.BoxDecoration(
+          color: bg,
+          border: isLast
+              ? null
+              : pw.Border(
+                  bottom: pw.BorderSide(color: gridColor, width: borderWidth),
+                ),
+        ),
+        child: pw.Row(
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
           children: [
-            pw.Padding(
+            pw.Container(
+              width: leftColWidth,
               padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-              child: isFirst
-                  ? pw.Text('Missions', style: labelStyle)
-                  : pw.SizedBox.shrink(),
+              decoration: pw.BoxDecoration(
+                border: pw.Border(
+                  right: pw.BorderSide(color: gridColor, width: borderWidth),
+                ),
+              ),
+              child: pw.Text(label, style: labelStyle),
             ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-              child: pw.Text(perimetres[i], style: valueStyle),
+            pw.Expanded(
+              child: pw.Container(
+                padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                child: contentWidget,
+              ),
             ),
           ],
         ),
       );
     }
 
-    // Partie B: Informations générales
-    final infoRowsData = [
-      {'label': 'Nature', 'widget': pw.Text(mission.natureMission ?? 'Périodique réglementaire', style: valueStyle)},
-      {'label': 'Dates d\'intervention', 'widget': pw.Text(dateInterventionStr, style: valueStyle)},
-      {'label': 'Durée', 'widget': pw.Text('$dureeJours jour(s)', style: valueStyle)},
-      {'label': 'Accompagnateur / Responsable', 'widget': pw.Text(accompagnateursStr, style: valueStyle)},
-      {'label': 'Compte rendu de fin de visite fait à', 'widget': pw.Text(compteRenduStr, style: valueStyle)},
-      {
-        'label': 'Vérificateur(s)',
-        'widget': pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: verificateursList.map((v) => pw.Text(v, style: valueStyle)).toList(),
-        ),
-      },
-    ];
-
-    for (int i = 0; i < infoRowsData.length; i++) {
-      final idx = perimetres.length + i;
-      final isOdd = idx.isOdd;
-      final bg = isOdd ? PdfColor.fromHex('#F8FAFC') : PdfColors.white;
-      final rowData = infoRowsData[i];
-
-      tableRows.add(
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: bg),
-          children: [
-            pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-              child: pw.Text(rowData['label'] as String, style: labelStyle),
+    return pw.Container(
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: gridColor, width: borderWidth),
+      ),
+      child: pw.Column(
+        children: [
+          // ── PARTIE A: MISSIONS (PÉRIMÈTRE - CELLULE UNIQUE À GAUCHE / ROWSPAN FACTEL) ──
+          pw.Container(
+            decoration: pw.BoxDecoration(
+              border: pw.Border(
+                bottom: pw.BorderSide(color: gridColor, width: borderWidth),
+              ),
             ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-              child: rowData['widget'] as pw.Widget,
-            ),
-          ],
-        ),
-      );
-    }
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                pw.Container(
+                  width: leftColWidth,
+                  padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                  alignment: pw.Alignment.centerLeft,
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.white,
+                    border: pw.Border(
+                      right: pw.BorderSide(color: gridColor, width: borderWidth),
+                    ),
+                  ),
+                  child: pw.Text('Missions', style: labelStyle),
+                ),
+                pw.Expanded(
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: perimetres.asMap().entries.map((entry) {
+                      final idx = entry.key;
+                      final item = entry.value;
+                      final isLast = idx == perimetres.length - 1;
+                      final isOdd = idx.isOdd;
+                      final bg = isOdd ? PdfColor.fromHex('#F8FAFC') : PdfColors.white;
 
-    return pw.Table(
-      border: pw.TableBorder.all(color: tableBorderColor, width: 0.6),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(2.2),
-        1: pw.FlexColumnWidth(4.8),
-      },
-      children: tableRows,
+                      return pw.Container(
+                        width: double.infinity,
+                        padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                        decoration: pw.BoxDecoration(
+                          color: bg,
+                          border: isLast
+                              ? null
+                              : pw.Border(
+                                  bottom: pw.BorderSide(color: gridColor, width: borderWidth),
+                                ),
+                        ),
+                        child: pw.Text(item, style: valueStyle),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── PARTIE B: INFORMATIONS GÉNÉRALES ──
+          buildInfoRow(
+            'Nature',
+            pw.Text(mission.natureMission ?? 'Périodique réglementaire', style: valueStyle),
+            isLast: false,
+            isOdd: false,
+          ),
+          buildInfoRow(
+            'Dates d\'intervention',
+            pw.Text(dateInterventionStr, style: valueStyle),
+            isLast: false,
+            isOdd: true,
+          ),
+          buildInfoRow(
+            'Durée',
+            pw.Text('$dureeJours jour(s)', style: valueStyle),
+            isLast: false,
+            isOdd: false,
+          ),
+          buildInfoRow(
+            'Accompagnateur / Responsable',
+            pw.Text(accompagnateursStr, style: valueStyle),
+            isLast: false,
+            isOdd: true,
+          ),
+          buildInfoRow(
+            'Compte rendu de fin de visite fait à',
+            pw.Text(compteRenduStr, style: valueStyle),
+            isLast: false,
+            isOdd: false,
+          ),
+          buildInfoRow(
+            'Vérificateur(s)',
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: verificateursList.map((v) => pw.Text(v, style: valueStyle)).toList(),
+            ),
+            isLast: true,
+            isOdd: true,
+          ),
+        ],
+      ),
     );
   }
 
