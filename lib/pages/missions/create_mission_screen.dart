@@ -777,13 +777,17 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                Icons.add_circle_outline,
+                                widget.missionToEdit != null
+                                    ? Icons.save_rounded
+                                    : Icons.add_circle_outline,
                                 size: isSmallScreen ? 20 : 22,
                                 color: Colors.white,
                               ),
                               SizedBox(width: isSmallScreen ? 8 : 10),
                               Text(
-                                'CRÉER LA MISSION',
+                                widget.missionToEdit != null
+                                    ? 'ENREGISTRER'
+                                    : 'CRÉER LA MISSION',
                                 style: TextStyle(
                                   fontSize: isSmallScreen ? 15 : 16,
                                   fontWeight: FontWeight.bold,

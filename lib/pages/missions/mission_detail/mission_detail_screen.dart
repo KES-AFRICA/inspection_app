@@ -574,7 +574,7 @@ class _MissionDetailScreenState extends State<MissionDetailScreen>
                       Text(
                         labelText,
                         style: TextStyle(
-                          fontSize: 14,
+                          fontSize: 12,
                           fontWeight: FontWeight.bold,
                           color: btnColor,
                           letterSpacing: 0.3,
@@ -689,6 +689,16 @@ class _MissionDetailScreenState extends State<MissionDetailScreen>
                   label: 'Nature de la mission',
                   value: _currentMission.natureMission ?? 'Non spécifiée',
                 ),
+                if (_currentMission.perimetreMission != null &&
+                    _currentMission.perimetreMission!.isNotEmpty) ...[
+                  const Divider(height: 20),
+                  _buildInfoRow(
+                    icon: Icons.domain_verification_rounded,
+                    label: 'Périmètre de vérification',
+                    value: _currentMission.perimetreMission!.join(', '),
+                    multiline: true,
+                  ),
+                ],
               ],
             ),
           ),
