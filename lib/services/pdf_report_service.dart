@@ -1502,11 +1502,11 @@ class PdfReportService {
               style: pw.TextStyle(font: _fontBold, fontSize: fsBody)),
           pw.SizedBox(height: 5),
           pw.Row(children: [
-            _legendePriorite('1', priorite1Color, 'Niveau 1 : À surveiller'),
+            _legendePriorite('1', PdfColors.black, 'Niveau 1 : À surveiller'),
             pw.SizedBox(width: 16),
-            _legendePriorite('2', priorite2Color, 'Niveau 2 : Mise en conformité à planifier'),
+            _legendePriorite('2', PdfColor.fromInt(0xFFE65100), 'Niveau 2 : Mise en conformité à planifier'),
             pw.SizedBox(width: 16),
-            _legendePriorite('3', priorite3Color, 'Niveau 3 : Critique, Action immédiate'),
+            _legendePriorite('3', PdfColor.fromInt(0xFFD32F2F), 'Niveau 3 : Critique, Action immédiate'),
           ]),
         ],
       ),
@@ -1538,18 +1538,11 @@ class PdfReportService {
     return widgets;
   }
 
-  /// Légende priorité (cercle coloré + texte)
+  /// Légende priorité (chiffre coloré + texte)
   static pw.Widget _legendePriorite(String num, PdfColor color, String label) {
     return pw.Row(children: [
-      pw.Container(
-        width: 14, height: 14,
-        decoration: pw.BoxDecoration(color: color,
-            border: pw.Border.all(color: PdfColors.grey400, width: 0.4),
-            shape: pw.BoxShape.circle),
-        alignment: pw.Alignment.center,
-        child: pw.Text(num,
-            style: pw.TextStyle(font: _fontBold, fontSize: 6, color: PdfColors.black)),
-      ),
+      pw.Text(num,
+          style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: color)),
       pw.SizedBox(width: 4),
       pw.Text(label, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
     ]);
@@ -1631,10 +1624,14 @@ class PdfReportService {
         final o = group.items[i];
         altIdx++;
 
-        PdfColor badgeColor = PdfColors.white;
-        if (o.priorite == '1') badgeColor = priorite1Color;
-        if (o.priorite == '2') badgeColor = priorite2Color;
-        if (o.priorite == '3') badgeColor = priorite3Color;
+        PdfColor textColor = PdfColors.black;
+        if (o.priorite == '3') {
+          textColor = PdfColor.fromInt(0xFFD32F2F);
+        } else if (o.priorite == '2') {
+          textColor = PdfColor.fromInt(0xFFE65100);
+        } else {
+          textColor = PdfColors.black;
+        }
 
         final rowBg = altIdx.isOdd ? tableRowAlt : PdfColors.white;
 
@@ -1655,13 +1652,11 @@ class PdfReportService {
             ),
             // PRIORITÉ
             pw.Container(
-              color: o.priorite.isNotEmpty ? badgeColor : null,
               padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
               alignment: pw.Alignment.center,
               child: pw.Text(o.priorite,
                   style: pw.TextStyle(
-                      font: _fontBold, fontSize: fsSmall,
-                      color: o.priorite == '3' ? PdfColors.red900 : PdfColors.black)),
+                      font: _fontBold, fontSize: fsSmall, color: textColor)),
             ),
           ],
         ));
@@ -1842,10 +1837,14 @@ class PdfReportService {
           final o = eq.items[i];
           altIdx++;
 
-          PdfColor badgeColor = PdfColors.white;
-          if (o.priorite == '1') badgeColor = priorite1Color;
-          if (o.priorite == '2') badgeColor = priorite2Color;
-          if (o.priorite == '3') badgeColor = priorite3Color;
+          PdfColor textColor = PdfColors.black;
+          if (o.priorite == '3') {
+            textColor = PdfColor.fromInt(0xFFD32F2F);
+          } else if (o.priorite == '2') {
+            textColor = PdfColor.fromInt(0xFFE65100);
+          } else {
+            textColor = PdfColors.black;
+          }
 
           final rowBg = altIdx.isOdd ? tableRowAlt : PdfColors.white;
 
@@ -1865,12 +1864,10 @@ class PdfReportService {
               ),
               // PRIORITÉ
               pw.Container(
-                color: o.priorite.isNotEmpty ? badgeColor : null,
                 padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
                 alignment: pw.Alignment.center,
                 child: pw.Text(o.priorite, style: pw.TextStyle(
-                    font: _fontBold, fontSize: fsSmall,
-                    color: o.priorite == '3' ? PdfColors.red900 : PdfColors.black)),
+                    font: _fontBold, fontSize: fsSmall, color: textColor)),
               ),
             ],
           ));
