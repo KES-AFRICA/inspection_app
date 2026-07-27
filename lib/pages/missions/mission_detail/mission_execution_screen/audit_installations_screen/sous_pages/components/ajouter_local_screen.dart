@@ -4394,6 +4394,11 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
         dispositionsConstructives: _dispositionsConstructives,
         conditionsExploitation: _conditionsExploitation,
       );
+    } else if (local.type == 'LOCAL_BT' || local.type == 'LOCAL_TGBT' || local.type == 'LOCAL_ONDULEUR' || local.type == 'LOCAL_ELECTRIQUE') {
+      DispositionsConstructivesRegistry.ensureCompleteBTLocalChecklists(
+        dispositionsConstructives: _dispositionsConstructives,
+        conditionsExploitation: _conditionsExploitation,
+      );
     } else if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
       DispositionsConstructivesRegistry.ensureCompleteLocalChecklists(
         dispositionsConstructives: _dispositionsConstructives,

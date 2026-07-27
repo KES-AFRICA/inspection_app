@@ -2742,8 +2742,15 @@ class PdfReportService {
     }
 
     final isGE = local.type == 'LOCAL_GROUPE_ELECTROGENE';
+    final isBT = !isGE;
+
     if (isGE && local.dispositionsConstructives != null && local.conditionsExploitation != null) {
       DispositionsConstructivesRegistry.ensureCompleteGELocalChecklists(
+        dispositionsConstructives: local.dispositionsConstructives!,
+        conditionsExploitation: local.conditionsExploitation!,
+      );
+    } else if (isBT && local.dispositionsConstructives != null && local.conditionsExploitation != null) {
+      DispositionsConstructivesRegistry.ensureCompleteBTLocalChecklists(
         dispositionsConstructives: local.dispositionsConstructives!,
         conditionsExploitation: local.conditionsExploitation!,
       );
@@ -2751,10 +2758,10 @@ class PdfReportService {
 
     final dispTitle = isGE
         ? 'DISPOSITIONS CONSTRUCTIVES DU LOCAL TECHNIQUE GROUPE ÉLECTROGENE'
-        : 'DISPOSITIONS CONSTRUCTIVES DU LOCAL';
+        : 'DISPOSITIONS CONSTRUCTIVES DU LOCAL TECHNIQUE BASSE TENSION';
     final condTitle = isGE
         ? 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ LOCAL GROUPE ÉLECTROGENE'
-        : 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ';
+        : 'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ LOCAL BASSE TENSION';
 
     if (local.dispositionsConstructives != null && local.dispositionsConstructives!.isNotEmpty) {
       widgets.addAll(_buildDispositionsTable(

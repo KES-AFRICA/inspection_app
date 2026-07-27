@@ -2117,30 +2117,13 @@ static List<String> getDispositionsConstructivesForLocal(String localType) {
     
     case 'LOCAL_GROUPE_ELECTROGENE':
       return List<String>.from(DispositionsConstructivesRegistry.allGEDispositionsPoints);
-    
+
+    case 'LOCAL_BT':
     case 'LOCAL_TGBT':
     case 'LOCAL_ONDULEUR':
     case 'LOCAL_ELECTRIQUE':
     default:
-      return [
-        'Le local est exclusivement réservé à l\'usage électrique',
-        'Signalisation visible "Local électrique – Accès réservé au personnel habilité"',
-        'Dimensions',
-        'Parois, plancher et plafond en matériaux non combustibles',
-        'Présence d\'une porte pleine, ouvrant vers l\'extérieur, munie d\'un dispositif anti-panique',
-        'Verrouillage empêchant tout accès non autorisé',
-        'Absence de communication directe avec les locaux à risque',
-        'Revêtement de sol isolant ou antidérapant',
-        'Éclairage normal',
-        'Éclairage de secours conforme',
-        'Ventilation / Climatisation',
-        'Présence de canalisations étrangères',
-        'Présence d\'un revêtement diélectrique ou isolant au sol',
-        'Présence de stockage d\'objets non électriques',
-        'Mise à la terre de toutes les masses métalliques',
-        'Présence de la terre du neutre',
-        'Présence de la terre des masses',
-      ];
+      return List<String>.from(DispositionsConstructivesRegistry.allBTDispositionsPoints);
   }
 }
 
@@ -2151,19 +2134,7 @@ static List<String> getConditionsExploitationForLocal(String localType) {
   } else if (localType == 'LOCAL_GROUPE_ELECTROGENE') {
     return List<String>.from(DispositionsConstructivesRegistry.allGEConditionsPoints);
   }
-  return [
-    'Accès réservé au personnel habilité (habilitation électrique à jour)',
-    'Présence d\'un plan d\'intervention et de consignation affiché',
-    'Matériel de consignation (cadenas, étiquettes, détecteur de tension) disponible',
-    'Présence d\'un dispositif de mise hors tension générale du local',
-    'Présence et accessibilité des EPI électriques (gants, visière, tapis)',
-    'Zone dégagée et propre, sans obstruction des voies d\'accès',
-    'Extincteur CO₂ disponible et vérifié (date de validité à jour)',
-    if (localType == 'LOCAL_ONDULEUR' || localType == 'LOCAL_ELECTRIQUE')
-      'Présence de stockage de matériaux inflammables'
-    else
-      'Absence de stockage de matériaux inflammables',
-  ];
+  return List<String>.from(DispositionsConstructivesRegistry.allBTConditionsPoints);
 }
 
 /// Obtenir les points de vérification pour un type de coffret

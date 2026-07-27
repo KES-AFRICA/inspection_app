@@ -808,6 +808,263 @@ class DispositionsConstructivesRegistry {
         "Matériel de consignation (cadenas, étiquettes, détecteur de tension) disponible",
   };
 
+  /// Liste officielle des 23 points de vérification des Dispositions Constructives du Local Basse Tension (BT)
+  static const List<String> allBTDispositionsPoints = [
+    "Le local est exclusivement réservé à l'usage électrique",
+    'Signalisation visible "Local électrique – Accès réservé au personnel habilité"',
+    "Dimensions",
+    "Parois, plancher et plafond en matériaux non combustibles",
+    "Présence d'une porte pleine, ouvrant vers l'extérieur, munie d'un dispositif anti-panique",
+    "Verrouillage empêchant tout accès non autorisé",
+    "Absence de communication directe avec les locaux à risque",
+    "Absence de stockage d'objets non électriques",
+    "Accessibilité du local et dégagement permanent devant les tableaux",
+    "Obturation des traversées et maintien du degré coupe-feu des parois",
+    "Présence et lisibilité des consignes de sécurité",
+    "Identification du schéma de liaison à la terre de l'installation",
+    "Présence de canalisations étrangères",
+    "Absence d'infiltration d'eau, humidité ou condensation",
+    "Éclairage normal",
+    "Éclairage de secours conforme",
+    "Ventilation / Climatisation",
+    "Revêtement de sol isolant ou antidérapant",
+    "Présence d'un revêtement diélectrique ou isolant au sol",
+    "Mise à la terre de toutes les masses métalliques",
+    "Présence de la terre du neutre",
+    "Présence de la terre des masses",
+    "Continuité des liaisons équipotentielles principales",
+  ];
+
+  /// Liste officielle des 13 points de vérification des Conditions d'Exploitation du Local Basse Tension (BT)
+  static const List<String> allBTConditionsPoints = [
+    "Accès réservé au personnel habilité (habilitation électrique à jour)",
+    "Présence d'un dispositif de mise hors tension générale du local",
+    "Présence et accessibilité des EPI électriques (gants, visière, tapis)",
+    "Zone dégagée et propre, sans obstruction des voies d'accès",
+    "Absence de stockage de matériaux inflammables",
+    "Accès permanent aux dispositifs de coupure d'urgence",
+    "Absence de pièces nues sous tension accessibles",
+    "Présence d'un plan d'intervention et de consignation affiché",
+    "Disponibilité et mise à jour du schéma unifilaire",
+    "Traçabilité des opérations de maintenance et des vérifications",
+    "Matériel de consignation (cadenas, étiquettes, détecteur de tension) disponible",
+    "Extincteur CO₂ disponible et vérifié (date de validité à jour)",
+    "Disponibilité d'une procédure de consignation électrique",
+  ];
+
+  /// Registre spécifique des métadonnées pour le local Basse Tension (BT)
+  static final Map<String, DispositionMetadata> _btRegistry = {
+    // --- DISPOSITIONS CONSTRUCTIVES BT ---
+    "Le local est exclusivement réservé à l'usage électrique": DispositionMetadata(
+      referenceNormative: "NF C 15-100-7-729:2024 – § 729",
+      familleRisque: "Sécurité d'exploitation",
+      criticite: "Majeure",
+    ),
+    'Signalisation visible "Local électrique – Accès réservé au personnel habilité"': DispositionMetadata(
+      referenceNormative: "NF C 15-100-7-729:2024 – § 729",
+      familleRisque: "Accès non autorisé / risque électrique",
+      criticite: "Majeure",
+    ),
+    "Dimensions": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      familleRisque: "Protection mécanique / pénétration corps solides-liquides",
+      criticite: "Majeure",
+    ),
+    "Parois, plancher et plafond en matériaux non combustibles": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      familleRisque: "Incendie / propagation du feu",
+      criticite: "Majeure",
+    ),
+    "Présence d'une porte pleine, ouvrant vers l'extérieur, munie d'un dispositif anti-panique": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 462",
+      familleRisque: "Sécurité des interventions",
+      criticite: "Majeure",
+    ),
+    "Verrouillage empêchant tout accès non autorisé": DispositionMetadata(
+      referenceNormative: "NF C 15-100-7-729:2024 – § 729",
+      familleRisque: "Accès non autorisé / risque électrique",
+      criticite: "Majeure",
+    ),
+    "Absence de communication directe avec les locaux à risque": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      familleRisque: "Protection mécanique / pénétration corps solides-liquides",
+      criticite: "Majeure",
+    ),
+    "Absence de stockage d'objets non électriques": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      familleRisque: "Incendie / propagation du feu",
+      criticite: "Majeure",
+    ),
+    "Accessibilité du local et dégagement permanent devant les tableaux": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 513",
+      familleRisque: "Accès / exploitation / intervention",
+      criticite: "Majeure",
+    ),
+    "Obturation des traversées et maintien du degré coupe-feu des parois": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      familleRisque: "Incendie / propagation du feu",
+      criticite: "Majeure",
+    ),
+    "Présence et lisibilité des consignes de sécurité": DispositionMetadata(
+      referenceNormative: "NF C 18-510",
+      familleRisque: "Sécurité des interventions / risque électrique",
+      criticite: "Majeure",
+    ),
+    "Identification du schéma de liaison à la terre de l'installation": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      familleRisque: "Erreur d'exploitation / maintenance",
+      criticite: "Majeure",
+    ),
+    "Présence de canalisations étrangères": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      familleRisque: "Erreur d'exploitation / maintenance",
+      criticite: "Majeure",
+    ),
+    "Absence d'infiltration d'eau, humidité ou condensation": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 512.2 et § 522",
+      familleRisque: "Humidité / défaut d'isolement / électrisation",
+      criticite: "Critique",
+    ),
+    "Éclairage normal": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 559",
+      familleRisque: "Sécurité d'exploitation",
+      criticite: "Majeure",
+    ),
+    "Éclairage de secours conforme": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – Partie 5-56",
+      familleRisque: "Évacuation / continuité des installations de sécurité",
+      criticite: "Majeure",
+    ),
+    "Ventilation / Climatisation": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      familleRisque: "Échauffement / conditions d'environnement",
+      criticite: "Majeure",
+    ),
+    "Revêtement de sol isolant ou antidérapant": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 555",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Présence d'un revêtement diélectrique ou isolant au sol": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 555",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Mise à la terre de toutes les masses métalliques": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 542 et § 543",
+      familleRisque: "Électrisation / défaut de mise à la terre",
+      criticite: "Critique",
+    ),
+    "Présence de la terre du neutre": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 542 et § 543",
+      familleRisque: "Électrisation / défaut de mise à la terre",
+      criticite: "Critique",
+    ),
+    "Présence de la terre des masses": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 542 et § 543",
+      familleRisque: "Électrisation / défaut de mise à la terre",
+      criticite: "Critique",
+    ),
+    "Continuité des liaisons équipotentielles principales": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 544",
+      familleRisque: "Électrisation / défaut d'équipotentialité",
+      criticite: "Critique",
+    ),
+
+    // --- CONDITIONS D'EXPLOITATION BT ---
+    "Accès réservé au personnel habilité (habilitation électrique à jour)": DispositionMetadata(
+      referenceNormative: "NF C 18-510",
+      familleRisque: "Sécurité des interventions / risque électrique",
+      criticite: "Majeure",
+    ),
+    "Présence d'un dispositif de mise hors tension générale du local": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 462, § 465 et § 537",
+      familleRisque: "Sécurité des interventions / arrêt d'urgence",
+      criticite: "Critique",
+    ),
+    "Présence et accessibilité des EPI électriques (gants, visière, tapis)": DispositionMetadata(
+      referenceNormative: "NF C 18-510",
+      familleRisque: "Sécurité des interventions / risque électrique",
+      criticite: "Majeure",
+    ),
+    "Zone dégagée et propre, sans obstruction des voies d'accès": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 513",
+      familleRisque: "Accès / exploitation / intervention",
+      criticite: "Majeure",
+    ),
+    "Absence de stockage de matériaux inflammables": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      familleRisque: "Incendie / propagation du feu",
+      criticite: "Majeure",
+    ),
+    "Accès permanent aux dispositifs de coupure d'urgence": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 462, § 465 et § 537",
+      familleRisque: "Sécurité des interventions / arrêt d'urgence",
+      criticite: "Critique",
+    ),
+    "Absence de pièces nues sous tension accessibles": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 411 et Annexe 41A",
+      familleRisque: "Électrisation / électrocution",
+      criticite: "Critique",
+    ),
+    "Présence d'un plan d'intervention et de consignation affiché": DispositionMetadata(
+      referenceNormative: "NF C 18-510",
+      familleRisque: "Sécurité des interventions / risque électrique",
+      criticite: "Majeure",
+    ),
+    "Disponibilité et mise à jour du schéma unifilaire": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      familleRisque: "Erreur d'exploitation / maintenance",
+      criticite: "Majeure",
+    ),
+    "Traçabilité des opérations de maintenance et des vérifications": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 561",
+      familleRisque: "Évacuation / sécurité incendie",
+      criticite: "Majeure",
+    ),
+    "Matériel de consignation (cadenas, étiquettes, détecteur de tension) disponible": DispositionMetadata(
+      referenceNormative: "NF C 18-510",
+      familleRisque: "Sécurité des interventions / risque électrique",
+      criticite: "Majeure",
+    ),
+    "Extincteur CO₂ disponible et vérifié (date de validité à jour)": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      familleRisque: "Erreur d'exploitation / maintenance",
+      criticite: "Majeure",
+    ),
+    "Disponibilité d'une procédure de consignation électrique": DispositionMetadata(
+      referenceNormative: "NF C 18-510",
+      familleRisque: "Sécurité des interventions / risque électrique",
+      criticite: "Majeure",
+    ),
+  };
+
+  static final Map<String, String> _btDispositionsTitleAliases = {
+    _normalizeKey("Accessibilité du local et dégagement permanent des accès"):
+        "Accessibilité du local et dégagement permanent devant les tableaux",
+    _normalizeKey("Obturation coupe-feu des traversées de câbles et canalisations"):
+        "Obturation des traversées et maintien du degré coupe-feu des parois",
+    _normalizeKey("Présence et lisibilité des consignes de sécurité et plaques de danger"):
+        "Présence et lisibilité des consignes de sécurité",
+    _normalizeKey("Absence de traces d'humidité, corrosion ou condensation"):
+        "Absence d'infiltration d'eau, humidité ou condensation",
+    _normalizeKey("Présence d'un éclairage de sécurité permettant les manœuvres et l'évacuation"):
+        "Éclairage de secours conforme",
+    _normalizeKey("État et continuité des liaisons équipotentielles du local"):
+        "Continuité des liaisons équipotentielles principales",
+  };
+
+  static final Map<String, String> _btConditionsTitleAliases = {
+    _normalizeKey("Présence de stockage de matériaux inflammables"):
+        "Absence de stockage de matériaux inflammables",
+    _normalizeKey("Disponibilité et mise à jour du schéma unifilaire de l'installation"):
+        "Disponibilité et mise à jour du schéma unifilaire",
+    _normalizeKey("Affichage des consignes de manœuvre, secours et premiers soins"):
+        "Présence d'un plan d'intervention et de consignation affiché",
+    _normalizeKey("Disponibilité du matériel de mise à la terre et en court-circuit"):
+        "Matériel de consignation (cadenas, étiquettes, détecteur de tension) disponible",
+  };
+
   /// Assure l'exhaustivité et l'ordonnancement exact des points de contrôle pour un local Groupe Électrogène.
   static void ensureCompleteGELocalChecklists({
     required List<ElementControle> dispositionsConstructives,
@@ -888,6 +1145,104 @@ class DispositionsConstructivesRegistry {
 
     conditionsExploitation.clear();
     for (final refTitle in allGEConditionsPoints) {
+      final targetKey = _normalizeKey(refTitle);
+      if (existingCondMap.containsKey(targetKey)) {
+        final el = existingCondMap[targetKey]!;
+        el.elementControle = refTitle;
+        conditionsExploitation.add(el);
+      } else {
+        conditionsExploitation.add(
+          ElementControle(
+            elementControle: refTitle,
+            conforme: null,
+            estNA: true,
+            priorite: 3,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Assure l'exhaustivité et l'ordonnancement exact des points de contrôle pour un local Basse Tension (BT).
+  static void ensureCompleteBTLocalChecklists({
+    required List<ElementControle> dispositionsConstructives,
+    required List<ElementControle> conditionsExploitation,
+  }) {
+    // --- 1. MIGRATION DES DISPOSITIONS CONSTRUCTIVES BT ---
+    final existingDispMap = <String, ElementControle>{};
+    for (final el in dispositionsConstructives) {
+      final normKey = _normalizeKey(el.elementControle);
+      String targetTitle = el.elementControle;
+
+      if (_btDispositionsTitleAliases.containsKey(normKey)) {
+        targetTitle = _btDispositionsTitleAliases[normKey]!;
+      } else {
+        for (final refTitle in allBTDispositionsPoints) {
+          if (_normalizeKey(refTitle) == normKey) {
+            targetTitle = refTitle;
+            break;
+          }
+        }
+      }
+
+      el.elementControle = targetTitle;
+      final targetKey = _normalizeKey(targetTitle);
+
+      if (!existingDispMap.containsKey(targetKey) ||
+          (el.conforme != null && existingDispMap[targetKey]?.conforme == null) ||
+          (el.observation?.isNotEmpty == true && existingDispMap[targetKey]?.observation?.isEmpty == true)) {
+        existingDispMap[targetKey] = el;
+      }
+    }
+
+    dispositionsConstructives.clear();
+    for (final refTitle in allBTDispositionsPoints) {
+      final targetKey = _normalizeKey(refTitle);
+      if (existingDispMap.containsKey(targetKey)) {
+        final el = existingDispMap[targetKey]!;
+        el.elementControle = refTitle;
+        dispositionsConstructives.add(el);
+      } else {
+        dispositionsConstructives.add(
+          ElementControle(
+            elementControle: refTitle,
+            conforme: null,
+            estNA: true,
+            priorite: 3,
+          ),
+        );
+      }
+    }
+
+    // --- 2. MIGRATION DES CONDITIONS D'EXPLOITATION BT ---
+    final existingCondMap = <String, ElementControle>{};
+    for (final el in conditionsExploitation) {
+      final normKey = _normalizeKey(el.elementControle);
+      String targetTitle = el.elementControle;
+
+      if (_btConditionsTitleAliases.containsKey(normKey)) {
+        targetTitle = _btConditionsTitleAliases[normKey]!;
+      } else {
+        for (final refTitle in allBTConditionsPoints) {
+          if (_normalizeKey(refTitle) == normKey) {
+            targetTitle = refTitle;
+            break;
+          }
+        }
+      }
+
+      el.elementControle = targetTitle;
+      final targetKey = _normalizeKey(targetTitle);
+
+      if (!existingCondMap.containsKey(targetKey) ||
+          (el.conforme != null && existingCondMap[targetKey]?.conforme == null) ||
+          (el.observation?.isNotEmpty == true && existingCondMap[targetKey]?.observation?.isEmpty == true)) {
+        existingCondMap[targetKey] = el;
+      }
+    }
+
+    conditionsExploitation.clear();
+    for (final refTitle in allBTConditionsPoints) {
       final targetKey = _normalizeKey(refTitle);
       if (existingCondMap.containsKey(targetKey)) {
         final el = existingCondMap[targetKey]!;
@@ -1101,6 +1456,18 @@ class DispositionsConstructivesRegistry {
       }
     }
 
+    if (localType == 'LOCAL_BT') {
+      if (_btRegistry.containsKey(elementControle)) {
+        return _btRegistry[elementControle];
+      }
+      final normKey = _normalizeKey(elementControle);
+      for (final entry in _btRegistry.entries) {
+        if (_normalizeKey(entry.key) == normKey) {
+          return entry.value;
+        }
+      }
+    }
+
     if (_registry.containsKey(elementControle)) {
       return _registry[elementControle];
     }
@@ -1117,6 +1484,18 @@ class DispositionsConstructivesRegistry {
       }
       final normKey = _normalizeKey(elementControle);
       for (final entry in _geRegistry.entries) {
+        if (_normalizeKey(entry.key) == normKey) {
+          return entry.value;
+        }
+      }
+    }
+
+    if (localType != 'LOCAL_BT') {
+      if (_btRegistry.containsKey(elementControle)) {
+        return _btRegistry[elementControle];
+      }
+      final normKey = _normalizeKey(elementControle);
+      for (final entry in _btRegistry.entries) {
         if (_normalizeKey(entry.key) == normKey) {
           return entry.value;
         }
