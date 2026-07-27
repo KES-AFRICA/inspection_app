@@ -1,16 +1,16 @@
-// lib/pages/missions/mission_detail_screen.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
-import 'package:inspec_app/pages/missions/home_screen.dart';
-import 'package:inspec_app/pages/missions/mission_hub/mission_hub_screen.dart';
 import 'package:inspec_app/pages/missions/sequence/sequence_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/services/pdf_report_service.dart';
+import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:share_plus/share_plus.dart';
 
+/// Page de détails d'une mission avec refonte visuelle premium
+/// et gestion intelligente des workflows d'exécution et de rapport.
 class MissionDetailScreen extends StatefulWidget {
   final Mission mission;
   final Verificateur user;
@@ -25,61 +25,80 @@ class MissionDetailScreen extends StatefulWidget {
   State<MissionDetailScreen> createState() => _MissionDetailScreenState();
 }
 
-class _MissionDetailScreenState extends State<MissionDetailScreen> {
+class _MissionDetailScreenState extends State<MissionDetailScreen>
+    with SingleTickerProviderStateMixin {
   late Mission _currentMission;
   bool _isLoading = false;
+  late AnimationController _animController;
+  late Animation<double> _fadeAnimation;
 
   @override
   void initState() {
     super.initState();
     _currentMission = widget.mission;
+    _animController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _fadeAnimation = CurvedAnimation(
+      parent: _animController,
+      curve: Curves.easeOut,
+    );
+    _animController.forward();
+  }
+
+  @override
+  void dispose() {
+    _animController.dispose();
+    super.dispose();
   }
 
   Future<void> _updateMissionStatus(String newStatus) async {
     setState(() => _isLoading = true);
-    
+
     final success = await HiveService.updateMissionStatus(
       missionId: _currentMission.id,
       newStatus: newStatus,
     );
-    
+
     if (success) {
       setState(() {
         _currentMission.status = newStatus;
         _currentMission.updatedAt = DateTime.now();
       });
     }
-    
+
     setState(() => _isLoading = false);
   }
 
+  /// Intitulé du bouton principal (DÉBUTER LA MISSION / CONTINUER LA MISSION / VOIR LA MISSION)
   String _getButtonText() {
     if (_currentMission.isEnAttente) {
-      return 'DÉBUTER';
+      return 'DÉBUTER LA MISSION';
     } else if (_currentMission.isEnCours) {
-      return 'CONTINUER';
+      return 'CONTINUER LA MISSION';
     } else {
-      return 'VOIR LE RAPPORT';
+      return 'VOIR LA MISSION';
     }
   }
 
   IconData _getButtonIcon() {
     if (_currentMission.isEnAttente) {
-      return Icons.play_arrow;
+      return Icons.play_arrow_rounded;
     } else if (_currentMission.isEnCours) {
-      return Icons.play_circle_filled;
+      return Icons.play_circle_fill_rounded;
     } else {
-      return Icons.assessment;
+      return Icons.visibility_rounded;
     }
   }
 
   Color _getStatusColor() {
     if (_currentMission.isEnAttente) {
-      return Colors.orange;
+      return const Color(0xFFF59E0B); // Amber / Orange
     } else if (_currentMission.isEnCours) {
-      return AppTheme.primaryBlue;
+      return AppTheme.primaryBlue; // Bleu marque
     } else {
-      return Colors.green;
+      return const Color(0xFF10B981); // Emerald / Vert
     }
   }
 
@@ -89,47 +108,40 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
     } else if (_currentMission.isEnCours) {
       return 'EN COURS';
     } else {
-      return 'TERMINÉ';
+      return 'TERMINÉE';
     }
   }
 
+  /// Action sur le bouton principal (DÉBUTER / CONTINUER / VOIR LA MISSION)
+  /// Ramène l'inspecteur exactement au dernier endroit où il était dans la mission.
   Future<void> _handleMainAction() async {
-  if (_currentMission.isEnAttente) {
-    await _updateMissionStatus('en_cours');
-    
+    setState(() => _isLoading = true);
+
+    final progress = await SequenceProgressService.getProgress(_currentMission.id);
+    final lastStep = (progress['currentStep'] as int?) ?? 0;
+
+    if (_currentMission.isEnAttente) {
+      await _updateMissionStatus('en_cours');
+    }
+
+    setState(() => _isLoading = false);
+
     if (mounted) {
-      Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => SequenceScreen(
             mission: _currentMission,
             user: widget.user,
-            initialStep: 0,
+            initialStep: lastStep,
           ),
         ),
-      ).then((_) {
-        _refreshMission();
-      });
-    }
-  } else if (_currentMission.isEnCours) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => SequenceScreen(
-          mission: _currentMission,
-          user: widget.user,
-          initialStep: 0,
-        ),
-      ),
-    ).then((_) {
+      );
       _refreshMission();
-    });
-  } else {
-    // ✅ Mission terminée - Aller au résumé (étape 6)
-    _goToSummaryStep();
+    }
   }
-}
 
+  /// Navigation explicite vers l'étape de synthèse (Summary Step - Étape 5)
   void _goToSummaryStep() {
     Navigator.push(
       context,
@@ -137,34 +149,46 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
         builder: (context) => SequenceScreen(
           mission: _currentMission,
           user: widget.user,
-          initialStep: 6,
+          initialStep: 5,
         ),
       ),
-    ).then((_) {
-      _refreshMission();
-    });
+    ).then((_) => _refreshMission());
   }
 
-  void _refreshMission() {
-    final refreshedMission = HiveService.getMissionById(_currentMission.id);
-    if (refreshedMission != null) {
-      setState(() {
-        _currentMission = refreshedMission;
-      });
+  /// Action du bouton "GÉNÉRER LE RAPPORT"
+  /// - Si la mission est Terminée -> Redirection vers Summary Step (Étape 6)
+  /// - Si la mission est En cours / En attente -> Génération directe du PDF intermédiaire
+  Future<void> _handleReportAction() async {
+    if (_currentMission.isTermine) {
+      _goToSummaryStep();
+    } else {
+      await _generateIntermediateReport();
     }
   }
 
-  Future<void> _generateReport() async {
+  /// Génération intermédiaire du rapport PDF pour les missions en cours
+  Future<void> _generateIntermediateReport() async {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (context) => AlertDialog(
-        content: Column(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        content: const Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const CircularProgressIndicator(),
-            const SizedBox(height: 16),
-            const Text('Génération du rapport PDF en cours...'),
+            SizedBox(height: 10),
+            CircularProgressIndicator(),
+            SizedBox(height: 20),
+            Text(
+              'Génération du rapport intermédiaire PDF...',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'Veuillez patienter quelques instants',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
           ],
         ),
       ),
@@ -195,12 +219,21 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: const Text('Rapport généré !'),
-        content: const Text('Le rapport a été généré avec succès.'),
+        title: const Row(
+          children: [
+            Icon(Icons.check_circle_rounded, color: Colors.green, size: 28),
+            SizedBox(width: 10),
+            Text('Rapport généré !', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          ],
+        ),
+        content: const Text(
+          'Le rapport PDF intermédiaire représentant l\'état actuel de la mission a été généré avec succès.',
+          style: TextStyle(fontSize: 14),
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: const Text('Fermer'),
+            child: const Text('Fermer', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
           ),
           ElevatedButton.icon(
             onPressed: () async {
@@ -210,8 +243,13 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
                 subject: 'Rapport - ${_currentMission.nomClient}',
               );
             },
-            icon: const Icon(Icons.share),
-            label: const Text('Partager'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.share_rounded, size: 18),
+            label: const Text('Partager', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -220,167 +258,226 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
 
   void _showError(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red.shade700,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+      ),
     );
+  }
+
+  void _refreshMission() {
+    final refreshedMission = HiveService.getMissionById(_currentMission.id);
+    if (refreshedMission != null) {
+      setState(() {
+        _currentMission = refreshedMission;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final statusColor = _getStatusColor();
-    // Récupération des dimensions de l'écran pour la responsivité
-    final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    final mediaQuery = MediaQuery.of(context);
+    final screenWidth = mediaQuery.size.width;
+    final screenHeight = mediaQuery.size.height;
     final isSmallScreen = screenWidth < 360;
-    final isLargeScreen = screenWidth > 600;
-    
-    // Calcul dynamique de la hauteur de l'appbar
-    final appBarExpandedHeight = screenHeight * 0.28; // 28% de la hauteur de l'écran
-    
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      body: CustomScrollView(
-        slivers: [
-          // AppBar moderne avec couleur dynamique et hauteur responsive
-          SliverAppBar(
-            expandedHeight: appBarExpandedHeight,
-            pinned: true,
-            backgroundColor: statusColor,
-            elevation: 0,
-            leading: Container(
-              margin: EdgeInsets.all(isSmallScreen ? 6 : 8),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: IconButton(
-                icon: Icon(Icons.arrow_back, size: isSmallScreen ? 20 : 24, color: Colors.white),
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-              ),
-            ),
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      statusColor,
-                      statusColor.withOpacity(0.7),
-                    ],
-                  ),
-                ),
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // Espacement dynamique pour le status bar
-                      SizedBox(height: MediaQuery.of(context).padding.top + (isSmallScreen ? 20 : 30)),
-                      Container(
-                        width: isSmallScreen ? 60 : 80,
-                        height: isSmallScreen ? 60 : 80,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
-                        ),
-                        child: Icon(
-                          Icons.assignment_turned_in,
-                          size: isSmallScreen ? 30 : 40,
-                          color: Colors.white.withOpacity(0.9),
-                        ),
-                      ),
-                      SizedBox(height: isSmallScreen ? 12 : 16),
-                      // Gestion du débordement du texte du client
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: Text(
-                          _currentMission.nomClient,
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 18 : (isLargeScreen ? 28 : 24),
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                          textAlign: TextAlign.center,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      SizedBox(height: isSmallScreen ? 6 : 8),
-                      Container(
-                        padding: EdgeInsets.symmetric(
-                          horizontal: isSmallScreen ? 8 : 12, 
-                          vertical: isSmallScreen ? 2 : 4
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _getStatusText(),
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 10 : 12,
-                            fontWeight: FontWeight.w600,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
 
-          // Contenu principal avec padding responsive
-          SliverPadding(
-            padding: EdgeInsets.all(isSmallScreen ? 12.0 : 16.0),
-            sliver: SliverList(
-              delegate: SliverChildListDelegate([
-                // Bouton principal
-                _buildMainButton(statusColor, isSmallScreen),
-                
-                SizedBox(height: isSmallScreen ? 12 : 16),
-                
-                // Carte d'informations
-                _buildInfoCard(isSmallScreen, isLargeScreen),
-                
-                SizedBox(height: isSmallScreen ? 12 : 16),
-                
-                // Carte de l'équipe
-                _buildTeamCard(isSmallScreen),
-                
-                if (!_currentMission.isEnAttente) ...[
-                  SizedBox(height: isSmallScreen ? 20 : 24),
-                  _buildPdfButton(isSmallScreen),
-                  SizedBox(height: isSmallScreen ? 24 : 32),
-                ] else
-                  SizedBox(height: isSmallScreen ? 24 : 32),
-              ]),
+    final appBarExpandedHeight = screenHeight * 0.28;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: FadeTransition(
+        opacity: _fadeAnimation,
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
+          slivers: [
+            // 1. En-tête SliverAppBar Moderne avec Dégradé Dynamique
+            SliverAppBar(
+              expandedHeight: appBarExpandedHeight,
+              pinned: true,
+              backgroundColor: statusColor,
+              elevation: 0,
+              leading: Container(
+                margin: EdgeInsets.all(isSmallScreen ? 6 : 8),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.15),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: IconButton(
+                  icon: const Icon(Icons.arrow_back_rounded, size: 22, color: Colors.white),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+              ),
+              flexibleSpace: FlexibleSpaceBar(
+                background: Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [
+                        statusColor,
+                        Color.lerp(statusColor, Colors.black, 0.25)!,
+                      ],
+                    ),
+                  ),
+                  child: Stack(
+                    children: [
+                      // Motifs de fond géométriques subtils
+                      Positioned(
+                        right: -30,
+                        top: -20,
+                        child: Icon(
+                          Icons.assignment_rounded,
+                          size: 180,
+                          color: Colors.white.withValues(alpha: 0.06),
+                        ),
+                      ),
+                      Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            SizedBox(height: mediaQuery.padding.top + (isSmallScreen ? 10 : 20)),
+                            Container(
+                              width: isSmallScreen ? 56 : 72,
+                              height: isSmallScreen ? 56 : 72,
+                              padding: const EdgeInsets.all(12),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.18),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                  width: 2,
+                                ),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withValues(alpha: 0.1),
+                                    blurRadius: 12,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Icon(
+                                _currentMission.isTermine
+                                    ? Icons.task_alt_rounded
+                                    : Icons.engineering_rounded,
+                                size: isSmallScreen ? 28 : 36,
+                                color: Colors.white,
+                              ),
+                            ),
+                            SizedBox(height: isSmallScreen ? 10 : 14),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                              child: Text(
+                                _currentMission.nomClient,
+                                style: TextStyle(
+                                  fontSize: isSmallScreen ? 18 : 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                  letterSpacing: 0.3,
+                                ),
+                                textAlign: TextAlign.center,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withValues(alpha: 0.2),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: Colors.white.withValues(alpha: 0.3),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: const BoxDecoration(
+                                      color: Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    _getStatusText(),
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ),
-        ],
+
+            // 2. Contenu principal de la page
+            SliverPadding(
+              padding: EdgeInsets.all(isSmallScreen ? 14.0 : 18.0),
+              sliver: SliverList(
+                delegate: SliverChildListDelegate([
+                  // Bouton Action Principal (DÉBUTER / CONTINUER / VOIR LA MISSION)
+                  _buildMainButton(statusColor, isSmallScreen),
+
+                  const SizedBox(height: 16),
+
+                  // Bouton "GÉNÉRER LE RAPPORT" (avec comportement dynamique)
+                  if (!_currentMission.isEnAttente) ...[
+                    _buildReportButton(isSmallScreen),
+                    const SizedBox(height: 20),
+                  ],
+
+                  // Carte d'informations Générales
+                  _buildInfoCard(isSmallScreen),
+
+                  const SizedBox(height: 16),
+
+                  // Carte de l'Équipe d'Inspection
+                  _buildTeamCard(isSmallScreen),
+
+                  const SizedBox(height: 32),
+                ]),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
+  /// Bouton Action Principal (DÉBUTER / CONTINUER / VOIR LA MISSION)
   Widget _buildMainButton(Color statusColor, bool isSmallScreen) {
     final buttonText = _getButtonText();
     final buttonIcon = _getButtonIcon();
 
     return Container(
       width: double.infinity,
-      height: isSmallScreen ? 48 : 56,
+      height: isSmallScreen ? 50 : 56,
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          colors: [statusColor, statusColor.withOpacity(0.8)],
+          colors: [statusColor, Color.lerp(statusColor, Colors.black, 0.15)!],
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
         ),
-        borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: statusColor.withOpacity(0.3),
+            color: statusColor.withValues(alpha: 0.35),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -392,31 +489,28 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
           backgroundColor: Colors.transparent,
           shadowColor: Colors.transparent,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(isSmallScreen ? 14 : 16),
+            borderRadius: BorderRadius.circular(16),
           ),
-          padding: EdgeInsets.zero, // Important pour éviter les contraintes fixes
+          padding: EdgeInsets.zero,
         ),
         child: _isLoading
-            ? SizedBox(
-                width: isSmallScreen ? 20 : 24,
-                height: isSmallScreen ? 20 : 24,
-                child: const CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
               )
             : Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(buttonIcon, size: isSmallScreen ? 20 : 24),
-                  SizedBox(width: isSmallScreen ? 8 : 12),
-                  Flexible(
-                    child: FittedBox(
-                      fit: BoxFit.scaleDown,
-                      child: Text(
-                        buttonText,
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 16 : 18, 
-                          fontWeight: FontWeight.bold
-                        ),
-                      ),
+                  Icon(buttonIcon, size: 24, color: Colors.white),
+                  const SizedBox(width: 10),
+                  Text(
+                    buttonText,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
                     ),
                   ),
                 ],
@@ -425,138 +519,175 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
     );
   }
 
-  Widget _buildPdfButton(bool isSmallScreen) {
+  /// Bouton "GÉNÉRER LE RAPPORT"
+  /// Redirige vers Summary Step si Terminée, ou Génère un PDF Intermédiaire si En cours.
+  Widget _buildReportButton(bool isSmallScreen) {
+    final isFinished = _currentMission.isTermine;
+    final labelText = isFinished ? 'PRÉPARER & GÉRER LE RAPPORT' : 'GÉNÉRER LE RAPPORT';
+    final subText = isFinished
+        ? 'Accéder strictement au résumé et à la préparation finale'
+        : 'Générer directement un rapport PDF intermédiaire';
+
+    final btnColor = isFinished ? AppTheme.primaryBlue : const Color(0xFFDC2626);
+
     return Container(
       width: double.infinity,
-      height: isSmallScreen ? 46 : 52,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: btnColor.withValues(alpha: 0.3), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.red.withOpacity(0.15),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: btnColor.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
-      child: ElevatedButton.icon(
-        onPressed: _generateReport,
-        icon: Icon(Icons.picture_as_pdf, size: isSmallScreen ? 18 : 22),
-        label: FittedBox(
-          fit: BoxFit.scaleDown,
-          child: Text(
-            'GÉNÉRER RAPPORT PDF',
-            style: TextStyle(
-              fontSize: isSmallScreen ? 13 : 15, 
-              fontWeight: FontWeight.w600, 
-              letterSpacing: 0.5
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        child: InkWell(
+          onTap: _handleReportAction,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: btnColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(
+                    isFinished ? Icons.summarize_rounded : Icons.picture_as_pdf_rounded,
+                    color: btnColor,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        labelText,
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: btnColor,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subText,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey.shade600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Icon(
+                  Icons.arrow_forward_ios_rounded,
+                  size: 16,
+                  color: btnColor.withValues(alpha: 0.6),
+                ),
+              ],
             ),
-          ),
-        ),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.red,
-          foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(isSmallScreen ? 12 : 14),
           ),
         ),
       ),
     );
   }
 
-  Widget _buildInfoCard(bool isSmallScreen, bool isLargeScreen) {
+  /// Carte "Informations Générales"
+  Widget _buildInfoCard(bool isSmallScreen) {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Column(
         children: [
           Container(
-            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withOpacity(0.05),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(isSmallScreen ? 16 : 20),
-                topRight: Radius.circular(isSmallScreen ? 16 : 20),
-              ),
+              color: AppTheme.primaryBlue.withValues(alpha: 0.05),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            child: Row(
+            child: const Row(
               children: [
-                Container(
-                  padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
-                  decoration: BoxDecoration(
-                    color: AppTheme.primaryBlue.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-                  ),
-                  child: Icon(
-                    Icons.info_outline, 
-                    size: isSmallScreen ? 18 : 20, 
-                    color: AppTheme.primaryBlue
-                  ),
+                Icon(
+                  Icons.info_outline_rounded,
+                  size: 20,
+                  color: AppTheme.primaryBlue,
                 ),
-                SizedBox(width: isSmallScreen ? 10 : 12),
+                SizedBox(width: 10),
                 Text(
                   'Informations générales',
                   style: TextStyle(
-                    fontSize: isSmallScreen ? 14 : 16, 
-                    fontWeight: FontWeight.bold
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textDark,
                   ),
                 ),
               ],
             ),
           ),
           Padding(
-            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            padding: const EdgeInsets.all(16),
             child: Column(
               children: [
                 _buildInfoRow(
-                  icon: Icons.business,
+                  icon: Icons.business_rounded,
                   label: 'Client',
                   value: _currentMission.nomClient,
-                  isSmallScreen: isSmallScreen,
                 ),
-                Divider(height: isSmallScreen ? 20 : 24),
-                if (_currentMission.activiteClient != null) ...[
+                if (_currentMission.activiteClient != null &&
+                    _currentMission.activiteClient!.isNotEmpty) ...[
+                  const Divider(height: 20),
                   _buildInfoRow(
-                    icon: Icons.work,
+                    icon: Icons.work_outline_rounded,
                     label: 'Activité',
                     value: _currentMission.activiteClient!,
-                    isSmallScreen: isSmallScreen,
                   ),
-                  Divider(height: isSmallScreen ? 20 : 24),
                 ],
-                if (_currentMission.nomSite != null) ...[
+                if (_currentMission.nomSite != null &&
+                    _currentMission.nomSite!.isNotEmpty) ...[
+                  const Divider(height: 20),
                   _buildInfoRow(
-                    icon: Icons.location_city,
-                    label: 'Site',
+                    icon: Icons.location_city_rounded,
+                    label: 'Site d\'inspection',
                     value: _currentMission.nomSite!,
-                    isSmallScreen: isSmallScreen,
                   ),
-                  Divider(height: isSmallScreen ? 20 : 24),
                 ],
-                if (_currentMission.adresseClient != null) ...[
+                if (_currentMission.adresseClient != null &&
+                    _currentMission.adresseClient!.isNotEmpty) ...[
+                  const Divider(height: 20),
                   _buildInfoRow(
-                    icon: Icons.location_on,
+                    icon: Icons.place_outlined,
                     label: 'Adresse',
                     value: _currentMission.adresseClient!,
                     multiline: true,
-                    isSmallScreen: isSmallScreen,
                   ),
-                  Divider(height: isSmallScreen ? 20 : 24),
                 ],
+                const Divider(height: 20),
                 _buildInfoRow(
-                  icon: Icons.description,
-                  label: 'Nature',
+                  icon: Icons.assignment_outlined,
+                  label: 'Nature de la mission',
                   value: _currentMission.natureMission ?? 'Non spécifiée',
-                  isSmallScreen: isSmallScreen,
                 ),
               ],
             ),
@@ -566,86 +697,84 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
     );
   }
 
+  /// Carte "Équipe d'Inspection"
   Widget _buildTeamCard(bool isSmallScreen) {
-    final hasVerificateurs = _currentMission.verificateurs != null && _currentMission.verificateurs!.isNotEmpty;
-    final hasAccompagnateurs = _currentMission.accompagnateurs != null && _currentMission.accompagnateurs!.isNotEmpty;
+    final hasVerificateurs =
+        _currentMission.verificateurs != null && _currentMission.verificateurs!.isNotEmpty;
+    final hasAccompagnateurs =
+        _currentMission.accompagnateurs != null && _currentMission.accompagnateurs!.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade200),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.03),
             blurRadius: 10,
-            offset: const Offset(0, 2),
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Column(
         children: [
           Container(
-            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.orange.withOpacity(0.05),
-              borderRadius: BorderRadius.only(
-                topLeft: Radius.circular(isSmallScreen ? 16 : 20),
-                topRight: Radius.circular(isSmallScreen ? 16 : 20),
-              ),
+              color: Colors.amber.withValues(alpha: 0.08),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
             ),
-            child: Row(
+            child: const Row(
               children: [
-                Container(
-                  padding: EdgeInsets.all(isSmallScreen ? 6 : 8),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-                  ),
-                  child: Icon(
-                    Icons.people, 
-                    size: isSmallScreen ? 18 : 20, 
-                    color: Colors.orange
-                  ),
+                Icon(
+                  Icons.people_alt_rounded,
+                  size: 20,
+                  color: Color(0xFFD97706),
                 ),
-                SizedBox(width: isSmallScreen ? 10 : 12),
+                SizedBox(width: 10),
                 Text(
-                  'Équipe',
+                  'Équipe d\'inspection',
                   style: TextStyle(
-                    fontSize: isSmallScreen ? 14 : 16, 
-                    fontWeight: FontWeight.bold
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.textDark,
                   ),
                 ),
               ],
             ),
           ),
           Padding(
-            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            padding: const EdgeInsets.all(16),
             child: Column(
               children: [
                 if (hasVerificateurs)
                   _buildTeamRow(
-                    icon: Icons.verified_user,
-                    label: 'Vérificateurs',
+                    icon: Icons.verified_user_rounded,
+                    label: 'Vérificateurs habilités',
                     values: _currentMission.verificateurs!
                         .map((v) => '${v['prenom']} ${v['nom']} (${v['matricule']})')
                         .toList(),
-                    isSmallScreen: isSmallScreen,
+                    color: AppTheme.primaryBlue,
                   ),
-                if (hasVerificateurs && hasAccompagnateurs) 
-                  SizedBox(height: isSmallScreen ? 12 : 16),
+                if (hasVerificateurs && hasAccompagnateurs) const Divider(height: 20),
                 if (hasAccompagnateurs)
                   _buildTeamRow(
-                    icon: Icons.person_add,
-                    label: 'Accompagnateurs',
+                    icon: Icons.person_pin_rounded,
+                    label: 'Accompagnateurs du client',
                     values: _currentMission.accompagnateurs!,
-                    isSmallScreen: isSmallScreen,
+                    color: Colors.indigo.shade600,
                   ),
                 if (!hasVerificateurs && !hasAccompagnateurs)
-                  Text(
-                    'Aucune information d\'équipe',
-                    style: TextStyle(
-                      color: Colors.grey, 
-                      fontSize: isSmallScreen ? 12 : 14
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8.0),
+                    child: Text(
+                      'Aucune information d\'équipe enregistrée',
+                      style: TextStyle(
+                        color: Colors.grey.shade500,
+                        fontSize: 13,
+                        fontStyle: FontStyle.italic,
+                      ),
                     ),
                   ),
               ],
@@ -661,25 +790,19 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
     required String label,
     required String value,
     bool multiline = false,
-    required bool isSmallScreen,
   }) {
     return Row(
       crossAxisAlignment: multiline ? CrossAxisAlignment.start : CrossAxisAlignment.center,
       children: [
         Container(
-          width: isSmallScreen ? 32 : 36,
-          height: isSmallScreen ? 32 : 36,
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: AppTheme.primaryBlue.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+            color: AppTheme.primaryBlue.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            icon, 
-            size: isSmallScreen ? 16 : 18, 
-            color: AppTheme.primaryBlue
-          ),
+          child: Icon(icon, size: 18, color: AppTheme.primaryBlue),
         ),
-        SizedBox(width: isSmallScreen ? 10 : 12),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -687,16 +810,18 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: isSmallScreen ? 11 : 12, 
-                  color: Colors.grey.shade600
+                  fontSize: 11,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 2 : 4),
+              const SizedBox(height: 2),
               Text(
                 value,
-                style: TextStyle(
-                  fontSize: isSmallScreen ? 13 : 14, 
-                  fontWeight: FontWeight.w500
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.textDark,
                 ),
                 maxLines: multiline ? 3 : 1,
                 overflow: TextOverflow.ellipsis,
@@ -712,25 +837,20 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
     required IconData icon,
     required String label,
     required List<String> values,
-    required bool isSmallScreen,
+    required Color color,
   }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
-          width: isSmallScreen ? 32 : 36,
-          height: isSmallScreen ? 32 : 36,
+          padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+            color: color.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(10),
           ),
-          child: Icon(
-            icon, 
-            size: isSmallScreen ? 16 : 18, 
-            color: Colors.grey.shade600
-          ),
+          child: Icon(icon, size: 18, color: color),
         ),
-        SizedBox(width: isSmallScreen ? 10 : 12),
+        const SizedBox(width: 12),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -738,22 +858,27 @@ class _MissionDetailScreenState extends State<MissionDetailScreen> {
               Text(
                 label,
                 style: TextStyle(
-                  fontSize: isSmallScreen ? 11 : 12, 
-                  color: Colors.grey.shade600
+                  fontSize: 11,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
                 ),
               ),
-              SizedBox(height: isSmallScreen ? 3 : 4),
+              const SizedBox(height: 4),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: values.map((v) => Padding(
-                  padding: EdgeInsets.only(bottom: isSmallScreen ? 3 : 4),
-                  child: Text(
-                    '• $v',
-                    style: TextStyle(fontSize: isSmallScreen ? 12 : 13),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                )).toList(),
+                children: values
+                    .map((v) => Padding(
+                          padding: const EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            '• $v',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textDark,
+                            ),
+                          ),
+                        ))
+                    .toList(),
               ),
             ],
           ),
