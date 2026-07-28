@@ -8,6 +8,7 @@ import 'package:inspec_app/pages/missions/lighting/lighting_mission_detail_scree
 import 'package:inspec_app/pages/missions/logo/client_logo_screen.dart';
 import 'package:inspec_app/pages/missions/jsa/jsa_standalone_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/pages/missions/create_mission_screen.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 
 /// Écran d'accueil de la Mission (Mission Hub)
@@ -87,6 +88,20 @@ class _MissionHubScreenState extends State<MissionHubScreen>
     }
   }
 
+  Future<void> _handleEditMission(BuildContext context) async {
+    final result = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => CreateMissionScreen(
+          currentUser: widget.user,
+          missionToEdit: widget.mission,
+        ),
+      ),
+    );
+    if (result == true) {
+      _computeProgress();
+    }
+  }
+
   @override
   void dispose() {
     _animController.dispose();
@@ -125,6 +140,19 @@ class _MissionHubScreenState extends State<MissionHubScreen>
                 ),
               ),
             ),
+            actions: [
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: CircleAvatar(
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
+                  child: IconButton(
+                    icon: const Icon(Icons.edit_rounded, color: Colors.white, size: 20),
+                    tooltip: 'Éditer la mission',
+                    onPressed: () => _handleEditMission(context),
+                  ),
+                ),
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: _buildHeroHeaderBackground(
                 context,

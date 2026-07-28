@@ -384,6 +384,268 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
     );
   }
 
+  void _showTypePicker() {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.7,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: EdgeInsets.only(top: isSmallScreen ? 8 : 12),
+                width: isSmallScreen ? 30 : 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                child: Text(
+                  'Type ERP / ERT',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 18 : 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const Divider(height: 0),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: _classementTypes.map((t) {
+                      final isSelected = (_classementReglementaireType ?? '—') == t;
+                      final isNone = t == '—';
+                      final displayTitle = isNone ? 'Aucun type (—)' : 'Type $t';
+                      return InkWell(
+                        onTap: () {
+                          setState(() {
+                            _classementReglementaireType = isNone ? null : t;
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppTheme.primaryBlue.withOpacity(0.05) : Colors.transparent,
+                            border: isSelected
+                                ? const Border(left: BorderSide(color: AppTheme.primaryBlue, width: 4))
+                                : null,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: isSmallScreen ? 36 : 42,
+                                height: isSmallScreen ? 36 : 42,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryBlue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                                ),
+                                child: Center(
+                                  child: Text(
+                                    t,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: AppTheme.primaryBlue,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              SizedBox(width: isSmallScreen ? 12 : 16),
+                              Expanded(
+                                child: Text(
+                                  displayTitle,
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 14 : 16,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                    color: isSelected ? AppTheme.primaryBlue : Colors.black87,
+                                  ),
+                                ),
+                              ),
+                              if (isSelected)
+                                const Icon(
+                                  Icons.check_circle,
+                                  color: AppTheme.primaryBlue,
+                                  size: 22,
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              SizedBox(height: isSmallScreen ? 12 : 16),
+              Padding(
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                      ),
+                    ),
+                    child: Text(
+                      'Fermer',
+                      style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: isSmallScreen ? 6 : 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  void _showCategoriePicker() {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return Container(
+          constraints: BoxConstraints(
+            maxHeight: MediaQuery.of(context).size.height * 0.6,
+          ),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                margin: EdgeInsets.only(top: isSmallScreen ? 8 : 12),
+                width: isSmallScreen ? 30 : 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              Padding(
+                padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
+                child: Text(
+                  'Catégorie ERP / ERT',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 18 : 20,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const Divider(height: 0),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: Column(
+                    children: _classementCategories.map((c) {
+                      final isSelected = (_classementReglementaireCategorie ?? '—') == c;
+                      final isNone = c == '—';
+                      final displayTitle = isNone ? 'Aucune catégorie (—)' : c;
+                      return InkWell(
+                        onTap: () {
+                          setState(() {
+                            _classementReglementaireCategorie = isNone ? null : c;
+                          });
+                          Navigator.pop(context);
+                        },
+                        child: Container(
+                          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                          decoration: BoxDecoration(
+                            color: isSelected ? AppTheme.primaryBlue.withOpacity(0.05) : Colors.transparent,
+                            border: isSelected
+                                ? const Border(left: BorderSide(color: AppTheme.primaryBlue, width: 4))
+                                : null,
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: isSmallScreen ? 36 : 42,
+                                height: isSmallScreen ? 36 : 42,
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primaryBlue.withOpacity(0.1),
+                                  borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
+                                ),
+                                child: const Icon(
+                                  Icons.filter_list_outlined,
+                                  color: AppTheme.primaryBlue,
+                                  size: 20,
+                                ),
+                              ),
+                              SizedBox(width: isSmallScreen ? 12 : 16),
+                              Expanded(
+                                child: Text(
+                                  displayTitle,
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 14 : 16,
+                                    fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                    color: isSelected ? AppTheme.primaryBlue : Colors.black87,
+                                  ),
+                                ),
+                              ),
+                              if (isSelected)
+                                const Icon(
+                                  Icons.check_circle,
+                                  color: AppTheme.primaryBlue,
+                                  size: 22,
+                                ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+              SizedBox(height: isSmallScreen ? 12 : 16),
+              Padding(
+                padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton(
+                    onPressed: () => Navigator.pop(context),
+                    style: OutlinedButton.styleFrom(
+                      padding: EdgeInsets.symmetric(vertical: isSmallScreen ? 10 : 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
+                      ),
+                    ),
+                    child: Text(
+                      'Fermer',
+                      style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
+                    ),
+                  ),
+                ),
+              ),
+              SizedBox(height: isSmallScreen ? 6 : 8),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   void _showPerimetrePicker() {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
 
@@ -747,36 +1009,31 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
                 ),
                 SizedBox(height: isSmallScreen ? 12 : 16),
 
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: _classementTypes.contains(_classementReglementaireType) ? _classementReglementaireType : '—',
-                        decoration: InputDecoration(
-                          labelText: 'Type ERP / ERT',
-                          prefixIcon: const Icon(Icons.category_outlined, color: AppTheme.darkBlue),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                        ),
-                        items: _classementTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
-                        onChanged: (val) => setState(() => _classementReglementaireType = (val == '—' ? null : val)),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: _classementCategories.contains(_classementReglementaireCategorie) ? _classementReglementaireCategorie : '—',
-                        decoration: InputDecoration(
-                          labelText: 'Catégorie',
-                          prefixIcon: const Icon(Icons.filter_list_outlined, color: AppTheme.darkBlue),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-                        ),
-                        items: _classementCategories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
-                        onChanged: (val) => setState(() => _classementReglementaireCategorie = (val == '—' ? null : val)),
-                      ),
-                    ),
-                  ],
+                _buildDisplayField(
+                  label: 'Type',
+                  value: (_classementReglementaireType == null || _classementReglementaireType == '—')
+                      ? null
+                      : 'Type $_classementReglementaireType',
+                  hint: 'Sélectionnez le type',
+                  icon: Icons.category_outlined,
+                  onTap: _showTypePicker,
+                  color: (_classementReglementaireType != null && _classementReglementaireType != '—')
+                      ? AppTheme.primaryBlue
+                      : null,
+                ),
+                SizedBox(height: isSmallScreen ? 12 : 14),
+
+                _buildDisplayField(
+                  label: 'Catégorie',
+                  value: (_classementReglementaireCategorie == null || _classementReglementaireCategorie == '—')
+                      ? null
+                      : _classementReglementaireCategorie,
+                  hint: 'Sélectionnez la catégorie',
+                  icon: Icons.filter_list_outlined,
+                  onTap: _showCategoriePicker,
+                  color: (_classementReglementaireCategorie != null && _classementReglementaireCategorie != '—')
+                      ? AppTheme.primaryBlue
+                      : null,
                 ),
                 SizedBox(height: isSmallScreen ? 24 : 28),
                 

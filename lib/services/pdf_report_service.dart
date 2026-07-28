@@ -4682,9 +4682,10 @@ class PdfReportService {
             alignment: pw.Alignment.centerLeft,
             child: pw.Text(label, style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
           ),
-          pw.Padding(
+          pw.Container(
             padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
-            child: pw.Text(value, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+            alignment: pw.Alignment.center,
+            child: pw.Text(value, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
           ),
         ],
       );
@@ -5519,26 +5520,26 @@ class PdfReportService {
       },
       children: [
         blueHeaderRow(["PÉNÉTRATION DE CORPS SOLIDES", "SUBSTANCES CORROSIVES OU POLLUANTES", "MATIÈRES TRAITÉES OU ENTREPOSÉES"]),
-        _tableDataRow(["AE1 : Negligeable -> IP 2X", "AF1 : Negligeable", "BE1 : Risques negligeables"], alt: false),
-        _tableDataRow(["AE2 : Petits objets (\u2265 2,5 mm) -> IP 3X", "AF2 : Agents d'origine atmospherique", "BE2 : Risques d'incendie"], alt: true),
-        _tableDataRow(["AE3 : Tres petits objets (1 a 2,5 mm) -> IP 4X", "AF3 : Intermittente ou accidentelle", "BE3 : Risques d'explosion"], alt: false),
-        _tableDataRow(["AE4 : Poussieres -> IP 5X (Protege)", "AF4 : Permanente", "BE4 : Risques de contamination"], alt: true),
+        _tableDataRow(["AE1 : Negligeable -> IP 2X", "AF1 : Negligeable", "BE1 : Risques negligeables"], alt: false, centered: true),
+        _tableDataRow(["AE2 : Petits objets (\u2265 2,5 mm) -> IP 3X", "AF2 : Agents d'origine atmospherique", "BE2 : Risques d'incendie"], alt: true, centered: true),
+        _tableDataRow(["AE3 : Tres petits objets (1 a 2,5 mm) -> IP 4X", "AF3 : Intermittente ou accidentelle", "BE3 : Risques d'explosion"], alt: false, centered: true),
+        _tableDataRow(["AE4 : Poussieres -> IP 5X (Protege)", "AF4 : Permanente", "BE4 : Risques de contamination"], alt: true, centered: true),
         blueHeaderRow(["ACCÈS AUX PARTIES DANGEREUSES", "PÉNÉTRATION DE LIQUIDES", "RISQUES DE CHOCS MÉCANIQUES"]),
-        _tableDataRow(["Non protege -> IP 0X", "AD1 : Negligeable -> IP X0", "AG1 : Faibles (0,225 J) -> IK 02"], alt: false),
-        _tableDataRow(["A : Avec le dos de la main -> IP 1X", "AD2 : Chutes de gouttes d'eau -> IP X1", "AG2 : Moyens (2 J) -> IK 07"], alt: true),
-        _tableDataRow(["B : Avec un doigt -> IP 2X", "AD3 : Chutes de gouttes jusqu'à 15\u00B0 -> IP X2", "AG3 : Importants (5 J) -> IK 08"], alt: false),
-        _tableDataRow(["C : Avec un outil -> IP 3X", "AD4 : Aspersion d'eau -> IP X3", "AG4 : Tres importants (20 J) -> IK 10"], alt: true),
-        _tableDataRow(["D : Avec un fil -> IP 4X", "AD5 : Projections d'eau -> IP X4", ""], alt: false),
-        _tableDataRow(["", "AD6 : Jets d'eau -> IP X5", ""], alt: true),
-        _tableDataRow(["", "AD7 : Paquets d'eau -> IP X6", ""], alt: false),
-        _tableDataRow(["", "AD8 : Immersion -> IP X7", ""], alt: true),
-        _tableDataRow(["", "AD9 : Submersion -> IP X8", ""], alt: false),
+        _tableDataRow(["Non protege -> IP 0X", "AD1 : Negligeable -> IP X0", "AG1 : Faibles (0,225 J) -> IK 02"], alt: false, centered: true),
+        _tableDataRow(["A : Avec le dos de la main -> IP 1X", "AD2 : Chutes de gouttes d'eau -> IP X1", "AG2 : Moyens (2 J) -> IK 07"], alt: true, centered: true),
+        _tableDataRow(["B : Avec un doigt -> IP 2X", "AD3 : Chutes de gouttes jusqu'à 15\u00B0 -> IP X2", "AG3 : Importants (5 J) -> IK 08"], alt: false, centered: true),
+        _tableDataRow(["C : Avec un outil -> IP 3X", "AD4 : Aspersion d'eau -> IP X3", "AG4 : Tres importants (20 J) -> IK 10"], alt: true, centered: true),
+        _tableDataRow(["D : Avec un fil -> IP 4X", "AD5 : Projections d'eau -> IP X4", ""], alt: false, centered: true),
+        _tableDataRow(["", "AD6 : Jets d'eau -> IP X5", ""], alt: true, centered: true),
+        _tableDataRow(["", "AD7 : Paquets d'eau -> IP X6", ""], alt: false, centered: true),
+        _tableDataRow(["", "AD8 : Immersion -> IP X7", ""], alt: true, centered: true),
+        _tableDataRow(["", "AD9 : Submersion -> IP X8", ""], alt: false, centered: true),
         blueHeaderRow(["COMPÉTENCE DES PERSONNES", "VIBRATIONS", ""]),
-        _tableDataRow(["BA1 : Ordinaires", "AH1 : Faibles", ""], alt: false),
-        _tableDataRow(["BA2 : Enfants", "AH2 : Moyennes", ""], alt: true),
-        _tableDataRow(["BA3 : Personnes handicapees", "AH3 : Importantes", ""], alt: false),
-        _tableDataRow(["BA4 : Personnes averties", "", ""], alt: true),
-        _tableDataRow(["BA5 : Personnes qualifiees", "", ""], alt: false),
+        _tableDataRow(["BA1 : Ordinaires", "AH1 : Faibles", ""], alt: false, centered: true),
+        _tableDataRow(["BA2 : Enfants", "AH2 : Moyennes", ""], alt: true, centered: true),
+        _tableDataRow(["BA3 : Personnes handicapees", "AH3 : Importantes", ""], alt: false, centered: true),
+        _tableDataRow(["BA4 : Personnes averties", "", ""], alt: true, centered: true),
+        _tableDataRow(["BA5 : Personnes qualifiees", "", ""], alt: false, centered: true),
       ],
     );
 
@@ -5721,10 +5722,10 @@ class PdfReportService {
                 return pw.TableRow(
                   decoration: pw.BoxDecoration(color: e.key.isOdd ? tableRowAlt : PdfColors.white),
                   children: [
-                    _cell(pt.localisation, isHeader: false),
+                    _cell(pt.localisation, isHeader: false, centered: true),
                     _cell(pt.identification, isHeader: false, centered: true),
                     _cell(pt.conditionPriseTerre, isHeader: false, centered: true),
-                    _cell(pt.naturePriseTerre, isHeader: false),
+                    _cell(pt.naturePriseTerre, isHeader: false, centered: true),
                     _cell(pt.methodeMesure, isHeader: false, centered: true),
                     _cell(pt.valeurMesure?.toStringAsFixed(2) ?? '-', isHeader: false, centered: true),
                     pw.Container(
@@ -6005,7 +6006,7 @@ class PdfReportService {
             else
               ...mesures.continuiteResistances.asMap().entries.map((e) {
                 final c = e.value;
-                return _tableDataRow([c.localisation, c.designationTableau, c.origineMesure, c.observation ?? ''], alt: e.key.isOdd);
+                return _tableDataRow([c.localisation, c.designationTableau, c.origineMesure, c.observation ?? ''], alt: e.key.isOdd, centered: true);
               }),
           ],
         ),
@@ -6801,10 +6802,10 @@ class PdfReportService {
     );
   }
 
-  static pw.TableRow _tableDataRow(List<String> data, {required bool alt}) {
+  static pw.TableRow _tableDataRow(List<String> data, {required bool alt, bool centered = false}) {
     return pw.TableRow(
       decoration: alt ? pw.BoxDecoration(color: tableRowAlt) : null,
-      children: data.map((d) => _cell(d, isHeader: false)).toList(),
+      children: data.map((d) => _cell(d, isHeader: false, centered: centered)).toList(),
     );
   }
 
