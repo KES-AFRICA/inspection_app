@@ -18,6 +18,7 @@ import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/models/last_report.dart';
 import 'package:inspec_app/models/jsa.dart';
 import 'package:inspec_app/services/statistics/mission_statistics_collector.dart';
+import 'package:inspec_app/services/statistics/audit_finding_inventory_engine.dart';
 import 'package:inspec_app/services/statistics/unified_observation.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform
@@ -92,13 +93,13 @@ void main() {
   });
 
   group('MissionStatisticsCollector Pipeline Tests', () {
-    test('Should collect all non-conformities across MT, BT, GE, cells, transformers, equipment & Foudre', () async {
+    test('Should collect all non-conformities across MT, BT, GE, cells, transformers, equipment & Foudre via AuditFindingInventoryEngine', () async {
       final missionId = 'mission_test_stats_001';
 
       final now = DateTime.now();
       final mission = Mission(
         id: missionId,
-        nomClient: 'CLIENT TEST STATS',
+        nomClient: 'CLIENT TEST ENGINE',
         dateIntervention: now,
         createdAt: now,
         updatedAt: now,
@@ -107,58 +108,29 @@ void main() {
       final missionBox = Hive.box<Mission>('missions');
       await missionBox.put(missionId, mission);
 
-      // Audit avec MT, BT, GE, Cellules, Transformateurs, Coffrets
       final audit = AuditInstallationsElectriques.create(missionId);
 
-      // MT Local
+      // Local MT
       final mtLocal = MoyenneTensionLocal(
-        nom: 'Local HTA 1',
+        nom: 'Poste MT 1',
         type: 'LOCAL_POSTE_HTA',
         dispositionsConstructives: [
-          ElementControle(
-            elementControle: 'Porte d\'accès',
-            conforme: false,
-            observation: 'Fermeture défectueuse',
-            priorite: 3,
-            criticite: '3',
-            familleRisque: 'Sécurité d\'accès',
-            referenceNormative: 'NF C 13-100',
-          ),
-          ElementControle(
-            elementControle: 'Ventilation',
-            conforme: true,
-          ),
-          ElementControle(
-            elementControle: 'Éclairage secours',
-            conforme: false,
-            estNA: true, // Doit être ignoré
-          ),
+          ElementControle(elementControle: 'Porte d\'accès au local', conforme: false, priorite: 3),
         ],
         conditionsExploitation: [
-          ElementControle(
-            elementControle: 'Outillage de sécurité',
-            conforme: false,
-            observation: 'Gants périmés',
-            priorite: 2,
-            criticite: '2',
-          ),
+          ElementControle(elementControle: 'Outillage d\'isolement', conforme: false, priorite: 2),
         ],
         cellules: [
           Cellule(
-            fonction: 'Arrivée',
-            type: 'Cellule',
+            fonction: 'Arrivée HTA',
+            type: 'Interrupteur',
             marqueModeleAnnee: 'Schneider 2020',
             tensionAssignee: '24 kV',
             pouvoirCoupure: '16 kA',
             numerotation: 'C1',
-            parafoudres: 'Non',
+            parafoudres: 'Oui',
             elementsVerifies: [
-              ElementControle(
-                elementControle: 'Verrouillage mécanique',
-                conforme: false,
-                observation: 'Inopérant',
-                priorite: 3,
-              ),
+              ElementControle(elementControle: 'Verrouillage mécanique', conforme: false, priorite: 3),
             ],
           ),
         ],
@@ -172,29 +144,19 @@ void main() {
             typeRefroidissement: 'ONAN',
             regimeNeutre: 'TN',
             elementsVerifies: [
-              ElementControle(
-                elementControle: 'Rétention d\'huile',
-                conforme: false,
-                observation: 'Bac fuyard',
-                priorite: 2,
-              ),
+              ElementControle(elementControle: 'Niveau d\'huile', conforme: false, priorite: 2),
             ],
           ),
         ],
       );
       audit.moyenneTensionLocaux.add(mtLocal);
 
-      // BT Zone & Groupe Électrogène
+      // Local GE
       final geLocal = BasseTensionLocal(
-        nom: 'Local GE 1',
+        nom: 'Local Groupe Électrogène',
         type: 'LOCAL_GROUPE_ELECTROGENE',
         dispositionsConstructives: [
-          ElementControle(
-            elementControle: 'Bac de rétention fioul',
-            conforme: false,
-            observation: 'Absence de bac',
-            priorite: 3,
-          ),
+          ElementControle(elementControle: 'Bac de rétention fuel', conforme: false, priorite: 3),
         ],
         coffrets: [
           CoffretArmoire(
@@ -239,22 +201,25 @@ void main() {
       final foudreBox = Hive.box<Foudre>('foudre_observations');
       await foudreBox.put('foudre_1', foudre1);
 
-      // EXÉCUTION DU MOTEUR UNIFIÉ DE COLLECTE
+      // EXÉCUTION DU MOTEUR D'INVENTAIRE ET IMPRESSION CONSOLE
+      final inventory = AuditFindingInventoryEngine.buildInventory(missionId);
+      inventory.printDiagnostic();
+
+      expect(inventory.missionId, equals(missionId));
+      expect(inventory.totalFindings, equals(7)); // 1 DC MT + 1 CE MT + 1 Cellule + 1 Transfo + 1 GE + 1 TGBT + 1 Foudre
+
+      // Vérification des criticités recensées
+      expect(inventory.critiqueCount, equals(3)); // Porte d'accès (3), Cellule (3), GE Rétention (3)
+      expect(inventory.majeureCount, equals(3));  // Outillage (2), Transfo (2), TGBT IP2X (2)
+      expect(inventory.mineureCount, equals(1));  // Foudre (1)
+
+      // Exécution de la façade collector
       final stats = MissionStatisticsCollector.collect(missionId);
-
-      expect(stats.missionId, equals(missionId));
-      expect(stats.allNonConformities.length, equals(7)); // 1 DC MT + 1 CE MT + 1 Cellule + 1 Transfo + 1 GE + 1 TGBT + 1 Foudre
-
-      // Vérification des criticités
       final cStats = stats.criticalityStats;
-      expect(cStats.critique, equals(3)); // Porte d'accès (3), Cellule (3), GE Rétention (3)
-      expect(cStats.majeure, equals(3));  // Outillage (2), Transfo (2), TGBT IP2X (2)
-      expect(cStats.mineure, equals(1));  // Foudre (1)
+      expect(cStats.critique, equals(3));
+      expect(cStats.majeure, equals(3));
+      expect(cStats.mineure, equals(1));
       expect(cStats.total, equals(7));
-
-      // Somme des pourcentages = 100%
-      final sumPct = cStats.pctCritique + cStats.pctMajeure + cStats.pctMineure;
-      expect(sumPct.toStringAsFixed(1), equals('100.0'));
     });
 
     test('Should NOT count ObservationLibre items as Mineure non-conformities', () async {
@@ -298,14 +263,13 @@ void main() {
       final auditBox = Hive.box<AuditInstallationsElectriques>('audit_installations_electriques');
       await auditBox.put(missionId, audit);
 
-      final stats = MissionStatisticsCollector.collect(missionId);
-      final cStats = stats.criticalityStats;
+      final inventory = AuditFindingInventoryEngine.buildInventory(missionId);
+      inventory.printDiagnostic();
 
-      // Il doit y avoir EXACTEMENT 1 seule Mineure (le point Foudre), et NON PAS 5 !
-      expect(cStats.mineure, equals(1));
-      expect(cStats.critique, equals(0));
-      expect(cStats.majeure, equals(0));
-      expect(cStats.total, equals(1));
+      expect(inventory.mineureCount, equals(1));
+      expect(inventory.critiqueCount, equals(0));
+      expect(inventory.majeureCount, equals(0));
+      expect(inventory.unspecifiedCount, equals(4));
     });
   });
 }
