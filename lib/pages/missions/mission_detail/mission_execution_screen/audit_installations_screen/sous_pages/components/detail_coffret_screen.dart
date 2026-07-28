@@ -1081,6 +1081,8 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
             ),
             SizedBox(height: 12),
             _buildInfoRow('Type de protection', alimentation.typeProtection),
+            if (alimentation.courbe != null && alimentation.courbe!.isNotEmpty)
+              _buildInfoRow('Courbe', alimentation.courbe!),
             _buildInfoRow('PDC kA', alimentation.pdcKA),
             _buildInfoRow('Calibre', alimentation.calibre),
             _buildInfoRow('Section de câble', alimentation.sectionCable),

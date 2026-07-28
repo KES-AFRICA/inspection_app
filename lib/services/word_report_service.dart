@@ -870,11 +870,12 @@ class WordReportService {
     if (coffret.alimentations.isNotEmpty) {
       _subTitle(doc, 'Alimentations');
       final alimentRows = <TableRow>[
-        _headerRow(['Source', 'Type protection', 'PDC (kA)', 'Calibre (A)', 'Section (mm²)']),
+        _headerRow(['Source', 'Type protection', 'Courbe', 'PDC (kA)', 'Calibre (A)', 'Section (mm²)']),
         for (final a in coffret.alimentations)
           TableRow(cells: [
             TableCell.text(a.source.isNotEmpty ? a.source : '-'),
             TableCell.text(a.typeProtection),
+            TableCell.text(a.courbe ?? ''),
             TableCell.text(a.pdcKA),
             TableCell.text(a.calibre),
             TableCell.text(a.sectionCable),
@@ -888,9 +889,10 @@ class WordReportService {
       final pt = coffret.protectionTete!;
       _subTitle(doc, 'Protection de tête');
       doc.addTable(Table(rows: [
-        _headerRow(['Type protection', 'PDC (kA)', 'Calibre', 'Section câble']),
+        _headerRow(['Type protection', 'Courbe', 'PDC (kA)', 'Calibre', 'Section câble']),
         TableRow(cells: [
           TableCell.text(pt.typeProtection),
+          TableCell.text(pt.courbe ?? ''),
           TableCell.text(pt.pdcKA),
           TableCell.text(pt.calibre),
           TableCell.text(pt.sectionCable),

@@ -642,8 +642,12 @@ class Alimentation {
   @HiveField(5)
   String source;
 
+  @HiveField(6)
+  String? courbe;
+
   Alimentation({
     required this.typeProtection,
+    this.courbe = '',
     required this.pdcKA,
     required this.calibre,
     required this.sectionCable,

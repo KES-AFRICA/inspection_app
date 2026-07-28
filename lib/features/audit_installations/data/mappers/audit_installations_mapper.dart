@@ -116,6 +116,7 @@ class AuditInstallationsMapper {
   static AlimentationEntity toAlimentationEntity(Alimentation model) {
     return AlimentationEntity(
       typeProtection: model.typeProtection,
+      courbe: model.courbe,
       pdcKA: model.pdcKA,
       calibre: model.calibre,
       sectionCable: model.sectionCable,
@@ -127,6 +128,7 @@ class AuditInstallationsMapper {
   static Alimentation toAlimentationModel(AlimentationEntity entity) {
     return Alimentation(
       typeProtection: entity.typeProtection,
+      courbe: entity.courbe ?? '',
       pdcKA: entity.pdcKA,
       calibre: entity.calibre,
       sectionCable: entity.sectionCable,

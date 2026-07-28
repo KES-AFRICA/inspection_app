@@ -96,6 +96,7 @@ class TransformateurMTBTEntity {
 
 class AlimentationEntity {
   final String typeProtection;
+  final String? courbe;
   final String pdcKA;
   final String calibre;
   final String sectionCable;
@@ -104,6 +105,7 @@ class AlimentationEntity {
 
   const AlimentationEntity({
     required this.typeProtection,
+    this.courbe = '',
     required this.pdcKA,
     required this.calibre,
     required this.sectionCable,

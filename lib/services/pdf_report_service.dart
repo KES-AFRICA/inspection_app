@@ -3646,6 +3646,65 @@ class PdfReportService {
   }
 
   static pw.Widget _buildObsZoneTable(String zone, List<ObservationLibre> obs) {
+    final rows = <pw.TableRow>[
+      // En-tête (avec Items centré et Titre à gauche en majuscule)
+      pw.TableRow(
+        decoration: const pw.BoxDecoration(color: PdfColors.white),
+        children: [
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            alignment: pw.Alignment.center,
+            child: pw.Text('Items',
+                style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black)),
+          ),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+            alignment: pw.Alignment.centerLeft,
+            child: pw.Text('OBSERVATIONS RELATIVES A ${zone.toUpperCase()}',
+                style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black)),
+          ),
+        ],
+      ),
+    ];
+
+    if (obs.isEmpty) {
+      rows.add(
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.white),
+          children: [
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              alignment: pw.Alignment.center,
+              child: pw.Text('-',
+                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+              child: pw.Text('Rien à signaler',
+                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall, fontStyle: pw.FontStyle.italic)),
+            ),
+          ],
+        ),
+      );
+    } else {
+      rows.addAll(obs.asMap().entries.map((e) => pw.TableRow(
+        decoration: pw.BoxDecoration(color: e.key.isEven ? PdfColors.white : tableRowAlt),
+        children: [
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            alignment: pw.Alignment.center,
+            child: pw.Text('${e.key + 1}',
+                style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+            child: pw.Text(e.value.texte,
+                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+          ),
+        ],
+      )));
+    }
+
     return pw.Table(
       defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
       border: pw.TableBorder(
@@ -3660,43 +3719,7 @@ class PdfReportService {
         0: pw.FlexColumnWidth(0.8),
         1: pw.FlexColumnWidth(6.4),
       },
-      children: [
-        // En-tête (avec Items centré et Titre à gauche en majuscule)
-        pw.TableRow(
-          decoration: const pw.BoxDecoration(color: PdfColors.white),
-          children: [
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              alignment: pw.Alignment.center,
-              child: pw.Text('Items',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black)),
-            ),
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-              alignment: pw.Alignment.centerLeft,
-              child: pw.Text('OBSERVATIONS RELATIVES A LA ${zone.toUpperCase()}',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black)),
-            ),
-          ],
-        ),
-        // Lignes d'observations
-        ...obs.asMap().entries.map((e) => pw.TableRow(
-          decoration: pw.BoxDecoration(color: e.key.isEven ? PdfColors.white : tableRowAlt),
-          children: [
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              alignment: pw.Alignment.center,
-              child: pw.Text('${e.key + 1}',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
-            ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
-              child: pw.Text(e.value.texte,
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-            ),
-          ],
-        )),
-      ],
+      children: rows,
     );
   }
 
@@ -4847,6 +4870,7 @@ class PdfReportService {
           children: [
             _thCell("Origine de la source d'alimentation"),
             _thCell('Type protection'),
+            _thCell('Courbe'),
             _thCell('PDC kA'),
             _thCell('Calibre'),
             _thCell('Section de câble'),
@@ -4857,6 +4881,7 @@ class PdfReportService {
           alimentRows.add(pw.TableRow(children: [
             _valueCell(a.source.isEmpty ? '-' : a.source),
             _valueCell(a.typeProtection),
+            _valueCell(a.courbe ?? ''),
             _valueCell(a.pdcKA),
             _valueCell(a.calibre),
             _valueCell(a.sectionCable),
@@ -4874,10 +4899,11 @@ class PdfReportService {
           ),
           columnWidths: const {
             0: pw.FlexColumnWidth(2.2),
-            1: pw.FlexColumnWidth(1.8),
-            2: pw.FlexColumnWidth(0.9),
-            3: pw.FlexColumnWidth(0.9),
-            4: pw.FlexColumnWidth(1.4),
+            1: pw.FlexColumnWidth(1.6),
+            2: pw.FlexColumnWidth(1.0),
+            3: pw.FlexColumnWidth(0.8),
+            4: pw.FlexColumnWidth(0.8),
+            5: pw.FlexColumnWidth(1.2),
           },
           children: alimentRows,
         ));
@@ -4897,7 +4923,7 @@ class PdfReportService {
           ),
           columnWidths: const {
             0: pw.FlexColumnWidth(2.2),
-            1: pw.FlexColumnWidth(5.0),
+            1: pw.FlexColumnWidth(5.4),
           },
           children: [
             pw.TableRow(
@@ -4913,23 +4939,25 @@ class PdfReportService {
                     textAlign: pw.TextAlign.center,
                   ),
                 ),
-                // Right column: nested table containing type, PDC, caliber, section headers and values
+                // Right column: nested table containing type, courbe, PDC, caliber, section headers and values
                 pw.Table(
                   border: pw.TableBorder(
                     horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
                     verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
                   ),
                   columnWidths: const {
-                    0: pw.FlexColumnWidth(1.8),
-                    1: pw.FlexColumnWidth(0.9),
-                    2: pw.FlexColumnWidth(0.9),
-                    3: pw.FlexColumnWidth(1.4),
+                    0: pw.FlexColumnWidth(1.6),
+                    1: pw.FlexColumnWidth(1.0),
+                    2: pw.FlexColumnWidth(0.8),
+                    3: pw.FlexColumnWidth(0.8),
+                    4: pw.FlexColumnWidth(1.2),
                   },
                   children: [
                     pw.TableRow(
                       decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
                       children: [
                         _thCell('Type protection'),
+                        _thCell('Courbe'),
                         _thCell('PDC kA'),
                         _thCell('Calibre'),
                         _thCell('Section de câble'),
@@ -4938,6 +4966,7 @@ class PdfReportService {
                     pw.TableRow(
                       children: [
                         _valueCell(pt.typeProtection),
+                        _valueCell(pt.courbe ?? ''),
                         _valueCell(pt.pdcKA),
                         _valueCell(pt.calibre),
                         _valueCell(pt.sectionCable),
