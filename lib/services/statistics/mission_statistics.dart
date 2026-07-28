@@ -1,0 +1,118 @@
+// lib/services/statistics/mission_statistics.dart
+
+import 'unified_observation.dart';
+
+class CriticalityStats {
+  final int critique;
+  final int majeure;
+  final int mineure;
+  final int total;
+  final double pctCritique;
+  final double pctMajeure;
+  final double pctMineure;
+
+  CriticalityStats({
+    required this.critique,
+    required this.majeure,
+    required this.mineure,
+    required this.total,
+    required this.pctCritique,
+    required this.pctMajeure,
+    required this.pctMineure,
+  });
+
+  factory CriticalityStats.fromObservations(List<UnifiedObservation> observations) {
+    int c = 0;
+    int m = 0;
+    int min = 0;
+
+    for (final obs in observations) {
+      switch (obs.criticite) {
+        case CriticalityLevel.critique:
+          c++;
+          break;
+        case CriticalityLevel.majeure:
+          m++;
+          break;
+        case CriticalityLevel.mineure:
+          min++;
+          break;
+        case CriticalityLevel.none:
+          break;
+      }
+    }
+
+    final tot = c + m + min;
+    if (tot == 0) {
+      return CriticalityStats(
+        critique: 0,
+        majeure: 0,
+        mineure: 0,
+        total: 0,
+        pctCritique: 0.0,
+        pctMajeure: 0.0,
+        pctMineure: 0.0,
+      );
+    }
+
+    return CriticalityStats(
+      critique: c,
+      majeure: m,
+      mineure: min,
+      total: tot,
+      pctCritique: (c / tot) * 100,
+      pctMajeure: (m / tot) * 100,
+      pctMineure: (min / tot) * 100,
+    );
+  }
+}
+
+class MissionStatistics {
+  final String missionId;
+  final List<UnifiedObservation> allNonConformities;
+  final CriticalityStats criticalityStats;
+  final Map<String, int> statsByFamilleRisque;
+  final Map<String, int> statsByRefNormative;
+  final Map<String, int> statsByLocalisation;
+  final Map<String, int> statsByTypeObjet;
+
+  MissionStatistics({
+    required this.missionId,
+    required this.allNonConformities,
+    required this.criticalityStats,
+    required this.statsByFamilleRisque,
+    required this.statsByRefNormative,
+    required this.statsByLocalisation,
+    required this.statsByTypeObjet,
+  });
+
+  factory MissionStatistics.compute(String missionId, List<UnifiedObservation> observations) {
+    final criticality = CriticalityStats.fromObservations(observations);
+
+    final byRisk = <String, int>{};
+    final byNorm = <String, int>{};
+    final byLoc = <String, int>{};
+    final byType = <String, int>{};
+
+    for (final obs in observations) {
+      if (obs.familleRisque != null && obs.familleRisque!.isNotEmpty) {
+        byRisk[obs.familleRisque!] = (byRisk[obs.familleRisque!] ?? 0) + 1;
+      }
+      if (obs.referenceNormative != null && obs.referenceNormative!.isNotEmpty) {
+        byNorm[obs.referenceNormative!] = (byNorm[obs.referenceNormative!] ?? 0) + 1;
+      }
+      byLoc[obs.localisation] = (byLoc[obs.localisation] ?? 0) + 1;
+      byType[obs.typeObjet] = (byType[obs.typeObjet] ?? 0) + 1;
+    }
+
+    return MissionStatistics(
+      missionId: missionId,
+      allNonConformities: observations,
+      criticalityStats: criticality,
+      statsByFamilleRisque: byRisk,
+      statsByRefNormative: byNorm,
+      statsByLocalisation: byLoc,
+      statsByTypeObjet: byType,
+    );
+  }
+}

@@ -20,6 +20,7 @@ import 'package:intl/intl.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:inspec_app/services/pdf/pdf_chunk_merger.dart';
 import 'dispositions_constructives_registry.dart';
+import 'statistics/mission_statistics_collector.dart';
 
 // ================================================================
 //  PdfReportService
@@ -1451,45 +1452,22 @@ class PdfReportService {
 
   static List<pw.Widget> _buildAnalyseStatistique(
     Mission mission,
-    AuditInstallationsElectriques? audit,
-    List<Foudre> foudres,
     Map<String, int> trackedPages,
     String numeroRapportDoc,
   ) {
     final widgets = <pw.Widget>[];
 
-    final allObs = <_ObsRecap>[
-      if (audit != null) ..._collectObservationsMT(audit),
-      if (audit != null) ..._collectObservationsBT(audit),
-      for (var f in foudres)
-        _ObsRecap(
-          localisation: 'Foudre',
-          coffret: 'Foudre',
-          observation: f.observation,
-          refNorm: '',
-          priorite: f.niveauPriorite.toString(),
-        ),
-    ];
+    // Collecte unifiée via la pipeline statistique centralisée
+    final stats = MissionStatisticsCollector.collect(mission.id);
+    final cStats = stats.criticalityStats;
 
-    int critique = 0;
-    int majeure = 0;
-    int mineure = 0;
-
-    for (final obs in allObs) {
-      final p = obs.priorite.trim();
-      if (p == '3' || p.toLowerCase().contains('critique')) {
-        critique++;
-      } else if (p == '2' || p.toLowerCase().contains('majeur')) {
-        majeure++;
-      } else {
-        mineure++;
-      }
-    }
-
-    final total = critique + majeure + mineure;
-    final pctCritique = total > 0 ? (critique / total) * 100 : 0.0;
-    final pctMajeure = total > 0 ? (majeure / total) * 100 : 0.0;
-    final pctMineure = total > 0 ? (mineure / total) * 100 : 0.0;
+    final critique = cStats.critique;
+    final majeure = cStats.majeure;
+    final mineure = cStats.mineure;
+    final total = cStats.total;
+    final pctCritique = cStats.pctCritique;
+    final pctMajeure = cStats.pctMajeure;
+    final pctMineure = cStats.pctMineure;
 
     // Entête de section
     widgets.add(PageTracker(
@@ -6545,7 +6523,7 @@ class PdfReportService {
 
           // ─── ANALYSE STATISTIQUE (Démarre sur une nouvelle page juste après Résumé Exécutif) ───
           pw.NewPage(),
-          ..._buildAnalyseStatistique(mission, audit, foudres, trackedPages, numeroRapportDoc),
+          ..._buildAnalyseStatistique(mission, trackedPages, numeroRapportDoc),
         ],
       ));
 
