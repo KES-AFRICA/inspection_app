@@ -3,6 +3,11 @@ import 'package:inspec_app/models/audit_installations_electriques.dart';
 import '../../domain/entities/audit_installations_entities.dart';
 
 class AuditInstallationsMapper {
+  static String? _normRef(String? ref) {
+    if (ref == null || ref.isEmpty) return ref;
+    return ref.replaceAll(RegExp(r'§\s*'), 'art ');
+  }
+
   // ElementControle
   static ElementControleEntity toElementEntity(ElementControle model) {
     return ElementControleEntity(
@@ -11,7 +16,7 @@ class AuditInstallationsMapper {
       observation: model.observation,
       priorite: model.priorite,
       photos: List<String>.from(model.photos),
-      referenceNormative: model.referenceNormativeEffective,
+      referenceNormative: _normRef(model.referenceNormativeEffective),
       estNA: model.estNA,
       familleRisque: model.familleRisqueEffective,
       criticite: model.criticiteEffective,
@@ -25,7 +30,7 @@ class AuditInstallationsMapper {
       observation: entity.observation,
       priorite: entity.priorite,
       photos: List<String>.from(entity.photos),
-      referenceNormative: entity.referenceNormative,
+      referenceNormative: _normRef(entity.referenceNormative),
       estNA: entity.estNA,
       familleRisque: entity.familleRisque,
       criticite: entity.criticite,

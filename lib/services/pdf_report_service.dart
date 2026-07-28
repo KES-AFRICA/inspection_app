@@ -2821,11 +2821,13 @@ class PdfReportService {
               child: pw.Text(o.observation,
                   style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
             ),
-            // REF. NORMATIVE
-            pw.Padding(
+            // REF. NORMATIVE (centré)
+            pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+              alignment: pw.Alignment.center,
               child: pw.Text(o.refNorm,
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                  textAlign: pw.TextAlign.center),
             ),
           ],
         ));
@@ -3014,10 +3016,13 @@ class PdfReportService {
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 child: pw.Text(o.observation, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
               ),
-              // REF. NORMATIVE
-              pw.Padding(
+              // REF. NORMATIVE (centré)
+              pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                child: pw.Text(o.refNorm, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                alignment: pw.Alignment.center,
+                child: pw.Text(o.refNorm,
+                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                    textAlign: pw.TextAlign.center),
               ),
             ],
           ));
@@ -5097,15 +5102,19 @@ class PdfReportService {
                 child: pw.Text(confText,
                     style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
               ),
-              pw.Padding(
+              pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                alignment: pw.Alignment.center,
                 child: pw.Text(refNorm,
-                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                    textAlign: pw.TextAlign.center),
               ),
-              pw.Padding(
+              pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                alignment: pw.Alignment.center,
                 child: pw.Text(familleRisque,
-                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                    textAlign: pw.TextAlign.center),
               ),
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
@@ -6636,6 +6645,7 @@ class PdfReportService {
   /// Seuls les symboles Unicode hors-charset sont translittérés.
   static String _normalizeText(String text) {
     if (text.isEmpty) return text;
+    text = text.replaceAll(RegExp(r'§\s*'), 'art ');
 
     const replacements = <String, String>{
       // Guillemets typographiques
@@ -7398,10 +7408,10 @@ class _ObsRecap {
     required this.localisation,
     required this.coffret,
     required this.observation,
-    required this.refNorm,
+    required String refNorm,
     required this.priorite,
     this.repere,
-  });
+  }) : refNorm = refNorm.replaceAll(RegExp(r'§\s*'), 'art ');
 }
 
 

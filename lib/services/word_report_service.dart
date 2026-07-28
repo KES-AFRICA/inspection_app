@@ -23,6 +23,10 @@ const _orange   = 'FF9800';
 const _green    = '4CAF50';
 
 class WordReportService {
+  static String _normRef(String? ref) {
+    if (ref == null || ref.isEmpty) return '';
+    return ref.replaceAll(RegExp(r'§\s*'), 'art ');
+  }
 
   // ═══════════════════════════════════════════════════════════════
   //  GÉNÉRATION PRINCIPALE
@@ -467,7 +471,7 @@ class WordReportService {
         list.add([
           loc, equip,
           el.observation?.isNotEmpty == true ? el.observation! : el.elementControle,
-          el.referenceNormative ?? '',
+          _normRef(el.referenceNormative),
           el.conforme == false ? (el.priorite?.toString() ?? '') : 'NA',
         ]);
       }
@@ -481,7 +485,7 @@ class WordReportService {
               loc,
               equip,
               obs.observation?.isNotEmpty == true ? obs.observation! : p.pointVerification,
-              obs.referenceNormative ?? p.referenceNormative ?? '',
+              _normRef(obs.referenceNormative ?? p.referenceNormative),
               obs.conforme == false ? (obs.priorite?.toString() ?? '') : 'NA',
             ]);
           }
@@ -490,7 +494,7 @@ class WordReportService {
             loc,
             equip,
             p.observation?.isNotEmpty == true ? p.observation! : p.pointVerification,
-            p.referenceNormative ?? '',
+            _normRef(p.referenceNormative),
             p.priorite?.toString() ?? '',
           ]);
         }
@@ -548,7 +552,7 @@ class WordReportService {
         list.add([
           loc, equip,
           el.observation?.isNotEmpty == true ? el.observation! : el.elementControle,
-          el.referenceNormative ?? '',
+          _normRef(el.referenceNormative),
           el.conforme == false ? (el.priorite?.toString() ?? '') : 'NA',
         ]);
       }
@@ -562,7 +566,7 @@ class WordReportService {
               loc,
               equip,
               obs.observation?.isNotEmpty == true ? obs.observation! : p.pointVerification,
-              obs.referenceNormative ?? p.referenceNormative ?? '',
+              _normRef(obs.referenceNormative ?? p.referenceNormative),
               obs.conforme == false ? (obs.priorite?.toString() ?? '') : 'NA',
             ]);
           }
@@ -571,7 +575,7 @@ class WordReportService {
             loc,
             equip,
             p.observation?.isNotEmpty == true ? p.observation! : p.pointVerification,
-            p.referenceNormative ?? '',
+            _normRef(p.referenceNormative),
             p.priorite?.toString() ?? '',
           ]);
         }

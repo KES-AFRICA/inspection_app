@@ -59,14 +59,15 @@ class UnifiedObservation {
     required this.texteObservation,
     required this.criticite,
     this.prioriteInt,
-    this.referenceNormative,
+    String? referenceNormative,
     this.familleRisque,
     required this.sourceCategory,
     required this.tableType,
     required this.typeObjet,
     this.repere,
     List<String>? photos,
-  }) : photos = photos ?? [];
+  })  : referenceNormative = referenceNormative?.replaceAll(RegExp(r'§\s*'), 'art '),
+        photos = photos ?? [];
 
   static CriticalityLevel intToCriticality(int? priority) {
     if (priority == 3) return CriticalityLevel.critique;
