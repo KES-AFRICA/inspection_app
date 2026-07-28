@@ -3,6 +3,9 @@ class MissionEntity {
   final String id;
   final String nomClient;
   final String? activiteClient;
+  final String? activiteSurSite;
+  final String? classementReglementaireType;
+  final String? classementReglementaireCategorie;
   final String? adresseClient;
   final String? logoClient;
   final String? qrCodeClient;
@@ -47,6 +50,9 @@ class MissionEntity {
     required this.id,
     required this.nomClient,
     this.activiteClient,
+    this.activiteSurSite,
+    this.classementReglementaireType,
+    this.classementReglementaireCategorie,
     this.adresseClient,
     this.logoClient,
     this.qrCodeClient,

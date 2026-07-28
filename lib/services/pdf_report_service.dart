@@ -643,6 +643,28 @@ class PdfReportService {
     );
   }
 
+  static List<SommaireEntry> getSommaireEntriesForTesting({
+    Mission? mission,
+    AuditInstallationsElectriques? audit,
+    MesuresEssais? mesures,
+  }) {
+    final dummyMission = mission ?? Mission(
+      id: 'test',
+      nomClient: 'TEST',
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+      status: 'active',
+    );
+    return _collectSommaireEntries(
+      mission: dummyMission,
+      rg: null,
+      desc: null,
+      audit: audit,
+      mesures: mesures,
+      foudres: [],
+    );
+  }
+
   static List<_SommaireEntry> _collectSommaireEntries({
     required Mission mission,
     required RenseignementsGeneraux? rg,
@@ -677,6 +699,11 @@ class PdfReportService {
 
     // 5. Analyse Statistique (Immédiatement après Résumé Exécutif)
     entries.add(_SommaireEntry(titre: "ANALYSE STATISTIQUE", key: 'analyse_statistique', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "Principales non-conformités et répartition", key: 'analyse_statistique', level: 1));
+    entries.add(_SommaireEntry(titre: "Statistique par type de défaut", key: 'stat_defauts', level: 1));
+    entries.add(_SommaireEntry(titre: "Répartition par domaine de tension", key: 'stat_tension', level: 1));
+    entries.add(_SommaireEntry(titre: "Non-conformités croisées par catégorie d'équipement", key: 'stat_croisee', level: 1));
+    entries.add(_SommaireEntry(titre: "Inventaire chiffré des installations et équipements", key: 'stat_inventaire', level: 1));
 
     // 6. Renseignements généraux
     entries.add(_SommaireEntry(titre: "RENSEIGNEMENTS GENERAUX DE L'ETABLISSEMENT", key: 'renseignements', level: 0, isBold: true, isUppercase: true));
@@ -1520,7 +1547,11 @@ class PdfReportService {
     // VI. Sous-section : Statistique par type de défaut (10 principales)
     final topDefects = inventory.getTopDefects(limit: 10);
     if (topDefects.isNotEmpty) {
-      widgets.add(_subTitle('Statistique par type de d\u00e9faut'));
+      widgets.add(PageTracker(
+        key: 'stat_defauts',
+        registry: trackedPages,
+        child: _subTitle('Statistique par type de d\u00e9faut'),
+      ));
       widgets.add(pw.SizedBox(height: 5));
       widgets.add(_bodyText(
         'Les ${inventory.totalFindings} non-conformit\u00e9s relev\u00e9es ont \u00e9t\u00e9 regroup\u00e9es par nature de d\u00e9faut. Les dix cat\u00e9gories les plus repr\u00e9sent\u00e9es sont pr\u00e9sent\u00e9es ci-dessous ; elles concentrent \u00e0 elles seules la quasi-totalit\u00e9 des \u00e9carts constat\u00e9s.',
@@ -1533,7 +1564,11 @@ class PdfReportService {
     // VII. Sous-section : Répartition par domaine de tension (MT vs BT)
     final domainStats = inventory.getTensionDomainStats();
     if (domainStats.totalCount > 0) {
-      widgets.add(_buildTensionDomainSection(domainStats));
+      widgets.add(PageTracker(
+        key: 'stat_tension',
+        registry: trackedPages,
+        child: _buildTensionDomainSection(domainStats),
+      ));
       widgets.add(pw.SizedBox(height: 12));
     }
 
@@ -1548,12 +1583,20 @@ class PdfReportService {
       countCoffrets: diagReport.countEquipements,
     );
     if (crossItems.isNotEmpty) {
-      widgets.add(_buildCrossCategorySection(crossItems));
+      widgets.add(PageTracker(
+        key: 'stat_croisee',
+        registry: trackedPages,
+        child: _buildCrossCategorySection(crossItems),
+      ));
       widgets.add(pw.SizedBox(height: 12));
     }
 
     // IX. Sous-section : Inventaire chiffré des installations et équipements
-    widgets.add(_buildInventaireEquipementsSection(mission.id));
+    widgets.add(PageTracker(
+      key: 'stat_inventaire',
+      registry: trackedPages,
+      child: _buildInventaireEquipementsSection(mission.id),
+    ));
 
     return widgets;
   }
@@ -2185,104 +2228,62 @@ class PdfReportService {
               ['Etablissement vérifié', mission.nomClient],
               alt: false,
             ),
-
-            if (rg != null) ...[
-              _tableDataRow(
-                ['Installation vérifié', rg.installation],
-                alt: true,
-              ),
-              _tableDataRow(
-                ['Activité principale', rg.activite],
-                alt: false,
-              ),
-            ] else if (mission.activiteClient != null)
-              _tableDataRow(
-                ['Activité principale', mission.activiteClient!],
-                alt: false,
-              ),
-
-            if (mission.adresseClient != null)
-              _tableDataRow(
-                ['Adresse', mission.adresseClient!],
-                alt: true,
-              ),
-
-            if (rg != null && rg.nomSite.isNotEmpty)
-              _tableDataRow(
-                ['Nom du site', rg.nomSite],
-                alt: false,
-              )
-            else if (mission.nomSite != null &&
-                mission.nomSite!.isNotEmpty)
-              _tableDataRow(
-                ['Nom du site', mission.nomSite!],
-                alt: false,
-              ),
-
             _tableDataRow(
               [
-                'Nature',
-                mission.natureMission ??
-                    rg?.verificationType ??
-                    '',
+                'Installation vérifié',
+                rg?.installation.isNotEmpty == true
+                    ? rg!.installation
+                    : (mission.installation ?? 'Toutes les installations électriques'),
               ],
               alt: true,
             ),
-
-            if (dateIntervTxt.isNotEmpty)
-              _tableDataRow(
-                ['Dates d\'intervention', dateIntervTxt],
-                alt: false,
-              ),
-
-            if (rg != null && rg.dureeJours > 0)
-              _tableDataRow(
-                ['Durée', '${rg.dureeJours} jour(s)'],
-                alt: true,
-              )
-            else if (mission.dureeMissionJours != null)
-              _tableDataRow(
-                [
-                  'Durée',
-                  '${mission.dureeMissionJours} jour(s)',
-                ],
-                alt: true,
-              ),
-
-            if (rg != null) ...[
-              if (rg.accompagnateurs.isNotEmpty)
-                _tableDataRow(
-                  [
-                    'Accompagnateur / Responsable',
-                    rg.accompagnateurs
-                        .map((m) => m['nom'] ?? '')
-                        .where((n) => n.isNotEmpty)
-                        .join(', '),
-                  ],
-                  alt: false,
-                ),
-
-              if (rg.registreControle.isNotEmpty)
-                _tableDataRow(
-                  ['Registre de controle', rg.registreControle],
-                  alt: true,
-                ),
-
-              if (rg.compteRendu.isNotEmpty)
-                _tableDataRow(
-                  [
-                    'Compte rendu de fin de visite fait à',
-                    rg.compteRendu.join(', '),
-                  ],
-                  alt: false,
-                ),
-
-              if (verificateursNoms.isNotEmpty)
-                _tableDataRow(
-                  ['Vérificateur(s)', verificateursNoms],
-                  alt: true,
-                ),
-            ],
+            _tableDataRow(
+              [
+                'Activité principale',
+                rg?.activite.isNotEmpty == true
+                    ? rg!.activite
+                    : (mission.activiteClient ?? '—'),
+              ],
+              alt: false,
+            ),
+            _tableDataRow(
+              ['Adresse', mission.adresseClient ?? '—'],
+              alt: true,
+            ),
+            _tableDataRow(
+              [
+                'Nom du site',
+                rg?.nomSite.isNotEmpty == true
+                    ? rg!.nomSite
+                    : (mission.nomSite ?? '—'),
+              ],
+              alt: false,
+            ),
+            _tableDataRow(
+              ['Activité sur le site', mission.activiteSurSite ?? '—'],
+              alt: true,
+            ),
+            _tableDataRow(
+              [
+                'Registre de contrôle',
+                rg?.registreControle.isNotEmpty == true
+                    ? rg!.registreControle
+                    : 'Non présenté',
+              ],
+              alt: false,
+            ),
+            _tableDataRow(
+              ['Classement règlementaire', ''],
+              alt: true,
+            ),
+            _tableDataRow(
+              ['                          Type', mission.classementReglementaireType ?? '—'],
+              alt: false,
+            ),
+            _tableDataRow(
+              ['                          Catégorie', mission.classementReglementaireCategorie ?? '—'],
+              alt: true,
+            ),
           ],
         ),
 

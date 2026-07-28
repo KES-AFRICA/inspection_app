@@ -25,12 +25,25 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
   // Controllers pour les champs
   final _nomClientCtrl = TextEditingController();
   final _activiteClientCtrl = TextEditingController();
+  final _activiteSurSiteCtrl = TextEditingController();
   final _adresseClientCtrl = TextEditingController();
   final _nomSiteCtrl = TextEditingController();
   final _installationCtrl = TextEditingController();
   
   // Sélection pour Nature de vérification
   String? _natureMission;
+
+  // Classement réglementaire
+  String? _classementReglementaireType;
+  String? _classementReglementaireCategorie;
+
+  static const List<String> _classementTypes = [
+    '—', 'A', 'B', 'C', 'D', 'E', 'J', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'
+  ];
+
+  static const List<String> _classementCategories = [
+    '—', '1ère catégorie', '2ème catégorie', '3ème catégorie', '4ème catégorie', '5ème catégorie'
+  ];
 
   // Sélection pour Périmètre de la mission
   List<String> _selectedPerimetres = [];
@@ -68,6 +81,9 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
       final m = widget.missionToEdit!;
       _nomClientCtrl.text = m.nomClient;
       _activiteClientCtrl.text = m.activiteClient ?? '';
+      _activiteSurSiteCtrl.text = m.activiteSurSite ?? '';
+      _classementReglementaireType = m.classementReglementaireType;
+      _classementReglementaireCategorie = m.classementReglementaireCategorie;
       _adresseClientCtrl.text = m.adresseClient ?? '';
       _nomSiteCtrl.text = m.nomSite ?? '';
       _installationCtrl.text = m.installation ?? '';
@@ -116,6 +132,7 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
   void dispose() {
     _nomClientCtrl.dispose();
     _activiteClientCtrl.dispose();
+    _activiteSurSiteCtrl.dispose();
     _adresseClientCtrl.dispose();
     _nomSiteCtrl.dispose();
     _installationCtrl.dispose();
@@ -168,6 +185,9 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
         id: missionId,
         nomClient: _nomClientCtrl.text.trim(),
         activiteClient: _activiteClientCtrl.text.trim().isEmpty ? null : _activiteClientCtrl.text.trim(),
+        activiteSurSite: _activiteSurSiteCtrl.text.trim().isEmpty ? null : _activiteSurSiteCtrl.text.trim(),
+        classementReglementaireType: _classementReglementaireType,
+        classementReglementaireCategorie: _classementReglementaireCategorie,
         adresseClient: _adresseClientCtrl.text.trim().isEmpty ? null : _adresseClientCtrl.text.trim(),
         nomSite: _nomSiteCtrl.text.trim(),
         installation: _installationCtrl.text.trim(),
@@ -670,9 +690,18 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
                 // Activité du client
                 _buildTextField(
                   controller: _activiteClientCtrl,
-                  label: 'Activité du client',
+                  label: 'Activité principale du client',
                   icon: Icons.work_outline,
-                  hint: 'Ex: Banque, Industrie, Services...',
+                  hint: 'Ex: Société de transport, Banque...',
+                ),
+                SizedBox(height: isSmallScreen ? 14 : 16),
+
+                // Activité sur le site
+                _buildTextField(
+                  controller: _activiteSurSiteCtrl,
+                  label: 'Activité sur le site',
+                  icon: Icons.storefront_outlined,
+                  hint: 'Ex: Atelier, Gare, Dépôt, Siège...',
                 ),
                 SizedBox(height: isSmallScreen ? 14 : 16),
 
@@ -703,6 +732,51 @@ class _CreateMissionScreenState extends State<CreateMissionScreen> {
                   icon: Icons.location_on_outlined,
                   hint: 'Ex: Yaoundé, Cameroun',
                   maxLines: 2,
+                ),
+                SizedBox(height: isSmallScreen ? 24 : 28),
+
+                // Section Classement réglementaire
+                Text(
+                  'CLASSEMENT RÈGLEMENTAIRE',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 14 : 16,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.darkBlue,
+                    letterSpacing: 1.1,
+                  ),
+                ),
+                SizedBox(height: isSmallScreen ? 12 : 16),
+
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _classementTypes.contains(_classementReglementaireType) ? _classementReglementaireType : '—',
+                        decoration: InputDecoration(
+                          labelText: 'Type ERP / ERT',
+                          prefixIcon: const Icon(Icons.category_outlined, color: AppTheme.darkBlue),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                        ),
+                        items: _classementTypes.map((t) => DropdownMenuItem(value: t, child: Text(t))).toList(),
+                        onChanged: (val) => setState(() => _classementReglementaireType = (val == '—' ? null : val)),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _classementCategories.contains(_classementReglementaireCategorie) ? _classementReglementaireCategorie : '—',
+                        decoration: InputDecoration(
+                          labelText: 'Catégorie',
+                          prefixIcon: const Icon(Icons.filter_list_outlined, color: AppTheme.darkBlue),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+                        ),
+                        items: _classementCategories.map((c) => DropdownMenuItem(value: c, child: Text(c))).toList(),
+                        onChanged: (val) => setState(() => _classementReglementaireCategorie = (val == '—' ? null : val)),
+                      ),
+                    ),
+                  ],
                 ),
                 SizedBox(height: isSmallScreen ? 24 : 28),
                 

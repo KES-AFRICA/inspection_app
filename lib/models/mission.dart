@@ -131,10 +131,22 @@ class Mission extends HiveObject {
   @HiveField(41)
   String? qrCodeClient;
 
+  @HiveField(42)
+  String? activiteSurSite;
+
+  @HiveField(43)
+  String? classementReglementaireType;
+
+  @HiveField(44)
+  String? classementReglementaireCategorie;
+
   Mission({
     required this.id,
     required this.nomClient,
     this.activiteClient,
+    this.activiteSurSite,
+    this.classementReglementaireType,
+    this.classementReglementaireCategorie,
     this.adresseClient,
     this.logoClient,
     this.accompagnateurs,
@@ -237,6 +249,9 @@ class Mission extends HiveObject {
       perimetreMission: json['perimetre_mission'] != null
           ? List<String>.from(json['perimetre_mission'])
           : null,
+      activiteSurSite: json['activite_sur_site'],
+      classementReglementaireType: json['classement_reglementaire_type'],
+      classementReglementaireCategorie: json['classement_reglementaire_categorie'],
     );
   }
 
@@ -245,6 +260,9 @@ class Mission extends HiveObject {
       'id': id,
       'nom_client': nomClient,
       'activite_client': activiteClient,
+      'activite_sur_site': activiteSurSite,
+      'classement_reglementaire_type': classementReglementaireType,
+      'classement_reglementaire_categorie': classementReglementaireCategorie,
       'adresse_client': adresseClient,
       'logo_client': logoClient,
       'qr_code_client': qrCodeClient,

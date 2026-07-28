@@ -4,6 +4,9 @@ import 'package:inspec_app/models/mission.dart';
 class CreateMissionData {
   String nomClient;
   String? activiteClient;
+  String? activiteSurSite;
+  String? classementReglementaireType;
+  String? classementReglementaireCategorie;
   String? adresseClient;
   String nomSite;
   String installation;
@@ -34,6 +37,9 @@ class CreateMissionData {
   CreateMissionData({
     required this.nomClient,
     this.activiteClient,
+    this.activiteSurSite,
+    this.classementReglementaireType,
+    this.classementReglementaireCategorie,
     this.adresseClient,
     required this.nomSite,
     required this.installation,
@@ -65,6 +71,9 @@ class CreateMissionData {
       id: id,
       nomClient: nomClient,
       activiteClient: activiteClient,
+      activiteSurSite: activiteSurSite,
+      classementReglementaireType: classementReglementaireType,
+      classementReglementaireCategorie: classementReglementaireCategorie,
       adresseClient: adresseClient,
       dgResponsable: dgResponsable,
       nomSite: nomSite,
