@@ -5367,71 +5367,42 @@ class PdfReportService {
             alignment: pw.Alignment.center,
             child: pw.Text(r.origineClassement, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
           ),
-          // Influences
-          pw.Table(
-            border: pw.TableBorder(verticalInside: pw.BorderSide(color: borderColor, width: 0.4)),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(0.48),
-              1: pw.FlexColumnWidth(0.48),
-              2: pw.FlexColumnWidth(0.48),
-              3: pw.FlexColumnWidth(0.48),
-              4: pw.FlexColumnWidth(0.48),
-            },
-            children: [
-              pw.TableRow(
-                children: [
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                    alignment: pw.Alignment.center,
-                    child: pw.Text(r.af ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                    alignment: pw.Alignment.center,
-                    child: pw.Text(r.be ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                    alignment: pw.Alignment.center,
-                    child: pw.Text(r.ae ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                    alignment: pw.Alignment.center,
-                    child: pw.Text(r.ad ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                    alignment: pw.Alignment.center,
-                    child: pw.Text(r.ag ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-                  ),
-                ],
-              ),
-            ],
+          // Influences (5 colonnes plates)
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(r.af ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
           ),
-          // IP/IK
-          pw.Table(
-            border: pw.TableBorder(verticalInside: pw.BorderSide(color: borderColor, width: 0.4)),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(0.7),
-              1: pw.FlexColumnWidth(0.7),
-            },
-            children: [
-              pw.TableRow(
-                children: [
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                    alignment: pw.Alignment.center,
-                    child: pw.Text(r.ip ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-                  ),
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                    alignment: pw.Alignment.center,
-                    child: pw.Text(r.ik ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-                  ),
-                ],
-              ),
-            ],
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(r.be ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+          ),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(r.ae ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+          ),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(r.ad ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+          ),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(r.ag ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+          ),
+          // IP/IK (2 colonnes plates)
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(r.ip ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+          ),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(r.ik ?? '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
           ),
         ],
       ));
@@ -5446,11 +5417,16 @@ class PdfReportService {
         horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(1.7),
-        1: pw.FlexColumnWidth(0.8),
-        2: pw.FlexColumnWidth(0.9),
-        3: pw.FlexColumnWidth(2.4),
-        4: pw.FlexColumnWidth(1.4),
+        0: pw.FlexColumnWidth(1.7),  // Localisation
+        1: pw.FlexColumnWidth(0.8),  // Zone
+        2: pw.FlexColumnWidth(0.9),  // Origine
+        3: pw.FlexColumnWidth(0.48), // AF
+        4: pw.FlexColumnWidth(0.48), // BE
+        5: pw.FlexColumnWidth(0.48), // AE
+        6: pw.FlexColumnWidth(0.48), // AD
+        7: pw.FlexColumnWidth(0.48), // AG
+        8: pw.FlexColumnWidth(0.7),  // IP
+        9: pw.FlexColumnWidth(0.7),  // IK
       },
       children: dataRows,
     ));
