@@ -2710,31 +2710,6 @@ class PdfReportService {
   static List<pw.Widget> _buildListeRecapitulativeMulti(AuditInstallationsElectriques audit, Map<String, int> trackedPages) {
     final widgets = <pw.Widget>[];
 
-    // Légende priorités — style trame
-    widgets.add(pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: pw.BoxDecoration(
-        color: PdfColor.fromInt(0xFFF5F8FC),
-        border: pw.Border.all(color: borderColor, width: 0.4),
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-      ),
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          pw.Text('Niveau de priorité des observations constatées',
-              style: pw.TextStyle(font: _fontBold, fontSize: fsBody)),
-          pw.SizedBox(height: 5),
-          pw.Row(children: [
-            _legendePriorite('1', PdfColors.black, 'Niveau 1 : À surveiller'),
-            pw.SizedBox(width: 16),
-            _legendePriorite('2', PdfColor.fromInt(0xFFE65100), 'Niveau 2 : Mise en conformité à planifier'),
-            pw.SizedBox(width: 16),
-            _legendePriorite('3', PdfColor.fromInt(0xFFD32F2F), 'Niveau 3 : Critique, Action immédiate'),
-          ]),
-        ],
-      ),
-    ));
-    widgets.add(pw.SizedBox(height: 14));
 
     // ── Moyenne Tension ──
     widgets.add(PageTracker(
@@ -2761,18 +2736,8 @@ class PdfReportService {
     return widgets;
   }
 
-  /// Légende priorité (chiffre coloré + texte)
-  static pw.Widget _legendePriorite(String num, PdfColor color, String label) {
-    return pw.Row(children: [
-      pw.Text(num,
-          style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: color)),
-      pw.SizedBox(width: 4),
-      pw.Text(label, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-    ]);
-  }
-
   /// ── Tableau récap MT ──
-  /// Colonnes : LOCAL | OBSERVATIONS | REF. NORMATIVE | PRIORITÉ
+  /// Colonnes : LOCAL | OBSERVATIONS | REF. NORMATIVE
   /// (pas de colonne ÉQUIPEMENT en MT — conforme à la trame)
   static List<pw.Widget> _buildObsRecapTableMT(List<_ObsRecap> obs) {
     if (obs.isEmpty) {
@@ -2794,8 +2759,8 @@ class PdfReportService {
         verticalInside: pw.BorderSide(color: borderColor, width: 0.5),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(1.8),
-        1: pw.FlexColumnWidth(6.2),
+        0: pw.FlexColumnWidth(2.0),
+        1: pw.FlexColumnWidth(6.0),
       },
       children: [
         pw.TableRow(
@@ -2817,10 +2782,9 @@ class PdfReportService {
         verticalInside: pw.BorderSide(color: borderColor, width: 0.5),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(1.8),
-        1: pw.FlexColumnWidth(3.8),
+        0: pw.FlexColumnWidth(2.0),
+        1: pw.FlexColumnWidth(4.2),
         2: pw.FlexColumnWidth(1.8),
-        3: pw.FlexColumnWidth(0.6),
       },
       children: [
         pw.TableRow(
@@ -2829,7 +2793,6 @@ class PdfReportService {
             _obsHeaderCellMT('LOCAL'),
             _obsHeaderCellMT('OBSERVATIONS'),
             _obsHeaderCellMT('RÉF. NORMATIVE'),
-            _obsHeaderCellMT('PRIORITÉ'),
           ],
         ),
       ],
@@ -2846,15 +2809,6 @@ class PdfReportService {
       for (int i = 0; i < group.items.length; i++) {
         final o = group.items[i];
         altIdx++;
-
-        PdfColor textColor = PdfColors.black;
-        if (o.priorite == '3') {
-          textColor = PdfColor.fromInt(0xFFD32F2F);
-        } else if (o.priorite == '2') {
-          textColor = PdfColor.fromInt(0xFFE65100);
-        } else {
-          textColor = PdfColors.black;
-        }
 
         final rowBg = altIdx.isOdd ? tableRowAlt : PdfColors.white;
 
@@ -2873,14 +2827,6 @@ class PdfReportService {
               child: pw.Text(o.refNorm,
                   style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
             ),
-            // PRIORITÉ
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
-              alignment: pw.Alignment.center,
-              child: pw.Text(o.priorite,
-                  style: pw.TextStyle(
-                      font: _fontBold, fontSize: fsSmall, color: textColor)),
-            ),
           ],
         ));
       }
@@ -2895,8 +2841,8 @@ class PdfReportService {
           verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
         ),
         columnWidths: const {
-          0: pw.FlexColumnWidth(1.8),
-          1: pw.FlexColumnWidth(6.2),
+          0: pw.FlexColumnWidth(2.0),
+          1: pw.FlexColumnWidth(6.0),
         },
         children: [
           pw.TableRow(
@@ -2917,9 +2863,8 @@ class PdfReportService {
                   verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
                 ),
                 columnWidths: const {
-                  0: pw.FlexColumnWidth(3.8),
+                  0: pw.FlexColumnWidth(4.2),
                   1: pw.FlexColumnWidth(1.8),
-                  2: pw.FlexColumnWidth(0.6),
                 },
                 children: nestedRows,
               ),
@@ -2935,7 +2880,7 @@ class PdfReportService {
   }
 
   /// ── Tableau récap BT ──
-  /// Colonnes : LOCAL | ÉQUIPEMENT | OBSERVATIONS | REF. NORMATIVE | PRIORITÉ
+  /// Colonnes : LOCAL | ÉQUIPEMENT | OBSERVATIONS | REF. NORMATIVE
   static List<pw.Widget> _buildObsRecapTableBT(List<_ObsRecap> obs) {
     if (obs.isEmpty) {
       return [pw.Container(
@@ -2957,8 +2902,8 @@ class PdfReportService {
         verticalInside: pw.BorderSide(color: borderColor, width: 0.5),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(1.2),
-        1: pw.FlexColumnWidth(1.8),
+        0: pw.FlexColumnWidth(1.0),
+        1: pw.FlexColumnWidth(2.0),
         2: pw.FlexColumnWidth(5.4),
       },
       children: [
@@ -2983,11 +2928,10 @@ class PdfReportService {
         verticalInside: pw.BorderSide(color: borderColor, width: 0.5),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(1.2),
-        1: pw.FlexColumnWidth(1.8),
-        2: pw.FlexColumnWidth(3.4),
-        3: pw.FlexColumnWidth(1.2),
-        4: pw.FlexColumnWidth(0.8),
+        0: pw.FlexColumnWidth(1.0),
+        1: pw.FlexColumnWidth(2.0),
+        2: pw.FlexColumnWidth(3.9),
+        3: pw.FlexColumnWidth(1.5),
       },
       children: [
         pw.TableRow(
@@ -2997,7 +2941,6 @@ class PdfReportService {
             _obsHeaderCellMT('ÉQUIPEMENT'),
             _obsHeaderCellMT('OBSERVATIONS'),
             _obsHeaderCellMT('RÉF. NORMATIVE'),
-            _obsHeaderCellMT('PRIORITÉ'),
           ],
         ),
       ],
@@ -3011,13 +2954,13 @@ class PdfReportService {
     int equipIdx = 0; // Global counter for equipments in the BT table
 
     for (final group in groups) {
-      // Troisième ligne : Séparateur local (colspan sur col 1-4)
+      // Séparateur local (colspan sur col 1-4)
       final localSeparatorTable = pw.Table(
         defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
         border: pw.TableBorder.all(color: borderColor, width: 0.4),
         columnWidths: const {
-          0: pw.FlexColumnWidth(1.2),
-          1: pw.FlexColumnWidth(7.2),
+          0: pw.FlexColumnWidth(1.0),
+          1: pw.FlexColumnWidth(7.4),
         },
         children: [
           pw.TableRow(
@@ -3060,15 +3003,6 @@ class PdfReportService {
           final o = eq.items[i];
           altIdx++;
 
-          PdfColor textColor = PdfColors.black;
-          if (o.priorite == '3') {
-            textColor = PdfColor.fromInt(0xFFD32F2F);
-          } else if (o.priorite == '2') {
-            textColor = PdfColor.fromInt(0xFFE65100);
-          } else {
-            textColor = PdfColors.black;
-          }
-
           final rowBg = altIdx.isOdd ? tableRowAlt : PdfColors.white;
 
           // Observations nested table row
@@ -3084,13 +3018,6 @@ class PdfReportService {
               pw.Padding(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 child: pw.Text(o.refNorm, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-              ),
-              // PRIORITÉ
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
-                alignment: pw.Alignment.center,
-                child: pw.Text(o.priorite, style: pw.TextStyle(
-                    font: _fontBold, fontSize: fsSmall, color: textColor)),
               ),
             ],
           ));
@@ -3112,7 +3039,7 @@ class PdfReportService {
                   style: pw.TextStyle(font: _fontBold, fontSize: fsSmall),
                   textAlign: pw.TextAlign.center),
             ),
-            // OBSERVATIONS + REF + PRIORITÉ
+            // OBSERVATIONS + REF
             pw.Table(
               defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
               border: pw.TableBorder(
@@ -3120,9 +3047,8 @@ class PdfReportService {
                 verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
               ),
               columnWidths: const {
-                0: pw.FlexColumnWidth(3.4),
-                1: pw.FlexColumnWidth(1.2),
-                2: pw.FlexColumnWidth(0.8),
+                0: pw.FlexColumnWidth(3.9),
+                1: pw.FlexColumnWidth(1.5),
               },
               children: observationRows,
             ),
@@ -3141,8 +3067,8 @@ class PdfReportService {
           horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
         ),
         columnWidths: const {
-          0: pw.FlexColumnWidth(1.2),
-          1: pw.FlexColumnWidth(1.8),
+          0: pw.FlexColumnWidth(1.0),
+          1: pw.FlexColumnWidth(2.0),
           2: pw.FlexColumnWidth(5.4),
         },
         children: localRows,
