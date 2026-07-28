@@ -37,6 +37,8 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
   final _nomController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   
+  bool _isRiskZone = false;
+
   // Photos de la zone
   List<String> _zonePhotos = [];
   bool _isLoadingPhotos = false;
@@ -58,6 +60,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
   void _chargerDonneesExistantes() {
     final zone = widget.zone!;
     _nomController.text = zone.nom;
+    _isRiskZone = (zone is MoyenneTensionZone || zone is BasseTensionZone) ? (zone.isRiskZone ?? false) : false;
     
     // Charger les observations existantes
     _observationsExistantes.addAll(zone.observationsLibres);
@@ -845,6 +848,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
             observationsLibres: _observationsExistantes,
             photos: _zonePhotos,
             locaux: widget.isEdition ? widget.zone.locaux : [],
+            isRiskZone: _isRiskZone,
           );
         } else {
           zone = BasseTensionZone(
@@ -853,6 +857,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
             coffretsDirects: widget.isEdition ? widget.zone.coffretsDirects : [],
             observationsLibres: _observationsExistantes,
             photos: _zonePhotos,
+            isRiskZone: _isRiskZone,
           );
         }
 
@@ -1086,6 +1091,10 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                 _buildTextField(_nomController, 'Nom de la zone*', isRequired: true),
                 const SizedBox(height: 16),
       
+                // Zone à risque ?
+                _buildRiskZoneSelector(),
+                const SizedBox(height: 16),
+
                 // Photos de la zone
                 Container(
                   decoration: BoxDecoration(
@@ -1181,6 +1190,103 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRiskZoneSelector() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(color: const Color(0xFFF1F5F9)),
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: _isRiskZone ? Colors.orange.shade700 : AppTheme.primaryBlue,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Zone à risque ?',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.darkBlue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300, width: 1),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _isRiskZone = false),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: !_isRiskZone ? AppTheme.primaryBlue : Colors.transparent,
+                        borderRadius: const BorderRadius.horizontal(left: Radius.circular(7)),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Non',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: !_isRiskZone ? Colors.white : Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => setState(() => _isRiskZone = true),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      decoration: BoxDecoration(
+                        color: _isRiskZone ? Colors.orange.shade700 : Colors.transparent,
+                        borderRadius: const BorderRadius.horizontal(right: Radius.circular(7)),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Oui',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: _isRiskZone ? Colors.white : Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

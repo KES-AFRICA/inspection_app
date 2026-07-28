@@ -713,6 +713,7 @@ class PdfReportService {
 
     // 4. Description des installations
     entries.add(_SommaireEntry(titre: "DESCRIPTION DES INSTALLATIONS", key: 'description', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "Zones et Locaux à risque", key: 'desc_locaux_risques', level: 1));
 
     // 5. Liste récapitulative
     if (audit != null) {
@@ -2277,11 +2278,11 @@ class PdfReportService {
               alt: true,
             ),
             _tableDataRow(
-              ['                          Type', mission.classementReglementaireType ?? '—'],
+              ['                                     Type', mission.classementReglementaireType ?? '—'],
               alt: false,
             ),
             _tableDataRow(
-              ['                          Catégorie', mission.classementReglementaireCategorie ?? '—'],
+              ['                                     Catégorie', mission.classementReglementaireCategorie ?? '—'],
               alt: true,
             ),
           ],
@@ -2429,7 +2430,53 @@ class PdfReportService {
   //  DESCRIPTION DES INSTALLATIONS (avec ordre des colonnes)
   // ──────────────────────────────────────────────────────────────
   
-  static List<pw.Widget> _buildDescriptionInstallationsMulti(DescriptionInstallations? desc, Map<String, int> trackedPages) {
+  static List<String> collectRiskZonesAndLocauxForTesting(AuditInstallationsElectriques? audit) {
+    return _collectRiskZonesAndLocaux(audit);
+  }
+
+  static List<String> _collectRiskZonesAndLocaux(AuditInstallationsElectriques? audit) {
+    final items = <String>[];
+    if (audit == null) return items;
+
+    void addZone(String name) {
+      final formatted = name.toLowerCase().startsWith('zone') ? name : 'Zone $name';
+      if (!items.contains(formatted)) items.add(formatted);
+    }
+
+    void addLocal(String name) {
+      final formatted = name.toLowerCase().startsWith('local') || name.toLowerCase().startsWith('salle') ? name : 'Local $name';
+      if (!items.contains(formatted)) items.add(formatted);
+    }
+
+    // Locaux MT directs
+    for (final local in audit.moyenneTensionLocaux) {
+      if (local.isRiskZone) addLocal(local.nom);
+    }
+
+    // Zones MT et leurs locaux
+    for (final zone in audit.moyenneTensionZones) {
+      if (zone.isRiskZone) addZone(zone.nom);
+      for (final local in zone.locaux) {
+        if (local.isRiskZone) addLocal(local.nom);
+      }
+    }
+
+    // Zones BT et leurs locaux
+    for (final zone in audit.basseTensionZones) {
+      if (zone.isRiskZone) addZone(zone.nom);
+      for (final local in zone.locaux) {
+        if (local.isRiskZone) addLocal(local.nom);
+      }
+    }
+
+    return items;
+  }
+
+  static List<pw.Widget> _buildDescriptionInstallationsMulti(
+    DescriptionInstallations? desc,
+    AuditInstallationsElectriques? audit,
+    Map<String, int> trackedPages,
+  ) {
     final widgets = <pw.Widget>[];
     widgets.add(PageTracker(
       key: 'description',
@@ -2531,6 +2578,22 @@ class PdfReportService {
 
     widgets.add(_subTitle('Registre de sécurité'));
     widgets.add(_bodyText('- ${desc.registreSecurite ?? 'Non transmis'}'));
+    widgets.add(pw.SizedBox(height: 5));
+
+    widgets.add(PageTracker(
+      key: 'desc_locaux_risques',
+      registry: trackedPages,
+      child: _subTitle('Zones et Locaux \u00e0 risque'),
+    ));
+
+    final riskItems = _collectRiskZonesAndLocaux(audit);
+    if (riskItems.isEmpty) {
+      widgets.add(_bodyText('Rien \u00e0 signaler.'));
+    } else {
+      for (final item in riskItems) {
+        widgets.add(_bodyText('\u2022 $item'));
+      }
+    }
 
     return widgets;
   }
@@ -7041,7 +7104,7 @@ class PdfReportService {
           nomSite: nomSiteHeader,
           numeroRapport: numeroRapportDoc,
         ),
-        build: (ctx) => _buildDescriptionInstallationsMulti(description, trackedPages),
+        build: (ctx) => _buildDescriptionInstallationsMulti(description, audit, trackedPages),
       ));
 
       // 6. Synthèse récapitulative des observations (page de section + contenu)

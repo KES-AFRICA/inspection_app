@@ -80,13 +80,14 @@ class MoyenneTensionLocalAdapter extends TypeAdapter<MoyenneTensionLocal> {
       transformateurs: (fields[31] as List?)?.cast<TransformateurMTBT>(),
       accessible: fields[32] as bool?,
       aReverifier: fields[33] as bool?,
+      isRiskZone: (fields[34] as bool?) ?? false,
     );
   }
 
   @override
   void write(BinaryWriter writer, MoyenneTensionLocal obj) {
     writer
-      ..writeByte(13)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.nom)
       ..writeByte(1)
@@ -112,7 +113,9 @@ class MoyenneTensionLocalAdapter extends TypeAdapter<MoyenneTensionLocal> {
       ..writeByte(32)
       ..write(obj.accessible)
       ..writeByte(33)
-      ..write(obj.aReverifier);
+      ..write(obj.aReverifier)
+      ..writeByte(34)
+      ..write(obj.isRiskZone);
   }
 
   @override
@@ -144,13 +147,14 @@ class MoyenneTensionZoneAdapter extends TypeAdapter<MoyenneTensionZone> {
       photos: (fields[4] as List?)?.cast<String>(),
       locaux: (fields[5] as List?)?.cast<MoyenneTensionLocal>(),
       classementZoneId: fields[6] as String?,
+      isRiskZone: (fields[7] as bool?) ?? false,
     );
   }
 
   @override
   void write(BinaryWriter writer, MoyenneTensionZone obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.nom)
       ..writeByte(1)
@@ -164,7 +168,9 @@ class MoyenneTensionZoneAdapter extends TypeAdapter<MoyenneTensionZone> {
       ..writeByte(5)
       ..write(obj.locaux)
       ..writeByte(6)
-      ..write(obj.classementZoneId);
+      ..write(obj.classementZoneId)
+      ..writeByte(7)
+      ..write(obj.isRiskZone);
   }
 
   @override
@@ -196,13 +202,14 @@ class BasseTensionZoneAdapter extends TypeAdapter<BasseTensionZone> {
       observationsLibres: (fields[4] as List?)?.cast<ObservationLibre>(),
       photos: (fields[5] as List?)?.cast<String>(),
       classementZoneId: fields[6] as String?,
+      isRiskZone: (fields[7] as bool?) ?? false,
     );
   }
 
   @override
   void write(BinaryWriter writer, BasseTensionZone obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.nom)
       ..writeByte(1)
@@ -216,7 +223,9 @@ class BasseTensionZoneAdapter extends TypeAdapter<BasseTensionZone> {
       ..writeByte(5)
       ..write(obj.photos)
       ..writeByte(6)
-      ..write(obj.classementZoneId);
+      ..write(obj.classementZoneId)
+      ..writeByte(7)
+      ..write(obj.isRiskZone);
   }
 
   @override
@@ -252,13 +261,14 @@ class BasseTensionLocalAdapter extends TypeAdapter<BasseTensionLocal> {
       aReverifier: fields[8] as bool?,
       cellules: (fields[9] as List?)?.cast<Cellule>(),
       transformateurs: (fields[10] as List?)?.cast<TransformateurMTBT>(),
+      isRiskZone: (fields[11] as bool?) ?? false,
     );
   }
 
   @override
   void write(BinaryWriter writer, BasseTensionLocal obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.nom)
       ..writeByte(1)
@@ -280,7 +290,9 @@ class BasseTensionLocalAdapter extends TypeAdapter<BasseTensionLocal> {
       ..writeByte(9)
       ..write(obj.cellules)
       ..writeByte(10)
-      ..write(obj.transformateurs);
+      ..write(obj.transformateurs)
+      ..writeByte(11)
+      ..write(obj.isRiskZone);
   }
 
   @override

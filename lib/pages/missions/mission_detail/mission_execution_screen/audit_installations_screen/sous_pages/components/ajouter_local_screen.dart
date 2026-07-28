@@ -79,6 +79,8 @@ class _EtapeInformationsGenerales extends StatefulWidget {
   final bool typeValid;
   final VoidCallback onValidate;
   final bool isMoyenneTension;
+  final bool isRiskZone;
+  final ValueChanged<bool> onRiskZoneChanged;
 
   const _EtapeInformationsGenerales({
     required this.nomController,
@@ -102,6 +104,8 @@ class _EtapeInformationsGenerales extends StatefulWidget {
     required this.typeValid,
     required this.onValidate,
     required this.isMoyenneTension,
+    required this.isRiskZone,
+    required this.onRiskZoneChanged,
   });
 
   @override
@@ -123,10 +127,101 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
         SizedBox(height: context.spacingXL),
         _buildModernTypeSelector(context),
         SizedBox(height: context.spacingXL),
+        _buildModernRiskZoneSelector(context),
+        SizedBox(height: context.spacingXL),
         _buildModernPhotoCarousel(context),
         SizedBox(height: context.spacingXL),
         _buildModernObservationsCard(context),
         SizedBox(height: context.spacingXXL),
+      ],
+    );
+  }
+
+  Widget _buildModernRiskZoneSelector(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: EdgeInsets.fromLTRB(context.spacingL, context.spacingM, context.spacingL, context.spacingS),
+          child: Row(
+            children: [
+              Icon(
+                Icons.warning_amber_rounded,
+                color: widget.isRiskZone ? Colors.orange.shade700 : AppTheme.primaryBlue,
+                size: context.iconSizeM,
+              ),
+              SizedBox(width: context.spacingS),
+              Flexible(
+                child: Text(
+                  'Local à risque ?',
+                  style: TextStyle(
+                    fontSize: context.fontSizeL,
+                    fontWeight: FontWeight.w600,
+                    color: AppTheme.darkBlue,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: context.spacingL),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.grey.shade50,
+              borderRadius: BorderRadius.circular(context.spacingS),
+              border: Border.all(color: Colors.grey.shade300, width: 1),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => widget.onRiskZoneChanged(false),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: context.spacingM),
+                      decoration: BoxDecoration(
+                        color: !widget.isRiskZone ? AppTheme.primaryBlue : Colors.transparent,
+                        borderRadius: BorderRadius.horizontal(left: Radius.circular(context.spacingS - 1)),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Non',
+                          style: TextStyle(
+                            fontSize: context.fontSizeM,
+                            fontWeight: FontWeight.bold,
+                            color: !widget.isRiskZone ? Colors.white : Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: () => widget.onRiskZoneChanged(true),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: context.spacingM),
+                      decoration: BoxDecoration(
+                        color: widget.isRiskZone ? Colors.orange.shade700 : Colors.transparent,
+                        borderRadius: BorderRadius.horizontal(right: Radius.circular(context.spacingS - 1)),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'Oui',
+                          style: TextStyle(
+                            fontSize: context.fontSizeM,
+                            fontWeight: FontWeight.bold,
+                            color: widget.isRiskZone ? Colors.white : Colors.grey.shade700,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     );
   }
@@ -4109,6 +4204,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   final _nomController = TextEditingController();
 
   bool? _accessible; 
+  bool _isRiskZone = false;
   List<ElementControle> _dispositionsConstructives = [];
   List<ElementControle> _conditionsExploitation = [];
   
@@ -4199,6 +4295,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       _nomController.text = local.nom ?? '';
       _selectedType = local.type;
       _accessible = (local.accessible == false) ? false : true;
+      _isRiskZone = (local is MoyenneTensionLocal || local is BasseTensionLocal) ? (local.isRiskZone ?? false) : false;
       _typeValid = true;
       _nomValid = (local.nom != null && local.nom!.isNotEmpty && local.nom != 'Sans nom');
       
@@ -4315,6 +4412,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       transformateurs: _transformateurs,
       accessible: _accessible ?? true,
       aReverifier: (_accessible == false),
+      isRiskZone: _isRiskZone,
     );
   }
 
@@ -4360,6 +4458,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       cellules: isFlowLong ? _cellules : [],
       transformateurs: isFlowLong ? _transformateurs : [],
       coffrets: widget.isEdition && widget.local != null ? (widget.local as BasseTensionLocal).coffrets : [],
+      isRiskZone: _isRiskZone,
     );
   }
 
@@ -4367,6 +4466,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     final local = widget.local!;
     _nomController.text = local.nom;
     _selectedType = local.type;
+    _isRiskZone = (local is MoyenneTensionLocal || local is BasseTensionLocal) ? (local.isRiskZone ?? false) : false;
     _dispositionsConstructives = List.from(local.dispositionsConstructives);
     _conditionsExploitation = List.from(local.conditionsExploitation);
     _observationsExistantes.addAll(local.observationsLibres);
@@ -5772,6 +5872,11 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                     nomValid: _nomValid,
                     typeValid: _typeValid,
                     onValidate: () => _validateNom(_nomController.text),
+                    isRiskZone: _isRiskZone,
+                    onRiskZoneChanged: (val) {
+                      setState(() => _isRiskZone = val);
+                      _scheduleAutoSave();
+                    },
                   ),
 
                   _buildSlideAccessibilite(),

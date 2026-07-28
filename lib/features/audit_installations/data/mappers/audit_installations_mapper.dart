@@ -249,6 +249,7 @@ class AuditInstallationsMapper {
       transformateurs: model.transformateurs.map(toTransformateurEntity).toList(),
       accessible: model.accessible,
       aReverifier: model.aReverifier,
+      isRiskZone: model.isRiskZone,
     );
   }
 
@@ -265,6 +266,7 @@ class AuditInstallationsMapper {
       transformateurs: entity.transformateurs.map(toTransformateurModel).toList(),
       accessible: entity.accessible,
       aReverifier: entity.aReverifier,
+      isRiskZone: entity.isRiskZone,
     );
   }
 
@@ -278,6 +280,7 @@ class AuditInstallationsMapper {
       photos: List<String>.from(model.photos),
       locaux: model.locaux.map(toMoyenneTensionLocalEntity).toList(),
       classementZoneId: model.classementZoneId,
+      isRiskZone: model.isRiskZone,
     );
   }
 
@@ -290,6 +293,7 @@ class AuditInstallationsMapper {
       photos: List<String>.from(entity.photos),
       locaux: entity.locaux.map(toMoyenneTensionLocalModel).toList(),
       classementZoneId: entity.classementZoneId,
+      isRiskZone: entity.isRiskZone,
     );
   }
 
@@ -307,6 +311,7 @@ class AuditInstallationsMapper {
       aReverifier: model.aReverifier,
       cellules: model.cellules.map(toCelluleEntity).toList(),
       transformateurs: model.transformateurs.map(toTransformateurEntity).toList(),
+      isRiskZone: model.isRiskZone,
     );
   }
 
@@ -323,6 +328,7 @@ class AuditInstallationsMapper {
       aReverifier: entity.aReverifier,
       cellules: entity.cellules.map(toCelluleModel).toList(),
       transformateurs: entity.transformateurs.map(toTransformateurModel).toList(),
+      isRiskZone: entity.isRiskZone,
     );
   }
 
@@ -336,6 +342,7 @@ class AuditInstallationsMapper {
       observationsLibres: model.observationsLibres.map(toObservationLibreEntity).toList(),
       photos: List<String>.from(model.photos),
       classementZoneId: model.classementZoneId,
+      isRiskZone: model.isRiskZone,
     );
   }
 
@@ -348,6 +355,7 @@ class AuditInstallationsMapper {
       observationsLibres: entity.observationsLibres.map(toObservationLibreModel).toList(),
       photos: List<String>.from(entity.photos),
       classementZoneId: entity.classementZoneId,
+      isRiskZone: entity.isRiskZone,
     );
   }
 

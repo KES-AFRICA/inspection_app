@@ -208,6 +208,7 @@ class MoyenneTensionLocalEntity {
   final List<TransformateurMTBTEntity> transformateurs;
   final bool accessible;
   final bool aReverifier;
+  final bool isRiskZone;
 
   const MoyenneTensionLocalEntity({
     required this.nom,
@@ -221,6 +222,7 @@ class MoyenneTensionLocalEntity {
     this.transformateurs = const [],
     this.accessible = true,
     this.aReverifier = false,
+    this.isRiskZone = false,
   });
 }
 
@@ -232,6 +234,7 @@ class MoyenneTensionZoneEntity {
   final List<String> photos;
   final List<MoyenneTensionLocalEntity> locaux;
   final String? classementZoneId;
+  final bool isRiskZone;
 
   const MoyenneTensionZoneEntity({
     required this.nom,
@@ -241,6 +244,7 @@ class MoyenneTensionZoneEntity {
     this.photos = const [],
     this.locaux = const [],
     this.classementZoneId,
+    this.isRiskZone = false,
   });
 }
 
@@ -256,6 +260,7 @@ class BasseTensionLocalEntity {
   final bool aReverifier;
   final List<CelluleEntity> cellules;
   final List<TransformateurMTBTEntity> transformateurs;
+  final bool isRiskZone;
 
   const BasseTensionLocalEntity({
     required this.nom,
@@ -269,6 +274,7 @@ class BasseTensionLocalEntity {
     this.aReverifier = false,
     this.cellules = const [],
     this.transformateurs = const [],
+    this.isRiskZone = false,
   });
 }
 
@@ -280,6 +286,7 @@ class BasseTensionZoneEntity {
   final List<ObservationLibreEntity> observationsLibres;
   final List<String> photos;
   final String? classementZoneId;
+  final bool isRiskZone;
 
   const BasseTensionZoneEntity({
     required this.nom,
@@ -289,6 +296,7 @@ class BasseTensionZoneEntity {
     this.observationsLibres = const [],
     this.photos = const [],
     this.classementZoneId,
+    this.isRiskZone = false,
   });
 }
 

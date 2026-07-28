@@ -96,6 +96,9 @@ class MoyenneTensionLocal {
   @HiveField(33)
   bool aReverifier;
 
+  @HiveField(34)
+  bool isRiskZone;
+
   MoyenneTensionLocal({
     required this.nom,
     required this.type,
@@ -110,6 +113,7 @@ class MoyenneTensionLocal {
     List<TransformateurMTBT>? transformateurs,
     bool? accessible,
     bool? aReverifier,
+    bool? isRiskZone,
   })  : dispositionsConstructives = dispositionsConstructives ?? [],
         conditionsExploitation = conditionsExploitation ?? [],
         coffrets = coffrets ?? [],
@@ -118,7 +122,8 @@ class MoyenneTensionLocal {
         cellules = cellules ?? [],
         transformateurs = transformateurs ?? [],
         accessible = accessible ?? true,
-        aReverifier = aReverifier ?? false;
+        aReverifier = aReverifier ?? false,
+        isRiskZone = isRiskZone ?? false;
 
   // MÉTHODE DE MIGRATION (préserve les données existantes)
   void migrateFromOldFields() {
@@ -162,6 +167,9 @@ class MoyenneTensionZone {
   @HiveField(6)
   String? classementZoneId;
 
+  @HiveField(7)
+  bool isRiskZone;
+
   MoyenneTensionZone({
     required this.nom,
     this.description,
@@ -170,10 +178,12 @@ class MoyenneTensionZone {
     List<String>? photos,
     List<MoyenneTensionLocal>? locaux,
     this.classementZoneId,
+    bool? isRiskZone,
   })  : coffrets = coffrets ?? [],
         observationsLibres = observationsLibres ?? [],
         photos = photos ?? [],
-        locaux = locaux ?? [];
+        locaux = locaux ?? [],
+        isRiskZone = isRiskZone ?? false;
 }
 
 // STRUCTURES BASSE TENSION
@@ -201,6 +211,9 @@ class BasseTensionZone {
   @HiveField(6)
   String? classementZoneId;
 
+  @HiveField(7)
+  bool isRiskZone;
+
   BasseTensionZone({
     required this.nom,
     this.description,
@@ -209,10 +222,12 @@ class BasseTensionZone {
     List<ObservationLibre>? observationsLibres,
     List<String>? photos,
     this.classementZoneId,
+    bool? isRiskZone,
   })  : locaux = locaux ?? [],
         coffretsDirects = coffretsDirects ?? [],
         observationsLibres = observationsLibres ?? [],
-        photos = photos ?? [];
+        photos = photos ?? [],
+        isRiskZone = isRiskZone ?? false;
 }
 
 @HiveType(typeId: 7)
@@ -253,6 +268,9 @@ class BasseTensionLocal {
   @HiveField(10)
   List<TransformateurMTBT> transformateurs;
 
+  @HiveField(11)
+  bool isRiskZone;
+
   BasseTensionLocal({
     required this.nom,
     required this.type,
@@ -265,6 +283,7 @@ class BasseTensionLocal {
     bool? aReverifier,
     List<Cellule>? cellules,
     List<TransformateurMTBT>? transformateurs,
+    bool? isRiskZone,
   })  : dispositionsConstructives = dispositionsConstructives ?? [],
         conditionsExploitation = conditionsExploitation ?? [],
         coffrets = coffrets ?? [],
@@ -273,7 +292,8 @@ class BasseTensionLocal {
         accessible = accessible ?? true,
         aReverifier = aReverifier ?? false,
         cellules = cellules ?? [],
-        transformateurs = transformateurs ?? [];
+        transformateurs = transformateurs ?? [],
+        isRiskZone = isRiskZone ?? false;
 }
 
 // STRUCTURES COMMUNES
