@@ -1457,7 +1457,9 @@ class PdfReportService {
   ) {
     final widgets = <pw.Widget>[];
 
-    // Collecte unifiée via la pipeline statistique centralisée
+    // Collecte unifiée via la pipeline statistique centralisée et impression d'inventaire
+    final inventory = MissionStatisticsCollector.getInventory(mission.id);
+    inventory.printFullInventoryDetails();
     final stats = MissionStatisticsCollector.collect(mission.id);
     final cStats = stats.criticalityStats;
 

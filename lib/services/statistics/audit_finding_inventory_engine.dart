@@ -3,6 +3,7 @@
 import '../../models/audit_installations_electriques.dart';
 import '../../models/foudre.dart';
 import '../hive_service.dart';
+import '../dispositions_constructives_registry.dart';
 import 'audit_finding.dart';
 
 /// Moteur de Récensement et d'Inventaire Unifié des Non-Conformités (`AuditFindingInventoryEngine`).
@@ -178,6 +179,17 @@ class AuditFindingInventoryEngine {
     return _criticalityFromInt(el.priorite);
   }
 
+  static String _resolvePointVerificationCriticality(PointVerification pv, String coffretType) {
+    final meta = DispositionsConstructivesRegistry.getCoffretMetadata(pv.pointVerification, coffretType: coffretType);
+    if (meta != null && meta.criticite.trim().isNotEmpty) {
+      final s = meta.criticite.trim().toLowerCase();
+      if (s.contains('critique') || s == '3') return 'Critique';
+      if (s.contains('majeur') || s == '2') return 'Majeure';
+      if (s.contains('mineur') || s == '1') return 'Mineure';
+    }
+    return _criticalityFromInt(pv.priorite);
+  }
+
   static String _criticalityFromInt(int? priority) {
     if (priority == 3) return 'Critique';
     if (priority == 2) return 'Majeure';
@@ -192,7 +204,7 @@ class AuditFindingInventoryEngine {
   }
 
   // ──────────────────────────────────────────────────────────────
-  //  VISITATION DES INSTANCES PHYSICUES
+  //  VISITATION DES INSTANCES PHYSIQUES
   // ──────────────────────────────────────────────────────────────
 
   static void _visitMTLocal({
@@ -452,7 +464,7 @@ class AuditFindingInventoryEngine {
             verificationPoint: pv.pointVerification,
             observationText: pv.observation?.isNotEmpty == true ? pv.observation! : pv.pointVerification,
             conformity: 'non',
-            criticality: _criticalityFromInt(pv.priorite),
+            criticality: _resolvePointVerificationCriticality(pv, coffret.type),
             priority: pv.priorite,
             normativeReference: pv.referenceNormative,
             photos: pv.photos,
