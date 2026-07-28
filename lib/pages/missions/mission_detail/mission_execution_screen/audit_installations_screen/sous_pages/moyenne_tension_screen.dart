@@ -1099,6 +1099,7 @@ void _ouvrirClassementZone(ClassementZone classement) async {
                   ],
                 )),
                 Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                  if (local.isRiskZone == true) _buildRiskBadge(),
                   if (aReverifier) _buildBadge('À revérifier', Colors.orange),
                   if (inaccessible) _buildBadge('Inaccessible', Colors.red),
                 ]),
@@ -1184,6 +1185,37 @@ void _ouvrirClassementZone(ClassementZone classement) async {
       child: Text(label,
         style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold,
             color: color.withOpacity(0.9))),
+    );
+  }
+
+  Widget _buildRiskBadge() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.amber.shade400, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            size: 13,
+            color: Colors.amber.shade900,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            'À risque',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.amber.shade900,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1425,6 +1457,10 @@ void _supprimerBrouillonLocal(String? draftId, String nomLocal) {
                                 ),
                               ),
                             ),
+                            if (zone.isRiskZone == true) ...[
+                              const SizedBox(width: 8),
+                              _buildRiskBadge(),
+                            ],
                             if (nonClassee) ...[
                               const SizedBox(width: 8),
                               Container(

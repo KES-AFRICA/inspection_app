@@ -2137,6 +2137,37 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
     );
   }
 
+  Widget _buildRiskBadge() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.amber.shade400, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            size: 13,
+            color: Colors.amber.shade900,
+          ),
+          const SizedBox(width: 4),
+          Text(
+            'Local à risque',
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.amber.shade900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildLocalStats() {
     // Calculer le nombre total de photos (local + toutes les observations)
     int totalPhotos = _localPhotos.length;
@@ -2144,18 +2175,26 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       totalPhotos += observation.photos.length as int;
     }
 
+    final isRiskZone = (_local is MoyenneTensionLocal && (_local as MoyenneTensionLocal).isRiskZone == true) ||
+        (_local is BasseTensionLocal && (_local as BasseTensionLocal).isRiskZone == true);
+
     return Container(
       padding: EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         border: Border(bottom: BorderSide(color: Colors.grey.shade300)),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceAround,
+      child: Column(
         children: [
-          _buildZoneStat('Coffrets', _coffrets.length),
-          _buildZoneStat('Photos', totalPhotos),
-          _buildZoneStat('Observations', _local.observationsLibres.length),
+          if (isRiskZone) _buildRiskBadge(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildZoneStat('Coffrets', _coffrets.length),
+              _buildZoneStat('Photos', totalPhotos),
+              _buildZoneStat('Observations', _local.observationsLibres.length),
+            ],
+          ),
         ],
       ),
     );

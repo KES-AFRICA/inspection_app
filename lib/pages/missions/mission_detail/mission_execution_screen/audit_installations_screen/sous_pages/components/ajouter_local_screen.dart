@@ -5245,7 +5245,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
             nouveauLocal = localData;
           }
         } else {
-          if (_selectedType == 'LOCAL_MTBT') {
           if (widget.isEdition && widget.localIndex != null) {
             await HiveService.updateMoyenneTensionLocal(
               missionId: widget.mission.id,
@@ -5272,31 +5271,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
             }
             nouveauLocal = localData;
           }
-        } else if (widget.zoneIndex != null) {
-          if (widget.isEdition && widget.localIndex != null) {
-            await HiveService.updateBasseTensionLocal(
-              missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, 
-              localIndex: widget.localIndex!, local: _creerBasseTensionLocal(),
-            );
-            nouveauLocal = _creerBasseTensionLocal();
-          } else {
-            final localData = _creerBasseTensionLocal();
-            final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-            final zone = audit.basseTensionZones[widget.zoneIndex!];
-            final existingIndex = zone.locaux.indexWhere((l) => l.nom.trim() == localData.nom.trim());
-            if (existingIndex != -1) {
-              await HiveService.updateBasseTensionLocal(
-                missionId: widget.mission.id, zoneIndex: widget.zoneIndex!,
-                localIndex: existingIndex, local: localData,
-              );
-            } else {
-              await HiveService.addLocalToBasseTensionZone(
-                missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, local: localData,
-              );
-            }
-            nouveauLocal = localData;
-          }
-        }
         }
       } else {
         if (widget.zoneIndex != null) {
@@ -5335,6 +5309,15 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       
       setState(() => _isLoading = false);
       
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.isEdition ? 'Local modifié' : 'Local ajouté'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
       if (widget.isEdition) {
         Navigator.pop(context, true);
       } else {
@@ -5360,6 +5343,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           type: _selectedType ?? 'LOCAL_ELECTRIQUE',
           accessible: false,
           aReverifier: true,
+          isRiskZone: _isRiskZone,
         );
         if (widget.isInZone && widget.zoneIndex != null) {
           // Vérifier doublon par nom
@@ -5393,6 +5377,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           type: _selectedType ?? 'LOCAL_ELECTRIQUE',
           accessible: false,
           aReverifier: true,
+          isRiskZone: _isRiskZone,
         );
         if (widget.zoneIndex != null) {
           final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
@@ -5746,6 +5731,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       accessible: _accessible ?? true,
       aReverifier: (_accessible == false),
       coffrets: widget.isEdition && widget.local != null ? (widget.local as MoyenneTensionLocal).coffrets : [],
+      isRiskZone: _isRiskZone,
     );
   }
 

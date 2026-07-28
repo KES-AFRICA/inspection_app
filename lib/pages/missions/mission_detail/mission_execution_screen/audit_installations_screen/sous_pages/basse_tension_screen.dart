@@ -850,6 +850,10 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
                                 ),
                               ),
                             ),
+                            if (zone.isRiskZone == true) ...[
+                              const SizedBox(width: 8),
+                              _buildRiskBadge(),
+                            ],
                             if (nonClassee) ...[
                               const SizedBox(width: 8),
                               Container(
@@ -958,6 +962,37 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
           textAlign: TextAlign.center,
         ),
       ],
+    );
+  }
+
+  Widget _buildRiskBadge() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.amber.shade400, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            size: 13,
+            color: Colors.amber.shade900,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            'À risque',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.amber.shade900,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

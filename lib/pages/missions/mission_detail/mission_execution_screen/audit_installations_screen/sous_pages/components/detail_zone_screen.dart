@@ -1440,6 +1440,9 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
+                      if ((local is MoyenneTensionLocal && local.isRiskZone == true) ||
+                          (local is BasseTensionLocal && local.isRiskZone == true))
+                        _buildRiskBadge(),
                       if (aReverifier)
                         _buildBadge('À revérifier', Colors.orange),
                       if (inaccessible) _buildBadge('Inaccessible', Colors.red),
@@ -1596,6 +1599,37 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
           fontWeight: FontWeight.bold,
           color: color.withOpacity(0.9),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRiskBadge() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: Colors.amber.shade50,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: Colors.amber.shade400, width: 1),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            size: 13,
+            color: Colors.amber.shade900,
+          ),
+          const SizedBox(width: 3),
+          Text(
+            'À risque',
+            style: TextStyle(
+              fontSize: 10,
+              fontWeight: FontWeight.bold,
+              color: Colors.amber.shade900,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2195,6 +2229,11 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          if ((_zone is MoyenneTensionZone && (_zone as MoyenneTensionZone).isRiskZone == true) ||
+              (_zone is BasseTensionZone && (_zone as BasseTensionZone).isRiskZone == true)) ...[
+            _buildRiskBadge(),
+            const SizedBox(height: 8),
+          ],
           if (_zone.description != null && _zone.description!.isNotEmpty) ...[
             Text('Description:', style: TextStyle(fontWeight: FontWeight.bold)),
             SizedBox(height: 4),
