@@ -342,10 +342,10 @@ class ElementControle {
 
   String? referenceNormativeEffectiveFor({String? localType}) {
     final meta = DispositionsConstructivesRegistry.getMetadata(elementControle, localType: localType);
-    if (meta?.referenceNormative != null && meta!.referenceNormative!.isNotEmpty) {
-      return meta.referenceNormative;
-    }
-    return referenceNormative;
+    final raw = (meta?.referenceNormative != null && meta!.referenceNormative!.isNotEmpty)
+        ? meta.referenceNormative
+        : referenceNormative;
+    return DispositionsConstructivesRegistry.normalizeNormativeReference(raw);
   }
 
   String? get referenceNormativeEffective => referenceNormativeEffectiveFor();

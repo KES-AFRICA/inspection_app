@@ -11,6 +11,7 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/services/hive_service.dart';
 import 'dart:io';
 
+import 'package:inspec_app/services/dispositions_constructives_registry.dart';
 import 'package:path_provider/path_provider.dart';
 
 class DetailCoffretScreen extends StatefulWidget {
@@ -1202,7 +1203,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
             if (point.referenceNormative != null && point.referenceNormative!.isNotEmpty) ...[
               SizedBox(height: 4),
               Text(
-                'Référence: ${point.referenceNormative}',
+                'Référence: ${DispositionsConstructivesRegistry.normalizeNormativeReference(point.referenceNormative)}',
                 style: TextStyle(
                   fontSize: 11,
                   color: Colors.grey.shade600,

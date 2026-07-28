@@ -15,6 +15,7 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/services/hive_service.dart';
 import 'dart:io';
 
+import 'package:inspec_app/services/dispositions_constructives_registry.dart';
 import 'package:path_provider/path_provider.dart';
 
 class DetailLocalScreen extends StatefulWidget {
@@ -1609,7 +1610,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                 SizedBox(width: 4),
                 Expanded(
                   child: Text(
-                    'Référence: ${element.referenceNormative}',
+                    'Référence: ${DispositionsConstructivesRegistry.normalizeNormativeReference(element.referenceNormativeEffective ?? element.referenceNormative)}',
                     style: TextStyle(
                       fontSize: 11,
                       color: Colors.blue.shade700,

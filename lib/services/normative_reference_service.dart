@@ -28,9 +28,10 @@ class NormativeReferenceService {
     'Présence de double alimentation électrique': 'Norme NF C 15-100 art 612',
   };
 
-  /// Récupère la référence normative pour un point de vérification donné
   static String? getReferenceForPoint(String pointVerification) {
-    return _normativeReferences[pointVerification];
+    final ref = _normativeReferences[pointVerification];
+    if (ref == null) return null;
+    return ref.replaceAll(RegExp(r'§\s*'), 'art ');
   }
 
   /// Vérifie si un point a une référence normative

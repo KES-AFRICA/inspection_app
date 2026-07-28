@@ -148,7 +148,7 @@ class AuditInstallationsMapper {
       pointVerification: model.pointVerification,
       conformite: model.conformite,
       observation: model.observation,
-      referenceNormative: model.referenceNormative,
+      referenceNormative: _normRef(model.referenceNormative),
       priorite: model.priorite,
       photos: List<String>.from(model.photos),
     );
@@ -159,7 +159,7 @@ class AuditInstallationsMapper {
       pointVerification: entity.pointVerification,
       conformite: entity.conformite,
       observation: entity.observation,
-      referenceNormative: entity.referenceNormative,
+      referenceNormative: _normRef(entity.referenceNormative),
       priorite: entity.priorite,
       photos: List<String>.from(entity.photos),
     );

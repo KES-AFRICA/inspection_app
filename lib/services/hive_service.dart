@@ -1368,6 +1368,10 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
         changed = true;
       }
     }
+    if (el.referenceNormative != null && el.referenceNormative!.contains('§')) {
+      el.referenceNormative = DispositionsConstructivesRegistry.normalizeNormativeReference(el.referenceNormative);
+      changed = true;
+    }
   }
 
   void migrateCoffret(CoffretArmoire coffret) {
@@ -1428,6 +1432,10 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
           pv.referenceNormative = meta.referenceNormative;
           changed = true;
         }
+      }
+      if (pv.referenceNormative != null && pv.referenceNormative!.contains('§')) {
+        pv.referenceNormative = DispositionsConstructivesRegistry.normalizeNormativeReference(pv.referenceNormative);
+        changed = true;
       }
 
       for (var obs in pv.observations!) {
