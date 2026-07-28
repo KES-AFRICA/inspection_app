@@ -1808,6 +1808,8 @@ class DispositionsConstructivesRegistry {
         pt.pointVerification = refTitle;
         if (meta != null) {
           pt.referenceNormative = meta.referenceNormative;
+          pt.familleRisque = meta.familleRisque;
+          pt.criticite = meta.criticite;
         }
         points.add(pt);
       } else {
@@ -1815,6 +1817,8 @@ class DispositionsConstructivesRegistry {
           PointVerification(
             pointVerification: refTitle,
             referenceNormative: meta?.referenceNormative,
+            familleRisque: meta?.familleRisque,
+            criticite: meta?.criticite,
             conformite: 'Sans objet',
           ),
         );
@@ -1863,6 +1867,8 @@ class DispositionsConstructivesRegistry {
         pt.pointVerification = refTitle;
         if (meta != null) {
           pt.referenceNormative = meta.referenceNormative;
+          pt.familleRisque = meta.familleRisque;
+          pt.criticite = meta.criticite;
         }
         points.add(pt);
       } else {
@@ -1870,6 +1876,8 @@ class DispositionsConstructivesRegistry {
           PointVerification(
             pointVerification: refTitle,
             referenceNormative: meta?.referenceNormative,
+            familleRisque: meta?.familleRisque,
+            criticite: meta?.criticite,
             conformite: 'Sans objet',
           ),
         );
@@ -2022,14 +2030,32 @@ class DispositionsConstructivesRegistry {
 
   /// Assure l'exhaustivité des points de contrôle pour une cellule (auto-migration silencieuse).
   static void ensureCompleteCelluleChecklist(List<ElementControle> elementsVerifies) {
-    final existingKeys = elementsVerifies
-        .map((e) => _normalizeKey(e.elementControle))
-        .toSet();
+    final existingMap = <String, ElementControle>{};
+    for (final el in elementsVerifies) {
+      final normKey = _normalizeKey(el.elementControle);
+      existingMap[normKey] = el;
+    }
+
+    elementsVerifies.clear();
     for (final refTitle in allCellulePoints) {
-      if (!existingKeys.contains(_normalizeKey(refTitle))) {
+      final targetKey = _normalizeKey(refTitle);
+      final meta = getMetadata(refTitle, localType: 'LOCAL_POSTE_HTA');
+      if (existingMap.containsKey(targetKey)) {
+        final el = existingMap[targetKey]!;
+        el.elementControle = refTitle;
+        if (meta != null) {
+          el.referenceNormative = meta.referenceNormative;
+          el.familleRisque = meta.familleRisque;
+          el.criticite = meta.criticite;
+        }
+        elementsVerifies.add(el);
+      } else {
         elementsVerifies.add(
           ElementControle(
             elementControle: refTitle,
+            referenceNormative: meta?.referenceNormative,
+            familleRisque: meta?.familleRisque,
+            criticite: meta?.criticite,
             conforme: null,
             estNA: true,
             priorite: 3,
@@ -2041,14 +2067,32 @@ class DispositionsConstructivesRegistry {
 
   /// Assure l'exhaustivité des points de contrôle pour un transformateur (auto-migration silencieuse).
   static void ensureCompleteTransformateurChecklist(List<ElementControle> elementsVerifies) {
-    final existingKeys = elementsVerifies
-        .map((e) => _normalizeKey(e.elementControle))
-        .toSet();
+    final existingMap = <String, ElementControle>{};
+    for (final el in elementsVerifies) {
+      final normKey = _normalizeKey(el.elementControle);
+      existingMap[normKey] = el;
+    }
+
+    elementsVerifies.clear();
     for (final refTitle in allTransformateurPoints) {
-      if (!existingKeys.contains(_normalizeKey(refTitle))) {
+      final targetKey = _normalizeKey(refTitle);
+      final meta = getMetadata(refTitle, localType: 'LOCAL_POSTE_HTA');
+      if (existingMap.containsKey(targetKey)) {
+        final el = existingMap[targetKey]!;
+        el.elementControle = refTitle;
+        if (meta != null) {
+          el.referenceNormative = meta.referenceNormative;
+          el.familleRisque = meta.familleRisque;
+          el.criticite = meta.criticite;
+        }
+        elementsVerifies.add(el);
+      } else {
         elementsVerifies.add(
           ElementControle(
             elementControle: refTitle,
+            referenceNormative: meta?.referenceNormative,
+            familleRisque: meta?.familleRisque,
+            criticite: meta?.criticite,
             conforme: null,
             estNA: true,
             priorite: 3,

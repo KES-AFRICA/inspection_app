@@ -656,6 +656,12 @@ class PointVerification {
   @HiveField(6)
   List<ElementControle>? observations;
 
+  @HiveField(7)
+  String? criticite;
+
+  @HiveField(8)
+  String? familleRisque;
+
   PointVerification({
     required this.pointVerification,
     required this.conformite,
@@ -664,6 +670,8 @@ class PointVerification {
     this.priorite,
     List<String>? photos,
     List<ElementControle>? observations,
+    this.criticite,
+    this.familleRisque,
   }) : photos = photos ?? [],
        observations = observations ?? [];
 }

@@ -672,13 +672,15 @@ class PointVerificationAdapter extends TypeAdapter<PointVerification> {
       priorite: fields[4] as int?,
       photos: (fields[5] as List?)?.cast<String>(),
       observations: (fields[6] as List?)?.cast<ElementControle>(),
+      criticite: fields[7] as String?,
+      familleRisque: fields[8] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, PointVerification obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.pointVerification)
       ..writeByte(1)
@@ -692,7 +694,11 @@ class PointVerificationAdapter extends TypeAdapter<PointVerification> {
       ..writeByte(5)
       ..write(obj.photos)
       ..writeByte(6)
-      ..write(obj.observations);
+      ..write(obj.observations)
+      ..writeByte(7)
+      ..write(obj.criticite)
+      ..writeByte(8)
+      ..write(obj.familleRisque);
   }
 
   @override

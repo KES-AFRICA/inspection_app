@@ -1352,6 +1352,24 @@ static AuditInstallationsElectriques? getAuditInstallationsByMissionId(String mi
 static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
   bool changed = false;
 
+  void migrateElementControle(ElementControle el, {String? localType}) {
+    final meta = DispositionsConstructivesRegistry.getMetadata(el.elementControle, localType: localType);
+    if (meta != null) {
+      if (el.criticite == null || el.criticite!.isEmpty) {
+        el.criticite = meta.criticite;
+        changed = true;
+      }
+      if (el.familleRisque == null || el.familleRisque!.isEmpty) {
+        el.familleRisque = meta.familleRisque;
+        changed = true;
+      }
+      if (el.referenceNormative == null || el.referenceNormative!.isEmpty) {
+        el.referenceNormative = meta.referenceNormative;
+        changed = true;
+      }
+    }
+  }
+
   void migrateCoffret(CoffretArmoire coffret) {
     if (coffret.observationsParafoudreEnrichies == null) {
       coffret.observationsParafoudreEnrichies = [];
@@ -1359,14 +1377,20 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
     }
     if (coffret.observationsParafoudreEnrichies!.isEmpty && coffret.observationsParafoudre.isNotEmpty) {
       for (var oldObs in coffret.observationsParafoudre) {
-        coffret.observationsParafoudreEnrichies!.add(ElementControle(
+        final el = ElementControle(
           elementControle: oldObs.texte,
           conforme: false,
           observation: oldObs.texte,
           photos: List.from(oldObs.photos),
-        ));
+        );
+        migrateElementControle(el);
+        coffret.observationsParafoudreEnrichies!.add(el);
       }
       changed = true;
+    }
+
+    for (var el in coffret.observationsParafoudreEnrichies!) {
+      migrateElementControle(el);
     }
 
     for (var pv in coffret.pointsVerification) {
@@ -1375,26 +1399,54 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
         changed = true;
       }
       if (pv.observations!.isEmpty && pv.observation != null && pv.observation!.isNotEmpty) {
-        pv.observations!.add(ElementControle(
+        final el = ElementControle(
           elementControle: pv.pointVerification,
           conforme: false,
           observation: pv.observation,
           priorite: pv.priorite,
+          criticite: pv.criticite,
+          familleRisque: pv.familleRisque,
+          referenceNormative: pv.referenceNormative,
           photos: List.from(pv.photos),
-        ));
+        );
+        migrateElementControle(el);
+        pv.observations!.add(el);
         changed = true;
+      }
+
+      final meta = DispositionsConstructivesRegistry.getCoffretMetadata(pv.pointVerification, coffretType: coffret.type);
+      if (meta != null) {
+        if (pv.criticite == null || pv.criticite!.isEmpty) {
+          pv.criticite = meta.criticite;
+          changed = true;
+        }
+        if (pv.familleRisque == null || pv.familleRisque!.isEmpty) {
+          pv.familleRisque = meta.familleRisque;
+          changed = true;
+        }
+        if (pv.referenceNormative == null || pv.referenceNormative!.isEmpty) {
+          pv.referenceNormative = meta.referenceNormative;
+          changed = true;
+        }
+      }
+
+      for (var obs in pv.observations!) {
+        migrateElementControle(obs);
       }
     }
   }
 
   int cellCounter = 0;
   void migrateLocalCellules(dynamic local) {
-    if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+    if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT' || local.type == 'LOCAL_POSTE_HTA') {
       for (var cellule in local.cellules) {
         if (cellule.syncId == null || cellule.syncId!.isEmpty) {
           cellule.syncId = 'cellule_${DateTime.now().microsecondsSinceEpoch}_$cellCounter';
           cellCounter++;
           changed = true;
+        }
+        for (var el in cellule.elementsVerifies) {
+          migrateElementControle(el, localType: local.type);
         }
       }
     }
@@ -1402,7 +1454,7 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
 
   int transfoCounter = 0;
   void migrateLocalTransformateurs(dynamic local) {
-    if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT') {
+    if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT' || local.type == 'LOCAL_POSTE_HTA') {
       for (var transfo in local.transformateurs) {
         if (transfo.syncId == null || transfo.syncId!.isEmpty) {
           transfo.syncId = 'transfo_${DateTime.now().microsecondsSinceEpoch}_$transfoCounter';
@@ -1413,24 +1465,40 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
           transfo.observations = [];
           changed = true;
         }
+        for (var el in transfo.elementsVerifies) {
+          migrateElementControle(el, localType: local.type);
+        }
       }
     }
   }
 
   // Locaux MT
   for (var local in audit.moyenneTensionLocaux) {
+    for (var el in local.dispositionsConstructives) {
+      migrateElementControle(el, localType: local.type);
+    }
+    for (var el in local.conditionsExploitation) {
+      migrateElementControle(el, localType: local.type);
+    }
     migrateLocalCellules(local);
     migrateLocalTransformateurs(local);
     for (var coffret in local.coffrets) {
       migrateCoffret(coffret);
     }
   }
+
   // Zones MT
   for (var zone in audit.moyenneTensionZones) {
     for (var coffret in zone.coffrets) {
       migrateCoffret(coffret);
     }
     for (var local in zone.locaux) {
+      for (var el in local.dispositionsConstructives) {
+        migrateElementControle(el, localType: local.type);
+      }
+      for (var el in local.conditionsExploitation) {
+        migrateElementControle(el, localType: local.type);
+      }
       migrateLocalCellules(local);
       migrateLocalTransformateurs(local);
       for (var coffret in local.coffrets) {
@@ -1438,12 +1506,23 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
       }
     }
   }
+
   // Zones BT
   for (var zone in audit.basseTensionZones) {
     for (var coffret in zone.coffretsDirects) {
       migrateCoffret(coffret);
     }
     for (var local in zone.locaux) {
+      if (local.dispositionsConstructives != null) {
+        for (var el in local.dispositionsConstructives!) {
+          migrateElementControle(el, localType: local.type);
+        }
+      }
+      if (local.conditionsExploitation != null) {
+        for (var el in local.conditionsExploitation!) {
+          migrateElementControle(el, localType: local.type);
+        }
+      }
       migrateLocalCellules(local);
       migrateLocalTransformateurs(local);
       for (var coffret in local.coffrets) {
