@@ -1166,17 +1166,17 @@ class PdfReportService {
   }
 
   static pw.Widget _buildCalloutBox(String title, String body) {
-    final borderColor = PdfColor.fromHex('#D97706');
-    final bgColor = PdfColor.fromHex('#FFFBEB');
-    final titleColor = PdfColor.fromHex('#B45309');
+    final boxBorderColor = accentColor;
+    final boxBgColor = PdfColor.fromHex('#F4F7FA');
+    final boxTitleColor = headerColor;
 
     return pw.Container(
       width: double.infinity,
       padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 10),
       decoration: pw.BoxDecoration(
-        color: bgColor,
-        border: pw.Border.all(color: borderColor, width: 1.0),
-        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+        color: boxBgColor,
+        border: pw.Border.all(color: boxBorderColor, width: 0.8),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
       ),
       child: pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
@@ -1187,7 +1187,7 @@ class PdfReportService {
               font: _fontBold,
               fontSize: 9.5,
               fontWeight: pw.FontWeight.bold,
-              color: titleColor,
+              color: boxTitleColor,
             ),
           ),
           pw.SizedBox(height: 4),
@@ -1196,8 +1196,8 @@ class PdfReportService {
             style: pw.TextStyle(
               font: _fontRegular,
               fontSize: 8.5,
-              color: PdfColor.fromHex('#334155'),
-              lineSpacing: 1.5,
+              color: darkGrey,
+              lineSpacing: 1.6,
             ),
             textAlign: pw.TextAlign.justify,
           ),
@@ -3207,31 +3207,6 @@ class PdfReportService {
             repere: coffretRepere,
           ));
         }
-        // Observations parafoudre dans la liste récap
-        if (coffret.presenceParafoudre) {
-          final pfEnrichies = coffret.observationsParafoudreEnrichies ?? [];
-          if (pfEnrichies.isNotEmpty) {
-            for (var obs in pfEnrichies) {
-              list.add(_ObsRecap(
-                localisation: local.nom,
-                coffret: '${coffret.nom} (Parafoudre)',
-                observation: obs.observation?.isNotEmpty == true ? obs.observation! : obs.elementControle,
-                refNorm: obs.referenceNormative ?? '',
-                priorite: obs.priorite?.toString() ?? '',
-                repere: coffretRepere,
-              ));
-            }
-          } else {
-            for (var obs in coffret.observationsParafoudre) {
-              list.add(_ObsRecap(
-                localisation: local.nom,
-                coffret: '${coffret.nom} (Parafoudre)',
-                observation: obs.texte, refNorm: '', priorite: '',
-                repere: coffretRepere,
-              ));
-            }
-          }
-        }
       }
       for (var obs in local.observationsLibres) {
         list.add(_ObsRecap(
@@ -3272,28 +3247,6 @@ class PdfReportService {
             localisation: zone.nom, coffret: coffret.nom,
             observation: obs.texte, refNorm: '', priorite: '',
           ));
-        }
-        if (coffret.presenceParafoudre) {
-          final pfEnrichies = coffret.observationsParafoudreEnrichies ?? [];
-          if (pfEnrichies.isNotEmpty) {
-            for (var obs in pfEnrichies) {
-              list.add(_ObsRecap(
-                localisation: zone.nom,
-                coffret: '${coffret.nom} (Parafoudre)',
-                observation: obs.observation?.isNotEmpty == true ? obs.observation! : obs.elementControle,
-                refNorm: obs.referenceNormative ?? '',
-                priorite: obs.priorite?.toString() ?? '',
-              ));
-            }
-          } else {
-            for (var obs in coffret.observationsParafoudre) {
-              list.add(_ObsRecap(
-                localisation: zone.nom,
-                coffret: '${coffret.nom} (Parafoudre)',
-                observation: obs.texte, refNorm: '', priorite: '',
-              ));
-            }
-          }
         }
       }
       for (var local in zone.locaux) {
@@ -3338,28 +3291,6 @@ class PdfReportService {
               coffret: coffret.nom,
               observation: obs.texte, refNorm: '', priorite: '',
             ));
-          }
-          if (coffret.presenceParafoudre) {
-            final pfEnrichies = coffret.observationsParafoudreEnrichies ?? [];
-            if (pfEnrichies.isNotEmpty) {
-              for (var obs in pfEnrichies) {
-                list.add(_ObsRecap(
-                  localisation: '${zone.nom} / ${local.nom}',
-                  coffret: '${coffret.nom} (Parafoudre)',
-                  observation: obs.observation?.isNotEmpty == true ? obs.observation! : obs.elementControle,
-                  refNorm: obs.referenceNormative ?? '',
-                  priorite: obs.priorite?.toString() ?? '',
-                ));
-              }
-            } else {
-              for (var obs in coffret.observationsParafoudre) {
-                list.add(_ObsRecap(
-                  localisation: '${zone.nom} / ${local.nom}',
-                  coffret: '${coffret.nom} (Parafoudre)',
-                  observation: obs.texte, refNorm: '', priorite: '',
-                ));
-              }
-            }
           }
         }
         for (var obs in local.observationsLibres) {
@@ -3417,30 +3348,6 @@ class PdfReportService {
             observation: obs.texte, refNorm: '', priorite: '',
             repere: coffretRepere,
           ));
-        }
-        if (coffret.presenceParafoudre) {
-          final pfEnrichies = coffret.observationsParafoudreEnrichies ?? [];
-          if (pfEnrichies.isNotEmpty) {
-            for (var obs in pfEnrichies) {
-              list.add(_ObsRecap(
-                localisation: zone.nom,
-                coffret: '${coffret.nom} (Parafoudre)',
-                observation: obs.observation?.isNotEmpty == true ? obs.observation! : obs.elementControle,
-                refNorm: obs.referenceNormative ?? '',
-                priorite: obs.priorite?.toString() ?? '',
-                repere: coffretRepere,
-              ));
-            }
-          } else {
-            for (var obs in coffret.observationsParafoudre) {
-              list.add(_ObsRecap(
-                localisation: zone.nom,
-                coffret: '${coffret.nom} (Parafoudre)',
-                observation: obs.texte, refNorm: '', priorite: '',
-                repere: coffretRepere,
-              ));
-            }
-          }
         }
       }
 
@@ -3506,30 +3413,6 @@ class PdfReportService {
               observation: obs.texte, refNorm: '', priorite: '',
               repere: coffretRepere,
             ));
-          }
-          if (coffret.presenceParafoudre) {
-            final pfEnrichies = coffret.observationsParafoudreEnrichies ?? [];
-            if (pfEnrichies.isNotEmpty) {
-              for (var obs in pfEnrichies) {
-                list.add(_ObsRecap(
-                  localisation: '${zone.nom} / ${local.nom}',
-                  coffret: '${coffret.nom} (Parafoudre)',
-                  observation: obs.observation?.isNotEmpty == true ? obs.observation! : obs.elementControle,
-                  refNorm: obs.referenceNormative ?? '',
-                  priorite: obs.priorite?.toString() ?? '',
-                  repere: coffretRepere,
-                ));
-              }
-            } else {
-              for (var obs in coffret.observationsParafoudre) {
-                list.add(_ObsRecap(
-                  localisation: '${zone.nom} / ${local.nom}',
-                  coffret: '${coffret.nom} (Parafoudre)',
-                  observation: obs.texte, refNorm: '', priorite: '',
-                  repere: coffretRepere,
-                ));
-              }
-            }
           }
         }
         for (var obs in local.observationsLibres) {
@@ -5532,7 +5415,96 @@ class PdfReportService {
   //  FOUDRE
   // ──────────────────────────────────────────────────────────────
   
-  static pw.Widget _buildFoudre(List<Foudre> foudres, Map<String, int> trackedPages) {
+  static List<_ParafoudreEquipementRow> _collectParafoudreRows(AuditInstallationsElectriques? audit) {
+    final rows = <_ParafoudreEquipementRow>[];
+    if (audit == null) return rows;
+
+    void processCoffretList(List<CoffretArmoire> coffrets, String locName) {
+      for (var c in coffrets) {
+        if (c.presenceParafoudre) {
+          final coffretRepere = c.repere?.isNotEmpty == true ? c.repere! : (c.numeroEquipement ?? '');
+          final repStr = coffretRepere.isNotEmpty ? ' [Réf: $coffretRepere]' : '';
+          final typeStr = c.type.isNotEmpty ? c.type : 'Équipement';
+          final coffretTitle = '$typeStr : ${c.nom}$repStr';
+          final fullLoc = '$coffretTitle ($locName)';
+
+          final pfEnrichies = c.observationsParafoudreEnrichies ?? [];
+          if (pfEnrichies.isNotEmpty) {
+            for (var obs in pfEnrichies) {
+              final text = obs.observation?.isNotEmpty == true
+                  ? obs.observation!
+                  : obs.elementControle;
+              if (text.trim().isNotEmpty) {
+                rows.add(_ParafoudreEquipementRow(
+                  observation: text.trim(),
+                  localisation: fullLoc,
+                ));
+              }
+            }
+          } else {
+            for (var obs in c.observationsParafoudre) {
+              if (obs.texte.trim().isNotEmpty) {
+                rows.add(_ParafoudreEquipementRow(
+                  observation: obs.texte.trim(),
+                  localisation: fullLoc,
+                ));
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // 1. Locaux MT
+    for (var local in audit.moyenneTensionLocaux) {
+      processCoffretList(local.coffrets, local.nom);
+    }
+    // 2. Zones MT
+    for (var zone in audit.moyenneTensionZones) {
+      processCoffretList(zone.coffrets, zone.nom);
+      for (var local in zone.locaux) {
+        processCoffretList(local.coffrets, '${zone.nom} / ${local.nom}');
+      }
+    }
+    // 3. Zones BT
+    for (var zone in audit.basseTensionZones) {
+      processCoffretList(zone.coffretsDirects, zone.nom);
+      for (var local in zone.locaux) {
+        processCoffretList(local.coffrets, '${zone.nom} / ${local.nom}');
+      }
+    }
+
+    return rows;
+  }
+
+  static pw.Widget _buildFoudre(
+    AuditInstallationsElectriques? audit,
+    List<Foudre> foudres,
+    Map<String, int> trackedPages, {
+    bool afficherTableauFoudre = false,
+  }) {
+    final equipRows = _collectParafoudreRows(audit);
+
+    pw.Widget itemBulletBold(String text) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.only(top: 3, bottom: 2),
+        child: pw.Text(
+          _normalizeText(text),
+          style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey),
+        ),
+      );
+    }
+
+    pw.Widget itemSubBullet(String text) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.only(left: 6, bottom: 2),
+        child: pw.Text(
+          _normalizeText(text),
+          style: pw.TextStyle(font: _fontRegular, fontSize: fsBody - 0.5, color: darkGrey),
+        ),
+      );
+    }
+
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -5544,40 +5516,122 @@ class PdfReportService {
           child: _sectionBox('FOUDRE'),
         ),
         pw.SizedBox(height: 8),
-        if (foudres.isEmpty)
-          _bodyText('Aucune observation foudre disponible.')
+
+        // Tableau Statique Foudre (Affiché uniquement si le toggle est activé)
+        if (afficherTableauFoudre) ...[
+          pw.Table(
+            border: pw.TableBorder.all(color: borderColor, width: 0.4),
+            columnWidths: const {
+              0: pw.FlexColumnWidth(0.6),
+              1: pw.FlexColumnWidth(0.9),
+              2: pw.FlexColumnWidth(4.5),
+            },
+            children: [
+              _tableHeaderRow(['Items', 'CRITICITÉ', 'Observations']),
+
+              // Item 1
+              pw.TableRow(
+                children: [
+                  pw.Container(
+                    alignment: pw.Alignment.center,
+                    padding: const pw.EdgeInsets.all(6),
+                    child: pw.Text('1', style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: headerColor)),
+                  ),
+                  pw.Container(
+                    alignment: pw.Alignment.center,
+                    padding: const pw.EdgeInsets.all(6),
+                    child: pw.Text('Majeure', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: priorite2Color)),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(6),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        _bodyText("- Absence d'étude technique foudre avec caractéristiques des parafoudres"),
+                        _bodyText("- Mise en œuvre non conforme du conducteur de descente"),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              // Item 2
+              pw.TableRow(
+                decoration: pw.BoxDecoration(color: tableRowAlt),
+                children: [
+                  pw.Container(
+                    alignment: pw.Alignment.center,
+                    padding: const pw.EdgeInsets.all(6),
+                    child: pw.Text('2', style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: headerColor)),
+                  ),
+                  pw.Container(
+                    alignment: pw.Alignment.center,
+                    padding: const pw.EdgeInsets.all(6),
+                    child: pw.Text('Majeure', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: priorite2Color)),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(6),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        _bodyText("Une installation de paratonnerre conforme et efficace, doit répondre dans un premier temps aux principes de base d'installation d'un paratonnerre."),
+                        pw.SizedBox(height: 3),
+                        _bodyText("Il est indispensable de réaliser :"),
+                        itemBulletBold("- Une analyse risque foudre"),
+                        _bodyText("L'ARF a pour objectif de définir précisément les biens à protéger ainsi que les niveaux de protection nécessaires aux installations et à l'étude technique."),
+                        pw.SizedBox(height: 3),
+                        _bodyText("Analyse du Risque Foudre, selon la norme NF EN 62305-2,"),
+                        _bodyText("Elle intégrera les différents points suivants :"),
+                        itemSubBullet("•  Estimation des risques selon la norme EN 62305-2/FD 17018"),
+                        itemSubBullet("•  Définition des niveaux de protection exigés sur l'installation"),
+                        itemSubBullet("•  Identification des événements redoutés dus aux effets de la foudre"),
+                        itemSubBullet("•  La rédaction d'un rapport ARF (En langue Française) précisant le niveau de protection éventuelle à atteindre pour les structures et services à protéger"),
+                        pw.SizedBox(height: 4),
+                        itemBulletBold("- Une étude technique foudre"),
+                        _bodyText("L'Etude Technique définit de façon détaillée les Installations Extérieures de Protection Foudre (IEPF) et les Installations Intérieures de Protection Foudre (IIPF) selon les normes en vigueur NF C 17 102, NF EN 62305-3 et NF EN 62305-4."),
+                        pw.SizedBox(height: 3),
+                        _bodyText("Elle intégrera les différents points suivants :"),
+                        itemSubBullet("•  Les mesures de prévention"),
+                        itemSubBullet("•  Le descriptif des équipements à installés (caractéristiques techniques)"),
+                        itemSubBullet("•  Le lieu d'implantation des équipements de protection"),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 14),
+        ],
+
+        pw.SizedBox(height: 14),
+
+        // Sous-section : Observations par équipement
+        _subSectionBar("Observations par équipement"),
+        pw.SizedBox(height: 6),
+
+        if (equipRows.isEmpty)
+          _bodyText('Aucune observation parafoudre par équipement disponible.')
         else
           pw.Table(
             border: pw.TableBorder.all(color: borderColor, width: 0.4),
             columnWidths: const {
-              0: pw.FlexColumnWidth(0.5),
-              1: pw.FlexColumnWidth(0.5),
-              2: pw.FlexColumnWidth(5),
+              0: pw.FlexColumnWidth(0.6),
+              1: pw.FlexColumnWidth(3.4),
+              2: pw.FlexColumnWidth(2.0),
             },
             children: [
-              _tableHeaderRow(['Items', 'Priorite', 'Observations']),
-              ...foudres.asMap().entries.map((e) {
-                final f = e.value;
-                final rowColor = e.key.isOdd ? tableRowAlt : PdfColors.white;
-
-                PdfColor badgeColor = PdfColors.white;
-                if (f.niveauPriorite == 1) badgeColor = priorite1Color;
-                if (f.niveauPriorite == 2) badgeColor = priorite2Color;
-                if (f.niveauPriorite == 3) badgeColor = priorite3Color;
-
+              _tableHeaderRow(['Item', 'Observation', 'Localisation']),
+              ...equipRows.asMap().entries.map((e) {
+                final idx = e.key + 1;
+                final row = e.value;
+                final bg = e.key.isOdd ? tableRowAlt : PdfColors.white;
                 return pw.TableRow(
-                  decoration: pw.BoxDecoration(color: rowColor),
+                  decoration: pw.BoxDecoration(color: bg),
                   children: [
-                    _cell('${e.key + 1}', isHeader: false, centered: true),
-                    pw.Container(
-                      color: badgeColor,
-                      alignment: pw.Alignment.center,
-                      padding: const pw.EdgeInsets.symmetric(vertical: 3),
-                      child: pw.Text('${f.niveauPriorite}',
-                          style: pw.TextStyle(fontSize: fsBody, fontWeight: pw.FontWeight.bold,
-                              color: f.niveauPriorite == 3 ? PdfColors.red900 : PdfColors.black)),
-                    ),
-                    _cell(f.observation, isHeader: false),
+                    _cell('$idx', isHeader: false, centered: true),
+                    _cell(row.observation, isHeader: false),
+                    _cell(row.localisation, isHeader: false),
                   ],
                 );
               }),
@@ -7385,7 +7439,7 @@ class PdfReportService {
       pdf.addPage(pw.MultiPage(
         maxPages: 10000,
         pageTheme: _buildInnerPageTheme(),
-        build: (ctx) => [_buildFoudre(foudres, trackedPages)],
+        build: (ctx) => [_buildFoudre(audit, foudres, trackedPages, afficherTableauFoudre: mission.afficherTableauFoudre)],
       ));
 
       // 10. Resultats des mesures et essais
@@ -7596,6 +7650,12 @@ class _ObsGroup {
   final String local;
   final List<_ObsRecap> items;
   _ObsGroup({required this.local, required this.items});
+}
+
+class _ParafoudreEquipementRow {
+  final String observation;
+  final String localisation;
+  _ParafoudreEquipementRow({required this.observation, required this.localisation});
 }
 
 class _EquipmentPhotoGroup {

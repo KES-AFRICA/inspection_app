@@ -348,6 +348,103 @@ class _FoudreScreenState extends ConsumerState<FoudreScreen> {
     }
   }
 
+  Widget _buildDisplayToggleCard() {
+    final isShow = widget.mission.afficherTableauFoudre;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              'Afficher le tableau Foudre dans le rapport',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade800,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Container(
+            height: 36,
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                GestureDetector(
+                  onTap: () async {
+                    if (!isShow) return;
+                    setState(() {
+                      widget.mission.afficherTableauFoudre = false;
+                    });
+                    await HiveService.saveMission(widget.mission);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: !isShow ? Colors.red.shade600 : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Non',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: !isShow ? Colors.white : Colors.grey.shade700,
+                      ),
+                    ),
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () async {
+                    if (isShow) return;
+                    setState(() {
+                      widget.mission.afficherTableauFoudre = true;
+                    });
+                    await HiveService.saveMission(widget.mission);
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: isShow ? Colors.green.shade600 : Colors.transparent,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Text(
+                      'Oui',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: isShow ? Colors.white : Colors.grey.shade700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final observationsAsync = ref.watch(foudreObservationsProvider(widget.mission.id));
@@ -375,7 +472,9 @@ class _FoudreScreenState extends ConsumerState<FoudreScreen> {
             return Column(
               children: [
                 _buildHeaderStats(observations),
-                const SizedBox(height: 8),
+                const SizedBox(height: 4),
+                _buildDisplayToggleCard(),
+                const SizedBox(height: 4),
                 _buildPriorityFilter(),
                 const SizedBox(height: 8),
                 if (filteredObservations.isEmpty)
