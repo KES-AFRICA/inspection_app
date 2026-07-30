@@ -1019,141 +1019,100 @@ class PdfReportService {
       color: headerColor,
     );
 
-    pw.Widget buildInfoRow(String label, pw.Widget contentWidget, {required bool isLast, required bool isOdd}) {
+    pw.TableRow buildTableRow(String label, pw.Widget contentWidget, {required bool isOdd}) {
       final bg = isOdd ? PdfColor.fromHex('#F8FAFC') : PdfColors.white;
-      return pw.Container(
-        decoration: pw.BoxDecoration(
-          color: bg,
-          border: isLast
-              ? null
-              : pw.Border(
-                  bottom: pw.BorderSide(color: gridColor, width: borderWidth),
-                ),
-        ),
-        child: pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.center,
-          children: [
-            pw.Container(
-              width: leftColWidth,
-              padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-              decoration: pw.BoxDecoration(
-                border: pw.Border(
-                  right: pw.BorderSide(color: gridColor, width: borderWidth),
-                ),
-              ),
-              child: pw.Text(label, style: labelStyle),
-            ),
-            pw.Expanded(
-              child: pw.Container(
-                padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                child: contentWidget,
-              ),
-            ),
-          ],
-        ),
+      return pw.TableRow(
+        decoration: pw.BoxDecoration(color: bg),
+        children: [
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+            child: pw.Text(label, style: labelStyle),
+          ),
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+            child: contentWidget,
+          ),
+        ],
       );
     }
 
-    return pw.Container(
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: gridColor, width: borderWidth),
-      ),
-      child: pw.Column(
-        children: [
-          // ── PARTIE A: MISSIONS (PÉRIMÈTRE - CELLULE UNIQUE À GAUCHE / ROWSPAN FACTEL) ──
-          pw.Container(
-            decoration: pw.BoxDecoration(
-              border: pw.Border(
-                bottom: pw.BorderSide(color: gridColor, width: borderWidth),
-              ),
+    return pw.Table(
+      border: pw.TableBorder.all(color: gridColor, width: borderWidth),
+      columnWidths: const {
+        0: pw.FixedColumnWidth(leftColWidth),
+        1: pw.FlexColumnWidth(),
+      },
+      children: [
+        // ── PARTIE A: MISSIONS (PÉRIMÈTRE - CELLULE UNIQUE À GAUCHE) ──
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.white),
+          children: [
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+              child: pw.Text('Missions', style: labelStyle),
             ),
-            child: pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                pw.Container(
-                  width: leftColWidth,
-                  padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 8),
-                  alignment: pw.Alignment.centerLeft,
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.white,
-                    border: pw.Border(
-                      right: pw.BorderSide(color: gridColor, width: borderWidth),
-                    ),
-                  ),
-                  child: pw.Text('Missions', style: labelStyle),
-                ),
-                pw.Expanded(
-                  child: pw.Column(
-                    crossAxisAlignment: pw.CrossAxisAlignment.start,
-                    children: perimetres.asMap().entries.map((entry) {
-                      final idx = entry.key;
-                      final item = entry.value;
-                      final isLast = idx == perimetres.length - 1;
-                      final isOdd = idx.isOdd;
-                      final bg = isOdd ? PdfColor.fromHex('#F8FAFC') : PdfColors.white;
-
-                      return pw.Container(
-                        width: double.infinity,
-                        padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                        decoration: pw.BoxDecoration(
-                          color: bg,
-                          border: isLast
-                              ? null
-                              : pw.Border(
-                                  bottom: pw.BorderSide(color: gridColor, width: borderWidth),
-                                ),
-                        ),
-                        child: pw.Text(item, style: valueStyle),
-                      );
-                    }).toList(),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ── PARTIE B: INFORMATIONS GÉNÉRALES ──
-          buildInfoRow(
-            'Nature',
-            pw.Text(mission.natureMission ?? 'Périodique réglementaire', style: valueStyle),
-            isLast: false,
-            isOdd: false,
-          ),
-          buildInfoRow(
-            'Dates d\'intervention',
-            pw.Text(dateInterventionStr, style: valueStyle),
-            isLast: false,
-            isOdd: true,
-          ),
-          buildInfoRow(
-            'Durée',
-            pw.Text('$dureeJours jour(s)', style: valueStyle),
-            isLast: false,
-            isOdd: false,
-          ),
-          buildInfoRow(
-            'Accompagnateur / Responsable',
-            pw.Text(accompagnateursStr, style: valueStyle),
-            isLast: false,
-            isOdd: true,
-          ),
-          buildInfoRow(
-            'Compte rendu de fin de visite fait à',
-            pw.Text(compteRenduStr, style: valueStyle),
-            isLast: false,
-            isOdd: false,
-          ),
-          buildInfoRow(
-            'Vérificateur(s)',
             pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: verificateursList.map((v) => pw.Text(v, style: valueStyle)).toList(),
+              children: perimetres.asMap().entries.map((entry) {
+                final idx = entry.key;
+                final item = entry.value;
+                final isLast = idx == perimetres.length - 1;
+                final isOdd = idx.isOdd;
+                final bg = isOdd ? PdfColor.fromHex('#F8FAFC') : PdfColors.white;
+
+                return pw.Container(
+                  width: double.infinity,
+                  padding: const pw.EdgeInsets.symmetric(vertical: 6, horizontal: 8),
+                  decoration: pw.BoxDecoration(
+                    color: bg,
+                    border: isLast
+                        ? null
+                        : pw.Border(
+                            bottom: pw.BorderSide(color: gridColor, width: borderWidth),
+                          ),
+                  ),
+                  child: pw.Text(item, style: valueStyle),
+                );
+              }).toList(),
             ),
-            isLast: true,
-            isOdd: true,
+          ],
+        ),
+
+        // ── PARTIE B: INFORMATIONS GÉNÉRALES ──
+        buildTableRow(
+          'Nature',
+          pw.Text(mission.natureMission ?? 'Périodique réglementaire', style: valueStyle),
+          isOdd: false,
+        ),
+        buildTableRow(
+          'Dates d\'intervention',
+          pw.Text(dateInterventionStr, style: valueStyle),
+          isOdd: true,
+        ),
+        buildTableRow(
+          'Durée',
+          pw.Text('$dureeJours jour(s)', style: valueStyle),
+          isOdd: false,
+        ),
+        buildTableRow(
+          'Accompagnateur / Responsable',
+          pw.Text(accompagnateursStr, style: valueStyle),
+          isOdd: true,
+        ),
+        buildTableRow(
+          'Compte rendu de fin de visite fait à',
+          pw.Text(compteRenduStr, style: valueStyle),
+          isOdd: false,
+        ),
+        buildTableRow(
+          'Vérificateur(s)',
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: verificateursList.map((v) => pw.Text(v, style: valueStyle)).toList(),
           ),
-        ],
-      ),
+          isOdd: true,
+        ),
+      ],
     );
   }
 
