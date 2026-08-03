@@ -138,7 +138,7 @@ class _BackupScreenState extends State<BackupScreen> {
     try {
       final pickerResult = await FilePicker.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['json'],
+        allowedExtensions: ['json', 'bin', 'inspec', 'zip'],
         withData: false, // CRITIQUE: 0 Mo alloués en RAM native
       );
 
@@ -869,7 +869,7 @@ class _BackupScreenState extends State<BackupScreen> {
                   child: _buildActionCard(
                     context,
                     title: 'Importer',
-                    subtitle: 'Depuis fichier .json',
+                    subtitle: 'Depuis fichier .bin ou .json',
                     icon: Icons.cloud_download_rounded,
                     iconColor: Colors.green.shade600,
                     buttonText: 'IMPORTER',

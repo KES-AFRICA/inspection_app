@@ -36,6 +36,7 @@ import '../models/jsa.dart';
 import '../models/renseignements_generaux.dart';
 import 'hive_service.dart';
 import 'sequence_progress_service.dart';
+import 'package:inspec_app/services/backup/backup_format_strategy.dart';
 
 // ─────────────────────────────────────────────────────────────
 // RÉSULTATS TYPÉS
@@ -350,7 +351,7 @@ class BackupService {
 
 
 
-  /// Liste des fichiers de sauvegarde (.json) stockés localement dans Downloads/Verif Elec/
+  /// Liste des fichiers de sauvegarde (.json, .bin, .inspec, .zip) stockés localement dans Downloads/Verif Elec/
   static Future<List<File>> getLocalBackupFiles() async {
     try {
       final downloadsPath = Platform.isAndroid
@@ -363,7 +364,14 @@ class BackupService {
       final files = verifElecDir
           .listSync()
           .whereType<File>()
-          .where((f) => f.path.endsWith('.json') && f.path.contains('inspec'))
+          .where((f) {
+            final p = f.path.toLowerCase();
+            final isSupportedExt = p.endsWith('.json') ||
+                p.endsWith('.bin') ||
+                p.endsWith('.inspec') ||
+                p.endsWith('.zip');
+            return isSupportedExt && p.contains('inspec');
+          })
           .toList();
       files.sort((a, b) => b.lastModifiedSync().compareTo(a.lastModifiedSync()));
       return files;
@@ -1148,8 +1156,16 @@ class BackupService {
         );
       }
 
-      // 1. Détection du format ZIP V4
-      if (await _isZipFile(file)) {
+      final formatInfo = await BackupFormatDetector.detectFormat(file);
+      if (!formatInfo.isSupported) {
+        return const InspectionSauvegarde(
+          isValid: false,
+          message: 'Format de fichier non reconnu ou non pris en charge. Veuillez sélectionner un fichier .bin ou .json valide.',
+        );
+      }
+
+      // 1. Détection du format ZIP / BIN V4
+      if (formatInfo.format == BackupFileFormat.zipBin || await _isZipFile(file)) {
         try {
           final bytes = await file.readAsBytes();
           final archive = ZipDecoder().decodeBytes(bytes);
@@ -1165,7 +1181,7 @@ class BackupService {
             final missionCount = (manifest['mission_count'] as num?)?.toInt() ?? 1;
 
             return InspectionSauvegarde(
-              isValid: magic == _magicV4,
+              isValid: magic == _magicV4 || magic == _magic || magic == _magicV2,
               magic: magic,
               schemaVersion: schemaVersion,
               exportType: exportType,
@@ -1203,7 +1219,7 @@ class BackupService {
         return InspectionSauvegarde(
           isValid: false,
           magic: magic,
-          message: 'Format de sauvegarde non reconnu ou incompatible ($magic).',
+          message: 'Format de sauvegarde non reconnu ou incompatible ($magic). Veuillez sélectionner un fichier .bin ou .json valide.',
         );
       }
 
@@ -1333,7 +1349,7 @@ class BackupService {
     }
   }
 
-  // ── ENTREE UNIFIEE D'IMPORTATION (DUAL-MODE AUTOMATIQUE V4 & LEGACY) ──
+  // ── ENTREE UNIFIEE D'IMPORTATION (DUAL-MODE AUTOMATIQUE BIN/ZIP & LEGACY JSON) ──
   static Future<ImportResult> importerMissions(
     String filePath, {
     bool ecraserExistants = false,
@@ -1350,8 +1366,9 @@ class BackupService {
       );
     }
 
-    final isZip = await _isZipFile(file);
-    if (isZip) {
+    final formatInfo = await BackupFormatDetector.detectFormat(file);
+
+    if (formatInfo.format == BackupFileFormat.zipBin || await _isZipFile(file)) {
       return _importBackupV4(
         filePath,
         ecraserExistants: ecraserExistants,
@@ -1362,13 +1379,20 @@ class BackupService {
       );
     }
 
-    return _importLegacyBackup(
-      filePath,
-      ecraserExistants: ecraserExistants,
-      importeurMatricule: importeurMatricule,
-      importeurNom: importeurNom,
-      importeurPrenom: importeurPrenom,
-      onProgress: onProgress,
+    if (formatInfo.format == BackupFileFormat.jsonLegacy) {
+      return _importLegacyBackup(
+        filePath,
+        ecraserExistants: ecraserExistants,
+        importeurMatricule: importeurMatricule,
+        importeurNom: importeurNom,
+        importeurPrenom: importeurPrenom,
+        onProgress: onProgress,
+      );
+    }
+
+    return const ImportResult(
+      success: false,
+      message: 'Format de fichier non supporté. Seuls les fichiers .bin et .json sont acceptés.',
     );
   }
 
