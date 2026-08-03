@@ -869,7 +869,7 @@ class _BackupScreenState extends State<BackupScreen> {
                   child: _buildActionCard(
                     context,
                     title: 'Importer',
-                    subtitle: 'Depuis fichier .bin ou .json',
+                    subtitle: 'Depuis fichier (.inspec, .bin, .json)',
                     icon: Icons.cloud_download_rounded,
                     iconColor: Colors.green.shade600,
                     buttonText: 'IMPORTER',

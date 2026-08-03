@@ -1416,9 +1416,17 @@ class BackupService {
     final extractDir = Directory('${tempDir.path}/import_v4_${DateTime.now().millisecondsSinceEpoch}');
     await extractDir.create(recursive: true);
 
+    String effectiveZipPath = zipFilePath;
+    File? tempZipCopy;
+    if (!zipFilePath.toLowerCase().endsWith('.zip')) {
+      tempZipCopy = File('${tempDir.path}/temp_import_${DateTime.now().millisecondsSinceEpoch}.zip');
+      await File(zipFilePath).copy(tempZipCopy.path);
+      effectiveZipPath = tempZipCopy.path;
+    }
+
     try {
       // 1. Extraction Zip streaming direct sur disque avec archive_io
-      await extractFileToDisk(zipFilePath, extractDir.path);
+      await extractFileToDisk(effectiveZipPath, extractDir.path);
 
       onProgress?.call('Restauration des médias...', 0.20);
 
@@ -1525,6 +1533,11 @@ class BackupService {
         errorDetail: e.toString(),
       );
     } finally {
+      if (tempZipCopy != null && await tempZipCopy.exists()) {
+        try {
+          await tempZipCopy.delete();
+        } catch (_) {}
+      }
       if (await extractDir.exists()) {
         await extractDir.delete(recursive: true);
       }

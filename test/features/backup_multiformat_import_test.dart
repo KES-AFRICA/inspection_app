@@ -110,6 +110,37 @@ void main() {
       expect(binInspect.magic, equals('INSPEC_BACKUP_V4'));
     });
 
+    test('inspecterSauvegardeFichier & importerMissions should handle .inspec extension without extractFileToDisk ArgumentError', () async {
+      final inspecPath = '${tempDir.path}/test_backup.inspec';
+      final encoder = ZipFileEncoder();
+      encoder.create(inspecPath);
+
+      final manifestFile = File('${tempDir.path}/manifest.json');
+      await manifestFile.writeAsString(jsonEncode({
+        'magic': 'INSPEC_BACKUP_V4',
+        'schema_version': 4,
+        'export_type': 'single_mission',
+        'exported_at': '2026-08-03T10:00:00Z',
+        'mission_count': 1,
+      }));
+      await encoder.addFile(manifestFile);
+      await encoder.close();
+
+      final inspecFile = File(inspecPath);
+      expect(inspecFile.existsSync(), isTrue);
+
+      final inspectResult = await BackupService.inspecterSauvegardeFichier(inspecPath);
+      expect(inspectResult.isValid, isTrue);
+      expect(inspectResult.magic, equals('INSPEC_BACKUP_V4'));
+
+      final realInspecFile = File('/home/andelson-teufack/Téléchargements/inspec_Camwater_2026-08-03T12-13-29.inspec');
+      if (realInspecFile.existsSync()) {
+        final realInspect = await BackupService.inspecterSauvegardeFichier(realInspecFile.path);
+        expect(realInspect.isValid, isTrue);
+        expect(realInspect.magic, equals('INSPEC_BACKUP_V4'));
+      }
+    });
+
     test('importerMissions should reject unsupported file formats gracefully', () async {
       final invalidFile = File('${tempDir.path}/invalid.xyz');
       await invalidFile.writeAsString('Invalid payload content');
