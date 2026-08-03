@@ -12,7 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/core/providers/mission_providers.dart';
 import 'package:inspec_app/features/mission/presentation/providers/mission_detail_provider.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
-import 'package:inspec_app/services/pdf_report_service.dart';
+import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 import 'package:inspec_app/services/word_report_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:share_plus/share_plus.dart';

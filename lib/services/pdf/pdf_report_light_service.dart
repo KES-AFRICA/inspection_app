@@ -4,7 +4,7 @@ import 'package:inspec_app/models/lighting_inspection.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/renseignements_generaux.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:inspec_app/services/pdf_report_service.dart';
+import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;

@@ -7,7 +7,7 @@ import 'package:inspec_app/models/lighting_inspection.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/services/file_storage_service.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:inspec_app/services/pdf_report_light_service.dart';
+import 'package:inspec_app/services/pdf/pdf_report_light_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';
 import 'package:share_plus/share_plus.dart';

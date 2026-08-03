@@ -17,7 +17,7 @@ import 'package:inspec_app/models/renseignements_generaux.dart';
 import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/models/last_report.dart';
 import 'package:inspec_app/models/jsa.dart';
-import 'package:inspec_app/services/pdf_report_service.dart';
+import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 
 class MockPathProviderPlatform extends PathProviderPlatform
     with MockPlatformInterfaceMixin {

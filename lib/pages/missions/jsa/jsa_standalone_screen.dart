@@ -7,7 +7,7 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/pages/missions/sequence/steps/jsa_step.dart';
 import 'package:inspec_app/services/file_storage_service.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:inspec_app/services/pdf_report_jsa_service.dart';
+import 'package:inspec_app/services/pdf/pdf_report_jsa_service.dart';
 import 'package:intl/intl.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:printing/printing.dart';

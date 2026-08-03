@@ -5,7 +5,7 @@ import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/pages/missions/sequence/sequence_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
-import 'package:inspec_app/services/pdf_report_service.dart';
+import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:share_plus/share_plus.dart';
 

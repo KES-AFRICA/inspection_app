@@ -19,10 +19,10 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:inspec_app/services/pdf/pdf_chunk_merger.dart';
-import 'dispositions_constructives_registry.dart';
-import 'statistics/mission_statistics_collector.dart';
-import 'statistics/audit_finding.dart';
-import 'statistics/audit_diagnostic_engine.dart';
+import '../dispositions_constructives_registry.dart';
+import '../statistics/mission_statistics_collector.dart';
+import '../statistics/audit_finding.dart';
+import '../statistics/audit_diagnostic_engine.dart';
 
 // ================================================================
 //  PdfReportService
@@ -676,64 +676,95 @@ class PdfReportService {
     final entries = <_SommaireEntry>[];
 
     // 1. Objet de la vérification
-    entries.add(_SommaireEntry(titre: "OBJET DE LA VERIFICATION", key: 'objet', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "Références normatives et règlementaires", key: 'objet', level: 1));
-    entries.add(_SommaireEntry(titre: "Matériel utilisé", key: 'objet', level: 1));
+    entries.add(_SommaireEntry(titre: "OBJET DE LA VÉRIFICATION", key: 'objet', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "Références normatives et réglementaires", key: 'objet_normes', level: 1));
+    entries.add(_SommaireEntry(titre: "Matériel utilisé", key: 'objet_materiel', level: 1));
 
     // 2. Périmètre de la mission
     entries.add(_SommaireEntry(titre: "PERIMETRE DE LA MISSION", key: 'perimetre', level: 0, isBold: true, isUppercase: true));
 
     // 3. Rappel des responsabilités
-    entries.add(_SommaireEntry(titre: "RAPPEL DES RESPONSABILITES DE L'EMPLOYEUR", key: 'rappel', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "Responsabilité et accompagnement", key: 'rappel', level: 1));
-    entries.add(_SommaireEntry(titre: "Conditions de réalisation", key: 'rappel', level: 1));
-    entries.add(_SommaireEntry(titre: "Vérifications complémentaires", key: 'rappel', level: 1));
-    entries.add(_SommaireEntry(titre: "Surveillance & maintenance des installations électriques", key: 'rappel', level: 1));
-    entries.add(_SommaireEntry(titre: "Formation du personnel intervenant sur les installations et à proximité", key: 'rappel', level: 1));
-    entries.add(_SommaireEntry(titre: "MESURES DE SECURITE AUTOUR DES INSTALLATIONS", key: 'mesures_securite', level: 1, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "Technicien en maintenance des installations", key: 'mesures_securite', level: 1));
-    entries.add(_SommaireEntry(titre: "Engagement de KES INSPECTIONS AND PROJECTS", key: 'mesures_securite', level: 1));
+    entries.add(_SommaireEntry(titre: "RAPPEL DES RESPONSABILITÉS DE L'EMPLOYEUR", key: 'rappel', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "Responsabilité et accompagnement", key: 'rappel_accompagnement', level: 1));
+    entries.add(_SommaireEntry(titre: "Conditions de réalisation", key: 'rappel_conditions', level: 1));
+    entries.add(_SommaireEntry(titre: "Vérifications complémentaires", key: 'rappel_complementaires', level: 1));
+    entries.add(_SommaireEntry(titre: "Surveillance et maintenance des installations électriques", key: 'rappel_maintenance', level: 1));
+    entries.add(_SommaireEntry(titre: "Formation du personnel intervenant sur les installations et à proximité", key: 'rappel_formation', level: 1));
 
-    // 4. Résumé Exécutif (Immédiatement après MESURES DE SÉCURITÉ)
+    // 4. Mesures de sécurité autour des installations
+    entries.add(_SommaireEntry(titre: "MESURES DE SÉCURITÉ AUTOUR DES INSTALLATIONS", key: 'mesures_securite', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "Technicien en maintenance des installations", key: 'mesures_technicien', level: 1));
+    entries.add(_SommaireEntry(titre: "Engagement de KES INSPECTIONS AND PROJECTS", key: 'mesures_engagement', level: 1));
+
+    // 5. Résumé Exécutif
     entries.add(_SommaireEntry(titre: "RESUME EXECUTIF", key: 'resume_executif', level: 0, isBold: true, isUppercase: true));
 
-    // 5. Analyse Statistique (Immédiatement après Résumé Exécutif)
+    // 6. Analyse Statistique
     entries.add(_SommaireEntry(titre: "ANALYSE STATISTIQUE", key: 'analyse_statistique', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "Principales non-conformités et répartition", key: 'analyse_statistique', level: 1));
-    entries.add(_SommaireEntry(titre: "Statistique par type de défaut", key: 'stat_defauts', level: 1));
-    entries.add(_SommaireEntry(titre: "Répartition par domaine de tension", key: 'stat_tension', level: 1));
-    entries.add(_SommaireEntry(titre: "Non-conformités croisées par catégorie d'équipement", key: 'stat_croisee', level: 1));
+    entries.add(_SommaireEntry(titre: "Non-conformités de l'année passée", key: 'stat_annee_passee', level: 1));
+    entries.add(_SommaireEntry(titre: "Comparaison avec celles de cette année", key: 'stat_comparaison', level: 1));
+    entries.add(_SommaireEntry(titre: "Taux de mise en conformité", key: 'stat_taux_conformite', level: 1));
+
+    try {
+      final inventory = MissionStatisticsCollector.getInventory(mission.id);
+      final topDefects = inventory.getTopDefects(limit: 10);
+      if (topDefects.isNotEmpty) {
+        entries.add(_SommaireEntry(titre: "Statistique par type de défaut", key: 'stat_defauts', level: 1));
+      }
+
+      final domainStats = inventory.getTensionDomainStats();
+      if (domainStats.totalCount > 0) {
+        entries.add(_SommaireEntry(titre: "Répartition par domaine de tension", key: 'stat_tension', level: 1));
+      }
+
+      final diagReport = AuditDiagnosticEngine.runDiagnostic(mission.id);
+      final crossItems = inventory.getCrossCategoryAnalysis(
+        countMTLocaux: diagReport.countLocauxMT,
+        countBTLocaux: diagReport.countLocauxBT,
+        countCellules: diagReport.countCellules,
+        countTransfos: diagReport.countTransformateurs,
+        countGELocaux: diagReport.countGroupesElectrogenes,
+        countCoffrets: diagReport.countEquipements,
+      );
+      if (crossItems.isNotEmpty) {
+        entries.add(_SommaireEntry(titre: "Non-conformités croisées par catégorie d'équipement", key: 'stat_croisee', level: 1));
+      }
+    } catch (_) {
+      // En environnement de test ou sans Hive, omis silencieusement sans provoquer d'erreur.
+    }
+
     entries.add(_SommaireEntry(titre: "Inventaire chiffré des installations et équipements", key: 'stat_inventaire', level: 1));
 
-    // 6. Renseignements généraux
-    entries.add(_SommaireEntry(titre: "RENSEIGNEMENTS GENERAUX DE L'ETABLISSEMENT", key: 'renseignements', level: 0, isBold: true, isUppercase: true));
+    // 7. Renseignements généraux
+    entries.add(_SommaireEntry(titre: "RENSEIGNEMENTS GÉNÉRAUX DE L'ÉTABLISSEMENT", key: 'renseignements', level: 0, isBold: true, isUppercase: true));
     entries.add(_SommaireEntry(titre: "Renseignements principaux", key: 'renseignements_principaux', level: 1));
     entries.add(_SommaireEntry(titre: "Documents nécessaires à la vérification", key: 'renseignements_documents', level: 1));
     entries.add(_SommaireEntry(titre: "Habilitation électrique du personnel d'intervention", key: 'renseignements_habilitation', level: 1));
 
-    // 4. Description des installations
+    // 8. Description des installations
     entries.add(_SommaireEntry(titre: "DESCRIPTION DES INSTALLATIONS", key: 'description', level: 0, isBold: true, isUppercase: true));
     entries.add(_SommaireEntry(titre: "Zones et Locaux à risque", key: 'desc_locaux_risques', level: 1));
 
-    // 5. Liste récapitulative
+    // 9. Liste récapitulative (si audit)
     if (audit != null) {
-      entries.add(_SommaireEntry(titre: "SYNTHESE RECAPITULATIVE DES OBSERVATIONS", key: 'liste_recap', level: 0, isBold: true, isUppercase: true));
+      entries.add(_SommaireEntry(titre: "SYNTHÈSE RÉCAPITULATIVE DES OBSERVATIONS", key: 'liste_recap', level: 0, isBold: true, isUppercase: true));
       entries.add(_SommaireEntry(titre: "Moyenne tension", key: 'liste_recap_mt', level: 1));
       entries.add(_SommaireEntry(titre: "Basse tension", key: 'liste_recap_bt', level: 1));
     }
 
-    // 6. Audit des installations
+    // 10. Audit des installations (si audit)
     if (audit != null) {
       entries.add(_SommaireEntry(titre: "AUDIT DES INSTALLATIONS ELECTRIQUES", key: 'audit', level: 0, isBold: true, isUppercase: true));
     }
 
-    // 7. Classement
+    // 11. Classement
     entries.add(_SommaireEntry(titre: "CLASSEMENT ET EMPLACEMENTS DES LOCAUX ET ZONES EN FONCTION DES INFLUENCES EXTERNES", key: 'classement', level: 0, isBold: true, isUppercase: true));
 
-    // 8. Foudre
+    // 12. Foudre
     entries.add(_SommaireEntry(titre: "FOUDRE", key: 'foudre', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "Observations par équipement", key: 'foudre_equipements', level: 1));
 
-    // 9. Mesures et essais
+    // 13. Mesures et essais (si mesures)
     if (mesures != null) {
       entries.add(_SommaireEntry(titre: "RESULTATS DES MESURES ET ESSAIS", key: 'mesures', level: 0, isBold: true, isUppercase: true));
       entries.add(_SommaireEntry(titre: "Conditions de mesure", key: 'mesures_conditions', level: 1));
@@ -744,10 +775,10 @@ class PdfReportService {
       entries.add(_SommaireEntry(titre: "Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles", key: 'mesures_continuite', level: 1));
     }
 
-    // 10. Photos
+    // 14. Photos
     entries.add(_SommaireEntry(titre: "PHOTOS", key: 'photos', level: 0, isBold: true, isUppercase: true));
 
-    // 11. Schéma des installations électriques (si Oui)
+    // 15. Schéma des installations électriques (si Oui)
     final bool hasSchema = mission.schemaOption?.trim().toLowerCase() == 'oui';
     if (hasSchema) {
       entries.add(_SommaireEntry(
@@ -1469,19 +1500,27 @@ class PdfReportService {
     widgets.add(pw.SizedBox(height: 10));
 
     // I. Sous-section : Non-conformités de l'année passée
-    widgets.add(_subTitle('Non-conformit\u00e9s de l\'ann\u00e9e pass\u00e9e'));
+    widgets.add(PageTracker(
+      key: 'stat_annee_passee',
+      registry: trackedPages,
+      child: _subTitle('Non-conformités de l\'année passée'),
+    ));
     widgets.add(pw.SizedBox(height: 5));
     widgets.add(_buildCalloutBox(
-      'Donn\u00e9e non disponible',
-      'Le pr\u00e9sent rapport porte sur la premi\u00e8re visite de v\u00e9rification p\u00e9riodique disposant d\'une check-list num\u00e9rique structur\u00e9e pour ce site (Rapport n\u00b0 $numeroRapportDoc). Aucun rapport ant\u00e9rieur exploitable au m\u00eame format n\'a \u00e9t\u00e9 fourni pour extraire le nombre de non-conformit\u00e9s de l\'ann\u00e9e pass\u00e9e. Si un rapport ant\u00e9rieur existe, merci de le transmettre : cette section et la comparaison ci-dessous seront compl\u00e9t\u00e9es automatiquement.',
+      'Donnée non disponible',
+      'Le présent rapport porte sur la première visite de vérification périodique disposant d\'une check-list numérique structurée pour ce site (Rapport n° $numeroRapportDoc). Aucun rapport antérieur exploitable au même format n\'a été fourni pour extraire le nombre de non-conformités de l\'année passée. Si un rapport antérieur existe, merci de le transmettre : cette section et la comparaison ci-dessous seront complétées automatiquement.',
     ));
     widgets.add(pw.SizedBox(height: 10));
 
     // II. Sous-section : Comparaison avec celles de cette année
-    widgets.add(_subTitle('Comparaison avec celles de cette ann\u00e9e'));
+    widgets.add(PageTracker(
+      key: 'stat_comparaison',
+      registry: trackedPages,
+      child: _subTitle('Comparaison avec celles de cette année'),
+    ));
     widgets.add(pw.SizedBox(height: 5));
     widgets.add(_bodyText(
-      'Non calculable en l\'absence de donn\u00e9es de r\u00e9f\u00e9rence de l\'ann\u00e9e pr\u00e9c\u00e9dente (voir ci-dessus). \u00c0 titre indicatif, les non-conformit\u00e9s de la pr\u00e9sente visite se r\u00e9partissent comme suit :',
+      'Non calculable en l\'absence de données de référence de l\'année précédente (voir ci-dessus). À titre indicatif, les non-conformités de la présente visite se répartissent comme suit :',
     ));
     widgets.add(pw.SizedBox(height: 8));
 
@@ -1492,11 +1531,15 @@ class PdfReportService {
     widgets.add(pw.SizedBox(height: 10));
 
     // V. Sous-section : Taux de mise en conformité
-    widgets.add(_subTitle('Taux de mise en conformit\u00e9'));
+    widgets.add(PageTracker(
+      key: 'stat_taux_conformite',
+      registry: trackedPages,
+      child: _subTitle('Taux de mise en conformité'),
+    ));
     widgets.add(pw.SizedBox(height: 5));
     widgets.add(_buildCalloutBox(
-      'Donn\u00e9e partiellement disponible',
-      'Le taux de mise en conformit\u00e9 (\u00e9volution entre deux visites successives : non-conformit\u00e9s sold\u00e9es / non-conformit\u00e9s totales de l\'ann\u00e9e pr\u00e9c\u00e9dente) ne peut pas \u00eatre calcul\u00e9 sans le rapport de l\'ann\u00e9e pass\u00e9e. Il pourra \u00eatre renseign\u00e9 d\u00e8s r\u00e9ception de ce document de r\u00e9f\u00e9rence.',
+      'Donnée partiellement disponible',
+      'Le taux de mise en conformité (évolution entre deux visites successives : non-conformités soldées / non-conformités totales de l\'année précédente) ne peut pas être calculé sans le rapport de l\'année passée. Il pourra être renseigné dès réception de ce document de référence.',
     ));
     widgets.add(pw.SizedBox(height: 8));
     widgets.add(_bodyText(
@@ -5566,7 +5609,11 @@ class PdfReportService {
         pw.SizedBox(height: 14),
 
         // Sous-section : Observations par équipement
-        _subSectionBar("Observations par équipement"),
+        PageTracker(
+          key: 'foudre_equipements',
+          registry: trackedPages,
+          child: _subSectionBar("Observations par équipement"),
+        ),
         pw.SizedBox(height: 6),
 
         if (equipRows.isEmpty)
@@ -7092,11 +7139,19 @@ class PdfReportService {
           _bulletItem('L\'examen des mat\u00e9riels \u00e9lectriques en pr\u00e9sentation ou en d\u00e9monstration et destin\u00e9s \u00e0 la vente\u00a0;'),
           _bulletItem('Les mat\u00e9riels stock\u00e9s ou en r\u00e9serve, ou signal\u00e9s comme n\'\u00e9tant plus mis en \u0153uvre. Du fait que les installations sont examin\u00e9es en tenant compte des contraintes d\'exploitation et de s\u00e9curit\u00e9 propres \u00e0 chaque \u00e9tablissement et indiqu\u00e9es en d\u00e9but de v\u00e9rification au personnel charg\u00e9 de la v\u00e9rification, celle-ci est limit\u00e9e dans certains cas \u00e0 l\'\u00e9tat apparent des installations.'),
           pw.SizedBox(height: 12),
-          _subTitle('R\u00e9f\u00e9rences normatives et r\u00e9glementaires'),
+          PageTracker(
+            key: 'objet_normes',
+            registry: trackedPages,
+            child: _subTitle('Références normatives et réglementaires'),
+          ),
           pw.SizedBox(height: 5),
           _buildNormesTable(),
           pw.SizedBox(height: 12),
-          _subTitle('Mat\u00e9riel utilis\u00e9'),
+          PageTracker(
+            key: 'objet_materiel',
+            registry: trackedPages,
+            child: _subTitle('Matériel utilisé'),
+          ),
           pw.SizedBox(height: 5),
           _buildMaterielTable(),
 
@@ -7115,66 +7170,86 @@ class PdfReportService {
           PageTracker(
             key: 'rappel',
             registry: trackedPages,
-            child: _sectionBox('RAPPEL DES RESPONSABILIT\u00c9S DE L\'EMPLOYEUR'),
+            child: _sectionBox('RAPPEL DES RESPONSABILITÉS DE L\'EMPLOYEUR'),
           ),
           pw.SizedBox(height: 14),
           _bodyText(
-            'KES INSPECTIONS AND PROJECTS a le plaisir de vous transmettre le pr\u00e9sent rapport de v\u00e9rification de vos installations \u00e9lectriques, \u00e9tabli \u00e0 la suite des constats r\u00e9alis\u00e9s sur site.\n'
-            'Ce document pr\u00e9sente les observations effectu\u00e9es par le v\u00e9rificateur \u00e0 partir des \u00e9l\u00e9ments et moyens mis \u00e0 sa disposition.\n'
-            'Il identifie les points de non-conformit\u00e9 constat\u00e9s au regard des exigences r\u00e9glementaires, et formule, le cas \u00e9ch\u00e9ant, les recommandations techniques n\u00e9cessaires \u00e0 leur mise en conformit\u00e9.',
+            'KES INSPECTIONS AND PROJECTS a le plaisir de vous transmettre le présent rapport de vérification de vos installations électriques, établi à la suite des constats réalisés sur site.\n'
+            'Ce document présente les observations effectuées par le vérificateur à partir des éléments et moyens mis à sa disposition.\n'
+            'Il identifie les points de non-conformité constatés au regard des exigences réglementaires, et formule, le cas échéant, les recommandations techniques nécessaires à leur mise en conformité.',
           ),
           pw.SizedBox(height: 10),
-          _subTitle('Responsabilit\u00e9 et accompagnement'),
+          PageTracker(
+            key: 'rappel_accompagnement',
+            registry: trackedPages,
+            child: _subTitle('Responsabilité et accompagnement'),
+          ),
           _bodyText(
-            'Dans le cadre de la mission, il appartient \u00e0 l\'employeur de d\u00e9signer une personne qualifi\u00e9e et inform\u00e9e des installations, charg\u00e9e d\'accompagner le v\u00e9rificateur durant l\'intervention.\n'
-            'Cette personne doit pouvoir faciliter l\'acc\u00e8s \u00e0 l\'ensemble des locaux, appareillages et \u00e9quipements \u00e0 contr\u00f4ler.\n\n'
-            'L\'employeur reste responsable du bon fonctionnement, de la s\u00e9curit\u00e9 et de la disponibilit\u00e9 des installations tout au long de la v\u00e9rification.\n'
-            'Les informations et documents techniques fournis sous sa responsabilit\u00e9 doivent permettre la r\u00e9alisation des contr\u00f4les dans de bonnes conditions.',
+            'Dans le cadre de la mission, il appartient à l\'employeur de désigner une personne qualifiée et informée des installations, chargée d\'accompagner le vérificateur durant l\'intervention.\n'
+            'Cette personne doit pouvoir faciliter l\'accès à l\'ensemble des locaux, appareillages et équipements à contrôler.\n\n'
+            'L\'employeur reste responsable du bon fonctionnement, de la sécurité et de la disponibilité des installations tout au long de la vérification.\n'
+            'Les informations et documents techniques fournis sous sa responsabilité doivent permettre la réalisation des contrôles dans de bonnes conditions.',
           ),
           pw.SizedBox(height: 10),
-          _subTitle('Conditions de r\u00e9alisation'),
-          _bodyText('Afin d\'assurer le bon d\u00e9roulement des op\u00e9rations, l\'employeur doit\u00a0:'),
-          _bulletItem('Veiller \u00e0 ce que la v\u00e9rification soit r\u00e9alis\u00e9e dans des conditions de s\u00e9curit\u00e9 optimales, en particulier lors des acc\u00e8s en zone \u00e9lectrique\u00a0;'),
-          _bulletItem('Mettre en \u0153uvre les proc\u00e9dures n\u00e9cessaires aux mises hors tension permettant d\'effectuer les mesures et essais en toute s\u00e9curit\u00e9\u00a0;'),
-          _bulletItem('Garantir au v\u00e9rificateur l\'acc\u00e8s \u00e0 l\'ensemble des \u00e9quipements \u00e0 contr\u00f4ler, sans risque de chute ou d\'incident.'),
+          PageTracker(
+            key: 'rappel_conditions',
+            registry: trackedPages,
+            child: _subTitle('Conditions de réalisation'),
+          ),
+          _bodyText('Afin d\'assurer le bon déroulement des opérations, l\'employeur doit\u00a0:'),
+          _bulletItem('Veiller à ce que la vérification soit réalisée dans des conditions de sécurité optimales, en particulier lors des accès en zone électrique\u00a0;'),
+          _bulletItem('Mettre en œuvre les procédures nécessaires aux mises hors tension permettant d\'effectuer les mesures et essais en toute sécurité\u00a0;'),
+          _bulletItem('Garantir au vérificateur l\'accès à l\'ensemble des équipements à contrôler, sans risque de chute ou d\'incident.'),
           pw.SizedBox(height: 8),
           _bodyText(
-            'Si certaines v\u00e9rifications n\'ont pu \u00eatre effectu\u00e9es (impossibilit\u00e9 d\'acc\u00e8s, absence d\'agents habilit\u00e9s, contraintes d\'exploitation, documentation manquante, etc.), '
+            'Si certaines vérifications n\'ont pu être effectuées (impossibilité d\'accès, absence d\'agents habilités, contraintes d\'exploitation, documentation manquante, etc.), '
             'KES INSPECTIONS AND PROJECTS en mentionnera la cause dans le rapport.\n\n'
-            'Dans le cas des installations de moyenne ou haute tension, la mise hors tension et les man\u0153uvres associ\u00e9es rel\u00e8vent exclusivement de la responsabilit\u00e9 de l\'employeur ou de son repr\u00e9sentant habilit\u00e9.',
+            'Dans le cas des installations de moyenne ou haute tension, la mise hors tension et les manœuvres associées relèvent exclusivement de la responsabilité de l\'employeur ou de son représentant habilité.',
           ),
           pw.SizedBox(height: 10),
-          _subTitle('V\u00e9rifications compl\u00e9mentaires'),
+          PageTracker(
+            key: 'rappel_complementaires',
+            registry: trackedPages,
+            child: _subTitle('Vérifications complémentaires'),
+          ),
           _bodyText(
-            'Lorsque des \u00e9l\u00e9ments du poste ou de l\'installation n\'ont pu \u00eatre contr\u00f4l\u00e9s lors de la visite initiale, une intervention compl\u00e9mentaire pourra \u00eatre programm\u00e9e \u00e0 la demande de l\'employeur.\n'
-            'Cette mission additionnelle fera alors l\'objet d\'une planification et d\'un rapport sp\u00e9cifique.',
+            'Lorsque des éléments du poste ou de l\'installation n\'ont pu être contrôlés lors de la visite initiale, une intervention complémentaire pourra être programmée à la demande de l\'employeur.\n'
+            'Cette mission additionnelle fera alors l\'objet d\'une planification et d\'un rapport spécifique.',
           ),
           pw.SizedBox(height: 10),
-          _subTitle('Surveillance et maintenance des installations \u00e9lectriques'),
+          PageTracker(
+            key: 'rappel_maintenance',
+            registry: trackedPages,
+            child: _subTitle('Surveillance et maintenance des installations électriques'),
+          ),
           _bodyText(
-            'La v\u00e9rification de conformit\u00e9 des installations \u00e9lectriques ne constitue qu\'un des \u00e9l\u00e9ments concourant \u00e0 la s\u00e9curit\u00e9 des personnes et des biens. Conform\u00e9ment \u00e0 la norme et aux textes r\u00e9glementaires applicables, '
-            'le chef d\'\u00e9tablissement doit mettre en place une organisation pour les op\u00e9rations de surveillance et la maintenance des installations \u00e9lectriques. '
-            'C\'est dans le cadre de ces op\u00e9rations que les dispositions doivent \u00eatre prises afin de rem\u00e9dier aux d\u00e9fectuosit\u00e9s constat\u00e9es pendant la v\u00e9rification ou celles qui peuvent se manifester apr\u00e8s la v\u00e9rification.',
+            'La vérification de conformité des installations électriques ne constitue qu\'un des éléments concourant à la sécurité des personnes et des biens. Conformément à la norme et aux textes réglementaires applicables, '
+            'le chef d\'établissement doit mettre en place une organisation pour les opérations de surveillance et la maintenance des installations électriques. '
+            'C\'est dans le cadre de ces opérations que les dispositions doivent être prises afin de remédier aux défectuosités constatées pendant la vérification ou celles qui peuvent se manifester après la vérification.',
           ),
           pw.SizedBox(height: 10),
-          _subTitle('Formation du personnel intervenant sur les installations et \u00e0 proximit\u00e9'),
-          _bodyText(
-            'Conform\u00e9ment aux dispositions r\u00e9glementaires en vigueur, l\'employeur doit s\'assurer que le personnel appel\u00e9 \u00e0 intervenir sur ou \u00e0 proximit\u00e9 des installations \u00e9lectriques dispose d\'une habilitation \u00e9lectrique adapt\u00e9e au domaine de tension concern\u00e9 '
-            'et \u00e0 la nature des op\u00e9rations \u00e0 r\u00e9aliser.',
+          PageTracker(
+            key: 'rappel_formation',
+            registry: trackedPages,
+            child: _subTitle('Formation du personnel intervenant sur les installations et à proximité'),
           ),
-          // ─── MESURES DE S\u00c9CURIT\u00c9 ───
+          _bodyText(
+            'Conformément aux dispositions réglementaires en vigueur, l\'employeur doit s\'assurer que le personnel appelé à intervenir sur ou à proximité des installations électriques dispose d\'une habilitation électrique adaptée au domaine de tension concerné '
+            'et à la nature des opérations à réaliser.',
+          ),
+          // ─── MESURES DE SÉCURITÉ ───
           pw.SizedBox(height: 20),
           PageTracker(
             key: 'mesures_securite',
             registry: trackedPages,
-            child: _sectionBox('MESURES DE S\u00c9CURIT\u00c9 AUTOUR DES INSTALLATIONS'),
+            child: _sectionBox('MESURES DE SÉCURITÉ AUTOUR DES INSTALLATIONS'),
           ),
           pw.SizedBox(height: 8),
-          _bodyText('Suivant la r\u00e9glementation applicable\u00a0:'),
-          _bulletItem('Article 5 \u2013 Arr\u00eat\u00e9 039/MTPS/IMT du 26 novembre 1984 fixant les mesures g\u00e9n\u00e9rales d\'hygi\u00e8ne et de s\u00e9curit\u00e9 sur les lieux de travail\u00a0;'),
-          _bulletItem('NFC 18-510\u00a0: Op\u00e9rations sur les ouvrages et installations \u00e9lectriques et dans un environnement \u00e9lectrique \u2013 Pr\u00e9vention du risque \u00e9lectrique.'),
+          _bodyText('Suivant la réglementation applicable\u00a0:'),
+          _bulletItem('Article 5 \u2013 Arrêté 039/MTPS/IMT du 26 novembre 1984 fixant les mesures générales d\'hygiène et de sécurité sur les lieux de travail\u00a0;'),
+          _bulletItem('NFC 18-510\u00a0: Opérations sur les ouvrages et installations électriques et dans un environnement électrique \u2013 Prévention du risque électrique.'),
           pw.SizedBox(height: 5),
-          _bodyText('Le personnel doit avoir suivi avec succ\u00e8s une formation en habilitation \u00e9lectrique en fonction du domaine de tension.'),
+          _bodyText('Le personnel doit avoir suivi avec succès une formation en habilitation électrique en fonction du domaine de tension.'),
           pw.SizedBox(height: 5),
           if (_imgHabilitation != null)
             pw.Container(width: double.infinity, child: pw.Image(_imgHabilitation!, fit: pw.BoxFit.fitWidth))
@@ -7182,9 +7257,9 @@ class PdfReportService {
             pw.SizedBox(),
           pw.SizedBox(height: 12),
           _bodyText(
-            'Il est rappel\u00e9 que des dispositions de s\u00e9curit\u00e9 particuli\u00e8res et parfaitement d\u00e9finies doivent \u00eatre prises par le chef de l\'\u00e9tablissement '
-            'pour toute intervention de maintenance, r\u00e9glage, nettoyage sur ou \u00e0 proximit\u00e9 des installations \u00e9lectriques.\n\n'
-            'L\'acc\u00e8s aux locaux et armoires \u00e9lectriques doit \u00eatre interdit aux personnes non autoris\u00e9es.',
+            'Il est rappelé que des dispositions de sécurité particulières et parfaitement définies doivent être prises par le chef de l\'établissement '
+            'pour toute intervention de maintenance, réglage, nettoyage sur ou à proximité des installations électriques.\n\n'
+            'L\'accès aux locaux et armoires électriques doit être interdit aux personnes non autorisées.',
           ),
           pw.SizedBox(height: 8),
           if (_imgAccesGauche != null || _imgAccesDroite1 != null || _imgAccesDroite2 != null)
@@ -7210,21 +7285,29 @@ class PdfReportService {
             ),
           pw.SizedBox(height: 12),
           _bodyText(
-            'En effet, une installation, bien que d\u00e9clar\u00e9e conforme en phase d\'exploitation, peut lors d\'op\u00e9rations, par exemple d\'entretien, '
-            'n\u00e9cessiter des pr\u00e9cautions sp\u00e9ciales du fait de la pr\u00e9sence \u00e0 proximit\u00e9 de pi\u00e8ces nues sous tension '
-            '(cas des locaux r\u00e9serv\u00e9s aux \u00e9lectriciens et dans lesquels la r\u00e9glementation n\'interdit pas la pr\u00e9sence de pi\u00e8ces nues sous tension).',
+            'En effet, une installation, bien que déclarée conforme en phase d\'exploitation, peut lors d\'opérations, par exemple d\'entretien, '
+            'nécessiter des précautions spéciales du fait de la présence à proximité de pièces nues sous tension '
+            '(cas des locaux réservés aux électriciens et dans lesquels la réglementation n\'interdit pas la présence de pièces nues sous tension).',
           ),
           pw.SizedBox(height: 10),
-          _subTitle('Technicien en maintenance des installations'),
+          PageTracker(
+            key: 'mesures_technicien',
+            registry: trackedPages,
+            child: _subTitle('Technicien en maintenance des installations'),
+          ),
           pw.SizedBox(height: 5),
-          _bodyText('Il est fortement recommand\u00e9 \u00e0 l\'employeur de faire participer les employ\u00e9s \u00e0 des s\u00e9ances de formation sur les modules suivants\u00a0:'),
-          _bulletItem('Connaissance des normes en \u00e9lectricit\u00e9 (NC 244 C15 00\u2026)\u00a0;'),
-          _bulletItem('Maintenance des installations \u00e9lectriques.'),
+          _bodyText('Il est fortement recommandé à l\'employeur de faire participer les employés à des séances de formation sur les modules suivants\u00a0:'),
+          _bulletItem('Connaissance des normes en électricité (NC 244 C15 00\u2026)\u00a0;'),
+          _bulletItem('Maintenance des installations électriques.'),
           pw.SizedBox(height: 10),
-          _subTitle('Engagement de KES INSPECTIONS AND PROJECTS'),
+          PageTracker(
+            key: 'mesures_engagement',
+            registry: trackedPages,
+            child: _subTitle('Engagement de KES INSPECTIONS AND PROJECTS'),
+          ),
           _bodyText(
-            'KES INSPECTIONS AND PROJECTS s\'engage \u00e0 r\u00e9aliser ses v\u00e9rifications dans le strict respect des normes et r\u00e8glements applicables, '
-            'avec le souci constant de la s\u00e9curit\u00e9, de la fiabilit\u00e9 technique et de l\'impartialit\u00e9 des constats.',
+            'KES INSPECTIONS AND PROJECTS s\'engage à réaliser ses vérifications dans le strict respect des normes et règlements applicables, '
+            'avec le souci constant de la sécurité, de la fiabilité technique et de l\'impartialité des constats.',
           ),
 
           // ─── RÉSUMÉ EXÉCUTIF (Démarre sur une nouvelle page juste après Mesures de Sécurité) ───
