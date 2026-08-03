@@ -1,7 +1,6 @@
 // lib/services/statistics/mission_tree_visitor.dart
 
 import '../../models/audit_installations_electriques.dart';
-import '../../models/foudre.dart';
 import '../hive_service.dart';
 import 'unified_observation.dart';
 

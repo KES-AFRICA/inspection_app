@@ -135,16 +135,16 @@ class AuditFindingInventoryEngine {
   // ──────────────────────────────────────────────────────────────
 
   static String _resolveCriticalityString(ElementControle el, {String? localType}) {
-    final directVal = el.criticite?.trim();
-    if (directVal != null && directVal.isNotEmpty) {
-      final s = directVal.toLowerCase();
+    final criticiteStr = el.criticiteEffectiveFor(localType: localType);
+    if (criticiteStr != null && criticiteStr.trim().isNotEmpty) {
+      final s = criticiteStr.trim().toLowerCase();
       if (s.contains('critique') || s == '3') return 'Critique';
       if (s.contains('majeur') || s == '2') return 'Majeure';
       if (s.contains('mineur') || s == '1') return 'Mineure';
     }
-    final criticiteStr = el.criticiteEffectiveFor(localType: localType);
-    if (criticiteStr != null && criticiteStr.trim().isNotEmpty) {
-      final s = criticiteStr.trim().toLowerCase();
+    final directVal = el.criticite?.trim();
+    if (directVal != null && directVal.isNotEmpty) {
+      final s = directVal.toLowerCase();
       if (s.contains('critique') || s == '3') return 'Critique';
       if (s.contains('majeur') || s == '2') return 'Majeure';
       if (s.contains('mineur') || s == '1') return 'Mineure';
@@ -153,13 +153,13 @@ class AuditFindingInventoryEngine {
   }
 
   static String _resolvePointVerificationCriticality(PointVerification pv, String coffretType) {
-    final directVal = pv.criticite?.trim();
-    if (directVal != null && directVal.isNotEmpty) {
-      return _normalizeCriticalityLabel(directVal);
-    }
     final meta = DispositionsConstructivesRegistry.getCoffretMetadata(pv.pointVerification, coffretType: coffretType);
     if (meta != null && meta.criticite.trim().isNotEmpty) {
       return _normalizeCriticalityLabel(meta.criticite);
+    }
+    final directVal = pv.criticite?.trim();
+    if (directVal != null && directVal.isNotEmpty) {
+      return _normalizeCriticalityLabel(directVal);
     }
     return 'Non spécifiée';
   }
