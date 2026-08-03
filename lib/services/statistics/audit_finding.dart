@@ -175,8 +175,8 @@ class AuditFindingInventory {
     final sortedEntries = counts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    final topEntries = sortedEntries.take(limit).toList();
-    final tot = totalFindings;
+    final topEntries = limit > 0 ? sortedEntries.take(limit).toList() : sortedEntries;
+    final tot = classifiedCount > 0 ? classifiedCount : totalFindings;
 
     return topEntries.map((e) {
       final pct = tot > 0 ? (e.value / tot) * 100 : 0.0;
@@ -186,6 +186,13 @@ class AuditFindingInventory {
         percentage: pct,
       );
     }).toList();
+  }
+
+  /// Vérifie la cohérence stricte entre les points de vérification recensés et le nombre total d'occurrences.
+  bool verifyDefectConsistency() {
+    final allDefects = getTopDefects(limit: -1);
+    final sumOccurrences = allDefects.fold<int>(0, (sum, item) => sum + item.count);
+    return sumOccurrences == totalFindings;
   }
 
   /// Calcule la répartition des non-conformités par famille de risque.
