@@ -50,4 +50,11 @@ class MissionStatisticsCollector {
     inventory.printDiagnostic();
     return inventory;
   }
+
+  /// Génère le résumé statistique unifié Néo-Natif (`MissionStatisticsSummary`).
+  static MissionStatisticsSummary collectSummary(String missionId) {
+    final inventory = AuditFindingInventoryEngine.buildInventory(missionId);
+    inventory.printDiagnostic();
+    return MissionStatisticsSummary.fromInventory(inventory);
+  }
 }

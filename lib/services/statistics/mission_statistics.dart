@@ -1,5 +1,6 @@
 // lib/services/statistics/mission_statistics.dart
 
+import 'audit_finding.dart';
 import 'unified_observation.dart';
 
 class CriticalityStats {
@@ -113,6 +114,52 @@ class MissionStatistics {
       statsByRefNormative: byNorm,
       statsByLocalisation: byLoc,
       statsByTypeObjet: byType,
+    );
+  }
+}
+
+/// Modèle conteneur unifié et certifié de l'analyse statistique d'une mission (`MissionStatisticsSummary`).
+class MissionStatisticsSummary {
+  final String missionId;
+  final AuditFindingInventory inventory;
+  final CriticalityStats criticalityStats;
+  final List<TopDefectItem> topDefects;
+  final List<RiskFamilyItem> riskFamilyStats;
+  final TensionDomainStats tensionDomainStats;
+  final List<InstallationTypeItem> installationTypeStats;
+  final List<EquipmentInventoryItem> equipmentInventory;
+
+  MissionStatisticsSummary({
+    required this.missionId,
+    required this.inventory,
+    required this.criticalityStats,
+    required this.topDefects,
+    required this.riskFamilyStats,
+    required this.tensionDomainStats,
+    required this.installationTypeStats,
+    required this.equipmentInventory,
+  });
+
+  factory MissionStatisticsSummary.fromInventory(AuditFindingInventory inventory) {
+    final cStats = CriticalityStats(
+      critique: inventory.critiqueCount,
+      majeure: inventory.majeureCount,
+      mineure: inventory.mineureCount,
+      total: inventory.totalFindings,
+      pctCritique: inventory.pctCritique,
+      pctMajeure: inventory.pctMajeure,
+      pctMineure: inventory.pctMineure,
+    );
+
+    return MissionStatisticsSummary(
+      missionId: inventory.missionId,
+      inventory: inventory,
+      criticalityStats: cStats,
+      topDefects: inventory.getTopDefects(limit: 10),
+      riskFamilyStats: inventory.getRiskFamilyStats(),
+      tensionDomainStats: inventory.getTensionDomainStats(),
+      installationTypeStats: inventory.getInstallationTypeStats(),
+      equipmentInventory: AuditFindingInventory.computeEquipmentInventory(inventory.missionId),
     );
   }
 }
