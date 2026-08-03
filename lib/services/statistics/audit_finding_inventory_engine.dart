@@ -1,7 +1,6 @@
 // lib/services/statistics/audit_finding_inventory_engine.dart
 
 import '../../models/audit_installations_electriques.dart';
-import '../../models/foudre.dart';
 import '../hive_service.dart';
 import '../dispositions_constructives_registry.dart';
 import 'audit_finding.dart';
@@ -70,25 +69,8 @@ class AuditFindingInventoryEngine {
             visitedCoffrets: visitedCoffrets,
           );
         }
-        for (var i = 0; i < zone.observationsLibres.length; i++) {
-          final obs = zone.observationsLibres[i];
-          if (obs.texte.trim().isNotEmpty) {
-            final hash = identityHashCode(obs);
-            addFinding(AuditFinding(
-              id: 'mt_zone_${zIdx}_obs_hash_$hash',
-              missionId: missionId,
-              origin: 'Zone MT "${zone.nom}"',
-              objectType: 'Zone MT',
-              objectName: zone.nom,
-              tableName: 'Observations libres',
-              verificationPoint: 'Remarque libre',
-              observationText: obs.texte,
-              conformity: 'non',
-              criticality: 'Non spécifiée',
-              photos: obs.photos,
-            ));
-          }
-        }
+        // Note : les observations libres des zones sont exclues du périmètre statistique
+        // (elles n'ont pas de criticité normative et ne sont pas des points de vérification).
       }
 
       // 3. BASSE TENSION : ZONES & LOCAUX
@@ -115,29 +97,13 @@ class AuditFindingInventoryEngine {
             visitedCoffrets: visitedCoffrets,
           );
         }
-        for (var i = 0; i < zone.observationsLibres.length; i++) {
-          final obs = zone.observationsLibres[i];
-          if (obs.texte.trim().isNotEmpty) {
-            final hash = identityHashCode(obs);
-            addFinding(AuditFinding(
-              id: 'bt_zone_${zIdx}_obs_hash_$hash',
-              missionId: missionId,
-              origin: 'Zone BT "${zone.nom}"',
-              objectType: 'Zone BT',
-              objectName: zone.nom,
-              tableName: 'Observations libres',
-              verificationPoint: 'Remarque libre',
-              observationText: obs.texte,
-              conformity: 'non',
-              criticality: 'Non spécifiée',
-              photos: obs.photos,
-            ));
-          }
-        }
+        // Note : les observations libres des zones sont exclues du périmètre statistique.
       }
     }
 
     // 4. MODULE FOUDRE
+    // Note : les observations foudre n'ont pas de criticité normative.
+    // La priorité (niveauPriorite) est conservée mais n'est PAS confondue avec la criticité.
     for (var i = 0; i < foudres.length; i++) {
       final f = foudres[i];
       if (f.observation.trim().isNotEmpty) {
@@ -152,7 +118,7 @@ class AuditFindingInventoryEngine {
           verificationPoint: 'Observation Foudre ${i + 1}',
           observationText: f.observation,
           conformity: 'non',
-          criticality: _criticalityFromInt(f.niveauPriorite),
+          criticality: 'Non spécifiée',
           priority: f.niveauPriorite,
         ));
       }
@@ -189,25 +155,43 @@ class AuditFindingInventoryEngine {
   static String _resolvePointVerificationCriticality(PointVerification pv, String coffretType) {
     final directVal = pv.criticite?.trim();
     if (directVal != null && directVal.isNotEmpty) {
-      final s = directVal.toLowerCase();
-      if (s.contains('critique') || s == '3') return 'Critique';
-      if (s.contains('majeur') || s == '2') return 'Majeure';
-      if (s.contains('mineur') || s == '1') return 'Mineure';
+      return _normalizeCriticalityLabel(directVal);
     }
     final meta = DispositionsConstructivesRegistry.getCoffretMetadata(pv.pointVerification, coffretType: coffretType);
     if (meta != null && meta.criticite.trim().isNotEmpty) {
-      final s = meta.criticite.trim().toLowerCase();
-      if (s.contains('critique') || s == '3') return 'Critique';
-      if (s.contains('majeur') || s == '2') return 'Majeure';
-      if (s.contains('mineur') || s == '1') return 'Mineure';
+      return _normalizeCriticalityLabel(meta.criticite);
     }
     return 'Non spécifiée';
   }
 
-  static String _criticalityFromInt(int? priority) {
-    if (priority == 3) return 'Critique';
-    if (priority == 2) return 'Majeure';
-    if (priority == 1) return 'Mineure';
+  static String? _resolvePointVerificationNormRef(PointVerification pv, String coffretType) {
+    if (pv.referenceNormative?.trim().isNotEmpty == true) {
+      return DispositionsConstructivesRegistry.normalizeNormativeReference(pv.referenceNormative);
+    }
+    final meta = DispositionsConstructivesRegistry.getCoffretMetadata(pv.pointVerification, coffretType: coffretType);
+    if (meta != null && meta.referenceNormative.trim().isNotEmpty) {
+      return DispositionsConstructivesRegistry.normalizeNormativeReference(meta.referenceNormative);
+    }
+    return pv.referenceNormative;
+  }
+
+  static String? _resolvePointVerificationRiskFamily(PointVerification pv, String coffretType) {
+    if (pv.familleRisque?.trim().isNotEmpty == true) {
+      return pv.familleRisque;
+    }
+    final meta = DispositionsConstructivesRegistry.getCoffretMetadata(pv.pointVerification, coffretType: coffretType);
+    if (meta != null && meta.familleRisque.trim().isNotEmpty) {
+      return meta.familleRisque;
+    }
+    return null;
+  }
+
+  /// Normalise un libellé de criticité brut vers les trois valeurs canoniques.
+  static String _normalizeCriticalityLabel(String raw) {
+    final s = raw.trim().toLowerCase();
+    if (s.contains('critique')) return 'Critique';
+    if (s.contains('majeur')) return 'Majeure';
+    if (s.contains('mineur')) return 'Mineure';
     return 'Non spécifiée';
   }
 
@@ -441,13 +425,24 @@ class AuditFindingInventoryEngine {
     final typeEquipementStr = coffret.type.isNotEmpty ? coffret.type : 'Équipement';
 
     // Points de vérification non conformes
+    // La criticité est TOUJOURS résolue via le libellé du point de vérification parent
+    // en consultant le registre coffret (_coffretRegistry), PAS via le texte de l'observation.
     for (var i = 0; i < coffret.pointsVerification.length; i++) {
       final pv = coffret.pointsVerification[i];
       if (_isNonConforme(pv.conformite)) {
+        // Résolution unique de la criticité pour CE point de vérification
+        final resolvedCriticality = _resolvePointVerificationCriticality(pv, coffret.type);
+        final resolvedNormRef = _resolvePointVerificationNormRef(pv, coffret.type);
+        final resolvedRiskFamily = _resolvePointVerificationRiskFamily(pv, coffret.type);
+
         if (pv.observations != null && pv.observations!.isNotEmpty) {
           for (var j = 0; j < pv.observations!.length; j++) {
             final obs = pv.observations![j];
-            final prio = obs.priorite ?? pv.priorite;
+            // L'observation peut porter sa propre criticité explicite (saisie par l'inspecteur).
+            // Sinon, on hérite de la criticité du point de vérification parent.
+            final obsCriticality = (obs.criticite?.trim().isNotEmpty == true)
+                ? _normalizeCriticalityLabel(obs.criticite!)
+                : resolvedCriticality;
             addFinding(AuditFinding(
               id: 'eq_${coffretHash}_pv_${i}_obs_$j',
               missionId: missionId,
@@ -459,10 +454,10 @@ class AuditFindingInventoryEngine {
               verificationPoint: pv.pointVerification,
               observationText: obs.observation?.isNotEmpty == true ? obs.observation! : pv.pointVerification,
               conformity: 'non',
-              criticality: _resolveCriticalityString(obs),
-              priority: prio,
-              normativeReference: obs.referenceNormativeEffectiveFor() ?? pv.referenceNormative,
-              riskFamily: obs.familleRisqueEffectiveFor(),
+              criticality: obsCriticality,
+              priority: obs.priorite ?? pv.priorite,
+              normativeReference: obs.referenceNormativeEffectiveFor() ?? resolvedNormRef,
+              riskFamily: obs.familleRisqueEffectiveFor() ?? resolvedRiskFamily,
               photos: obs.photos.isNotEmpty ? obs.photos : pv.photos,
             ));
           }
@@ -478,35 +473,18 @@ class AuditFindingInventoryEngine {
             verificationPoint: pv.pointVerification,
             observationText: pv.observation?.isNotEmpty == true ? pv.observation! : pv.pointVerification,
             conformity: 'non',
-            criticality: _resolvePointVerificationCriticality(pv, coffret.type),
+            criticality: resolvedCriticality,
             priority: pv.priorite,
-            normativeReference: pv.referenceNormative,
+            normativeReference: resolvedNormRef,
+            riskFamily: resolvedRiskFamily,
             photos: pv.photos,
           ));
         }
       }
     }
 
-    // Observations libres
-    for (var i = 0; i < coffret.observationsLibres.length; i++) {
-      final obs = coffret.observationsLibres[i];
-      if (obs.texte.trim().isNotEmpty) {
-        addFinding(AuditFinding(
-          id: 'eq_${coffretHash}_libre_$i',
-          missionId: missionId,
-          origin: originNom,
-          objectType: typeEquipementStr,
-          objectName: coffret.nom,
-          objectRepere: coffretRepere,
-          tableName: 'Observations libres',
-          verificationPoint: 'Remarque libre',
-          observationText: obs.texte,
-          conformity: 'non',
-          criticality: 'Non spécifiée',
-          photos: obs.photos,
-        ));
-      }
-    }
+    // Note : les observations libres des équipements sont exclues du périmètre statistique
+    // (elles n'ont pas de criticité normative et ne sont pas des points de vérification).
 
     // Observations parafoudre enrichies
     if (coffret.presenceParafoudre) {

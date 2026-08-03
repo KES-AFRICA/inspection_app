@@ -1,6 +1,5 @@
 // lib/services/statistics/audit_finding.dart
 
-import 'package:flutter/foundation.dart';
 import '../hive_service.dart';
 
 /// Modèle d'item d'inventaire chiffré des installations et équipements
@@ -149,9 +148,17 @@ class AuditFindingInventory {
   int get mineureCount => findings.where((f) => f.criticality == 'Mineure').length;
   int get unspecifiedCount => findings.where((f) => f.criticality != 'Critique' && f.criticality != 'Majeure' && f.criticality != 'Mineure').length;
 
-  double get pctCritique => totalFindings > 0 ? (critiqueCount / totalFindings) * 100 : 0.0;
-  double get pctMajeure => totalFindings > 0 ? (majeureCount / totalFindings) * 100 : 0.0;
-  double get pctMineure => totalFindings > 0 ? (mineureCount / totalFindings) * 100 : 0.0;
+  /// Nombre de findings possédant une criticité normative résolue (Critique, Majeure ou Mineure).
+  int get classifiedCount => critiqueCount + majeureCount + mineureCount;
+
+  /// Findings possédant une criticité normative résolue.
+  List<AuditFinding> get classifiedFindings => findings.where(
+    (f) => f.criticality == 'Critique' || f.criticality == 'Majeure' || f.criticality == 'Mineure'
+  ).toList();
+
+  double get pctCritique => classifiedCount > 0 ? (critiqueCount / classifiedCount) * 100 : 0.0;
+  double get pctMajeure => classifiedCount > 0 ? (majeureCount / classifiedCount) * 100 : 0.0;
+  double get pctMineure => classifiedCount > 0 ? (mineureCount / classifiedCount) * 100 : 0.0;
 
   /// Récupère le Top N des points de vérification les plus fréquemment non conformes.
   List<TopDefectItem> getTopDefects({int limit = 10}) {

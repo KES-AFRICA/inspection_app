@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/services/statistics/audit_finding.dart';
 import 'package:inspec_app/services/statistics/mission_statistics.dart';
-import 'package:inspec_app/services/statistics/mission_statistics_collector.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

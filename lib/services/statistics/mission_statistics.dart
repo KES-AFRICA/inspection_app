@@ -145,7 +145,7 @@ class MissionStatisticsSummary {
       critique: inventory.critiqueCount,
       majeure: inventory.majeureCount,
       mineure: inventory.mineureCount,
-      total: inventory.totalFindings,
+      total: inventory.classifiedCount,
       pctCritique: inventory.pctCritique,
       pctMajeure: inventory.pctMajeure,
       pctMineure: inventory.pctMineure,
