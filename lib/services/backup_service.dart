@@ -777,6 +777,9 @@ class BackupService {
         'verificateurs': r.verificateurs,
         'updatedAt': r.updatedAt.toIso8601String(),
         'nomSite': r.nomSite,
+        'activiteSurSite': r.activiteSurSite,
+        'classementReglementaireType': r.classementReglementaireType,
+        'classementReglementaireCategorie': r.classementReglementaireCategorie,
       };
 
   static Map<String, dynamic> _f(Foudre f) => f.toJson();
@@ -2433,7 +2436,9 @@ class BackupService {
             [],
         nomSite: d['nomSite'] as String? ?? '',
         updatedAt: _dt(d['updatedAt']),
-
+        activiteSurSite: d['activiteSurSite'] as String?,
+        classementReglementaireType: d['classementReglementaireType'] as String?,
+        classementReglementaireCategorie: d['classementReglementaireCategorie'] as String?,
       );
       await box.add(rens);
     } catch (e) {

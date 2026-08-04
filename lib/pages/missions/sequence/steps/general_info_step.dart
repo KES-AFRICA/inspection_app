@@ -43,6 +43,7 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
   late TextEditingController _installationController;
   late TextEditingController _activiteController;
   late TextEditingController _nomSiteController;
+  late TextEditingController _activiteSurSiteController;
 
   // Données
   DateTime? _dateDebut;
@@ -55,6 +56,18 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
   String _formationHabilitationElectrique = 'Inconnu';
   List<String> _compteRenduDestinataires = [];
 
+  // Classement réglementaire
+  String? _classementReglementaireType;
+  String? _classementReglementaireCategorie;
+
+  static const List<String> _classementTypesOptions = [
+    '—', 'A', 'B', 'C', 'D', 'E', 'J', 'L', 'M', 'N', 'O', 'P', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y'
+  ];
+
+  static const List<String> _classementCategoriesOptions = [
+    '—', '1ère catégorie', '2ème catégorie', '3ème catégorie', '4ème catégorie', '5ème catégorie'
+  ];
+
   // Listes
   List<Map<String, String>> _accompagnateurs = [];
   List<Map<String, String>> _verificateurs = [];
@@ -64,6 +77,7 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
   final FocusNode _installationFocus = FocusNode();
   final FocusNode _activiteFocus = FocusNode();
   final FocusNode _nomSiteFocus = FocusNode();
+  final FocusNode _activiteSurSiteFocus = FocusNode();
 
   // Flags de validation
   bool _hasAttemptedValidation = false;
@@ -73,6 +87,7 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
   bool _installationTouched = false;
   bool _activiteTouched = false;
   bool _nomSiteTouched = false;
+  bool _activiteSurSiteTouched = false;
 
   // Options pour les dropdowns stylisés
   final List<Map<String, dynamic>> _verificationOptions = [
@@ -209,6 +224,11 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
         setState(() => _nomSiteTouched = true);
       }
     });
+    _activiteSurSiteFocus.addListener(() {
+      if (!_activiteSurSiteFocus.hasFocus) {
+        setState(() => _activiteSurSiteTouched = true);
+      }
+    });
   }
 
   void _initControllers() {
@@ -216,6 +236,7 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
     _installationController = TextEditingController();
     _activiteController = TextEditingController();
     _nomSiteController = TextEditingController();
+    _activiteSurSiteController = TextEditingController();
   }
 
   void _notifyValidation() {
@@ -231,6 +252,9 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
       installation: _installationController.text,
       activite: _activiteController.text,
       nomSite: _nomSiteController.text,
+      activiteSurSite: _activiteSurSiteController.text,
+      classementReglementaireType: _classementReglementaireType,
+      classementReglementaireCategorie: _classementReglementaireCategorie,
       dateDebut: _dateDebut,
       dateFin: _dateFin,
       dureeJours: _dureeJours,
@@ -1285,16 +1309,116 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
     await _saveData();
   }
 
+  void _showClassementTypePicker() {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) => AppBottomSheet(
+        title: 'Classement réglementaire - Type',
+        children: _classementTypesOptions.map((type) {
+          final isSelected = (_classementReglementaireType ?? '—') == type;
+          return InkWell(
+            onTap: () async {
+              setState(() {
+                _classementReglementaireType = (type == '—') ? null : type;
+              });
+              await _saveData();
+              Navigator.pop(context);
+            },
+            child: Container(
+              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.blue.withOpacity(0.05) : Colors.transparent,
+                border: isSelected ? const Border(left: BorderSide(color: Colors.blue, width: 4)) : null,
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    type == '—' ? 'Aucun (—)' : 'Type $type',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 14 : 16,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected ? Colors.blue : Colors.black87,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (isSelected) const Icon(Icons.check_circle, color: Colors.blue),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  void _showClassementCategoriePicker() {
+    final isSmallScreen = MediaQuery.of(context).size.width < 360;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      backgroundColor: Colors.transparent,
+      builder: (context) => AppBottomSheet(
+        title: 'Classement réglementaire - Catégorie',
+        children: _classementCategoriesOptions.map((cat) {
+          final isSelected = (_classementReglementaireCategorie ?? '—') == cat;
+          return InkWell(
+            onTap: () async {
+              setState(() {
+                _classementReglementaireCategorie = (cat == '—') ? null : cat;
+              });
+              await _saveData();
+              Navigator.pop(context);
+            },
+            child: Container(
+              padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+              decoration: BoxDecoration(
+                color: isSelected ? Colors.blue.withOpacity(0.05) : Colors.transparent,
+                border: isSelected ? const Border(left: BorderSide(color: Colors.blue, width: 4)) : null,
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    cat == '—' ? 'Aucune (—)' : cat,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 14 : 16,
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                      color: isSelected ? Colors.blue : Colors.black87,
+                    ),
+                  ),
+                  const Spacer(),
+                  if (isSelected) const Icon(Icons.check_circle, color: Colors.blue),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _etablissementController.dispose();
     _installationController.dispose();
     _activiteController.dispose();
     _nomSiteController.dispose();
+    _activiteSurSiteController.dispose();
     _etablissementFocus.dispose();
     _installationFocus.dispose();
     _activiteFocus.dispose();
     _nomSiteFocus.dispose();
+    _activiteSurSiteFocus.dispose();
     super.dispose();
   }
 
@@ -1328,6 +1452,9 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
           _installationController.text = data.installation;
           _activiteController.text = data.activite;
           _nomSiteController.text = data.nomSite;
+          _activiteSurSiteController.text = data.activiteSurSite ?? widget.mission.activiteSurSite ?? '';
+          _classementReglementaireType = data.classementReglementaireType ?? widget.mission.classementReglementaireType;
+          _classementReglementaireCategorie = data.classementReglementaireCategorie ?? widget.mission.classementReglementaireCategorie;
 
           _dateDebut = data.dateDebut;
           _dateFin = data.dateFin;
@@ -1347,6 +1474,7 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
             _installationTouched = true;
           if (_activiteController.text.isNotEmpty) _activiteTouched = true;
           if (_nomSiteController.text.isNotEmpty) _nomSiteTouched = true;
+          if (_activiteSurSiteController.text.isNotEmpty) _activiteSurSiteTouched = true;
 
           _isFirstLoad = false;
         }
@@ -1475,6 +1603,49 @@ class GeneralInfoStepState extends ConsumerState<GeneralInfoStep> {
                       hasValue: _nomSiteController.text.trim().isNotEmpty,
                       isTouched: _nomSiteTouched,
                     ),
+                  ),
+
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+
+                  // Activité sur le site
+                  _buildTextField(
+                    controller: _activiteSurSiteController,
+                    label: 'Activité sur le site',
+                    icon: Icons.storefront_outlined,
+                    hint: 'Ex: Production, Stockage, Bureaux...',
+                    focusNode: _activiteSurSiteFocus,
+                    isRequired: false,
+                    showError: false,
+                  ),
+
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+
+                  // Classement réglementaire : Type
+                  _buildDisplayField(
+                    label: 'Classement réglementaire - Type',
+                    value: _classementReglementaireType != null
+                        ? 'Type $_classementReglementaireType'
+                        : null,
+                    hint: 'Sélectionnez le type (ex: J, M, N, W...)',
+                    icon: Icons.category_outlined,
+                    onTap: _showClassementTypePicker,
+                    color: _classementReglementaireType != null ? Colors.blue : null,
+                    isRequired: false,
+                    showError: false,
+                  ),
+
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+
+                  // Classement réglementaire : Catégorie
+                  _buildDisplayField(
+                    label: 'Classement réglementaire - Catégorie',
+                    value: _classementReglementaireCategorie,
+                    hint: 'Sélectionnez la catégorie (ex: 1ère catégorie...)',
+                    icon: Icons.grade_outlined,
+                    onTap: _showClassementCategoriePicker,
+                    color: _classementReglementaireCategorie != null ? Colors.blue : null,
+                    isRequired: false,
+                    showError: false,
                   ),
 
                   SizedBox(height: isSmallScreen ? 20 : 24),

@@ -2263,7 +2263,12 @@ class PdfReportService {
               alt: false,
             ),
             _tableDataRow(
-              ['Activité sur le site', mission.activiteSurSite ?? '—'],
+              [
+                'Activité sur le site',
+                (rg?.activiteSurSite?.isNotEmpty == true)
+                    ? rg!.activiteSurSite!
+                    : (mission.activiteSurSite ?? '—'),
+              ],
               alt: true,
             ),
             _tableDataRow(
@@ -2280,11 +2285,21 @@ class PdfReportService {
               alt: true,
             ),
             _tableDataRow(
-              ['                                     Type', mission.classementReglementaireType ?? '—'],
+              [
+                '                                     Type',
+                (rg?.classementReglementaireType?.isNotEmpty == true)
+                    ? rg!.classementReglementaireType!
+                    : (mission.classementReglementaireType ?? '—'),
+              ],
               alt: false,
             ),
             _tableDataRow(
-              ['                                     Catégorie', mission.classementReglementaireCategorie ?? '—'],
+              [
+                '                                     Catégorie',
+                (rg?.classementReglementaireCategorie?.isNotEmpty == true)
+                    ? rg!.classementReglementaireCategorie!
+                    : (mission.classementReglementaireCategorie ?? '—'),
+              ],
               alt: true,
             ),
           ],

@@ -16,6 +16,9 @@ class RenseignementsGenerauxEntity {
   final DateTime updatedAt;
   final String nomSite;
   final String formationHabilitationElectrique;
+  final String? activiteSurSite;
+  final String? classementReglementaireType;
+  final String? classementReglementaireCategorie;
 
   const RenseignementsGenerauxEntity({
     required this.missionId,
@@ -33,5 +36,8 @@ class RenseignementsGenerauxEntity {
     required this.updatedAt,
     required this.nomSite,
     this.formationHabilitationElectrique = 'Inconnu',
+    this.activiteSurSite,
+    this.classementReglementaireType,
+    this.classementReglementaireCategorie,
   });
 }

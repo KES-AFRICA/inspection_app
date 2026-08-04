@@ -76,6 +76,9 @@ class RenseignementsGenerauxNotifier
     List<Map<String, String>>? accompagnateurs,
     List<Map<String, String>>? verificateurs,
     String? formationHabilitationElectrique,
+    String? activiteSurSite,
+    String? classementReglementaireType,
+    String? classementReglementaireCategorie,
   }) async {
     final currentData = state.value;
     if (currentData == null) return;
@@ -94,6 +97,13 @@ class RenseignementsGenerauxNotifier
     if (verificateurs != null) currentData.verificateurs = verificateurs;
     if (formationHabilitationElectrique != null) {
       currentData.formationHabilitationElectrique = formationHabilitationElectrique;
+    }
+    if (activiteSurSite != null) currentData.activiteSurSite = activiteSurSite;
+    if (classementReglementaireType != null) {
+      currentData.classementReglementaireType = classementReglementaireType == '—' ? null : classementReglementaireType;
+    }
+    if (classementReglementaireCategorie != null) {
+      currentData.classementReglementaireCategorie = classementReglementaireCategorie == '—' ? null : classementReglementaireCategorie;
     }
     currentData.updatedAt = DateTime.now();
 

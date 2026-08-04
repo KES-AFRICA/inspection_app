@@ -267,10 +267,16 @@ class WordReportService {
       _dataRow(['Nom du client', mission.nomClient]),
       if (nomSite.isNotEmpty) _dataRow(['Nom du site', nomSite]),
       if (rg?.etablissement.isNotEmpty == true) _dataRow(['Établissement', rg!.etablissement]),
-      if (rg?.activite.isNotEmpty == true) _dataRow(['Activité', rg!.activite]),
+      if (rg?.activite.isNotEmpty == true) _dataRow(['Activité principale', rg!.activite]),
+      if ((rg?.activiteSurSite ?? mission.activiteSurSite) != null)
+        _dataRow(['Activité sur le site', rg?.activiteSurSite ?? mission.activiteSurSite!]),
       if (mission.adresseClient != null) _dataRow(['Adresse', mission.adresseClient!]),
       if (mission.dgResponsable != null) _dataRow(['DG / Responsable', mission.dgResponsable!]),
       if (rg?.installation.isNotEmpty == true) _dataRow(['Installation', rg!.installation]),
+      if ((rg?.classementReglementaireType ?? mission.classementReglementaireType) != null)
+        _dataRow(['Classement réglementaire - Type', rg?.classementReglementaireType ?? mission.classementReglementaireType!]),
+      if ((rg?.classementReglementaireCategorie ?? mission.classementReglementaireCategorie) != null)
+        _dataRow(['Classement réglementaire - Catégorie', rg?.classementReglementaireCategorie ?? mission.classementReglementaireCategorie!]),
     ];
     doc.addTable(Table(rows: idRows, borders: TableBorders.all()));
 

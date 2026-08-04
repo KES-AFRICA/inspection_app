@@ -24,6 +24,9 @@ class RenseignementsGenerauxMapper {
       updatedAt: model.updatedAt,
       nomSite: model.nomSite,
       formationHabilitationElectrique: model.habilitationElectriqueEffective,
+      activiteSurSite: model.activiteSurSite,
+      classementReglementaireType: model.classementReglementaireType,
+      classementReglementaireCategorie: model.classementReglementaireCategorie,
     );
   }
 
@@ -48,6 +51,9 @@ class RenseignementsGenerauxMapper {
       updatedAt: entity.updatedAt,
       nomSite: entity.nomSite,
       formationHabilitationElectrique: entity.formationHabilitationElectrique,
+      activiteSurSite: entity.activiteSurSite,
+      classementReglementaireType: entity.classementReglementaireType,
+      classementReglementaireCategorie: entity.classementReglementaireCategorie,
     );
   }
 }

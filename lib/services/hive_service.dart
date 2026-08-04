@@ -283,6 +283,47 @@ class HiveService {
   static Future<void> saveMission(Mission mission) async {
     final box = Hive.box<Mission>(_missionBox);
     await box.put(mission.id, mission);
+
+    // ✅ Synchroniser également avec RenseignementsGeneraux s'il existe déjà
+    try {
+      final rensBox = Hive.box<RenseignementsGeneraux>(_renseignementsGenerauxBox);
+      final existing = rensBox.values.firstWhere((r) => r.missionId == mission.id);
+      bool changed = false;
+      if (mission.activiteSurSite != existing.activiteSurSite) {
+        existing.activiteSurSite = mission.activiteSurSite;
+        changed = true;
+      }
+      if (mission.classementReglementaireType != existing.classementReglementaireType) {
+        existing.classementReglementaireType = mission.classementReglementaireType;
+        changed = true;
+      }
+      if (mission.classementReglementaireCategorie != existing.classementReglementaireCategorie) {
+        existing.classementReglementaireCategorie = mission.classementReglementaireCategorie;
+        changed = true;
+      }
+      if (mission.nomClient.isNotEmpty && mission.nomClient != existing.etablissement) {
+        existing.etablissement = mission.nomClient;
+        changed = true;
+      }
+      if (mission.installation != null && mission.installation != existing.installation) {
+        existing.installation = mission.installation!;
+        changed = true;
+      }
+      if (mission.activiteClient != null && mission.activiteClient != existing.activite) {
+        existing.activite = mission.activiteClient!;
+        changed = true;
+      }
+      if (mission.nomSite != null && mission.nomSite != existing.nomSite) {
+        existing.nomSite = mission.nomSite!;
+        changed = true;
+      }
+      if (changed) {
+        existing.updatedAt = DateTime.now();
+        await existing.save();
+      }
+    } catch (_) {
+      // Aucun RenseignementsGeneraux existant pour l'instant
+    }
   }
 
   static Future<void> saveMissions(List<Mission> missions) async {
@@ -5757,10 +5798,29 @@ static ClassementEmplacement? getClassementExisting({
 /// Créer ou récupérer les renseignements généraux pour une mission
 static Future<RenseignementsGeneraux> getOrCreateRenseignementsGeneraux(String missionId) async {
   final box = Hive.box<RenseignementsGeneraux>(_renseignementsGenerauxBox);
+  final mission = getMissionById(missionId);
   
   try {
     // Chercher si des renseignements existent déjà pour cette mission
     final existing = box.values.firstWhere((r) => r.missionId == missionId);
+    if (mission != null) {
+      bool changed = false;
+      if (existing.activiteSurSite == null && mission.activiteSurSite != null) {
+        existing.activiteSurSite = mission.activiteSurSite;
+        changed = true;
+      }
+      if (existing.classementReglementaireType == null && mission.classementReglementaireType != null) {
+        existing.classementReglementaireType = mission.classementReglementaireType;
+        changed = true;
+      }
+      if (existing.classementReglementaireCategorie == null && mission.classementReglementaireCategorie != null) {
+        existing.classementReglementaireCategorie = mission.classementReglementaireCategorie;
+        changed = true;
+      }
+      if (changed) {
+        await existing.save();
+      }
+    }
     if (kDebugMode) {
       print('✅ Renseignements existants trouvés pour: $missionId');
     }
@@ -5770,9 +5830,7 @@ static Future<RenseignementsGeneraux> getOrCreateRenseignementsGeneraux(String m
       print('🔵 Création de nouveaux renseignements pour: $missionId');
     }
     
-    final mission = getMissionById(missionId);
-    
-    // ✅ Créer avec des listes vides MODIFIABLES
+    // ✅ Créer avec préremplissage complet depuis Mission
     final newData = RenseignementsGeneraux(
       missionId: missionId,
       etablissement: mission?.nomClient ?? '',
@@ -5781,9 +5839,12 @@ static Future<RenseignementsGeneraux> getOrCreateRenseignementsGeneraux(String m
       verificationType: mission?.natureMission,
       updatedAt: DateTime.now(),
       nomSite: mission?.nomSite ?? '',
-      compteRendu: [],  // ← Liste vide modifiable
-      accompagnateurs: [],  // ← Liste vide modifiable
-      verificateurs: [],  // ← Liste vide modifiable
+      activiteSurSite: mission?.activiteSurSite,
+      classementReglementaireType: mission?.classementReglementaireType,
+      classementReglementaireCategorie: mission?.classementReglementaireCategorie,
+      compteRendu: [],
+      accompagnateurs: [],
+      verificateurs: [],
     );
     
     await box.add(newData);
@@ -5808,6 +5869,29 @@ static Future<void> saveRenseignementsGeneraux(RenseignementsGeneraux data) asyn
   final box = Hive.box<RenseignementsGeneraux>(_renseignementsGenerauxBox);
   data.updatedAt = DateTime.now();
   await data.save();
+
+  // ✅ Synchroniser avec la Mission correspondante
+  final missionBox = Hive.box<Mission>(_missionBox);
+  final mission = missionBox.get(data.missionId);
+  if (mission != null) {
+    bool missionChanged = false;
+    if (data.activiteSurSite != mission.activiteSurSite) {
+      mission.activiteSurSite = data.activiteSurSite;
+      missionChanged = true;
+    }
+    if (data.classementReglementaireType != mission.classementReglementaireType) {
+      mission.classementReglementaireType = data.classementReglementaireType;
+      missionChanged = true;
+    }
+    if (data.classementReglementaireCategorie != mission.classementReglementaireCategorie) {
+      mission.classementReglementaireCategorie = data.classementReglementaireCategorie;
+      missionChanged = true;
+    }
+    if (missionChanged) {
+      await mission.save();
+    }
+  }
+
   if (kDebugMode) {
     print('✅ Renseignements généraux sauvegardés pour mission ${data.missionId}');
   }
