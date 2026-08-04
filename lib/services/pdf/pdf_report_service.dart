@@ -3093,7 +3093,11 @@ class PdfReportService {
   /// ── Tableau récap BT ──
   /// Colonnes : LOCAL | ÉQUIPEMENT | OBSERVATIONS | REF. NORMATIVE
   static List<pw.Widget> _buildObsRecapTableBT(List<_ObsRecap> obs) {
-    if (obs.isEmpty) {
+    return _buildObsRecapTableBTFromGroups(_groupByLocal(obs));
+  }
+
+  static List<pw.Widget> _buildObsRecapTableBTFromGroups(List<_ObsGroup> groups) {
+    if (groups.isEmpty) {
       return [pw.Container(
         decoration: pw.BoxDecoration(border: pw.Border.all(color: borderColor, width: 0.4)),
         padding: const pw.EdgeInsets.all(6),
@@ -3160,7 +3164,6 @@ class PdfReportService {
     widgets.add(header1);
     widgets.add(header2);
 
-    final groups = _groupByLocal(obs);
     int altIdx = 0;
     int equipIdx = 0; // Global counter for equipments in the BT table
 
@@ -7213,6 +7216,180 @@ class PdfReportService {
 
   
 
+  static Future<List<File>> _addListeRecapitulativeSectionChunked(
+    Mission mission,
+    AuditInstallationsElectriques audit,
+    Map<String, int> trackedPages, {
+    required String nomSite,
+    required String numeroRapport,
+  }) async {
+    final chunkFiles = <File>[];
+    final tempDir = await getTemporaryDirectory();
+
+    // 1. Page de Garde de la Synthèse Récapitulative
+    final coverDoc = pw.Document(
+      title: 'Recap Cover - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: true,
+    );
+    coverDoc.addPage(pw.MultiPage(
+      maxPages: 10000,
+      pageTheme: _buildInnerPageTheme(showWatermark: false),
+      header: (ctx) => _buildPageHeaderWidget(
+        nomSite: nomSite,
+        numeroRapport: numeroRapport,
+      ),
+      build: (ctx) => [
+        pw.SizedBox(height: 220),
+        pw.Center(
+          child: pw.Column(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Container(width: 350, height: 2, color: accentColor),
+              pw.SizedBox(height: 24),
+              PageTracker(
+                key: 'liste_recap',
+                registry: trackedPages,
+                child: pw.Text(
+                  'SYNTHÈSE RÉCAPITULATIVE DES OBSERVATIONS',
+                  style: pw.TextStyle(
+                    font: _fontBold, fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                    color: headerColor,
+                    letterSpacing: 1.0,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.SizedBox(height: 12),
+              pw.Text(
+                mission.nomClient.toUpperCase(),
+                style: pw.TextStyle(
+                  font: _fontRegular, fontSize: 13, color: accentColor,
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
+              pw.SizedBox(height: 24),
+              pw.Container(width: 350, height: 2, color: accentColor),
+            ],
+          ),
+        ),
+      ],
+    ));
+    final coverBytes = await coverDoc.save();
+    final coverFile = File('${tempDir.path}/pdf_chunk_recap_cover_${mission.id}.pdf');
+    await coverFile.writeAsBytes(coverBytes);
+    chunkFiles.add(coverFile);
+
+    // 2. Moyenne Tension Récap
+    final obsMT = _collectObservationsMT(audit);
+    final mtDoc = pw.Document(
+      title: 'Recap MT - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: true,
+    );
+    final mtWidgets = <pw.Widget>[
+      PageTracker(
+        key: 'liste_recap_mt',
+        registry: trackedPages,
+        child: _subSectionBar('Moyenne tension'),
+      ),
+      pw.SizedBox(height: 5),
+      ..._buildObsRecapTableMT(obsMT),
+    ];
+    mtDoc.addPage(pw.MultiPage(
+      maxPages: 10000,
+      pageTheme: _buildInnerPageTheme(),
+      header: (ctx) => _buildPageHeaderWidget(
+        nomClient: mission.nomClient,
+        nomSite: nomSite,
+        numeroRapport: numeroRapport,
+      ),
+      build: (ctx) => mtWidgets,
+    ));
+    final mtBytes = await mtDoc.save();
+    final mtFile = File('${tempDir.path}/pdf_chunk_recap_mt_${mission.id}.pdf');
+    await mtFile.writeAsBytes(mtBytes);
+    chunkFiles.add(mtFile);
+
+    // 3. Basse Tension Récap (Découpé par tranche de 15 groupes de locaux max)
+    final obsBT = _collectObservationsBT(audit);
+    final groupsBT = _groupByLocal(obsBT);
+
+    if (groupsBT.isEmpty) {
+      final btDoc = pw.Document(
+        title: 'Recap BT Empty - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: true,
+      );
+      btDoc.addPage(pw.MultiPage(
+        maxPages: 10000,
+        pageTheme: _buildInnerPageTheme(),
+        header: (ctx) => _buildPageHeaderWidget(
+          nomClient: mission.nomClient,
+          nomSite: nomSite,
+          numeroRapport: numeroRapport,
+        ),
+        build: (ctx) => [
+          PageTracker(
+            key: 'liste_recap_bt',
+            registry: trackedPages,
+            child: _subSectionBar('Basse tension'),
+          ),
+          pw.SizedBox(height: 5),
+          pw.Container(
+            decoration: pw.BoxDecoration(border: pw.Border.all(color: borderColor, width: 0.4)),
+            padding: const pw.EdgeInsets.all(6),
+            child: pw.Text('Aucune observation',
+                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall, fontStyle: pw.FontStyle.italic)),
+          ),
+        ],
+      ));
+      final btBytes = await btDoc.save();
+      final btFile = File('${tempDir.path}/pdf_chunk_recap_bt_empty_${mission.id}.pdf');
+      await btFile.writeAsBytes(btBytes);
+      chunkFiles.add(btFile);
+    } else {
+      const int batchSize = 15;
+      for (int i = 0; i < groupsBT.length; i += batchSize) {
+        final subGroups = groupsBT.sublist(i, (i + batchSize).clamp(0, groupsBT.length));
+        final btDoc = pw.Document(
+          title: 'Recap BT Chunk ${i ~/ batchSize} - ${mission.nomClient}',
+          author: 'KES INSPECTIONS AND PROJECTS',
+          compress: true,
+        );
+        final btWidgets = <pw.Widget>[];
+        if (i == 0) {
+          btWidgets.add(PageTracker(
+            key: 'liste_recap_bt',
+            registry: trackedPages,
+            child: _subSectionBar('Basse tension'),
+          ));
+          btWidgets.add(pw.SizedBox(height: 5));
+        }
+        btWidgets.addAll(_buildObsRecapTableBTFromGroups(subGroups));
+
+        btDoc.addPage(pw.MultiPage(
+          maxPages: 10000,
+          pageTheme: _buildInnerPageTheme(),
+          header: (ctx) => _buildPageHeaderWidget(
+            nomClient: mission.nomClient,
+            nomSite: nomSite,
+            numeroRapport: numeroRapport,
+          ),
+          build: (ctx) => btWidgets,
+        ));
+        final btBytes = await btDoc.save();
+        final btFile = File('${tempDir.path}/pdf_chunk_recap_bt_${i ~/ batchSize}_${mission.id}.pdf');
+        await btFile.writeAsBytes(btBytes);
+        chunkFiles.add(btFile);
+      }
+    }
+
+    return chunkFiles;
+  }
+
   static Future<List<File>> _addAuditSectionChunked(
     Mission mission,
     AuditInstallationsElectriques audit,
@@ -7677,67 +7854,7 @@ class PdfReportService {
         build: (ctx) => _buildDescriptionInstallationsMulti(description, audit, trackedPages),
       ));
 
-      // 6. Synthèse récapitulative des observations (page de section + contenu)
-      if (audit != null) {
-        pdf.addPage(pw.MultiPage(
-          maxPages: 10000,
-          pageTheme: _buildInnerPageTheme(showWatermark: false),
-          header: (ctx) => _buildPageHeaderWidget(
-            nomSite: nomSiteHeader,
-            numeroRapport: numeroRapportDoc,
-          ),
-          build: (ctx) => [
-            pw.SizedBox(height: 220),
-            pw.Center(
-              child: pw.Column(
-                mainAxisAlignment: pw.MainAxisAlignment.center,
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                children: [
-                  pw.Container(width: 350, height: 2, color: accentColor),
-                  pw.SizedBox(height: 24),
-                  PageTracker(
-                    key: 'liste_recap',
-                    registry: trackedPages,
-                    child: pw.Text(
-                      'SYNTHÈSE RÉCAPITULATIVE DES OBSERVATIONS',
-                      style: pw.TextStyle(
-                        font: _fontBold, fontSize: 20,
-                        fontWeight: pw.FontWeight.bold,
-                        color: headerColor,
-                        letterSpacing: 1.0,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  pw.SizedBox(height: 12),
-                  pw.Text(
-                    mission.nomClient.toUpperCase(),
-                    style: pw.TextStyle(
-                      font: _fontRegular, fontSize: 13, color: accentColor,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                  pw.SizedBox(height: 24),
-                  pw.Container(width: 350, height: 2, color: accentColor),
-                ],
-              ),
-            ),
-          ],
-        ));
-
-        pdf.addPage(pw.MultiPage(
-          maxPages: 10000,
-          pageTheme: _buildInnerPageTheme(),
-          header: (ctx) => _buildPageHeaderWidget(
-            nomClient: mission.nomClient,
-            nomSite: nomSiteHeader,
-            numeroRapport: numeroRapportDoc,
-          ),
-          build: (ctx) => _buildListeRecapitulativeMulti(audit, trackedPages),
-        ));
-      }
-
-      // 7. Audit des installations électriques (Généré par Chunks Autonomes par zone)
+      // 6 & 7. Chunking de la Synthèse Récapitulative et de l'Audit des installations
       final allChunkFiles = <File>[];
       final dir = await getTemporaryDirectory();
 
@@ -7746,6 +7863,17 @@ class PdfReportService {
       allChunkFiles.add(mainPart1File);
 
       if (audit != null) {
+        // 6. Synthèse récapitulative des observations (Chunked par tranche de 15 groupes)
+        final recapChunkFiles = await _addListeRecapitulativeSectionChunked(
+          mission,
+          audit,
+          trackedPages,
+          nomSite: nomSiteHeader,
+          numeroRapport: numeroRapportDoc,
+        );
+        allChunkFiles.addAll(recapChunkFiles);
+
+        // 7. Audit des installations électriques (Chunked par zone)
         final auditChunkFiles = await _addAuditSectionChunked(
           mission,
           audit,
