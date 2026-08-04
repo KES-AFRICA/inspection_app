@@ -127,6 +127,8 @@ class MissionStatisticsSummary {
   final List<RiskFamilyItem> riskFamilyStats;
   final TensionDomainStats tensionDomainStats;
   final List<InstallationTypeItem> installationTypeStats;
+  final List<CategoryCrossItem> crossCategoryItems;
+  final String crossAnalysisText;
   final List<EquipmentInventoryItem> equipmentInventory;
 
   MissionStatisticsSummary({
@@ -137,6 +139,8 @@ class MissionStatisticsSummary {
     required this.riskFamilyStats,
     required this.tensionDomainStats,
     required this.installationTypeStats,
+    required this.crossCategoryItems,
+    required this.crossAnalysisText,
     required this.equipmentInventory,
   });
 
@@ -151,6 +155,14 @@ class MissionStatisticsSummary {
       pctMineure: inventory.pctMineure,
     );
 
+    final crossItems = inventory.getCrossCategoryAnalysis();
+    final crossText = CategoryCrossAnalysisTextGenerator.generate(crossItems);
+
+    final eqInventory = crossItems.map((ci) => EquipmentInventoryItem(
+      label: ci.categoryName,
+      count: ci.equipmentCount,
+    )).toList();
+
     return MissionStatisticsSummary(
       missionId: inventory.missionId,
       inventory: inventory,
@@ -159,7 +171,11 @@ class MissionStatisticsSummary {
       riskFamilyStats: inventory.getRiskFamilyStats(),
       tensionDomainStats: inventory.getTensionDomainStats(),
       installationTypeStats: inventory.getInstallationTypeStats(),
-      equipmentInventory: AuditFindingInventory.computeEquipmentInventory(inventory.missionId),
+      crossCategoryItems: crossItems,
+      crossAnalysisText: crossText,
+      equipmentInventory: eqInventory.isNotEmpty
+          ? eqInventory
+          : AuditFindingInventory.computeEquipmentInventory(inventory.missionId),
     );
   }
 }

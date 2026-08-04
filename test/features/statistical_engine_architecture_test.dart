@@ -158,6 +158,46 @@ void main() {
       expect(summary.riskFamilyStats.length, equals(1));
       expect(summary.tensionDomainStats.mtCount, equals(1));
       expect(summary.installationTypeStats.length, equals(1));
+      expect(summary.crossAnalysisText, isNotEmpty);
+    });
+
+    test('CategoryCrossAnalysisTextGenerator should dynamically generate French analysis text', () {
+      final crossItems = [
+        CategoryCrossItem(
+          categoryKey: 'local_mt',
+          categoryName: 'Locaux techniques Moyenne Tension',
+          equipmentCount: 2,
+          totalPointsEvaluated: 10,
+          compliantPointsCount: 6,
+          nonCompliantPointsCount: 4,
+          naPointsCount: 0,
+          critiqueCount: 2,
+          majeureCount: 2,
+          mineureCount: 0,
+          complianceRate: 60.0,
+          density: 2.0,
+        ),
+        CategoryCrossItem(
+          categoryKey: 'coffret',
+          categoryName: 'Coffrets',
+          equipmentCount: 5,
+          totalPointsEvaluated: 50,
+          compliantPointsCount: 48,
+          nonCompliantPointsCount: 2,
+          naPointsCount: 0,
+          critiqueCount: 0,
+          majeureCount: 1,
+          mineureCount: 1,
+          complianceRate: 96.0,
+          density: 0.4,
+        ),
+      ];
+
+      final text = CategoryCrossAnalysisTextGenerator.generate(crossItems);
+      expect(text, contains('Locaux techniques Moyenne Tension'));
+      expect(text, contains('2 non-conformité(s) critique(s)'));
+      expect(text, contains('Coffrets'));
+      expect(text, contains('96.0 %'));
     });
   });
 }

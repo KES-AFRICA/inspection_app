@@ -117,34 +117,119 @@ class InstallationTypeItem {
 
 /// Modèle d'item d'analyse croisée par catégorie d'équipement
 class CategoryCrossItem {
+  final String categoryKey;
   final String categoryName;
   final int equipmentCount;
-  final int nonConformitiesCount;
+  final int totalPointsEvaluated;
+  final int compliantPointsCount;
+  final int nonCompliantPointsCount;
+  final int naPointsCount;
   final int critiqueCount;
   final int majeureCount;
   final int mineureCount;
+  final double complianceRate;
   final double density; // nonConformitiesCount / equipmentCount
 
+  int get nonConformitiesCount => nonCompliantPointsCount;
+
   CategoryCrossItem({
+    required this.categoryKey,
     required this.categoryName,
     required this.equipmentCount,
-    required this.nonConformitiesCount,
+    required this.totalPointsEvaluated,
+    required this.compliantPointsCount,
+    required this.nonCompliantPointsCount,
+    required this.naPointsCount,
     required this.critiqueCount,
     required this.majeureCount,
     required this.mineureCount,
+    required this.complianceRate,
     required this.density,
   });
+}
+
+/// Générateur dynamique de synthèse textuelle de la lecture croisée par catégorie.
+class CategoryCrossAnalysisTextGenerator {
+  static String generate(List<CategoryCrossItem> items) {
+    final activeItems = items.where((it) => it.equipmentCount > 0 || it.totalPointsEvaluated > 0).toList();
+    if (activeItems.isEmpty) {
+      return "L'analyse croisée des installations ne révèle aucun équipement ou local évalué pour cette mission.";
+    }
+
+    final totalEquipments = activeItems.fold<int>(0, (sum, it) => sum + it.equipmentCount);
+
+    // 1. Catégorie la plus critique
+    final sortedByCritique = List<CategoryCrossItem>.from(activeItems)
+      ..sort((a, b) {
+        final compC = b.critiqueCount.compareTo(a.critiqueCount);
+        if (compC != 0) return compC;
+        return b.nonConformitiesCount.compareTo(a.nonConformitiesCount);
+      });
+    final mostCritical = sortedByCritique.first;
+
+    // 2. Catégorie avec le plus grand nombre de NC
+    final sortedByNC = List<CategoryCrossItem>.from(activeItems)
+      ..sort((a, b) => b.nonConformitiesCount.compareTo(a.nonConformitiesCount));
+    final highestNC = sortedByNC.first;
+
+    // 3. Catégorie avec la meilleure conformité
+    final sortedByBestComp = List<CategoryCrossItem>.from(activeItems)
+      ..sort((a, b) => b.complianceRate.compareTo(a.complianceRate));
+    final bestComp = sortedByBestComp.first;
+
+    // 4. Catégorie avec le taux de conformité le plus bas
+    final sortedByWorstComp = List<CategoryCrossItem>.from(activeItems)
+      ..sort((a, b) => a.complianceRate.compareTo(b.complianceRate));
+    final worstComp = sortedByWorstComp.first;
+
+    final buffer = StringBuffer();
+    buffer.write(
+      "L'analyse croisée réalisée sur l'ensemble des $totalEquipments installations et équipements "
+      "de la mission fait ressortir la catégorie « ${mostCritical.categoryName} » comme le secteur le plus critique"
+    );
+
+    if (mostCritical.critiqueCount > 0) {
+      buffer.write(" avec ${mostCritical.critiqueCount} non-conformité(s) critique(s). ");
+    } else if (mostCritical.nonConformitiesCount > 0) {
+      buffer.write(" avec un total de ${mostCritical.nonConformitiesCount} constat(s) de non-conformité. ");
+    } else {
+      buffer.write(". ");
+    }
+
+    if (highestNC.categoryKey != mostCritical.categoryKey && highestNC.nonConformitiesCount > 0) {
+      buffer.write(
+        "La catégorie « ${highestNC.categoryName} » concentre également un volume important de défaillances "
+        "(${highestNC.nonConformitiesCount} non-conformité(s)). "
+      );
+    }
+
+    if (worstComp.complianceRate < 100 && worstComp.categoryKey != mostCritical.categoryKey) {
+      buffer.write(
+        "Le taux de conformité le plus faible est observé sur les « ${worstComp.categoryName} » (${worstComp.complianceRate.toStringAsFixed(1)} %). "
+      );
+    }
+
+    if (bestComp.complianceRate > 0) {
+      buffer.write(
+        "À l'inverse, la catégorie « ${bestComp.categoryName} » présente le meilleur taux de conformité globale (${bestComp.complianceRate.toStringAsFixed(1)} %)."
+      );
+    }
+
+    return buffer.toString();
+  }
 }
 
 /// Collection certifiée d'inventaire brut d'une mission.
 class AuditFindingInventory {
   final String missionId;
   final List<AuditFinding> findings;
+  final List<CategoryCrossItem> crossCategoryItems;
 
   AuditFindingInventory({
     required this.missionId,
     required this.findings,
-  });
+    List<CategoryCrossItem>? crossCategoryItems,
+  }) : crossCategoryItems = crossCategoryItems ?? [];
 
   int get totalFindings => findings.length;
 
@@ -270,88 +355,53 @@ class AuditFindingInventory {
   }
 
   /// Calcule l'analyse croisée par catégorie d'installation / d'équipement.
-  List<CategoryCrossItem> getCrossCategoryAnalysis({
-    int countMTLocaux = 0,
-    int countCellules = 0,
-    int countTransfos = 0,
-    int countGELocaux = 0,
-    int countBTLocaux = 0,
-    int countTGBT = 0,
-    int countArmoires = 0,
-    int countCoffrets = 0,
-    int countTableauxDivisionnaires = 0,
-    int countPrisesTerre = 0,
-  }) {
-    // 1. Locaux MT
-    final mtLocauxFindings = findings.where((f) => f.objectType == 'Local MT').toList();
-    // 2. Cellules MT
-    final celluleFindings = findings.where((f) => f.objectType == 'Cellule MT').toList();
-    // 3. Transformateurs MT/BT
-    final transfoFindings = findings.where((f) => f.objectType == 'Transformateur MT/BT').toList();
-    // 4. Locaux GE
-    final geLocauxFindings = findings.where((f) => f.objectType == 'Local BT' && (f.objectName.toLowerCase().contains('groupe') || f.origin.toLowerCase().contains('groupe'))).toList();
-    // 5. Locaux BT
-    final btLocauxFindings = findings.where((f) => f.objectType == 'Local BT' && !(f.objectName.toLowerCase().contains('groupe') || f.origin.toLowerCase().contains('groupe'))).toList();
-    // 6. TGBT
-    final tgbtFindings = findings.where((f) => f.objectType == 'TGBT').toList();
-    // 7. Armoires
-    final armoireFindings = findings.where((f) => f.objectType == 'Armoire').toList();
-    // 8. Coffrets
-    final coffretFindings = findings.where((f) => f.objectType == 'Coffret' || f.objectType == 'Inverseur').toList();
-    // 9. Tableaux divisionnaires
-    final tabDivFindings = findings.where((f) => f.origin.toLowerCase().contains('zone')).toList();
-    // 10. Foudre / Terre
-    final foudreFindings = findings.where((f) => f.objectType == 'Foudre').toList();
+  List<CategoryCrossItem> getCrossCategoryAnalysis() {
+    if (crossCategoryItems.isNotEmpty) {
+      return crossCategoryItems;
+    }
 
-    CategoryCrossItem buildItem(String catName, int eqCount, List<AuditFinding> list) {
+    // Fallback dynamique
+    final items = <CategoryCrossItem>[];
+    final mtLocauxFindings = findings.where((f) => f.objectType == 'Local MT').toList();
+    final celluleFindings = findings.where((f) => f.objectType == 'Cellule MT').toList();
+    final transfoFindings = findings.where((f) => f.objectType == 'Transformateur MT/BT').toList();
+    final geLocauxFindings = findings.where((f) => f.objectType == 'Local BT' && (f.objectName.toLowerCase().contains('groupe') || f.origin.toLowerCase().contains('groupe'))).toList();
+    final btLocauxFindings = findings.where((f) => f.objectType == 'Local BT' && !(f.objectName.toLowerCase().contains('groupe') || f.origin.toLowerCase().contains('groupe'))).toList();
+    final tgbtFindings = findings.where((f) => f.objectType == 'TGBT').toList();
+    final armoireFindings = findings.where((f) => f.objectType == 'Armoire').toList();
+    final coffretFindings = findings.where((f) => f.objectType == 'Coffret').toList();
+    final inverseurFindings = findings.where((f) => f.objectType == 'Inverseur').toList();
+
+    CategoryCrossItem buildItem(String key, String catName, List<AuditFinding> list) {
       final ncCount = list.length;
       final cCount = list.where((f) => f.criticality == 'Critique').length;
       final mCount = list.where((f) => f.criticality == 'Majeure').length;
       final minCount = list.where((f) => f.criticality == 'Mineure').length;
-      final dens = eqCount > 0 ? ncCount / eqCount : 0.0;
       return CategoryCrossItem(
+        categoryKey: key,
         categoryName: catName,
-        equipmentCount: eqCount,
-        nonConformitiesCount: ncCount,
+        equipmentCount: 1,
+        totalPointsEvaluated: ncCount,
+        compliantPointsCount: 0,
+        nonCompliantPointsCount: ncCount,
+        naPointsCount: 0,
         critiqueCount: cCount,
         majeureCount: mCount,
         mineureCount: minCount,
-        density: dens,
+        complianceRate: 0.0,
+        density: ncCount.toDouble(),
       );
     }
 
-    final items = <CategoryCrossItem>[];
-
-    if (countMTLocaux > 0 || mtLocauxFindings.isNotEmpty) {
-      items.add(buildItem('Locaux techniques Moyenne Tension', countMTLocaux > 0 ? countMTLocaux : 1, mtLocauxFindings));
-    }
-    if (countCellules > 0 || celluleFindings.isNotEmpty) {
-      items.add(buildItem('Cellules MT', countCellules > 0 ? countCellules : 1, celluleFindings));
-    }
-    if (countTransfos > 0 || transfoFindings.isNotEmpty) {
-      items.add(buildItem('Transformateurs MT/BT', countTransfos > 0 ? countTransfos : 1, transfoFindings));
-    }
-    if (countGELocaux > 0 || geLocauxFindings.isNotEmpty) {
-      items.add(buildItem('Locaux techniques Groupe Électrogène', countGELocaux > 0 ? countGELocaux : 1, geLocauxFindings));
-    }
-    if (countBTLocaux > 0 || btLocauxFindings.isNotEmpty) {
-      items.add(buildItem('Locaux techniques Basse Tension', countBTLocaux > 0 ? countBTLocaux : 1, btLocauxFindings));
-    }
-    if (countTGBT > 0 || tgbtFindings.isNotEmpty) {
-      items.add(buildItem('TGBT', countTGBT > 0 ? countTGBT : 1, tgbtFindings));
-    }
-    if (countArmoires > 0 || armoireFindings.isNotEmpty) {
-      items.add(buildItem('Armoires', countArmoires > 0 ? countArmoires : 1, armoireFindings));
-    }
-    if (countCoffrets > 0 || coffretFindings.isNotEmpty) {
-      items.add(buildItem('Coffrets (nommés + TCL)', countCoffrets > 0 ? countCoffrets : 1, coffretFindings));
-    }
-    if (countTableauxDivisionnaires > 0 || tabDivFindings.isNotEmpty) {
-      items.add(buildItem('Tableaux divisionnaires par zone', countTableauxDivisionnaires > 0 ? countTableauxDivisionnaires : 1, tabDivFindings));
-    }
-    if (countPrisesTerre > 0 || foudreFindings.isNotEmpty) {
-      items.add(buildItem('Prises de terre mesurées', countPrisesTerre > 0 ? countPrisesTerre : 1, foudreFindings));
-    }
+    if (mtLocauxFindings.isNotEmpty) items.add(buildItem('local_mt', 'Locaux techniques Moyenne Tension', mtLocauxFindings));
+    if (btLocauxFindings.isNotEmpty) items.add(buildItem('local_bt', 'Locaux techniques Basse Tension', btLocauxFindings));
+    if (geLocauxFindings.isNotEmpty) items.add(buildItem('local_ge', 'Locaux techniques Groupe Électrogène', geLocauxFindings));
+    if (celluleFindings.isNotEmpty) items.add(buildItem('cellule_mt', 'Cellules MT', celluleFindings));
+    if (transfoFindings.isNotEmpty) items.add(buildItem('transfo_mt_bt', 'Transformateurs MT/BT', transfoFindings));
+    if (tgbtFindings.isNotEmpty) items.add(buildItem('tgbt', 'TGBT', tgbtFindings));
+    if (armoireFindings.isNotEmpty) items.add(buildItem('armoire', 'Armoires', armoireFindings));
+    if (coffretFindings.isNotEmpty) items.add(buildItem('coffret', 'Coffrets', coffretFindings));
+    if (inverseurFindings.isNotEmpty) items.add(buildItem('inverseur', 'Inverseurs', inverseurFindings));
 
     return items;
   }

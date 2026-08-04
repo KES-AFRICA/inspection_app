@@ -5,6 +5,52 @@ import '../hive_service.dart';
 import '../dispositions_constructives_registry.dart';
 import 'audit_finding.dart';
 
+class _CategoryTracker {
+  final String categoryKey;
+  final String categoryName;
+  int equipmentCount = 0;
+  int compliantPoints = 0;
+  int nonCompliantPoints = 0;
+  int naPoints = 0;
+  int critiqueCount = 0;
+  int majeureCount = 0;
+  int mineureCount = 0;
+
+  _CategoryTracker(this.categoryKey, this.categoryName);
+
+  int get totalPointsEvaluated => compliantPoints + nonCompliantPoints + naPoints;
+
+  double get complianceRate {
+    final evaluated = compliantPoints + nonCompliantPoints;
+    if (evaluated > 0) {
+      return (compliantPoints / evaluated) * 100.0;
+    }
+    if (totalPointsEvaluated > 0) {
+      return (compliantPoints / totalPointsEvaluated) * 100.0;
+    }
+    return 100.0;
+  }
+
+  double get density => equipmentCount > 0 ? nonCompliantPoints / equipmentCount : 0.0;
+
+  CategoryCrossItem toCategoryCrossItem() {
+    return CategoryCrossItem(
+      categoryKey: categoryKey,
+      categoryName: categoryName,
+      equipmentCount: equipmentCount,
+      totalPointsEvaluated: totalPointsEvaluated,
+      compliantPointsCount: compliantPoints,
+      nonCompliantPointsCount: nonCompliantPoints,
+      naPointsCount: naPoints,
+      critiqueCount: critiqueCount,
+      majeureCount: majeureCount,
+      mineureCount: mineureCount,
+      complianceRate: complianceRate,
+      density: density,
+    );
+  }
+}
+
 /// Moteur de Récensement et d'Inventaire Unifié des Non-Conformités (`AuditFindingInventoryEngine`).
 /// 
 /// Responsabilité Unique : Parcourir 100 % des instances enregistrées en mémoire dans la mission,
@@ -21,6 +67,18 @@ class AuditFindingInventoryEngine {
     final visitedMTLocaux = <int>{};
     final visitedBTLocaux = <int>{};
     final visitedCoffrets = <int>{};
+
+    final categoryTrackers = <String, _CategoryTracker>{
+      'local_mt': _CategoryTracker('local_mt', 'Locaux techniques Moyenne Tension'),
+      'local_bt': _CategoryTracker('local_bt', 'Locaux techniques Basse Tension'),
+      'local_ge': _CategoryTracker('local_ge', 'Locaux techniques Groupe Électrogène'),
+      'cellule_mt': _CategoryTracker('cellule_mt', 'Cellules MT'),
+      'transfo_mt_bt': _CategoryTracker('transfo_mt_bt', 'Transformateurs MT/BT'),
+      'tgbt': _CategoryTracker('tgbt', 'TGBT'),
+      'armoire': _CategoryTracker('armoire', 'Armoires'),
+      'coffret': _CategoryTracker('coffret', 'Coffrets'),
+      'inverseur': _CategoryTracker('inverseur', 'Inverseurs'),
+    };
 
     void addFinding(AuditFinding finding) {
       if (!seenFindingIds.contains(finding.id)) {
@@ -41,6 +99,7 @@ class AuditFindingInventoryEngine {
           addFinding: addFinding,
           visitedMTLocaux: visitedMTLocaux,
           visitedCoffrets: visitedCoffrets,
+          trackers: categoryTrackers,
         );
       }
 
@@ -57,6 +116,7 @@ class AuditFindingInventoryEngine {
             addFinding: addFinding,
             visitedMTLocaux: visitedMTLocaux,
             visitedCoffrets: visitedCoffrets,
+            trackers: categoryTrackers,
           );
         }
         for (var eqIdx = 0; eqIdx < zone.coffrets.length; eqIdx++) {
@@ -67,10 +127,9 @@ class AuditFindingInventoryEngine {
             originNom: 'Zone MT "${zone.nom}"',
             addFinding: addFinding,
             visitedCoffrets: visitedCoffrets,
+            trackers: categoryTrackers,
           );
         }
-        // Note : les observations libres des zones sont exclues du périmètre statistique
-        // (elles n'ont pas de criticité normative et ne sont pas des points de vérification).
       }
 
       // 3. BASSE TENSION : ZONES & LOCAUX
@@ -85,6 +144,7 @@ class AuditFindingInventoryEngine {
             addFinding: addFinding,
             visitedBTLocaux: visitedBTLocaux,
             visitedCoffrets: visitedCoffrets,
+            trackers: categoryTrackers,
           );
         }
         for (var eqIdx = 0; eqIdx < zone.coffretsDirects.length; eqIdx++) {
@@ -95,15 +155,13 @@ class AuditFindingInventoryEngine {
             originNom: 'Zone BT "${zone.nom}"',
             addFinding: addFinding,
             visitedCoffrets: visitedCoffrets,
+            trackers: categoryTrackers,
           );
         }
-        // Note : les observations libres des zones sont exclues du périmètre statistique.
       }
     }
 
     // 4. MODULE FOUDRE
-    // Note : les observations foudre n'ont pas de criticité normative.
-    // La priorité (niveauPriorite) est conservée mais n'est PAS confondue avec la criticité.
     for (var i = 0; i < foudres.length; i++) {
       final f = foudres[i];
       if (f.observation.trim().isNotEmpty) {
@@ -125,9 +183,15 @@ class AuditFindingInventoryEngine {
       }
     }
 
+    final crossCategoryItems = categoryTrackers.values
+        .where((tr) => tr.equipmentCount > 0 || tr.totalPointsEvaluated > 0)
+        .map((tr) => tr.toCategoryCrossItem())
+        .toList();
+
     return AuditFindingInventory(
       missionId: missionId,
       findings: findings,
+      crossCategoryItems: crossCategoryItems,
     );
   }
 
@@ -202,6 +266,17 @@ class AuditFindingInventoryEngine {
     return s == 'non' || s == 'non conforme' || s == 'non_conforme' || s == 'false';
   }
 
+  static void _incrementCriticality(_CategoryTracker tracker, String crit) {
+    final s = crit.trim().toLowerCase();
+    if (s.contains('critique')) {
+      tracker.critiqueCount++;
+    } else if (s.contains('majeur')) {
+      tracker.majeureCount++;
+    } else if (s.contains('mineur')) {
+      tracker.mineureCount++;
+    }
+  }
+
   // ──────────────────────────────────────────────────────────────
   //  VISITATION DES INSTANCES PHYSIQUES
   // ──────────────────────────────────────────────────────────────
@@ -213,17 +288,27 @@ class AuditFindingInventoryEngine {
     required Function(AuditFinding) addFinding,
     required Set<int> visitedMTLocaux,
     required Set<int> visitedCoffrets,
+    required Map<String, _CategoryTracker> trackers,
   }) {
     final localHash = identityHashCode(local);
     if (visitedMTLocaux.contains(localHash)) return;
     visitedMTLocaux.add(localHash);
 
+    trackers['local_mt']?.equipmentCount++;
     final localType = local.type.isNotEmpty ? local.type : 'LOCAL_POSTE_HTA';
 
     // Dispositions constructives
     for (var i = 0; i < local.dispositionsConstructives.length; i++) {
       final el = local.dispositionsConstructives[i];
-      if (el.conforme == false && !el.estNA) {
+      if (el.estNA) {
+        trackers['local_mt']?.naPoints++;
+      } else if (el.conforme == true) {
+        trackers['local_mt']?.compliantPoints++;
+      } else if (el.conforme == false) {
+        trackers['local_mt']?.nonCompliantPoints++;
+        final crit = _resolveCriticalityString(el, localType: localType);
+        _incrementCriticality(trackers['local_mt']!, crit);
+
         addFinding(AuditFinding(
           id: 'mt_local_${localHash}_dc_$i',
           missionId: missionId,
@@ -235,7 +320,7 @@ class AuditFindingInventoryEngine {
           verificationPoint: el.elementControle,
           observationText: el.observation?.isNotEmpty == true ? el.observation! : el.elementControle,
           conformity: 'non',
-          criticality: _resolveCriticalityString(el, localType: localType),
+          criticality: crit,
           priority: el.priorite,
           normativeReference: el.referenceNormativeEffectiveFor(localType: localType),
           riskFamily: el.familleRisqueEffectiveFor(localType: localType),
@@ -247,7 +332,15 @@ class AuditFindingInventoryEngine {
     // Conditions d'exploitation
     for (var i = 0; i < local.conditionsExploitation.length; i++) {
       final el = local.conditionsExploitation[i];
-      if (el.conforme == false && !el.estNA) {
+      if (el.estNA) {
+        trackers['local_mt']?.naPoints++;
+      } else if (el.conforme == true) {
+        trackers['local_mt']?.compliantPoints++;
+      } else if (el.conforme == false) {
+        trackers['local_mt']?.nonCompliantPoints++;
+        final crit = _resolveCriticalityString(el, localType: localType);
+        _incrementCriticality(trackers['local_mt']!, crit);
+
         addFinding(AuditFinding(
           id: 'mt_local_${localHash}_ce_$i',
           missionId: missionId,
@@ -259,7 +352,7 @@ class AuditFindingInventoryEngine {
           verificationPoint: el.elementControle,
           observationText: el.observation?.isNotEmpty == true ? el.observation! : el.elementControle,
           conformity: 'non',
-          criticality: _resolveCriticalityString(el, localType: localType),
+          criticality: crit,
           priority: el.priorite,
           normativeReference: el.referenceNormativeEffectiveFor(localType: localType),
           riskFamily: el.familleRisqueEffectiveFor(localType: localType),
@@ -271,10 +364,19 @@ class AuditFindingInventoryEngine {
     // Cellules MT
     for (var i = 0; i < local.cellules.length; i++) {
       final cellule = local.cellules[i];
+      trackers['cellule_mt']?.equipmentCount++;
       final itemLabel = 'Cellule ${i + 1} (${cellule.fonction})';
       for (var j = 0; j < cellule.elementsVerifies.length; j++) {
         final el = cellule.elementsVerifies[j];
-        if (el.conforme == false && !el.estNA) {
+        if (el.estNA) {
+          trackers['cellule_mt']?.naPoints++;
+        } else if (el.conforme == true) {
+          trackers['cellule_mt']?.compliantPoints++;
+        } else if (el.conforme == false) {
+          trackers['cellule_mt']?.nonCompliantPoints++;
+          final crit = _resolveCriticalityString(el, localType: localType);
+          _incrementCriticality(trackers['cellule_mt']!, crit);
+
           addFinding(AuditFinding(
             id: 'mt_local_${localHash}_cell_${i}_el_$j',
             missionId: missionId,
@@ -286,7 +388,7 @@ class AuditFindingInventoryEngine {
             verificationPoint: el.elementControle,
             observationText: el.observation?.isNotEmpty == true ? el.observation! : el.elementControle,
             conformity: 'non',
-            criticality: _resolveCriticalityString(el, localType: localType),
+            criticality: crit,
             priority: el.priorite,
             normativeReference: el.referenceNormativeEffectiveFor(localType: localType),
             riskFamily: el.familleRisqueEffectiveFor(localType: localType),
@@ -299,10 +401,19 @@ class AuditFindingInventoryEngine {
     // Transformateurs MT/BT
     for (var i = 0; i < local.transformateurs.length; i++) {
       final transfo = local.transformateurs[i];
+      trackers['transfo_mt_bt']?.equipmentCount++;
       final itemLabel = 'Transformateur ${i + 1}';
       for (var j = 0; j < transfo.elementsVerifies.length; j++) {
         final el = transfo.elementsVerifies[j];
-        if (el.conforme == false && !el.estNA) {
+        if (el.estNA) {
+          trackers['transfo_mt_bt']?.naPoints++;
+        } else if (el.conforme == true) {
+          trackers['transfo_mt_bt']?.compliantPoints++;
+        } else if (el.conforme == false) {
+          trackers['transfo_mt_bt']?.nonCompliantPoints++;
+          final crit = _resolveCriticalityString(el, localType: localType);
+          _incrementCriticality(trackers['transfo_mt_bt']!, crit);
+
           addFinding(AuditFinding(
             id: 'mt_local_${localHash}_transfo_${i}_el_$j',
             missionId: missionId,
@@ -314,7 +425,7 @@ class AuditFindingInventoryEngine {
             verificationPoint: el.elementControle,
             observationText: el.observation?.isNotEmpty == true ? el.observation! : el.elementControle,
             conformity: 'non',
-            criticality: _resolveCriticalityString(el, localType: localType),
+            criticality: crit,
             priority: el.priorite,
             normativeReference: el.referenceNormativeEffectiveFor(localType: localType),
             riskFamily: el.familleRisqueEffectiveFor(localType: localType),
@@ -334,6 +445,7 @@ class AuditFindingInventoryEngine {
         addFinding: addFinding,
         visitedCoffrets: visitedCoffrets,
         defaultTensionDomain: TensionDomain.mt,
+        trackers: trackers,
       );
     }
   }
@@ -345,19 +457,31 @@ class AuditFindingInventoryEngine {
     required Function(AuditFinding) addFinding,
     required Set<int> visitedBTLocaux,
     required Set<int> visitedCoffrets,
+    required Map<String, _CategoryTracker> trackers,
   }) {
     final localHash = identityHashCode(local);
     if (visitedBTLocaux.contains(localHash)) return;
     visitedBTLocaux.add(localHash);
 
-    final isGE = local.type == 'LOCAL_GROUPE_ELECTROGENE';
+    final isGE = local.type == 'LOCAL_GROUPE_ELECTROGENE' || local.nom.toLowerCase().contains('groupe');
+    final catKey = isGE ? 'local_ge' : 'local_bt';
     final typeObjetName = isGE ? 'Groupe Électrogène' : 'Local BT';
+
+    trackers[catKey]?.equipmentCount++;
 
     // Dispositions constructives
     if (local.dispositionsConstructives != null) {
       for (var i = 0; i < local.dispositionsConstructives!.length; i++) {
         final el = local.dispositionsConstructives![i];
-        if (el.conforme == false && !el.estNA) {
+        if (el.estNA) {
+          trackers[catKey]?.naPoints++;
+        } else if (el.conforme == true) {
+          trackers[catKey]?.compliantPoints++;
+        } else if (el.conforme == false) {
+          trackers[catKey]?.nonCompliantPoints++;
+          final crit = _resolveCriticalityString(el, localType: local.type);
+          _incrementCriticality(trackers[catKey]!, crit);
+
           addFinding(AuditFinding(
             id: 'bt_local_${localHash}_dc_$i',
             missionId: missionId,
@@ -369,7 +493,7 @@ class AuditFindingInventoryEngine {
             verificationPoint: el.elementControle,
             observationText: el.observation?.isNotEmpty == true ? el.observation! : el.elementControle,
             conformity: 'non',
-            criticality: _resolveCriticalityString(el, localType: local.type),
+            criticality: crit,
             priority: el.priorite,
             normativeReference: el.referenceNormativeEffectiveFor(localType: local.type),
             riskFamily: el.familleRisqueEffectiveFor(localType: local.type),
@@ -383,7 +507,15 @@ class AuditFindingInventoryEngine {
     if (local.conditionsExploitation != null) {
       for (var i = 0; i < local.conditionsExploitation!.length; i++) {
         final el = local.conditionsExploitation![i];
-        if (el.conforme == false && !el.estNA) {
+        if (el.estNA) {
+          trackers[catKey]?.naPoints++;
+        } else if (el.conforme == true) {
+          trackers[catKey]?.compliantPoints++;
+        } else if (el.conforme == false) {
+          trackers[catKey]?.nonCompliantPoints++;
+          final crit = _resolveCriticalityString(el, localType: local.type);
+          _incrementCriticality(trackers[catKey]!, crit);
+
           addFinding(AuditFinding(
             id: 'bt_local_${localHash}_ce_$i',
             missionId: missionId,
@@ -395,7 +527,7 @@ class AuditFindingInventoryEngine {
             verificationPoint: el.elementControle,
             observationText: el.observation?.isNotEmpty == true ? el.observation! : el.elementControle,
             conformity: 'non',
-            criticality: _resolveCriticalityString(el, localType: local.type),
+            criticality: crit,
             priority: el.priorite,
             normativeReference: el.referenceNormativeEffectiveFor(localType: local.type),
             riskFamily: el.familleRisqueEffectiveFor(localType: local.type),
@@ -415,6 +547,7 @@ class AuditFindingInventoryEngine {
         addFinding: addFinding,
         visitedCoffrets: visitedCoffrets,
         defaultTensionDomain: TensionDomain.bt,
+        trackers: trackers,
       );
     }
   }
@@ -426,19 +559,41 @@ class AuditFindingInventoryEngine {
     required Function(AuditFinding) addFinding,
     required Set<int> visitedCoffrets,
     TensionDomain defaultTensionDomain = TensionDomain.bt,
+    required Map<String, _CategoryTracker> trackers,
   }) {
     final coffretHash = identityHashCode(coffret);
     if (visitedCoffrets.contains(coffretHash)) return;
     visitedCoffrets.add(coffretHash);
 
+    final t = coffret.type.trim().toLowerCase();
+    String catKey = 'coffret';
+    if (t.contains('inverseur')) {
+      catKey = 'inverseur';
+    } else if (t.contains('tgbt') || t.contains('t.g.b.t')) {
+      catKey = 'tgbt';
+    } else if (t.contains('armoire') || t.contains('tur')) {
+      catKey = 'armoire';
+    }
+
+    trackers[catKey]?.equipmentCount++;
+
     final coffretRepere = coffret.repere?.isNotEmpty == true ? coffret.repere : coffret.numeroEquipement;
     final typeEquipementStr = coffret.type.isNotEmpty ? coffret.type : 'Équipement';
 
-    // Points de vérification non conformes
+    // Points de vérification
     for (var i = 0; i < coffret.pointsVerification.length; i++) {
       final pv = coffret.pointsVerification[i];
-      if (_isNonConforme(pv.conformite)) {
+      final conf = pv.conformite?.trim().toLowerCase();
+
+      if (conf == 'na' || conf == 's.o.' || conf == 'so') {
+        trackers[catKey]?.naPoints++;
+      } else if (conf == 'oui' || conf == 'true') {
+        trackers[catKey]?.compliantPoints++;
+      } else if (_isNonConforme(pv.conformite)) {
+        trackers[catKey]?.nonCompliantPoints++;
         final resolvedCriticality = _resolvePointVerificationCriticality(pv, coffret.type);
+        _incrementCriticality(trackers[catKey]!, resolvedCriticality);
+
         final resolvedNormRef = _resolvePointVerificationNormRef(pv, coffret.type);
         final resolvedRiskFamily = _resolvePointVerificationRiskFamily(pv, coffret.type);
 

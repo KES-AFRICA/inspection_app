@@ -1577,20 +1577,12 @@ class PdfReportService {
     }
 
     // VIII. Sous-section : Non-conformités croisées par catégorie d'installation / d'équipement
-    final diagReport = AuditDiagnosticEngine.runDiagnostic(mission.id);
-    final crossItems = inventory.getCrossCategoryAnalysis(
-      countMTLocaux: diagReport.countLocauxMT,
-      countBTLocaux: diagReport.countLocauxBT,
-      countCellules: diagReport.countCellules,
-      countTransfos: diagReport.countTransformateurs,
-      countGELocaux: diagReport.countGroupesElectrogenes,
-      countCoffrets: diagReport.countEquipements,
-    );
-    if (crossItems.isNotEmpty) {
+    final statsSummary = MissionStatisticsCollector.collectSummary(mission.id);
+    if (statsSummary.crossCategoryItems.isNotEmpty) {
       widgets.add(PageTracker(
         key: 'stat_croisee',
         registry: trackedPages,
-        child: _buildCrossCategorySection(crossItems),
+        child: _buildCrossCategorySection(statsSummary.crossCategoryItems, statsSummary.crossAnalysisText),
       ));
       widgets.add(pw.SizedBox(height: 12));
     }
@@ -1599,7 +1591,7 @@ class PdfReportService {
     widgets.add(PageTracker(
       key: 'stat_inventaire',
       registry: trackedPages,
-      child: _buildInventaireEquipementsSection(mission.id),
+      child: _buildInventaireEquipementsSection(statsSummary.equipmentInventory),
     ));
 
     return widgets;
@@ -1609,8 +1601,7 @@ class PdfReportService {
   //  GRAPHIQUES ET ANALYSES STATISTIQUES AVANCÉES
   // ──────────────────────────────────────────────────────────────
 
-  static pw.Widget _buildInventaireEquipementsSection(String missionId) {
-    final items = AuditFindingInventory.computeEquipmentInventory(missionId);
+  static pw.Widget _buildInventaireEquipementsSection(List<EquipmentInventoryItem> items) {
     final totalEquipementsBT = items
         .where((e) => e.label == 'TGBT' || e.label == 'Armoires' || e.label == 'Coffrets')
         .fold(0, (sum, e) => sum + e.count);
@@ -1893,7 +1884,7 @@ class PdfReportService {
     );
   }
 
-  static pw.Widget _buildCrossCategorySection(List<CategoryCrossItem> items) {
+  static pw.Widget _buildCrossCategorySection(List<CategoryCrossItem> items, String crossText) {
     if (items.isEmpty) return pw.SizedBox();
 
     final maxVal = items.map((e) => e.nonConformitiesCount).fold(1, (a, b) => a > b ? a : b);
@@ -2024,7 +2015,7 @@ class PdfReportService {
           ],
         ),
         pw.SizedBox(height: 8),
-        _buildLectureCroiseeBox(items),
+        _buildCalloutBox('Lecture crois\u00e9e', crossText),
       ],
     );
   }
@@ -2033,30 +2024,13 @@ class PdfReportService {
     if (cat.contains('Moyenne Tension')) return 'Local MT';
     if (cat.contains('Cellules')) return 'Cellule MT';
     if (cat.contains('Transformateurs')) return 'Transfo MT/BT';
-    if (cat.contains('Groupe \u00c9lectrog\u00e8ne')) return 'Local GE';
+    if (cat.contains('Groupe')) return 'Local GE';
     if (cat.contains('Basse Tension')) return 'Local BT';
     if (cat.contains('TGBT')) return 'TGBT';
     if (cat.contains('Armoires')) return 'Armoire';
     if (cat.contains('Coffrets')) return 'Coffret';
-    if (cat.contains('Tableaux divisionnaires')) return 'Tab. Div.';
-    if (cat.contains('Prises de terre')) return 'Terre';
+    if (cat.contains('Inverseurs')) return 'Inverseur';
     return cat;
-  }
-
-  static pw.Widget _buildLectureCroiseeBox(List<CategoryCrossItem> items) {
-    if (items.isEmpty) return pw.SizedBox();
-
-    final sortedByDensity = List<CategoryCrossItem>.from(items)
-      ..sort((a, b) => b.density.compareTo(a.density));
-    final highestDensity = sortedByDensity.first;
-
-    final sortedByVolume = List<CategoryCrossItem>.from(items)
-      ..sort((a, b) => b.nonConformitiesCount.compareTo(a.nonConformitiesCount));
-    final highestVolume = sortedByVolume.first;
-
-    final txt = 'Rapport\u00e9es au nombre d\'\u00e9quipements, la cat\u00e9gorie affichant la densit\u00e9 de non-conformit\u00e9s la plus \u00e9lev\u00e9e est "${highestDensity.categoryName}" (${highestDensity.density.toStringAsFixed(1).replaceAll('.', ',')} NC/\u00e9quipement). En volume brut, la cat\u00e9gorie "${highestVolume.categoryName}" enregistre le plus grand nombre d\'\u00e9carts constat\u00e9s (${highestVolume.nonConformitiesCount} non-conformit\u00e9s).';
-
-    return _buildCalloutBox('Lecture crois\u00e9e', txt);
   }
 
   // ──────────────────────────────────────────────────────────────
