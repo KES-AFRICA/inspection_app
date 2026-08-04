@@ -22,7 +22,6 @@ import 'package:inspec_app/services/pdf/pdf_chunk_merger.dart';
 import '../dispositions_constructives_registry.dart';
 import '../statistics/mission_statistics_collector.dart';
 import '../statistics/audit_finding.dart';
-import '../statistics/audit_diagnostic_engine.dart';
 import '../../components/safe_file_image.dart';
 
 // ================================================================
@@ -2912,15 +2911,10 @@ class PdfReportService {
     return units[fieldKey] ?? '';
   }
 
-  // ──────────────────────────────────────────────────────────────
-  //  LISTE RECAPITULATIVE DES OBSERVATIONS (BT sur nouvelle page)
-  // ──────────────────────────────────────────────────────────────
-  
   static List<pw.Widget> _buildListeRecapitulativeMulti(AuditInstallationsElectriques audit, Map<String, int> trackedPages) {
     final widgets = <pw.Widget>[];
 
 
-    // ── Moyenne Tension ──
     widgets.add(PageTracker(
       key: 'liste_recap_mt',
       registry: trackedPages,
@@ -2932,7 +2926,6 @@ class PdfReportService {
 
     widgets.add(pw.NewPage());
 
-    // ── Basse Tension ──
     widgets.add(PageTracker(
       key: 'liste_recap_bt',
       registry: trackedPages,
@@ -2947,7 +2940,6 @@ class PdfReportService {
 
   /// ── Tableau récap MT ──
   /// Colonnes : LOCAL | OBSERVATIONS | REF. NORMATIVE
-  /// (pas de colonne ÉQUIPEMENT en MT — conforme à la trame)
   static List<pw.Widget> _buildObsRecapTableMT(List<_ObsRecap> obs) {
     if (obs.isEmpty) {
       return [pw.Container(
@@ -2958,136 +2950,79 @@ class PdfReportService {
       )];
     }
 
-    final widgets = <pw.Widget>[];
-
-    final header1 = pw.Table(
-      border: pw.TableBorder(
-        top: pw.BorderSide(color: borderColor, width: 0.5),
-        left: pw.BorderSide(color: borderColor, width: 0.5),
-        right: pw.BorderSide(color: borderColor, width: 0.5),
-        verticalInside: pw.BorderSide(color: borderColor, width: 0.5),
-      ),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(2.0),
-        1: pw.FlexColumnWidth(6.0),
-      },
-      children: [
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: headerColor),
-          children: [
-            _obsHeaderCellMT('LOCALISATION'),
-            _obsHeaderCellMT('NON-CONFORMITÉ - PRÉCONISATION'),
-          ],
-        ),
-      ],
-    );
-
-    final header2 = pw.Table(
-      border: pw.TableBorder(
-        top: pw.BorderSide(color: borderColor, width: 0.5),
-        bottom: pw.BorderSide(color: borderColor, width: 0.5),
-        left: pw.BorderSide(color: borderColor, width: 0.5),
-        right: pw.BorderSide(color: borderColor, width: 0.5),
-        verticalInside: pw.BorderSide(color: borderColor, width: 0.5),
-      ),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(2.0),
-        1: pw.FlexColumnWidth(4.2),
-        2: pw.FlexColumnWidth(1.8),
-      },
-      children: [
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFF2E5F9A)),
-          children: [
-            _obsHeaderCellMT('LOCAL'),
-            _obsHeaderCellMT('OBSERVATIONS'),
-            _obsHeaderCellMT('RÉF. NORMATIVE'),
-          ],
-        ),
-      ],
-    );
-
-    widgets.add(header1);
-    widgets.add(header2);
-
     final groups = _groupByLocal(obs);
+    final tableRows = <pw.TableRow>[
+      // En-tête 1
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: headerColor),
+        children: [
+          _obsHeaderCellMT('LOCALISATION'),
+          _obsHeaderCellMT('NON-CONFORMITÉ - PRÉCONISATION'),
+        ],
+      ),
+      // En-tête 2
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFF2E5F9A)),
+        children: [
+          _obsHeaderCellMT('LOCAL'),
+          _obsHeaderCellMT('OBSERVATIONS & RÉF. NORMATIVE'),
+        ],
+      ),
+    ];
+
     int altIdx = 0;
 
     for (final group in groups) {
-      final nestedRows = <pw.TableRow>[];
       for (int i = 0; i < group.items.length; i++) {
         final o = group.items[i];
         altIdx++;
-
         final rowBg = altIdx.isOdd ? tableRowAlt : PdfColors.white;
 
-        nestedRows.add(pw.TableRow(
+        tableRows.add(pw.TableRow(
           decoration: pw.BoxDecoration(color: rowBg),
           children: [
-            // OBSERVATIONS
+            // LOCAL (affiché pour le premier item du groupe)
             pw.Padding(
               padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-              child: pw.Text(o.observation,
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+              child: pw.Text(
+                i == 0 ? group.local.toUpperCase() : '',
+                style: pw.TextStyle(font: _fontBold, fontSize: fsSmall),
+              ),
             ),
-            // REF. NORMATIVE (centré)
-            pw.Container(
+            // OBSERVATION + REF NORMATIVE
+            pw.Padding(
               padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-              alignment: pw.Alignment.center,
-              child: pw.Text(o.refNorm,
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
-                  textAlign: pw.TextAlign.center),
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Expanded(
+                    flex: 7,
+                    child: pw.Text(o.observation, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                  ),
+                  pw.SizedBox(width: 4),
+                  pw.Expanded(
+                    flex: 3,
+                    child: pw.Text(o.refNorm, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
+                  ),
+                ],
+              ),
             ),
           ],
         ));
       }
+    }
 
-      final dataTable = pw.Table(
+    return [
+      pw.Table(
         defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
-        border: pw.TableBorder(
-          top: pw.BorderSide(color: borderColor, width: 0.4),
-          bottom: pw.BorderSide(color: borderColor, width: 0.4),
-          left: pw.BorderSide(color: borderColor, width: 0.4),
-          right: pw.BorderSide(color: borderColor, width: 0.4),
-          verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
-        ),
+        border: pw.TableBorder.all(color: borderColor, width: 0.4),
         columnWidths: const {
           0: pw.FlexColumnWidth(2.0),
           1: pw.FlexColumnWidth(6.0),
         },
-        children: [
-          pw.TableRow(
-            children: [
-              // LOCAL (perfectly centered vertically)
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                alignment: pw.Alignment.center,
-                child: pw.Text(group.local.toUpperCase(),
-                    style: pw.TextStyle(font: _fontBold, fontSize: fsSmall),
-                    textAlign: pw.TextAlign.center),
-              ),
-              // TABLE IMBRIQUÉE
-              pw.Table(
-                defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
-                border: pw.TableBorder(
-                  horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
-                  verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
-                ),
-                columnWidths: const {
-                  0: pw.FlexColumnWidth(4.2),
-                  1: pw.FlexColumnWidth(1.8),
-                },
-                children: nestedRows,
-              ),
-            ],
-          ),
-        ],
-      );
-      widgets.add(dataTable);
-      widgets.add(pw.SizedBox(height: 6));
-    }
-
-    return widgets;
+        children: tableRows,
+      ),
+    ];
   }
 
   /// ── Tableau récap BT ──
@@ -3108,53 +3043,22 @@ class PdfReportService {
 
     final widgets = <pw.Widget>[];
 
-    // Ligne 1 : en-tête avec colspan
+    // En-tête principal
     final header1 = pw.Table(
-      border: pw.TableBorder(
-        top: pw.BorderSide(color: borderColor, width: 0.5),
-        left: pw.BorderSide(color: borderColor, width: 0.5),
-        right: pw.BorderSide(color: borderColor, width: 0.5),
-        verticalInside: pw.BorderSide(color: borderColor, width: 0.5),
-      ),
+      border: pw.TableBorder.all(color: borderColor, width: 0.5),
       columnWidths: const {
-        0: pw.FlexColumnWidth(1.0),
-        1: pw.FlexColumnWidth(2.0),
-        2: pw.FlexColumnWidth(5.4),
-      },
-      children: [
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: headerColor),
-          children: [
-            _obsHeaderCellMT('LOCALISATION'),
-            _obsHeaderCellMT(''),
-            _obsHeaderCellMT('NON-CONFORMITÉ - PRÉCONISATION'),
-          ],
-        ),
-      ],
-    );
-
-    // Ligne 2 : sous-colonnes
-    final header2 = pw.Table(
-      border: pw.TableBorder(
-        top: pw.BorderSide(color: borderColor, width: 0.5),
-        bottom: pw.BorderSide(color: borderColor, width: 0.5),
-        left: pw.BorderSide(color: borderColor, width: 0.5),
-        right: pw.BorderSide(color: borderColor, width: 0.5),
-        verticalInside: pw.BorderSide(color: borderColor, width: 0.5),
-      ),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(1.0),
-        1: pw.FlexColumnWidth(2.0),
+        0: pw.FlexColumnWidth(0.8),
+        1: pw.FlexColumnWidth(2.2),
         2: pw.FlexColumnWidth(3.9),
         3: pw.FlexColumnWidth(1.5),
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFF2E5F9A)),
+          decoration: pw.BoxDecoration(color: headerColor),
           children: [
-            _obsHeaderCellMT(''), // Première colonne entièrement vide
+            _obsHeaderCellMT('#'),
             _obsHeaderCellMT('ÉQUIPEMENT'),
-            _obsHeaderCellMT('OBSERVATIONS'),
+            _obsHeaderCellMT('NON-CONFORMITÉ - PRÉCONISATION'),
             _obsHeaderCellMT('RÉF. NORMATIVE'),
           ],
         ),
@@ -3162,19 +3066,16 @@ class PdfReportService {
     );
 
     widgets.add(header1);
-    widgets.add(header2);
 
     int altIdx = 0;
-    int equipIdx = 0; // Global counter for equipments in the BT table
+    int equipIdx = 0;
 
     for (final group in groups) {
-      // Séparateur local (colspan sur col 1-4)
-      final localSeparatorTable = pw.Table(
-        defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+      // Séparateur local (Flat row dans sa propre table simple)
+      widgets.add(pw.Table(
         border: pw.TableBorder.all(color: borderColor, width: 0.4),
         columnWidths: const {
           0: pw.FlexColumnWidth(1.0),
-          1: pw.FlexColumnWidth(7.4),
         },
         children: [
           pw.TableRow(
@@ -3183,21 +3084,12 @@ class PdfReportService {
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
                 alignment: pw.Alignment.centerLeft,
-                child: pw.Text('LOCALISATION', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor)),
-              ),
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                alignment: pw.Alignment.center,
-                child: pw.Text(group.local.toUpperCase(), style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor)),
+                child: pw.Text('LOCALISATION : ${group.local.toUpperCase()}', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor)),
               ),
             ],
           ),
         ],
-      );
-      widgets.add(localSeparatorTable);
-      widgets.add(pw.SizedBox(height: 2));
-
-      final localRows = <pw.TableRow>[];
+      ));
 
       // Sous-grouper par équipement
       final equipGroups = <_ObsGroup>[];
@@ -3209,89 +3101,60 @@ class PdfReportService {
         }
       }
 
+      final groupTableRows = <pw.TableRow>[];
+
       for (final eq in equipGroups) {
-        equipIdx++; // Increment the global counter for each equipment
-        final observationRows = <pw.TableRow>[];
-        
+        equipIdx++;
         for (int i = 0; i < eq.items.length; i++) {
           final o = eq.items[i];
           altIdx++;
-
           final rowBg = altIdx.isOdd ? tableRowAlt : PdfColors.white;
 
-          // Observations nested table row
-          observationRows.add(pw.TableRow(
+          groupTableRows.add(pw.TableRow(
             decoration: pw.BoxDecoration(color: rowBg),
             children: [
-              // OBSERVATIONS
+              // N° Equipement (affiché sur la 1ère observation de l'équipement)
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                alignment: pw.Alignment.center,
+                child: pw.Text(i == 0 ? '$equipIdx' : '', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+              ),
+              // ÉQUIPEMENT (affiché sur la 1ère observation de l'équipement)
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                child: pw.Text(
+                  i == 0 ? eq.local.toUpperCase() : '',
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall),
+                ),
+              ),
+              // OBSERVATION
               pw.Padding(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 child: pw.Text(o.observation, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
               ),
-              // REF. NORMATIVE (centré)
+              // REF NORMATIVE
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 alignment: pw.Alignment.center,
-                child: pw.Text(o.refNorm,
-                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
-                    textAlign: pw.TextAlign.center),
+                child: pw.Text(o.refNorm, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
               ),
             ],
           ));
         }
-
-        localRows.add(pw.TableRow(
-          children: [
-            // INDEX (Single parent cell showing the global equipment index)
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              alignment: pw.Alignment.center,
-              child: pw.Text('$equipIdx', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
-            ),
-            // ÉQUIPEMENT (Perfectly centered vertically and horizontally)
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              alignment: pw.Alignment.center,
-              child: pw.Text(eq.local.toUpperCase(),
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall),
-                  textAlign: pw.TextAlign.center),
-            ),
-            // OBSERVATIONS + REF
-            pw.Table(
-              defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
-              border: pw.TableBorder(
-                horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
-                verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
-              ),
-              columnWidths: const {
-                0: pw.FlexColumnWidth(3.9),
-                1: pw.FlexColumnWidth(1.5),
-              },
-              children: observationRows,
-            ),
-          ],
-        ));
       }
 
-      final localTable = pw.Table(
+      widgets.add(pw.Table(
         defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
-        border: pw.TableBorder(
-          top: pw.BorderSide(color: borderColor, width: 0.4),
-          bottom: pw.BorderSide(color: borderColor, width: 0.4),
-          left: pw.BorderSide(color: borderColor, width: 0.4),
-          right: pw.BorderSide(color: borderColor, width: 0.4),
-          verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
-          horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
-        ),
+        border: pw.TableBorder.all(color: borderColor, width: 0.4),
         columnWidths: const {
-          0: pw.FlexColumnWidth(1.0),
-          1: pw.FlexColumnWidth(2.0),
-          2: pw.FlexColumnWidth(5.4),
+          0: pw.FlexColumnWidth(0.8),
+          1: pw.FlexColumnWidth(2.2),
+          2: pw.FlexColumnWidth(3.9),
+          3: pw.FlexColumnWidth(1.5),
         },
-        children: localRows,
-      );
-      widgets.add(localTable);
-      widgets.add(pw.SizedBox(height: 6));
+        children: groupTableRows,
+      ));
+      widgets.add(pw.SizedBox(height: 4));
     }
 
     return widgets;
