@@ -2,6 +2,7 @@
 
 import 'audit_finding.dart';
 import 'unified_observation.dart';
+import 'mission_domain_inventory_engine.dart';
 
 class CriticalityStats {
   final int critique;
@@ -176,6 +177,42 @@ class MissionStatisticsSummary {
       equipmentInventory: eqInventory.isNotEmpty
           ? eqInventory
           : AuditFindingInventory.computeEquipmentInventory(inventory.missionId),
+    );
+  }
+
+  /// Factory principale utilisant le `MissionDomainInventoryEngine` comme source unique de vérité
+  /// pour l'inventaire physique (comptes d'instances, analyse croisée, inventaire chiffré).
+  /// Les statistiques de criticité et les findings proviennent de `AuditFindingInventory`.
+  factory MissionStatisticsSummary.fromDomainInventory(
+    AuditFindingInventory inventory,
+    MissionDomainInventory domainInventory,
+  ) {
+    final cStats = CriticalityStats(
+      critique: inventory.critiqueCount,
+      majeure: inventory.majeureCount,
+      mineure: inventory.mineureCount,
+      total: inventory.classifiedCount,
+      pctCritique: inventory.pctCritique,
+      pctMajeure: inventory.pctMajeure,
+      pctMineure: inventory.pctMineure,
+    );
+
+    // Source unique de vérité : MissionDomainInventoryEngine
+    final crossItems = domainInventory.getCrossCategoryAnalysis();
+    final crossText = CategoryCrossAnalysisTextGenerator.generate(crossItems);
+    final eqInventory = domainInventory.getEquipmentInventorySummary();
+
+    return MissionStatisticsSummary(
+      missionId: inventory.missionId,
+      inventory: inventory,
+      criticalityStats: cStats,
+      topDefects: inventory.getTopDefects(limit: 10),
+      riskFamilyStats: inventory.getRiskFamilyStats(),
+      tensionDomainStats: inventory.getTensionDomainStats(),
+      installationTypeStats: inventory.getInstallationTypeStats(),
+      crossCategoryItems: crossItems,
+      crossAnalysisText: crossText,
+      equipmentInventory: eqInventory,
     );
   }
 }

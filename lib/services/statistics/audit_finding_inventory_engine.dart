@@ -4,6 +4,7 @@ import '../../models/audit_installations_electriques.dart';
 import '../hive_service.dart';
 import '../dispositions_constructives_registry.dart';
 import 'audit_finding.dart';
+import 'domain_entity_instance.dart';
 
 class _CategoryTracker {
   final String categoryKey;
@@ -565,20 +566,19 @@ class AuditFindingInventoryEngine {
     if (visitedCoffrets.contains(coffretHash)) return;
     visitedCoffrets.add(coffretHash);
 
-    final t = coffret.type.trim().toLowerCase();
-    String catKey = 'coffret';
-    if (t.contains('inverseur')) {
-      catKey = 'inverseur';
-    } else if (t.contains('tgbt') || t.contains('t.g.b.t')) {
-      catKey = 'tgbt';
-    } else if (t.contains('armoire') || t.contains('tur')) {
-      catKey = 'armoire';
+    // Utilisation du classificateur centralisé pour le type d'équipement
+    final category = EquipmentClassifier.classify(coffret);
+    String catKey = category.categoryKey;
+    // Normaliser la clé pour les trackers existants
+    if (catKey == 'transfo_mt_bt' || catKey == 'cellule_mt' || catKey == 'local_mt' || catKey == 'local_bt' || catKey == 'local_ge' || catKey == 'foudre' || catKey == 'prise_terre') {
+      catKey = 'coffret'; // fallback pour catégories non-équipement (ne devrait pas arriver)
     }
 
     trackers[catKey]?.equipmentCount++;
 
     final coffretRepere = coffret.repere?.isNotEmpty == true ? coffret.repere : coffret.numeroEquipement;
-    final typeEquipementStr = coffret.type.isNotEmpty ? coffret.type : 'Équipement';
+    // Label normalisé déterministe au lieu du type brut du modèle
+    final typeEquipementStr = category.normalizedObjectType;
 
     // Points de vérification
     for (var i = 0; i < coffret.pointsVerification.length; i++) {

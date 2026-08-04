@@ -4,6 +4,7 @@ import 'audit_finding_inventory_engine.dart';
 import 'audit_finding.dart';
 import 'unified_observation.dart';
 import 'mission_statistics.dart';
+import 'mission_domain_inventory_engine.dart';
 
 /// Façade Principale du Moteur d'Inventaire et de Statistiques.
 /// 
@@ -52,9 +53,16 @@ class MissionStatisticsCollector {
   }
 
   /// Génère le résumé statistique unifié Néo-Natif (`MissionStatisticsSummary`).
+  ///
+  /// Utilise `MissionDomainInventoryEngine` comme source unique de vérité pour
+  /// l'inventaire physique (comptes d'instances), et `AuditFindingInventoryEngine`
+  /// pour le diagnostic des non-conformités et les statistiques de criticité.
   static MissionStatisticsSummary collectSummary(String missionId) {
     final inventory = AuditFindingInventoryEngine.buildInventory(missionId);
     inventory.printDiagnostic();
-    return MissionStatisticsSummary.fromInventory(inventory);
+
+    // Utiliser MissionDomainInventoryEngine pour les cross-category et l'inventaire chiffré.
+    final domainInventory = MissionDomainInventoryEngine.buildInventory(missionId);
+    return MissionStatisticsSummary.fromDomainInventory(inventory, domainInventory);
   }
 }

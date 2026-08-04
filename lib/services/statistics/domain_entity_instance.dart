@@ -4,6 +4,7 @@ import '../../models/audit_installations_electriques.dart';
 import 'audit_finding.dart';
 
 /// Catégories métiers canoniques des équipements et installations électriques.
+/// Chaque valeur représente un type d'objet physique réel dans une mission d'inspection.
 enum DomainObjectType {
   localMT,
   localBT,
@@ -15,6 +16,7 @@ enum DomainObjectType {
   coffret,
   inverseur,
   foudre,
+  priseTerre,
 }
 
 extension DomainObjectTypeExtension on DomainObjectType {
@@ -40,6 +42,8 @@ extension DomainObjectTypeExtension on DomainObjectType {
         return 'inverseur';
       case DomainObjectType.foudre:
         return 'foudre';
+      case DomainObjectType.priseTerre:
+        return 'prise_terre';
     }
   }
 
@@ -65,6 +69,8 @@ extension DomainObjectTypeExtension on DomainObjectType {
         return 'Inverseurs';
       case DomainObjectType.foudre:
         return 'Prises de terre / Foudre';
+      case DomainObjectType.priseTerre:
+        return 'Prises de terre mesurées';
     }
   }
 
@@ -90,6 +96,37 @@ extension DomainObjectTypeExtension on DomainObjectType {
         return 'Inverseur';
       case DomainObjectType.foudre:
         return 'Terre/Foudre';
+      case DomainObjectType.priseTerre:
+        return 'Prise de terre';
+    }
+  }
+
+  /// Retourne le label normalisé à utiliser comme `objectType` dans les AuditFinding.
+  /// Ce label est déterministe et indépendant du champ brut `coffret.type`.
+  String get normalizedObjectType {
+    switch (this) {
+      case DomainObjectType.localMT:
+        return 'Local MT';
+      case DomainObjectType.localBT:
+        return 'Local BT';
+      case DomainObjectType.localGE:
+        return 'Groupe Électrogène';
+      case DomainObjectType.celluleMT:
+        return 'Cellule MT';
+      case DomainObjectType.transformateurMTBT:
+        return 'Transformateur MT/BT';
+      case DomainObjectType.tgbt:
+        return 'TGBT';
+      case DomainObjectType.armoire:
+        return 'Armoire';
+      case DomainObjectType.coffret:
+        return 'Coffret';
+      case DomainObjectType.inverseur:
+        return 'Inverseur';
+      case DomainObjectType.foudre:
+        return 'Foudre';
+      case DomainObjectType.priseTerre:
+        return 'Prise de terre';
     }
   }
 }
@@ -97,7 +134,11 @@ extension DomainObjectTypeExtension on DomainObjectType {
 /// Classificateur d'Équipements Électriques (`EquipmentClassifier`).
 ///
 /// Résout de façon déterministe la véritable nature d'un [CoffretArmoire]
-/// (TGBT, Armoire, Inverseur, Coffret) en analysant son type, nom, repère et domaine.
+/// (TGBT, Armoire, Inverseur, Coffret) en analysant conjointement
+/// son type, son nom, son repère et son domaine de tension.
+///
+/// Gère aussi bien les types courts modernes ('TGBT', 'ARMOIRE', 'INVERSEUR')
+/// que les anciens types longs ('Tableau urbain réduit (TUR)', etc.) des missions legacy.
 class EquipmentClassifier {
   static DomainObjectType classify(CoffretArmoire coffret) {
     final typeStr = coffret.type.trim().toLowerCase();
@@ -105,40 +146,68 @@ class EquipmentClassifier {
     final repereStr = (coffret.repere ?? '').trim().toLowerCase();
 
     // 1. INVERSEUR (Source Normal/Secours)
-    if (typeStr.contains('inverseur') ||
-        typeStr.contains('inv') ||
-        nomStr.contains('inverseur') ||
-        repereStr.contains('inverseur') ||
-        typeStr.contains('source secours') ||
-        typeStr.contains('ge/secteur')) {
+    if (_matchesInverseur(typeStr, nomStr, repereStr)) {
       return DomainObjectType.inverseur;
     }
 
     // 2. TGBT (Tableau Général Basse Tension)
-    if (typeStr.contains('tgbt') ||
+    if (_matchesTGBT(typeStr, nomStr, repereStr)) {
+      return DomainObjectType.tgbt;
+    }
+
+    // 3. ARMOIRE / TUR (inclut les anciens types "Tableau urbain réduit (TUR)")
+    if (_matchesArmoire(typeStr, nomStr, repereStr)) {
+      return DomainObjectType.armoire;
+    }
+
+    // 4. COFFRET (catégorie par défaut pour les coffrets de distribution)
+    return DomainObjectType.coffret;
+  }
+
+  static bool _matchesInverseur(String typeStr, String nomStr, String repereStr) {
+    return typeStr.contains('inverseur') ||
+        typeStr == 'inv' ||
+        typeStr.startsWith('inv ') ||
+        nomStr.contains('inverseur') ||
+        repereStr.contains('inverseur') ||
+        repereStr.startsWith('inv') ||
+        typeStr.contains('source secours') ||
+        typeStr.contains('ge/secteur') ||
+        typeStr.contains('normal/secours') ||
+        nomStr.contains('normal/secours') ||
+        nomStr.contains('normal / secours');
+  }
+
+  static bool _matchesTGBT(String typeStr, String nomStr, String repereStr) {
+    return typeStr == 'tgbt' ||
+        typeStr.contains('tgbt') ||
         typeStr.contains('t.g.b.t') ||
+        typeStr.contains('tableau general') ||
+        typeStr.contains('tableau général') ||
         nomStr.contains('tgbt') ||
         nomStr.contains('t.g.b.t') ||
         nomStr.contains('tableau general') ||
         nomStr.contains('tableau général') ||
-        repereStr.contains('tgbt')) {
-      return DomainObjectType.tgbt;
-    }
+        repereStr.contains('tgbt');
+  }
 
-    // 3. ARMOIRE / TUR
-    if (typeStr.contains('armoire') ||
-        typeStr.contains('tur') ||
+  static bool _matchesArmoire(String typeStr, String nomStr, String repereStr) {
+    return typeStr == 'armoire' ||
+        typeStr.contains('armoire') ||
+        typeStr == 'tur' ||
+        typeStr.contains('tur') ||          // Ancien format "Tableau urbain réduit (TUR)"
+        typeStr.contains('tableau urbain') ||
         nomStr.contains('armoire') ||
-        repereStr.contains('armoire')) {
-      return DomainObjectType.armoire;
-    }
-
-    // 4. COFFRET (Par défaut pour les coffrets de distribution)
-    return DomainObjectType.coffret;
+        nomStr.contains('tur') ||
+        repereStr.contains('armoire') ||
+        repereStr.contains('tur');
   }
 }
 
 /// Représentation unifiée d'une instance physique d'équipement ou de local (`DomainEntityInstance`).
+///
+/// Chaque objet métier découvert lors du parcours unique de la mission est encapsulé
+/// dans cette structure, avec ses bilans de conformité et ses constats rattachés.
 class DomainEntityInstance {
   final String instanceId;
   final DomainObjectType category;
@@ -199,7 +268,7 @@ class DomainEntityInstance {
     String? criticality,
   }) {
     final conf = conformity.trim().toLowerCase();
-    if (conf == 'na' || conf == 's.o.' || conf == 'so' || conf == 'non_acquis') {
+    if (conf == 'na' || conf == 's.o.' || conf == 'so' || conf == 'non_acquis' || conf == 'sans objet') {
       naCheckpoints++;
     } else if (conf == 'oui' || conf == 'true' || conf == 'conforme') {
       compliantCheckpoints++;

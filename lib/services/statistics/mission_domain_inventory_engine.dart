@@ -1,6 +1,7 @@
 // lib/services/statistics/mission_domain_inventory_engine.dart
 
 import '../../models/audit_installations_electriques.dart';
+import '../../models/mesures_essais.dart';
 import '../dispositions_constructives_registry.dart';
 import '../hive_service.dart';
 import 'audit_finding.dart';
@@ -75,7 +76,8 @@ class MissionDomainInventory {
     );
   }
 
-  /// Génère l'analyse croisée pour les 9 catégories métiers normalisées.
+  /// Génère l'analyse croisée pour les 10 catégories métiers normalisées.
+  /// Les prises de terre apparaissent en dernier dans la liste.
   List<CategoryCrossItem> getCrossCategoryAnalysis() {
     final canonicalCategories = [
       DomainObjectType.localMT,
@@ -87,6 +89,7 @@ class MissionDomainInventory {
       DomainObjectType.armoire,
       DomainObjectType.coffret,
       DomainObjectType.inverseur,
+      DomainObjectType.priseTerre,
     ];
 
     final result = <CategoryCrossItem>[];
@@ -100,6 +103,7 @@ class MissionDomainInventory {
   }
 
   /// Génère l'inventaire chiffré des installations et équipements (sous-section IX du rapport PDF).
+  /// Les prises de terre apparaissent en dernier dans la liste.
   List<EquipmentInventoryItem> getEquipmentInventorySummary() {
     final canonicalCategories = [
       DomainObjectType.localMT,
@@ -111,6 +115,7 @@ class MissionDomainInventory {
       DomainObjectType.armoire,
       DomainObjectType.coffret,
       DomainObjectType.inverseur,
+      DomainObjectType.priseTerre,
     ];
 
     return canonicalCategories.map((cat) {
@@ -345,7 +350,7 @@ class MissionDomainInventoryEngine {
       }
     }
 
-    // 4. MODULE FOUDRE / PRISES DE TERRE
+    // 4. MODULE FOUDRE
     if (foudres.isNotEmpty) {
       for (var i = 0; i < foudres.length; i++) {
         final f = foudres[i];
@@ -365,7 +370,7 @@ class MissionDomainInventoryEngine {
             missionId: missionId,
             tensionDomain: TensionDomain.bt,
             origin: 'Module Foudre',
-            objectType: 'Foudre',
+            objectType: DomainObjectType.foudre.normalizedObjectType,
             objectName: 'Installation Foudre',
             tableName: 'Observations Foudre',
             verificationPoint: 'Observation Foudre ${i + 1}',
@@ -380,6 +385,57 @@ class MissionDomainInventoryEngine {
           instances.add(inst);
         }
       }
+    }
+
+    // 5. PRISES DE TERRE (depuis MesuresEssais)
+    try {
+      final mesuresEssais = HiveService.getMesuresEssaisByMissionId(missionId);
+      if (mesuresEssais != null && mesuresEssais.prisesTerre.isNotEmpty) {
+        for (var i = 0; i < mesuresEssais.prisesTerre.length; i++) {
+          final pt = mesuresEssais.prisesTerre[i];
+          final ptHash = identityHashCode(pt);
+          final ptName = pt.identification.isNotEmpty ? pt.identification : 'PT ${i + 1}';
+          final ptInst = DomainEntityInstance(
+            instanceId: 'prise_terre_$ptHash',
+            category: DomainObjectType.priseTerre,
+            name: ptName,
+            tensionDomain: TensionDomain.bt,
+            originPath: 'Mesures & Essais > Prises de terre > ${pt.localisation}',
+            rawModelRef: pt,
+          );
+
+          // Chaque prise de terre est un « point » complet :
+          // si elle a une observation renseignée avec une valeur de mesure, c'est un point évalué.
+          if (pt.isComplete) {
+            final obsLower = (pt.observation ?? '').trim().toLowerCase();
+            if (obsLower.contains('non satisfaisant') || obsLower.contains('non conforme')) {
+              ptInst.registerCheckpoint(conformity: 'non', criticality: 'Majeure');
+              addFinding(
+                ptInst,
+                AuditFinding(
+                  id: 'prise_terre_${ptHash}_nc',
+                  missionId: missionId,
+                  tensionDomain: TensionDomain.bt,
+                  origin: 'Mesures & Essais > Prises de terre',
+                  objectType: DomainObjectType.priseTerre.normalizedObjectType,
+                  objectName: ptName,
+                  tableName: 'Prises de terre',
+                  verificationPoint: 'Valeur de résistance prise de terre',
+                  observationText: '${pt.identification} — ${pt.localisation} : ${pt.valeurMesure ?? "?"} Ω — ${pt.observation}',
+                  conformity: 'non',
+                  criticality: 'Majeure',
+                ),
+              );
+            } else {
+              ptInst.registerCheckpoint(conformity: 'oui');
+            }
+          }
+
+          instances.add(ptInst);
+        }
+      }
+    } catch (_) {
+      // En environnement de test sans Hive actif, ignorer.
     }
 
     return MissionDomainInventory(
@@ -844,7 +900,10 @@ class MissionDomainInventoryEngine {
 
     final category = EquipmentClassifier.classify(coffret);
     final coffretRepere = coffret.repere?.isNotEmpty == true ? coffret.repere : coffret.numeroEquipement;
-    final typeEquipementStr = coffret.type.isNotEmpty ? coffret.type : category.label;
+    // Utilisation du label normalisé canonique au lieu du type brut du modèle.
+    // C'est la correction du bug TGBT : le type brut pouvait être "TGBT", "Tableau urbain réduit (TUR)", etc.
+    // Le label normalisé est toujours déterministe : "TGBT", "Armoire", "Coffret", "Inverseur".
+    final typeEquipementStr = category.normalizedObjectType;
 
     final instance = DomainEntityInstance(
       instanceId: 'eq_$coffretHash',
@@ -884,7 +943,7 @@ class MissionDomainInventoryEngine {
                 missionId: missionId,
                 tensionDomain: defaultTensionDomain,
                 origin: originNom,
-                objectType: typeEquipementStr,
+                objectType: category.normalizedObjectType,
                 objectName: coffret.nom,
                 objectRepere: coffretRepere,
                 tableName: 'Points de vérification',
@@ -907,7 +966,7 @@ class MissionDomainInventoryEngine {
               missionId: missionId,
               tensionDomain: defaultTensionDomain,
               origin: originNom,
-              objectType: typeEquipementStr,
+              objectType: category.normalizedObjectType,
               objectName: coffret.nom,
               objectRepere: coffretRepere,
               tableName: 'Points de vérification',
@@ -941,7 +1000,7 @@ class MissionDomainInventoryEngine {
               missionId: missionId,
               tensionDomain: defaultTensionDomain,
               origin: originNom,
-              objectType: typeEquipementStr,
+              objectType: category.normalizedObjectType,
               objectName: '${coffret.nom} (Parafoudre)',
               objectRepere: coffretRepere,
               tableName: 'Observations Parafoudre',
