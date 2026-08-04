@@ -4749,20 +4749,21 @@ class PdfReportService {
     // ── Photo interne ──────────────────────────────────────────────────────
     pw.MemoryImage? photoInterne;
     for (final src in [...coffret.photosInternes, ...coffret.photos, ...coffret.photosExternes]) {
-      if (src.isEmpty) continue;
-      if (_coffretPhotoCache.containsKey(src)) {
-        photoInterne = _coffretPhotoCache[src];
-        if (photoInterne != null) break;
-      } else {
-        try {
-          final f = File(src);
+      final trimmed = src.trim();
+      if (trimmed.isEmpty) continue;
+      try {
+        final resolved = AppImageUtils.resolvePathSync(trimmed);
+        if (resolved != null) {
+          final f = File(resolved);
           if (f.existsSync()) {
-            photoInterne = pw.MemoryImage(f.readAsBytesSync());
-            _coffretPhotoCache[src] = photoInterne;
-            break;
+            final bytes = f.readAsBytesSync();
+            if (bytes.isNotEmpty) {
+              photoInterne = pw.MemoryImage(bytes);
+              break;
+            }
           }
-        } catch (_) {}
-      }
+        }
+      } catch (_) {}
     }
 
     // Helper functions for characteristics
@@ -6383,7 +6384,7 @@ class PdfReportService {
     );
   }
 
-  static final Map<String, pw.MemoryImage?> _coffretPhotoCache = {};
+
 
   static Future<pw.MemoryImage?> loadAndOptimizeImage(
     String path, {
@@ -6863,51 +6864,7 @@ class PdfReportService {
     return chunkFiles;
   }
 
-  static Future<void> _preloadCoffretPhotos(AuditInstallationsElectriques? audit) async {
-    _coffretPhotoCache.clear();
-    if (audit == null) return;
 
-    final coffretPhotoPaths = <String>{};
-
-    void collectFromCoffret(CoffretArmoire c) {
-      for (final p in [...c.photosInternes, ...c.photos, ...c.photosExternes]) {
-        if (p.trim().isNotEmpty) coffretPhotoPaths.add(p.trim());
-      }
-    }
-
-    for (var local in audit.moyenneTensionLocaux) {
-      for (var c in local.coffrets) {
-        collectFromCoffret(c);
-      }
-    }
-    for (var zone in audit.moyenneTensionZones) {
-      for (var c in zone.coffrets) {
-        collectFromCoffret(c);
-      }
-      for (var local in zone.locaux) {
-        for (var c in local.coffrets) {
-          collectFromCoffret(c);
-        }
-      }
-    }
-    for (var zone in audit.basseTensionZones) {
-      for (var c in zone.coffretsDirects) {
-        collectFromCoffret(c);
-      }
-      for (var local in zone.locaux) {
-        for (var c in local.coffrets) {
-          collectFromCoffret(c);
-        }
-      }
-    }
-
-    for (final path in coffretPhotoPaths) {
-      final img = await _loadAndOptimizeImage(path, maxWidth: 300, maxHeight: 300, quality: 60);
-      if (img != null) {
-        _coffretPhotoCache[path] = img;
-      }
-    }
-  }
 
 
 
@@ -7256,6 +7213,179 @@ class PdfReportService {
 
   
 
+  static Future<List<File>> _addAuditSectionChunked(
+    Mission mission,
+    AuditInstallationsElectriques audit,
+    Map<String, int> trackedPages, {
+    required String nomSite,
+    required String numeroRapport,
+  }) async {
+    final chunkFiles = <File>[];
+    final tempDir = await getTemporaryDirectory();
+
+    // 1. Page de Garde / Titre de l'Audit
+    final coverDoc = pw.Document(
+      title: 'Audit Cover - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: true,
+    );
+    coverDoc.addPage(pw.MultiPage(
+      maxPages: 10000,
+      pageTheme: _buildInnerPageTheme(showWatermark: false),
+      header: (ctx) => _buildPageHeaderWidget(
+        nomSite: nomSite,
+        numeroRapport: numeroRapport,
+      ),
+      build: (ctx) => [
+        pw.SizedBox(height: 220),
+        pw.Center(
+          child: pw.Column(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Container(width: 350, height: 2, color: accentColor),
+              pw.SizedBox(height: 24),
+              PageTracker(
+                key: 'audit',
+                registry: trackedPages,
+                child: pw.Text(
+                  'AUDIT DES INSTALLATIONS ELECTRIQUES',
+                  style: pw.TextStyle(
+                    font: _fontBold, fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                    color: headerColor,
+                    letterSpacing: 1.0,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.SizedBox(height: 12),
+              pw.Text(
+                mission.nomClient.toUpperCase(),
+                style: pw.TextStyle(
+                  font: _fontRegular, fontSize: 13, color: accentColor,
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
+              pw.SizedBox(height: 24),
+              pw.Container(width: 350, height: 2, color: accentColor),
+            ],
+          ),
+        ),
+      ],
+    ));
+    final coverBytes = await coverDoc.save();
+    final coverFile = File('${tempDir.path}/pdf_chunk_audit_cover_${mission.id}.pdf');
+    await coverFile.writeAsBytes(coverBytes);
+    chunkFiles.add(coverFile);
+
+    // 2. MT Locaux Directs (si présents)
+    if (audit.moyenneTensionLocaux.isNotEmpty) {
+      final mtDoc = pw.Document(
+        title: 'Audit MT Directs - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: true,
+      );
+      final widgets = <pw.Widget>[
+        _subSectionBar('MOYENNE TENSION — LOCAUX DIRECTS'),
+      ];
+      for (int i = 0; i < audit.moyenneTensionLocaux.length; i++) {
+        if (i > 0) widgets.add(pw.NewPage());
+        widgets.addAll(_buildLocalMT(audit.moyenneTensionLocaux[i], trackedPages));
+      }
+      mtDoc.addPage(pw.MultiPage(
+        maxPages: 10000,
+        pageTheme: _buildInnerPageTheme(),
+        header: (ctx) => _buildPageHeaderWidget(
+          nomClient: mission.nomClient,
+          nomSite: nomSite,
+          numeroRapport: numeroRapport,
+        ),
+        build: (ctx) => widgets,
+      ));
+      final mtBytes = await mtDoc.save();
+      final mtFile = File('${tempDir.path}/pdf_chunk_audit_mt_${mission.id}.pdf');
+      await mtFile.writeAsBytes(mtBytes);
+      chunkFiles.add(mtFile);
+    }
+
+    // 3. Zones MT (1 chunk autonome par Zone MT)
+    for (var zIdx = 0; zIdx < audit.moyenneTensionZones.length; zIdx++) {
+      final zone = audit.moyenneTensionZones[zIdx];
+      final zoneDoc = pw.Document(
+        title: 'Audit Zone MT ${zone.nom} - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: true,
+      );
+      final widgets = <pw.Widget>[];
+      widgets.addAll(_buildZone(zone.nom, zone.observationsLibres, trackedPages));
+      int elemIdx = 0;
+      for (int i = 0; i < zone.locaux.length; i++) {
+        if (elemIdx > 0) widgets.add(pw.NewPage());
+        widgets.addAll(_buildLocalMT(zone.locaux[i], trackedPages));
+        elemIdx++;
+      }
+      for (int i = 0; i < zone.coffrets.length; i++) {
+        if (elemIdx > 0) widgets.add(pw.NewPage());
+        widgets.addAll(_buildCoffret(zone.coffrets[i], trackedPages, zone.nom));
+        elemIdx++;
+      }
+      zoneDoc.addPage(pw.MultiPage(
+        maxPages: 10000,
+        pageTheme: _buildInnerPageTheme(),
+        header: (ctx) => _buildPageHeaderWidget(
+          nomClient: mission.nomClient,
+          nomSite: nomSite,
+          numeroRapport: numeroRapport,
+        ),
+        build: (ctx) => widgets,
+      ));
+      final zoneBytes = await zoneDoc.save();
+      final zoneFile = File('${tempDir.path}/pdf_chunk_audit_mt_z${zIdx}_${mission.id}.pdf');
+      await zoneFile.writeAsBytes(zoneBytes);
+      chunkFiles.add(zoneFile);
+    }
+
+    // 4. Zones BT (1 chunk autonome par Zone BT)
+    for (var zIdx = 0; zIdx < audit.basseTensionZones.length; zIdx++) {
+      final zone = audit.basseTensionZones[zIdx];
+      final zoneDoc = pw.Document(
+        title: 'Audit Zone BT ${zone.nom} - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: true,
+      );
+      final widgets = <pw.Widget>[];
+      widgets.addAll(_buildZone(zone.nom, zone.observationsLibres, trackedPages));
+      int elemIdx = 0;
+      for (int i = 0; i < zone.coffretsDirects.length; i++) {
+        if (elemIdx > 0) widgets.add(pw.NewPage());
+        widgets.addAll(_buildCoffret(zone.coffretsDirects[i], trackedPages, zone.nom));
+        elemIdx++;
+      }
+      for (int i = 0; i < zone.locaux.length; i++) {
+        if (elemIdx > 0) widgets.add(pw.NewPage());
+        widgets.addAll(_buildLocalBT(zone.locaux[i], trackedPages));
+        elemIdx++;
+      }
+      zoneDoc.addPage(pw.MultiPage(
+        maxPages: 10000,
+        pageTheme: _buildInnerPageTheme(),
+        header: (ctx) => _buildPageHeaderWidget(
+          nomClient: mission.nomClient,
+          nomSite: nomSite,
+          numeroRapport: numeroRapport,
+        ),
+        build: (ctx) => widgets,
+      ));
+      final zoneBytes = await zoneDoc.save();
+      final zoneFile = File('${tempDir.path}/pdf_chunk_audit_bt_z${zIdx}_${mission.id}.pdf');
+      await zoneFile.writeAsBytes(zoneBytes);
+      chunkFiles.add(zoneFile);
+    }
+
+    return chunkFiles;
+  }
+
   // ──────────────────────────────────────────────────────────────
   //  POINT D'ENTREE PRINCIPAL
   // ──────────────────────────────────────────────────────────────
@@ -7270,7 +7400,6 @@ class PdfReportService {
       
       final description = HiveService.getDescriptionInstallationsByMissionId(missionId);
       final audit = HiveService.getAuditInstallationsByMissionId(missionId);
-      await _preloadCoffretPhotos(audit);
       final classements = HiveService.getEmplacementsByMissionId(missionId);
       final classementsZones = HiveService.getClassementsZonesByMissionId(missionId);
       final mesures = HiveService.getMesuresEssaisByMissionId(missionId);
@@ -7608,68 +7737,34 @@ class PdfReportService {
         ));
       }
 
-      // 7. Audit des installations electriques (page titre + contenu)
-      if (audit != null) {
-        pdf.addPage(pw.MultiPage(
-          maxPages: 10000,
-          pageTheme: _buildInnerPageTheme(showWatermark: false),
-          header: (ctx) => _buildPageHeaderWidget(
-            nomSite: nomSiteHeader,
-            numeroRapport: numeroRapportDoc,
-          ),
-          build: (ctx) => [
-            pw.SizedBox(height: 220),
-            pw.Center(
-              child: pw.Column(
-                mainAxisAlignment: pw.MainAxisAlignment.center,
-                crossAxisAlignment: pw.CrossAxisAlignment.center,
-                children: [
-                  pw.Container(width: 350, height: 2, color: accentColor),
-                  pw.SizedBox(height: 24),
-                  PageTracker(
-                    key: 'audit',
-                    registry: trackedPages,
-                    child: pw.Text(
-                      'AUDIT DES INSTALLATIONS ELECTRIQUES',
-                      style: pw.TextStyle(
-                        font: _fontBold, fontSize: 20,
-                        fontWeight: pw.FontWeight.bold,
-                        color: headerColor,
-                        letterSpacing: 1.0,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  pw.SizedBox(height: 12),
-                  pw.Text(
-                    mission.nomClient.toUpperCase(),
-                    style: pw.TextStyle(
-                      font: _fontRegular, fontSize: 13, color: accentColor,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                  pw.SizedBox(height: 24),
-                  pw.Container(width: 350, height: 2, color: accentColor),
-                ],
-              ),
-            ),
-          ],
-        ));
+      // 7. Audit des installations électriques (Généré par Chunks Autonomes par zone)
+      final allChunkFiles = <File>[];
+      final dir = await getTemporaryDirectory();
 
-        pdf.addPage(pw.MultiPage(
-          maxPages: 10000,
-          pageTheme: _buildInnerPageTheme(),
-          header: (ctx) => _buildPageHeaderWidget(
-            nomClient: mission.nomClient,
-            nomSite: nomSiteHeader,
-            numeroRapport: numeroRapportDoc,
-          ),
-          build: (ctx) => _buildAuditContentOrdered(audit, trackedPages),
-        ));
+      final mainPart1File = File('${dir.path}/pdf_chunk_part1_$missionId.pdf');
+      await mainPart1File.writeAsBytes(await pdf.save());
+      allChunkFiles.add(mainPart1File);
+
+      if (audit != null) {
+        final auditChunkFiles = await _addAuditSectionChunked(
+          mission,
+          audit,
+          trackedPages,
+          nomSite: nomSiteHeader,
+          numeroRapport: numeroRapportDoc,
+        );
+        allChunkFiles.addAll(auditChunkFiles);
       }
 
+      // Part 2: Section 8 (Classement), Section 9 (Foudre), Section 10 (Mesures & Essais + Signatures), Section 11 (Page Garde Photos), Section 12 (Schéma)
+      final pdfPart2 = pw.Document(
+        title: 'Rapport Part 2 - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: true,
+      );
+
       // 8. Classement des emplacements
-      pdf.addPage(pw.MultiPage(
+      pdfPart2.addPage(pw.MultiPage(
         maxPages: 10000,
         pageTheme: _buildInnerPageTheme(),
         header: (ctx) => _buildPageHeaderWidget(
@@ -7681,7 +7776,7 @@ class PdfReportService {
       ));
 
       // 9. Foudre
-      pdf.addPage(pw.MultiPage(
+      pdfPart2.addPage(pw.MultiPage(
         maxPages: 10000,
         pageTheme: _buildInnerPageTheme(),
         build: (ctx) => [_buildFoudre(audit, foudres, trackedPages, afficherTableauFoudre: mission.afficherTableauFoudre)],
@@ -7689,15 +7784,15 @@ class PdfReportService {
 
       // 10. Resultats des mesures et essais
       if (mesures != null) {
-        _addMesuresEssaisPages(pdf, mesures, trackedPages);
-        pdf.addPage(pw.Page(
+        _addMesuresEssaisPages(pdfPart2, mesures, trackedPages);
+        pdfPart2.addPage(pw.Page(
           pageTheme: _buildInnerPageTheme(),
           build: (ctx) => _buildSignaturePage(renseignements, currentUser?.fullName),
         ));
       }
 
       // 11. Page de garde Photos (si des photos sont présentes)
-      pdf.addPage(pw.MultiPage(
+      pdfPart2.addPage(pw.MultiPage(
         maxPages: 10000,
         pageTheme: _buildInnerPageTheme(showWatermark: false),
         header: (ctx) => _buildPageHeaderWidget(
@@ -7744,18 +7839,15 @@ class PdfReportService {
         ],
       ));
 
-      // 12. Schéma des installations électriques (si disponible, PLACÉ EN FIN DE RAPPORT APRÈS PHOTOS)
-      _addSchemaSection(pdf, mission, trackedPages,
+      // 12. Schéma des installations électriques (si disponible)
+      _addSchemaSection(pdfPart2, mission, trackedPages,
           nomSite: nomSiteHeader, numeroRapport: numeroRapportDoc);
 
-      final dir = await getTemporaryDirectory();
-      final mainChunkBytes = await pdf.save();
-      final mainChunkFile = File('${dir.path}/pdf_chunk_main_$missionId.pdf');
-      await mainChunkFile.writeAsBytes(mainChunkBytes);
+      final mainPart2File = File('${dir.path}/pdf_chunk_part2_$missionId.pdf');
+      await mainPart2File.writeAsBytes(await pdfPart2.save());
+      allChunkFiles.add(mainPart2File);
 
-      final allChunkFiles = <File>[mainChunkFile];
-
-      // 11. Photos Chunked
+      // 13. Photos Chunked
       final photoChunkFiles = await _addPhotosSectionChunked(
         mission,
         missionId,
@@ -7771,22 +7863,10 @@ class PdfReportService {
           .replaceAll(RegExp(r'[<>:"/\\|?*\s]'), '_');
       final outputFile = File('${dir.path}/$fileName');
 
-      if (allChunkFiles.length == 1) {
-        await mainChunkFile.copy(outputFile.path);
-      } else {
-        await PdfMergerService.mergePdfFiles(allChunkFiles, outputFile);
-      }
-
-      for (final f in allChunkFiles) {
-        if (await f.exists()) {
-          try {
-            await f.delete();
-          } catch (_) {}
-        }
-      }
+      await PdfMergerService.mergePdfFiles(allChunkFiles, outputFile);
 
       if (kDebugMode) {
-        print('✅ Rapport PDF genere avec succes: ${outputFile.path}');
+        print('✅ Rapport PDF Moteur V2 généré avec succès (${allChunkFiles.length} chunks) : ${outputFile.path}');
       }
       return outputFile;
       
@@ -7796,7 +7876,7 @@ class PdfReportService {
       }
       return null;
     } finally {
-      _coffretPhotoCache.clear();
+      // Nettoyage final
     }
   }
 
