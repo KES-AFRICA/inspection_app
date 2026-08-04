@@ -1,6 +1,7 @@
 // lib/services/statistics/audit_finding.dart
 
 import '../hive_service.dart';
+import 'mission_domain_inventory_engine.dart';
 
 /// Modèle d'item d'inventaire chiffré des installations et équipements
 class EquipmentInventoryItem {
@@ -435,98 +436,11 @@ class AuditFindingInventory {
 
   /// Calcule l'inventaire chiffré de toutes les installations et équipements enregistrés dans la mission.
   static List<EquipmentInventoryItem> computeEquipmentInventory(String missionId) {
-    int countCellules = 0;
-    int countTransformateurs = 0;
-    int countGroupesElectrogenes = 0;
-    int countLocauxGE = 0;
-    int countLocauxMT = 0;
-    int countLocauxBT = 0;
-    int countTGBT = 0;
-    int countArmoires = 0;
-    int countCoffrets = 0;
-    int countPrisesTerre = 0;
-
     try {
-      final audit = HiveService.getAuditInstallationsByMissionId(missionId);
-      final me = HiveService.getMesuresEssaisByMissionId(missionId);
-
-      if (me != null && me.prisesTerre.isNotEmpty) {
-        countPrisesTerre = me.prisesTerre.length;
-      }
-
-      if (audit != null) {
-        // Locaux MT
-        for (final local in audit.moyenneTensionLocaux) {
-          countLocauxMT++;
-          countCellules += local.cellules.length;
-          countTransformateurs += local.transformateurs.length;
-          for (final coffret in local.coffrets) {
-            final t = coffret.type.toUpperCase();
-            if (t.contains('TGBT') || t.contains('T.G.B.T')) {
-              countTGBT++;
-            } else if (t.contains('ARMOIRE') || t.contains('TUR')) {
-              countArmoires++;
-            } else {
-              countCoffrets++;
-            }
-          }
-        }
-
-        // Zones BT
-        for (final zone in audit.basseTensionZones) {
-          for (final local in zone.locaux) {
-            if (local.type == 'LOCAL_GROUPE_ELECTROGENE') {
-              countLocauxGE++;
-              countGroupesElectrogenes++;
-            } else {
-              countLocauxBT++;
-            }
-            for (final coffret in local.coffrets) {
-              final t = coffret.type.toUpperCase();
-              if (t.contains('TGBT') || t.contains('T.G.B.T')) {
-                countTGBT++;
-              } else if (t.contains('ARMOIRE') || t.contains('TUR')) {
-                countArmoires++;
-              } else {
-                countCoffrets++;
-              }
-            }
-          }
-          for (final coffret in zone.coffretsDirects) {
-            final t = coffret.type.toUpperCase();
-            if (t.contains('TGBT') || t.contains('T.G.B.T')) {
-              countTGBT++;
-            } else if (t.contains('ARMOIRE') || t.contains('TUR')) {
-              countArmoires++;
-            } else {
-              countCoffrets++;
-            }
-          }
-        }
-      }
-
-      // Fallback: Si MesuresEssais est vide, décompter la section Foudre si présente
-      if (countPrisesTerre == 0) {
-        final foudres = HiveService.getFoudreObservationsByMissionId(missionId);
-        if (foudres.isNotEmpty) {
-          countPrisesTerre = foudres.length;
-        }
-      }
+      final domainInventory = MissionDomainInventoryEngine.buildInventory(missionId);
+      return domainInventory.getEquipmentInventorySummary();
     } catch (_) {
-      // En environnement de test sans Hive actif, retour des totaux initialisés.
+      return [];
     }
-
-    return [
-      EquipmentInventoryItem(label: 'Cellules Moyenne Tension', count: countCellules),
-      EquipmentInventoryItem(label: 'Transformateurs MT/BT', count: countTransformateurs),
-      EquipmentInventoryItem(label: 'Groupes \u00e9lectrog\u00e8nes', count: countGroupesElectrogenes),
-      EquipmentInventoryItem(label: 'Locaux techniques Groupe \u00c9lectrog\u00e8ne', count: countLocauxGE),
-      EquipmentInventoryItem(label: 'Locaux techniques Moyenne Tension', count: countLocauxMT),
-      EquipmentInventoryItem(label: 'Locaux techniques Basse Tension', count: countLocauxBT),
-      EquipmentInventoryItem(label: 'TGBT', count: countTGBT),
-      EquipmentInventoryItem(label: 'Armoires', count: countArmoires),
-      EquipmentInventoryItem(label: 'Coffrets', count: countCoffrets),
-      EquipmentInventoryItem(label: 'Prises de terre mesur\u00e9es', count: countPrisesTerre),
-    ];
   }
 }
