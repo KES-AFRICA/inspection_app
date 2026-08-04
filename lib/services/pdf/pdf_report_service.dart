@@ -6525,7 +6525,7 @@ class PdfReportService {
     int pagesInCurrentChunk = 0;
 
     Future<void> flushChunkIfNeeded({bool force = false}) async {
-      if (pagesInCurrentChunk > 0 && (pagesInCurrentChunk >= 10 || force)) {
+      if (pagesInCurrentChunk > 0 && (pagesInCurrentChunk >= 3 || force)) {
         photoChunkIdx++;
         final chunkBytes = await photoDoc.save();
         final photoChunkFile = File('${tempDir.path}/pdf_chunk_photos_${missionId}_$photoChunkIdx.pdf');
