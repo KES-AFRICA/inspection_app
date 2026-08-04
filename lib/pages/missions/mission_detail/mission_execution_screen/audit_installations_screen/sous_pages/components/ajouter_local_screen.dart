@@ -20,6 +20,7 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:flutter/services.dart';
 import 'observation_enrichie_widget.dart';
 import 'package:inspec_app/services/dispositions_constructives_registry.dart';
+import 'package:inspec_app/components/safe_file_image.dart';
 
 // Extension pour obtenir la taille de l'écran facilement
 extension ScreenSize on BuildContext {
@@ -611,7 +612,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
                             child: Stack(
                               fit: StackFit.expand,
                               children: [
-                                Image.file(File(widget.localPhotos[index]), fit: BoxFit.cover),
+                                SafeFileImage(path: widget.localPhotos[index], fit: BoxFit.cover),
                                 Positioned(
                                   top: context.spacingS,
                                   right: context.spacingS,
@@ -876,7 +877,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
                             decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(context.spacingS),
-                              child: Image.file(File(widget.observationPhotos[index]), fit: BoxFit.cover),
+                              child: SafeFileImage(path: widget.observationPhotos[index], fit: BoxFit.cover),
                             ),
                           );
                         },
@@ -981,7 +982,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
                     decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(context.spacingS),
-                      child: Image.file(File(observation.photos[photoIndex]), fit: BoxFit.cover),
+                      child: SafeFileImage(path: observation.photos[photoIndex], fit: BoxFit.cover),
                     ),
                   );
                 },
@@ -1004,7 +1005,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
               decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.file(File(photos[index])),
+                child: SafeFileImage(path: photos[index], fit: BoxFit.contain),
               ),
             ),
             Positioned(
@@ -2162,7 +2163,7 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
                       decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(context.spacingS),
-                        child: Image.file(File(element.photos[photoIndex]), fit: BoxFit.cover),
+                        child: SafeFileImage(path: element.photos[photoIndex], fit: BoxFit.cover),
                       ),
                     ),
                     Positioned(
@@ -4908,7 +4909,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
           children: [
             Container(
               decoration: BoxDecoration(borderRadius: BorderRadius.circular(12), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.3), blurRadius: 10, spreadRadius: 2)]),
-              child: ClipRRect(borderRadius: BorderRadius.circular(12), child: Image.file(File(photos[index]), fit: BoxFit.contain)),
+              child: ClipRRect(borderRadius: BorderRadius.circular(12), child: SafeFileImage(path: photos[index], fit: BoxFit.contain)),
             ),
             Positioned(
               top: 10,

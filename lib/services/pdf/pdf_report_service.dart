@@ -23,6 +23,7 @@ import '../dispositions_constructives_registry.dart';
 import '../statistics/mission_statistics_collector.dart';
 import '../statistics/audit_finding.dart';
 import '../statistics/audit_diagnostic_engine.dart';
+import '../../components/safe_file_image.dart';
 
 // ================================================================
 //  PdfReportService
@@ -6211,7 +6212,9 @@ class PdfReportService {
     if (trimmed.isEmpty) return null;
 
     try {
-      final file = File(trimmed);
+      final resolvedPath = await AppImageUtils.resolvePathAsync(trimmed);
+      if (resolvedPath == null) return null;
+      final file = File(resolvedPath);
       if (!await file.exists()) return null;
 
       try {

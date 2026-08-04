@@ -9,6 +9,7 @@ import 'package:inspec_app/utils/image_compress_helper.dart';
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
+import 'package:inspec_app/components/safe_file_image.dart';
 
 class AjouterZoneScreen extends StatefulWidget {
   final Mission mission;
@@ -218,8 +219,8 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  File(photos[index]),
+                child: SafeFileImage(
+                  path: photos[index],
                   fit: BoxFit.contain,
                 ),
               ),
@@ -382,22 +383,11 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          File(photos[index]),
+                        child: SafeFileImage(
+                          path: photos[index],
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey.shade200,
-                              child: Center(
-                                child: Icon(
-                                  Icons.broken_image_outlined,
-                                  color: Colors.grey.shade400,
-                                ),
-                              ),
-                            );
-                          },
                         ),
                       ),
                     ),
@@ -556,8 +546,8 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                                   ),
                                   child: ClipRRect(
                                     borderRadius: BorderRadius.circular(8),
-                                    child: Image.file(
-                                      File(observation.photos[photoIndex]),
+                                    child: SafeFileImage(
+                                      path: observation.photos[photoIndex],
                                       fit: BoxFit.cover,
                                     ),
                                   ),

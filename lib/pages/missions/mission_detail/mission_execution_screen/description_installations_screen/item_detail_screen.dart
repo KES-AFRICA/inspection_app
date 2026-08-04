@@ -8,6 +8,7 @@ import 'package:inspec_app/utils/image_compress_helper.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
+import 'package:inspec_app/components/safe_file_image.dart';
 
 class ItemDetailScreen extends ConsumerStatefulWidget {
   final Mission mission;
@@ -67,8 +68,8 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
                 panEnabled: true,
                 minScale: 0.5,
                 maxScale: 3.0,
-                child: Image.file(
-                  File(widget.item.photoPaths[index]),
+                child: SafeFileImage(
+                  path: widget.item.photoPaths[index],
                   fit: BoxFit.contain,
                 ),
               ),

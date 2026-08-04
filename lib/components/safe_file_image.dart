@@ -6,6 +6,14 @@ import 'package:path_provider/path_provider.dart';
 class AppImageUtils {
   static String? _cachedDocDir;
 
+  /// Récupère ou met en cache le chemin des documents de l'app.
+  static Future<String> getAppDocDir() async {
+    if (_cachedDocDir != null) return _cachedDocDir!;
+    final dir = await getApplicationDocumentsDirectory();
+    _cachedDocDir = dir.path;
+    return _cachedDocDir!;
+  }
+
   /// Résolution synchrone (rapide si le fichier existe ou si le dossier app_flutter est en cache).
   static String? resolvePathSync(String? path) {
     if (path == null || path.trim().isEmpty) return null;
@@ -17,14 +25,17 @@ class AppImageUtils {
       if (direct.existsSync()) return direct.path;
 
       // 2. Ré-ancrage si le répertoire app_flutter courant est déjà en mémoire cache
-      if (_cachedDocDir != null && (cleanPath.contains('/audit_photos/') || cleanPath.contains('\\audit_photos\\'))) {
-        final separator = cleanPath.contains('\\audit_photos\\') ? '\\' : '/';
-        final keyword = '${separator}audit_photos${separator}';
-        final parts = cleanPath.split(keyword);
-        if (parts.length >= 2) {
-          final suffix = parts.sublist(1).join(keyword);
-          final reanchored = File('$_cachedDocDir${separator}audit_photos${separator}$suffix');
-          if (reanchored.existsSync()) return reanchored.path;
+      if (_cachedDocDir != null) {
+        for (final folderKeyword in ['audit_photos', 'client_logos']) {
+          if (cleanPath.contains(folderKeyword)) {
+            final separator = cleanPath.contains('\\$folderKeyword') ? '\\' : '/';
+            final idx = cleanPath.indexOf(folderKeyword);
+            if (idx != -1) {
+              final subPath = cleanPath.substring(idx);
+              final reanchored = File('$_cachedDocDir$separator$subPath');
+              if (reanchored.existsSync()) return reanchored.path;
+            }
+          }
         }
       }
     } catch (_) {}
@@ -44,14 +55,18 @@ class AppImageUtils {
       final appDir = await getApplicationDocumentsDirectory();
       _cachedDocDir = appDir.path;
 
-      if (cleanPath.contains('/audit_photos/') || cleanPath.contains('\\audit_photos\\')) {
-        final separator = cleanPath.contains('\\audit_photos\\') ? '\\' : '/';
-        final keyword = '${separator}audit_photos${separator}';
-        final parts = cleanPath.split(keyword);
-        if (parts.length >= 2) {
-          final suffix = parts.sublist(1).join(keyword);
-          final reanchored = File('${appDir.path}${separator}audit_photos${separator}$suffix');
-          if (await reanchored.exists()) return reanchored.path;
+      final direct = File(cleanPath);
+      if (await direct.exists()) return direct.path;
+
+      for (final folderKeyword in ['audit_photos', 'client_logos']) {
+        if (cleanPath.contains(folderKeyword)) {
+          final separator = cleanPath.contains('\\$folderKeyword') ? '\\' : '/';
+          final idx = cleanPath.indexOf(folderKeyword);
+          if (idx != -1) {
+            final subPath = cleanPath.substring(idx);
+            final reanchored = File('${appDir.path}$separator$subPath');
+            if (await reanchored.exists()) return reanchored.path;
+          }
         }
       }
     } catch (_) {}
@@ -72,6 +87,7 @@ class SafeFileImage extends StatefulWidget {
   final double? width;
   final double? height;
   final WidgetBuilder? errorBuilder;
+  final Widget? errorWidget;
 
   const SafeFileImage({
     Key? key,
@@ -80,6 +96,7 @@ class SafeFileImage extends StatefulWidget {
     this.width,
     this.height,
     this.errorBuilder,
+    this.errorWidget,
   }) : super(key: key);
 
   @override
@@ -126,6 +143,9 @@ class _SafeFileImageState extends State<SafeFileImage> {
   }
 
   Widget _buildFallback(BuildContext context) {
+    if (widget.errorWidget != null) {
+      return widget.errorWidget!;
+    }
     if (widget.errorBuilder != null) {
       return widget.errorBuilder!(context);
     }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_coffret_screen.dart';
+import 'package:inspec_app/components/safe_file_image.dart';
 
 class ObservationEnrichieWidget extends StatefulWidget {
   final ElementControle element;
@@ -316,17 +317,9 @@ class _ObservationEnrichieWidgetState extends State<ObservationEnrichieWidget> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(context.spacingS),
-                        child: Image.file(
-                          File(widget.element.photos[photoIndex]),
+                        child: SafeFileImage(
+                          path: widget.element.photos[photoIndex],
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) =>
-                              Container(
-                                color: Colors.grey.shade200,
-                                child: Icon(
-                                  Icons.broken_image,
-                                  color: Colors.grey.shade400,
-                                ),
-                              ),
                         ),
                       ),
                     ),

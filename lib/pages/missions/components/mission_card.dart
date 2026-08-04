@@ -7,6 +7,7 @@ import 'package:inspec_app/pages/missions/create_mission_screen.dart';
 import 'package:inspec_app/pages/missions/mission_hub/mission_hub_screen.dart';
 import 'package:inspec_app/services/backup_service.dart';
 import 'package:inspec_app/services/trash_service.dart';
+import 'package:inspec_app/components/safe_file_image.dart';
 
 /// Carte de mission moderne avec micro-interactions, badges dynamiques et menu 3-dots.
 class MissionCard extends StatefulWidget {
@@ -331,15 +332,11 @@ class _MissionCardState extends State<MissionCard> {
           errorBuilder: (_, __, ___) => _buildFallbackLogo(),
         );
       } else {
-        final file = File(logoPath);
-        if (file.existsSync()) {
-          imageWidget = Image.file(
-            file,
-            fit: BoxFit.contain,
-          );
-        } else {
-          return _buildFallbackLogo();
-        }
+        imageWidget = SafeFileImage(
+          path: logoPath,
+          fit: BoxFit.contain,
+          errorWidget: _buildFallbackLogo(),
+        );
       }
 
       return Container(
