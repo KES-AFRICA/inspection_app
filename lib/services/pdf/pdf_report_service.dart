@@ -718,16 +718,8 @@ class PdfReportService {
         entries.add(_SommaireEntry(titre: "Répartition par domaine de tension", key: 'stat_tension', level: 1));
       }
 
-      final diagReport = AuditDiagnosticEngine.runDiagnostic(mission.id);
-      final crossItems = inventory.getCrossCategoryAnalysis(
-        countMTLocaux: diagReport.countLocauxMT,
-        countBTLocaux: diagReport.countLocauxBT,
-        countCellules: diagReport.countCellules,
-        countTransfos: diagReport.countTransformateurs,
-        countGELocaux: diagReport.countGroupesElectrogenes,
-        countCoffrets: diagReport.countEquipements,
-      );
-      if (crossItems.isNotEmpty) {
+      final statsSummary = MissionStatisticsCollector.collectSummary(mission.id);
+      if (statsSummary.crossCategoryItems.isNotEmpty) {
         entries.add(_SommaireEntry(titre: "Non-conformités croisées par catégorie d'équipement", key: 'stat_croisee', level: 1));
       }
     } catch (_) {
@@ -1931,7 +1923,8 @@ class PdfReportService {
                 ],
               ),
               pw.SizedBox(height: 8),
-              pw.Expanded(
+              pw.Container(
+                height: 100,
                 child: pw.Row(
                   mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
                   crossAxisAlignment: pw.CrossAxisAlignment.end,
