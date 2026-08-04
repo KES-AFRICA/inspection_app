@@ -135,6 +135,10 @@ class MoyenneTensionLocal {
     if (transformateur != null && transformateurs.isEmpty) {
       transformateurs.add(transformateur!);
     }
+    DispositionsConstructivesRegistry.ensureCompleteLocalChecklists(
+      dispositionsConstructives: dispositionsConstructives,
+      conditionsExploitation: conditionsExploitation,
+    );
   }
   
   // GETTER POUR COMPATIBILITÉ (optionnel, peut être supprimé plus tard)

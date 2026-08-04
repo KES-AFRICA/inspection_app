@@ -1994,20 +1994,39 @@ class DispositionsConstructivesRegistry {
     "Contrôle du rapport de transformation et du couplage",
   ];
 
-  /// Assure l'exhaustivité des points de contrôle pour un local (auto-migration silencieuse).
+  /// Assure l'exhaustivité et le respect strict de l'ordre officiel des points de contrôle pour un local.
   /// Les points manquants sont ajoutés à leur position de référence avec estNA = true ("Sans objet").
   static void ensureCompleteLocalChecklists({
     required List<ElementControle> dispositionsConstructives,
     required List<ElementControle> conditionsExploitation,
   }) {
-    final existingDispKeys = dispositionsConstructives
-        .map((e) => _normalizeKey(e.elementControle))
-        .toSet();
+    // 1. Dispositions Constructives MT
+    final existingDispMap = <String, ElementControle>{};
+    for (final el in dispositionsConstructives) {
+      final normKey = _normalizeKey(el.elementControle);
+      existingDispMap[normKey] = el;
+    }
+
+    dispositionsConstructives.clear();
     for (final refTitle in allDispositionsConstructives) {
-      if (!existingDispKeys.contains(_normalizeKey(refTitle))) {
+      final targetKey = _normalizeKey(refTitle);
+      final meta = getMetadata(refTitle, localType: 'LOCAL_POSTE_HTA');
+      if (existingDispMap.containsKey(targetKey)) {
+        final el = existingDispMap[targetKey]!;
+        el.elementControle = refTitle;
+        if (meta != null) {
+          el.referenceNormative = meta.referenceNormative;
+          el.familleRisque = meta.familleRisque;
+          el.criticite = meta.criticite;
+        }
+        dispositionsConstructives.add(el);
+      } else {
         dispositionsConstructives.add(
           ElementControle(
             elementControle: refTitle,
+            referenceNormative: meta?.referenceNormative,
+            familleRisque: meta?.familleRisque,
+            criticite: meta?.criticite,
             conforme: null,
             estNA: true,
             priorite: 3,
@@ -2016,14 +2035,33 @@ class DispositionsConstructivesRegistry {
       }
     }
 
-    final existingCondKeys = conditionsExploitation
-        .map((e) => _normalizeKey(e.elementControle))
-        .toSet();
+    // 2. Conditions d'Exploitation MT
+    final existingCondMap = <String, ElementControle>{};
+    for (final el in conditionsExploitation) {
+      final normKey = _normalizeKey(el.elementControle);
+      existingCondMap[normKey] = el;
+    }
+
+    conditionsExploitation.clear();
     for (final refTitle in allConditionsExploitation) {
-      if (!existingCondKeys.contains(_normalizeKey(refTitle))) {
+      final targetKey = _normalizeKey(refTitle);
+      final meta = getMetadata(refTitle, localType: 'LOCAL_POSTE_HTA');
+      if (existingCondMap.containsKey(targetKey)) {
+        final el = existingCondMap[targetKey]!;
+        el.elementControle = refTitle;
+        if (meta != null) {
+          el.referenceNormative = meta.referenceNormative;
+          el.familleRisque = meta.familleRisque;
+          el.criticite = meta.criticite;
+        }
+        conditionsExploitation.add(el);
+      } else {
         conditionsExploitation.add(
           ElementControle(
             elementControle: refTitle,
+            referenceNormative: meta?.referenceNormative,
+            familleRisque: meta?.familleRisque,
+            criticite: meta?.criticite,
             conforme: null,
             estNA: true,
             priorite: 3,

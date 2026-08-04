@@ -1548,7 +1548,7 @@ class PdfReportService {
     widgets.add(pw.SizedBox(height: 12));
 
     // VI. Sous-section : Statistique par type de défaut (10 principales)
-    final topDefects = summary.topDefects;
+    final topDefects = inventory.getTopDefects(limit: 10);
     if (topDefects.isNotEmpty) {
       widgets.add(PageTracker(
         key: 'stat_defauts',
