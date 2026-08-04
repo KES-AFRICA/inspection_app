@@ -13,6 +13,7 @@ import 'dart:io';
 
 import 'package:inspec_app/services/dispositions_constructives_registry.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:inspec_app/components/safe_file_image.dart';
 
 class DetailCoffretScreen extends StatefulWidget {
   final Mission mission;
@@ -162,8 +163,8 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  File(photos[index]),
+                child: SafeFileImage(
+                  path: photos[index],
                   fit: BoxFit.contain,
                 ),
               ),
@@ -330,22 +331,11 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          File(photos[index]),
+                        child: SafeFileImage(
+                          path: photos[index],
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey.shade200,
-                              child: Center(
-                                child: Icon(
-                                  Icons.broken_image_outlined,
-                                  color: Colors.grey.shade400,
-                                ),
-                              ),
-                            );
-                          },
                         ),
                       ),
                     ),
@@ -619,20 +609,9 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
-                          child: Image.file(
-                            File(observation.photos[photoIndex]),
+                          child: SafeFileImage(
+                            path: observation.photos[photoIndex],
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey.shade200,
-                                child: Center(
-                                  child: Icon(
-                                    Icons.broken_image_outlined,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                ),
-                              );
-                            },
                           ),
                         ),
                       ),
@@ -807,20 +786,9 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
-                          child: Image.file(
-                            File(observation.photos[photoIndex]),
+                          child: SafeFileImage(
+                            path: observation.photos[photoIndex],
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey.shade200,
-                                child: Center(
-                                  child: Icon(
-                                    Icons.broken_image_outlined,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                ),
-                              );
-                            },
                           ),
                         ),
                       ),
@@ -1244,21 +1212,9 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
-                          child: Image.file(
-                            File(point.photos[photoIndex]),
+                          child: SafeFileImage(
+                            path: point.photos[photoIndex],
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey.shade200,
-                                child: Center(
-                                  child: Icon(
-                                    Icons.broken_image_outlined,
-                                    color: Colors.grey.shade400,
-                                    size: 20,
-                                  ),
-                                ),
-                              );
-                            },
                           ),
                         ),
                       ),

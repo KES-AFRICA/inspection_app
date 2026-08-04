@@ -111,6 +111,7 @@ class AuditFindingInventoryEngine {
         addFinding(AuditFinding(
           id: 'foudre_hash_${hash}_obs_$i',
           missionId: missionId,
+          tensionDomain: TensionDomain.bt,
           origin: 'Module Foudre',
           objectType: 'Foudre',
           objectName: 'Installation Foudre',
@@ -226,6 +227,7 @@ class AuditFindingInventoryEngine {
         addFinding(AuditFinding(
           id: 'mt_local_${localHash}_dc_$i',
           missionId: missionId,
+          tensionDomain: TensionDomain.mt,
           origin: originNom,
           objectType: 'Local MT',
           objectName: local.nom,
@@ -249,6 +251,7 @@ class AuditFindingInventoryEngine {
         addFinding(AuditFinding(
           id: 'mt_local_${localHash}_ce_$i',
           missionId: missionId,
+          tensionDomain: TensionDomain.mt,
           origin: originNom,
           objectType: 'Local MT',
           objectName: local.nom,
@@ -275,11 +278,12 @@ class AuditFindingInventoryEngine {
           addFinding(AuditFinding(
             id: 'mt_local_${localHash}_cell_${i}_el_$j',
             missionId: missionId,
+            tensionDomain: TensionDomain.mt,
             origin: '$originNom > Cellule ${cellule.fonction}',
             objectType: 'Cellule MT',
-            objectName: cellule.fonction,
+            objectName: itemLabel,
             tableName: 'Tableau Cellule',
-            verificationPoint: '$itemLabel - ${el.elementControle}',
+            verificationPoint: el.elementControle,
             observationText: el.observation?.isNotEmpty == true ? el.observation! : el.elementControle,
             conformity: 'non',
             criticality: _resolveCriticalityString(el, localType: localType),
@@ -302,11 +306,12 @@ class AuditFindingInventoryEngine {
           addFinding(AuditFinding(
             id: 'mt_local_${localHash}_transfo_${i}_el_$j',
             missionId: missionId,
+            tensionDomain: TensionDomain.mt,
             origin: '$originNom > Transformateur ${i + 1}',
             objectType: 'Transformateur MT/BT',
-            objectName: 'Transformateur ${i + 1}',
+            objectName: itemLabel,
             tableName: 'Tableau Transformateur',
-            verificationPoint: '$itemLabel - ${el.elementControle}',
+            verificationPoint: el.elementControle,
             observationText: el.observation?.isNotEmpty == true ? el.observation! : el.elementControle,
             conformity: 'non',
             criticality: _resolveCriticalityString(el, localType: localType),
@@ -328,6 +333,7 @@ class AuditFindingInventoryEngine {
         originNom: originNom,
         addFinding: addFinding,
         visitedCoffrets: visitedCoffrets,
+        defaultTensionDomain: TensionDomain.mt,
       );
     }
   }
@@ -355,6 +361,7 @@ class AuditFindingInventoryEngine {
           addFinding(AuditFinding(
             id: 'bt_local_${localHash}_dc_$i',
             missionId: missionId,
+            tensionDomain: TensionDomain.bt,
             origin: originNom,
             objectType: typeObjetName,
             objectName: local.nom,
@@ -380,6 +387,7 @@ class AuditFindingInventoryEngine {
           addFinding(AuditFinding(
             id: 'bt_local_${localHash}_ce_$i',
             missionId: missionId,
+            tensionDomain: TensionDomain.bt,
             origin: originNom,
             objectType: typeObjetName,
             objectName: local.nom,
@@ -406,6 +414,7 @@ class AuditFindingInventoryEngine {
         originNom: originNom,
         addFinding: addFinding,
         visitedCoffrets: visitedCoffrets,
+        defaultTensionDomain: TensionDomain.bt,
       );
     }
   }
@@ -416,6 +425,7 @@ class AuditFindingInventoryEngine {
     required String originNom,
     required Function(AuditFinding) addFinding,
     required Set<int> visitedCoffrets,
+    TensionDomain defaultTensionDomain = TensionDomain.bt,
   }) {
     final coffretHash = identityHashCode(coffret);
     if (visitedCoffrets.contains(coffretHash)) return;
@@ -425,12 +435,9 @@ class AuditFindingInventoryEngine {
     final typeEquipementStr = coffret.type.isNotEmpty ? coffret.type : 'Équipement';
 
     // Points de vérification non conformes
-    // La criticité est TOUJOURS résolue via le libellé du point de vérification parent
-    // en consultant le registre coffret (_coffretRegistry), PAS via le texte de l'observation.
     for (var i = 0; i < coffret.pointsVerification.length; i++) {
       final pv = coffret.pointsVerification[i];
       if (_isNonConforme(pv.conformite)) {
-        // Résolution unique de la criticité pour CE point de vérification
         final resolvedCriticality = _resolvePointVerificationCriticality(pv, coffret.type);
         final resolvedNormRef = _resolvePointVerificationNormRef(pv, coffret.type);
         final resolvedRiskFamily = _resolvePointVerificationRiskFamily(pv, coffret.type);
@@ -438,14 +445,13 @@ class AuditFindingInventoryEngine {
         if (pv.observations != null && pv.observations!.isNotEmpty) {
           for (var j = 0; j < pv.observations!.length; j++) {
             final obs = pv.observations![j];
-            // L'observation peut porter sa propre criticité explicite (saisie par l'inspecteur).
-            // Sinon, on hérite de la criticité du point de vérification parent.
             final obsCriticality = (obs.criticite?.trim().isNotEmpty == true)
                 ? _normalizeCriticalityLabel(obs.criticite!)
                 : resolvedCriticality;
             addFinding(AuditFinding(
               id: 'eq_${coffretHash}_pv_${i}_obs_$j',
               missionId: missionId,
+              tensionDomain: defaultTensionDomain,
               origin: originNom,
               objectType: typeEquipementStr,
               objectName: coffret.nom,
@@ -465,6 +471,7 @@ class AuditFindingInventoryEngine {
           addFinding(AuditFinding(
             id: 'eq_${coffretHash}_pv_$i',
             missionId: missionId,
+            tensionDomain: defaultTensionDomain,
             origin: originNom,
             objectType: typeEquipementStr,
             objectName: coffret.nom,
@@ -483,9 +490,6 @@ class AuditFindingInventoryEngine {
       }
     }
 
-    // Note : les observations libres des équipements sont exclues du périmètre statistique
-    // (elles n'ont pas de criticité normative et ne sont pas des points de vérification).
-
     // Observations parafoudre enrichies
     if (coffret.presenceParafoudre) {
       if (coffret.observationsParafoudreEnrichies != null) {
@@ -495,6 +499,7 @@ class AuditFindingInventoryEngine {
             addFinding(AuditFinding(
               id: 'eq_${coffretHash}_parafoudre_$i',
               missionId: missionId,
+              tensionDomain: defaultTensionDomain,
               origin: originNom,
               objectType: typeEquipementStr,
               objectName: '${coffret.nom} (Parafoudre)',

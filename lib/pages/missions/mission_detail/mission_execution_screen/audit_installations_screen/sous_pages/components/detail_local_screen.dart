@@ -17,6 +17,7 @@ import 'dart:io';
 
 import 'package:inspec_app/services/dispositions_constructives_registry.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:inspec_app/components/safe_file_image.dart';
 
 class DetailLocalScreen extends StatefulWidget {
   final Mission mission;
@@ -292,7 +293,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.file(File(photos[index]), fit: BoxFit.contain),
+                child: SafeFileImage(path: photos[index], fit: BoxFit.contain),
               ),
             ),
             Positioned(
@@ -463,22 +464,11 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          File(photos[index]),
+                        child: SafeFileImage(
+                          path: photos[index],
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey.shade200,
-                              child: Center(
-                                child: Icon(
-                                  Icons.broken_image_outlined,
-                                  color: Colors.grey.shade400,
-                                ),
-                              ),
-                            );
-                          },
                         ),
                       ),
                     ),
@@ -769,20 +759,9 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                         ),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(4),
-                          child: Image.file(
-                            File(observation.photos[photoIndex]),
+                          child: SafeFileImage(
+                            path: observation.photos[photoIndex],
                             fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Container(
-                                color: Colors.grey.shade200,
-                                child: Center(
-                                  child: Icon(
-                                    Icons.broken_image_outlined,
-                                    color: Colors.grey.shade400,
-                                  ),
-                                ),
-                              );
-                            },
                           ),
                         ),
                       ),
@@ -1652,21 +1631,9 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(4),
-                        child: Image.file(
-                          File(element.photos[photoIndex]),
+                        child: SafeFileImage(
+                          path: element.photos[photoIndex],
                           fit: BoxFit.cover,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey.shade200,
-                              child: Center(
-                                child: Icon(
-                                  Icons.broken_image_outlined,
-                                  color: Colors.grey.shade400,
-                                  size: 20,
-                                ),
-                              ),
-                            );
-                          },
                         ),
                       ),
                     ),

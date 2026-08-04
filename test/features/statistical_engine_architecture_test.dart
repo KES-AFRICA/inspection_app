@@ -11,6 +11,7 @@ void main() {
         AuditFinding(
           id: 'f1',
           missionId: 'm1',
+          tensionDomain: TensionDomain.mt,
           origin: 'Local MT 1',
           objectType: 'Local MT',
           objectName: 'Poste HTA',
@@ -24,6 +25,7 @@ void main() {
         AuditFinding(
           id: 'f2',
           missionId: 'm1',
+          tensionDomain: TensionDomain.mt,
           origin: 'Local MT 1',
           objectType: 'Cellule MT',
           objectName: 'Cellule Arrivée',
@@ -37,6 +39,7 @@ void main() {
         AuditFinding(
           id: 'f3',
           missionId: 'm1',
+          tensionDomain: TensionDomain.bt,
           origin: 'Local BT 1',
           objectType: 'Coffret',
           objectName: 'Coffret Divisionnaire',
@@ -63,15 +66,15 @@ void main() {
     test('getTopDefects should correctly group and rank verification points', () {
       final findings = [
         AuditFinding(
-          id: 'f1', missionId: 'm1', origin: 'Local MT', objectType: 'Local MT', objectName: 'Poste',
+          id: 'f1', missionId: 'm1', tensionDomain: TensionDomain.mt, origin: 'Local MT', objectType: 'Local MT', objectName: 'Poste',
           tableName: 'DC', verificationPoint: 'Signalisation', observationText: 'Obs 1', conformity: 'non', criticality: 'Majeure',
         ),
         AuditFinding(
-          id: 'f2', missionId: 'm1', origin: 'Local BT', objectType: 'Local BT', objectName: 'TGBT',
+          id: 'f2', missionId: 'm1', tensionDomain: TensionDomain.bt, origin: 'Local BT', objectType: 'Local BT', objectName: 'TGBT',
           tableName: 'DC', verificationPoint: 'Signalisation', observationText: 'Obs 2', conformity: 'non', criticality: 'Mineure',
         ),
         AuditFinding(
-          id: 'f3', missionId: 'm1', origin: 'Local BT', objectType: 'Coffret', objectName: 'Coffret A',
+          id: 'f3', missionId: 'm1', tensionDomain: TensionDomain.bt, origin: 'Local BT', objectType: 'Coffret', objectName: 'Coffret A',
           tableName: 'PV', verificationPoint: 'Mise à la terre', observationText: 'Obs 3', conformity: 'non', criticality: 'Critique',
         ),
       ];
@@ -91,15 +94,15 @@ void main() {
     test('getRiskFamilyStats should compute risk family counts and percentages', () {
       final findings = [
         AuditFinding(
-          id: 'f1', missionId: 'm1', origin: 'Local MT', objectType: 'Local MT', objectName: 'Poste',
+          id: 'f1', missionId: 'm1', tensionDomain: TensionDomain.mt, origin: 'Local MT', objectType: 'Local MT', objectName: 'Poste',
           tableName: 'DC', verificationPoint: 'Point 1', observationText: 'Obs 1', conformity: 'non', criticality: 'Majeure', riskFamily: 'Risque Électrique',
         ),
         AuditFinding(
-          id: 'f2', missionId: 'm1', origin: 'Local BT', objectType: 'Local BT', objectName: 'TGBT',
+          id: 'f2', missionId: 'm1', tensionDomain: TensionDomain.bt, origin: 'Local BT', objectType: 'Local BT', objectName: 'TGBT',
           tableName: 'DC', verificationPoint: 'Point 2', observationText: 'Obs 2', conformity: 'non', criticality: 'Critique', riskFamily: 'Risque Incendie',
         ),
         AuditFinding(
-          id: 'f3', missionId: 'm1', origin: 'Local BT', objectType: 'Coffret', objectName: 'Coffret A',
+          id: 'f3', missionId: 'm1', tensionDomain: TensionDomain.bt, origin: 'Local BT', objectType: 'Coffret', objectName: 'Coffret A',
           tableName: 'PV', verificationPoint: 'Point 3', observationText: 'Obs 3', conformity: 'non', criticality: 'Mineure', riskFamily: 'Risque Électrique',
         ),
       ];
@@ -119,11 +122,11 @@ void main() {
     test('getTensionDomainStats should distinguish MT vs BT findings', () {
       final findings = [
         AuditFinding(
-          id: 'f1', missionId: 'm1', origin: 'Local MT 1', objectType: 'Cellule MT', objectName: 'Cellule A',
+          id: 'f1', missionId: 'm1', tensionDomain: TensionDomain.mt, origin: 'Local MT 1', objectType: 'Cellule MT', objectName: 'Cellule A',
           tableName: 'Tableau Cellule', verificationPoint: 'Point MT', observationText: 'Obs MT', conformity: 'non', criticality: 'Majeure',
         ),
         AuditFinding(
-          id: 'f2', missionId: 'm1', origin: 'Local BT 1', objectType: 'Coffret', objectName: 'Coffret BT',
+          id: 'f2', missionId: 'm1', tensionDomain: TensionDomain.bt, origin: 'Local BT 1', objectType: 'Coffret', objectName: 'Coffret BT',
           tableName: 'Points de vérification', verificationPoint: 'Point BT', observationText: 'Obs BT', conformity: 'non', criticality: 'Mineure',
         ),
       ];
@@ -141,7 +144,7 @@ void main() {
     test('MissionStatisticsSummary.fromInventory should generate a complete summary container', () {
       final findings = [
         AuditFinding(
-          id: 'f1', missionId: 'm_test', origin: 'Local MT', objectType: 'Local MT', objectName: 'Poste',
+          id: 'f1', missionId: 'm_test', tensionDomain: TensionDomain.mt, origin: 'Local MT', objectType: 'Local MT', objectName: 'Poste',
           tableName: 'DC', verificationPoint: 'Signalisation', observationText: 'Obs', conformity: 'non', criticality: 'Critique', riskFamily: 'Risque Électrique',
         ),
       ];

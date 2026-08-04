@@ -14,10 +14,11 @@ import 'package:inspec_app/features/mesures_essais/presentation/providers/mesure
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
+import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'dart:convert';
 import 'dart:async';
-import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'observation_enrichie_widget.dart';
+import 'package:inspec_app/components/safe_file_image.dart';
 
 // ================================================================
 // EXTENSION RESPONSIVE
@@ -561,7 +562,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
                             ),
                             child: ClipRRect(
                               borderRadius: BorderRadius.circular(context.spacingS),
-                              child: Image.file(File(photos[index]), fit: BoxFit.cover),
+                              child: SafeFileImage(path: photos[index], fit: BoxFit.cover),
                             ),
                           ),
                           Positioned(
@@ -787,7 +788,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
                         decoration: BoxDecoration(borderRadius: BorderRadius.circular(context.spacingS)),
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(context.spacingS),
-                          child: Image.file(File(widget.observationPhotos[i]), fit: BoxFit.cover),
+                          child: SafeFileImage(path: widget.observationPhotos[i], fit: BoxFit.cover),
                         ),
                       ),
                     ),
@@ -854,7 +855,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
               itemBuilder: (ctx, i) => Container(
                 width: context.screenWidth * 0.15,
                 margin: EdgeInsets.only(right: context.spacingS),
-                child: ClipRRect(borderRadius: BorderRadius.circular(context.spacingXS), child: Image.file(File(obs.photos[i]), fit: BoxFit.cover)),
+                child: ClipRRect(borderRadius: BorderRadius.circular(context.spacingXS), child: SafeFileImage(path: obs.photos[i], fit: BoxFit.cover)),
               ),
             ),
           ),
@@ -946,7 +947,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.file(File(photos[index])),
+                child: SafeFileImage(path: photos[index], fit: BoxFit.contain),
               ),
             ),
             Positioned(

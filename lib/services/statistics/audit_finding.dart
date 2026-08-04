@@ -13,12 +13,16 @@ class EquipmentInventoryItem {
   });
 }
 
+/// Domaine de tension d'un constat d'audit.
+enum TensionDomain { mt, bt }
+
 /// Modèle d'occurrence individuelle d'inventaire représentant une ligne non conforme constatée.
 class AuditFinding {
   final String id;
   final String missionId;
 
   // Localisation & Contexte
+  final TensionDomain tensionDomain; // Domaine de tension (MT vs BT)
   final String origin;           // "Local MT", "Local BT", "Zone MT", "Zone BT", "Groupe Électrogène", "Foudre"
   final String objectType;       // "Local MT", "Local BT", "Cellule MT", "Transformateur MT/BT", "Coffret", "Armoire", "TGBT", "Inverseur", "Foudre"
   final String objectName;       // Nom de l'équipement ou du local
@@ -38,6 +42,7 @@ class AuditFinding {
   AuditFinding({
     required this.id,
     required this.missionId,
+    required this.tensionDomain,
     required this.origin,
     required this.objectType,
     required this.objectName,
@@ -244,13 +249,7 @@ class AuditFindingInventory {
     int bt = 0;
 
     for (final f in findings) {
-      final origLower = f.origin.toLowerCase();
-      final typeLower = f.objectType.toLowerCase();
-
-      if (origLower.contains('mt') ||
-          typeLower.contains('mt') ||
-          typeLower.contains('cellule') ||
-          typeLower.contains('transformateur')) {
+      if (f.tensionDomain == TensionDomain.mt) {
         mt++;
       } else {
         bt++;

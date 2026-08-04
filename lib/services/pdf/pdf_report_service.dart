@@ -1788,7 +1788,7 @@ class PdfReportService {
         _subTitle('R\u00e9partition des non-conformit\u00e9s par domaine de tension'),
         pw.SizedBox(height: 6),
         pw.Container(
-          height: 110,
+          height: 130,
           padding: const pw.EdgeInsets.all(8),
           decoration: pw.BoxDecoration(
             border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
@@ -1814,7 +1814,7 @@ class PdfReportService {
                         pw.SizedBox(height: 2),
                         pw.Container(
                           width: 45,
-                          height: stats.totalCount > 0 ? (stats.mtCount / stats.totalCount) * 55 + 4 : 4,
+                          height: stats.totalCount > 0 ? (stats.mtCount / stats.totalCount) * 45 + 4 : 4,
                           decoration: pw.BoxDecoration(
                             color: headerColor,
                             borderRadius: const pw.BorderRadius.vertical(top: pw.Radius.circular(3)),
@@ -1831,7 +1831,7 @@ class PdfReportService {
                         pw.SizedBox(height: 2),
                         pw.Container(
                           width: 45,
-                          height: stats.totalCount > 0 ? (stats.btCount / stats.totalCount) * 55 + 4 : 4,
+                          height: stats.totalCount > 0 ? (stats.btCount / stats.totalCount) * 45 + 4 : 4,
                           decoration: pw.BoxDecoration(
                             color: headerColor,
                             borderRadius: const pw.BorderRadius.vertical(top: pw.Radius.circular(3)),

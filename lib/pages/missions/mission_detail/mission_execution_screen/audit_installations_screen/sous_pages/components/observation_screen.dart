@@ -7,6 +7,7 @@ import 'package:inspec_app/constants/app_theme.dart';
 import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
+import 'package:inspec_app/components/safe_file_image.dart';
 
 class ObservationScreen extends StatefulWidget {
   final ObservationLibre? observation; // null pour création, non-null pour édition
@@ -163,8 +164,8 @@ class _ObservationScreenState extends State<ObservationScreen> {
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.file(
-                  File(_photos[index]),
+                child: SafeFileImage(
+                  path: _photos[index],
                   fit: BoxFit.contain,
                 ),
               ),
@@ -255,22 +256,11 @@ class _ObservationScreenState extends State<ObservationScreen> {
                       ),
                       child: ClipRRect(
                         borderRadius: BorderRadius.circular(8),
-                        child: Image.file(
-                          File(_photos[index]),
+                        child: SafeFileImage(
+                          path: _photos[index],
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Container(
-                              color: Colors.grey.shade200,
-                              child: Center(
-                                child: Icon(
-                                  Icons.broken_image_outlined,
-                                  color: Colors.grey.shade400,
-                                ),
-                              ),
-                            );
-                          },
                         ),
                       ),
                     ),
