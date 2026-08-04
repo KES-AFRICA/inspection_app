@@ -1463,6 +1463,230 @@ class PdfReportService {
     );
   }
 
+  static String _formatDateRangeFrench(DateTime? start, DateTime? end) {
+    if (start == null && end == null) {
+      return _formatDate(DateTime.now());
+    }
+    final s = start ?? end!;
+    final e = end ?? start!;
+
+    final months = [
+      '', 'janvier', 'février', 'mars', 'avril', 'mai', 'juin',
+      'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'
+    ];
+
+    if (s.year == e.year && s.month == e.month && s.day == e.day) {
+      return 'le ${s.day} ${months[s.month]} ${s.year}';
+    }
+
+    if (s.year == e.year && s.month == e.month) {
+      if (e.day == s.day + 1) {
+        return 'les ${s.day} et ${e.day} ${months[s.month]} ${s.year}';
+      } else {
+        return 'du ${s.day} au ${e.day} ${months[s.month]} ${s.year}';
+      }
+    }
+
+    if (s.year == e.year) {
+      return 'du ${s.day} ${months[s.month]} au ${e.day} ${months[e.month]} ${s.year}';
+    }
+
+    return 'du ${s.day} ${months[s.month]} ${s.year} au ${e.day} ${months[e.month]} ${e.year}';
+  }
+
+  static pw.Widget _buildBulletItemRow({
+    required String countText,
+    required String label,
+    required String pctText,
+    required bool isLast,
+  }) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(left: 14, bottom: 4),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text('•  ', style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey)),
+          pw.Expanded(
+            child: pw.RichText(
+              text: pw.TextSpan(
+                style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey),
+                children: [
+                  pw.TextSpan(text: countText, style: pw.TextStyle(font: _fontBold)),
+                  pw.TextSpan(text: label),
+                  pw.TextSpan(text: ', soit '),
+                  pw.TextSpan(text: '$pctText %', style: pw.TextStyle(font: _fontBold)),
+                  pw.TextSpan(text: isLast ? '.' : ' ;'),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Construit la section « RÉSUMÉ EXÉCUTIF » entièrement dynamique, alimentée
+  /// par notre architecture statistique centralisée et les métadonnées de la mission.
+  static List<pw.Widget> _buildResumeExecutif(
+    Mission mission,
+    Map<String, int> trackedPages,
+    String numeroRapportDoc,
+  ) {
+    final widgets = <pw.Widget>[];
+
+    // Source unique de vérité pour les statistiques
+    final summary = MissionStatisticsCollector.collectSummary(mission.id);
+    final cStats = summary.criticalityStats;
+
+    // Renseignements généraux de la mission
+    final rg = HiveService.getRenseignementsGenerauxByMissionId(mission.id);
+
+    // 1. Métadonnées dynamiques
+    final siteNameRaw = (rg?.nomSite != null && rg!.nomSite.trim().isNotEmpty)
+        ? rg.nomSite.trim()
+        : ((rg?.etablissement != null && rg!.etablissement.trim().isNotEmpty)
+            ? rg.etablissement.trim()
+            : mission.nomClient.trim());
+    
+    final siteNameLabel = siteNameRaw;
+
+    final natureMission = (rg?.verificationType != null && rg!.verificationType!.trim().isNotEmpty)
+        ? rg.verificationType!.trim()
+        : ((mission.natureMission != null && mission.natureMission!.trim().isNotEmpty)
+            ? mission.natureMission!.trim()
+            : 'vérification périodique réglementaire');
+
+    final dateStart = rg?.dateDebut ?? mission.dateIntervention;
+    final dateEnd = rg?.dateFin;
+    final dateText = _formatDateRangeFrench(dateStart, dateEnd);
+    final annee = (dateStart ?? DateTime.now()).year;
+
+    final tensionStats = summary.tensionDomainStats;
+    final domainStr = (tensionStats.mtCount > 0) ? 'moyenne et basse tension' : 'basse tension';
+
+    final total = cStats.total;
+    final critique = cStats.critique;
+    final majeure = cStats.majeure;
+    final mineure = cStats.mineure;
+
+    final pctCritiqueStr = cStats.pctCritique.toStringAsFixed(1).replaceAll('.', ',');
+    final pctMajeureStr = cStats.pctMajeure.toStringAsFixed(1).replaceAll('.', ',');
+    final pctMineureStr = cStats.pctMineure.toStringAsFixed(1).replaceAll('.', ',');
+
+    // Entête de section RÉSUMÉ EXÉCUTIF
+    widgets.add(PageTracker(
+      key: 'resume_executif',
+      registry: trackedPages,
+      child: _sectionBox('RESUME EXECUTIF'),
+    ));
+    widgets.add(pw.SizedBox(height: 14));
+
+    // Paragraphe 1: Contexte et périmètre
+    widgets.add(pw.RichText(
+      textAlign: pw.TextAlign.justify,
+      text: pw.TextSpan(
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        children: [
+          pw.TextSpan(text: 'Dans le cadre de'),
+          pw.TextSpan(text: '${natureMission.toLowerCase()} ', style: pw.TextStyle(font: _fontBold)),
+          pw.TextSpan(text: 'des installations électriques du site '),
+          pw.TextSpan(text: siteNameLabel, style: pw.TextStyle(font: _fontBold)),
+          pw.TextSpan(text: ', KES INSPECTIONS & PROJECTS a procédé, '),
+          pw.TextSpan(text: '$dateText, ', style: pw.TextStyle(font: _fontBold)),
+          pw.TextSpan(text: 'à l\'examen des installations électriques '),
+          pw.TextSpan(text: domainStr),
+          pw.TextSpan(text: ' du site. La mission couvre l\'ensemble des installations électriques et vise notamment à apprécier leur état de conservation, leur niveau de sécurité et leur conformité aux prescriptions réglementaires et normatives applicables.'),
+        ],
+      ),
+    ));
+    widgets.add(pw.SizedBox(height: 12));
+
+    // Paragraphe 2: Synthèse chiffrée
+    widgets.add(pw.RichText(
+      textAlign: pw.TextAlign.justify,
+      text: pw.TextSpan(
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        children: [
+          pw.TextSpan(text: 'L\'analyse de la campagne '),
+          pw.TextSpan(text: '$annee', style: pw.TextStyle(font: _fontBold)),
+          pw.TextSpan(text: ' fait ressortir un total de '),
+          pw.TextSpan(text: '$total non-conformité${total > 1 ? 's' : ''}', style: pw.TextStyle(font: _fontBold)),
+          pw.TextSpan(text: ', réparties comme suit :'),
+        ],
+      ),
+    ));
+    widgets.add(pw.SizedBox(height: 8));
+
+    // Liste à puces des NCs
+    widgets.add(_buildBulletItemRow(
+      countText: '$critique',
+      label: ' non-conformité${critique > 1 ? 's' : ''} critique${critique > 1 ? 's' : ''}',
+      pctText: pctCritiqueStr,
+      isLast: false,
+    ));
+    widgets.add(_buildBulletItemRow(
+      countText: '$majeure',
+      label: ' non-conformité${majeure > 1 ? 's' : ''} majeure${majeure > 1 ? 's' : ''}',
+      pctText: pctMajeureStr,
+      isLast: false,
+    ));
+    widgets.add(_buildBulletItemRow(
+      countText: '$mineure',
+      label: ' non-conformité${mineure > 1 ? 's' : ''} mineure${mineure > 1 ? 's' : ''}',
+      pctText: pctMineureStr,
+      isLast: true,
+    ));
+    widgets.add(pw.SizedBox(height: 12));
+
+    // Paragraphe 3: Niveau de risque global
+    pw.TextSpan riskRich;
+    if (total == 0) {
+      riskRich = pw.TextSpan(
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        children: [
+          pw.TextSpan(text: 'L\'examen approfondi des installations n\'a révélé '),
+          pw.TextSpan(text: 'aucune non-conformité', style: pw.TextStyle(font: _fontBold)),
+          pw.TextSpan(text: ' lors de la présente vérification, attestant d\'un excellent niveau de conservation et de conformité des équipements du site.'),
+        ],
+      );
+    } else if (critique > 0 || (critique + majeure) / total >= 0.4) {
+      riskRich = pw.TextSpan(
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        children: [
+          pw.TextSpan(text: 'La proportion élevée de non-conformités '),
+          pw.TextSpan(text: 'critiques et majeures', style: pw.TextStyle(font: _fontBold)),
+          pw.TextSpan(text: ' montre que le niveau de risque demeure significatif et nécessite la poursuite d\'un programme structuré de mise en conformité.'),
+        ],
+      );
+    } else {
+      riskRich = pw.TextSpan(
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        children: [
+          pw.TextSpan(text: 'La répartition des observations montre une prédominance de non-conformités '),
+          pw.TextSpan(text: 'mineures', style: pw.TextStyle(font: _fontBold)),
+          pw.TextSpan(text: ', traduisant un niveau de risque globalement maîtrisé, nécessitant néanmoins la programmation d\'actions correctives ciblées.'),
+        ],
+      );
+    }
+    widgets.add(pw.RichText(textAlign: pw.TextAlign.justify, text: riskRich));
+    widgets.add(pw.SizedBox(height: 12));
+
+    // Paragraphe 4: Situation de référence (baseline)
+    widgets.add(pw.RichText(
+      textAlign: pw.TextAlign.justify,
+      text: pw.TextSpan(
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        children: [
+          pw.TextSpan(text: 'La campagne '),
+          pw.TextSpan(text: '$annee', style: pw.TextStyle(font: _fontBold)),
+          pw.TextSpan(text: ' doit ainsi servir de nouvelle situation de référence pour la mise en place d\'un suivi systématique des non-conformités, permettant, lors des prochaines vérifications, de distinguer clairement les observations levées, maintenues, nouvelles et devenues sans objet.'),
+        ],
+      ),
+    ));
+
+    return widgets;
+  }
+
   static List<pw.Widget> _buildAnalyseStatistique(
     Mission mission,
     Map<String, int> trackedPages,
@@ -7297,13 +7521,7 @@ class PdfReportService {
 
           // ─── RÉSUMÉ EXÉCUTIF (Démarre sur une nouvelle page juste après Mesures de Sécurité) ───
           pw.NewPage(),
-          PageTracker(
-            key: 'resume_executif',
-            registry: trackedPages,
-            child: _sectionBox('RESUME EXECUTIF'),
-          ),
-          pw.SizedBox(height: 14),
-          pw.Container(width: double.infinity, height: 80),
+          ..._buildResumeExecutif(mission, trackedPages, numeroRapportDoc),
 
           // ─── ANALYSE STATISTIQUE (Démarre sur une nouvelle page juste après Résumé Exécutif) ───
           pw.NewPage(),
