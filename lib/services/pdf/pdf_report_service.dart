@@ -4311,10 +4311,12 @@ class PdfReportService {
             child: pw.Text(label,
                 style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
           ),
-          pw.Padding(
+          pw.Container(
             padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            alignment: pw.Alignment.center,
             child: pw.Text(value,
-                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                textAlign: pw.TextAlign.center),
           ),
         ],
       );
@@ -4548,10 +4550,12 @@ class PdfReportService {
             child: pw.Text(label,
                 style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
           ),
-          pw.Padding(
+          pw.Container(
             padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            alignment: pw.Alignment.center,
             child: pw.Text(value,
-                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                textAlign: pw.TextAlign.center),
           ),
         ],
       );
@@ -6484,14 +6488,30 @@ class PdfReportService {
     final equipmentGroups = <_EquipmentPhotoGroup>[];
     final seenPaths = <String>{};
 
-    void addGeneralPhotos(List<String>? paths, String desc, {String? repere, bool isObservation = false}) {
+    void addGeneralPhotos(
+      List<String>? paths,
+      String desc, {
+      String? repere,
+      bool isObservation = false,
+      String? badgeLabel,
+      PdfColor? badgeBgColor,
+      PdfColor? badgeTextColor,
+    }) {
       if (paths == null || paths.isEmpty) return;
       for (var p in paths) {
         final trimmed = p.trim();
         if (trimmed.isEmpty) continue;
         if (!seenPaths.contains(trimmed)) {
           seenPaths.add(trimmed);
-          generalPhotos.add(_PhotoEntry(filePath: trimmed, description: desc, repere: repere, isObservation: isObservation));
+          generalPhotos.add(_PhotoEntry(
+            filePath: trimmed,
+            description: desc,
+            repere: repere,
+            isObservation: isObservation,
+            badgeLabel: badgeLabel ?? (isObservation ? 'ANOMALIE' : null),
+            badgeBgColor: badgeBgColor ?? (isObservation ? PdfColors.white : null),
+            badgeTextColor: badgeTextColor ?? (isObservation ? PdfColors.red700 : null),
+          ));
         }
       }
     }
@@ -6534,7 +6554,7 @@ class PdfReportService {
         );
       }
 
-      // 3. Photos d'observations
+      // 3. Photos d'observations (Équipements)
       final obsEntries = <_PhotoEntry>[];
       void addObsPhoto(List<String>? paths, String desc) {
         if (paths == null) return;
@@ -6547,6 +6567,9 @@ class PdfReportService {
               description: desc,
               repere: repVal,
               isObservation: true,
+              badgeLabel: 'ANOMALIE',
+              badgeBgColor: PdfColors.white,
+              badgeTextColor: PdfColors.red700,
             ));
           }
         }
@@ -6572,13 +6595,24 @@ class PdfReportService {
       );
     }
 
+    // Palette des badges par catégorie d'élément
+    final localBadgeColor = PdfColor.fromInt(0xFF0F766E); // Deep Teal
+    final zoneBadgeColor = PdfColor.fromInt(0xFF4338CA);  // Dark Indigo
+    final celluleBadgeColor = PdfColor.fromInt(0xFF0369A1); // Sky/Cyan Blue
+
     // 1. Photos Description des installations
     if (description != null) {
       void addItems(List<InstallationItem>? items, String categoryLabel) {
         if (items == null) return;
         for (var item in items) {
           final nomItem = item.data['nom'] ?? item.data['Nom'] ?? (item.data.isNotEmpty ? item.data.values.first : '');
-          addGeneralPhotos(item.photoPaths, 'Description - $categoryLabel${nomItem.isNotEmpty ? ' : $nomItem' : ''}');
+          addGeneralPhotos(
+            item.photoPaths,
+            'Description - $categoryLabel${nomItem.isNotEmpty ? ' : $nomItem' : ''}',
+            badgeLabel: 'DESCRIPTION',
+            badgeBgColor: PdfColor.fromInt(0xFF1E3A8A),
+            badgeTextColor: PdfColors.white,
+          );
         }
       }
       addItems(description.alimentationMoyenneTension, 'Alimentation MT');
@@ -6592,32 +6626,95 @@ class PdfReportService {
 
     // 2. Photos Audit des installations électriques
     if (audit != null) {
-      addGeneralPhotos(audit.photos, "Général Audit");
+      addGeneralPhotos(
+        audit.photos,
+        "Général Audit",
+        badgeLabel: 'AUDIT',
+        badgeBgColor: PdfColor.fromInt(0xFF1E3A8A),
+        badgeTextColor: PdfColors.white,
+      );
       
       // Moyenne Tension Locaux
       for (var local in audit.moyenneTensionLocaux) {
-        addGeneralPhotos(local.photos, local.nom);
+        addGeneralPhotos(
+          local.photos,
+          'Local : ${local.nom}',
+          badgeLabel: 'LOCAL',
+          badgeBgColor: localBadgeColor,
+          badgeTextColor: PdfColors.white,
+        );
         for (var dc in local.dispositionsConstructives) {
-          addGeneralPhotos(dc.photos, '${local.nom} - DC : ${dc.elementControle}');
+          final isObs = dc.conforme == false;
+          addGeneralPhotos(
+            dc.photos,
+            'Local : ${local.nom} - DC : ${dc.elementControle}',
+            isObservation: isObs,
+            badgeLabel: isObs ? 'ANOMALIE' : 'LOCAL',
+            badgeBgColor: isObs ? PdfColors.white : localBadgeColor,
+            badgeTextColor: isObs ? PdfColors.red700 : PdfColors.white,
+          );
         }
         for (var ce in local.conditionsExploitation) {
-          addGeneralPhotos(ce.photos, '${local.nom} - CE : ${ce.elementControle}');
+          final isObs = ce.conforme == false;
+          addGeneralPhotos(
+            ce.photos,
+            'Local : ${local.nom} - CE : ${ce.elementControle}',
+            isObservation: isObs,
+            badgeLabel: isObs ? 'ANOMALIE' : 'LOCAL',
+            badgeBgColor: isObs ? PdfColors.white : localBadgeColor,
+            badgeTextColor: isObs ? PdfColors.red700 : PdfColors.white,
+          );
         }
         for (var obs in local.observationsLibres) {
-          addGeneralPhotos(obs.photos, '${local.nom} - Obs libre : ${obs.texte}', isObservation: true);
+          addGeneralPhotos(
+            obs.photos,
+            'Local : ${local.nom} - Obs libre : ${obs.texte}',
+            isObservation: true,
+            badgeLabel: 'ANOMALIE',
+            badgeBgColor: PdfColors.white,
+            badgeTextColor: PdfColors.red700,
+          );
         }
         for (var i = 0; i < local.cellules.length; i++) {
           final cellule = local.cellules[i];
-          addGeneralPhotos(cellule.photos, '${local.nom} - Cellule ${i + 1} (${cellule.fonction})');
+          addGeneralPhotos(
+            cellule.photos,
+            'Local : ${local.nom} - Cellule ${i + 1} (${cellule.fonction})',
+            badgeLabel: 'CELLULE',
+            badgeBgColor: celluleBadgeColor,
+            badgeTextColor: PdfColors.white,
+          );
           for (var ev in cellule.elementsVerifies) {
-            addGeneralPhotos(ev.photos, '${local.nom} - Cellule ${i + 1} - Vérif : ${ev.elementControle}', isObservation: ev.conforme == false);
+            final isObs = ev.conforme == false;
+            addGeneralPhotos(
+              ev.photos,
+              'Local : ${local.nom} - Cellule ${i + 1} - Vérif : ${ev.elementControle}',
+              isObservation: isObs,
+              badgeLabel: isObs ? 'ANOMALIE' : 'CELLULE',
+              badgeBgColor: isObs ? PdfColors.white : celluleBadgeColor,
+              badgeTextColor: isObs ? PdfColors.red700 : PdfColors.white,
+            );
           }
         }
         for (var i = 0; i < local.transformateurs.length; i++) {
           final transfo = local.transformateurs[i];
-          addGeneralPhotos(transfo.photos, '${local.nom} - Transformateur ${i + 1}');
+          addGeneralPhotos(
+            transfo.photos,
+            'Local : ${local.nom} - Transformateur ${i + 1}',
+            badgeLabel: 'TRANSFO',
+            badgeBgColor: celluleBadgeColor,
+            badgeTextColor: PdfColors.white,
+          );
           for (var ev in transfo.elementsVerifies) {
-            addGeneralPhotos(ev.photos, '${local.nom} - Transformateur ${i + 1} - Vérif : ${ev.elementControle}', isObservation: ev.conforme == false);
+            final isObs = ev.conforme == false;
+            addGeneralPhotos(
+              ev.photos,
+              'Local : ${local.nom} - Transformateur ${i + 1} - Vérif : ${ev.elementControle}',
+              isObservation: isObs,
+              badgeLabel: isObs ? 'ANOMALIE' : 'TRANSFO',
+              badgeBgColor: isObs ? PdfColors.white : celluleBadgeColor,
+              badgeTextColor: isObs ? PdfColors.red700 : PdfColors.white,
+            );
           }
         }
         for (var c in local.coffrets) {
@@ -6627,56 +6724,140 @@ class PdfReportService {
 
       // Moyenne Tension Zones
       for (var zone in audit.moyenneTensionZones) {
-        addGeneralPhotos(zone.photos, zone.nom);
+        addGeneralPhotos(
+          zone.photos,
+          'Zone : ${zone.nom}',
+          badgeLabel: 'ZONE',
+          badgeBgColor: zoneBadgeColor,
+          badgeTextColor: PdfColors.white,
+        );
         for (var obs in zone.observationsLibres) {
-          addGeneralPhotos(obs.photos, '${zone.nom} - Obs libre : ${obs.texte}', isObservation: true);
+          addGeneralPhotos(
+            obs.photos,
+            'Zone : ${zone.nom} - Obs libre : ${obs.texte}',
+            isObservation: true,
+            badgeLabel: 'ANOMALIE',
+            badgeBgColor: PdfColors.white,
+            badgeTextColor: PdfColors.red700,
+          );
         }
         for (var c in zone.coffrets) {
           equipmentGroups.add(processCoffret(c, zone.nom));
         }
         for (var local in zone.locaux) {
-          addGeneralPhotos(local.photos, '${zone.nom} - Local ${local.nom}');
+          addGeneralPhotos(
+            local.photos,
+            'Zone : ${zone.nom} - Local : ${local.nom}',
+            badgeLabel: 'LOCAL',
+            badgeBgColor: localBadgeColor,
+            badgeTextColor: PdfColors.white,
+          );
           for (var dc in local.dispositionsConstructives) {
-            addGeneralPhotos(dc.photos, '${zone.nom} - Local ${local.nom} - DC : ${dc.elementControle}', isObservation: dc.conforme == false);
+            final isObs = dc.conforme == false;
+            addGeneralPhotos(
+              dc.photos,
+              'Zone : ${zone.nom} - Local : ${local.nom} - DC : ${dc.elementControle}',
+              isObservation: isObs,
+              badgeLabel: isObs ? 'ANOMALIE' : 'LOCAL',
+              badgeBgColor: isObs ? PdfColors.white : localBadgeColor,
+              badgeTextColor: isObs ? PdfColors.red700 : PdfColors.white,
+            );
           }
           for (var ce in local.conditionsExploitation) {
-            addGeneralPhotos(ce.photos, '${zone.nom} - Local ${local.nom} - CE : ${ce.elementControle}', isObservation: ce.conforme == false);
+            final isObs = ce.conforme == false;
+            addGeneralPhotos(
+              ce.photos,
+              'Zone : ${zone.nom} - Local : ${local.nom} - CE : ${ce.elementControle}',
+              isObservation: isObs,
+              badgeLabel: isObs ? 'ANOMALIE' : 'LOCAL',
+              badgeBgColor: isObs ? PdfColors.white : localBadgeColor,
+              badgeTextColor: isObs ? PdfColors.red700 : PdfColors.white,
+            );
           }
           for (var obs in local.observationsLibres) {
-            addGeneralPhotos(obs.photos, '${zone.nom} - Local ${local.nom} - Obs libre : ${obs.texte}', isObservation: true);
+            addGeneralPhotos(
+              obs.photos,
+              'Zone : ${zone.nom} - Local : ${local.nom} - Obs libre : ${obs.texte}',
+              isObservation: true,
+              badgeLabel: 'ANOMALIE',
+              badgeBgColor: PdfColors.white,
+              badgeTextColor: PdfColors.red700,
+            );
           }
           for (var c in local.coffrets) {
-            equipmentGroups.add(processCoffret(c, '${zone.nom} - Local ${local.nom}'));
+            equipmentGroups.add(processCoffret(c, '${zone.nom} - Local : ${local.nom}'));
           }
         }
       }
 
       // Basse Tension Zones
       for (var zone in audit.basseTensionZones) {
-        addGeneralPhotos(zone.photos, zone.nom);
+        addGeneralPhotos(
+          zone.photos,
+          'Zone : ${zone.nom}',
+          badgeLabel: 'ZONE',
+          badgeBgColor: zoneBadgeColor,
+          badgeTextColor: PdfColors.white,
+        );
         for (var obs in zone.observationsLibres) {
-          addGeneralPhotos(obs.photos, '${zone.nom} - Obs libre : ${obs.texte}', isObservation: true);
+          addGeneralPhotos(
+            obs.photos,
+            'Zone : ${zone.nom} - Obs libre : ${obs.texte}',
+            isObservation: true,
+            badgeLabel: 'ANOMALIE',
+            badgeBgColor: PdfColors.white,
+            badgeTextColor: PdfColors.red700,
+          );
         }
         for (var c in zone.coffretsDirects) {
           equipmentGroups.add(processCoffret(c, zone.nom));
         }
         for (var local in zone.locaux) {
-          addGeneralPhotos(local.photos, '${zone.nom} - Local ${local.nom}');
+          addGeneralPhotos(
+            local.photos,
+            'Zone : ${zone.nom} - Local : ${local.nom}',
+            badgeLabel: 'LOCAL',
+            badgeBgColor: localBadgeColor,
+            badgeTextColor: PdfColors.white,
+          );
           if (local.dispositionsConstructives != null) {
             for (var dc in local.dispositionsConstructives!) {
-              addGeneralPhotos(dc.photos, '${zone.nom} - Local ${local.nom} - DC : ${dc.elementControle}', isObservation: dc.conforme == false);
+              final isObs = dc.conforme == false;
+              addGeneralPhotos(
+                dc.photos,
+                'Zone : ${zone.nom} - Local : ${local.nom} - DC : ${dc.elementControle}',
+                isObservation: isObs,
+                badgeLabel: isObs ? 'ANOMALIE' : 'LOCAL',
+                badgeBgColor: isObs ? PdfColors.white : localBadgeColor,
+                badgeTextColor: isObs ? PdfColors.red700 : PdfColors.white,
+              );
             }
           }
           if (local.conditionsExploitation != null) {
             for (var ce in local.conditionsExploitation!) {
-              addGeneralPhotos(ce.photos, '${zone.nom} - Local ${local.nom} - CE : ${ce.elementControle}', isObservation: ce.conforme == false);
+              final isObs = ce.conforme == false;
+              addGeneralPhotos(
+                ce.photos,
+                'Zone : ${zone.nom} - Local : ${local.nom} - CE : ${ce.elementControle}',
+                isObservation: isObs,
+                badgeLabel: isObs ? 'ANOMALIE' : 'LOCAL',
+                badgeBgColor: isObs ? PdfColors.white : localBadgeColor,
+                badgeTextColor: isObs ? PdfColors.red700 : PdfColors.white,
+              );
             }
           }
           for (var obs in local.observationsLibres) {
-            addGeneralPhotos(obs.photos, '${zone.nom} - Local ${local.nom} - Obs libre : ${obs.texte}', isObservation: true);
+            addGeneralPhotos(
+              obs.photos,
+              'Zone : ${zone.nom} - Local : ${local.nom} - Obs libre : ${obs.texte}',
+              isObservation: true,
+              badgeLabel: 'ANOMALIE',
+              badgeBgColor: PdfColors.white,
+              badgeTextColor: PdfColors.red700,
+            );
           }
           for (var c in local.coffrets) {
-            equipmentGroups.add(processCoffret(c, '${zone.nom} - Local ${local.nom}'));
+            equipmentGroups.add(processCoffret(c, '${zone.nom} - Local : ${local.nom}'));
           }
         }
       }
