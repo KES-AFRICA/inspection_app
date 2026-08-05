@@ -85,10 +85,12 @@ class _ReportGenerationLoaderState extends State<ReportGenerationLoader>
   bool _isCompleted = false;
   bool _showCheck = false;
   double _displayPercent = 0;
+  String _currentMessage = '';
 
   @override
   void initState() {
     super.initState();
+    _currentMessage = widget.message;
 
     // Progression du cercle (de 0 à ~85% en boucle lors du chargement)
     _progressController = AnimationController(
@@ -99,7 +101,7 @@ class _ReportGenerationLoaderState extends State<ReportGenerationLoader>
       CurvedAnimation(parent: _progressController, curve: Curves.easeInOut),
     );
     _progressAnim.addListener(() {
-      if (!_isCompleted) {
+      if (!_isCompleted && widget.controller._onProgress == null) {
         setState(() {
           _displayPercent = (_progressAnim.value * 100).clamp(0, 85);
         });
@@ -141,16 +143,26 @@ class _ReportGenerationLoaderState extends State<ReportGenerationLoader>
     _progressController.forward();
     _progressController.addStatusListener((status) {
       if (status == AnimationStatus.completed && !_isCompleted) {
-        // Reverse pour créer un effet de va-et-vient
         _progressController.reverse();
       } else if (status == AnimationStatus.dismissed && !_isCompleted) {
         _progressController.forward();
       }
     });
 
-    // Enregistrer les callbacks de complétion et de fermeture
+    // Enregistrer les callbacks de complétion, fermeture et progression
     widget.controller._onComplete = _handleComplete;
     widget.controller._onDismiss = _handleDismiss;
+    widget.controller._onProgress = _handleProgress;
+  }
+
+  void _handleProgress(double progressRatio, String message) {
+    if (!mounted || _isCompleted) return;
+    setState(() {
+      _displayPercent = (progressRatio * 100).clamp(0, 99);
+      if (message.isNotEmpty) {
+        _currentMessage = message;
+      }
+    });
   }
 
   void _handleDismiss() {
@@ -319,8 +331,8 @@ class _ReportGenerationLoaderState extends State<ReportGenerationLoader>
                 AnimatedSwitcher(
                   duration: const Duration(milliseconds: 300),
                   child: Text(
-                    _showCheck ? 'Rapport généré !' : widget.message,
-                    key: ValueKey(_showCheck ? 'done' : 'loading'),
+                    _showCheck ? 'Rapport généré !' : (_currentMessage.isNotEmpty ? _currentMessage : widget.message),
+                    key: ValueKey(_showCheck ? 'done' : _currentMessage),
                     textAlign: TextAlign.center,
                     style: TextStyle(
                       fontSize: 14,
@@ -352,6 +364,14 @@ class _ReportGenerationLoaderState extends State<ReportGenerationLoader>
 class ReportGenerationLoaderController {
   Future<void> Function()? _onComplete;
   void Function()? _onDismiss;
+  void Function(double progress, String message)? _onProgress;
+
+  /// Met à jour la progression et le message affiché en temps réel.
+  void updateProgress(double progressRatio, String message) {
+    if (_onProgress != null) {
+      _onProgress!(progressRatio, message);
+    }
+  }
 
   /// Déclenche l'animation de complétion (cercle → check → fermeture).
   /// Retourne un Future qui se résout lorsque le dialog est fermé.

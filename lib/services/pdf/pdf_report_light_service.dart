@@ -36,9 +36,12 @@ class PdfReportLightService {
     'Accessibilité pour la maintenance',
   ];
 
-  /// Génère le document PDF complet pour la mission d'éclairage spécifiée
-  static Future<File?> generateLightingMissionReport(String missionId) async {
+  static Future<File?> generateLightingMissionReport(
+    String missionId, {
+    PdfProgressCallback? onProgress,
+  }) async {
     try {
+      onProgress?.call(0.10, 'Chargement des ressources et des polices...');
       await PdfReportService.loadImages();
       await PdfReportService.loadFonts();
 

@@ -520,6 +520,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "4.0.0"
+  get:
+    dependency: transitive
+    description:
+      name: get
+      sha256: "5ed34a7925b85336e15d472cc4cfe7d9ebf4ab8e8b9f688585bf6b50f4c3d79a"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.7.3"
   get_it:
     dependency: "direct main"
     description:
@@ -920,6 +928,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.12.0"
+  pdf_merger:
+    dependency: "direct main"
+    description:
+      name: pdf_merger
+      sha256: "32cdd622e26a861c98a5bffbf689e3a130f004bd310385070044623445b03c32"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.6"
   pdf_widget_wrapper:
     dependency: transitive
     description:

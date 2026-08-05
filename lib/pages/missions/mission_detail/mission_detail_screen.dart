@@ -7,6 +7,7 @@ import 'package:inspec_app/pages/missions/sequence/sequence_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
+import 'package:inspec_app/widgets/report_generation_loader.dart';
 import 'package:share_plus/share_plus.dart';
 
 /// Page de détails d'une mission avec refonte visuelle premium
@@ -168,38 +169,22 @@ class _MissionDetailScreenState extends State<MissionDetailScreen>
 
   /// Génération intermédiaire du rapport PDF pour les missions en cours
   Future<void> _generateIntermediateReport() async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(height: 10),
-            CircularProgressIndicator(),
-            SizedBox(height: 20),
-            Text(
-              'Génération du rapport intermédiaire PDF...',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            SizedBox(height: 6),
-            Text(
-              'Veuillez patienter quelques instants',
-              style: TextStyle(fontSize: 12, color: Colors.grey),
-            ),
-          ],
-        ),
-      ),
+    final loaderController = ReportGenerationLoaderController();
+    ReportGenerationLoader.show(
+      context,
+      controller: loaderController,
+      message: 'Génération du rapport intermédiaire PDF...',
     );
 
     try {
-      final file = await PdfReportService.generateMissionReport(_currentMission.id);
+      final file = await PdfReportService.generateMissionReport(
+        _currentMission.id,
+        onProgress: (progress, statusMessage) {
+          loaderController.updateProgress(progress, statusMessage);
+        },
+      );
 
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
+      await loaderController.complete();
 
       if (file != null && file.existsSync()) {
         _showSuccessDialog(file);
@@ -207,9 +192,7 @@ class _MissionDetailScreenState extends State<MissionDetailScreen>
         _showError('Erreur lors de la génération du rapport');
       }
     } catch (e) {
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
+      loaderController.dismiss();
       _showError('Erreur: $e');
     }
   }

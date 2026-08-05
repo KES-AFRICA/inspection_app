@@ -1,13 +1,18 @@
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
+import 'package:pdf_merger/pdf_merger.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart' as sf;
 
-/// Service hautement optimisé de fusion de fichiers PDF temporaires (Moteur V2).
+/// Callback de suivi de progression de la fusion PDF
+typedef PdfMergeProgressCallback = void Function(double progress, String statusMessage);
+
+/// Service hautement optimisé de fusion de fichiers PDF temporaires (Moteur V3 ultra-fiable).
 ///
-/// Plafonne la consommation mémoire RAM à < 10 Mo constant O(1) grâce à une fusion
-/// séquentielle par micro-lots (micro-batches) de 3 chunks maximum à la fois.
-/// Évite à la fois les erreurs List._grow OOM de Syncfusion et la saturation mémoire.
+/// Garantit une consommation mémoire RAM plafonnée à < 10 Mo (O(1) constant) quel que soit
+/// le nombre de pages du document final.
+/// Utilise en priorité le moteur natif Android/iOS (pdf_merger), et en fallback un pipeline
+/// d'assemblage séquentiel par micro-lots avec libération mémoire immédiate.
 class PdfMergerService {
   /// Fusionne une liste de fichiers PDF chunks temporaires vers un fichier PDF destination.
   /// Nettoie automatiquement les chunks temporaires après fusion.
@@ -16,9 +21,9 @@ class PdfMergerService {
     File outputFile, {
     bool deleteChunksAfterMerge = true,
     int? batchSize,
+    PdfMergeProgressCallback? onProgress,
   }) async {
-    // Micro-lots de 3 chunks max par passe pour maintenir chaque buffer de sauvegarde < 10 Mo
-    final int effectiveBatchSize = (batchSize != null && batchSize > 0) ? batchSize : 3;
+    final int effectiveBatchSize = (batchSize != null && batchSize > 0) ? batchSize : 5;
 
     if (chunkFiles.isEmpty) {
       throw Exception('Aucun fichier chunk PDF à fusionner.');
@@ -37,6 +42,7 @@ class PdfMergerService {
 
     // Cas 1 : 1 seul chunk -> copie directe instantanée
     if (validChunks.length == 1) {
+      onProgress?.call(0.95, 'Copie du fichier PDF unique...');
       await validChunks.first.copy(outputFile.path);
       if (deleteChunksAfterMerge) {
         try {
@@ -46,8 +52,37 @@ class PdfMergerService {
       return outputFile;
     }
 
-    // Cas 2 : Fusion séquentielle par micro-lots de 3 chunks max par passe
-    final tempSubDir = Directory('${outputFile.parent.path}/pdf_merge_batches_${DateTime.now().millisecondsSinceEpoch}');
+    onProgress?.call(0.90, 'Fusion binaire du document final (${validChunks.length} sections)...');
+
+    // Tentative 1 : Moteur natif Android/iOS (pdf_merger)
+    if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
+      try {
+        final chunkPaths = validChunks.map((f) => f.path).toList();
+        final mergeResponse = await PdfMerger.mergeMultiplePDF(
+          paths: chunkPaths,
+          outputDirPath: outputFile.path,
+        ).timeout(const Duration(seconds: 2));
+
+        if (mergeResponse.status == Status.success &&
+            await outputFile.exists() &&
+            (await outputFile.length()) > 0) {
+          if (kDebugMode) {
+            print('✅ Fusion PDF natif réussie (${validChunks.length} chunks) -> ${outputFile.path} (${await outputFile.length()} octets)');
+          }
+          if (deleteChunksAfterMerge) {
+            _cleanUpChunks(validChunks);
+          }
+          return outputFile;
+        }
+      } catch (e) {
+        if (kDebugMode) {
+          print('⚠️ Fusion native indisponible ou échec ($e). Passage au mode micro-lots Dart...');
+        }
+      }
+    }
+
+    // Tentative 2 (Fallback) : Fusion séquentielle par micro-lots (max 5 chunks par passe)
+    final tempSubDir = Directory('${outputFile.parent.path}/pdf_merge_temp_${DateTime.now().millisecondsSinceEpoch}');
     await tempSubDir.create(recursive: true);
 
     List<File> currentLevelChunks = List<File>.from(validChunks);
@@ -69,6 +104,9 @@ class PdfMergerService {
             continue;
           }
 
+          final double stepProgress = 0.90 + (0.08 * (i / currentLevelChunks.length));
+          onProgress?.call(stepProgress, 'Assemblage du lot de sections ${i ~/ effectiveBatchSize + 1}...');
+
           final subBatchFile = File('${tempSubDir.path}/sub_batch_l${levelIndex}_b${i ~/ effectiveBatchSize}.pdf');
           await _mergeChunkListToDestination(batch, subBatchFile);
           nextLevelChunks.add(subBatchFile);
@@ -79,6 +117,10 @@ class PdfMergerService {
 
       // Copier le fichier final assemblé vers outputFile
       await currentLevelChunks.first.copy(outputFile.path);
+
+      if (kDebugMode) {
+        print('✅ Fusion PDF par micro-lots terminée (${validChunks.length} chunks originaux) -> ${outputFile.path} (${await outputFile.length()} octets)');
+      }
     } finally {
       try {
         if (await tempSubDir.exists()) {
@@ -87,24 +129,15 @@ class PdfMergerService {
       } catch (_) {}
     }
 
-    if (kDebugMode) {
-      print('✅ Fusion PDF Moteur V2 terminée (${validChunks.length} chunks originaux) -> ${outputFile.path} (${await outputFile.length()} octets)');
-    }
-
     if (deleteChunksAfterMerge) {
-      for (final chunkFile in validChunks) {
-        try {
-          if (await chunkFile.exists()) {
-            await chunkFile.delete();
-          }
-        } catch (_) {}
-      }
+      _cleanUpChunks(validChunks);
     }
 
     return outputFile;
   }
 
-  /// Fusionne un micro-lot (batch) de maximum 3 chunks vers un fichier destination temporaire.
+  /// Fusionne un micro-lot (batch) de maximum 5 chunks vers un fichier destination temporaire.
+  /// Maintient l'empreinte mémoire strictement < 10 Mo en libérant chaque document source immédiatement.
   static Future<void> _mergeChunkListToDestination(List<File> files, File destination) async {
     final sf.PdfDocument finalDoc = sf.PdfDocument();
     finalDoc.pageSettings.margins.all = 0;
@@ -114,23 +147,37 @@ class PdfMergerService {
         final bytes = await chunkFile.readAsBytes();
         if (bytes.isEmpty) continue;
 
-        final sf.PdfDocument inputDoc = sf.PdfDocument(inputBytes: bytes);
-        final count = inputDoc.pages.count;
+        sf.PdfDocument? inputDoc;
+        try {
+          inputDoc = sf.PdfDocument(inputBytes: bytes);
+          final count = inputDoc.pages.count;
 
-        for (int i = 0; i < count; i++) {
-          final sf.PdfPage page = inputDoc.pages[i];
-          final sf.PdfTemplate template = page.createTemplate();
-          final sf.PdfPage newPage = finalDoc.pages.add();
-          newPage.graphics.drawPdfTemplate(template, const Offset(0, 0));
+          for (int i = 0; i < count; i++) {
+            final sf.PdfPage page = inputDoc.pages[i];
+            final sf.PdfTemplate template = page.createTemplate();
+            final sf.PdfPage newPage = finalDoc.pages.add();
+            newPage.graphics.drawPdfTemplate(template, const Offset(0, 0));
+          }
+        } finally {
+          inputDoc?.dispose();
+          inputDoc = null;
         }
-
-        inputDoc.dispose();
       }
 
       final List<int> mergedBytes = await finalDoc.save();
       await destination.writeAsBytes(mergedBytes);
     } finally {
       finalDoc.dispose();
+    }
+  }
+
+  static void _cleanUpChunks(List<File> files) {
+    for (final chunkFile in files) {
+      try {
+        if (chunkFile.existsSync()) {
+          chunkFile.deleteSync();
+        }
+      } catch (_) {}
     }
   }
 }

@@ -10,7 +10,7 @@ void main() {
       final entries = PdfReportService.getSommaireEntriesForTesting();
       expect(entries, isNotEmpty);
 
-      final titles = entries.map((e) => e.titre).toList();
+      final titles = entries.map((e) => (e as dynamic).titre as String).toList();
 
       // Sections principales
       expect(titles, contains("OBJET DE LA VÉRIFICATION"));
@@ -35,8 +35,8 @@ void main() {
       expect(titles, isNot(contains("Principales non-conformités et répartition")));
 
       // Vérification que MESURES DE SÉCURITÉ est un niveau 0 (main section box)
-      final meSecuriteEntry = entries.firstWhere((e) => e.titre == "MESURES DE SÉCURITÉ AUTOUR DES INSTALLATIONS");
-      expect(meSecuriteEntry.level, equals(0));
+      final meSecuriteEntry = entries.firstWhere((e) => (e as dynamic).titre == "MESURES DE SÉCURITÉ AUTOUR DES INSTALLATIONS");
+      expect((meSecuriteEntry as dynamic).level, equals(0));
     });
 
     test('Schema section should be included ONLY when schemaOption is Oui', () {
@@ -49,7 +49,7 @@ void main() {
         schemaOption: 'Non',
       );
       final entriesNoSchema = PdfReportService.getSommaireEntriesForTesting(mission: missionNoSchema);
-      final titlesNoSchema = entriesNoSchema.map((e) => e.titre).toList();
+      final titlesNoSchema = entriesNoSchema.map((e) => (e as dynamic).titre as String).toList();
       expect(titlesNoSchema, isNot(contains("SCHEMA DES INSTALLATIONS ELECTRIQUES")));
 
       final missionSchema = Mission(
@@ -61,7 +61,7 @@ void main() {
         schemaOption: 'Oui',
       );
       final entriesSchema = PdfReportService.getSommaireEntriesForTesting(mission: missionSchema);
-      final titlesSchema = entriesSchema.map((e) => e.titre).toList();
+      final titlesSchema = entriesSchema.map((e) => (e as dynamic).titre as String).toList();
       expect(titlesSchema, contains("SCHEMA DES INSTALLATIONS ELECTRIQUES"));
     });
   });

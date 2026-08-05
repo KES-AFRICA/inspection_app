@@ -24,6 +24,8 @@ import '../statistics/mission_statistics_collector.dart';
 import '../statistics/audit_finding.dart';
 import '../../components/safe_file_image.dart';
 
+typedef PdfProgressCallback = void Function(double progress, String statusMessage);
+
 // ================================================================
 //  PdfReportService
 // ================================================================
@@ -175,14 +177,14 @@ class PdfReportService {
       }
     }
     
-    _watermarkImage       = await tryLoad('assets/images/filigranne_image.png');
-    _firstPageFooterImage = await tryLoad('assets/images/firstpage_footer.png');
-    _otherPageFooterImage = await tryLoad('assets/images/otherpage_footer.png');
+    _watermarkImage       = await tryLoad('assets/images/filigranne_image.png', maxWidth: 300, maxHeight: 300);
+    _firstPageFooterImage = await tryLoad('assets/images/firstpage_footer.png', maxWidth: 600, maxHeight: 150);
+    _otherPageFooterImage = await tryLoad('assets/images/otherpage_footer.png', maxWidth: 600, maxHeight: 150);
     _logoKesImage         = await tryLoad('assets/images/logo.png', maxWidth: 400, maxHeight: 150);
-    _imgHabilitation      = await tryLoad('assets/images/image.png');
-    _imgAccesGauche       = await tryLoad('assets/images/image copy.png');
-    _imgAccesDroite1      = await tryLoad('assets/images/image copy 2.png');
-    _imgAccesDroite2      = await tryLoad('assets/images/image copy 3.png');
+    _imgHabilitation      = await tryLoad('assets/images/image.png', maxWidth: 450, maxHeight: 250);
+    _imgAccesGauche       = await tryLoad('assets/images/image copy.png', maxWidth: 300, maxHeight: 200);
+    _imgAccesDroite1      = await tryLoad('assets/images/image copy 2.png', maxWidth: 300, maxHeight: 200);
+    _imgAccesDroite2      = await tryLoad('assets/images/image copy 3.png', maxWidth: 300, maxHeight: 200);
     
     _imagesLoaded = true;
   }
@@ -4635,7 +4637,8 @@ class PdfReportService {
           final resolved = AppImageUtils.resolvePathSync(trimmed);
           if (resolved != null) {
             final f = File(resolved);
-            if (f.existsSync()) {
+            // Charger l'image uniquement si elle pèse moins de 150 Ko
+            if (f.existsSync() && f.lengthSync() < 150000) {
               final bytes = f.readAsBytesSync();
               if (bytes.isNotEmpty) {
                 photoInterne = pw.MemoryImage(bytes);
@@ -7270,7 +7273,6 @@ class PdfReportService {
 
   static Future<Map<CoffretArmoire, pw.MemoryImage?>> _preloadCoffretPhotos(AuditInstallationsElectriques audit) async {
     final cache = <CoffretArmoire, pw.MemoryImage?>{};
-
     Future<void> processCoffret(CoffretArmoire c) async {
       for (final src in [...c.photosInternes, ...c.photos, ...c.photosExternes]) {
         final trimmed = src.trim();
@@ -7322,7 +7324,6 @@ class PdfReportService {
     final chunkFiles = <File>[];
     final tempDir = await getTemporaryDirectory();
 
-    // Préchargement asynchrone des photos de coffrets optimisées à 20 Ko
     final photoCache = await _preloadCoffretPhotos(audit);
 
     // 1. Page de Garde / Titre de l'Audit
@@ -7332,7 +7333,7 @@ class PdfReportService {
       compress: true,
     );
     coverDoc.addPage(pw.MultiPage(
-      maxPages: 10000,
+      maxPages: 200,
       pageTheme: _buildInnerPageTheme(showWatermark: false),
       header: (ctx) => _buildPageHeaderWidget(
         nomSite: nomSite,
@@ -7396,7 +7397,7 @@ class PdfReportService {
         widgets.addAll(_buildLocalMT(audit.moyenneTensionLocaux[i], trackedPages, photoCache: photoCache));
       }
       mtDoc.addPage(pw.MultiPage(
-        maxPages: 10000,
+        maxPages: 200,
         pageTheme: _buildInnerPageTheme(),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
@@ -7433,7 +7434,7 @@ class PdfReportService {
         elemIdx++;
       }
       zoneDoc.addPage(pw.MultiPage(
-        maxPages: 10000,
+        maxPages: 200,
         pageTheme: _buildInnerPageTheme(),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
@@ -7470,7 +7471,7 @@ class PdfReportService {
         elemIdx++;
       }
       zoneDoc.addPage(pw.MultiPage(
-        maxPages: 10000,
+        maxPages: 200,
         pageTheme: _buildInnerPageTheme(),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
@@ -7488,15 +7489,17 @@ class PdfReportService {
     return chunkFiles;
   }
 
-  // ──────────────────────────────────────────────────────────────
-  //  POINT D'ENTREE PRINCIPAL
-  // ──────────────────────────────────────────────────────────────
-  
-  static Future<File?> generateMissionReport(String missionId) async {
+  static Future<File?> generateMissionReport(
+    String missionId, {
+    PdfProgressCallback? onProgress,
+  }) async {
+    final allChunkFiles = <File>[];
     try {
+      onProgress?.call(0.02, 'Initialisation des ressources et des polices...');
       await _loadImages();
       await _loadFonts();
       
+      onProgress?.call(0.05, 'Chargement des données de la mission...');
       final mission = HiveService.getMissionById(missionId);
       if (mission == null) return null;
       
@@ -7524,33 +7527,42 @@ class PdfReportService {
         foudres: foudres,
       );
 
-      final pdf = pw.Document(
-        title: 'Rapport d\'Audit Electrique - ${mission.nomClient}',
+      final dir = await getTemporaryDirectory();
+
+      // ── Sub-chunk 1.1 : Couverture & Sommaire ──
+      onProgress?.call(0.10, 'Génération de la page de garde et du sommaire...');
+      final pdfP1_1 = pw.Document(
+        title: 'Couverture & Sommaire - ${mission.nomClient}',
         author: 'KES INSPECTIONS AND PROJECTS',
         compress: true,
       );
-
-      // 1. PAGE DE COUVERTURE
-      pdf.addPage(
+      pdfP1_1.addPage(
         pw.Page(
           pageTheme: _buildCoverPageTheme(),
           build: (ctx) => _buildCoverPage(mission, renseignements, ctx),
         ),
       );
-
-      // 2. SOMMAIRE
       _addSommairePages(
-        pdf,
+        pdfP1_1,
         sommaireEntries,
         trackedPages,
         nomClient: mission.nomClient,
         nomSite: nomSiteHeader,
         numeroRapport: numeroRapportDoc,
       );
+      final chunkP1_1 = File('${dir.path}/pdf_chunk_p1_1_$missionId.pdf');
+      await chunkP1_1.writeAsBytes(await pdfP1_1.save());
+      allChunkFiles.add(chunkP1_1);
 
-      // 3. Rappel des responsabilités + Mesures de sécurité + Objet de la vérification
-      pdf.addPage(pw.MultiPage(
-        maxPages: 10000,
+      // ── Sub-chunk 1.2 : Objet, Périmètre & Mesures de sécurité ──
+      onProgress?.call(0.18, 'Génération du périmètre et des mesures de sécurité...');
+      final pdfP1_2 = pw.Document(
+        title: 'Périmètre & Sécurité - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: true,
+      );
+      pdfP1_2.addPage(pw.MultiPage(
+        maxPages: 200,
         pageTheme: _buildInnerPageTheme(),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
@@ -7558,26 +7570,24 @@ class PdfReportService {
           numeroRapport: numeroRapportDoc,
         ),
         build: (ctx) => [
-
-          // ─── OBJET DE LA V\u00c9RIFICATION ───
           pw.SizedBox(height: 20),
           PageTracker(
             key: 'objet',
             registry: trackedPages,
-            child: _sectionBox('OBJET DE LA V\u00c9RIFICATION'),
+            child: _sectionBox('OBJET DE LA VÉRIFICATION'),
           ),
           pw.SizedBox(height: 10),
           _bodyText(
-            'La mission a pour objet de d\u00e9celer les non-conformit\u00e9s pouvant affecter la s\u00e9curit\u00e9 des personnes et des biens, et de s\'assurer du bon \u00e9tat de conservation des installations. '
-            'Afin de pr\u00e9senter l\'\u00e9tat des lieux de l\'existant, les points sur lesquels les installations s\'\u00e9cartent des normes et textes applicables, et de proposer des actions correctives.\n\n'
-            'D\'une mani\u00e8re g\u00e9n\u00e9rale, la v\u00e9rification a \u00e9t\u00e9 \u00e9tendue \u00e0 l\'ensemble des installations \u00e9lectriques pr\u00e9sent\u00e9es et accessibles dans l\'\u00e9tablissement, depuis les sources jusqu\'aux points d\'utilisation.',
+            'La mission a pour objet de déceler les non-conformités pouvant affecter la sécurité des personnes et des biens, et de s\'assurer du bon état de conservation des installations. '
+            'Afin de présenter l\'état des lieux de l\'existant, les points sur lesquels les installations s\'écartent des normes et textes applicables, et de proposer des actions correctives.\n\n'
+            'D\'une manière générale, la vérification a été étendue à l\'ensemble des installations électriques présentées et accessibles dans l\'établissement, depuis les sources jusqu\'aux points d\'utilisation.',
           ),
           pw.SizedBox(height: 10),
-          _bodyText('Ainsi sont exclus du champ de la v\u00e9rification\u00a0:'),
-          _bulletItem('Les dispositions administratives, organisationnelles et techniques relatives \u00e0 l\'information et \u00e0 la formation du personnel (prescriptions au personnel) lors de l\'exploitation courante, de travaux ou d\'interventions sur les installations, ainsi que les mesures de s\u00e9curit\u00e9 qui en d\u00e9coulent\u00a0;'),
-          _bulletItem('Les dispositions administratives relatives aux documents \u00e0 tenir \u00e0 la disposition des autorit\u00e9s publiques\u00a0;'),
-          _bulletItem('L\'examen des mat\u00e9riels \u00e9lectriques en pr\u00e9sentation ou en d\u00e9monstration et destin\u00e9s \u00e0 la vente\u00a0;'),
-          _bulletItem('Les mat\u00e9riels stock\u00e9s ou en r\u00e9serve, ou signal\u00e9s comme n\'\u00e9tant plus mis en \u0153uvre. Du fait que les installations sont examin\u00e9es en tenant compte des contraintes d\'exploitation et de s\u00e9curit\u00e9 propres \u00e0 chaque \u00e9tablissement et indiqu\u00e9es en d\u00e9but de v\u00e9rification au personnel charg\u00e9 de la v\u00e9rification, celle-ci est limit\u00e9e dans certains cas \u00e0 l\'\u00e9tat apparent des installations.'),
+          _bodyText('Ainsi sont exclus du champ de la vérification\u00a0:'),
+          _bulletItem('Les dispositions administratives, organisationnelles et techniques relatives à l\'information et à la formation du personnel (prescriptions au personnel) lors de l\'exploitation courante, de travaux ou d\'interventions sur les installations, ainsi que les mesures de sécurité qui en découlent\u00a0;'),
+          _bulletItem('Les dispositions administratives relatives aux documents à tenir à la disposition des autorités publiques\u00a0;'),
+          _bulletItem('L\'examen des matériels électriques en présentation ou en démonstration et destinés à la vente\u00a0;'),
+          _bulletItem('Les matériels stockés ou en réserve, ou signalés comme n\'étant plus mis en œuvre. Du fait que les installations sont examinées en tenant compte des contraintes d\'exploitation et de sécurité propres à chaque établissement et indiquées en début de vérification au personnel chargé de la vérification, celle-ci est limitée dans certains cas à l\'état apparent des installations.'),
           pw.SizedBox(height: 12),
           PageTracker(
             key: 'objet_normes',
@@ -7594,8 +7604,6 @@ class PdfReportService {
           ),
           pw.SizedBox(height: 5),
           _buildMaterielTable(),
-
-          // ─── PÉRIMÈTRE DE LA MISSION (Sur sa propre page immédiatement après OBJET DE LA VÉRIFICATION) ───
           pw.NewPage(),
           PageTracker(
             key: 'perimetre',
@@ -7604,8 +7612,6 @@ class PdfReportService {
           ),
           pw.SizedBox(height: 14),
           _buildPerimetreTable(mission, renseignements),
-
-          // ─── RAPPEL DES RESPONSABILITÉS DE L'EMPLOYEUR ───
           pw.NewPage(),
           PageTracker(
             key: 'rappel',
@@ -7677,7 +7683,6 @@ class PdfReportService {
             'Conformément aux dispositions réglementaires en vigueur, l\'employeur doit s\'assurer que le personnel appelé à intervenir sur ou à proximité des installations électriques dispose d\'une habilitation électrique adaptée au domaine de tension concerné '
             'et à la nature des opérations à réaliser.',
           ),
-          // ─── MESURES DE SÉCURITÉ ───
           pw.SizedBox(height: 20),
           PageTracker(
             key: 'mesures_securite',
@@ -7749,27 +7754,52 @@ class PdfReportService {
             'KES INSPECTIONS AND PROJECTS s\'engage à réaliser ses vérifications dans le strict respect des normes et règlements applicables, '
             'avec le souci constant de la sécurité, de la fiabilité technique et de l\'impartialité des constats.',
           ),
+        ],
+      ));
+      final chunkP1_2 = File('${dir.path}/pdf_chunk_p1_2_$missionId.pdf');
+      await chunkP1_2.writeAsBytes(await pdfP1_2.save());
+      allChunkFiles.add(chunkP1_2);
 
-          // ─── RÉSUMÉ EXÉCUTIF (Démarre sur une nouvelle page juste après Mesures de Sécurité) ───
-          pw.NewPage(),
+      // ── Sub-chunk 1.3 : Résumé exécutif & Analyse statistique ──
+      onProgress?.call(0.28, 'Génération du résumé exécutif et des statistiques...');
+      final pdfP1_3 = pw.Document(
+        title: 'Résumé Exécutif & Stats - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: true,
+      );
+      pdfP1_3.addPage(pw.MultiPage(
+        maxPages: 200,
+        pageTheme: _buildInnerPageTheme(),
+        header: (ctx) => _buildPageHeaderWidget(
+          nomClient: mission.nomClient,
+          nomSite: nomSiteHeader,
+          numeroRapport: numeroRapportDoc,
+        ),
+        build: (ctx) => [
           ..._buildResumeExecutif(mission, trackedPages, numeroRapportDoc),
-
-          // ─── ANALYSE STATISTIQUE (Démarre sur une nouvelle page juste après Résumé Exécutif) ───
           pw.NewPage(),
           ..._buildAnalyseStatistique(mission, trackedPages, numeroRapportDoc),
         ],
       ));
 
-      // 4. Renseignements generaux
-      pdf.addPage(pw.MultiPage(
-        maxPages: 10000,
+      final chunkP1_3 = File('${dir.path}/pdf_chunk_p1_3_$missionId.pdf');
+      await chunkP1_3.writeAsBytes(await pdfP1_3.save());
+      allChunkFiles.add(chunkP1_3);
+
+      // ── Sub-chunk 1.4 : Renseignements généraux & Description des installations ──
+      onProgress?.call(0.38, 'Génération de la description des installations...');
+      final pdfP1_4 = pw.Document(
+        title: 'Description Installations - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: true,
+      );
+      pdfP1_4.addPage(pw.MultiPage(
+        maxPages: 200,
         pageTheme: _buildInnerPageTheme(),
         build: (ctx) => [_buildRenseignementsGeneraux(mission, renseignements, trackedPages)],
       ));
-
-      // 5. Description des installations
-      pdf.addPage(pw.MultiPage(
-        maxPages: 10000,
+      pdfP1_4.addPage(pw.MultiPage(
+        maxPages: 200,
         pageTheme: _buildInnerPageTheme(),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
@@ -7778,17 +7808,13 @@ class PdfReportService {
         ),
         build: (ctx) => _buildDescriptionInstallationsMulti(description, audit, trackedPages),
       ));
+      final chunkP1_4 = File('${dir.path}/pdf_chunk_p1_4_$missionId.pdf');
+      await chunkP1_4.writeAsBytes(await pdfP1_4.save());
+      allChunkFiles.add(chunkP1_4);
 
-      // 6 & 7. Chunking de la Synthèse Récapitulative et de l'Audit des installations
-      final allChunkFiles = <File>[];
-      final dir = await getTemporaryDirectory();
-
-      final mainPart1File = File('${dir.path}/pdf_chunk_part1_$missionId.pdf');
-      await mainPart1File.writeAsBytes(await pdf.save());
-      allChunkFiles.add(mainPart1File);
-
+      // ── Section 6 & 7 : Synthèse Récapitulative et Audit par zone ──
       if (audit != null) {
-        // 6. Synthèse récapitulative des observations (Chunked par tranche de 15 groupes)
+        onProgress?.call(0.48, 'Génération de la synthèse récapitulative...');
         final recapChunkFiles = await _addListeRecapitulativeSectionChunked(
           mission,
           audit,
@@ -7798,7 +7824,7 @@ class PdfReportService {
         );
         allChunkFiles.addAll(recapChunkFiles);
 
-        // 7. Audit des installations électriques (Chunked par zone)
+        onProgress?.call(0.60, 'Audit détaillé des zones MT et BT...');
         final auditChunkFiles = await _addAuditSectionChunked(
           mission,
           audit,
@@ -7809,16 +7835,15 @@ class PdfReportService {
         allChunkFiles.addAll(auditChunkFiles);
       }
 
-      // Part 2: Section 8 (Classement), Section 9 (Foudre), Section 10 (Mesures & Essais + Signatures), Section 11 (Page Garde Photos), Section 12 (Schéma)
-      final pdfPart2 = pw.Document(
-        title: 'Rapport Part 2 - ${mission.nomClient}',
+      // ── Sub-chunk 2.1 : Classement, Foudre, Mesures & Essais, Signatures ──
+      onProgress?.call(0.75, 'Génération du classement, foudre et signatures...');
+      final pdfP2_1 = pw.Document(
+        title: 'Classement & Mesures - ${mission.nomClient}',
         author: 'KES INSPECTIONS AND PROJECTS',
         compress: true,
       );
-
-      // 8. Classement des emplacements
-      pdfPart2.addPage(pw.MultiPage(
-        maxPages: 10000,
+      pdfP2_1.addPage(pw.MultiPage(
+        maxPages: 200,
         pageTheme: _buildInnerPageTheme(),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
@@ -7827,26 +7852,31 @@ class PdfReportService {
         ),
         build: (ctx) => _buildClassementEmplacementsMulti(classements, classementsZones, trackedPages),
       ));
-
-      // 9. Foudre
-      pdfPart2.addPage(pw.MultiPage(
-        maxPages: 10000,
+      pdfP2_1.addPage(pw.MultiPage(
+        maxPages: 200,
         pageTheme: _buildInnerPageTheme(),
         build: (ctx) => [_buildFoudre(audit, foudres, trackedPages, afficherTableauFoudre: mission.afficherTableauFoudre)],
       ));
-
-      // 10. Resultats des mesures et essais
       if (mesures != null) {
-        _addMesuresEssaisPages(pdfPart2, mesures, trackedPages);
-        pdfPart2.addPage(pw.Page(
+        _addMesuresEssaisPages(pdfP2_1, mesures, trackedPages);
+        pdfP2_1.addPage(pw.Page(
           pageTheme: _buildInnerPageTheme(),
           build: (ctx) => _buildSignaturePage(renseignements, currentUser?.fullName),
         ));
       }
+      final chunkP2_1 = File('${dir.path}/pdf_chunk_p2_1_$missionId.pdf');
+      await chunkP2_1.writeAsBytes(await pdfP2_1.save());
+      allChunkFiles.add(chunkP2_1);
 
-      // 11. Page de garde Photos (si des photos sont présentes)
-      pdfPart2.addPage(pw.MultiPage(
-        maxPages: 10000,
+      // ── Sub-chunk 2.2 : Page de garde Photos & Schéma ──
+      onProgress?.call(0.82, 'Génération de la section schéma et garde des photos...');
+      final pdfP2_2 = pw.Document(
+        title: 'Garde Photos & Schéma - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: true,
+      );
+      pdfP2_2.addPage(pw.MultiPage(
+        maxPages: 200,
         pageTheme: _buildInnerPageTheme(showWatermark: false),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
@@ -7891,16 +7921,15 @@ class PdfReportService {
           ),
         ],
       ));
-
-      // 12. Schéma des installations électriques (si disponible)
-      _addSchemaSection(pdfPart2, mission, trackedPages,
+      _addSchemaSection(pdfP2_2, mission, trackedPages,
           nomSite: nomSiteHeader, numeroRapport: numeroRapportDoc);
 
-      final mainPart2File = File('${dir.path}/pdf_chunk_part2_$missionId.pdf');
-      await mainPart2File.writeAsBytes(await pdfPart2.save());
-      allChunkFiles.add(mainPart2File);
+      final chunkP2_2 = File('${dir.path}/pdf_chunk_p2_2_$missionId.pdf');
+      await chunkP2_2.writeAsBytes(await pdfP2_2.save());
+      allChunkFiles.add(chunkP2_2);
 
-      // 13. Photos Chunked
+      // ── Section 13 : Photos Chunked ──
+      onProgress?.call(0.87, 'Traitement et compression des photos d\'illustration...');
       final photoChunkFiles = await _addPhotosSectionChunked(
         mission,
         missionId,
@@ -7912,14 +7941,23 @@ class PdfReportService {
       );
       allChunkFiles.addAll(photoChunkFiles);
 
+      // ── Assembly final par fusion binaire ──
+      onProgress?.call(0.92, 'Fusion binaire haute performance du document final...');
       final fileName = 'Rapport_${mission.nomClient}_${_formatDate(DateTime.now())}.pdf'
           .replaceAll(RegExp(r'[<>:"/\\|?*\s]'), '_');
       final outputFile = File('${dir.path}/$fileName');
 
-      await PdfMergerService.mergePdfFiles(allChunkFiles, outputFile);
+      await PdfMergerService.mergePdfFiles(
+        allChunkFiles,
+        outputFile,
+        deleteChunksAfterMerge: false,
+        onProgress: onProgress,
+      );
+
+      onProgress?.call(1.0, 'Rapport PDF généré avec succès !');
 
       if (kDebugMode) {
-        print('✅ Rapport PDF Moteur V2 généré avec succès (${allChunkFiles.length} chunks) : ${outputFile.path}');
+        print('✅ Rapport PDF Moteur V3 généré avec succès (${allChunkFiles.length} chunks) : ${outputFile.path}');
       }
       return outputFile;
       
@@ -7929,13 +7967,16 @@ class PdfReportService {
       }
       return null;
     } finally {
-      // Nettoyage final
+      // Nettoyage final exhaustif de tous les fichiers chunks temporaires (Fix F11)
+      for (final chunkFile in allChunkFiles) {
+        try {
+          if (chunkFile.existsSync()) {
+            chunkFile.deleteSync();
+          }
+        } catch (_) {}
+      }
     }
   }
-
-  // ──────────────────────────────────────────────────────────────
-  //  HELPERS DIVERS
-  // ──────────────────────────────────────────────────────────────
   
   static String _formatDate(DateTime d) => DateFormat('dd/MM/yyyy').format(d);
 

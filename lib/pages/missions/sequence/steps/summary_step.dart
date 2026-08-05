@@ -114,7 +114,12 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
         file = await WordReportService.generateMissionReport(widget.mission.id);
         fileName = 'Rapport_${widget.mission.nomClient}_${DateTime.now().millisecondsSinceEpoch}.docx';
       } else {
-        file = await PdfReportService.generateMissionReport(widget.mission.id);
+        file = await PdfReportService.generateMissionReport(
+          widget.mission.id,
+          onProgress: (progress, statusMessage) {
+            loaderController.updateProgress(progress, statusMessage);
+          },
+        );
         fileName = 'Rapport_${widget.mission.nomClient}_${DateTime.now().millisecondsSinceEpoch}.pdf';
       }
 
