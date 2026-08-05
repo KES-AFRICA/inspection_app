@@ -5,9 +5,9 @@ import 'package:syncfusion_flutter_pdf/pdf.dart' as sf;
 
 /// Service hautement optimisé de fusion de fichiers PDF temporaires (Moteur V2).
 ///
-/// Plafonne la consommation mémoire RAM à < 20 Mo constant O(1) grâce à une fusion
-/// contrôlée à 2 niveaux (Batching L1 discret de 10 chunks max -> Assemblage L2 final).
-/// Évite à la fois la récursion profonde de dictionnaires et les erreurs List._grow OOM.
+/// Plafonne la consommation mémoire RAM à < 10 Mo constant O(1) grâce à une fusion
+/// séquentielle par micro-lots (micro-batches) de 3 chunks maximum à la fois.
+/// Évite à la fois les erreurs List._grow OOM de Syncfusion et la saturation mémoire.
 class PdfMergerService {
   /// Fusionne une liste de fichiers PDF chunks temporaires vers un fichier PDF destination.
   /// Nettoie automatiquement les chunks temporaires après fusion.
@@ -17,7 +17,8 @@ class PdfMergerService {
     bool deleteChunksAfterMerge = true,
     int? batchSize,
   }) async {
-    final int effectiveBatchSize = (batchSize != null && batchSize > 0) ? batchSize : 10;
+    // Micro-lots de 3 chunks max par passe pour maintenir chaque buffer de sauvegarde < 10 Mo
+    final int effectiveBatchSize = (batchSize != null && batchSize > 0) ? batchSize : 3;
 
     if (chunkFiles.isEmpty) {
       throw Exception('Aucun fichier chunk PDF à fusionner.');
@@ -45,43 +46,45 @@ class PdfMergerService {
       return outputFile;
     }
 
-    // Cas 2 : Petits nombres de chunks (<= effectiveBatchSize) -> Passe directe unique (RAM < 15 Mo)
-    if (validChunks.length <= effectiveBatchSize) {
-      await _mergeChunkListToDestination(validChunks, outputFile);
-    } else {
-      // Cas 3 : Nombre élevé de chunks -> Fusion contrôlée à 2 niveaux maximum (L1 sub-batches -> L2 final)
-      final tempSubDir = Directory('${outputFile.parent.path}/pdf_merge_batches_${DateTime.now().millisecondsSinceEpoch}');
-      await tempSubDir.create(recursive: true);
+    // Cas 2 : Fusion séquentielle par micro-lots de 3 chunks max par passe
+    final tempSubDir = Directory('${outputFile.parent.path}/pdf_merge_batches_${DateTime.now().millisecondsSinceEpoch}');
+    await tempSubDir.create(recursive: true);
 
-      try {
-        final level1SubBatchFiles = <File>[];
+    List<File> currentLevelChunks = List<File>.from(validChunks);
+    int levelIndex = 0;
 
-        // Niveau 1 : Fusion par sous-groupes discrets de 10 chunks max (Libération RAM immédiate par batch)
-        for (int i = 0; i < validChunks.length; i += effectiveBatchSize) {
-          final batch = validChunks.sublist(
+    try {
+      while (currentLevelChunks.length > 1) {
+        levelIndex++;
+        final nextLevelChunks = <File>[];
+
+        for (int i = 0; i < currentLevelChunks.length; i += effectiveBatchSize) {
+          final batch = currentLevelChunks.sublist(
             i,
-            (i + effectiveBatchSize).clamp(0, validChunks.length),
+            (i + effectiveBatchSize).clamp(0, currentLevelChunks.length),
           );
 
           if (batch.length == 1) {
-            level1SubBatchFiles.add(batch.first);
+            nextLevelChunks.add(batch.first);
             continue;
           }
 
-          final subBatchFile = File('${tempSubDir.path}/sub_batch_l1_${i ~/ effectiveBatchSize}.pdf');
+          final subBatchFile = File('${tempSubDir.path}/sub_batch_l${levelIndex}_b${i ~/ effectiveBatchSize}.pdf');
           await _mergeChunkListToDestination(batch, subBatchFile);
-          level1SubBatchFiles.add(subBatchFile);
+          nextLevelChunks.add(subBatchFile);
         }
 
-        // Niveau 2 : Assemblage final des sous-fichiers de Niveau 1 vers la destination (Niveau max = 2)
-        await _mergeChunkListToDestination(level1SubBatchFiles, outputFile);
-      } finally {
-        try {
-          if (await tempSubDir.exists()) {
-            await tempSubDir.delete(recursive: true);
-          }
-        } catch (_) {}
+        currentLevelChunks = nextLevelChunks;
       }
+
+      // Copier le fichier final assemblé vers outputFile
+      await currentLevelChunks.first.copy(outputFile.path);
+    } finally {
+      try {
+        if (await tempSubDir.exists()) {
+          await tempSubDir.delete(recursive: true);
+        }
+      } catch (_) {}
     }
 
     if (kDebugMode) {
@@ -101,7 +104,7 @@ class PdfMergerService {
     return outputFile;
   }
 
-  /// Fusionne une liste ciblée de fichiers chunks vers un fichier destination unique.
+  /// Fusionne un micro-lot (batch) de maximum 3 chunks vers un fichier destination temporaire.
   static Future<void> _mergeChunkListToDestination(List<File> files, File destination) async {
     final sf.PdfDocument finalDoc = sf.PdfDocument();
     finalDoc.pageSettings.margins.all = 0;
