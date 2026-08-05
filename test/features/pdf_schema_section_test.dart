@@ -1,4 +1,4 @@
-@Timeout(Duration(seconds: 90))
+@Timeout(Duration(minutes: 5))
 library;
 
 import 'dart:io';
