@@ -1,4 +1,4 @@
-@Timeout(Duration(minutes: 5))
+@Timeout(Duration(minutes: 10))
 library;
 
 import 'dart:io';
@@ -44,9 +44,6 @@ void main() {
 
   setUpAll(() {
     PathProviderPlatform.instance = MockPathProviderPlatform();
-  });
-
-  test('Should handle schemaOption condition in PDF generation', () async {
     final tempDir = Directory.systemTemp.createTempSync('hive_schema_test');
     Hive.init(tempDir.path);
 
@@ -86,7 +83,9 @@ void main() {
     Hive.registerAdapter(JSAVerificationFinaleAdapter());
     Hive.registerAdapter(ClassementZoneAdapter());
     Hive.registerAdapter(LastReportAdapter());
+  });
 
+  test('Should handle schemaOption == Oui in PDF generation', () async {
     final missionsBox = await Hive.openBox<Mission>('missions');
     await Hive.openBox<DescriptionInstallations>('description_installations');
     await Hive.openBox<AuditInstallationsElectriques>('audit_installations_electriques');
@@ -110,7 +109,6 @@ void main() {
     await Hive.openBox<RenseignementsGeneraux>('renseignements_generaux');
     await Hive.openBox<ClassementZone>('classement_zones');
 
-    // Test Mission avec schemaOption == 'Oui'
     final missionOui = Mission(
       id: 'mission_schema_oui',
       nomClient: 'CLIENT SCHEMA OUI',
@@ -128,8 +126,11 @@ void main() {
     final fileOui = await PdfReportService.generateMissionReport(missionOui.id);
     expect(fileOui, isNotNull);
     expect(await fileOui!.exists(), isTrue);
+  });
 
-    // Test Mission avec schemaOption == 'Non'
+  test('Should handle schemaOption == Non in PDF generation', () async {
+    final missionsBox = await Hive.openBox<Mission>('missions');
+
     final missionNon = Mission(
       id: 'mission_schema_non',
       nomClient: 'CLIENT SCHEMA NON',

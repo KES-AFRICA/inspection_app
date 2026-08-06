@@ -148,28 +148,14 @@ class PdfReportService {
     ],
   };
 
-  /// Charge toutes les images necessaires (appele une seule fois)
+  /// Charge toutes les images necessaires (appele une seule fois sans compression native)
   static Future<void> _loadImages() async {
     if (_imagesLoaded) return;
     
-    Future<pw.MemoryImage?> tryLoad(String asset, {int? maxWidth, int? maxHeight}) async {
+    Future<pw.MemoryImage?> tryLoad(String asset) async {
       try {
         final data = await rootBundle.load(asset);
         final bytes = data.buffer.asUint8List();
-        if (maxWidth != null || maxHeight != null) {
-          try {
-            final compressed = await FlutterImageCompress.compressWithList(
-              bytes,
-              minWidth: maxWidth ?? 400,
-              minHeight: maxHeight ?? 400,
-              quality: 85,
-              format: CompressFormat.png,
-            );
-            if (compressed.isNotEmpty) {
-              return pw.MemoryImage(compressed);
-            }
-          } catch (_) {}
-        }
         return pw.MemoryImage(bytes);
       } catch (e) {
         if (kDebugMode) print('Image non trouvee: $asset');
@@ -177,14 +163,14 @@ class PdfReportService {
       }
     }
     
-    _watermarkImage       = await tryLoad('assets/images/filigranne_image.png', maxWidth: 300, maxHeight: 300);
-    _firstPageFooterImage = await tryLoad('assets/images/firstpage_footer.png', maxWidth: 600, maxHeight: 150);
-    _otherPageFooterImage = await tryLoad('assets/images/otherpage_footer.png', maxWidth: 600, maxHeight: 150);
-    _logoKesImage         = await tryLoad('assets/images/logo.png', maxWidth: 400, maxHeight: 150);
-    _imgHabilitation      = await tryLoad('assets/images/image.png', maxWidth: 450, maxHeight: 250);
-    _imgAccesGauche       = await tryLoad('assets/images/image copy.png', maxWidth: 300, maxHeight: 200);
-    _imgAccesDroite1      = await tryLoad('assets/images/image copy 2.png', maxWidth: 300, maxHeight: 200);
-    _imgAccesDroite2      = await tryLoad('assets/images/image copy 3.png', maxWidth: 300, maxHeight: 200);
+    _watermarkImage       = await tryLoad('assets/images/filigranne_image.png');
+    _firstPageFooterImage = await tryLoad('assets/images/firstpage_footer.png');
+    _otherPageFooterImage = await tryLoad('assets/images/otherpage_footer.png');
+    _logoKesImage         = await tryLoad('assets/images/logo.png');
+    _imgHabilitation      = await tryLoad('assets/images/image.png');
+    _imgAccesGauche       = await tryLoad('assets/images/image copy.png');
+    _imgAccesDroite1      = await tryLoad('assets/images/image copy 2.png');
+    _imgAccesDroite2      = await tryLoad('assets/images/image copy 3.png');
     
     _imagesLoaded = true;
   }
@@ -1691,8 +1677,6 @@ class PdfReportService {
       ),
     ));
 
-    widgets.addAll(_buildAnalyseStatistique(mission, trackedPages, numeroRapportDoc, offset: offset));
-
     return widgets;
   }
 
@@ -1707,7 +1691,6 @@ class PdfReportService {
     // Collecte unifiée via le résumé statistique Néo-Natif
     final summary = MissionStatisticsCollector.collectSummary(mission.id);
     final inventory = summary.inventory;
-    inventory.printFullInventoryDetails();
     final cStats = summary.criticalityStats;
 
     final critique = cStats.critique;
@@ -4813,7 +4796,7 @@ class PdfReportService {
 
     // ── Photo interne (déduite du cache préchargé optimisé à 20 Ko) ─────────
     pw.MemoryImage? photoInterne = photoCache?[coffret];
-    if (photoInterne == null) {
+    if (photoInterne == null && photoCache == null) {
       for (final src in [...coffret.photosInternes, ...coffret.photos, ...coffret.photosExternes]) {
         final trimmed = src.trim();
         if (trimmed.isEmpty) continue;
@@ -6939,7 +6922,7 @@ class PdfReportService {
         photoDoc = pw.Document(
           title: 'Photos Batch ${photoChunkIdx + 1} - ${mission.nomClient}',
           author: 'KES INSPECTIONS AND PROJECTS',
-          compress: true,
+          compress: saveFilesToDisk,
         );
         pagesInCurrentChunk = 0;
       }
@@ -6952,7 +6935,11 @@ class PdfReportService {
       final pageGroup = generalPhotos.sublist(gi, (gi + 4).clamp(0, generalPhotos.length));
       final pageImgs = <pw.MemoryImage?>[];
       for (final entry in pageGroup) {
-        pageImgs.add(await _loadAndOptimizeImage(entry.filePath, maxWidth: 600, maxHeight: 800, quality: 65));
+        if (saveFilesToDisk) {
+          pageImgs.add(await _loadAndOptimizeImage(entry.filePath, maxWidth: 600, maxHeight: 800, quality: 65));
+        } else {
+          pageImgs.add(null);
+        }
       }
 
       final startPhotoNum = globalPhotoCounter;
@@ -7032,20 +7019,24 @@ class PdfReportService {
     }
 
     for (var group in activeEquipmentGroups) {
-      // Charger l'image extérieure et intérieure
+      // Charger l'image extérieure et intérieure uniquement en Passe 2 (saveFilesToDisk == true)
       pw.MemoryImage? extImg;
-      if (group.extPhoto != null) {
+      if (group.extPhoto != null && saveFilesToDisk) {
         extImg = await _loadAndOptimizeImage(group.extPhoto!.filePath, maxWidth: 600, maxHeight: 800, quality: 65);
       }
       pw.MemoryImage? intImg;
-      if (group.intPhoto != null) {
+      if (group.intPhoto != null && saveFilesToDisk) {
         intImg = await _loadAndOptimizeImage(group.intPhoto!.filePath, maxWidth: 600, maxHeight: 800, quality: 65);
       }
 
-      // Charger les images d'observations
+      // Charger les images d'observations uniquement en Passe 2 (saveFilesToDisk == true)
       final obsImgs = <pw.MemoryImage?>[];
       for (var obs in group.obsPhotos) {
-        obsImgs.add(await _loadAndOptimizeImage(obs.filePath, maxWidth: 600, maxHeight: 800, quality: 65));
+        if (saveFilesToDisk) {
+          obsImgs.add(await _loadAndOptimizeImage(obs.filePath, maxWidth: 600, maxHeight: 800, quality: 65));
+        } else {
+          obsImgs.add(null);
+        }
       }
 
       final extCellNum = group.extPhoto != null ? globalPhotoCounter++ : null;
@@ -7504,7 +7495,7 @@ class PdfReportService {
     final coverDoc = pw.Document(
       title: 'Recap Cover - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
-      compress: true,
+      compress: saveFilesToDisk,
     );
     coverDoc.addPage(pw.MultiPage(
       maxPages: 10000,
@@ -7552,8 +7543,8 @@ class PdfReportService {
         ),
       ],
     ));
+    final coverBytes = await coverDoc.save();
     if (saveFilesToDisk) {
-      final coverBytes = await coverDoc.save();
       final coverFile = File('${tempDir.path}/pdf_chunk_recap_cover_${mission.id}.pdf');
       await coverFile.writeAsBytes(coverBytes);
       chunkFiles.add(coverFile);
@@ -7565,7 +7556,7 @@ class PdfReportService {
     final mtDoc = pw.Document(
       title: 'Recap MT - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
-      compress: true,
+      compress: saveFilesToDisk,
     );
     final mtWidgets = <pw.Widget>[
       PageTracker(
@@ -7587,8 +7578,8 @@ class PdfReportService {
       ),
       build: (ctx) => mtWidgets,
     ));
+    final mtBytes = await mtDoc.save();
     if (saveFilesToDisk) {
-      final mtBytes = await mtDoc.save();
       final mtFile = File('${tempDir.path}/pdf_chunk_recap_mt_${mission.id}.pdf');
       await mtFile.writeAsBytes(mtBytes);
       chunkFiles.add(mtFile);
@@ -7603,7 +7594,7 @@ class PdfReportService {
       final btDoc = pw.Document(
         title: 'Recap BT Empty - ${mission.nomClient}',
         author: 'KES INSPECTIONS AND PROJECTS',
-        compress: true,
+        compress: saveFilesToDisk,
       );
       btDoc.addPage(pw.MultiPage(
         maxPages: 10000,
@@ -7629,8 +7620,8 @@ class PdfReportService {
           ),
         ],
       ));
+      final btBytes = await btDoc.save();
       if (saveFilesToDisk) {
-        final btBytes = await btDoc.save();
         final btFile = File('${tempDir.path}/pdf_chunk_recap_bt_empty_${mission.id}.pdf');
         await btFile.writeAsBytes(btBytes);
         chunkFiles.add(btFile);
@@ -7643,7 +7634,7 @@ class PdfReportService {
         final btDoc = pw.Document(
           title: 'Recap BT Chunk ${i ~/ batchSize} - ${mission.nomClient}',
           author: 'KES INSPECTIONS AND PROJECTS',
-          compress: true,
+          compress: saveFilesToDisk,
         );
         final btWidgets = <pw.Widget>[];
         if (i == 0) {
@@ -7667,8 +7658,8 @@ class PdfReportService {
           ),
           build: (ctx) => btWidgets,
         ));
+        final btBytes = await btDoc.save();
         if (saveFilesToDisk) {
-          final btBytes = await btDoc.save();
           final btFile = File('${tempDir.path}/pdf_chunk_recap_bt_${i ~/ batchSize}_${mission.id}.pdf');
           await btFile.writeAsBytes(btBytes);
           chunkFiles.add(btFile);
@@ -7680,8 +7671,13 @@ class PdfReportService {
     return _ChunkSectionResult(files: chunkFiles, totalPages: currentOffset - pageOffset);
   }
 
-  static Future<Map<CoffretArmoire, pw.MemoryImage?>> _preloadCoffretPhotos(AuditInstallationsElectriques audit) async {
+  static Future<Map<CoffretArmoire, pw.MemoryImage?>> _preloadCoffretPhotos(
+    AuditInstallationsElectriques audit, {
+    bool loadImages = true,
+  }) async {
     final cache = <CoffretArmoire, pw.MemoryImage?>{};
+    if (!loadImages) return cache;
+
     Future<void> processCoffret(CoffretArmoire c) async {
       for (final src in [...c.photosInternes, ...c.photos, ...c.photosExternes]) {
         final trimmed = src.trim();
@@ -7737,13 +7733,13 @@ class PdfReportService {
     final tempDir = await getTemporaryDirectory();
     int currentOffset = pageOffset;
 
-    final photoCache = await _preloadCoffretPhotos(audit);
+    final photoCache = await _preloadCoffretPhotos(audit, loadImages: saveFilesToDisk);
 
     // 1. Page de Garde / Titre de l'Audit
     final coverDoc = pw.Document(
       title: 'Audit Cover - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
-      compress: true,
+      compress: saveFilesToDisk,
     );
     coverDoc.addPage(pw.MultiPage(
       maxPages: 200,
@@ -7791,8 +7787,8 @@ class PdfReportService {
         ),
       ],
     ));
+    final coverBytes = await coverDoc.save();
     if (saveFilesToDisk) {
-      final coverBytes = await coverDoc.save();
       final coverFile = File('${tempDir.path}/pdf_chunk_audit_cover_${mission.id}.pdf');
       await coverFile.writeAsBytes(coverBytes);
       chunkFiles.add(coverFile);
@@ -7804,7 +7800,7 @@ class PdfReportService {
       final mtDoc = pw.Document(
         title: 'Audit MT Directs - ${mission.nomClient}',
         author: 'KES INSPECTIONS AND PROJECTS',
-        compress: true,
+        compress: saveFilesToDisk,
       );
       final widgets = <pw.Widget>[
         PageTracker(
@@ -7828,8 +7824,8 @@ class PdfReportService {
         ),
         build: (ctx) => widgets,
       ));
+      final mtBytes = await mtDoc.save();
       if (saveFilesToDisk) {
-        final mtBytes = await mtDoc.save();
         final mtFile = File('${tempDir.path}/pdf_chunk_audit_mt_${mission.id}.pdf');
         await mtFile.writeAsBytes(mtBytes);
         chunkFiles.add(mtFile);
@@ -7843,7 +7839,7 @@ class PdfReportService {
       final zoneDoc = pw.Document(
         title: 'Audit Zone MT ${zone.nom} - ${mission.nomClient}',
         author: 'KES INSPECTIONS AND PROJECTS',
-        compress: true,
+        compress: saveFilesToDisk,
       );
       final widgets = <pw.Widget>[];
       widgets.addAll(_buildZone(zone.nom, zone.observationsLibres, trackedPages));
@@ -7868,8 +7864,8 @@ class PdfReportService {
         ),
         build: (ctx) => widgets,
       ));
+      final zoneBytes = await zoneDoc.save();
       if (saveFilesToDisk) {
-        final zoneBytes = await zoneDoc.save();
         final zoneFile = File('${tempDir.path}/pdf_chunk_audit_mt_z${zIdx}_${mission.id}.pdf');
         await zoneFile.writeAsBytes(zoneBytes);
         chunkFiles.add(zoneFile);
@@ -7883,7 +7879,7 @@ class PdfReportService {
       final zoneDoc = pw.Document(
         title: 'Audit Zone BT ${zone.nom} - ${mission.nomClient}',
         author: 'KES INSPECTIONS AND PROJECTS',
-        compress: true,
+        compress: saveFilesToDisk,
       );
       final widgets = <pw.Widget>[];
       widgets.addAll(_buildZone(zone.nom, zone.observationsLibres, trackedPages));
@@ -7908,8 +7904,8 @@ class PdfReportService {
         ),
         build: (ctx) => widgets,
       ));
+      final zoneBytes = await zoneDoc.save();
       if (saveFilesToDisk) {
-        final zoneBytes = await zoneDoc.save();
         final zoneFile = File('${tempDir.path}/pdf_chunk_audit_bt_z${zIdx}_${mission.id}.pdf');
         await zoneFile.writeAsBytes(zoneBytes);
         chunkFiles.add(zoneFile);
@@ -7954,7 +7950,7 @@ class PdfReportService {
     final preflightP1_1 = pw.Document(
       title: 'Couverture & Sommaire Preflight - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
-      compress: true,
+      compress: saveFilesToDisk,
     );
     preflightP1_1.addPage(
       pw.Page(
@@ -7973,6 +7969,7 @@ class PdfReportService {
       overrideTotalPages: overrideTotalPages,
     );
 
+    await preflightP1_1.save();
     final int subChunk1_1_Pages = preflightP1_1.document.pdfPageList.pages.length;
     int currentOffset = subChunk1_1_Pages;
 
@@ -7981,7 +7978,7 @@ class PdfReportService {
     final pdfP1_2 = pw.Document(
       title: 'Périmètre & Sécurité - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
-      compress: true,
+      compress: saveFilesToDisk,
     );
     pdfP1_2.addPage(pw.MultiPage(
       maxPages: 200,
@@ -8191,9 +8188,10 @@ class PdfReportService {
         ),
       ],
     ));
+    final bytesP1_2 = await pdfP1_2.save();
     if (saveFilesToDisk) {
       final chunkP1_2 = File('${tempDir.path}/pdf_chunk_p1_2_$missionId.pdf');
-      await chunkP1_2.writeAsBytes(await pdfP1_2.save());
+      await chunkP1_2.writeAsBytes(bytesP1_2);
       allChunkFiles.add(chunkP1_2);
     }
     currentOffset += pdfP1_2.document.pdfPageList.pages.length;
@@ -8203,7 +8201,7 @@ class PdfReportService {
     final pdfP1_3 = pw.Document(
       title: 'Résumé Exécutif & Stats - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
-      compress: true,
+      compress: saveFilesToDisk,
     );
     pdfP1_3.addPage(pw.MultiPage(
       maxPages: 200,
@@ -8219,9 +8217,10 @@ class PdfReportService {
         ..._buildAnalyseStatistique(mission, trackedPages, numeroRapportDoc, offset: currentOffset),
       ],
     ));
+    final bytesP1_3 = await pdfP1_3.save();
     if (saveFilesToDisk) {
       final chunkP1_3 = File('${tempDir.path}/pdf_chunk_p1_3_$missionId.pdf');
-      await chunkP1_3.writeAsBytes(await pdfP1_3.save());
+      await chunkP1_3.writeAsBytes(bytesP1_3);
       allChunkFiles.add(chunkP1_3);
     }
     currentOffset += pdfP1_3.document.pdfPageList.pages.length;
@@ -8231,7 +8230,7 @@ class PdfReportService {
     final pdfP1_4 = pw.Document(
       title: 'Description Installations - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
-      compress: true,
+      compress: saveFilesToDisk,
     );
     pdfP1_4.addPage(pw.MultiPage(
       maxPages: 200,
@@ -8248,9 +8247,10 @@ class PdfReportService {
       ),
       build: (ctx) => _buildDescriptionInstallationsMulti(description, audit, trackedPages, offset: currentOffset),
     ));
+    final bytesP1_4 = await pdfP1_4.save();
     if (saveFilesToDisk) {
       final chunkP1_4 = File('${tempDir.path}/pdf_chunk_p1_4_$missionId.pdf');
-      await chunkP1_4.writeAsBytes(await pdfP1_4.save());
+      await chunkP1_4.writeAsBytes(bytesP1_4);
       allChunkFiles.add(chunkP1_4);
     }
     currentOffset += pdfP1_4.document.pdfPageList.pages.length;
@@ -8291,7 +8291,7 @@ class PdfReportService {
     final pdfP2_1 = pw.Document(
       title: 'Classement & Mesures - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
-      compress: true,
+      compress: saveFilesToDisk,
     );
     pdfP2_1.addPage(pw.MultiPage(
       maxPages: 200,
@@ -8315,9 +8315,10 @@ class PdfReportService {
         build: (ctx) => _buildSignaturePage(renseignements, currentUser?.fullName),
       ));
     }
+    final bytesP2_1 = await pdfP2_1.save();
     if (saveFilesToDisk) {
       final chunkP2_1 = File('${tempDir.path}/pdf_chunk_p2_1_$missionId.pdf');
-      await chunkP2_1.writeAsBytes(await pdfP2_1.save());
+      await chunkP2_1.writeAsBytes(bytesP2_1);
       allChunkFiles.add(chunkP2_1);
     }
     currentOffset += pdfP2_1.document.pdfPageList.pages.length;
@@ -8327,7 +8328,7 @@ class PdfReportService {
     final pdfP2_2 = pw.Document(
       title: 'Garde Photos & Schéma - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
-      compress: true,
+      compress: saveFilesToDisk,
     );
     pdfP2_2.addPage(pw.MultiPage(
       maxPages: 200,
@@ -8376,9 +8377,10 @@ class PdfReportService {
         ),
       ],
     ));
+    final bytesP2_2 = await pdfP2_2.save();
     if (saveFilesToDisk) {
       final chunkP2_2 = File('${tempDir.path}/pdf_chunk_p2_2_$missionId.pdf');
-      await chunkP2_2.writeAsBytes(await pdfP2_2.save());
+      await chunkP2_2.writeAsBytes(bytesP2_2);
       allChunkFiles.add(chunkP2_2);
     }
     currentOffset += pdfP2_2.document.pdfPageList.pages.length;
@@ -8406,7 +8408,7 @@ class PdfReportService {
       final pdfSchema = pw.Document(
         title: 'Schéma - ${mission.nomClient}',
         author: 'KES INSPECTIONS AND PROJECTS',
-        compress: true,
+        compress: saveFilesToDisk,
       );
       _addSchemaSection(
         pdfSchema,
@@ -8417,9 +8419,10 @@ class PdfReportService {
         pageOffset: currentOffset,
         overrideTotalPages: overrideTotalPages,
       );
+      final bytesSchema = await pdfSchema.save();
       if (saveFilesToDisk) {
         final chunkSchema = File('${tempDir.path}/pdf_chunk_schema_$missionId.pdf');
-        await chunkSchema.writeAsBytes(await pdfSchema.save());
+        await chunkSchema.writeAsBytes(bytesSchema);
         allChunkFiles.add(chunkSchema);
       }
       currentOffset += pdfSchema.document.pdfPageList.pages.length;
@@ -8433,7 +8436,7 @@ class PdfReportService {
       final pdfP1_1 = pw.Document(
         title: 'Couverture & Sommaire - ${mission.nomClient}',
         author: 'KES INSPECTIONS AND PROJECTS',
-        compress: true,
+        compress: saveFilesToDisk,
       );
       pdfP1_1.addPage(
         pw.Page(

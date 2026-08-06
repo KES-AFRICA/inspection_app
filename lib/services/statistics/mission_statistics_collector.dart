@@ -17,10 +17,7 @@ class MissionStatisticsCollector {
     // 1. Phase Inventaire Brut Exhaustif
     final inventory = AuditFindingInventoryEngine.buildInventory(missionId);
 
-    // 2. Affichage automatique du diagnostic dans la console de debug
-    inventory.printDiagnostic();
-
-    // 3. Conversion de l'inventaire en UnifiedObservation pour rétrocompatibilité totale
+    // 2. Conversion de l'inventaire en UnifiedObservation pour rétrocompatibilité totale
     final unifiedObsList = inventory.findings.map((finding) {
       return UnifiedObservation(
         id: finding.id,
@@ -41,14 +38,13 @@ class MissionStatisticsCollector {
       );
     }).toList();
 
-    // 4. Phase Calcul Statistique
+    // 3. Phase Calcul Statistique
     return MissionStatistics.compute(missionId, unifiedObsList);
   }
 
   /// Génère directement l'inventaire brut AuditFindingInventory pour inspection et diagnostic.
   static AuditFindingInventory getInventory(String missionId) {
     final inventory = AuditFindingInventoryEngine.buildInventory(missionId);
-    inventory.printDiagnostic();
     return inventory;
   }
 
@@ -59,7 +55,6 @@ class MissionStatisticsCollector {
   /// pour le diagnostic des non-conformités et les statistiques de criticité.
   static MissionStatisticsSummary collectSummary(String missionId) {
     final inventory = AuditFindingInventoryEngine.buildInventory(missionId);
-    inventory.printDiagnostic();
 
     // Utiliser MissionDomainInventoryEngine pour les cross-category et l'inventaire chiffré.
     final domainInventory = MissionDomainInventoryEngine.buildInventory(missionId);
