@@ -273,7 +273,9 @@ class PdfReportService {
     const double descente = kBottomMargin + 40;
 
     final pageNum = ctx.pageNumber + pageOffset;
-    final totalPagesStr = overrideTotalPages != null ? '$overrideTotalPages' : '${ctx.pagesCount}';
+    final String pageDisplay = (overrideTotalPages != null)
+        ? 'Page $pageNum / $overrideTotalPages'
+        : 'Page $pageNum';
 
     return pw.Stack(
       overflow: pw.Overflow.visible,
@@ -301,7 +303,7 @@ class PdfReportService {
             bottom: -descente + 20,
             left:   -kLeftMargin + kLeftMargin,
             child: pw.Text(
-              'Page $pageNum / $totalPagesStr',
+              pageDisplay,
               style: pw.TextStyle(
                 font: _fontRegular,
                 fontSize: 7.5,
@@ -5902,11 +5904,17 @@ class PdfReportService {
   //  RESULTATS DES MESURES ET ESSAIS
   // ──────────────────────────────────────────────────────────────
   
-  static void _addMesuresEssaisPages(pw.Document pdf, MesuresEssais mesures, Map<String, int> trackedPages) {
+  static void _addMesuresEssaisPages(
+    pw.Document pdf,
+    MesuresEssais mesures,
+    Map<String, int> trackedPages, {
+    int pageOffset = 0,
+    int? overrideTotalPages,
+  }) {
     // Page intro avec conditions ET les deux essais
     pdf.addPage(pw.MultiPage(
       maxPages: 10000,
-      pageTheme: _buildInnerPageTheme(),
+      pageTheme: _buildInnerPageTheme(pageOffset: pageOffset, overrideTotalPages: overrideTotalPages),
       header: (ctx) => _buildPageHeaderWidget(),
       build: (ctx) => [
           PageTracker(
@@ -5966,7 +5974,7 @@ class PdfReportService {
     // Prise de terre (nouvelle page)
     pdf.addPage(pw.MultiPage(
       maxPages: 10000,
-      pageTheme: _buildInnerPageTheme(),
+      pageTheme: _buildInnerPageTheme(pageOffset: pageOffset, overrideTotalPages: overrideTotalPages),
       header: (ctx) => _buildPageHeaderWidget(),
       build: (ctx) => [
         PageTracker(
@@ -6060,7 +6068,7 @@ class PdfReportService {
     
     // Mesures d'isolement des circuits BT (nouvelle page)
     pdf.addPage(pw.Page(
-      pageTheme: _buildInnerPageTheme(),
+      pageTheme: _buildInnerPageTheme(pageOffset: pageOffset, overrideTotalPages: overrideTotalPages),
       build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
         _buildPageHeaderWidget(), pw.SizedBox(height: 10),
         _subSectionBar("Mésures d'isolement des circuits BT"),
@@ -6071,7 +6079,7 @@ class PdfReportService {
     // Essais de declenchement des DDR (nouvelle page)
     pdf.addPage(pw.MultiPage(
       maxPages: 10000,
-      pageTheme: _buildInnerPageTheme(),
+      pageTheme: _buildInnerPageTheme(pageOffset: pageOffset, overrideTotalPages: overrideTotalPages),
       header: (ctx) => _buildPageHeaderWidget(),
       build: (ctx) {
         final widgets = <pw.Widget>[];
@@ -6274,7 +6282,7 @@ class PdfReportService {
     // Continuite (nouvelle page)
     pdf.addPage(pw.MultiPage(
       maxPages: 10000,
-      pageTheme: _buildInnerPageTheme(),
+      pageTheme: _buildInnerPageTheme(pageOffset: pageOffset, overrideTotalPages: overrideTotalPages),
       header: (ctx) => _buildPageHeaderWidget(),
       build: (ctx) => [
         PageTracker(
@@ -6916,7 +6924,7 @@ class PdfReportService {
       globalPhotoCounter += pageGroup.length;
 
       photoDoc.addPage(pw.Page(
-        pageTheme: _buildInnerPageTheme(),
+        pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
         build: (ctx) {
           final cells = <pw.Widget>[];
           for (int ci = 0; ci < 4; ci++) {
@@ -6959,7 +6967,7 @@ class PdfReportService {
       currentPageEquipRows.clear();
 
       photoDoc.addPage(pw.Page(
-        pageTheme: _buildInnerPageTheme(),
+        pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
         build: (ctx) {
           return pw.Column(
             children: [
@@ -7105,13 +7113,15 @@ class PdfReportService {
     Map<String, int> trackedPages, {
     String? nomSite,
     String? numeroRapport,
+    int pageOffset = 0,
+    int? overrideTotalPages,
   }) {
     final hasSchema = mission.schemaOption?.trim().toLowerCase() == 'oui';
     if (!hasSchema) return;
 
     pdf.addPage(pw.MultiPage(
       maxPages: 10000,
-      pageTheme: _buildInnerPageTheme(showWatermark: false),
+      pageTheme: _buildInnerPageTheme(pageOffset: pageOffset, overrideTotalPages: overrideTotalPages, showWatermark: false),
       header: (ctx) => _buildPageHeaderWidget(
         nomClient: mission.nomClient,
         nomSite: nomSite,
@@ -7904,9 +7914,28 @@ class PdfReportService {
       foudres: foudres,
     );
 
-    final sommairePagesCount = (sommaireEntries.length > 25) ? 2 : 1;
-    final subChunk1_1_Pages = 1 + sommairePagesCount;
+    // Pre-flight réel du Sub-chunk 1.1 pour mesurer sans estimation le nombre de pages initial
+    final preflightP1_1 = pw.Document(
+      title: 'Couverture & Sommaire Preflight - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: true,
+    );
+    preflightP1_1.addPage(
+      pw.Page(
+        pageTheme: _buildCoverPageTheme(),
+        build: (ctx) => _buildCoverPage(mission, renseignements, ctx),
+      ),
+    );
+    _addSommairePages(
+      preflightP1_1,
+      sommaireEntries,
+      trackedPages,
+      nomClient: mission.nomClient,
+      nomSite: nomSiteHeader,
+      numeroRapport: numeroRapportDoc,
+    );
 
+    final int subChunk1_1_Pages = preflightP1_1.document.pdfPageList.pages.length;
     int currentOffset = subChunk1_1_Pages;
 
     // ── Sub-chunk 1.2 : Objet, Périmètre & Mesures de sécurité ──
@@ -8242,7 +8271,7 @@ class PdfReportService {
       build: (ctx) => [_buildFoudre(audit, foudres, trackedPages, afficherTableauFoudre: mission.afficherTableauFoudre)],
     ));
     if (mesures != null) {
-      _addMesuresEssaisPages(pdfP2_1, mesures, trackedPages);
+      _addMesuresEssaisPages(pdfP2_1, mesures, trackedPages, pageOffset: currentOffset, overrideTotalPages: overrideTotalPages);
       pdfP2_1.addPage(pw.Page(
         pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
         build: (ctx) => _buildSignaturePage(renseignements, currentUser?.fullName),
@@ -8310,7 +8339,7 @@ class PdfReportService {
       ],
     ));
     _addSchemaSection(pdfP2_2, mission, trackedPages,
-        nomSite: nomSiteHeader, numeroRapport: numeroRapportDoc);
+        nomSite: nomSiteHeader, numeroRapport: numeroRapportDoc, pageOffset: currentOffset, overrideTotalPages: overrideTotalPages);
 
     if (saveFilesToDisk) {
       final chunkP2_2 = File('${tempDir.path}/pdf_chunk_p2_2_$missionId.pdf');
