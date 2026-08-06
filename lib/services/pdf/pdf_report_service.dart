@@ -800,10 +800,12 @@ class PdfReportService {
     String? nomClient,
     String? nomSite,
     String? numeroRapport,
+    int pageOffset = 0,
+    int? overrideTotalPages,
   }) {
     pdf.addPage(pw.MultiPage(
       maxPages: 10000,
-      pageTheme: _buildInnerPageTheme(),
+      pageTheme: _buildInnerPageTheme(pageOffset: pageOffset, overrideTotalPages: overrideTotalPages),
       header: (ctx) => _buildPageHeaderWidget(
         nomClient: nomClient,
         nomSite: nomSite,
@@ -7933,6 +7935,8 @@ class PdfReportService {
       nomClient: mission.nomClient,
       nomSite: nomSiteHeader,
       numeroRapport: numeroRapportDoc,
+      pageOffset: 0,
+      overrideTotalPages: overrideTotalPages,
     );
 
     final int subChunk1_1_Pages = preflightP1_1.document.pdfPageList.pages.length;
@@ -8338,9 +8342,6 @@ class PdfReportService {
         ),
       ],
     ));
-    _addSchemaSection(pdfP2_2, mission, trackedPages,
-        nomSite: nomSiteHeader, numeroRapport: numeroRapportDoc, pageOffset: currentOffset, overrideTotalPages: overrideTotalPages);
-
     if (saveFilesToDisk) {
       final chunkP2_2 = File('${tempDir.path}/pdf_chunk_p2_2_$missionId.pdf');
       await chunkP2_2.writeAsBytes(await pdfP2_2.save());
@@ -8365,6 +8366,31 @@ class PdfReportService {
     if (saveFilesToDisk) allChunkFiles.addAll(photoResult.files);
     currentOffset += photoResult.totalPages;
 
+    // ── Sub-chunk 2.3 : Schéma d'exploitation (Placé à la FIN du document si schemaOption == 'oui') ──
+    final hasSchema = mission.schemaOption?.trim().toLowerCase() == 'oui';
+    if (hasSchema) {
+      final pdfSchema = pw.Document(
+        title: 'Schéma - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: true,
+      );
+      _addSchemaSection(
+        pdfSchema,
+        mission,
+        trackedPages,
+        nomSite: nomSiteHeader,
+        numeroRapport: numeroRapportDoc,
+        pageOffset: currentOffset,
+        overrideTotalPages: overrideTotalPages,
+      );
+      if (saveFilesToDisk) {
+        final chunkSchema = File('${tempDir.path}/pdf_chunk_schema_$missionId.pdf');
+        await chunkSchema.writeAsBytes(await pdfSchema.save());
+        allChunkFiles.add(chunkSchema);
+      }
+      currentOffset += pdfSchema.document.pdfPageList.pages.length;
+    }
+
     final totalReportPages = currentOffset;
 
     // ── Sub-chunk 1.1 : Couverture & Sommaire (Généré en dernier) ──
@@ -8388,6 +8414,8 @@ class PdfReportService {
         nomClient: mission.nomClient,
         nomSite: nomSiteHeader,
         numeroRapport: numeroRapportDoc,
+        pageOffset: 0,
+        overrideTotalPages: totalReportPages,
       );
       final chunkP1_1 = File('${tempDir.path}/pdf_chunk_p1_1_$missionId.pdf');
       final bytesP1_1 = await pdfP1_1.save();
