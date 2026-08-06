@@ -1535,8 +1535,9 @@ class PdfReportService {
   static List<pw.Widget> _buildResumeExecutif(
     Mission mission,
     Map<String, int> trackedPages,
-    String numeroRapportDoc,
-  ) {
+    String numeroRapportDoc, {
+    int offset = 0,
+  }) {
     final widgets = <pw.Widget>[];
 
     // Source unique de vérité pour les statistiques
@@ -1582,6 +1583,7 @@ class PdfReportService {
     widgets.add(PageTracker(
       key: 'resume_executif',
       registry: trackedPages,
+      offset: offset,
       child: _sectionBox('RESUME EXECUTIF'),
     ));
     widgets.add(pw.SizedBox(height: 14));
@@ -1689,14 +1691,17 @@ class PdfReportService {
       ),
     ));
 
+    widgets.addAll(_buildAnalyseStatistique(mission, trackedPages, numeroRapportDoc, offset: offset));
+
     return widgets;
   }
 
   static List<pw.Widget> _buildAnalyseStatistique(
     Mission mission,
     Map<String, int> trackedPages,
-    String numeroRapportDoc,
-  ) {
+    String numeroRapportDoc, {
+    int offset = 0,
+  }) {
     final widgets = <pw.Widget>[];
 
     // Collecte unifiée via le résumé statistique Néo-Natif
@@ -1717,6 +1722,7 @@ class PdfReportService {
     widgets.add(PageTracker(
       key: 'analyse_statistique',
       registry: trackedPages,
+      offset: offset,
       child: _sectionBox('ANALYSE STATISTIQUE'),
     ));
     widgets.add(pw.SizedBox(height: 10));
@@ -1725,6 +1731,7 @@ class PdfReportService {
     widgets.add(PageTracker(
       key: 'stat_annee_passee',
       registry: trackedPages,
+      offset: offset,
       child: _subTitle('Non-conformités de l\'année passée'),
     ));
     widgets.add(pw.SizedBox(height: 5));
@@ -1738,6 +1745,7 @@ class PdfReportService {
     widgets.add(PageTracker(
       key: 'stat_comparaison',
       registry: trackedPages,
+      offset: offset,
       child: _subTitle('Comparaison avec celles de cette année'),
     ));
     widgets.add(pw.SizedBox(height: 5));
@@ -1756,6 +1764,7 @@ class PdfReportService {
     widgets.add(PageTracker(
       key: 'stat_taux_conformite',
       registry: trackedPages,
+      offset: offset,
       child: _subTitle('Taux de mise en conformité'),
     ));
     widgets.add(pw.SizedBox(height: 5));
@@ -1775,6 +1784,7 @@ class PdfReportService {
       widgets.add(PageTracker(
         key: 'stat_defauts',
         registry: trackedPages,
+        offset: offset,
         child: _subTitle('Statistique par type de d\u00e9faut'),
       ));
       widgets.add(pw.SizedBox(height: 5));
@@ -1792,6 +1802,7 @@ class PdfReportService {
       widgets.add(PageTracker(
         key: 'stat_tension',
         registry: trackedPages,
+        offset: offset,
         child: _buildTensionDomainSection(domainStats),
       ));
       widgets.add(pw.SizedBox(height: 12));
@@ -1803,6 +1814,7 @@ class PdfReportService {
       widgets.add(PageTracker(
         key: 'stat_croisee',
         registry: trackedPages,
+        offset: offset,
         child: _buildCrossCategorySection(statsSummary.crossCategoryItems, statsSummary.crossAnalysisText),
       ));
       widgets.add(pw.SizedBox(height: 12));
@@ -1812,6 +1824,7 @@ class PdfReportService {
     widgets.add(PageTracker(
       key: 'stat_inventaire',
       registry: trackedPages,
+      offset: offset,
       child: _buildInventaireEquipementsSection(statsSummary.equipmentInventory),
     ));
 
@@ -2262,8 +2275,9 @@ class PdfReportService {
   static pw.Widget _buildRenseignementsGeneraux(
     Mission mission,
     RenseignementsGeneraux? rg,
-    Map<String, int> trackedPages,
-  ) {
+    Map<String, int> trackedPages, {
+    int offset = 0,
+  }) {
     final verificateursNoms = rg != null && rg.verificateurs.isNotEmpty
         ? rg.verificateurs
             .map((v) => '${v['prenom'] ?? ''} ${v['nom'] ?? ''}'.trim())
@@ -2401,6 +2415,7 @@ class PdfReportService {
         PageTracker(
           key: 'renseignements',
           registry: trackedPages,
+          offset: offset,
           child: _sectionBox('RENSEIGNEMENTS G\u00c9N\u00c9RAUX DE L\'\u00c9TABLISSEMENT'),
         ),
 
@@ -2409,6 +2424,7 @@ class PdfReportService {
         PageTracker(
           key: 'renseignements_principaux',
           registry: trackedPages,
+          offset: offset,
           child: _subTitle('RENSEIGNEMENTS PRINCIPAUX'),
         ),
 
@@ -2507,6 +2523,7 @@ class PdfReportService {
   PageTracker(
     key: 'renseignements_documents',
     registry: trackedPages,
+    offset: offset,
     child: _subTitle('DOCUMENTS NECESSAIRES A LA VERIFICATION'),
   ),
 
@@ -2587,6 +2604,7 @@ class PdfReportService {
   PageTracker(
     key: 'renseignements_habilitation',
     registry: trackedPages,
+    offset: offset,
     child: _subTitle('HABILITATION ÉLECTRIQUE DU PERSONNEL D\'INTERVENTION'),
   ),
   pw.SizedBox(height: 6),
@@ -2689,12 +2707,14 @@ class PdfReportService {
   static List<pw.Widget> _buildDescriptionInstallationsMulti(
     DescriptionInstallations? desc,
     AuditInstallationsElectriques? audit,
-    Map<String, int> trackedPages,
-  ) {
+    Map<String, int> trackedPages, {
+    int offset = 0,
+  }) {
     final widgets = <pw.Widget>[];
     widgets.add(PageTracker(
       key: 'description',
       registry: trackedPages,
+      offset: offset,
       child: _sectionBox('DESCRIPTION DES INSTALLATIONS'),
     ));
     widgets.add(pw.SizedBox(height: 8));
@@ -2797,6 +2817,7 @@ class PdfReportService {
     widgets.add(PageTracker(
       key: 'desc_locaux_risques',
       registry: trackedPages,
+      offset: offset,
       child: _subTitle('Zones et Locaux \u00e0 risque'),
     ));
 
@@ -5315,14 +5336,16 @@ class PdfReportService {
   static List<pw.Widget> _buildClassementEmplacementsMulti(
     List<ClassementEmplacement> emplacements,
     List<ClassementZone> zonesClassement,
-    Map<String, int> trackedPages,
-  ) {
+    Map<String, int> trackedPages, {
+    int offset = 0,
+  }) {
     final widgets = <pw.Widget>[];
 
     // _sectionBox title like other sections
     widgets.add(PageTracker(
       key: 'classement',
       registry: trackedPages,
+      offset: offset,
       child: _sectionBox(
         "CLASSEMENT ET EMPLACEMENTS DES LOCAUX ET ZONE EN FONCTION DES INFLUENCES EXTERNES"
       ),
@@ -5739,6 +5762,7 @@ class PdfReportService {
     List<Foudre> foudres,
     Map<String, int> trackedPages, {
     bool afficherTableauFoudre = false,
+    int offset = 0,
   }) {
     final equipRows = _collectParafoudreRows(audit);
 
@@ -5770,6 +5794,7 @@ class PdfReportService {
         PageTracker(
           key: 'foudre',
           registry: trackedPages,
+          offset: offset,
           child: _sectionBox('FOUDRE'),
         ),
         pw.SizedBox(height: 8),
@@ -5867,6 +5892,7 @@ class PdfReportService {
         PageTracker(
           key: 'foudre_equipements',
           registry: trackedPages,
+          offset: offset,
           child: _subSectionBar("Observations par équipement"),
         ),
         pw.SizedBox(height: 6),
@@ -7141,6 +7167,7 @@ class PdfReportService {
               PageTracker(
                 key: 'schema_installations',
                 registry: trackedPages,
+                offset: pageOffset,
                 child: pw.Text(
                   'SCH\u00c9MA DES INSTALLATIONS ELECTRIQUES',
                   style: pw.TextStyle(
@@ -8180,9 +8207,9 @@ class PdfReportService {
         numeroRapport: numeroRapportDoc,
       ),
       build: (ctx) => [
-        ..._buildResumeExecutif(mission, trackedPages, numeroRapportDoc),
+        ..._buildResumeExecutif(mission, trackedPages, numeroRapportDoc, offset: currentOffset),
         pw.NewPage(),
-        ..._buildAnalyseStatistique(mission, trackedPages, numeroRapportDoc),
+        ..._buildAnalyseStatistique(mission, trackedPages, numeroRapportDoc, offset: currentOffset),
       ],
     ));
     if (saveFilesToDisk) {
@@ -8202,7 +8229,7 @@ class PdfReportService {
     pdfP1_4.addPage(pw.MultiPage(
       maxPages: 200,
       pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
-      build: (ctx) => [_buildRenseignementsGeneraux(mission, renseignements, trackedPages)],
+      build: (ctx) => [_buildRenseignementsGeneraux(mission, renseignements, trackedPages, offset: currentOffset)],
     ));
     pdfP1_4.addPage(pw.MultiPage(
       maxPages: 200,
@@ -8212,7 +8239,7 @@ class PdfReportService {
         nomSite: nomSiteHeader,
         numeroRapport: numeroRapportDoc,
       ),
-      build: (ctx) => _buildDescriptionInstallationsMulti(description, audit, trackedPages),
+      build: (ctx) => _buildDescriptionInstallationsMulti(description, audit, trackedPages, offset: currentOffset),
     ));
     if (saveFilesToDisk) {
       final chunkP1_4 = File('${tempDir.path}/pdf_chunk_p1_4_$missionId.pdf');
@@ -8267,12 +8294,12 @@ class PdfReportService {
         nomSite: nomSiteHeader,
         numeroRapport: numeroRapportDoc,
       ),
-      build: (ctx) => _buildClassementEmplacementsMulti(classements, classementsZones, trackedPages),
+      build: (ctx) => _buildClassementEmplacementsMulti(classements, classementsZones, trackedPages, offset: currentOffset),
     ));
     pdfP2_1.addPage(pw.MultiPage(
       maxPages: 200,
       pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
-      build: (ctx) => [_buildFoudre(audit, foudres, trackedPages, afficherTableauFoudre: mission.afficherTableauFoudre)],
+      build: (ctx) => [_buildFoudre(audit, foudres, trackedPages, afficherTableauFoudre: mission.afficherTableauFoudre, offset: currentOffset)],
     ));
     if (mesures != null) {
       _addMesuresEssaisPages(pdfP2_1, mesures, trackedPages, pageOffset: currentOffset, overrideTotalPages: overrideTotalPages);
