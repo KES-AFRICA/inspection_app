@@ -6473,7 +6473,7 @@ class PdfReportService {
     }
   }
 
-  static Future<List<File>> _addPhotosSectionChunked(
+  static Future<_ChunkSectionResult> _addPhotosSectionChunked(
       Mission mission,
       String missionId,
       AuditInstallationsElectriques? audit,
@@ -6481,9 +6481,13 @@ class PdfReportService {
       Map<String, int> trackedPages, {
       String? nomSite,
       String? numeroRapport,
+      int pageOffset = 0,
+      int? overrideTotalPages,
+      bool saveFilesToDisk = true,
   }) async {
     final chunkFiles = <File>[];
     final tempDir = await getTemporaryDirectory();
+    int currentOffset = pageOffset;
     final generalPhotos = <_PhotoEntry>[];
     final equipmentGroups = <_EquipmentPhotoGroup>[];
     final seenPaths = <String>{};
@@ -6866,7 +6870,7 @@ class PdfReportService {
     final activeEquipmentGroups = equipmentGroups.where((g) => g.hasPhotos).toList();
     final totalPhotosCount = generalPhotos.length + activeEquipmentGroups.fold<int>(0, (sum, g) => sum + g.totalPhotosCount);
 
-    if (totalPhotosCount == 0) return chunkFiles;
+    if (totalPhotosCount == 0) return _ChunkSectionResult(files: chunkFiles, totalPages: 0);
 
     int globalPhotoCounter = 1;
     int photoChunkIdx = 0;
@@ -6881,10 +6885,13 @@ class PdfReportService {
     Future<void> flushChunkIfNeeded({bool force = false}) async {
       if (pagesInCurrentChunk > 0 && (pagesInCurrentChunk >= 3 || force)) {
         photoChunkIdx++;
-        final chunkBytes = await photoDoc.save();
-        final photoChunkFile = File('${tempDir.path}/pdf_chunk_photos_${missionId}_$photoChunkIdx.pdf');
-        await photoChunkFile.writeAsBytes(chunkBytes);
-        chunkFiles.add(photoChunkFile);
+        if (saveFilesToDisk) {
+          final chunkBytes = await photoDoc.save();
+          final photoChunkFile = File('${tempDir.path}/pdf_chunk_photos_${missionId}_$photoChunkIdx.pdf');
+          await photoChunkFile.writeAsBytes(chunkBytes);
+          chunkFiles.add(photoChunkFile);
+        }
+        currentOffset += pagesInCurrentChunk;
 
         photoDoc = pw.Document(
           title: 'Photos Batch ${photoChunkIdx + 1} - ${mission.nomClient}',
@@ -7081,7 +7088,7 @@ class PdfReportService {
 
     await flushEquipmentPage();
     await flushChunkIfNeeded(force: true);
-    return chunkFiles;
+    return _ChunkSectionResult(files: chunkFiles, totalPages: currentOffset - pageOffset);
   }
 
 
@@ -7433,15 +7440,19 @@ class PdfReportService {
 
   
 
-  static Future<List<File>> _addListeRecapitulativeSectionChunked(
+  static Future<_ChunkSectionResult> _addListeRecapitulativeSectionChunked(
     Mission mission,
     AuditInstallationsElectriques audit,
     Map<String, int> trackedPages, {
     required String nomSite,
     required String numeroRapport,
+    int pageOffset = 0,
+    int? overrideTotalPages,
+    bool saveFilesToDisk = true,
   }) async {
     final chunkFiles = <File>[];
     final tempDir = await getTemporaryDirectory();
+    int currentOffset = pageOffset;
 
     // 1. Page de Garde de la Synthèse Récapitulative
     final coverDoc = pw.Document(
@@ -7451,7 +7462,7 @@ class PdfReportService {
     );
     coverDoc.addPage(pw.MultiPage(
       maxPages: 10000,
-      pageTheme: _buildInnerPageTheme(showWatermark: false),
+      pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages, showWatermark: false),
       header: (ctx) => _buildPageHeaderWidget(
         nomSite: nomSite,
         numeroRapport: numeroRapport,
@@ -7468,6 +7479,7 @@ class PdfReportService {
               PageTracker(
                 key: 'liste_recap',
                 registry: trackedPages,
+                offset: currentOffset,
                 child: pw.Text(
                   'SYNTHÈSE RÉCAPITULATIVE DES OBSERVATIONS',
                   style: pw.TextStyle(
@@ -7494,10 +7506,13 @@ class PdfReportService {
         ),
       ],
     ));
-    final coverBytes = await coverDoc.save();
-    final coverFile = File('${tempDir.path}/pdf_chunk_recap_cover_${mission.id}.pdf');
-    await coverFile.writeAsBytes(coverBytes);
-    chunkFiles.add(coverFile);
+    if (saveFilesToDisk) {
+      final coverBytes = await coverDoc.save();
+      final coverFile = File('${tempDir.path}/pdf_chunk_recap_cover_${mission.id}.pdf');
+      await coverFile.writeAsBytes(coverBytes);
+      chunkFiles.add(coverFile);
+    }
+    currentOffset += coverDoc.document.pdfPageList.pages.length;
 
     // 2. Moyenne Tension Récap
     final obsMT = _collectObservationsMT(audit);
@@ -7510,6 +7525,7 @@ class PdfReportService {
       PageTracker(
         key: 'liste_recap_mt',
         registry: trackedPages,
+        offset: currentOffset,
         child: _subSectionBar('Moyenne tension'),
       ),
       pw.SizedBox(height: 5),
@@ -7517,7 +7533,7 @@ class PdfReportService {
     ];
     mtDoc.addPage(pw.MultiPage(
       maxPages: 10000,
-      pageTheme: _buildInnerPageTheme(),
+      pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
       header: (ctx) => _buildPageHeaderWidget(
         nomClient: mission.nomClient,
         nomSite: nomSite,
@@ -7525,10 +7541,13 @@ class PdfReportService {
       ),
       build: (ctx) => mtWidgets,
     ));
-    final mtBytes = await mtDoc.save();
-    final mtFile = File('${tempDir.path}/pdf_chunk_recap_mt_${mission.id}.pdf');
-    await mtFile.writeAsBytes(mtBytes);
-    chunkFiles.add(mtFile);
+    if (saveFilesToDisk) {
+      final mtBytes = await mtDoc.save();
+      final mtFile = File('${tempDir.path}/pdf_chunk_recap_mt_${mission.id}.pdf');
+      await mtFile.writeAsBytes(mtBytes);
+      chunkFiles.add(mtFile);
+    }
+    currentOffset += mtDoc.document.pdfPageList.pages.length;
 
     // 3. Basse Tension Récap (Découpé par tranche de 15 groupes de locaux max)
     final obsBT = _collectObservationsBT(audit);
@@ -7542,7 +7561,7 @@ class PdfReportService {
       );
       btDoc.addPage(pw.MultiPage(
         maxPages: 10000,
-        pageTheme: _buildInnerPageTheme(),
+        pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
           nomSite: nomSite,
@@ -7552,6 +7571,7 @@ class PdfReportService {
           PageTracker(
             key: 'liste_recap_bt',
             registry: trackedPages,
+            offset: currentOffset,
             child: _subSectionBar('Basse tension'),
           ),
           pw.SizedBox(height: 5),
@@ -7563,10 +7583,13 @@ class PdfReportService {
           ),
         ],
       ));
-      final btBytes = await btDoc.save();
-      final btFile = File('${tempDir.path}/pdf_chunk_recap_bt_empty_${mission.id}.pdf');
-      await btFile.writeAsBytes(btBytes);
-      chunkFiles.add(btFile);
+      if (saveFilesToDisk) {
+        final btBytes = await btDoc.save();
+        final btFile = File('${tempDir.path}/pdf_chunk_recap_bt_empty_${mission.id}.pdf');
+        await btFile.writeAsBytes(btBytes);
+        chunkFiles.add(btFile);
+      }
+      currentOffset += btDoc.document.pdfPageList.pages.length;
     } else {
       const int batchSize = 15;
       for (int i = 0; i < groupsBT.length; i += batchSize) {
@@ -7581,6 +7604,7 @@ class PdfReportService {
           btWidgets.add(PageTracker(
             key: 'liste_recap_bt',
             registry: trackedPages,
+            offset: currentOffset,
             child: _subSectionBar('Basse tension'),
           ));
           btWidgets.add(pw.SizedBox(height: 5));
@@ -7589,7 +7613,7 @@ class PdfReportService {
 
         btDoc.addPage(pw.MultiPage(
           maxPages: 10000,
-          pageTheme: _buildInnerPageTheme(),
+          pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
           header: (ctx) => _buildPageHeaderWidget(
             nomClient: mission.nomClient,
             nomSite: nomSite,
@@ -7597,14 +7621,17 @@ class PdfReportService {
           ),
           build: (ctx) => btWidgets,
         ));
-        final btBytes = await btDoc.save();
-        final btFile = File('${tempDir.path}/pdf_chunk_recap_bt_${i ~/ batchSize}_${mission.id}.pdf');
-        await btFile.writeAsBytes(btBytes);
-        chunkFiles.add(btFile);
+        if (saveFilesToDisk) {
+          final btBytes = await btDoc.save();
+          final btFile = File('${tempDir.path}/pdf_chunk_recap_bt_${i ~/ batchSize}_${mission.id}.pdf');
+          await btFile.writeAsBytes(btBytes);
+          chunkFiles.add(btFile);
+        }
+        currentOffset += btDoc.document.pdfPageList.pages.length;
       }
     }
 
-    return chunkFiles;
+    return _ChunkSectionResult(files: chunkFiles, totalPages: currentOffset - pageOffset);
   }
 
   static Future<Map<CoffretArmoire, pw.MemoryImage?>> _preloadCoffretPhotos(AuditInstallationsElectriques audit) async {
@@ -7650,15 +7677,19 @@ class PdfReportService {
     return cache;
   }
 
-  static Future<List<File>> _addAuditSectionChunked(
+  static Future<_ChunkSectionResult> _addAuditSectionChunked(
     Mission mission,
     AuditInstallationsElectriques audit,
     Map<String, int> trackedPages, {
     required String nomSite,
     required String numeroRapport,
+    int pageOffset = 0,
+    int? overrideTotalPages,
+    bool saveFilesToDisk = true,
   }) async {
     final chunkFiles = <File>[];
     final tempDir = await getTemporaryDirectory();
+    int currentOffset = pageOffset;
 
     final photoCache = await _preloadCoffretPhotos(audit);
 
@@ -7670,7 +7701,7 @@ class PdfReportService {
     );
     coverDoc.addPage(pw.MultiPage(
       maxPages: 200,
-      pageTheme: _buildInnerPageTheme(showWatermark: false),
+      pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages, showWatermark: false),
       header: (ctx) => _buildPageHeaderWidget(
         nomSite: nomSite,
         numeroRapport: numeroRapport,
@@ -7687,6 +7718,7 @@ class PdfReportService {
               PageTracker(
                 key: 'audit',
                 registry: trackedPages,
+                offset: currentOffset,
                 child: pw.Text(
                   'AUDIT DES INSTALLATIONS ELECTRIQUES',
                   style: pw.TextStyle(
@@ -7713,10 +7745,13 @@ class PdfReportService {
         ),
       ],
     ));
-    final coverBytes = await coverDoc.save();
-    final coverFile = File('${tempDir.path}/pdf_chunk_audit_cover_${mission.id}.pdf');
-    await coverFile.writeAsBytes(coverBytes);
-    chunkFiles.add(coverFile);
+    if (saveFilesToDisk) {
+      final coverBytes = await coverDoc.save();
+      final coverFile = File('${tempDir.path}/pdf_chunk_audit_cover_${mission.id}.pdf');
+      await coverFile.writeAsBytes(coverBytes);
+      chunkFiles.add(coverFile);
+    }
+    currentOffset += coverDoc.document.pdfPageList.pages.length;
 
     // 2. MT Locaux Directs (si présents)
     if (audit.moyenneTensionLocaux.isNotEmpty) {
@@ -7726,7 +7761,12 @@ class PdfReportService {
         compress: true,
       );
       final widgets = <pw.Widget>[
-        _subSectionBar('MOYENNE TENSION — LOCAUX DIRECTS'),
+        PageTracker(
+          key: 'audit_mt',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _subSectionBar('MOYENNE TENSION — LOCAUX DIRECTS'),
+        ),
       ];
       for (int i = 0; i < audit.moyenneTensionLocaux.length; i++) {
         if (i > 0) widgets.add(pw.NewPage());
@@ -7734,7 +7774,7 @@ class PdfReportService {
       }
       mtDoc.addPage(pw.MultiPage(
         maxPages: 200,
-        pageTheme: _buildInnerPageTheme(),
+        pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
           nomSite: nomSite,
@@ -7742,10 +7782,13 @@ class PdfReportService {
         ),
         build: (ctx) => widgets,
       ));
-      final mtBytes = await mtDoc.save();
-      final mtFile = File('${tempDir.path}/pdf_chunk_audit_mt_${mission.id}.pdf');
-      await mtFile.writeAsBytes(mtBytes);
-      chunkFiles.add(mtFile);
+      if (saveFilesToDisk) {
+        final mtBytes = await mtDoc.save();
+        final mtFile = File('${tempDir.path}/pdf_chunk_audit_mt_${mission.id}.pdf');
+        await mtFile.writeAsBytes(mtBytes);
+        chunkFiles.add(mtFile);
+      }
+      currentOffset += mtDoc.document.pdfPageList.pages.length;
     }
 
     // 3. Zones MT (1 chunk autonome par Zone MT)
@@ -7771,7 +7814,7 @@ class PdfReportService {
       }
       zoneDoc.addPage(pw.MultiPage(
         maxPages: 200,
-        pageTheme: _buildInnerPageTheme(),
+        pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
           nomSite: nomSite,
@@ -7779,10 +7822,13 @@ class PdfReportService {
         ),
         build: (ctx) => widgets,
       ));
-      final zoneBytes = await zoneDoc.save();
-      final zoneFile = File('${tempDir.path}/pdf_chunk_audit_mt_z${zIdx}_${mission.id}.pdf');
-      await zoneFile.writeAsBytes(zoneBytes);
-      chunkFiles.add(zoneFile);
+      if (saveFilesToDisk) {
+        final zoneBytes = await zoneDoc.save();
+        final zoneFile = File('${tempDir.path}/pdf_chunk_audit_mt_z${zIdx}_${mission.id}.pdf');
+        await zoneFile.writeAsBytes(zoneBytes);
+        chunkFiles.add(zoneFile);
+      }
+      currentOffset += zoneDoc.document.pdfPageList.pages.length;
     }
 
     // 4. Zones BT (1 chunk autonome par Zone BT)
@@ -7808,7 +7854,7 @@ class PdfReportService {
       }
       zoneDoc.addPage(pw.MultiPage(
         maxPages: 200,
-        pageTheme: _buildInnerPageTheme(),
+        pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
           nomSite: nomSite,
@@ -7816,20 +7862,523 @@ class PdfReportService {
         ),
         build: (ctx) => widgets,
       ));
-      final zoneBytes = await zoneDoc.save();
-      final zoneFile = File('${tempDir.path}/pdf_chunk_audit_bt_z${zIdx}_${mission.id}.pdf');
-      await zoneFile.writeAsBytes(zoneBytes);
-      chunkFiles.add(zoneFile);
+      if (saveFilesToDisk) {
+        final zoneBytes = await zoneDoc.save();
+        final zoneFile = File('${tempDir.path}/pdf_chunk_audit_bt_z${zIdx}_${mission.id}.pdf');
+        await zoneFile.writeAsBytes(zoneBytes);
+        chunkFiles.add(zoneFile);
+      }
+      currentOffset += zoneDoc.document.pdfPageList.pages.length;
     }
 
-    return chunkFiles;
+    return _ChunkSectionResult(files: chunkFiles, totalPages: currentOffset - pageOffset);
+  }
+
+  static Future<_GeneratedReportResult> _generateReportPass({
+    required Mission mission,
+    required String missionId,
+    required AuditInstallationsElectriques? audit,
+    required DescriptionInstallations? description,
+    required dynamic classements,
+    required dynamic classementsZones,
+    required dynamic mesures,
+    required dynamic foudres,
+    required dynamic renseignements,
+    required dynamic currentUser,
+    required String nomSiteHeader,
+    required String numeroRapportDoc,
+    required Directory tempDir,
+    int? overrideTotalPages,
+    bool saveFilesToDisk = true,
+    PdfProgressCallback? onProgress,
+  }) async {
+    final allChunkFiles = <File>[];
+    final trackedPages = <String, int>{};
+
+    final sommaireEntries = _collectSommaireEntries(
+      mission: mission,
+      rg: renseignements,
+      desc: description,
+      audit: audit,
+      mesures: mesures,
+      foudres: foudres,
+    );
+
+    final sommairePagesCount = (sommaireEntries.length > 25) ? 2 : 1;
+    final subChunk1_1_Pages = 1 + sommairePagesCount;
+
+    int currentOffset = subChunk1_1_Pages;
+
+    // ── Sub-chunk 1.2 : Objet, Périmètre & Mesures de sécurité ──
+    if (saveFilesToDisk) onProgress?.call(0.18, 'Génération du périmètre et des mesures de sécurité...');
+    final pdfP1_2 = pw.Document(
+      title: 'Périmètre & Sécurité - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: true,
+    );
+    pdfP1_2.addPage(pw.MultiPage(
+      maxPages: 200,
+      pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
+      header: (ctx) => _buildPageHeaderWidget(
+        nomClient: mission.nomClient,
+        nomSite: nomSiteHeader,
+        numeroRapport: numeroRapportDoc,
+      ),
+      build: (ctx) => [
+        pw.SizedBox(height: 20),
+        PageTracker(
+          key: 'objet',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _sectionBox('OBJET DE LA VÉRIFICATION'),
+        ),
+        pw.SizedBox(height: 10),
+        _bodyText(
+          'La mission a pour objet de déceler les non-conformités pouvant affecter la sécurité des personnes et des biens, et de s\'assurer du bon état de conservation des installations. '
+          'Afin de présenter l\'état des lieux de l\'existant, les points sur lesquels les installations s\'écartent des normes et textes applicables, et de proposer des actions correctives.\n\n'
+          'D\'une manière générale, la vérification a été étendue à l\'ensemble des installations électriques présentées et accessibles dans l\'établissement, depuis les sources jusqu\'aux points d\'utilisation.',
+        ),
+        pw.SizedBox(height: 10),
+        _bodyText('Ainsi sont exclus du champ de la vérification\u00a0:'),
+        _bulletItem('Les dispositions administratives, organisationnelles et techniques relatives à l\'information et à la formation du personnel (prescriptions au personnel) lors de l\'exploitation courante, de travaux ou d\'interventions sur les installations, ainsi que les mesures de sécurité qui en découlent\u00a0;'),
+        _bulletItem('Les dispositions administratives relatives aux documents à tenir à la disposition des autorités publiques\u00a0;'),
+        _bulletItem('L\'examen des matériels électriques en présentation ou en démonstration et destinés à la vente\u00a0;'),
+        _bulletItem('Les matériels stockés ou en réserve, ou signalés comme n\'étant plus mis en œuvre. Du fait que les installations sont examinées en tenant compte des contraintes d\'exploitation et de sécurité propres à chaque établissement et indiquées en début de vérification au personnel chargé de la vérification, celle-ci est limitée dans certains cas à l\'état apparent des installations.'),
+        pw.SizedBox(height: 12),
+        PageTracker(
+          key: 'objet_normes',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _subTitle('Références normatives et réglementaires'),
+        ),
+        pw.SizedBox(height: 5),
+        _buildNormesTable(),
+        pw.SizedBox(height: 12),
+        PageTracker(
+          key: 'objet_materiel',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _subTitle('Matériel utilisé'),
+        ),
+        pw.SizedBox(height: 5),
+        _buildMaterielTable(),
+        pw.NewPage(),
+        PageTracker(
+          key: 'perimetre',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _sectionBox('PERIMETRE DE LA MISSION'),
+        ),
+        pw.SizedBox(height: 14),
+        _buildPerimetreTable(mission, renseignements),
+        pw.NewPage(),
+        PageTracker(
+          key: 'rappel',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _sectionBox('RAPPEL DES RESPONSABILITÉS DE L\'EMPLOYEUR'),
+        ),
+        pw.SizedBox(height: 14),
+        _bodyText(
+          'KES INSPECTIONS AND PROJECTS a le plaisir de vous transmettre le présent rapport de vérification de vos installations électriques, établi à la suite des constats réalisés sur site.\n'
+          'Ce document présente les observations effectuées par le vérificateur à partir des éléments et moyens mis à sa disposition.\n'
+          'Il identifie les points de non-conformité constatés au regard des exigences réglementaires, et formule, le cas échéant, les recommandations techniques nécessaires à leur mise en conformité.',
+        ),
+        pw.SizedBox(height: 10),
+        PageTracker(
+          key: 'rappel_accompagnement',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _subTitle('Responsabilité et accompagnement'),
+        ),
+        _bodyText(
+          'Dans le cadre de la mission, il appartient à l\'employeur de désigner une personne qualifiée et informée des installations, chargée d\'accompagner le vérificateur durant l\'intervention.\n'
+          'Cette personne doit pouvoir faciliter l\'accès à l\'ensemble des locaux, appareillages et équipements à contrôler.\n\n'
+          'L\'employeur reste responsable du bon fonctionnement, de la sécurité et de la disponibilité des installations tout au long de la vérification.\n'
+          'Les informations et documents techniques fournis sous sa responsabilité doivent permettre la réalisation des contrôles dans de bonnes conditions.',
+        ),
+        pw.SizedBox(height: 10),
+        PageTracker(
+          key: 'rappel_conditions',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _subTitle('Conditions de réalisation'),
+        ),
+        _bodyText('Afin d\'assurer le bon déroulement des opérations, l\'employeur doit\u00a0:'),
+        _bulletItem('Veiller à ce que la vérification soit réalisée dans des conditions de sécurité optimales, en particulier lors des accès en zone électrique\u00a0;'),
+        _bulletItem('Mettre en œuvre les procédures nécessaires aux mises hors tension permettant d\'effectuer les mesures et essais en toute sécurité\u00a0;'),
+        _bulletItem('Garantir au vérificateur l\'accès à l\'ensemble des équipements à contrôler, sans risque de chute ou d\'incident.'),
+        pw.SizedBox(height: 8),
+        _bodyText(
+          'Si certaines vérifications n\'ont pu être effectuées (impossibilité d\'accès, absence d\'agents habilités, contraintes d\'exploitation, documentation manquante, etc.), '
+          'KES INSPECTIONS AND PROJECTS en mentionnera la cause dans le rapport.\n\n'
+          'Dans le cas des installations de moyenne ou haute tension, la mise hors tension et les manœuvres associées relèvent exclusivement de la responsabilité de l\'employeur ou de son représentant habilité.',
+        ),
+        pw.SizedBox(height: 10),
+        PageTracker(
+          key: 'rappel_complementaires',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _subTitle('Vérifications complémentaires'),
+        ),
+        _bodyText(
+          'Lorsque des éléments du poste ou de l\'installation n\'ont pu être contrôlés lors de la visite initiale, une intervention complémentaire pourra être programmée à la demande de l\'employeur.\n'
+          'Cette mission additionnelle fera alors l\'objet d\'une planification et d\'un rapport spécifique.',
+        ),
+        pw.SizedBox(height: 10),
+        PageTracker(
+          key: 'rappel_maintenance',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _subTitle('Surveillance et maintenance des installations électriques'),
+        ),
+        _bodyText(
+          'La vérification de conformité des installations électriques ne constitue qu\'un des éléments concourant à la sécurité des personnes et des biens. Conformément à la norme et aux textes réglementaires applicables, '
+          'le chef d\'établissement doit mettre en place une organisation pour les opérations de surveillance et la maintenance des installations électriques. '
+          'C\'est dans le cadre de ces opérations que les dispositions doivent être prises afin de remédier aux défectuosités constatées pendant la vérification ou celles qui peuvent se manifester après la vérification.',
+        ),
+        pw.SizedBox(height: 10),
+        PageTracker(
+          key: 'rappel_formation',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _subTitle('Formation du personnel intervenant sur les installations et à proximité'),
+        ),
+        _bodyText(
+          'Conformément aux dispositions réglementaires en vigueur, l\'employeur doit s\'assurer que le personnel appelé à intervenir sur ou à proximité des installations électriques dispose d\'une habilitation électrique adaptée au domaine de tension concerné '
+          'et à la nature des opérations à réaliser.',
+        ),
+        pw.SizedBox(height: 20),
+        PageTracker(
+          key: 'mesures_securite',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _sectionBox('MESURES DE SÉCURITÉ AUTOUR DES INSTALLATIONS'),
+        ),
+        pw.SizedBox(height: 8),
+        _bodyText('Suivant la réglementation applicable\u00a0:'),
+        _bulletItem('Article 5 \u2013 Arrêté 039/MTPS/IMT du 26 novembre 1984 fixant les mesures générales d\'hygiène et de sécurité sur les lieux de travail\u00a0;'),
+        _bulletItem('NFC 18-510\u00a0: Opérations sur les ouvrages et installations électriques et dans un environnement électrique \u2013 Prévention du risque électrique.'),
+        pw.SizedBox(height: 5),
+        _bodyText('Le personnel doit avoir suivi avec succès une formation en habilitation électrique en fonction du domaine de tension.'),
+        pw.SizedBox(height: 5),
+        if (_imgHabilitation != null)
+          pw.Container(width: double.infinity, child: pw.Image(_imgHabilitation!, fit: pw.BoxFit.fitWidth))
+        else
+          pw.SizedBox(),
+        pw.SizedBox(height: 12),
+        _bodyText(
+          'Il est rappelé que des dispositions de sécurité particulières et parfaitement définies doivent être prises par le chef de l\'établissement '
+          'pour toute intervention de maintenance, réglage, nettoyage sur ou à proximité des installations électriques.\n\n'
+          'L\'accès aux locaux et armoires électriques doit être interdit aux personnes non autorisées.',
+        ),
+        pw.SizedBox(height: 8),
+        if (_imgAccesGauche != null || _imgAccesDroite1 != null || _imgAccesDroite2 != null)
+          pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              if (_imgAccesGauche != null)
+                pw.Expanded(
+                  flex: 4,
+                  child: pw.Container(height: 80, width: double.infinity, child: pw.Image(_imgAccesGauche!, fit: pw.BoxFit.contain)),
+                ),
+              pw.SizedBox(width: 8),
+              pw.Expanded(
+                flex: 6,
+                child: pw.Row(children: [
+                  if (_imgAccesDroite1 != null)
+                    pw.Expanded(child: pw.Container(height: 80, width: double.infinity, child: pw.Image(_imgAccesDroite1!, fit: pw.BoxFit.contain))),
+                  if (_imgAccesDroite2 != null)
+                    pw.Expanded(child: pw.Container(height: 80, width: double.infinity, child: pw.Image(_imgAccesDroite2!, fit: pw.BoxFit.contain))),
+                ]),
+              ),
+            ],
+          ),
+        pw.SizedBox(height: 12),
+        _bodyText(
+          'En effet, une installation, bien que déclarée conforme en phase d\'exploitation, peut lors d\'opérations, par exemple d\'entretien, '
+          'nécessiter des précautions spéciales du fait de la présence à proximité de pièces nues sous tension '
+          '(cas des locaux réservés aux électriciens et dans lesquels la réglementation n\'interdit pas la présence de pièces nues sous tension).',
+        ),
+        pw.SizedBox(height: 10),
+        PageTracker(
+          key: 'mesures_technicien',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _subTitle('Technicien en maintenance des installations'),
+        ),
+        pw.SizedBox(height: 5),
+        _bodyText('Il est fortement recommandé à l\'employeur de faire participer les employés à des séances de formation sur les modules suivants\u00a0:'),
+        _bulletItem('Connaissance des normes en électricité (NC 244 C15 00\u2026)\u00a0;'),
+        _bulletItem('Maintenance des installations électriques.'),
+        pw.SizedBox(height: 10),
+        PageTracker(
+          key: 'mesures_engagement',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _subTitle('Engagement de KES INSPECTIONS AND PROJECTS'),
+        ),
+        _bodyText(
+          'KES INSPECTIONS AND PROJECTS s\'engage à réaliser ses vérifications dans le strict respect des normes et règlements applicables, '
+          'avec le souci constant de la sécurité, de la fiabilité technique et de l\'impartialité des constats.',
+        ),
+      ],
+    ));
+    if (saveFilesToDisk) {
+      final chunkP1_2 = File('${tempDir.path}/pdf_chunk_p1_2_$missionId.pdf');
+      await chunkP1_2.writeAsBytes(await pdfP1_2.save());
+      allChunkFiles.add(chunkP1_2);
+    }
+    currentOffset += pdfP1_2.document.pdfPageList.pages.length;
+
+    // ── Sub-chunk 1.3 : Résumé exécutif & Analyse statistique ──
+    if (saveFilesToDisk) onProgress?.call(0.28, 'Génération du résumé exécutif et des statistiques...');
+    final pdfP1_3 = pw.Document(
+      title: 'Résumé Exécutif & Stats - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: true,
+    );
+    pdfP1_3.addPage(pw.MultiPage(
+      maxPages: 200,
+      pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
+      header: (ctx) => _buildPageHeaderWidget(
+        nomClient: mission.nomClient,
+        nomSite: nomSiteHeader,
+        numeroRapport: numeroRapportDoc,
+      ),
+      build: (ctx) => [
+        ..._buildResumeExecutif(mission, trackedPages, numeroRapportDoc),
+        pw.NewPage(),
+        ..._buildAnalyseStatistique(mission, trackedPages, numeroRapportDoc),
+      ],
+    ));
+    if (saveFilesToDisk) {
+      final chunkP1_3 = File('${tempDir.path}/pdf_chunk_p1_3_$missionId.pdf');
+      await chunkP1_3.writeAsBytes(await pdfP1_3.save());
+      allChunkFiles.add(chunkP1_3);
+    }
+    currentOffset += pdfP1_3.document.pdfPageList.pages.length;
+
+    // ── Sub-chunk 1.4 : Renseignements généraux & Description des installations ──
+    if (saveFilesToDisk) onProgress?.call(0.38, 'Génération de la description des installations...');
+    final pdfP1_4 = pw.Document(
+      title: 'Description Installations - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: true,
+    );
+    pdfP1_4.addPage(pw.MultiPage(
+      maxPages: 200,
+      pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
+      build: (ctx) => [_buildRenseignementsGeneraux(mission, renseignements, trackedPages)],
+    ));
+    pdfP1_4.addPage(pw.MultiPage(
+      maxPages: 200,
+      pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
+      header: (ctx) => _buildPageHeaderWidget(
+        nomClient: mission.nomClient,
+        nomSite: nomSiteHeader,
+        numeroRapport: numeroRapportDoc,
+      ),
+      build: (ctx) => _buildDescriptionInstallationsMulti(description, audit, trackedPages),
+    ));
+    if (saveFilesToDisk) {
+      final chunkP1_4 = File('${tempDir.path}/pdf_chunk_p1_4_$missionId.pdf');
+      await chunkP1_4.writeAsBytes(await pdfP1_4.save());
+      allChunkFiles.add(chunkP1_4);
+    }
+    currentOffset += pdfP1_4.document.pdfPageList.pages.length;
+
+    // ── Section 6 & 7 : Synthèse Récapitulative et Audit par zone ──
+    if (audit != null) {
+      if (saveFilesToDisk) onProgress?.call(0.48, 'Génération de la synthèse récapitulative...');
+      final recapResult = await _addListeRecapitulativeSectionChunked(
+        mission,
+        audit,
+        trackedPages,
+        nomSite: nomSiteHeader,
+        numeroRapport: numeroRapportDoc,
+        pageOffset: currentOffset,
+        overrideTotalPages: overrideTotalPages,
+        saveFilesToDisk: saveFilesToDisk,
+      );
+      if (saveFilesToDisk) allChunkFiles.addAll(recapResult.files);
+      currentOffset += recapResult.totalPages;
+
+      if (saveFilesToDisk) onProgress?.call(0.60, 'Audit détaillé des zones MT et BT...');
+      final auditResult = await _addAuditSectionChunked(
+        mission,
+        audit,
+        trackedPages,
+        nomSite: nomSiteHeader,
+        numeroRapport: numeroRapportDoc,
+        pageOffset: currentOffset,
+        overrideTotalPages: overrideTotalPages,
+        saveFilesToDisk: saveFilesToDisk,
+      );
+      if (saveFilesToDisk) allChunkFiles.addAll(auditResult.files);
+      currentOffset += auditResult.totalPages;
+    }
+
+    // ── Sub-chunk 2.1 : Classement, Foudre, Mesures & Essais, Signatures ──
+    if (saveFilesToDisk) onProgress?.call(0.75, 'Génération du classement, foudre et signatures...');
+    final pdfP2_1 = pw.Document(
+      title: 'Classement & Mesures - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: true,
+    );
+    pdfP2_1.addPage(pw.MultiPage(
+      maxPages: 200,
+      pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
+      header: (ctx) => _buildPageHeaderWidget(
+        nomClient: mission.nomClient,
+        nomSite: nomSiteHeader,
+        numeroRapport: numeroRapportDoc,
+      ),
+      build: (ctx) => _buildClassementEmplacementsMulti(classements, classementsZones, trackedPages),
+    ));
+    pdfP2_1.addPage(pw.MultiPage(
+      maxPages: 200,
+      pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
+      build: (ctx) => [_buildFoudre(audit, foudres, trackedPages, afficherTableauFoudre: mission.afficherTableauFoudre)],
+    ));
+    if (mesures != null) {
+      _addMesuresEssaisPages(pdfP2_1, mesures, trackedPages);
+      pdfP2_1.addPage(pw.Page(
+        pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
+        build: (ctx) => _buildSignaturePage(renseignements, currentUser?.fullName),
+      ));
+    }
+    if (saveFilesToDisk) {
+      final chunkP2_1 = File('${tempDir.path}/pdf_chunk_p2_1_$missionId.pdf');
+      await chunkP2_1.writeAsBytes(await pdfP2_1.save());
+      allChunkFiles.add(chunkP2_1);
+    }
+    currentOffset += pdfP2_1.document.pdfPageList.pages.length;
+
+    // ── Sub-chunk 2.2 : Page de garde Photos & Schéma ──
+    if (saveFilesToDisk) onProgress?.call(0.82, 'Génération de la section schéma et garde des photos...');
+    final pdfP2_2 = pw.Document(
+      title: 'Garde Photos & Schéma - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: true,
+    );
+    pdfP2_2.addPage(pw.MultiPage(
+      maxPages: 200,
+      pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages, showWatermark: false),
+      header: (ctx) => _buildPageHeaderWidget(
+        nomClient: mission.nomClient,
+        nomSite: nomSiteHeader,
+        numeroRapport: numeroRapportDoc,
+      ),
+      build: (ctx) => [
+        pw.SizedBox(height: 220),
+        pw.Center(
+          child: pw.Column(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Container(width: 350, height: 2, color: accentColor),
+              pw.SizedBox(height: 24),
+              PageTracker(
+                key: 'photos',
+                registry: trackedPages,
+                offset: currentOffset,
+                child: pw.Text(
+                  'PHOTOS',
+                  style: pw.TextStyle(
+                    font: _fontBold, fontSize: 20,
+                    fontWeight: pw.FontWeight.bold,
+                    color: headerColor,
+                    letterSpacing: 1.0,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.SizedBox(height: 12),
+              pw.Text(
+                nomSiteHeader.isNotEmpty ? nomSiteHeader.toUpperCase() : mission.nomClient.toUpperCase(),
+                style: pw.TextStyle(
+                  font: _fontRegular, fontSize: 13, color: accentColor,
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
+              pw.SizedBox(height: 24),
+              pw.Container(width: 350, height: 2, color: accentColor),
+            ],
+          ),
+        ),
+      ],
+    ));
+    _addSchemaSection(pdfP2_2, mission, trackedPages,
+        nomSite: nomSiteHeader, numeroRapport: numeroRapportDoc);
+
+    if (saveFilesToDisk) {
+      final chunkP2_2 = File('${tempDir.path}/pdf_chunk_p2_2_$missionId.pdf');
+      await chunkP2_2.writeAsBytes(await pdfP2_2.save());
+      allChunkFiles.add(chunkP2_2);
+    }
+    currentOffset += pdfP2_2.document.pdfPageList.pages.length;
+
+    // ── Section 13 : Photos Chunked ──
+    if (saveFilesToDisk) onProgress?.call(0.87, 'Traitement et compression des photos d\'illustration...');
+    final photoResult = await _addPhotosSectionChunked(
+      mission,
+      missionId,
+      audit,
+      description,
+      trackedPages,
+      nomSite: nomSiteHeader,
+      numeroRapport: numeroRapportDoc,
+      pageOffset: currentOffset,
+      overrideTotalPages: overrideTotalPages,
+      saveFilesToDisk: saveFilesToDisk,
+    );
+    if (saveFilesToDisk) allChunkFiles.addAll(photoResult.files);
+    currentOffset += photoResult.totalPages;
+
+    final totalReportPages = currentOffset;
+
+    // ── Sub-chunk 1.1 : Couverture & Sommaire (Généré en dernier) ──
+    if (saveFilesToDisk) {
+      onProgress?.call(0.92, 'Génération du sommaire dynamique et finalisation...');
+      final pdfP1_1 = pw.Document(
+        title: 'Couverture & Sommaire - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: true,
+      );
+      pdfP1_1.addPage(
+        pw.Page(
+          pageTheme: _buildCoverPageTheme(),
+          build: (ctx) => _buildCoverPage(mission, renseignements, ctx),
+        ),
+      );
+      _addSommairePages(
+        pdfP1_1,
+        sommaireEntries,
+        trackedPages,
+        nomClient: mission.nomClient,
+        nomSite: nomSiteHeader,
+        numeroRapport: numeroRapportDoc,
+      );
+      final chunkP1_1 = File('${tempDir.path}/pdf_chunk_p1_1_$missionId.pdf');
+      final bytesP1_1 = await pdfP1_1.save();
+      await chunkP1_1.writeAsBytes(bytesP1_1);
+
+      allChunkFiles.insert(0, chunkP1_1);
+    }
+
+    return _GeneratedReportResult(
+      files: allChunkFiles,
+      trackedPages: trackedPages,
+      totalReportPages: totalReportPages,
+    );
   }
 
   static Future<File?> generateMissionReport(
     String missionId, {
     PdfProgressCallback? onProgress,
   }) async {
-    final allChunkFiles = <File>[];
+    List<File> allChunkFiles = [];
     try {
       onProgress?.call(0.02, 'Initialisation des ressources et des polices...');
       await _loadImages();
@@ -7853,458 +8402,70 @@ class PdfReportService {
           : (mission.nomSite ?? '');
       const String numeroRapportDoc = 'KES/IP/VE/2025/001';
 
-      final trackedPages = <String, int>{};
-      final sommaireEntries = _collectSommaireEntries(
+      final tempDir = await getTemporaryDirectory();
+
+      // ── Passe 1 : Calcul préliminaire de la pagination totale et enregistrement des clés ──
+      onProgress?.call(0.10, 'Calcul préliminaire de la pagination et du sommaire...');
+      final pass1Result = await _generateReportPass(
         mission: mission,
-        rg: renseignements,
-        desc: description,
+        missionId: missionId,
         audit: audit,
+        description: description,
+        classements: classements,
+        classementsZones: classementsZones,
         mesures: mesures,
         foudres: foudres,
+        renseignements: renseignements,
+        currentUser: currentUser,
+        nomSiteHeader: nomSiteHeader,
+        numeroRapportDoc: numeroRapportDoc,
+        tempDir: tempDir,
+        saveFilesToDisk: false,
       );
 
-      final dir = await getTemporaryDirectory();
+      final totalReportPages = pass1Result.totalReportPages;
 
-      // Note: Sub-chunk 1.1 (Couverture & Sommaire) est généré à la fin
-      // une fois la carte trackedPages totalement renseignée.
-
-      // ── Sub-chunk 1.2 : Objet, Périmètre & Mesures de sécurité ──
-      onProgress?.call(0.18, 'Génération du périmètre et des mesures de sécurité...');
-      final pdfP1_2 = pw.Document(
-        title: 'Périmètre & Sécurité - ${mission.nomClient}',
-        author: 'KES INSPECTIONS AND PROJECTS',
-        compress: true,
+      // ── Passe 2 : Génération finale avec numérotation Page X / N et enregistrement sur disque ──
+      onProgress?.call(0.15, 'Génération des fichiers PDF avec pagination Page / $totalReportPages...');
+      final pass2Result = await _generateReportPass(
+        mission: mission,
+        missionId: missionId,
+        audit: audit,
+        description: description,
+        classements: classements,
+        classementsZones: classementsZones,
+        mesures: mesures,
+        foudres: foudres,
+        renseignements: renseignements,
+        currentUser: currentUser,
+        nomSiteHeader: nomSiteHeader,
+        numeroRapportDoc: numeroRapportDoc,
+        tempDir: tempDir,
+        overrideTotalPages: totalReportPages,
+        saveFilesToDisk: true,
+        onProgress: onProgress,
       );
-      pdfP1_2.addPage(pw.MultiPage(
-        maxPages: 200,
-        pageTheme: _buildInnerPageTheme(),
-        header: (ctx) => _buildPageHeaderWidget(
-          nomClient: mission.nomClient,
-          nomSite: nomSiteHeader,
-          numeroRapport: numeroRapportDoc,
-        ),
-        build: (ctx) => [
-          pw.SizedBox(height: 20),
-          PageTracker(
-            key: 'objet',
-            registry: trackedPages,
-            child: _sectionBox('OBJET DE LA VÉRIFICATION'),
-          ),
-          pw.SizedBox(height: 10),
-          _bodyText(
-            'La mission a pour objet de déceler les non-conformités pouvant affecter la sécurité des personnes et des biens, et de s\'assurer du bon état de conservation des installations. '
-            'Afin de présenter l\'état des lieux de l\'existant, les points sur lesquels les installations s\'écartent des normes et textes applicables, et de proposer des actions correctives.\n\n'
-            'D\'une manière générale, la vérification a été étendue à l\'ensemble des installations électriques présentées et accessibles dans l\'établissement, depuis les sources jusqu\'aux points d\'utilisation.',
-          ),
-          pw.SizedBox(height: 10),
-          _bodyText('Ainsi sont exclus du champ de la vérification\u00a0:'),
-          _bulletItem('Les dispositions administratives, organisationnelles et techniques relatives à l\'information et à la formation du personnel (prescriptions au personnel) lors de l\'exploitation courante, de travaux ou d\'interventions sur les installations, ainsi que les mesures de sécurité qui en découlent\u00a0;'),
-          _bulletItem('Les dispositions administratives relatives aux documents à tenir à la disposition des autorités publiques\u00a0;'),
-          _bulletItem('L\'examen des matériels électriques en présentation ou en démonstration et destinés à la vente\u00a0;'),
-          _bulletItem('Les matériels stockés ou en réserve, ou signalés comme n\'étant plus mis en œuvre. Du fait que les installations sont examinées en tenant compte des contraintes d\'exploitation et de sécurité propres à chaque établissement et indiquées en début de vérification au personnel chargé de la vérification, celle-ci est limitée dans certains cas à l\'état apparent des installations.'),
-          pw.SizedBox(height: 12),
-          PageTracker(
-            key: 'objet_normes',
-            registry: trackedPages,
-            child: _subTitle('Références normatives et réglementaires'),
-          ),
-          pw.SizedBox(height: 5),
-          _buildNormesTable(),
-          pw.SizedBox(height: 12),
-          PageTracker(
-            key: 'objet_materiel',
-            registry: trackedPages,
-            child: _subTitle('Matériel utilisé'),
-          ),
-          pw.SizedBox(height: 5),
-          _buildMaterielTable(),
-          pw.NewPage(),
-          PageTracker(
-            key: 'perimetre',
-            registry: trackedPages,
-            child: _sectionBox('PERIMETRE DE LA MISSION'),
-          ),
-          pw.SizedBox(height: 14),
-          _buildPerimetreTable(mission, renseignements),
-          pw.NewPage(),
-          PageTracker(
-            key: 'rappel',
-            registry: trackedPages,
-            child: _sectionBox('RAPPEL DES RESPONSABILITÉS DE L\'EMPLOYEUR'),
-          ),
-          pw.SizedBox(height: 14),
-          _bodyText(
-            'KES INSPECTIONS AND PROJECTS a le plaisir de vous transmettre le présent rapport de vérification de vos installations électriques, établi à la suite des constats réalisés sur site.\n'
-            'Ce document présente les observations effectuées par le vérificateur à partir des éléments et moyens mis à sa disposition.\n'
-            'Il identifie les points de non-conformité constatés au regard des exigences réglementaires, et formule, le cas échéant, les recommandations techniques nécessaires à leur mise en conformité.',
-          ),
-          pw.SizedBox(height: 10),
-          PageTracker(
-            key: 'rappel_accompagnement',
-            registry: trackedPages,
-            child: _subTitle('Responsabilité et accompagnement'),
-          ),
-          _bodyText(
-            'Dans le cadre de la mission, il appartient à l\'employeur de désigner une personne qualifiée et informée des installations, chargée d\'accompagner le vérificateur durant l\'intervention.\n'
-            'Cette personne doit pouvoir faciliter l\'accès à l\'ensemble des locaux, appareillages et équipements à contrôler.\n\n'
-            'L\'employeur reste responsable du bon fonctionnement, de la sécurité et de la disponibilité des installations tout au long de la vérification.\n'
-            'Les informations et documents techniques fournis sous sa responsabilité doivent permettre la réalisation des contrôles dans de bonnes conditions.',
-          ),
-          pw.SizedBox(height: 10),
-          PageTracker(
-            key: 'rappel_conditions',
-            registry: trackedPages,
-            child: _subTitle('Conditions de réalisation'),
-          ),
-          _bodyText('Afin d\'assurer le bon déroulement des opérations, l\'employeur doit\u00a0:'),
-          _bulletItem('Veiller à ce que la vérification soit réalisée dans des conditions de sécurité optimales, en particulier lors des accès en zone électrique\u00a0;'),
-          _bulletItem('Mettre en œuvre les procédures nécessaires aux mises hors tension permettant d\'effectuer les mesures et essais en toute sécurité\u00a0;'),
-          _bulletItem('Garantir au vérificateur l\'accès à l\'ensemble des équipements à contrôler, sans risque de chute ou d\'incident.'),
-          pw.SizedBox(height: 8),
-          _bodyText(
-            'Si certaines vérifications n\'ont pu être effectuées (impossibilité d\'accès, absence d\'agents habilités, contraintes d\'exploitation, documentation manquante, etc.), '
-            'KES INSPECTIONS AND PROJECTS en mentionnera la cause dans le rapport.\n\n'
-            'Dans le cas des installations de moyenne ou haute tension, la mise hors tension et les manœuvres associées relèvent exclusivement de la responsabilité de l\'employeur ou de son représentant habilité.',
-          ),
-          pw.SizedBox(height: 10),
-          PageTracker(
-            key: 'rappel_complementaires',
-            registry: trackedPages,
-            child: _subTitle('Vérifications complémentaires'),
-          ),
-          _bodyText(
-            'Lorsque des éléments du poste ou de l\'installation n\'ont pu être contrôlés lors de la visite initiale, une intervention complémentaire pourra être programmée à la demande de l\'employeur.\n'
-            'Cette mission additionnelle fera alors l\'objet d\'une planification et d\'un rapport spécifique.',
-          ),
-          pw.SizedBox(height: 10),
-          PageTracker(
-            key: 'rappel_maintenance',
-            registry: trackedPages,
-            child: _subTitle('Surveillance et maintenance des installations électriques'),
-          ),
-          _bodyText(
-            'La vérification de conformité des installations électriques ne constitue qu\'un des éléments concourant à la sécurité des personnes et des biens. Conformément à la norme et aux textes réglementaires applicables, '
-            'le chef d\'établissement doit mettre en place une organisation pour les opérations de surveillance et la maintenance des installations électriques. '
-            'C\'est dans le cadre de ces opérations que les dispositions doivent être prises afin de remédier aux défectuosités constatées pendant la vérification ou celles qui peuvent se manifester après la vérification.',
-          ),
-          pw.SizedBox(height: 10),
-          PageTracker(
-            key: 'rappel_formation',
-            registry: trackedPages,
-            child: _subTitle('Formation du personnel intervenant sur les installations et à proximité'),
-          ),
-          _bodyText(
-            'Conformément aux dispositions réglementaires en vigueur, l\'employeur doit s\'assurer que le personnel appelé à intervenir sur ou à proximité des installations électriques dispose d\'une habilitation électrique adaptée au domaine de tension concerné '
-            'et à la nature des opérations à réaliser.',
-          ),
-          pw.SizedBox(height: 20),
-          PageTracker(
-            key: 'mesures_securite',
-            registry: trackedPages,
-            child: _sectionBox('MESURES DE SÉCURITÉ AUTOUR DES INSTALLATIONS'),
-          ),
-          pw.SizedBox(height: 8),
-          _bodyText('Suivant la réglementation applicable\u00a0:'),
-          _bulletItem('Article 5 \u2013 Arrêté 039/MTPS/IMT du 26 novembre 1984 fixant les mesures générales d\'hygiène et de sécurité sur les lieux de travail\u00a0;'),
-          _bulletItem('NFC 18-510\u00a0: Opérations sur les ouvrages et installations électriques et dans un environnement électrique \u2013 Prévention du risque électrique.'),
-          pw.SizedBox(height: 5),
-          _bodyText('Le personnel doit avoir suivi avec succès une formation en habilitation électrique en fonction du domaine de tension.'),
-          pw.SizedBox(height: 5),
-          if (_imgHabilitation != null)
-            pw.Container(width: double.infinity, child: pw.Image(_imgHabilitation!, fit: pw.BoxFit.fitWidth))
-          else
-            pw.SizedBox(),
-          pw.SizedBox(height: 12),
-          _bodyText(
-            'Il est rappelé que des dispositions de sécurité particulières et parfaitement définies doivent être prises par le chef de l\'établissement '
-            'pour toute intervention de maintenance, réglage, nettoyage sur ou à proximité des installations électriques.\n\n'
-            'L\'accès aux locaux et armoires électriques doit être interdit aux personnes non autorisées.',
-          ),
-          pw.SizedBox(height: 8),
-          if (_imgAccesGauche != null || _imgAccesDroite1 != null || _imgAccesDroite2 != null)
-            pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                if (_imgAccesGauche != null)
-                  pw.Expanded(
-                    flex: 4,
-                    child: pw.Container(height: 80, width: double.infinity, child: pw.Image(_imgAccesGauche!, fit: pw.BoxFit.contain)),
-                  ),
-                pw.SizedBox(width: 8),
-                pw.Expanded(
-                  flex: 6,
-                  child: pw.Row(children: [
-                    if (_imgAccesDroite1 != null)
-                      pw.Expanded(child: pw.Container(height: 80, width: double.infinity, child: pw.Image(_imgAccesDroite1!, fit: pw.BoxFit.contain))),
-                    if (_imgAccesDroite2 != null)
-                      pw.Expanded(child: pw.Container(height: 80, width: double.infinity, child: pw.Image(_imgAccesDroite2!, fit: pw.BoxFit.contain))),
-                  ]),
-                ),
-              ],
-            ),
-          pw.SizedBox(height: 12),
-          _bodyText(
-            'En effet, une installation, bien que déclarée conforme en phase d\'exploitation, peut lors d\'opérations, par exemple d\'entretien, '
-            'nécessiter des précautions spéciales du fait de la présence à proximité de pièces nues sous tension '
-            '(cas des locaux réservés aux électriciens et dans lesquels la réglementation n\'interdit pas la présence de pièces nues sous tension).',
-          ),
-          pw.SizedBox(height: 10),
-          PageTracker(
-            key: 'mesures_technicien',
-            registry: trackedPages,
-            child: _subTitle('Technicien en maintenance des installations'),
-          ),
-          pw.SizedBox(height: 5),
-          _bodyText('Il est fortement recommandé à l\'employeur de faire participer les employés à des séances de formation sur les modules suivants\u00a0:'),
-          _bulletItem('Connaissance des normes en électricité (NC 244 C15 00\u2026)\u00a0;'),
-          _bulletItem('Maintenance des installations électriques.'),
-          pw.SizedBox(height: 10),
-          PageTracker(
-            key: 'mesures_engagement',
-            registry: trackedPages,
-            child: _subTitle('Engagement de KES INSPECTIONS AND PROJECTS'),
-          ),
-          _bodyText(
-            'KES INSPECTIONS AND PROJECTS s\'engage à réaliser ses vérifications dans le strict respect des normes et règlements applicables, '
-            'avec le souci constant de la sécurité, de la fiabilité technique et de l\'impartialité des constats.',
-          ),
-        ],
-      ));
-      final chunkP1_2 = File('${dir.path}/pdf_chunk_p1_2_$missionId.pdf');
-      await chunkP1_2.writeAsBytes(await pdfP1_2.save());
-      allChunkFiles.add(chunkP1_2);
 
-      // ── Sub-chunk 1.3 : Résumé exécutif & Analyse statistique ──
-      onProgress?.call(0.28, 'Génération du résumé exécutif et des statistiques...');
-      final pdfP1_3 = pw.Document(
-        title: 'Résumé Exécutif & Stats - ${mission.nomClient}',
-        author: 'KES INSPECTIONS AND PROJECTS',
-        compress: true,
-      );
-      pdfP1_3.addPage(pw.MultiPage(
-        maxPages: 200,
-        pageTheme: _buildInnerPageTheme(),
-        header: (ctx) => _buildPageHeaderWidget(
-          nomClient: mission.nomClient,
-          nomSite: nomSiteHeader,
-          numeroRapport: numeroRapportDoc,
-        ),
-        build: (ctx) => [
-          ..._buildResumeExecutif(mission, trackedPages, numeroRapportDoc),
-          pw.NewPage(),
-          ..._buildAnalyseStatistique(mission, trackedPages, numeroRapportDoc),
-        ],
-      ));
-
-      final chunkP1_3 = File('${dir.path}/pdf_chunk_p1_3_$missionId.pdf');
-      await chunkP1_3.writeAsBytes(await pdfP1_3.save());
-      allChunkFiles.add(chunkP1_3);
-
-      // ── Sub-chunk 1.4 : Renseignements généraux & Description des installations ──
-      onProgress?.call(0.38, 'Génération de la description des installations...');
-      final pdfP1_4 = pw.Document(
-        title: 'Description Installations - ${mission.nomClient}',
-        author: 'KES INSPECTIONS AND PROJECTS',
-        compress: true,
-      );
-      pdfP1_4.addPage(pw.MultiPage(
-        maxPages: 200,
-        pageTheme: _buildInnerPageTheme(),
-        build: (ctx) => [_buildRenseignementsGeneraux(mission, renseignements, trackedPages)],
-      ));
-      pdfP1_4.addPage(pw.MultiPage(
-        maxPages: 200,
-        pageTheme: _buildInnerPageTheme(),
-        header: (ctx) => _buildPageHeaderWidget(
-          nomClient: mission.nomClient,
-          nomSite: nomSiteHeader,
-          numeroRapport: numeroRapportDoc,
-        ),
-        build: (ctx) => _buildDescriptionInstallationsMulti(description, audit, trackedPages),
-      ));
-      final chunkP1_4 = File('${dir.path}/pdf_chunk_p1_4_$missionId.pdf');
-      await chunkP1_4.writeAsBytes(await pdfP1_4.save());
-      allChunkFiles.add(chunkP1_4);
-
-      // ── Section 6 & 7 : Synthèse Récapitulative et Audit par zone ──
-      if (audit != null) {
-        onProgress?.call(0.48, 'Génération de la synthèse récapitulative...');
-        final recapChunkFiles = await _addListeRecapitulativeSectionChunked(
-          mission,
-          audit,
-          trackedPages,
-          nomSite: nomSiteHeader,
-          numeroRapport: numeroRapportDoc,
-        );
-        allChunkFiles.addAll(recapChunkFiles);
-
-        onProgress?.call(0.60, 'Audit détaillé des zones MT et BT...');
-        final auditChunkFiles = await _addAuditSectionChunked(
-          mission,
-          audit,
-          trackedPages,
-          nomSite: nomSiteHeader,
-          numeroRapport: numeroRapportDoc,
-        );
-        allChunkFiles.addAll(auditChunkFiles);
-      }
-
-      // ── Sub-chunk 2.1 : Classement, Foudre, Mesures & Essais, Signatures ──
-      onProgress?.call(0.75, 'Génération du classement, foudre et signatures...');
-      final pdfP2_1 = pw.Document(
-        title: 'Classement & Mesures - ${mission.nomClient}',
-        author: 'KES INSPECTIONS AND PROJECTS',
-        compress: true,
-      );
-      pdfP2_1.addPage(pw.MultiPage(
-        maxPages: 200,
-        pageTheme: _buildInnerPageTheme(),
-        header: (ctx) => _buildPageHeaderWidget(
-          nomClient: mission.nomClient,
-          nomSite: nomSiteHeader,
-          numeroRapport: numeroRapportDoc,
-        ),
-        build: (ctx) => _buildClassementEmplacementsMulti(classements, classementsZones, trackedPages),
-      ));
-      pdfP2_1.addPage(pw.MultiPage(
-        maxPages: 200,
-        pageTheme: _buildInnerPageTheme(),
-        build: (ctx) => [_buildFoudre(audit, foudres, trackedPages, afficherTableauFoudre: mission.afficherTableauFoudre)],
-      ));
-      if (mesures != null) {
-        _addMesuresEssaisPages(pdfP2_1, mesures, trackedPages);
-        pdfP2_1.addPage(pw.Page(
-          pageTheme: _buildInnerPageTheme(),
-          build: (ctx) => _buildSignaturePage(renseignements, currentUser?.fullName),
-        ));
-      }
-      final chunkP2_1 = File('${dir.path}/pdf_chunk_p2_1_$missionId.pdf');
-      await chunkP2_1.writeAsBytes(await pdfP2_1.save());
-      allChunkFiles.add(chunkP2_1);
-
-      // ── Sub-chunk 2.2 : Page de garde Photos & Schéma ──
-      onProgress?.call(0.82, 'Génération de la section schéma et garde des photos...');
-      final pdfP2_2 = pw.Document(
-        title: 'Garde Photos & Schéma - ${mission.nomClient}',
-        author: 'KES INSPECTIONS AND PROJECTS',
-        compress: true,
-      );
-      pdfP2_2.addPage(pw.MultiPage(
-        maxPages: 200,
-        pageTheme: _buildInnerPageTheme(showWatermark: false),
-        header: (ctx) => _buildPageHeaderWidget(
-          nomClient: mission.nomClient,
-          nomSite: nomSiteHeader,
-          numeroRapport: numeroRapportDoc,
-        ),
-        build: (ctx) => [
-          pw.SizedBox(height: 220),
-          pw.Center(
-            child: pw.Column(
-              mainAxisAlignment: pw.MainAxisAlignment.center,
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                pw.Container(width: 350, height: 2, color: accentColor),
-                pw.SizedBox(height: 24),
-                PageTracker(
-                  key: 'photos',
-                  registry: trackedPages,
-                  child: pw.Text(
-                    'PHOTOS',
-                    style: pw.TextStyle(
-                      font: _fontBold, fontSize: 20,
-                      fontWeight: pw.FontWeight.bold,
-                      color: headerColor,
-                      letterSpacing: 1.0,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.SizedBox(height: 12),
-                pw.Text(
-                  nomSiteHeader.isNotEmpty ? nomSiteHeader.toUpperCase() : mission.nomClient.toUpperCase(),
-                  style: pw.TextStyle(
-                    font: _fontRegular, fontSize: 13, color: accentColor,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.SizedBox(height: 24),
-                pw.Container(width: 350, height: 2, color: accentColor),
-              ],
-            ),
-          ),
-        ],
-      ));
-      _addSchemaSection(pdfP2_2, mission, trackedPages,
-          nomSite: nomSiteHeader, numeroRapport: numeroRapportDoc);
-
-      final chunkP2_2 = File('${dir.path}/pdf_chunk_p2_2_$missionId.pdf');
-      await chunkP2_2.writeAsBytes(await pdfP2_2.save());
-      allChunkFiles.add(chunkP2_2);
-
-      // ── Section 13 : Photos Chunked ──
-      onProgress?.call(0.87, 'Traitement et compression des photos d\'illustration...');
-      final photoChunkFiles = await _addPhotosSectionChunked(
-        mission,
-        missionId,
-        audit,
-        description,
-        trackedPages,
-        nomSite: nomSiteHeader,
-        numeroRapport: numeroRapportDoc,
-      );
-      allChunkFiles.addAll(photoChunkFiles);
-
-      // ── Sub-chunk 1.1 : Couverture & Sommaire (Généré en dernier avec la carte trackedPages complète) ──
-      onProgress?.call(0.90, 'Finalisation du sommaire avec pagination exacte...');
-      final pdfP1_1 = pw.Document(
-        title: 'Couverture & Sommaire - ${mission.nomClient}',
-        author: 'KES INSPECTIONS AND PROJECTS',
-        compress: true,
-      );
-      pdfP1_1.addPage(
-        pw.Page(
-          pageTheme: _buildCoverPageTheme(),
-          build: (ctx) => _buildCoverPage(mission, renseignements, ctx),
-        ),
-      );
-      _addSommairePages(
-        pdfP1_1,
-        sommaireEntries,
-        trackedPages,
-        nomClient: mission.nomClient,
-        nomSite: nomSiteHeader,
-        numeroRapport: numeroRapportDoc,
-      );
-      final chunkP1_1 = File('${dir.path}/pdf_chunk_p1_1_$missionId.pdf');
-      final bytesP1_1 = await pdfP1_1.save();
-      await chunkP1_1.writeAsBytes(bytesP1_1);
-
-      allChunkFiles.insert(0, chunkP1_1);
+      allChunkFiles = pass2Result.files;
 
       // ── Assembly final par fusion binaire ──
-      onProgress?.call(0.92, 'Fusion binaire haute performance du document final...');
+      onProgress?.call(0.96, 'Fusion binaire haute performance du document final...');
       final fileName = 'Rapport_${mission.nomClient}_${_formatDate(DateTime.now())}.pdf'
           .replaceAll(RegExp(r'[<>:"/\\|?*\s]'), '_');
-      final outputFile = File('${dir.path}/$fileName');
+      final outputFile = File('${tempDir.path}/$fileName');
 
-      await PdfMergerService.mergePdfFiles(
+      final finalPdfFile = await PdfMergerService.mergePdfFiles(
         allChunkFiles,
         outputFile,
         deleteChunksAfterMerge: false,
         onProgress: onProgress,
       );
 
-      onProgress?.call(1.0, 'Rapport PDF généré avec succès !');
-
+      onProgress?.call(1.0, 'Génération du rapport terminée avec succès.');
+      return finalPdfFile;
+    } catch (e, stackTrace) {
       if (kDebugMode) {
-        print('✅ Rapport PDF Moteur V3 généré avec succès (${allChunkFiles.length} chunks) : ${outputFile.path}');
-      }
-      return outputFile;
-      
-    } catch (e, stack) {
-      if (kDebugMode) {
-        print('❌ Erreur generation PDF: $e\n$stack');
+        print('❌ Erreur lors de la génération du rapport PDF: $e\n$stackTrace');
       }
       return null;
     } finally {
@@ -8553,5 +8714,22 @@ class _ClassementRow {
     this.ip,
     this.ik,
     required this.isZone,
+  });
+}
+
+class _ChunkSectionResult {
+  final List<File> files;
+  final int totalPages;
+  _ChunkSectionResult({required this.files, required this.totalPages});
+}
+
+class _GeneratedReportResult {
+  final List<File> files;
+  final Map<String, int> trackedPages;
+  final int totalReportPages;
+  _GeneratedReportResult({
+    required this.files,
+    required this.trackedPages,
+    required this.totalReportPages,
   });
 }
