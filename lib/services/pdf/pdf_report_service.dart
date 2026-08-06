@@ -5948,6 +5948,7 @@ class PdfReportService {
           PageTracker(
             key: 'mesures',
             registry: trackedPages,
+            offset: pageOffset,
             child: _sectionBox('RESULTATS DES MESURES ET ESSAIS'),
           ),
           pw.SizedBox(height: 10),
@@ -5955,6 +5956,7 @@ class PdfReportService {
           PageTracker(
             key: 'mesures_conditions',
             registry: trackedPages,
+            offset: pageOffset,
             child: _subSectionBar("Conditions de mesure"),
           ),
           pw.SizedBox(height: 10),
@@ -5981,6 +5983,7 @@ class PdfReportService {
           PageTracker(
             key: 'mesures_demarrage',
             registry: trackedPages,
+            offset: pageOffset,
             child: _subSectionBar('Essais de démarrage automatique du groupe électrogène'),
           ),
           pw.SizedBox(height: 5),
@@ -5992,6 +5995,7 @@ class PdfReportService {
           PageTracker(
             key: 'mesures_arret',
             registry: trackedPages,
+            offset: pageOffset,
             child: _subSectionBar("Test de fonctionnement de l'arrêt d'urgence"),
           ),
           pw.SizedBox(height: 5),
@@ -6008,6 +6012,7 @@ class PdfReportService {
         PageTracker(
           key: 'mesures_terre',
           registry: trackedPages,
+          offset: pageOffset,
           child: _subSectionBar('Prise de terre'),
         ),
         pw.SizedBox(height: 8),
@@ -6115,6 +6120,7 @@ class PdfReportService {
         widgets.add(PageTracker(
           key: 'mesures_ddr',
           registry: trackedPages,
+          offset: pageOffset,
           child: _subSectionBar("Essais de déclenchement des dispositifs différentiels et mesure d'isolement"),
         ));
         widgets.add(pw.SizedBox(height: 8));
@@ -6316,6 +6322,7 @@ class PdfReportService {
         PageTracker(
           key: 'mesures_continuite',
           registry: trackedPages,
+          offset: pageOffset,
           child: _subSectionBar('Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles'),
         ),
         pw.SizedBox(height: 8),
