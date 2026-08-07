@@ -3048,10 +3048,14 @@ class PdfReportService {
       for (int i = 0; i < count; i++) {
         final o = group.items[i];
         final rowBg = i.isOdd ? tableRowAlt : PdfColors.white;
-        final hasBottomBorder = i < count - 1;
-        final obsBorder = hasBottomBorder
-            ? const pw.Border(bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5))
-            : null;
+        final obsBorder = pw.Border(
+          top: i > 0
+              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5)
+              : pw.BorderSide.none,
+          bottom: i < count - 1
+              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5)
+              : pw.BorderSide.none,
+        );
 
         tableRows.add(
           pw.TableRow(
@@ -3069,13 +3073,14 @@ class PdfReportService {
                       )
                     : pw.SizedBox(),
               ),
-              // Cellule 1 : Observation (avec bordure inférieure séparatrice)
+              // Cellule 1 : Observation (avec bordure supérieure et inférieure séparatrices)
               pw.Container(
                 decoration: pw.BoxDecoration(border: obsBorder),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                alignment: pw.Alignment.centerLeft,
                 child: pw.Text(o.observation, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
               ),
-              // Cellule 2 : Référence Normative (avec bordure inférieure séparatrice)
+              // Cellule 2 : Référence Normative (avec bordure supérieure et inférieure séparatrices)
               pw.Container(
                 decoration: pw.BoxDecoration(border: obsBorder),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
@@ -3261,10 +3266,14 @@ class PdfReportService {
         for (int i = 0; i < count; i++) {
           final o = eq.items[i];
           final rowBg = i.isOdd ? tableRowAlt : PdfColors.white;
-          final hasBottomBorder = i < count - 1;
-          final obsBorder = hasBottomBorder
-              ? const pw.Border(bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5))
-              : null;
+          final obsBorder = pw.Border(
+            top: i > 0
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5)
+                : pw.BorderSide.none,
+            bottom: i < count - 1
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5)
+                : pw.BorderSide.none,
+          );
 
           tableRows.add(
             pw.TableRow(
@@ -3292,14 +3301,14 @@ class PdfReportService {
                         )
                       : pw.SizedBox(),
                 ),
-                // Cellule 2 : Observation (avec bordure inférieure séparatrice)
+                // Cellule 2 : Observation (avec bordures supérieure et inférieure séparatrices)
                 pw.Container(
                   decoration: pw.BoxDecoration(border: obsBorder),
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                   alignment: pw.Alignment.centerLeft,
                   child: pw.Text(o.observation, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
                 ),
-                // Cellule 3 : Référence Normative (avec bordure inférieure séparatrice)
+                // Cellule 3 : Référence Normative (avec bordures supérieure et inférieure séparatrices)
                 pw.Container(
                   decoration: pw.BoxDecoration(border: obsBorder),
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
