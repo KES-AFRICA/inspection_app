@@ -6478,6 +6478,20 @@ class PdfReportService {
       final file = File(resolvedPath);
       if (!await file.exists()) return null;
 
+      // ── Cache Disque de la Photo Optimisée (Évite les décodages Skia natifs répétés) ──
+      final tempDir = await getTemporaryDirectory();
+      final cacheFileName = 'img_cache_${resolvedPath.hashCode}_${maxWidth}_${maxHeight}_$quality.jpg';
+      final cacheFile = File('${tempDir.path}/$cacheFileName');
+
+      if (await cacheFile.exists()) {
+        try {
+          final cachedBytes = await cacheFile.readAsBytes();
+          if (cachedBytes.isNotEmpty) {
+            return pw.MemoryImage(cachedBytes);
+          }
+        } catch (_) {}
+      }
+
       try {
         final compressedBytes = await FlutterImageCompress.compressWithFile(
           file.absolute.path,
@@ -6487,6 +6501,9 @@ class PdfReportService {
           format: CompressFormat.jpeg,
         );
         if (compressedBytes != null && compressedBytes.isNotEmpty) {
+          try {
+            await cacheFile.writeAsBytes(compressedBytes);
+          } catch (_) {}
           return pw.MemoryImage(compressedBytes);
         }
       } catch (_) {}
@@ -7671,14 +7688,14 @@ class PdfReportService {
     return _ChunkSectionResult(files: chunkFiles, totalPages: currentOffset - pageOffset);
   }
 
-  static Future<Map<CoffretArmoire, pw.MemoryImage?>> _preloadCoffretPhotos(
-    AuditInstallationsElectriques audit, {
+  static Future<Map<CoffretArmoire, pw.MemoryImage?>> _preloadCoffretsList(
+    List<CoffretArmoire> coffrets, {
     bool loadImages = true,
   }) async {
     final cache = <CoffretArmoire, pw.MemoryImage?>{};
     if (!loadImages) return cache;
 
-    Future<void> processCoffret(CoffretArmoire c) async {
+    for (final c in coffrets) {
       for (final src in [...c.photosInternes, ...c.photos, ...c.photosExternes]) {
         final trimmed = src.trim();
         if (trimmed.isEmpty) continue;
@@ -7689,34 +7706,29 @@ class PdfReportService {
         }
       }
     }
-
-    for (var local in audit.moyenneTensionLocaux) {
-      for (var c in local.coffrets) {
-        await processCoffret(c);
-      }
-    }
-    for (var zone in audit.moyenneTensionZones) {
-      for (var c in zone.coffrets) {
-        await processCoffret(c);
-      }
-      for (var local in zone.locaux) {
-        for (var c in local.coffrets) {
-          await processCoffret(c);
-        }
-      }
-    }
-    for (var zone in audit.basseTensionZones) {
-      for (var c in zone.coffretsDirects) {
-        await processCoffret(c);
-      }
-      for (var local in zone.locaux) {
-        for (var c in local.coffrets) {
-          await processCoffret(c);
-        }
-      }
-    }
-
     return cache;
+  }
+
+  static Future<Map<CoffretArmoire, pw.MemoryImage?>> _preloadZoneMTCoffrets(
+    MoyenneTensionZone zone, {
+    bool loadImages = true,
+  }) async {
+    final coffrets = <CoffretArmoire>[...zone.coffrets];
+    for (final local in zone.locaux) {
+      coffrets.addAll(local.coffrets);
+    }
+    return _preloadCoffretsList(coffrets, loadImages: loadImages);
+  }
+
+  static Future<Map<CoffretArmoire, pw.MemoryImage?>> _preloadZoneBTCoffrets(
+    BasseTensionZone zone, {
+    bool loadImages = true,
+  }) async {
+    final coffrets = <CoffretArmoire>[...zone.coffretsDirects];
+    for (final local in zone.locaux) {
+      coffrets.addAll(local.coffrets);
+    }
+    return _preloadCoffretsList(coffrets, loadImages: loadImages);
   }
 
   static Future<_ChunkSectionResult> _addAuditSectionChunked(
@@ -7732,8 +7744,6 @@ class PdfReportService {
     final chunkFiles = <File>[];
     final tempDir = await getTemporaryDirectory();
     int currentOffset = pageOffset;
-
-    final photoCache = await _preloadCoffretPhotos(audit, loadImages: saveFilesToDisk);
 
     // 1. Page de Garde / Titre de l'Audit
     final coverDoc = pw.Document(
@@ -7797,6 +7807,12 @@ class PdfReportService {
 
     // 2. MT Locaux Directs (si présents)
     if (audit.moyenneTensionLocaux.isNotEmpty) {
+      final mtCoffrets = <CoffretArmoire>[];
+      for (final local in audit.moyenneTensionLocaux) {
+        mtCoffrets.addAll(local.coffrets);
+      }
+      final mtPhotoCache = await _preloadCoffretsList(mtCoffrets, loadImages: saveFilesToDisk);
+
       final mtDoc = pw.Document(
         title: 'Audit MT Directs - ${mission.nomClient}',
         author: 'KES INSPECTIONS AND PROJECTS',
@@ -7812,7 +7828,7 @@ class PdfReportService {
       ];
       for (int i = 0; i < audit.moyenneTensionLocaux.length; i++) {
         if (i > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildLocalMT(audit.moyenneTensionLocaux[i], trackedPages, photoCache: photoCache));
+        widgets.addAll(_buildLocalMT(audit.moyenneTensionLocaux[i], trackedPages, photoCache: mtPhotoCache));
       }
       mtDoc.addPage(pw.MultiPage(
         maxPages: 200,
@@ -7831,11 +7847,14 @@ class PdfReportService {
         chunkFiles.add(mtFile);
       }
       currentOffset += mtDoc.document.pdfPageList.pages.length;
+      mtPhotoCache.clear();
     }
 
     // 3. Zones MT (1 chunk autonome par Zone MT)
     for (var zIdx = 0; zIdx < audit.moyenneTensionZones.length; zIdx++) {
       final zone = audit.moyenneTensionZones[zIdx];
+      final zonePhotoCache = await _preloadZoneMTCoffrets(zone, loadImages: saveFilesToDisk);
+
       final zoneDoc = pw.Document(
         title: 'Audit Zone MT ${zone.nom} - ${mission.nomClient}',
         author: 'KES INSPECTIONS AND PROJECTS',
@@ -7846,12 +7865,12 @@ class PdfReportService {
       int elemIdx = 0;
       for (int i = 0; i < zone.locaux.length; i++) {
         if (elemIdx > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildLocalMT(zone.locaux[i], trackedPages, photoCache: photoCache));
+        widgets.addAll(_buildLocalMT(zone.locaux[i], trackedPages, photoCache: zonePhotoCache));
         elemIdx++;
       }
       for (int i = 0; i < zone.coffrets.length; i++) {
         if (elemIdx > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildCoffret(zone.coffrets[i], trackedPages, zone.nom, photoCache: photoCache));
+        widgets.addAll(_buildCoffret(zone.coffrets[i], trackedPages, zone.nom, photoCache: zonePhotoCache));
         elemIdx++;
       }
       zoneDoc.addPage(pw.MultiPage(
@@ -7871,11 +7890,14 @@ class PdfReportService {
         chunkFiles.add(zoneFile);
       }
       currentOffset += zoneDoc.document.pdfPageList.pages.length;
+      zonePhotoCache.clear();
     }
 
     // 4. Zones BT (1 chunk autonome par Zone BT)
     for (var zIdx = 0; zIdx < audit.basseTensionZones.length; zIdx++) {
       final zone = audit.basseTensionZones[zIdx];
+      final zonePhotoCache = await _preloadZoneBTCoffrets(zone, loadImages: saveFilesToDisk);
+
       final zoneDoc = pw.Document(
         title: 'Audit Zone BT ${zone.nom} - ${mission.nomClient}',
         author: 'KES INSPECTIONS AND PROJECTS',
@@ -7886,12 +7908,12 @@ class PdfReportService {
       int elemIdx = 0;
       for (int i = 0; i < zone.coffretsDirects.length; i++) {
         if (elemIdx > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildCoffret(zone.coffretsDirects[i], trackedPages, zone.nom, photoCache: photoCache));
+        widgets.addAll(_buildCoffret(zone.coffretsDirects[i], trackedPages, zone.nom, photoCache: zonePhotoCache));
         elemIdx++;
       }
       for (int i = 0; i < zone.locaux.length; i++) {
         if (elemIdx > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildLocalBT(zone.locaux[i], trackedPages, photoCache: photoCache));
+        widgets.addAll(_buildLocalBT(zone.locaux[i], trackedPages, photoCache: zonePhotoCache));
         elemIdx++;
       }
       zoneDoc.addPage(pw.MultiPage(
@@ -7911,6 +7933,7 @@ class PdfReportService {
         chunkFiles.add(zoneFile);
       }
       currentOffset += zoneDoc.document.pdfPageList.pages.length;
+      zonePhotoCache.clear();
     }
 
     return _ChunkSectionResult(files: chunkFiles, totalPages: currentOffset - pageOffset);
