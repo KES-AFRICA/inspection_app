@@ -149,9 +149,10 @@ class _ReportGenerationLoaderState extends State<ReportGenerationLoader>
       }
     });
 
-    // Enregistrer les callbacks de complétion, fermeture et progression
+    // Enregistrer les callbacks de complétion, fermeture, annulation et progression
     widget.controller._onComplete = _handleComplete;
     widget.controller._onDismiss = _handleDismiss;
+    widget.controller._onCancel = _handleCancel;
     widget.controller._onProgress = _handleProgress;
   }
 
@@ -167,6 +168,16 @@ class _ReportGenerationLoaderState extends State<ReportGenerationLoader>
 
   void _handleDismiss() {
     if (mounted) {
+      Navigator.of(context, rootNavigator: true).pop();
+    }
+  }
+
+  void _handleCancel() {
+    if (mounted) {
+      try {
+        _progressController.stop();
+        _rotationController.stop();
+      } catch (_) {}
       Navigator.of(context, rootNavigator: true).pop();
     }
   }
@@ -344,6 +355,35 @@ class _ReportGenerationLoaderState extends State<ReportGenerationLoader>
                     ),
                   ),
                 ),
+
+                // Bouton Annuler la génération (Rouge)
+                if (!_showCheck) ...[
+                  const SizedBox(height: 20),
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      widget.controller.cancel();
+                    },
+                    icon: const Icon(Icons.close_rounded, size: 16, color: Colors.redAccent),
+                    label: const Text(
+                      'Annuler la génération',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.redAccent,
+                      ),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.redAccent,
+                      side: BorderSide(color: Colors.red.shade200, width: 1.2),
+                      backgroundColor: Colors.red.shade50.withValues(alpha: 0.5),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      minimumSize: const Size(0, 36),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                    ),
+                  ),
+                ],
               ],
             ),
           ),
@@ -364,10 +404,27 @@ class _ReportGenerationLoaderState extends State<ReportGenerationLoader>
 class ReportGenerationLoaderController {
   Future<void> Function()? _onComplete;
   void Function()? _onDismiss;
+  void Function()? _onCancel;
   void Function(double progress, String message)? _onProgress;
+  bool _isCancelled = false;
+
+  /// Indique si l'utilisateur a annulé la génération.
+  bool get isCancelled => _isCancelled;
+
+  /// Annule la génération et ferme le dialogue.
+  void cancel() {
+    if (_isCancelled) return;
+    _isCancelled = true;
+    if (_onCancel != null) {
+      _onCancel!();
+    } else {
+      dismiss();
+    }
+  }
 
   /// Met à jour la progression et le message affiché en temps réel.
   void updateProgress(double progressRatio, String message) {
+    if (_isCancelled) return;
     if (_onProgress != null) {
       _onProgress!(progressRatio, message);
     }
@@ -376,6 +433,7 @@ class ReportGenerationLoaderController {
   /// Déclenche l'animation de complétion (cercle → check → fermeture).
   /// Retourne un Future qui se résout lorsque le dialog est fermé.
   Future<void> complete() async {
+    if (_isCancelled) return;
     if (_onComplete != null) {
       await _onComplete!();
     }

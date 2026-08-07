@@ -117,10 +117,25 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
         file = await PdfReportService.generateMissionReport(
           widget.mission.id,
           onProgress: (progress, statusMessage) {
+            if (loaderController.isCancelled) {
+              throw Exception('Génération annulée par l\'utilisateur');
+            }
             loaderController.updateProgress(progress, statusMessage);
           },
         );
         fileName = 'Rapport_${widget.mission.nomClient}_${DateTime.now().millisecondsSinceEpoch}.pdf';
+      }
+
+      if (loaderController.isCancelled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Génération du rapport annulée'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
       }
 
       if (file != null && file.existsSync()) {
@@ -157,8 +172,17 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
         _showError('Erreur lors de la génération');
       }
     } catch (e) {
-      loaderController.dismiss();
-      _showError('Erreur: $e');
+      if (!loaderController.isCancelled) {
+        loaderController.dismiss();
+        _showError('Erreur lors de la génération: $e');
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Génération du rapport annulée'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     } finally {
       setState(() => _isGenerating = false);
     }

@@ -180,9 +180,24 @@ class _MissionDetailScreenState extends State<MissionDetailScreen>
       final file = await PdfReportService.generateMissionReport(
         _currentMission.id,
         onProgress: (progress, statusMessage) {
+          if (loaderController.isCancelled) {
+            throw Exception('Génération annulée par l\'utilisateur');
+          }
           loaderController.updateProgress(progress, statusMessage);
         },
       );
+
+      if (loaderController.isCancelled) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Génération du rapport annulée'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+        return;
+      }
 
       await loaderController.complete();
 
@@ -192,8 +207,17 @@ class _MissionDetailScreenState extends State<MissionDetailScreen>
         _showError('Erreur lors de la génération du rapport');
       }
     } catch (e) {
-      loaderController.dismiss();
-      _showError('Erreur: $e');
+      if (!loaderController.isCancelled) {
+        loaderController.dismiss();
+        _showError('Erreur: $e');
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Génération du rapport annulée'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
