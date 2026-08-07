@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
+import 'package:inspec_app/features/backup/presentation/screens/sauvegardes_screen.dart';
 import 'package:inspec_app/pages/backup/backup_screen.dart';
 import 'package:inspec_app/pages/login_screen.dart';
 import 'package:inspec_app/pages/trash/corbeille_screen.dart';
@@ -236,6 +237,20 @@ class SidebarMenu extends StatelessWidget {
 
                     // Section DONNÉES & SÉCURITÉ
                     _buildSectionHeader('DONNÉES & SÉCURITÉ', isDarkMode),
+                    _buildNavigationTile(
+                      icon: Icons.cloud_sync_rounded,
+                      title: 'Sauvegardes Cloud M365',
+                      isSelected: false,
+                      isDarkMode: isDarkMode,
+                      onTap: () {
+                        onClose();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => const SauvegardesScreen(),
+                          ),
+                        );
+                      },
+                    ),
                     _buildNavigationTile(
                       icon: Icons.delete_outline_rounded,
                       title: 'Corbeille Sécurisée',

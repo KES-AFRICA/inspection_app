@@ -1,0 +1,312 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:inspec_app/models/mission.dart';
+import 'package:inspec_app/services/hive_service.dart';
+import '../providers/backup_providers.dart';
+import '../widgets/microsoft_account_header.dart';
+import '../widgets/mission_backup_card.dart';
+import '../../domain/models/microsoft_user_profile.dart';
+
+class SauvegardesScreen extends ConsumerStatefulWidget {
+  const SauvegardesScreen({super.key});
+
+  @override
+  ConsumerState<SauvegardesScreen> createState() => _SauvegardesScreenState();
+}
+
+class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _refresh();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _refresh() async {
+    final user = HiveService.getCurrentUser();
+    if (user != null) {
+      await ref.read(backupSyncNotifierProvider.notifier).refreshAll(user.matricule);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = HiveService.getCurrentUser();
+    final missions = user != null ? HiveService.getMissionsByMatricule(user.matricule) : <Mission>[];
+
+    final filtered = missions.where((m) {
+      if (_searchQuery.isEmpty) return true;
+      return m.nomClient.toLowerCase().contains(_searchQuery) ||
+          (m.adresseClient ?? '').toLowerCase().contains(_searchQuery) ||
+          (m.natureMission ?? '').toLowerCase().contains(_searchQuery);
+    }).toList();
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        child: CustomScrollView(
+          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+          slivers: [
+            // AppBar Fixe avec titre
+            SliverAppBar(
+              pinned: true,
+              backgroundColor: const Color(0xFF0F172A),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              title: const Text(
+                'Sauvegardes Cloud M365',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+              ),
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.refresh_rounded),
+                  tooltip: 'Actualiser la synchronisation',
+                  onPressed: _refresh,
+                ),
+              ],
+            ),
+
+            // Header Pinned & Collapsible (Sliver)
+            SliverPersistentHeader(
+              pinned: true,
+              delegate: _BackupHeaderSliverDelegate(
+                searchController: _searchController,
+                onSearchChanged: (val) {
+                  setState(() {
+                    _searchQuery = val.trim().toLowerCase();
+                  });
+                },
+                ref: ref,
+              ),
+            ),
+
+            // Contenu : Liste des missions ou état vide
+            if (filtered.isEmpty)
+              SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        missions.isEmpty ? Icons.assignment_outlined : Icons.search_off_rounded,
+                        size: 48,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(height: 12),
+                      Text(
+                        missions.isEmpty
+                            ? 'Aucune mission enregistrée'
+                            : 'Aucune mission ne correspond à la recherche.',
+                        style: const TextStyle(color: Colors.grey, fontSize: 15),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.only(top: 8, bottom: 24),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final mission = filtered[index];
+                      return MissionBackupCard(
+                        mission: mission,
+                        currentMatricule: user?.matricule ?? '',
+                      );
+                    },
+                    childCount: filtered.length,
+                  ),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// SLIVER DELEGATE POUR LE HEADER D'ÉTAT & BARRE DE RECHERCHE
+// ─────────────────────────────────────────────────────────────
+
+class _BackupHeaderSliverDelegate extends SliverPersistentHeaderDelegate {
+  final TextEditingController searchController;
+  final ValueChanged<String> onSearchChanged;
+  final WidgetRef ref;
+
+  _BackupHeaderSliverDelegate({
+    required this.searchController,
+    required this.onSearchChanged,
+    required this.ref,
+  });
+
+  @override
+  double get minExtent => 72.0;
+
+  @override
+  double get maxExtent => 235.0;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final shrinkPercent = (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
+    final authState = ref.watch(microsoftAuthNotifierProvider);
+    final profile = authState.asData?.value;
+
+    return Container(
+      color: const Color(0xFFF8FAFC),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 1. Mode Déplié (Expanded Card + Search Bar)
+          Opacity(
+            opacity: (1.0 - shrinkPercent * 2.0).clamp(0.0, 1.0),
+            child: OverflowBox(
+              minHeight: maxExtent,
+              maxHeight: maxExtent,
+              alignment: Alignment.topCenter,
+              child: Column(
+                children: [
+                  const MicrosoftAccountHeader(),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: _buildExpandedSearchBar(),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // 2. Mode Replié (Sliver Compact Pinned Header)
+          if (shrinkPercent > 0.4)
+            Opacity(
+              opacity: ((shrinkPercent - 0.4) / 0.6).clamp(0.0, 1.0),
+              child: Container(
+                color: const Color(0xFF0F172A),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Row(
+                  children: [
+                    // Icône compacte d'état Cloud
+                    Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: profile != null
+                            ? const Color(0xFF10B981).withValues(alpha: 0.2)
+                            : Colors.white.withValues(alpha: 0.1),
+                      ),
+                      child: Icon(
+                        profile != null ? Icons.cloud_done_rounded : Icons.cloud_off_rounded,
+                        color: profile != null ? const Color(0xFF10B981) : Colors.white70,
+                        size: 20,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Barre de recherche compacte
+                    Expanded(
+                      child: _buildCompactSearchBar(),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Bouton de connexion / déconnexion compact (icône sans texte)
+                    _buildCompactAuthButton(context, profile),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExpandedSearchBar() {
+    return TextField(
+      controller: searchController,
+      onChanged: onSearchChanged,
+      decoration: InputDecoration(
+        hintText: 'Rechercher une mission...',
+        prefixIcon: const Icon(Icons.search_rounded),
+        filled: true,
+        fillColor: Colors.white,
+        contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(color: Colors.grey.shade300),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactSearchBar() {
+    return SizedBox(
+      height: 38,
+      child: TextField(
+        controller: searchController,
+        onChanged: onSearchChanged,
+        style: const TextStyle(color: Colors.white, fontSize: 13),
+        decoration: InputDecoration(
+          hintText: 'Rechercher...',
+          hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 13),
+          prefixIcon: const Icon(Icons.search_rounded, color: Colors.white70, size: 18),
+          filled: true,
+          fillColor: Colors.white.withValues(alpha: 0.15),
+          contentPadding: const EdgeInsets.symmetric(vertical: 0, horizontal: 12),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(20),
+            borderSide: BorderSide.none,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCompactAuthButton(BuildContext context, MicrosoftUserProfile? profile) {
+    if (profile == null) {
+      return ElevatedButton(
+        onPressed: () {
+          // Triggers login modal in header
+          ref.read(microsoftAuthNotifierProvider.notifier).checkStatus();
+        },
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color(0xFF0078D4),
+          foregroundColor: Colors.white,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          minimumSize: const Size(36, 36),
+        ),
+        child: const Icon(Icons.login_rounded, size: 18),
+      );
+    }
+
+    return IconButton(
+      onPressed: () async {
+        await ref.read(microsoftAuthNotifierProvider.notifier).logout();
+      },
+      icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 20),
+      tooltip: 'Déconnexion M365',
+    );
+  }
+
+  @override
+  bool shouldRebuild(covariant _BackupHeaderSliverDelegate oldDelegate) {
+    return oldDelegate.searchController.text != searchController.text;
+  }
+}
