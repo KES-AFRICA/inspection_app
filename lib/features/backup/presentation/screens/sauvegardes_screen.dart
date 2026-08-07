@@ -55,26 +55,22 @@ class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> {
       backgroundColor: const Color(0xFFF8FAFC),
       body: RefreshIndicator(
         onRefresh: _refresh,
+        edgeOffset: 215.0, // Fait sortir l'icône de recharge juste en dessous de la barre de recherche
+        color: const Color(0xFF0078D4),
         child: CustomScrollView(
           physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
           slivers: [
-            // AppBar Fixe avec titre
-            SliverAppBar(
+            // AppBar Fixe & Épurée
+            const SliverAppBar(
               pinned: true,
-              backgroundColor: const Color(0xFF0F172A),
+              backgroundColor: Color(0xFF0F172A),
               foregroundColor: Colors.white,
               elevation: 0,
-              title: const Text(
+              scrolledUnderElevation: 0,
+              title: Text(
                 'Sauvegardes Cloud M365',
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
               ),
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.refresh_rounded),
-                  tooltip: 'Actualiser la synchronisation',
-                  onPressed: _refresh,
-                ),
-              ],
             ),
 
             // Header Pinned & Collapsible (Sliver)
@@ -157,7 +153,7 @@ class _BackupHeaderSliverDelegate extends SliverPersistentHeaderDelegate {
   double get minExtent => 72.0;
 
   @override
-  double get maxExtent => 235.0;
+  double get maxExtent => 215.0;
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
