@@ -3039,36 +3039,45 @@ class PdfReportService {
       ),
     );
 
-    // Corps : 1 Table par groupe de Localisation avec TableRow top-level sécables
+    // Corps : 1 Table par groupe de Localisation avec effet visuel RowSpan (ligne médiane & masque de bordures)
     for (final group in groups) {
       final tableRows = <pw.TableRow>[];
-      for (int i = 0; i < group.items.length; i++) {
+      final count = group.items.length;
+      final midIndex = (count - 1) ~/ 2;
+
+      for (int i = 0; i < count; i++) {
         final o = group.items[i];
         final rowBg = i.isOdd ? tableRowAlt : PdfColors.white;
+        final hasBottomBorder = i < count - 1;
+        final obsBorder = hasBottomBorder
+            ? const pw.Border(bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5))
+            : null;
 
         tableRows.add(
           pw.TableRow(
             decoration: pw.BoxDecoration(color: rowBg),
             children: [
-              // Cellule 0 : Nom du LOCAL (affiché sur la 1ère ligne du groupe)
-              i == 0
-                  ? pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                      alignment: pw.Alignment.center,
-                      child: pw.Text(
+              // Cellule 0 : Nom du LOCAL (centré verticalement sur la ligne médiane du groupe)
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: i == midIndex
+                    ? pw.Text(
                         group.local.toUpperCase(),
                         style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
                         textAlign: pw.TextAlign.center,
-                      ),
-                    )
-                  : pw.Container(),
-              // Cellule 1 : Observation
-              pw.Padding(
+                      )
+                    : pw.SizedBox(),
+              ),
+              // Cellule 1 : Observation (avec bordure inférieure séparatrice)
+              pw.Container(
+                decoration: pw.BoxDecoration(border: obsBorder),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 child: pw.Text(o.observation, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
               ),
-              // Cellule 2 : Référence Normative
+              // Cellule 2 : Référence Normative (avec bordure inférieure séparatrice)
               pw.Container(
+                decoration: pw.BoxDecoration(border: obsBorder),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 alignment: pw.Alignment.center,
                 child: pw.Text(o.refNorm,
@@ -3082,8 +3091,15 @@ class PdfReportService {
 
       widgets.add(
         pw.Table(
-          defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
-          border: pw.TableBorder.all(color: PdfColor.fromHex('#475569'), width: 0.5),
+          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+          border: pw.TableBorder(
+            left: const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+            right: const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+            top: const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+            bottom: const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+            verticalInside: const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+            horizontalInside: pw.BorderSide.none,
+          ),
           columnWidths: const {
             0: pw.FlexColumnWidth(2.2),
             1: pw.FlexColumnWidth(5.8),
@@ -3239,44 +3255,53 @@ class PdfReportService {
       for (final eq in equipGroups) {
         equipIdx++;
         final tableRows = <pw.TableRow>[];
+        final count = eq.items.length;
+        final midIndex = (count - 1) ~/ 2;
 
-        for (int i = 0; i < eq.items.length; i++) {
+        for (int i = 0; i < count; i++) {
           final o = eq.items[i];
           final rowBg = i.isOdd ? tableRowAlt : PdfColors.white;
+          final hasBottomBorder = i < count - 1;
+          final obsBorder = hasBottomBorder
+              ? const pw.Border(bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5))
+              : null;
 
           tableRows.add(
             pw.TableRow(
               decoration: pw.BoxDecoration(color: rowBg),
               children: [
-                // Cellule 0 : N° Équipement (#)
-                i == 0
-                    ? pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text('$equipIdx',
-                            style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
-                            textAlign: pw.TextAlign.center),
-                      )
-                    : pw.Container(),
-                // Cellule 1 : Nom Équipement
-                i == 0
-                    ? pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
+                // Cellule 0 : N° Équipement (#) - centré verticalement sur la ligne médiane
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                  alignment: pw.Alignment.center,
+                  child: i == midIndex
+                      ? pw.Text('$equipIdx',
+                          style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                          textAlign: pw.TextAlign.center)
+                      : pw.SizedBox(),
+                ),
+                // Cellule 1 : Nom Équipement - centré verticalement sur la ligne médiane
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  alignment: pw.Alignment.center,
+                  child: i == midIndex
+                      ? pw.Text(
                           eq.local.toUpperCase(),
                           style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
                           textAlign: pw.TextAlign.center,
-                        ),
-                      )
-                    : pw.Container(),
-                // Cellule 2 : Observation
-                pw.Padding(
+                        )
+                      : pw.SizedBox(),
+                ),
+                // Cellule 2 : Observation (avec bordure inférieure séparatrice)
+                pw.Container(
+                  decoration: pw.BoxDecoration(border: obsBorder),
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                  alignment: pw.Alignment.centerLeft,
                   child: pw.Text(o.observation, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
                 ),
-                // Cellule 3 : Référence Normative
+                // Cellule 3 : Référence Normative (avec bordure inférieure séparatrice)
                 pw.Container(
+                  decoration: pw.BoxDecoration(border: obsBorder),
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                   alignment: pw.Alignment.center,
                   child: pw.Text(o.refNorm,
@@ -3290,8 +3315,15 @@ class PdfReportService {
 
         widgets.add(
           pw.Table(
-            defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
-            border: pw.TableBorder.all(color: PdfColor.fromHex('#475569'), width: 0.5),
+            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+            border: pw.TableBorder(
+              left: const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+              right: const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+              top: const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+              bottom: const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+              verticalInside: const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+              horizontalInside: pw.BorderSide.none,
+            ),
             columnWidths: const {
               0: pw.FlexColumnWidth(0.8),
               1: pw.FlexColumnWidth(2.2),
