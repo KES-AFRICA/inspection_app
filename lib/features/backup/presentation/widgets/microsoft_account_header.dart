@@ -1,7 +1,7 @@
-// lib/features/backup/presentation/widgets/microsoft_account_header.dart
-
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:app_links/app_links.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../providers/backup_providers.dart';
 import '../../domain/models/microsoft_user_profile.dart';
@@ -292,6 +292,8 @@ class MicrosoftAccountHeader extends ConsumerWidget {
     final authUrl = authService.buildAuthUrl(challenge);
 
     final codeController = TextEditingController();
+    final appLinks = AppLinks();
+    StreamSubscription? linkSubscription;
 
     showDialog(
       context: context,
@@ -302,6 +304,47 @@ class MicrosoftAccountHeader extends ConsumerWidget {
 
         return StatefulBuilder(
           builder: (context, setState) {
+            // Écouter automatiquement le retour Deep Link mobile MSAL
+            linkSubscription ??= appLinks.uriLinkStream.listen((uri) async {
+              if (uri.queryParameters.containsKey('code')) {
+                final code = uri.queryParameters['code']!;
+                codeController.text = code;
+                setState(() {
+                  isLoading = true;
+                  errorMessage = null;
+                });
+
+                final success = await ref
+                    .read(microsoftAuthNotifierProvider.notifier)
+                    .loginWithCode(code: code, verifier: verifier);
+
+                if (ctx.mounted) {
+                  linkSubscription?.cancel();
+                  if (success) {
+                    Navigator.pop(ctx);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Row(
+                          children: [
+                            Icon(Icons.check_circle_rounded, color: Colors.white),
+                            SizedBox(width: 10),
+                            Text('Connexion Microsoft 365 réussie !'),
+                          ],
+                        ),
+                        backgroundColor: Color(0xFF10B981),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  } else {
+                    setState(() {
+                      isLoading = false;
+                      errorMessage = 'Échec de l\'authentification automatique. Réessayez.';
+                    });
+                  }
+                }
+              }
+            });
+
             return Dialog(
               backgroundColor: const Color(0xFF0F172A),
               elevation: 24,
@@ -573,7 +616,10 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                           children: [
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: isLoading ? null : () => Navigator.pop(ctx),
+                                onPressed: isLoading ? null : () {
+                                  linkSubscription?.cancel();
+                                  Navigator.pop(ctx);
+                                },
                                 style: OutlinedButton.styleFrom(
                                   foregroundColor: const Color(0xFF94A3B8),
                                   side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),

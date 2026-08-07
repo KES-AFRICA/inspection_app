@@ -13,7 +13,7 @@ import '../../domain/models/microsoft_user_profile.dart';
 class MicrosoftAuthService {
   static const String _defaultClientId = '79e8b82a-9532-4025-bdfe-dd4f7ae31892'; // Valeur venant d'Azure
   static const String _tenant = '3c1c2bd0-8dfc-4b76-883c-c3c3dcaccb19'; // Tenant ID venant d'Azure
-  static const String _redirectUri = 'https://login.microsoftonline.com/common/oauth2/nativeclient';
+  static const String _redirectUri = 'msal79e8b82a-9532-4025-bdfe-dd4f7ae31892://auth'; // Redirect URI Mobile MSAL Officiel
 
   static const String _authority = 'https://login.microsoftonline.com/$_tenant/oauth2/v2.0';
   static const String _authorizeUrl = '$_authority/authorize';
@@ -125,13 +125,22 @@ class MicrosoftAuthService {
     required String codeVerifier,
   }) async {
     try {
+      // Nettoyage intelligent : si l'utilisateur colle toute l'URL de redirection
+      String cleanCode = authCode.trim();
+      if (cleanCode.contains('code=')) {
+        final uri = Uri.tryParse(cleanCode);
+        if (uri != null && uri.queryParameters.containsKey('code')) {
+          cleanCode = uri.queryParameters['code']!;
+        }
+      }
+
       final response = await _client.post(
         Uri.parse(_tokenUrl),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'},
         body: {
           'client_id': clientId,
           'grant_type': 'authorization_code',
-          'code': authCode,
+          'code': cleanCode,
           'redirect_uri': _redirectUri,
           'code_verifier': codeVerifier,
           'scope': _scopes.join(' '),

@@ -27,6 +27,7 @@ dependencies:
   pdf: ^3.11.3
   smooth_page_indicator: ^2.0.1
   url_launcher: ^6.3.2
+  app_links: ^6.3.3
   printing: ^5.14.3
   path: ^1.9.1
   external_path: ^2.2.0
