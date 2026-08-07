@@ -3039,21 +3039,35 @@ class PdfReportService {
       ),
     );
 
-    // Corps : 1 Table par groupe de Localisation avec RowSpan réel
+    // Corps : 1 Table par groupe de Localisation avec TableRow top-level sécables
     for (final group in groups) {
-      final innerRows = <pw.TableRow>[];
+      final tableRows = <pw.TableRow>[];
       for (int i = 0; i < group.items.length; i++) {
         final o = group.items[i];
         final rowBg = i.isOdd ? tableRowAlt : PdfColors.white;
 
-        innerRows.add(
+        tableRows.add(
           pw.TableRow(
             decoration: pw.BoxDecoration(color: rowBg),
             children: [
+              // Cellule 0 : Nom du LOCAL (affiché sur la 1ère ligne du groupe)
+              i == 0
+                  ? pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        group.local.toUpperCase(),
+                        style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    )
+                  : pw.Container(),
+              // Cellule 1 : Observation
               pw.Padding(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 child: pw.Text(o.observation, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
               ),
+              // Cellule 2 : Référence Normative
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 alignment: pw.Alignment.center,
@@ -3072,34 +3086,10 @@ class PdfReportService {
           border: pw.TableBorder.all(color: PdfColor.fromHex('#475569'), width: 0.5),
           columnWidths: const {
             0: pw.FlexColumnWidth(2.2),
-            1: pw.FlexColumnWidth(7.8),
+            1: pw.FlexColumnWidth(5.8),
+            2: pw.FlexColumnWidth(2.0),
           },
-          children: [
-            pw.TableRow(
-              children: [
-                // Cellule 0 : LOCALISATION (RowSpan unique, centré verticalement)
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    group.local.toUpperCase(),
-                    style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                // Cellule 1 : Sous-table des observations & ref. normatives
-                pw.Table(
-                  defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
-                  border: pw.TableBorder.all(color: PdfColor.fromHex('#475569'), width: 0.5),
-                  columnWidths: const {
-                    0: pw.FlexColumnWidth(5.8),
-                    1: pw.FlexColumnWidth(2.0),
-                  },
-                  children: innerRows,
-                ),
-              ],
-            ),
-          ],
+          children: tableRows,
         ),
       );
     }
@@ -3248,20 +3238,44 @@ class PdfReportService {
 
       for (final eq in equipGroups) {
         equipIdx++;
-        final innerRows = <pw.TableRow>[];
+        final tableRows = <pw.TableRow>[];
 
         for (int i = 0; i < eq.items.length; i++) {
           final o = eq.items[i];
           final rowBg = i.isOdd ? tableRowAlt : PdfColors.white;
 
-          innerRows.add(
+          tableRows.add(
             pw.TableRow(
               decoration: pw.BoxDecoration(color: rowBg),
               children: [
+                // Cellule 0 : N° Équipement (#)
+                i == 0
+                    ? pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                        alignment: pw.Alignment.center,
+                        child: pw.Text('$equipIdx',
+                            style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                            textAlign: pw.TextAlign.center),
+                      )
+                    : pw.Container(),
+                // Cellule 1 : Nom Équipement
+                i == 0
+                    ? pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        alignment: pw.Alignment.center,
+                        child: pw.Text(
+                          eq.local.toUpperCase(),
+                          style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      )
+                    : pw.Container(),
+                // Cellule 2 : Observation
                 pw.Padding(
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                   child: pw.Text(o.observation, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
                 ),
+                // Cellule 3 : Référence Normative
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                   alignment: pw.Alignment.center,
@@ -3281,42 +3295,10 @@ class PdfReportService {
             columnWidths: const {
               0: pw.FlexColumnWidth(0.8),
               1: pw.FlexColumnWidth(2.2),
-              2: pw.FlexColumnWidth(7.0),
+              2: pw.FlexColumnWidth(5.2),
+              3: pw.FlexColumnWidth(1.8),
             },
-            children: [
-              pw.TableRow(
-                children: [
-                  // Cellule 0 : N° Équipement (#) - RowSpan unique, centré verticalement
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-                    alignment: pw.Alignment.center,
-                    child: pw.Text('$equipIdx',
-                        style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
-                        textAlign: pw.TextAlign.center),
-                  ),
-                  // Cellule 1 : Nom Équipement - RowSpan unique, centré verticalement
-                  pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                    alignment: pw.Alignment.center,
-                    child: pw.Text(
-                      eq.local.toUpperCase(),
-                      style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  // Cellule 2 : Sous-table des observations & ref. normatives
-                  pw.Table(
-                    defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
-                    border: pw.TableBorder.all(color: PdfColor.fromHex('#475569'), width: 0.5),
-                    columnWidths: const {
-                      0: pw.FlexColumnWidth(5.2),
-                      1: pw.FlexColumnWidth(1.8),
-                    },
-                    children: innerRows,
-                  ),
-                ],
-              ),
-            ],
+            children: tableRows,
           ),
         );
       }
