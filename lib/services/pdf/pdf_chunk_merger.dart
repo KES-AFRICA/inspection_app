@@ -61,7 +61,7 @@ class PdfMergerService {
         final mergeResponse = await PdfMerger.mergeMultiplePDF(
           paths: chunkPaths,
           outputDirPath: outputFile.path,
-        ).timeout(const Duration(seconds: 2));
+        ).timeout(const Duration(seconds: 120));
 
         if (mergeResponse.status == Status.success &&
             await outputFile.exists() &&
