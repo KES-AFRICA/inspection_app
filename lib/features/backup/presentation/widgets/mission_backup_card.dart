@@ -123,12 +123,12 @@ class MissionBackupCard extends ConsumerWidget {
 
             const SizedBox(height: 16),
 
-            // Boutons d'action
+            // Boutons d'action intelligents
             Row(
               children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: isSyncing
+                    onPressed: (isSyncing || syncState.status == SyncStatus.upToDate)
                         ? null
                         : () async {
                             final success = await ref
@@ -143,30 +143,53 @@ class MissionBackupCard extends ConsumerWidget {
                                         ? 'Sauvegarde Cloud effectuée avec succès !'
                                         : 'Échec de la sauvegarde.',
                                   ),
-                                  backgroundColor: success ? Colors.green : Colors.red,
+                                  backgroundColor: success ? const Color(0xFF10B981) : Colors.red,
+                                  behavior: SnackBarBehavior.floating,
                                 ),
                               );
                             }
                           },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF0078D4),
-                      foregroundColor: Colors.white,
+                      backgroundColor: syncState.status == SyncStatus.upToDate
+                          ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                          : const Color(0xFF0078D4),
+                      disabledBackgroundColor: syncState.status == SyncStatus.upToDate
+                          ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                          : Colors.grey.shade300,
+                      foregroundColor: syncState.status == SyncStatus.upToDate
+                          ? const Color(0xFF047857)
+                          : Colors.white,
+                      disabledForegroundColor: syncState.status == SyncStatus.upToDate
+                          ? const Color(0xFF047857)
+                          : Colors.grey.shade600,
                       padding: const EdgeInsets.symmetric(vertical: 10),
+                      elevation: syncState.status == SyncStatus.upToDate ? 0 : 2,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
+                        borderRadius: BorderRadius.circular(10),
+                        side: syncState.status == SyncStatus.upToDate
+                            ? const BorderSide(color: Color(0xFF10B981), width: 1)
+                            : BorderSide.none,
                       ),
                     ),
-                    icon: const Icon(Icons.cloud_upload_rounded, size: 16),
+                    icon: Icon(
+                      syncState.status == SyncStatus.upToDate
+                          ? Icons.check_circle_rounded
+                          : Icons.cloud_upload_rounded,
+                      size: 16,
+                    ),
                     label: Text(
-                      syncState.status == SyncStatus.neverBackedUp
-                          ? 'Sauvegarder'
-                          : 'Mettre à jour',
+                      syncState.status == SyncStatus.upToDate
+                          ? 'Mission à jour'
+                          : syncState.status == SyncStatus.localModifications
+                              ? 'Mettre à jour le Cloud'
+                              : 'Sauvegarder',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton.icon(
-                  onPressed: isSyncing
+                  onPressed: isSyncing || syncState.status == SyncStatus.neverBackedUp
                       ? null
                       : () {
                           _confirmRestore(context, ref);
@@ -175,7 +198,7 @@ class MissionBackupCard extends ConsumerWidget {
                     foregroundColor: const Color(0xFF0F172A),
                     padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                   ),
                   icon: const Icon(Icons.cloud_download_rounded, size: 16),

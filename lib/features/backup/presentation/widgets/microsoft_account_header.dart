@@ -12,21 +12,31 @@ class MicrosoftAccountHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(microsoftAuthNotifierProvider);
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Container(
       margin: const EdgeInsets.fromLTRB(16, 12, 16, 10),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0F172A), Color(0xFF1E293B)],
+        gradient: LinearGradient(
+          colors: isDarkMode
+              ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
+              : [Colors.white, const Color(0xFFF8FAFC)],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1),
+        border: Border.all(
+          color: isDarkMode
+              ? Colors.white.withValues(alpha: 0.12)
+              : const Color(0xFFE2E8F0),
+          width: 1,
+        ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.25),
+            color: isDarkMode
+                ? Colors.black.withValues(alpha: 0.25)
+                : Colors.black.withValues(alpha: 0.05),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -50,7 +60,15 @@ class MicrosoftAccountHeader extends ConsumerWidget {
     );
   }
 
-  Widget _buildLoggedInView(BuildContext context, WidgetRef ref, MicrosoftUserProfile profile) {
+  Widget _buildLoggedInView(
+    BuildContext context,
+    WidgetRef ref,
+    MicrosoftUserProfile profile,
+  ) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor = isDarkMode ? Colors.white : const Color(0xFF0F172A);
+    final subTextColor = isDarkMode ? Colors.grey.shade400 : const Color(0xFF64748B);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -58,8 +76,8 @@ class MicrosoftAccountHeader extends ConsumerWidget {
         Row(
           children: [
             Container(
-              width: 46,
-              height: 46,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 gradient: const LinearGradient(
@@ -67,7 +85,12 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.25), width: 1.5),
+                border: Border.all(
+                  color: isDarkMode
+                      ? Colors.white.withValues(alpha: 0.25)
+                      : Colors.white,
+                  width: 2,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFF10B981).withValues(alpha: 0.3),
@@ -78,10 +101,12 @@ class MicrosoftAccountHeader extends ConsumerWidget {
               ),
               child: Center(
                 child: Text(
-                  profile.displayName.isNotEmpty ? profile.displayName[0].toUpperCase() : 'U',
+                  profile.displayName.isNotEmpty
+                      ? profile.displayName[0].toUpperCase()
+                      : 'U',
                   style: const TextStyle(
                     color: Colors.white,
-                    fontSize: 19,
+                    fontSize: 18,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -94,8 +119,8 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                 children: [
                   Text(
                     profile.displayName,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: primaryTextColor,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                       letterSpacing: -0.2,
@@ -105,20 +130,19 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                   const SizedBox(height: 2),
                   Text(
                     profile.email,
-                    style: TextStyle(
-                      color: Colors.grey.shade300,
-                      fontSize: 12,
-                    ),
+                    style: TextStyle(color: subTextColor, fontSize: 12),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
               ),
             ),
             IconButton(
-              onPressed: () async {
-                await ref.read(microsoftAuthNotifierProvider.notifier).logout();
-              },
-              icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 20),
+              onPressed: () => _confirmLogout(context, ref),
+              icon: const Icon(
+                Icons.logout_rounded,
+                color: Color(0xFFEF4444),
+                size: 20,
+              ),
               tooltip: 'Se déconnecter de Microsoft',
             ),
           ],
@@ -130,7 +154,9 @@ class MicrosoftAccountHeader extends ConsumerWidget {
           decoration: BoxDecoration(
             color: const Color(0xFF10B981).withValues(alpha: 0.12),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.25)),
+            border: Border.all(
+              color: const Color(0xFF10B981).withValues(alpha: 0.3),
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -144,10 +170,10 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              const Text(
+              Text(
                 'Connecté • Synchronisation Cloud KES Active',
                 style: TextStyle(
-                  color: Color(0xFF6EE7B7),
+                  color: isDarkMode ? const Color(0xFF6EE7B7) : const Color(0xFF047857),
                   fontSize: 10.5,
                   fontWeight: FontWeight.w600,
                 ),
@@ -160,6 +186,10 @@ class MicrosoftAccountHeader extends ConsumerWidget {
   }
 
   Widget _buildLoggedOutView(BuildContext context, WidgetRef ref) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+    final primaryTextColor = isDarkMode ? Colors.white : const Color(0xFF0F172A);
+    final subTextColor = isDarkMode ? Colors.white70 : const Color(0xFF64748B);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
@@ -177,7 +207,12 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.white.withValues(alpha: 0.2), width: 1),
+                border: Border.all(
+                  color: isDarkMode
+                      ? Colors.white.withValues(alpha: 0.2)
+                      : const Color(0xFF0078D4).withValues(alpha: 0.3),
+                  width: 1,
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: const Color(0xFF0078D4).withValues(alpha: 0.35),
@@ -186,29 +221,30 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                   ),
                 ],
               ),
-              child: const Icon(Icons.cloud_queue_rounded, color: Colors.white, size: 24),
+              child: const Icon(
+                Icons.cloud_queue_rounded,
+                color: Colors.white,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Compte Microsoft 365',
                     style: TextStyle(
-                      color: Colors.white,
+                      color: primaryTextColor,
                       fontSize: 15,
                       fontWeight: FontWeight.bold,
                       letterSpacing: -0.2,
                     ),
                   ),
-                  SizedBox(height: 2),
+                  const SizedBox(height: 2),
                   Text(
                     'Sauvegardez vos missions sur OneDrive KES',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11.5,
-                    ),
+                    style: TextStyle(color: subTextColor, fontSize: 11.5),
                     overflow: TextOverflow.ellipsis,
                   ),
                 ],
@@ -234,7 +270,10 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF0078D4),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 9,
+                  ),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -256,7 +295,9 @@ class MicrosoftAccountHeader extends ConsumerWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFEF4444).withValues(alpha: 0.10),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.25)),
+            border: Border.all(
+              color: const Color(0xFFEF4444).withValues(alpha: 0.25),
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -270,10 +311,10 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              const Text(
-                'Non connecté',
+              Text(
+                'Non connecté (Mode Local)',
                 style: TextStyle(
-                  color: Color(0xFFFCA5A5),
+                  color: isDarkMode ? const Color(0xFFFCA5A5) : const Color(0xFFDC2626),
                   fontSize: 10.5,
                   fontWeight: FontWeight.w600,
                 ),
@@ -282,6 +323,92 @@ class MicrosoftAccountHeader extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  void _confirmLogout(BuildContext context, WidgetRef ref) {
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: isDarkMode ? const Color(0xFF0F172A) : Colors.white,
+        elevation: 24,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: isDarkMode ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE2E8F0),
+          ),
+        ),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 22),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                'Déconnexion Microsoft 365',
+                style: TextStyle(
+                  color: isDarkMode ? Colors.white : const Color(0xFF0F172A),
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Êtes-vous sûr de vouloir vous déconnecter de votre compte professionnel Microsoft 365 ?\n\nLes sauvegardes automatiques sur OneDrive seront suspendues jusqu\'à votre prochaine connexion.',
+          style: TextStyle(
+            color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+            fontSize: 13,
+            height: 1.4,
+          ),
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          OutlinedButton(
+            onPressed: () => Navigator.pop(ctx),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+              side: BorderSide(
+                color: isDarkMode ? Colors.white.withValues(alpha: 0.15) : const Color(0xFFCBD5E1),
+              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await ref.read(microsoftAuthNotifierProvider.notifier).logout();
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Déconnexion de Microsoft 365 effectuée.'),
+                    backgroundColor: Color(0xFFEF4444),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.logout_rounded, size: 16),
+            label: const Text('Se déconnecter', style: TextStyle(fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
     );
   }
 
@@ -304,6 +431,18 @@ class MicrosoftAccountHeader extends ConsumerWidget {
 
         return StatefulBuilder(
           builder: (context, setState) {
+            final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+            final dialogBg = isDarkMode ? const Color(0xFF0F172A) : Colors.white;
+            final dialogBorder = isDarkMode ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE2E8F0);
+            final primaryText = isDarkMode ? Colors.white : const Color(0xFF0F172A);
+            final subText = isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+            final cardBg = isDarkMode ? Colors.white.withValues(alpha: 0.04) : const Color(0xFFF1F5F9);
+            final cardBorder = isDarkMode ? Colors.white.withValues(alpha: 0.08) : const Color(0xFFE2E8F0);
+            final inputFill = isDarkMode ? const Color(0xFF020617) : const Color(0xFFF8FAFC);
+            final inputBorder = isDarkMode ? Colors.white.withValues(alpha: 0.15) : const Color(0xFFCBD5E1);
+            final inputText = isDarkMode ? Colors.white : const Color(0xFF0F172A);
+            final closeIconColor = isDarkMode ? Colors.white60 : const Color(0xFF64748B);
+
             // Écouter automatiquement le retour Deep Link mobile MSAL
             linkSubscription ??= appLinks.uriLinkStream.listen((uri) async {
               if (uri.queryParameters.containsKey('code')) {
@@ -326,7 +465,10 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                       const SnackBar(
                         content: Row(
                           children: [
-                            Icon(Icons.check_circle_rounded, color: Colors.white),
+                            Icon(
+                              Icons.check_circle_rounded,
+                              color: Colors.white,
+                            ),
                             SizedBox(width: 10),
                             Text('Connexion Microsoft 365 réussie !'),
                           ],
@@ -338,7 +480,8 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                   } else {
                     setState(() {
                       isLoading = false;
-                      errorMessage = 'Échec de l\'authentification automatique. Réessayez.';
+                      errorMessage =
+                          'Échec de l\'authentification automatique. Réessayez.';
                     });
                   }
                 }
@@ -346,12 +489,12 @@ class MicrosoftAccountHeader extends ConsumerWidget {
             });
 
             return Dialog(
-              backgroundColor: const Color(0xFF0F172A),
+              backgroundColor: dialogBg,
               elevation: 24,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(24),
                 side: BorderSide(
-                  color: Colors.white.withValues(alpha: 0.12),
+                  color: dialogBorder,
                   width: 1,
                 ),
               ),
@@ -372,41 +515,50 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                               height: 32,
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
-                                  colors: [Color(0xFF0078D4), Color(0xFF0284C7)],
+                                  colors: [
+                                    Color(0xFF0078D4),
+                                    Color(0xFF0284C7),
+                                  ],
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
                                 ),
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF0078D4).withValues(alpha: 0.4),
+                                    color: const Color(
+                                      0xFF0078D4,
+                                    ).withValues(alpha: 0.4),
                                     blurRadius: 10,
                                     offset: const Offset(0, 4),
                                   ),
                                 ],
                               ),
-                              child: const Icon(Icons.shield_outlined, color: Colors.white, size: 22),
+                              child: const Icon(
+                                Icons.shield_outlined,
+                                color: Colors.white,
+                                size: 22,
+                              ),
                             ),
                             const SizedBox(width: 12),
-                            const Expanded(
+                            Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     'Connexion Microsoft 365',
                                     style: TextStyle(
-                                      color: Colors.white,
+                                      color: primaryText,
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
                                       letterSpacing: -0.3,
                                     ),
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  SizedBox(height: 2),
+                                  const SizedBox(height: 2),
                                   Text(
                                     'Authentification KES Enterprise',
                                     style: TextStyle(
-                                      color: Color(0xFF94A3B8),
+                                      color: subText,
                                       fontSize: 11.5,
                                     ),
                                     overflow: TextOverflow.ellipsis,
@@ -416,7 +568,11 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                             ),
                             IconButton(
                               onPressed: () => Navigator.pop(ctx),
-                              icon: const Icon(Icons.close_rounded, color: Colors.white60, size: 20),
+                              icon: Icon(
+                                Icons.close_rounded,
+                                color: closeIconColor,
+                                size: 20,
+                              ),
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                             ),
@@ -429,9 +585,11 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.04),
+                            color: cardBg,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                            border: Border.all(
+                              color: cardBorder,
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,26 +597,31 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                               Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF0078D4).withValues(alpha: 0.2),
+                                      color: const Color(
+                                        0xFF0078D4,
+                                      ).withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: const Text(
                                       'ÉTAPE 1',
                                       style: TextStyle(
-                                        color: Color(0xFF38BDF8),
+                                        color: Color(0xFF0078D4),
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  const Expanded(
+                                  Expanded(
                                     child: Text(
                                       'Connexion via le navigateur',
                                       style: TextStyle(
-                                        color: Colors.white,
+                                        color: primaryText,
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -467,9 +630,12 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              const Text(
+                              Text(
                                 'Ouvrez la page officielle Microsoft pour vous connecter avec vos identifiants KES.',
-                                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11.5),
+                                style: TextStyle(
+                                  color: subText,
+                                  fontSize: 11.5,
+                                ),
                               ),
                               const SizedBox(height: 12),
                               SizedBox(
@@ -478,19 +644,36 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                                   onPressed: () async {
                                     final uri = Uri.parse(authUrl);
                                     if (await canLaunchUrl(uri)) {
-                                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                                      await launchUrl(
+                                        uri,
+                                        mode: LaunchMode.externalApplication,
+                                      );
                                     }
                                   },
                                   style: OutlinedButton.styleFrom(
-                                    foregroundColor: const Color(0xFF38BDF8),
-                                    side: BorderSide(color: const Color(0xFF0078D4).withValues(alpha: 0.5)),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    foregroundColor: const Color(0xFF0078D4),
+                                    side: BorderSide(
+                                      color: const Color(
+                                        0xFF0078D4,
+                                      ).withValues(alpha: 0.5),
+                                    ),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
                                   ),
-                                  icon: const Icon(Icons.open_in_browser_rounded, size: 18),
+                                  icon: const Icon(
+                                    Icons.open_in_browser_rounded,
+                                    size: 18,
+                                  ),
                                   label: const Text(
                                     'Ouvrir la page Microsoft',
-                                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -504,9 +687,11 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                         Container(
                           padding: const EdgeInsets.all(14),
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.04),
+                            color: cardBg,
                             borderRadius: BorderRadius.circular(14),
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+                            border: Border.all(
+                              color: cardBorder,
+                            ),
                           ),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -514,26 +699,31 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                               Row(
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 3,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: const Color(0xFF0078D4).withValues(alpha: 0.2),
+                                      color: const Color(
+                                        0xFF0078D4,
+                                      ).withValues(alpha: 0.15),
                                       borderRadius: BorderRadius.circular(6),
                                     ),
                                     child: const Text(
                                       'ÉTAPE 2',
                                       style: TextStyle(
-                                        color: Color(0xFF38BDF8),
+                                        color: Color(0xFF0078D4),
                                         fontSize: 10,
                                         fontWeight: FontWeight.bold,
                                       ),
                                     ),
                                   ),
                                   const SizedBox(width: 8),
-                                  const Expanded(
+                                  Expanded(
                                     child: Text(
                                       'Validation du code',
                                       style: TextStyle(
-                                        color: Colors.white,
+                                        color: primaryText,
                                         fontSize: 13,
                                         fontWeight: FontWeight.w600,
                                       ),
@@ -542,22 +732,40 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                                 ],
                               ),
                               const SizedBox(height: 8),
-                              const Text(
+                              Text(
                                 'Collez le code obtenu après la connexion :',
-                                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 11.5),
+                                style: TextStyle(
+                                  color: subText,
+                                  fontSize: 11.5,
+                                ),
                               ),
                               const SizedBox(height: 10),
                               TextField(
                                 controller: codeController,
-                                style: const TextStyle(color: Colors.white, fontSize: 13),
+                                style: TextStyle(
+                                  color: inputText,
+                                  fontSize: 13,
+                                ),
                                 onChanged: (_) => setState(() {}),
                                 decoration: InputDecoration(
-                                  hintText: 'Code d\'autorisation (ex: M.R3_BAY...)',
-                                  hintStyle: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
-                                  prefixIcon: const Icon(Icons.key_rounded, color: Color(0xFF0078D4), size: 18),
+                                  hintText:
+                                      'Code d\'autorisation (ex: M.R3_BAY...)',
+                                  hintStyle: TextStyle(
+                                    color: isDarkMode ? const Color(0xFF64748B) : const Color(0xFF94A3B8),
+                                    fontSize: 12,
+                                  ),
+                                  prefixIcon: const Icon(
+                                    Icons.key_rounded,
+                                    color: Color(0xFF0078D4),
+                                    size: 18,
+                                  ),
                                   suffixIcon: codeController.text.isNotEmpty
                                       ? IconButton(
-                                          icon: const Icon(Icons.clear_rounded, color: Colors.white54, size: 18),
+                                          icon: Icon(
+                                            Icons.clear_rounded,
+                                            color: closeIconColor,
+                                            size: 18,
+                                          ),
                                           onPressed: () {
                                             codeController.clear();
                                             setState(() {});
@@ -565,19 +773,29 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                                         )
                                       : null,
                                   filled: true,
-                                  fillColor: const Color(0xFF020617),
-                                  contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
+                                  fillColor: inputFill,
+                                  contentPadding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                    horizontal: 14,
+                                  ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
-                                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                                    borderSide: BorderSide(
+                                      color: inputBorder,
+                                    ),
                                   ),
                                   enabledBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
-                                    borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
+                                    borderSide: BorderSide(
+                                      color: inputBorder,
+                                    ),
                                   ),
                                   focusedBorder: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
-                                    borderSide: const BorderSide(color: Color(0xFF0078D4), width: 1.5),
+                                    borderSide: const BorderSide(
+                                      color: Color(0xFF0078D4),
+                                      width: 1.5,
+                                    ),
                                   ),
                                 ),
                               ),
@@ -588,20 +806,36 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                         if (errorMessage != null) ...[
                           const SizedBox(height: 12),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                              color: const Color(
+                                0xFFEF4444,
+                              ).withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+                              border: Border.all(
+                                color: const Color(
+                                  0xFFEF4444,
+                                ).withValues(alpha: 0.3),
+                              ),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.error_outline_rounded, color: Color(0xFFFCA5A5), size: 18),
+                                const Icon(
+                                  Icons.error_outline_rounded,
+                                  color: Color(0xFFFCA5A5),
+                                  size: 18,
+                                ),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     errorMessage!,
-                                    style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 12),
+                                    style: const TextStyle(
+                                      color: Color(0xFFFCA5A5),
+                                      fontSize: 12,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -616,21 +850,30 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                           children: [
                             Expanded(
                               child: OutlinedButton(
-                                onPressed: isLoading ? null : () {
-                                  linkSubscription?.cancel();
-                                  Navigator.pop(ctx);
-                                },
+                                onPressed: isLoading
+                                    ? null
+                                    : () {
+                                        linkSubscription?.cancel();
+                                        Navigator.pop(ctx);
+                                      },
                                 style: OutlinedButton.styleFrom(
-                                  foregroundColor: const Color(0xFF94A3B8),
-                                  side: BorderSide(color: Colors.white.withValues(alpha: 0.15)),
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  foregroundColor: subText,
+                                  side: BorderSide(
+                                    color: inputBorder,
+                                  ),
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 12,
+                                  ),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                 ),
                                 child: const Text(
                                   'Annuler',
-                                  style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
                             ),
@@ -641,16 +884,21 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                                 decoration: BoxDecoration(
                                   borderRadius: BorderRadius.circular(10),
                                   boxShadow: [
-                                    if (codeController.text.trim().isNotEmpty && !isLoading)
+                                    if (codeController.text.trim().isNotEmpty &&
+                                        !isLoading)
                                       BoxShadow(
-                                        color: const Color(0xFF0078D4).withValues(alpha: 0.4),
+                                        color: const Color(
+                                          0xFF0078D4,
+                                        ).withValues(alpha: 0.4),
                                         blurRadius: 10,
                                         offset: const Offset(0, 3),
                                       ),
                                   ],
                                 ),
                                 child: ElevatedButton(
-                                  onPressed: (codeController.text.trim().isEmpty || isLoading)
+                                  onPressed:
+                                      (codeController.text.trim().isEmpty ||
+                                          isLoading)
                                       ? null
                                       : () async {
                                           setState(() {
@@ -658,25 +906,43 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                                             errorMessage = null;
                                           });
 
-                                          final code = codeController.text.trim();
+                                          final code = codeController.text
+                                              .trim();
                                           final success = await ref
-                                              .read(microsoftAuthNotifierProvider.notifier)
-                                              .loginWithCode(code: code, verifier: verifier);
+                                              .read(
+                                                microsoftAuthNotifierProvider
+                                                    .notifier,
+                                              )
+                                              .loginWithCode(
+                                                code: code,
+                                                verifier: verifier,
+                                              );
 
                                           if (ctx.mounted) {
                                             if (success) {
                                               Navigator.pop(ctx);
-                                              ScaffoldMessenger.of(context).showSnackBar(
+                                              ScaffoldMessenger.of(
+                                                context,
+                                              ).showSnackBar(
                                                 const SnackBar(
                                                   content: Row(
                                                     children: [
-                                                      Icon(Icons.check_circle_rounded, color: Colors.white),
+                                                      Icon(
+                                                        Icons
+                                                            .check_circle_rounded,
+                                                        color: Colors.white,
+                                                      ),
                                                       SizedBox(width: 10),
-                                                      Text('Connexion Microsoft 365 réussie !'),
+                                                      Text(
+                                                        'Connexion Microsoft 365 réussie !',
+                                                      ),
                                                     ],
                                                   ),
-                                                  backgroundColor: Color(0xFF10B981),
-                                                  behavior: SnackBarBehavior.floating,
+                                                  backgroundColor: Color(
+                                                    0xFF10B981,
+                                                  ),
+                                                  behavior:
+                                                      SnackBarBehavior.floating,
                                                 ),
                                               );
                                             } else {
@@ -690,10 +956,15 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                                         },
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: const Color(0xFF0078D4),
-                                    disabledBackgroundColor: const Color(0xFF0078D4).withValues(alpha: 0.3),
+                                    disabledBackgroundColor: const Color(
+                                      0xFF0078D4,
+                                    ).withValues(alpha: 0.3),
                                     foregroundColor: Colors.white,
-                                    disabledForegroundColor: Colors.white.withValues(alpha: 0.4),
-                                    padding: const EdgeInsets.symmetric(vertical: 12),
+                                    disabledForegroundColor: Colors.white
+                                        .withValues(alpha: 0.4),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 12,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(10),
                                     ),
@@ -710,7 +981,10 @@ class MicrosoftAccountHeader extends ConsumerWidget {
                                         )
                                       : const Text(
                                           'Valider la connexion',
-                                          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 13,
+                                          ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
                                         ),

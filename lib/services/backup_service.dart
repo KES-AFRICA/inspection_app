@@ -169,7 +169,10 @@ class BackupService {
 
   // ── EXPORT CIBLÉ D'UNE SEULE MISSION (FORMAT V4 ZIP BUNDLE) ──
 
-  static Future<BackupResult> exporterMission(String missionId) async {
+  static Future<BackupResult> exporterMission(
+    String missionId, {
+    bool openShareSheet = true,
+  }) async {
     try {
       final mission = HiveService.getMissionById(missionId);
       if (mission == null) {
@@ -197,6 +200,7 @@ class BackupService {
         exportType: 'single_mission',
         subject: 'Sauvegarde V4 — ${mission.nomClient}',
         text: 'Export mission ${mission.nomClient} ($ts)',
+        openShareSheet: openShareSheet,
       );
     } catch (e, st) {
       if (kDebugMode) print('❌ exporterMission V4: $e\n$st');
@@ -218,6 +222,7 @@ class BackupService {
     String? matricule,
     String? subject,
     String? text,
+    bool openShareSheet = true,
   }) async {
     try {
       if (serializedMissions.isEmpty) {
@@ -323,14 +328,16 @@ class BackupService {
       final publicFile = File('${exportDir.path}/$fileName');
       await zipFile.copy(publicFile.path);
 
-      try {
-        await Share.shareXFiles(
-          [XFile(publicFile.path)],
-          subject: subject ?? 'Sauvegarde Inspec V4',
-          text: text ?? 'Sauvegarde Inspec V4 (${serializedMissions.length} mission(s))',
-        );
-      } catch (e) {
-        if (kDebugMode) print('⚠️ Partage annulé ou non disponible: $e');
+      if (openShareSheet) {
+        try {
+          await Share.shareXFiles(
+            [XFile(publicFile.path)],
+            subject: subject ?? 'Sauvegarde Inspec V4',
+            text: text ?? 'Sauvegarde Inspec V4 (${serializedMissions.length} mission(s))',
+          );
+        } catch (e) {
+          if (kDebugMode) print('⚠️ Partage annulé ou non disponible: $e');
+        }
       }
 
       return BackupResult(

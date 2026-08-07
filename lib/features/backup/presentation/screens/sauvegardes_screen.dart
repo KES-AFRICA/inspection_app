@@ -293,8 +293,89 @@ class _BackupHeaderSliverDelegate extends SliverPersistentHeaderDelegate {
     }
 
     return IconButton(
-      onPressed: () async {
-        await ref.read(microsoftAuthNotifierProvider.notifier).logout();
+      onPressed: () {
+        final isDarkMode = Theme.of(context).brightness == Brightness.dark;
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            backgroundColor: isDarkMode ? const Color(0xFF0F172A) : Colors.white,
+            elevation: 24,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(20),
+              side: BorderSide(
+                color: isDarkMode ? Colors.white.withValues(alpha: 0.12) : const Color(0xFFE2E8F0),
+              ),
+            ),
+            title: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEF4444).withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Déconnexion Microsoft 365',
+                    style: TextStyle(
+                      color: isDarkMode ? Colors.white : const Color(0xFF0F172A),
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Text(
+              'Êtes-vous sûr de vouloir vous déconnecter de votre compte professionnel Microsoft 365 ?\n\nLes sauvegardes automatiques sur OneDrive seront suspendues.',
+              style: TextStyle(
+                color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                fontSize: 13,
+                height: 1.4,
+              ),
+            ),
+            actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            actions: [
+              OutlinedButton(
+                onPressed: () => Navigator.pop(ctx),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF64748B),
+                  side: BorderSide(
+                    color: isDarkMode ? Colors.white.withValues(alpha: 0.15) : const Color(0xFFCBD5E1),
+                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Annuler'),
+              ),
+              ElevatedButton.icon(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await ref.read(microsoftAuthNotifierProvider.notifier).logout();
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Déconnexion de Microsoft 365 effectuée.'),
+                        backgroundColor: Color(0xFFEF4444),
+                        behavior: SnackBarBehavior.floating,
+                      ),
+                    );
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFEF4444),
+                  foregroundColor: Colors.white,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                icon: const Icon(Icons.logout_rounded, size: 16),
+                label: const Text('Se déconnecter', style: TextStyle(fontWeight: FontWeight.bold)),
+              ),
+            ],
+          ),
+        );
       },
       icon: const Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 20),
       tooltip: 'Déconnexion M365',

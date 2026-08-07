@@ -115,10 +115,13 @@ class BackupSyncRepositoryImpl implements BackupSyncRepository {
       return false;
     }
 
-    onProgress?.call(0.05, 'Génération du bundle .inspec local...');
+    onProgress?.call(0.05, 'Génération du bundle .inspec local en arrière-plan...');
 
-    // 1. Appeler l'exportateur BackupService existant
-    final exportResult = await BackupService.exporterMission(missionId);
+    // 1. Appeler l'exportateur BackupService en mode silencieux (sans feuille de partage OS)
+    final exportResult = await BackupService.exporterMission(
+      missionId,
+      openShareSheet: false,
+    );
     if (!exportResult.success || exportResult.filePath == null) {
       onProgress?.call(0, 'Erreur d\'exportation: ${exportResult.message}');
       return false;
