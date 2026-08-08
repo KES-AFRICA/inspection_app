@@ -46,18 +46,11 @@ class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> with Widg
     }
   }
 
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _refresh();
-  }
-
   Future<void> _refresh() async {
     final user = HiveService.getCurrentUser();
     if (user != null) {
+      // 0ms réactivité : uniquement rafraîchir l'état réactif depuis le cache / arrière-plan
       await ref.read(backupSyncNotifierProvider.notifier).refreshAll(user.matricule);
-      // Lancer également le traitement opportuniste de la file d'attente s'il y a des missions éligibles
-      unawaited(ref.read(backupSchedulerServiceProvider).processQueue(user.matricule));
     }
   }
 
