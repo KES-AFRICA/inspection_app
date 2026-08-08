@@ -1,4 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../data/datasources/backup_queue_service.dart';
+import '../../data/services/backup_scheduler_service.dart';
+import '../../data/services/msal_recommendation_service.dart';
 import '../../data/datasources/microsoft_auth_service.dart';
 import '../../data/datasources/microsoft_graph_storage_service.dart';
 import '../../data/repositories/backup_sync_repository_impl.dart';
@@ -19,6 +22,22 @@ final backupSyncRepositoryProvider = Provider<BackupSyncRepository>((ref) {
   return BackupSyncRepositoryImpl(
     authService: ref.watch(microsoftAuthServiceProvider),
     storageService: ref.watch(microsoftGraphStorageServiceProvider),
+  );
+});
+
+final backupQueueServiceProvider = Provider<BackupQueueService>((ref) {
+  return BackupQueueService();
+});
+
+final msalRecommendationServiceProvider = Provider<MsalRecommendationService>((ref) {
+  return MsalRecommendationService();
+});
+
+final backupSchedulerServiceProvider = Provider<BackupSchedulerService>((ref) {
+  return BackupSchedulerService(
+    repository: ref.watch(backupSyncRepositoryProvider),
+    authService: ref.watch(microsoftAuthServiceProvider),
+    queueService: ref.watch(backupQueueServiceProvider),
   );
 });
 

@@ -101,9 +101,11 @@ class HiveService {
     await Hive.openBox<LastReport>('last_reports');  
     await Hive.openBox<TrashItem>(_trashBox);
     
-    // Box pour les préférences MT (type dynamique)
+    // Box pour les préférences MT et la sauvegarde automatique
     await Hive.openBox(_mtPreferenceBox);
     await Hive.openBox('sync_cache');
+    await Hive.openBox('backup_queue');
+    await Hive.openBox('backup_preferences');
 
     // Auto-purge automatique des éléments corbeille de +90 jours
     await TrashService.autoPurgeExpiredItems(retentionDays: 90);

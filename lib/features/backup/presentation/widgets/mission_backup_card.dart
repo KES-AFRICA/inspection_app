@@ -72,7 +72,61 @@ class MissionBackupCard extends ConsumerWidget {
                     ],
                   ),
                 ),
-                _buildStatusBadge(syncState.status),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _buildStatusBadge(syncState.status),
+                    const SizedBox(width: 6),
+                    PopupMenuButton<String>(
+                      icon: Icon(
+                        syncState.status == SyncStatus.paused ? Icons.pause_circle_filled_rounded : Icons.more_vert_rounded,
+                        size: 20,
+                        color: syncState.status == SyncStatus.paused ? const Color(0xFFD97706) : Colors.grey.shade600,
+                      ),
+                      tooltip: 'Gestion de la sauvegarde automatique',
+                      onSelected: (value) async {
+                        if (value == 'pause') {
+                          _confirmPause(context, ref);
+                        } else if (value == 'resume') {
+                          await ref.read(backupQueueServiceProvider).setMissionPaused(mission.id, currentMatricule, false);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Sauvegarde automatique réactivée pour cette mission.'),
+                                backgroundColor: Color(0xFF10B981),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      itemBuilder: (ctx) => [
+                        if (syncState.status != SyncStatus.paused)
+                          const PopupMenuItem(
+                            value: 'pause',
+                            child: Row(
+                              children: [
+                                Icon(Icons.pause_circle_outline_rounded, color: Color(0xFFD97706), size: 18),
+                                SizedBox(width: 8),
+                                Text('Mettre en pause l\'auto-backup', style: TextStyle(fontSize: 12.5)),
+                              ],
+                            ),
+                          )
+                        else
+                          const PopupMenuItem(
+                            value: 'resume',
+                            child: Row(
+                              children: [
+                                Icon(Icons.play_circle_outline_rounded, color: Color(0xFF10B981), size: 18),
+                                SizedBox(width: 8),
+                                Text('Réactiver l\'auto-backup', style: TextStyle(fontSize: 12.5)),
+                              ],
+                            ),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ],
             ),
 
@@ -222,6 +276,8 @@ class MissionBackupCard extends ConsumerWidget {
         return Colors.grey.shade300;
       case SyncStatus.syncing:
         return const Color(0xFF0078D4); // Bleu
+      case SyncStatus.paused:
+        return const Color(0xFFD97706); // Ambre Pause
       case SyncStatus.failed:
       case SyncStatus.interrupted:
         return const Color(0xFFEF4444); // Rouge
@@ -259,6 +315,12 @@ class MissionBackupCard extends ConsumerWidget {
         fg = const Color(0xFF1E40AF);
         icon = Icons.sync_rounded;
         break;
+      case SyncStatus.paused:
+        text = 'PAUSE';
+        bg = const Color(0xFFFEF3C7);
+        fg = const Color(0xFFB45309);
+        icon = Icons.pause_circle_filled_rounded;
+        break;
       case SyncStatus.failed:
       case SyncStatus.interrupted:
         text = 'ÉCHEC';
@@ -286,6 +348,41 @@ class MissionBackupCard extends ConsumerWidget {
               fontWeight: FontWeight.bold,
               color: fg,
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmPause(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Mettre en pause l\'Auto-Backup ?'),
+        content: Text(
+          'Voulez-vous suspendre la sauvegarde automatique planifiée pour la mission "${mission.nomClient}" ?\n\nCette mission ne sera plus sauvegardée automatiquement à 17h10 jusqu\'à sa réactivation.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Annuler'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              await ref.read(backupQueueServiceProvider).setMissionPaused(mission.id, currentMatricule, true);
+              if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Sauvegarde automatique mise en pause.'),
+                    backgroundColor: Color(0xFFD97706),
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD97706)),
+            child: const Text('Mettre en pause'),
           ),
         ],
       ),

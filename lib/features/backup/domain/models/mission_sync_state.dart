@@ -7,6 +7,7 @@ enum SyncStatus {
   syncing,            // Sauvegarde ou restauration en cours (avec progression %)
   failed,             // Échec du dernier transfert
   interrupted,        // Interrompu (reprise possible)
+  paused,             // Sauvegarde automatique mise en pause par l'inspecteur
 }
 
 class MissionSyncState {

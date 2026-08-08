@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/models/mission.dart';
@@ -7,6 +8,8 @@ import '../widgets/microsoft_account_header.dart';
 import '../widgets/mission_backup_card.dart';
 import '../../domain/models/microsoft_user_profile.dart';
 import '../../domain/models/mission_sync_state.dart';
+
+import '../widgets/msal_recommendation_banner.dart';
 
 class SauvegardesScreen extends ConsumerStatefulWidget {
   const SauvegardesScreen({super.key});
@@ -25,6 +28,7 @@ class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> with Widg
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refresh();
+      ref.read(backupSchedulerServiceProvider).initializeWorkManager();
     });
   }
 
@@ -52,6 +56,8 @@ class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> with Widg
     final user = HiveService.getCurrentUser();
     if (user != null) {
       await ref.read(backupSyncNotifierProvider.notifier).refreshAll(user.matricule);
+      // Lancer également le traitement opportuniste de la file d'attente s'il y a des missions éligibles
+      unawaited(ref.read(backupSchedulerServiceProvider).processQueue(user.matricule));
     }
   }
 
@@ -60,6 +66,8 @@ class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> with Widg
     final user = HiveService.getCurrentUser();
     final missions = user != null ? HiveService.getMissionsByMatricule(user.matricule) : <Mission>[];
     final syncStates = ref.watch(backupSyncNotifierProvider);
+    final msAuth = ref.watch(microsoftAuthNotifierProvider);
+    final isConnected = msAuth.value != null;
     final hasOfflineIssue = syncStates.values.any((s) => s.status == SyncStatus.interrupted);
 
     final filtered = missions.where((m) {
@@ -76,7 +84,7 @@ class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> with Widg
         backgroundColor: const Color(0xFFF8FAFC),
         body: RefreshIndicator(
           onRefresh: _refresh,
-          edgeOffset: 215.0, // Fait sortir l'icône de recharge juste en dessous de la barre de recherche
+          edgeOffset: 215.0,
           color: const Color(0xFF0078D4),
           child: CustomScrollView(
             physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
@@ -107,6 +115,45 @@ class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> with Widg
                   ref: ref,
                 ),
               ),
+
+              // Bannière de recommandation MSAL si l'inspecteur n'est pas encore connecté
+              if (!isConnected)
+                SliverToBoxAdapter(
+                  child: MsalRecommendationBanner(
+                    onConnectPressed: () {
+                      // Ouvrir le dialogue de connexion Microsoft
+                      ref.read(microsoftAuthNotifierProvider.notifier).checkStatus();
+                    },
+                  ),
+                )
+              else
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0078D4).withValues(alpha: 0.08),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFF0078D4).withValues(alpha: 0.2)),
+                    ),
+                    child: const Row(
+                      children: [
+                        Icon(Icons.schedule_rounded, color: Color(0xFF0078D4), size: 18),
+                        SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'Sauvegarde automatique planifiée activée • Du Lun. au Sam. à 17h10',
+                            style: TextStyle(
+                              color: Color(0xFF0078D4),
+                              fontSize: 11.5,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
 
               // Bannière d'avertissement si le réseau/cloud est hors-ligne
               if (hasOfflineIssue)
