@@ -181,7 +181,7 @@ class MissionBackupCard extends ConsumerWidget {
                       syncState.status == SyncStatus.upToDate
                           ? 'Mission à jour'
                           : syncState.status == SyncStatus.localModifications
-                              ? 'Mettre à jour le Cloud'
+                              ? 'Sauvegarder'
                               : 'Sauvegarder',
                       style: const TextStyle(fontWeight: FontWeight.bold),
                     ),

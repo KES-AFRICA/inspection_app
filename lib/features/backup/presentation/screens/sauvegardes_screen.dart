@@ -69,118 +69,122 @@ class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> with Widg
           (m.natureMission ?? '').toLowerCase().contains(_searchQuery);
     }).toList();
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        edgeOffset: 215.0, // Fait sortir l'icône de recharge juste en dessous de la barre de recherche
-        color: const Color(0xFF0078D4),
-        child: CustomScrollView(
-          physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
-          slivers: [
-            // AppBar Fixe & Épurée
-            const SliverAppBar(
-              pinned: true,
-              backgroundColor: Color(0xFF0F172A),
-              foregroundColor: Colors.white,
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              title: Text(
-                'Sauvegardes Cloud M365',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8FAFC),
+        body: RefreshIndicator(
+          onRefresh: _refresh,
+          edgeOffset: 215.0, // Fait sortir l'icône de recharge juste en dessous de la barre de recherche
+          color: const Color(0xFF0078D4),
+          child: CustomScrollView(
+            physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+            slivers: [
+              // AppBar Fixe & Épurée
+              const SliverAppBar(
+                pinned: true,
+                backgroundColor: Color(0xFF0F172A),
+                foregroundColor: Colors.white,
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                title: Text(
+                  'Sauvegardes Cloud M365',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                ),
               ),
-            ),
 
-            // Header Pinned & Collapsible (Sliver)
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _BackupHeaderSliverDelegate(
-                searchController: _searchController,
-                onSearchChanged: (val) {
-                  setState(() {
-                    _searchQuery = val.trim().toLowerCase();
-                  });
-                },
-                ref: ref,
+              // Header Pinned & Collapsible (Sliver)
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _BackupHeaderSliverDelegate(
+                  searchController: _searchController,
+                  onSearchChanged: (val) {
+                    setState(() {
+                      _searchQuery = val.trim().toLowerCase();
+                    });
+                  },
+                  ref: ref,
+                ),
               ),
-            ),
 
-            // Bannière d'avertissement si le réseau/cloud est hors-ligne
-            if (hasOfflineIssue)
-              SliverToBoxAdapter(
-                child: Container(
-                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF3C7),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.wifi_off_rounded, color: Color(0xFFD97706), size: 18),
-                      const SizedBox(width: 8),
-                      const Expanded(
-                        child: Text(
-                          'Synchronisation Cloud interrompue (Hors-ligne). Vos données locales restent conservées.',
-                          style: TextStyle(color: Color(0xFF92400E), fontSize: 11.5, fontWeight: FontWeight.w500),
+              // Bannière d'avertissement si le réseau/cloud est hors-ligne
+              if (hasOfflineIssue)
+                SliverToBoxAdapter(
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFEF3C7),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.wifi_off_rounded, color: Color(0xFFD97706), size: 18),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Synchronisation Cloud interrompue (Hors-ligne). Vos données locales restent conservées.',
+                            style: TextStyle(color: Color(0xFF92400E), fontSize: 11.5, fontWeight: FontWeight.w500),
+                          ),
                         ),
-                      ),
-                      TextButton(
-                        onPressed: _refresh,
-                        style: TextButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        TextButton(
+                          onPressed: _refresh,
+                          style: TextButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: const Text('Réessayer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5, color: Color(0xFFB45309))),
                         ),
-                        child: const Text('Réessayer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5, color: Color(0xFFB45309))),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
-              ),
 
-            // Contenu : Liste des missions ou état vide
-            if (filtered.isEmpty)
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        missions.isEmpty ? Icons.assignment_outlined : Icons.search_off_rounded,
-                        size: 48,
-                        color: Colors.grey,
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        missions.isEmpty
-                            ? 'Aucune mission enregistrée'
-                            : 'Aucune mission ne correspond à la recherche.',
-                        style: const TextStyle(color: Colors.grey, fontSize: 15),
-                      ),
-                    ],
+              // Contenu : Liste des missions ou état vide
+              if (filtered.isEmpty)
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          missions.isEmpty ? Icons.assignment_outlined : Icons.search_off_rounded,
+                          size: 48,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          missions.isEmpty
+                              ? 'Aucune mission enregistrée'
+                              : 'Aucune mission ne correspond à la recherche.',
+                          style: const TextStyle(color: Colors.grey, fontSize: 15),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.only(top: 8, bottom: 24),
+                  sliver: SliverList(
+                    delegate: SliverChildBuilderDelegate(
+                      (context, index) {
+                        final mission = filtered[index];
+                        return MissionBackupCard(
+                          mission: mission,
+                          currentMatricule: user?.matricule ?? '',
+                        );
+                      },
+                      childCount: filtered.length,
+                    ),
                   ),
                 ),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.only(top: 8, bottom: 24),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final mission = filtered[index];
-                      return MissionBackupCard(
-                        mission: mission,
-                        currentMatricule: user?.matricule ?? '',
-                      );
-                    },
-                    childCount: filtered.length,
-                  ),
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
