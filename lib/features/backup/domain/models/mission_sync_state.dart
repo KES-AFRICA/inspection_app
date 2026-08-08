@@ -46,4 +46,29 @@ class MissionSyncState {
       errorMessage: errorMessage ?? this.errorMessage,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'missionId': missionId,
+        'status': status.name,
+        'progress': progress,
+        'statusMessage': statusMessage,
+        'lastBackupDate': lastBackupDate?.toIso8601String(),
+        'remoteSizeBytes': remoteSizeBytes,
+        'errorMessage': errorMessage,
+      };
+
+  factory MissionSyncState.fromJson(Map<String, dynamic> json) => MissionSyncState(
+        missionId: json['missionId'] as String,
+        status: SyncStatus.values.firstWhere(
+          (e) => e.name == json['status'],
+          orElse: () => SyncStatus.neverBackedUp,
+        ),
+        progress: (json['progress'] as num?)?.toDouble() ?? 0.0,
+        statusMessage: json['statusMessage'] as String?,
+        lastBackupDate: json['lastBackupDate'] != null
+            ? DateTime.tryParse(json['lastBackupDate'])
+            : null,
+        remoteSizeBytes: json['remoteSizeBytes'] as int?,
+        errorMessage: json['errorMessage'] as String?,
+      );
 }

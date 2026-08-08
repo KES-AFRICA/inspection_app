@@ -6,6 +6,7 @@ import '../providers/backup_providers.dart';
 import '../widgets/microsoft_account_header.dart';
 import '../widgets/mission_backup_card.dart';
 import '../../domain/models/microsoft_user_profile.dart';
+import '../../domain/models/mission_sync_state.dart';
 
 class SauvegardesScreen extends ConsumerStatefulWidget {
   const SauvegardesScreen({super.key});
@@ -14,13 +15,14 @@ class SauvegardesScreen extends ConsumerStatefulWidget {
   ConsumerState<SauvegardesScreen> createState() => _SauvegardesScreenState();
 }
 
-class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> {
+class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> with WidgetsBindingObserver {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refresh();
     });
@@ -28,8 +30,22 @@ class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _searchController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _refresh();
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _refresh();
   }
 
   Future<void> _refresh() async {
@@ -43,6 +59,8 @@ class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> {
   Widget build(BuildContext context) {
     final user = HiveService.getCurrentUser();
     final missions = user != null ? HiveService.getMissionsByMatricule(user.matricule) : <Mission>[];
+    final syncStates = ref.watch(backupSyncNotifierProvider);
+    final hasOfflineIssue = syncStates.values.any((s) => s.status == SyncStatus.interrupted);
 
     final filtered = missions.where((m) {
       if (_searchQuery.isEmpty) return true;
@@ -86,6 +104,41 @@ class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> {
                 ref: ref,
               ),
             ),
+
+            // Bannière d'avertissement si le réseau/cloud est hors-ligne
+            if (hasOfflineIssue)
+              SliverToBoxAdapter(
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFEF3C7),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.wifi_off_rounded, color: Color(0xFFD97706), size: 18),
+                      const SizedBox(width: 8),
+                      const Expanded(
+                        child: Text(
+                          'Synchronisation Cloud interrompue (Hors-ligne). Vos données locales restent conservées.',
+                          style: TextStyle(color: Color(0xFF92400E), fontSize: 11.5, fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                      TextButton(
+                        onPressed: _refresh,
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          minimumSize: Size.zero,
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        child: const Text('Réessayer', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11.5, color: Color(0xFFB45309))),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
 
             // Contenu : Liste des missions ou état vide
             if (filtered.isEmpty)

@@ -71,9 +71,25 @@ class BackupSyncStateNotifier extends StateNotifier<Map<String, MissionSyncState
 
   BackupSyncStateNotifier(this.repository, this.ref) : super({});
 
+  Future<void> loadCachedStates(String matricule) async {
+    final cached = await repository.getCachedSyncStates(matricule);
+    if (cached.isNotEmpty) {
+      state = cached;
+    }
+  }
+
   Future<void> refreshAll(String matricule) async {
+    // 1. Charger immédiatement le cache local (0ms) si l'état est vide
+    if (state.isEmpty) {
+      await loadCachedStates(matricule);
+    }
+    // 2. Interroger Microsoft OneDrive en arrière-plan et fusionner sans clignotement
     final map = await repository.checkSyncStateForAllMissions(matricule);
-    state = map;
+    final newState = Map<String, MissionSyncState>.from(state);
+    map.forEach((key, value) {
+      newState[key] = value;
+    });
+    state = newState;
   }
 
   Future<bool> backupMission(String missionId, String matricule) async {

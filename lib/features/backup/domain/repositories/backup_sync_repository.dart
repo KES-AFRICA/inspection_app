@@ -11,6 +11,7 @@ abstract class BackupSyncRepository {
   });
   Future<void> logout();
 
+  Future<Map<String, MissionSyncState>> getCachedSyncStates(String matricule);
   Future<Map<String, MissionSyncState>> checkSyncStateForAllMissions(String matricule);
   
   Future<bool> backupSingleMission({

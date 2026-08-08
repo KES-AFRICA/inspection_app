@@ -103,6 +103,7 @@ class HiveService {
     
     // Box pour les préférences MT (type dynamique)
     await Hive.openBox(_mtPreferenceBox);
+    await Hive.openBox('sync_cache');
 
     // Auto-purge automatique des éléments corbeille de +90 jours
     await TrashService.autoPurgeExpiredItems(retentionDays: 90);

@@ -2,6 +2,7 @@
 
 import 'dart:io';
 import 'package:crypto/crypto.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:inspec_app/services/backup_service.dart';
 import 'package:inspec_app/services/hive_service.dart';
@@ -23,11 +24,7 @@ class BackupSyncRepositoryImpl implements BackupSyncRepository {
 
   @override
   Future<MicrosoftUserProfile?> checkAuthStatus() async {
-    final token = await authService.getValidAccessToken();
-    if (token != null) {
-      return await authService.getSavedUserProfile();
-    }
-    return null;
+    return await authService.getSavedUserProfile();
   }
 
   @override
@@ -47,52 +44,140 @@ class BackupSyncRepositoryImpl implements BackupSyncRepository {
   }
 
   @override
-  Future<Map<String, MissionSyncState>> checkSyncStateForAllMissions(String matricule) async {
-    final result = <String, MissionSyncState>{};
+  Future<Map<String, MissionSyncState>> getCachedSyncStates(String matricule) async {
     final missions = HiveService.getMissionsByMatricule(matricule);
-    final user = await authService.getSavedUserProfile();
-    final accessToken = await authService.getValidAccessToken();
+    if (missions.isEmpty) return {};
+
+    final cacheBox = Hive.isBoxOpen('sync_cache')
+        ? Hive.box('sync_cache')
+        : await Hive.openBox('sync_cache');
+
+    final map = <String, MissionSyncState>{};
 
     for (final mission in missions) {
-      if (accessToken == null || user == null) {
-        result[mission.id] = MissionSyncState(
-          missionId: mission.id,
-          status: SyncStatus.neverBackedUp,
-          statusMessage: 'Non connecté à Microsoft Cloud',
-        );
-        continue;
-      }
+      final cachedRaw = cacheBox.get(mission.id);
+      if (cachedRaw != null) {
+        try {
+          final Map<String, dynamic> json = Map<String, dynamic>.from(cachedRaw as Map);
+          final cachedState = MissionSyncState.fromJson(json);
 
-      final remoteFolderPath = 'Apps/KES Inspection/Sauvegardes/${user.displayName}/Mission_${mission.nomClient}_${mission.id}';
-      final manifest = await storageService.fetchRemoteManifest(
-        accessToken: accessToken,
-        remoteFolderPath: remoteFolderPath,
-      );
-
-      if (manifest == null) {
-        result[mission.id] = MissionSyncState(
-          missionId: mission.id,
-          status: SyncStatus.neverBackedUp,
-          statusMessage: 'Jamais sauvegardée sur le Cloud',
-        );
+          if (cachedState.lastBackupDate != null) {
+            // Comparer l'horodatage local actuel de la mission avec la date de sauvegarde enregistrée
+            final isModifiedLocally = mission.updatedAt.isAfter(cachedState.lastBackupDate!);
+            map[mission.id] = cachedState.copyWith(
+              status: isModifiedLocally ? SyncStatus.localModifications : SyncStatus.upToDate,
+              statusMessage: isModifiedLocally
+                  ? 'Modifications locales depuis la dernière sauvegarde'
+                  : 'Sauvegarde Cloud à jour (${((cachedState.remoteSizeBytes ?? 0) / (1024 * 1024)).toStringAsFixed(1)} Mo)',
+            );
+          } else {
+            map[mission.id] = cachedState;
+          }
+        } catch (_) {
+          map[mission.id] = MissionSyncState(
+            missionId: mission.id,
+            status: SyncStatus.neverBackedUp,
+            statusMessage: 'Vérification en cours...',
+          );
+        }
       } else {
-        // Détecter si la mission locale a été modifiée après la date de sauvegarde
-        final lastModifiedDate = mission.updatedAt;
-        final isModifiedLocally = lastModifiedDate.isAfter(manifest.backupCreatedAt);
-
-        result[mission.id] = MissionSyncState(
+        map[mission.id] = MissionSyncState(
           missionId: mission.id,
-          status: isModifiedLocally ? SyncStatus.localModifications : SyncStatus.upToDate,
-          lastBackupDate: manifest.backupCreatedAt,
-          remoteSizeBytes: manifest.fileSizeBytes,
-          statusMessage: isModifiedLocally
-              ? 'Modifications locales depuis la dernière sauvegarde'
-              : 'Sauvegarde Cloud à jour (${(manifest.fileSizeBytes / (1024 * 1024)).toStringAsFixed(1)} Mo)',
+          status: SyncStatus.neverBackedUp,
+          statusMessage: 'Vérification en cours...',
         );
       }
     }
 
-    return result;
+    return map;
+  }
+
+  @override
+  Future<Map<String, MissionSyncState>> checkSyncStateForAllMissions(String matricule) async {
+    final missions = HiveService.getMissionsByMatricule(matricule);
+    if (missions.isEmpty) return {};
+
+    final user = await authService.getSavedUserProfile();
+    final accessToken = await authService.getValidAccessToken();
+
+    if (accessToken == null || user == null) {
+      final map = <String, MissionSyncState>{};
+      for (final mission in missions) {
+        map[mission.id] = MissionSyncState(
+          missionId: mission.id,
+          status: SyncStatus.neverBackedUp,
+          statusMessage: 'Non connecté à Microsoft Cloud',
+        );
+      }
+      return map;
+    }
+
+    // Exécution parallèle accélérée (Future.wait) pour toutes les missions de l'inspecteur
+    final futures = missions.map((mission) async {
+      try {
+        final remoteFolderPath =
+            'Apps/KES Inspection/Sauvegardes/${user.displayName}/Mission_${mission.nomClient}_${mission.id}';
+        final manifest = await storageService.fetchRemoteManifest(
+          accessToken: accessToken,
+          remoteFolderPath: remoteFolderPath,
+        );
+
+        if (manifest == null) {
+          return MapEntry(
+            mission.id,
+            MissionSyncState(
+              missionId: mission.id,
+              status: SyncStatus.neverBackedUp,
+              statusMessage: 'Jamais sauvegardée sur le Cloud',
+            ),
+          );
+        } else {
+          final lastModifiedDate = mission.updatedAt;
+          final isModifiedLocally = lastModifiedDate.isAfter(manifest.backupCreatedAt);
+
+          return MapEntry(
+            mission.id,
+            MissionSyncState(
+              missionId: mission.id,
+              status: isModifiedLocally ? SyncStatus.localModifications : SyncStatus.upToDate,
+              lastBackupDate: manifest.backupCreatedAt,
+              remoteSizeBytes: manifest.fileSizeBytes,
+              statusMessage: isModifiedLocally
+                  ? 'Modifications locales depuis la dernière sauvegarde'
+                  : 'Sauvegarde Cloud à jour (${(manifest.fileSizeBytes / (1024 * 1024)).toStringAsFixed(1)} Mo)',
+            ),
+          );
+        }
+      } catch (e) {
+        // En cas d'échec réseau / hors-ligne, ne pas réinitialiser l'état
+        return MapEntry(
+          mission.id,
+          MissionSyncState(
+            missionId: mission.id,
+            status: SyncStatus.interrupted,
+            statusMessage: 'Cloud temporairement inaccessible (Hors-ligne)',
+          ),
+        );
+      }
+    });
+
+    final entries = await Future.wait(futures);
+    final resultMap = Map<String, MissionSyncState>.fromEntries(entries);
+
+    // Mettre à jour le cache persistant Hive
+    final cacheBox = Hive.isBoxOpen('sync_cache')
+        ? Hive.box('sync_cache')
+        : await Hive.openBox('sync_cache');
+
+    resultMap.forEach((missionId, state) {
+      if (state.status == SyncStatus.upToDate ||
+          state.status == SyncStatus.localModifications ||
+          state.status == SyncStatus.neverBackedUp) {
+        cacheBox.put(missionId, state.toJson());
+      }
+    });
+
+    return resultMap;
   }
 
   @override
