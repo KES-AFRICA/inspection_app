@@ -292,8 +292,8 @@ class SidebarMenu extends ConsumerWidget {
                     _buildSectionHeader('SYNCHRONISATION & CLOUD', isDarkMode),
                     _buildNavigationTile(
                       icon: Icons.cloud_sync_rounded,
-                      title: 'Sauvegardes Cloud M365',
-                      isSelected: false,
+                      title: 'Sauvegardes Cloud',
+                      isSelected: currentPageIndex == 2,
                       isDarkMode: isDarkMode,
                       statusBadge: isGlobalSyncing
                           ? _buildStatusBadge('EN COURS', const Color(0xFFDBEAFE), const Color(0xFF1E40AF), Icons.sync_rounded)
@@ -302,25 +302,17 @@ class SidebarMenu extends ConsumerWidget {
                               : _buildStatusBadge('À JOUR', const Color(0xFFD1FAE5), const Color(0xFF065F46), Icons.check_circle_rounded),
                       onTap: () {
                         onClose();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => const SauvegardesScreen(),
-                          ),
-                        );
+                        onNavigationItemSelected(2);
                       },
                     ),
                     _buildNavigationTile(
                       icon: Icons.folder_zip_rounded,
-                      title: 'Import / Export Manuel',
-                      isSelected: false,
+                      title: 'Import / Export',
+                      isSelected: currentPageIndex == 3,
                       isDarkMode: isDarkMode,
                       onTap: () {
                         onClose();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => BackupScreen(user: user),
-                          ),
-                        ).then((_) => onRefreshMissions?.call());
+                        onNavigationItemSelected(3);
                       },
                     ),
 
@@ -330,19 +322,13 @@ class SidebarMenu extends ConsumerWidget {
                     _buildSectionHeader('STOCKAGE', isDarkMode),
                     _buildNavigationTile(
                       icon: Icons.delete_outline_rounded,
-                      title: 'Corbeille Sécurisée',
-                      isSelected: false,
+                      title: 'Corbeille',
+                      isSelected: currentPageIndex == 4,
                       badgeCount: trashCount,
                       isDarkMode: isDarkMode,
                       onTap: () {
                         onClose();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => CorbeilleScreen(
-                              onRefreshParent: onRefreshMissions,
-                            ),
-                          ),
-                        ).then((_) => onRefreshMissions?.call());
+                        onNavigationItemSelected(4);
                       },
                     ),
                   ],

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
+import 'package:inspec_app/pages/missions/components/sort_dialog.dart';
 import 'package:inspec_app/pages/missions/create_mission_screen.dart';
 import 'package:inspec_app/pages/stats/stats_screen.dart';
 import 'package:inspec_app/pages/missions/components/filter_dialog.dart';
@@ -9,7 +10,9 @@ import 'package:inspec_app/pages/missions/components/home_app_bar.dart';
 import 'package:inspec_app/pages/missions/components/mission_card.dart';
 import 'package:inspec_app/pages/missions/components/search_dialog.dart';
 import 'package:inspec_app/pages/missions/components/sidebar_menu.dart';
-import 'package:inspec_app/pages/missions/components/sort_dialog.dart';
+import 'package:inspec_app/features/backup/presentation/screens/sauvegardes_screen.dart';
+import 'package:inspec_app/pages/backup/backup_screen.dart';
+import 'package:inspec_app/pages/trash/corbeille_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
 
 /// Écran principal "Mes Missions"
@@ -138,69 +141,98 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
+  Widget _buildCurrentPageContent(bool isDarkMode) {
+    switch (_currentPageIndex) {
+      case 0:
+        return _buildHomeContent(isDarkMode);
+      case 1:
+        return StatsScreen(
+          user: widget.user,
+          initialPeriod: _statsSelectedPeriod,
+          onPeriodChanged: _handleStatsPeriodChange,
+        );
+      case 2:
+        return const SauvegardesScreen();
+      case 3:
+        return BackupScreen(user: widget.user);
+      case 4:
+        return CorbeilleScreen(onRefreshParent: _loadLocalMissions);
+      default:
+        return _buildHomeContent(isDarkMode);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      child: Scaffold(
-        backgroundColor: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-        body: Stack(
-          children: [
-            // Contenu principal
-            Column(
-              children: [
-                // AppBar personnalisé
-                HomeAppBar(
-                  currentPageIndex: _currentPageIndex,
-                  onMenuPressed: () {
-                    setState(() {
-                      _showSidebar = !_showSidebar;
-                    });
-                  },
-                  onFilterPressed: () => showDialog(
-                    context: context,
-                    builder: (context) => FilterDialog(
-                      selectedFilter: _selectedFilter,
-                      missions: _missions,
-                      onFilterApplied: _updateFilteredMissions,
-                      onFilterSelected: _updateSelectedFilter,
+    return PopScope(
+      canPop: _currentPageIndex == 0 && !_showSidebar,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        if (_showSidebar) {
+          setState(() {
+            _showSidebar = false;
+          });
+        } else if (_currentPageIndex != 0) {
+          setState(() {
+            _currentPageIndex = 0;
+          });
+        }
+      },
+      child: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        child: Scaffold(
+          backgroundColor: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
+          body: Stack(
+            children: [
+              // Contenu principal
+              Column(
+                children: [
+                  // AppBar personnalisé
+                  HomeAppBar(
+                    currentPageIndex: _currentPageIndex,
+                    onMenuPressed: () {
+                      setState(() {
+                        _showSidebar = !_showSidebar;
+                      });
+                    },
+                    onFilterPressed: () => showDialog(
+                      context: context,
+                      builder: (context) => FilterDialog(
+                        selectedFilter: _selectedFilter,
+                        missions: _missions,
+                        onFilterApplied: _updateFilteredMissions,
+                        onFilterSelected: _updateSelectedFilter,
+                      ),
                     ),
-                  ),
-                  onSearchPressed: () => showDialog(
-                    context: context,
-                    builder: (context) => SearchDialog(
-                      searchQuery: _searchQuery,
-                      missions: _missions,
-                      onSearchApplied: _updateFilteredMissions,
-                      onSearchQueryChanged: _updateSearchQuery,
+                    onSearchPressed: () => showDialog(
+                      context: context,
+                      builder: (context) => SearchDialog(
+                        searchQuery: _searchQuery,
+                        missions: _missions,
+                        onSearchApplied: _updateFilteredMissions,
+                        onSearchQueryChanged: _updateSearchQuery,
+                      ),
                     ),
-                  ),
-                  onSortPressed: () => showDialog(
-                    context: context,
-                    builder: (context) => SortDialog(
-                      selectedFilter: _selectedFilter,
-                      missions: _missions,
-                      onFilterApplied: _updateFilteredMissions,
-                      onFilterSelected: _updateSelectedFilter,
+                    onSortPressed: () => showDialog(
+                      context: context,
+                      builder: (context) => SortDialog(
+                        selectedFilter: _selectedFilter,
+                        missions: _missions,
+                        onFilterApplied: _updateFilteredMissions,
+                        onFilterSelected: _updateSelectedFilter,
+                      ),
                     ),
+                    onStatsPeriodSelected: _handleStatsPeriodChange,
                   ),
-                  onStatsPeriodSelected: _handleStatsPeriodChange,
-                ),
 
-                // Corps de l'application
-                Expanded(
-                  child: _currentPageIndex == 0
-                      ? _buildHomeContent(isDarkMode)
-                      : StatsScreen(
-                          user: widget.user,
-                          initialPeriod: _statsSelectedPeriod,
-                          onPeriodChanged: _handleStatsPeriodChange,
-                        ),
-                ),
-              ],
-            ),
+                  // Corps de l'application
+                  Expanded(
+                    child: _buildCurrentPageContent(isDarkMode),
+                  ),
+                ],
+              ),
 
             // Floating Action Button
             if (_currentPageIndex == 0)
@@ -277,8 +309,9 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildHomeContent(bool isDarkMode) {
     // Calcul des KPIs
@@ -287,288 +320,398 @@ class _HomeScreenState extends State<HomeScreen> {
     final termineesCount = _missions.where((m) => _normalizeStatus(m.status) == 'Terminé').length;
     final enAttenteCount = _missions.where((m) => _normalizeStatus(m.status) == 'En attente').length;
 
-    return Column(
-      children: [
-        // 1. Bannière d'accueil & KPIs
-        Container(
-          padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
-          decoration: BoxDecoration(
+    return CustomScrollView(
+      physics: const BouncingScrollPhysics(parent: AlwaysScrollableScrollPhysics()),
+      slivers: [
+        // 1. Message de bienvenue d'accueil (Non pinned)
+        SliverToBoxAdapter(
+          child: Container(
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.03),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Message de bienvenue avec avatar utilisateur
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Bonjour, ${widget.user.prenom}',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w900,
-                          color: isDarkMode ? Colors.white : AppTheme.textDark,
-                          letterSpacing: -0.3,
-                        ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Bonjour, ${widget.user.prenom}',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                        color: isDarkMode ? Colors.white : AppTheme.textDark,
+                        letterSpacing: -0.3,
                       ),
-                      const SizedBox(height: 2),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Vérificateur agréé KES',
+                      style: TextStyle(
+                        fontSize: 12.5,
+                        color: Colors.grey.shade500,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primaryBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.shield_outlined, size: 14, color: AppTheme.primaryBlue),
+                      const SizedBox(width: 4),
                       Text(
-                        'Vérificateur agréé KES',
+                        widget.user.matricule,
                         style: TextStyle(
-                          fontSize: 12.5,
-                          color: Colors.grey.shade500,
-                          fontWeight: FontWeight.w500,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryBlue,
                         ),
                       ),
                     ],
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.shield_outlined, size: 14, color: AppTheme.primaryBlue),
-                        const SizedBox(width: 4),
-                        Text(
-                          widget.user.matricule,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryBlue,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // Cartes KPI interactives
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildKpiCard(
-                      title: 'Total',
-                      count: totalMissions,
-                      color: const Color(0xFF475569),
-                      bgColor: const Color(0xFFF1F5F9),
-                      isSelected: _selectedFilter == 'Tous',
-                      onTap: () => _updateSelectedFilter('Tous'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildKpiCard(
-                      title: 'En cours',
-                      count: enCoursCount,
-                      color: const Color(0xFF2563EB),
-                      bgColor: const Color(0xFFEFF6FF),
-                      isSelected: _selectedFilter == 'En cours',
-                      onTap: () => _updateSelectedFilter('En cours'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildKpiCard(
-                      title: 'Attente',
-                      count: enAttenteCount,
-                      color: const Color(0xFFD97706),
-                      bgColor: const Color(0xFFFEF3C7),
-                      isSelected: _selectedFilter == 'En attente',
-                      onTap: () => _updateSelectedFilter('En attente'),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildKpiCard(
-                      title: 'Terminées',
-                      count: termineesCount,
-                      color: const Color(0xFF059669),
-                      bgColor: const Color(0xFFECFDF5),
-                      isSelected: _selectedFilter == 'Terminé',
-                      onTap: () => _updateSelectedFilter('Terminé'),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              // Barre de recherche & Bouton de tri
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 44,
-                      decoration: BoxDecoration(
-                        color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                        borderRadius: BorderRadius.circular(22),
-                      ),
-                      child: TextField(
-                        controller: _searchController,
-                        onChanged: _updateSearchQuery,
-                        style: TextStyle(fontSize: 13.5, color: isDarkMode ? Colors.white : Colors.black87),
-                        decoration: InputDecoration(
-                          hintText: 'Rechercher client, site, adresse...',
-                          hintStyle: TextStyle(
-                            color: Colors.grey.shade400,
-                            fontSize: 13,
-                          ),
-                          prefixIcon: Icon(
-                            Icons.search_rounded,
-                            color: AppTheme.primaryBlue,
-                            size: 20,
-                          ),
-                          suffixIcon: _searchQuery.isNotEmpty
-                              ? IconButton(
-                                  icon: Icon(Icons.close_rounded, size: 18, color: Colors.grey.shade600),
-                                  onPressed: () {
-                                    _searchController.clear();
-                                    _updateSearchQuery('');
-                                  },
-                                )
-                              : null,
-                          border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Bouton Trier
-                  _buildQuickActionButton(
-                    icon: Icons.swap_vert_rounded,
-                    tooltip: 'Trier',
-                    isDarkMode: isDarkMode,
-                    onPressed: () => showDialog(
-                      context: context,
-                      builder: (context) => SortDialog(
-                        selectedFilter: _selectedFilter,
-                        missions: _missions,
-                        onFilterApplied: _updateFilteredMissions,
-                        onFilterSelected: _updateSelectedFilter,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-
-        // Compteur de résultats s'il y a un filtre actif
-        if (_selectedFilter != 'Tous' || _searchQuery.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline_rounded, size: 14, color: AppTheme.primaryBlue),
-                const SizedBox(width: 6),
-                Text(
-                  '${_filteredMissions.length} mission(s) trouvée(s)',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: isDarkMode ? Colors.grey.shade300 : AppTheme.textLight,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {
-                    setState(() {
-                      _selectedFilter = 'Tous';
-                      _searchQuery = '';
-                      _searchController.clear();
-                    });
-                    _applyFilters();
-                  },
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: const Text(
-                    'Réinitialiser',
-                    style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.bold),
                   ),
                 ),
               ],
             ),
           ),
+        ),
 
-        // Liste des missions
-        Expanded(
-          child: _filteredMissions.isEmpty
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: AppTheme.primaryBlue.withValues(alpha: 0.08),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          Icons.assignment_late_rounded,
-                          size: 54,
-                          color: AppTheme.primaryBlue,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      Text(
-                        _missions.isEmpty ? 'Aucune mission disponible' : 'Aucun résultat trouvé',
-                        style: TextStyle(
-                          fontSize: 16,
-                          color: isDarkMode ? Colors.white : AppTheme.greyDark,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        _missions.isEmpty
-                            ? 'Créez une nouvelle mission pour commencer'
-                            : 'Essayez de modifier vos critères de recherche',
-                        style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
-                      ),
-                    ],
+        // 2. Header Pinned & Collapsible (Cartes KPI qui disparaissent au scroll -> Barre recherche + filtre compacte fixe)
+        SliverPersistentHeader(
+          pinned: true,
+          delegate: _HomeFilterHeaderSliverDelegate(
+            isDarkMode: isDarkMode,
+            selectedFilter: _selectedFilter,
+            searchQuery: _searchQuery,
+            searchController: _searchController,
+            totalMissions: totalMissions,
+            enCoursCount: enCoursCount,
+            enAttenteCount: enAttenteCount,
+            termineesCount: termineesCount,
+            onFilterSelected: (filter) => _updateSelectedFilter(filter),
+            onSearchChanged: (query) => _updateSearchQuery(query),
+            onFilterPressed: () => showDialog(
+              context: context,
+              builder: (context) => FilterDialog(
+                selectedFilter: _selectedFilter,
+                missions: _missions,
+                onFilterApplied: _updateFilteredMissions,
+                onFilterSelected: _updateSelectedFilter,
+              ),
+            ),
+            onSortPressed: () => showDialog(
+              context: context,
+              builder: (context) => SortDialog(
+                selectedFilter: _selectedFilter,
+                missions: _missions,
+                onFilterApplied: _updateFilteredMissions,
+                onFilterSelected: _updateSelectedFilter,
+              ),
+            ),
+          ),
+        ),
+
+        // 3. Compteur de résultats s'il y a un filtre actif
+        if (_selectedFilter != 'Tous' || _searchQuery.isNotEmpty)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline_rounded, size: 14, color: AppTheme.primaryBlue),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${_filteredMissions.length} mission(s) trouvée(s)',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isDarkMode ? Colors.grey.shade300 : AppTheme.textLight,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                )
-              : ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-                  physics: const BouncingScrollPhysics(),
-                  itemCount: _filteredMissions.length,
-                  itemBuilder: (context, index) {
-                    final mission = _filteredMissions[index];
-                    return MissionCard(
+                  const Spacer(),
+                  TextButton(
+                    onPressed: () {
+                      setState(() {
+                        _selectedFilter = 'Tous';
+                        _searchQuery = '';
+                        _searchController.clear();
+                      });
+                      _applyFilters();
+                    },
+                    style: TextButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    child: const Text(
+                      'Réinitialiser',
+                      style: TextStyle(fontSize: 12, color: Colors.red, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+        // 4. Liste des cartes de missions
+        if (_filteredMissions.isEmpty)
+          SliverFillRemaining(
+            hasScrollBody: false,
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: AppTheme.primaryBlue.withValues(alpha: 0.08),
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.assignment_late_rounded,
+                      size: 54,
+                      color: AppTheme.primaryBlue,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    _missions.isEmpty ? 'Aucune mission disponible' : 'Aucun résultat trouvé',
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: isDarkMode ? Colors.white : AppTheme.greyDark,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    _missions.isEmpty
+                        ? 'Créez une nouvelle mission pour commencer'
+                        : 'Essayez de modifier vos critères de recherche',
+                    style: TextStyle(fontSize: 13, color: Colors.grey.shade500),
+                  ),
+                ],
+              ),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 80),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (context, index) {
+                  final mission = _filteredMissions[index];
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: MissionCard(
                       mission: mission,
                       user: widget.user,
                       onDeleted: _loadLocalMissions,
-                    );
-                  },
-                ),
-        ),
+                    ),
+                  );
+                },
+                childCount: _filteredMissions.length,
+              ),
+            ),
+          ),
       ],
     );
   }
+}
 
-  /// Widget Carte KPI d'accueil
-  Widget _buildKpiCard({
+// ─────────────────────────────────────────────────────────────
+// SLIVER DELEGATE POUR LES CARTES KPI ET FILTRES D'ACCUEIL
+// ─────────────────────────────────────────────────────────────
+
+class _HomeFilterHeaderSliverDelegate extends SliverPersistentHeaderDelegate {
+  final bool isDarkMode;
+  final String selectedFilter;
+  final String searchQuery;
+  final TextEditingController searchController;
+  final int totalMissions;
+  final int enCoursCount;
+  final int enAttenteCount;
+  final int termineesCount;
+  final ValueChanged<String> onFilterSelected;
+  final ValueChanged<String> onSearchChanged;
+  final VoidCallback onFilterPressed;
+  final VoidCallback onSortPressed;
+
+  _HomeFilterHeaderSliverDelegate({
+    required this.isDarkMode,
+    required this.selectedFilter,
+    required this.searchQuery,
+    required this.searchController,
+    required this.totalMissions,
+    required this.enCoursCount,
+    required this.enAttenteCount,
+    required this.termineesCount,
+    required this.onFilterSelected,
+    required this.onSearchChanged,
+    required this.onFilterPressed,
+    required this.onSortPressed,
+  });
+
+  @override
+  double get minExtent => 64.0;
+
+  @override
+  double get maxExtent => 165.0;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    final shrinkPercent = (shrinkOffset / (maxExtent - minExtent)).clamp(0.0, 1.0);
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: shrinkPercent > 0.8 ? (isDarkMode ? 0.3 : 0.06) : 0.03),
+            blurRadius: shrinkPercent > 0.8 ? 8 : 4,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          // 1. Mode Déplié : Cartes KPI + Barre de Recherche & Bouton Trier
+          Opacity(
+            opacity: (1.0 - shrinkPercent * 2.2).clamp(0.0, 1.0),
+            child: OverflowBox(
+              minHeight: maxExtent,
+              maxHeight: maxExtent,
+              alignment: Alignment.topCenter,
+              child: Column(
+                children: [
+                  // Cartes KPI interactives
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildKpiChip(
+                          title: 'Total',
+                          count: totalMissions,
+                          color: const Color(0xFF475569),
+                          bgColor: const Color(0xFFF1F5F9),
+                          isSelected: selectedFilter == 'Tous',
+                          onTap: () => onFilterSelected('Tous'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildKpiChip(
+                          title: 'En cours',
+                          count: enCoursCount,
+                          color: const Color(0xFF2563EB),
+                          bgColor: const Color(0xFFEFF6FF),
+                          isSelected: selectedFilter == 'En cours',
+                          onTap: () => onFilterSelected('En cours'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildKpiChip(
+                          title: 'Attente',
+                          count: enAttenteCount,
+                          color: const Color(0xFFD97706),
+                          bgColor: const Color(0xFFFEF3C7),
+                          isSelected: selectedFilter == 'En attente',
+                          onTap: () => onFilterSelected('En attente'),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: _buildKpiChip(
+                          title: 'Terminées',
+                          count: termineesCount,
+                          color: const Color(0xFF059669),
+                          bgColor: const Color(0xFFECFDF5),
+                          isSelected: selectedFilter == 'Terminé',
+                          onTap: () => onFilterSelected('Terminé'),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  // Barre de recherche & Bouton Trier
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildSearchBar(isCompact: false),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildQuickIconButton(
+                        icon: Icons.swap_vert_rounded,
+                        tooltip: 'Trier',
+                        onPressed: onSortPressed,
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          // 2. Mode Replié : Recherche Compacte Pinned + Icône Filtre avec Badge + Icône Trier
+          if (shrinkPercent > 0.45)
+            Opacity(
+              opacity: ((shrinkPercent - 0.45) / 0.55).clamp(0.0, 1.0),
+              child: Align(
+                alignment: Alignment.center,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildSearchBar(isCompact: true),
+                    ),
+                    const SizedBox(width: 8),
+
+                    // Bouton Filtre avec badge réactif si filtre actif
+                    Stack(
+                      children: [
+                        _buildQuickIconButton(
+                          icon: Icons.tune_rounded,
+                          tooltip: 'Filtrer',
+                          onPressed: onFilterPressed,
+                          isActive: selectedFilter != 'Tous',
+                        ),
+                        if (selectedFilter != 'Tous')
+                          Positioned(
+                            right: 4,
+                            top: 4,
+                            child: Container(
+                              width: 9,
+                              height: 9,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: AppTheme.primaryBlue,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(width: 6),
+
+                    // Bouton Trier
+                    _buildQuickIconButton(
+                      icon: Icons.swap_vert_rounded,
+                      tooltip: 'Trier',
+                      onPressed: onSortPressed,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildKpiChip({
     required String title,
     required int count,
     required Color color,
@@ -581,7 +724,7 @@ class _HomeScreenState extends State<HomeScreen> {
       borderRadius: BorderRadius.circular(14),
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 6),
         decoration: BoxDecoration(
           color: isSelected ? color : bgColor,
           borderRadius: BorderRadius.circular(14),
@@ -593,8 +736,8 @@ class _HomeScreenState extends State<HomeScreen> {
               ? [
                   BoxShadow(
                     color: color.withValues(alpha: 0.3),
-                    blurRadius: 8,
-                    offset: const Offset(0, 3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
                   ),
                 ]
               : null,
@@ -604,7 +747,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Text(
               '$count',
               style: TextStyle(
-                fontSize: 17,
+                fontSize: 16,
                 fontWeight: FontWeight.w900,
                 color: isSelected ? Colors.white : color,
               ),
@@ -626,27 +769,82 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildQuickActionButton({
+  Widget _buildSearchBar({required bool isCompact}) {
+    return Container(
+      height: isCompact ? 38 : 42,
+      decoration: BoxDecoration(
+        color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: TextField(
+        controller: searchController,
+        onChanged: onSearchChanged,
+        style: TextStyle(fontSize: 13, color: isDarkMode ? Colors.white : Colors.black87),
+        decoration: InputDecoration(
+          hintText: isCompact ? 'Rechercher...' : 'Rechercher client, site, adresse...',
+          hintStyle: TextStyle(
+            color: Colors.grey.shade400,
+            fontSize: 12.5,
+          ),
+          prefixIcon: Icon(
+            Icons.search_rounded,
+            color: AppTheme.primaryBlue,
+            size: isCompact ? 18 : 20,
+          ),
+          suffixIcon: searchController.text.isNotEmpty
+              ? IconButton(
+                  icon: Icon(Icons.close_rounded, size: 16, color: Colors.grey.shade600),
+                  onPressed: () {
+                    searchController.clear();
+                    onSearchChanged('');
+                  },
+                )
+              : null,
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(vertical: 8),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickIconButton({
     required IconData icon,
     required String tooltip,
-    required bool isDarkMode,
     required VoidCallback onPressed,
+    bool isActive = false,
   }) {
     return Tooltip(
       message: tooltip,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(22),
+        borderRadius: BorderRadius.circular(20),
         child: Container(
-          width: 44,
-          height: 44,
+          width: 38,
+          height: 38,
           decoration: BoxDecoration(
-            color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+            color: isActive
+                ? AppTheme.primaryBlue.withValues(alpha: 0.15)
+                : (isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9)),
             shape: BoxShape.circle,
           ),
-          child: Icon(icon, color: AppTheme.primaryBlue, size: 20),
+          child: Icon(
+            icon,
+            color: isActive ? AppTheme.primaryBlue : (isDarkMode ? Colors.white70 : AppTheme.darkBlue),
+            size: 19,
+          ),
         ),
       ),
     );
+  }
+
+  @override
+  bool shouldRebuild(covariant _HomeFilterHeaderSliverDelegate oldDelegate) {
+    return oldDelegate.selectedFilter != selectedFilter ||
+        oldDelegate.searchQuery != searchQuery ||
+        oldDelegate.isDarkMode != isDarkMode ||
+        oldDelegate.totalMissions != totalMissions ||
+        oldDelegate.enCoursCount != enCoursCount ||
+        oldDelegate.enAttenteCount != enAttenteCount ||
+        oldDelegate.termineesCount != termineesCount;
   }
 }

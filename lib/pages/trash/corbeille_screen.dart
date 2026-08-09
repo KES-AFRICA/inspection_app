@@ -265,29 +265,6 @@ class _CorbeilleScreenState extends State<CorbeilleScreen> {
 
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text(
-          'Corbeille Sécurisée',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-        ),
-        backgroundColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-        foregroundColor: isDarkMode ? Colors.white : AppTheme.textDark,
-        elevation: 0.5,
-        actions: [
-          if (_allItems.isNotEmpty)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: TextButton.icon(
-                onPressed: _confirmEmptyTrash,
-                icon: const Icon(Icons.delete_sweep_rounded, color: Colors.red, size: 20),
-                label: const Text(
-                  'Vider',
-                  style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13),
-                ),
-              ),
-            ),
-        ],
-      ),
       body: Column(
         children: [
           // Bannière d'information & Politique Purge
@@ -348,6 +325,20 @@ class _CorbeilleScreenState extends State<CorbeilleScreen> {
                         ],
                       ),
                     ),
+                    if (_allItems.isNotEmpty)
+                      OutlinedButton.icon(
+                        onPressed: _confirmEmptyTrash,
+                        icon: const Icon(Icons.delete_sweep_rounded, color: Colors.red, size: 18),
+                        label: const Text(
+                          'Tout vider',
+                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 14),

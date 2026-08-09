@@ -27,14 +27,16 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
       case 0:
         return 'Mes Missions';
       case 1:
-        return 'Statistiques';
+        return 'Statistiques & KPI';
+      case 2:
+        return 'Sauvegardes Cloud';
+      case 3:
+        return 'Import / Export';
+      case 4:
+        return 'Corbeille';
       default:
         return 'Mes Missions';
     }
-  }
-
-  bool _shouldShowActionButtons() {
-    return currentPageIndex == 0;
   }
 
   @override
@@ -68,113 +70,121 @@ class HomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                 ),
               ),
             ),
-            _shouldShowActionButtons()
-                ? PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, color: Colors.white),
-                    onSelected: (value) {
-                      if (value == 'filter') {
-                        onFilterPressed();
-                      } else if (value == 'search') {
-                        onSearchPressed();
-                      } else if (value == 'sort') {
-                        onSortPressed();
-                      }
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem<String>(
-                        value: 'filter',
-                        child: Row(
-                          children: [
-                            Icon(Icons.filter_list, color: AppTheme.primaryBlue),
-                            SizedBox(width: 8),
-                            Text('Filtrer'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem<String>(
-                        value: 'search',
-                        child: Row(
-                          children: [
-                            Icon(Icons.search, color: AppTheme.primaryBlue),
-                            SizedBox(width: 8),
-                            Text('Rechercher'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem<String>(
-                        value: 'sort',
-                        child: Row(
-                          children: [
-                            Icon(Icons.sort, color: AppTheme.primaryBlue),
-                            SizedBox(width: 8),
-                            Text('Trier'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  )
-                : PopupMenuButton<String>(
-                    icon: const Icon(Icons.more_vert, color: Colors.white),
-                    onSelected: (value) {
-                      // Transmettre la sélection via le callback
-                      onStatsPeriodSelected?.call(value);
-                    },
-                    itemBuilder: (context) => [
-                      const PopupMenuItem<String>(
-                        value: 'today',
-                        child: Row(
-                          children: [
-                            Icon(Icons.today, color: AppTheme.primaryBlue),
-                            SizedBox(width: 8),
-                            Text('Aujourd\'hui'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem<String>(
-                        value: 'week',
-                        child: Row(
-                          children: [
-                            Icon(Icons.calendar_view_week, color: AppTheme.primaryBlue),
-                            SizedBox(width: 8),
-                            Text('Cette semaine'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem<String>(
-                        value: 'month',
-                        child: Row(
-                          children: [
-                            Icon(Icons.calendar_view_month, color: AppTheme.primaryBlue),
-                            SizedBox(width: 8),
-                            Text('Ce mois'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem<String>(
-                        value: 'year',
-                        child: Row(
-                          children: [
-                            Icon(Icons.event_note, color: AppTheme.primaryBlue),
-                            SizedBox(width: 8),
-                            Text('Cette année'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem<String>(
-                        value: 'custom',
-                        child: Row(
-                          children: [
-                            Icon(Icons.date_range, color: AppTheme.primaryBlue),
-                            SizedBox(width: 8),
-                            Text('Période personnalisée'),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
+            _buildRightActionWidget(),
           ],
         ),
       ),
     );
+  }
+
+  Widget _buildRightActionWidget() {
+    switch (currentPageIndex) {
+      case 0:
+        return PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert, color: Colors.white),
+          onSelected: (value) {
+            if (value == 'filter') {
+              onFilterPressed();
+            } else if (value == 'search') {
+              onSearchPressed();
+            } else if (value == 'sort') {
+              onSortPressed();
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem<String>(
+              value: 'filter',
+              child: Row(
+                children: [
+                  Icon(Icons.filter_list, color: AppTheme.primaryBlue),
+                  SizedBox(width: 8),
+                  Text('Filtrer'),
+                ],
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'search',
+              child: Row(
+                children: [
+                  Icon(Icons.search, color: AppTheme.primaryBlue),
+                  SizedBox(width: 8),
+                  Text('Rechercher'),
+                ],
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'sort',
+              child: Row(
+                children: [
+                  Icon(Icons.sort, color: AppTheme.primaryBlue),
+                  SizedBox(width: 8),
+                  Text('Trier'),
+                ],
+              ),
+            ),
+          ],
+        );
+      case 1:
+        return PopupMenuButton<String>(
+          icon: const Icon(Icons.more_vert, color: Colors.white),
+          onSelected: (value) {
+            onStatsPeriodSelected?.call(value);
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem<String>(
+              value: 'today',
+              child: Row(
+                children: [
+                  Icon(Icons.today, color: AppTheme.primaryBlue),
+                  SizedBox(width: 8),
+                  Text('Aujourd\'hui'),
+                ],
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'week',
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_view_week, color: AppTheme.primaryBlue),
+                  SizedBox(width: 8),
+                  Text('Cette semaine'),
+                ],
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'month',
+              child: Row(
+                children: [
+                  Icon(Icons.calendar_view_month, color: AppTheme.primaryBlue),
+                  SizedBox(width: 8),
+                  Text('Ce mois'),
+                ],
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'year',
+              child: Row(
+                children: [
+                  Icon(Icons.event_note, color: AppTheme.primaryBlue),
+                  SizedBox(width: 8),
+                  Text('Cette année'),
+                ],
+              ),
+            ),
+            const PopupMenuItem<String>(
+              value: 'custom',
+              child: Row(
+                children: [
+                  Icon(Icons.date_range, color: AppTheme.primaryBlue),
+                  SizedBox(width: 8),
+                  Text('Période personnalisée'),
+                ],
+              ),
+            ),
+          ],
+        );
+      default:
+        return const SizedBox(width: 48);
+    }
   }
 }

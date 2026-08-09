@@ -766,19 +766,6 @@ class _BackupScreenState extends State<BackupScreen> {
 
     return Scaffold(
       backgroundColor: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: Text(
-          'Sauvegarde & Restauration',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-            color: isDarkMode ? Colors.white : AppTheme.darkBlue,
-          ),
-        ),
-        backgroundColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
-        foregroundColor: isDarkMode ? Colors.white : AppTheme.darkBlue,
-        elevation: 0.5,
-      ),
       body: SingleChildScrollView(
         physics: const BouncingScrollPhysics(),
         padding: const EdgeInsets.all(16.0),
