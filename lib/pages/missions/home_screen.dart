@@ -102,6 +102,9 @@ class _HomeScreenState extends State<HomeScreen> {
       _currentPageIndex = index;
       _showSidebar = false;
     });
+    if (index == 0) {
+      _loadLocalMissions();
+    }
   }
 
   void _updateSearchQuery(String query) {

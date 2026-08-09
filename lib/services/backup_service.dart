@@ -146,7 +146,8 @@ class BackupService {
           .replaceAll(':', '-')
           .replaceAll('.', '-')
           .substring(0, 19);
-      final fileName = 'inspec_backup_${matricule}_$ts.inspec';
+      final safeMatricule = matricule.replaceAll(RegExp(r'[/\\?%*:|"<> ]'), '_');
+      final fileName = 'inspec_backup_${safeMatricule}_$ts.inspec';
 
       final serializedMissions = <Map<String, dynamic>>[];
       for (int i = 0; i < missions.length; i++) {
@@ -199,6 +200,7 @@ class BackupService {
     void Function(OperationProgressState)? onProgressState,
     bool Function()? isCancelled,
     bool openShareSheet = true,
+    bool isCloudBackup = false,
   }) async {
     try {
       if (missionIds.isEmpty) {
@@ -224,7 +226,8 @@ class BackupService {
           .replaceAll(':', '-')
           .replaceAll('.', '-')
           .substring(0, 19);
-      final fileName = 'inspec_backup_${matricule}_$ts.inspec';
+      final safeMatricule = matricule.replaceAll(RegExp(r'[/\\?%*:|"<> ]'), '_');
+      final fileName = 'inspec_backup_${safeMatricule}_$ts.inspec';
 
       final serializedMissions = <Map<String, dynamic>>[];
       for (int i = 0; i < missions.length; i++) {
@@ -257,6 +260,7 @@ class BackupService {
         subject: 'Sauvegarde Inspec V4 — ${missions.length} mission(s)',
         text: 'Exportation ${missions.length} mission(s) ($ts)',
         openShareSheet: openShareSheet,
+        isCloudBackup: isCloudBackup,
         onProgressState: onProgressState,
         isCancelled: isCancelled,
       );
@@ -275,6 +279,7 @@ class BackupService {
   static Future<BackupResult> exporterMission(
     String missionId, {
     bool openShareSheet = true,
+    bool isCloudBackup = false,
     void Function(OperationProgressState)? onProgressState,
     bool Function()? isCancelled,
   }) async {
@@ -293,7 +298,7 @@ class BackupService {
           .replaceAll('.', '-')
           .substring(0, 19);
       final safeClient =
-          mission.nomClient.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
+          mission.nomClient.replaceAll(RegExp(r'[/\\?%*:|"<> ]'), '_');
       final fileName = 'inspec_${safeClient}_$ts.inspec';
 
       onProgressState?.call(OperationProgressState(
@@ -317,6 +322,7 @@ class BackupService {
         subject: 'Sauvegarde V4 — ${mission.nomClient}',
         text: 'Export mission ${mission.nomClient} ($ts)',
         openShareSheet: openShareSheet,
+        isCloudBackup: isCloudBackup,
         onProgressState: onProgressState,
         isCancelled: isCancelled,
       );
@@ -341,6 +347,7 @@ class BackupService {
     String? subject,
     String? text,
     bool openShareSheet = true,
+    bool isCloudBackup = false,
     void Function(OperationProgressState)? onProgressState,
     bool Function()? isCancelled,
   }) async {
@@ -501,24 +508,39 @@ class BackupService {
         processedPhotosCount: photoPaths.length,
       ));
 
-      // 5. Copie vers le dossier Downloads/Documents public
-      Directory? exportDir;
+      // 5. Copie vers le dossier Downloads/Verif Elec (Export Classique) ou Dossier Sauvegarde (Sauvegarde Cloud)
+      Directory? baseDir;
       if (Platform.isAndroid) {
         try {
           final pathStr = await ExternalPath.getExternalStoragePublicDirectory(
               ExternalPath.DIRECTORY_DOWNLOAD);
-          exportDir = Directory(pathStr);
+          baseDir = Directory(pathStr);
         } catch (_) {
-          exportDir = await getExternalStorageDirectory();
+          baseDir = await getExternalStorageDirectory();
         }
       } else {
-        exportDir = await getApplicationDocumentsDirectory();
+        baseDir = await getApplicationDocumentsDirectory();
       }
 
-      exportDir ??= await getApplicationDocumentsDirectory();
-      final publicFile = File('${exportDir.path}/$fileName');
+      baseDir ??= await getApplicationDocumentsDirectory();
+
+      // Séparation nette des workflows :
+      // - Export classique (Importer / Exporter -> Exporter) : Downloads/Verif Elec
+      // - Sauvegarde cloud / auto : dossier dédié au système de sauvegarde
+      final String targetFolderPath = isCloudBackup
+          ? baseDir.path
+          : '${baseDir.path}/Verif Elec';
+
+      final targetFolder = Directory(targetFolderPath);
+      if (!await targetFolder.exists()) {
+        await targetFolder.create(recursive: true);
+      }
+
+      final safeFileBasename = fileName.replaceAll('\\', '/').split('/').last;
+      final publicFile = File('${targetFolder.path}/$safeFileBasename');
       await zipFile.copy(publicFile.path);
 
+      final locationName = isCloudBackup ? 'Sauvegardes' : 'Downloads/Verif Elec';
       onProgressState?.call(OperationProgressState(
         type: OperationType.export,
         status: OperationStatus.completed,
@@ -530,7 +552,7 @@ class BackupService {
         overallProgress: 1.0,
         processedItemsCount: totalItemsProcessed,
         processedPhotosCount: photoPaths.length,
-        message: '${serializedMissions.length} mission(s) exportée(s) avec succès dans Downloads.',
+        message: '${serializedMissions.length} mission(s) exportée(s) avec succès dans $locationName.',
       ));
 
       if (openShareSheet) {

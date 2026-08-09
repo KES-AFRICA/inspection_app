@@ -206,6 +206,7 @@ class BackupSyncRepositoryImpl implements BackupSyncRepository {
     final exportResult = await BackupService.exporterMission(
       missionId,
       openShareSheet: false,
+      isCloudBackup: true,
     );
     if (!exportResult.success || exportResult.filePath == null) {
       onProgress?.call(0, 'Erreur d\'exportation: ${exportResult.message}');
