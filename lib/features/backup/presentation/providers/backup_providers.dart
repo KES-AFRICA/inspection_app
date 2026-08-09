@@ -63,10 +63,8 @@ final backupOrchestratorProvider = Provider<BackupOrchestrator>((ref) {
 final backupOrchestratorStateProvider = StreamProvider<BackupOrchestratorState>((ref) {
   return ref.watch(backupOrchestratorProvider).stateStream;
 });
-[UPD] Initialisation de initAutoSyncEngine dans main.dart et AuthWrapper pour le déclenchement immédiat de la sauvegarde de rattrapage
-[UPD] Déclenchement automatique et réactif du rattrapage post-connexion MSAL dans MicrosoftAuthNotifier
-[UPD] Intégration de l'écouteur de connectivité réseau pour la reprise automatique au retour d'Internet dans BackupOrchestrator
-[UPD] Enveloppement de MyApp avec GlobalBackupProgressOverlay pour l'affichage du toast de progression globale sur tous les écrans// State Notifier pour le profil Microsoft
+
+// State Notifier pour le profil Microsoft
 class MicrosoftAuthNotifier extends StateNotifier<AsyncValue<MicrosoftUserProfile?>> {
   final BackupSyncRepository repository;
   final Ref ref;

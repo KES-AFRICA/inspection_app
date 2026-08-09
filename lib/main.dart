@@ -41,7 +41,7 @@ void main() async {
   ImageCompressHelper.optimizeExistingPhotosProgressively();
   HiveService.synchronizeAllExistingMissions();
 
-  runApp(const ProviderScope(child: GlobalBackupProgressOverlay(child: MyApp())));
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -54,6 +54,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.theme,
       initialRoute: '/',
+      builder: (context, child) {
+        return GlobalBackupProgressOverlay(child: child ?? const SizedBox.shrink());
+      },
       routes: {
         '/': (context) => const AuthWrapper(),
         '/login': (context) => const LoginScreen(),
