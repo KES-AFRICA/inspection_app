@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/datasources/backup_queue_service.dart';
 import '../../data/services/backup_scheduler_service.dart';
@@ -62,12 +63,15 @@ final backupOrchestratorProvider = Provider<BackupOrchestrator>((ref) {
 final backupOrchestratorStateProvider = StreamProvider<BackupOrchestratorState>((ref) {
   return ref.watch(backupOrchestratorProvider).stateStream;
 });
-
-// State Notifier pour le profil Microsoft
+[UPD] Initialisation de initAutoSyncEngine dans main.dart et AuthWrapper pour le déclenchement immédiat de la sauvegarde de rattrapage
+[UPD] Déclenchement automatique et réactif du rattrapage post-connexion MSAL dans MicrosoftAuthNotifier
+[UPD] Intégration de l'écouteur de connectivité réseau pour la reprise automatique au retour d'Internet dans BackupOrchestrator
+[UPD] Enveloppement de MyApp avec GlobalBackupProgressOverlay pour l'affichage du toast de progression globale sur tous les écrans// State Notifier pour le profil Microsoft
 class MicrosoftAuthNotifier extends StateNotifier<AsyncValue<MicrosoftUserProfile?>> {
   final BackupSyncRepository repository;
+  final Ref ref;
 
-  MicrosoftAuthNotifier(this.repository) : super(const AsyncValue.loading()) {
+  MicrosoftAuthNotifier(this.repository, this.ref) : super(const AsyncValue.loading()) {
     checkStatus();
   }
 
@@ -86,6 +90,10 @@ class MicrosoftAuthNotifier extends StateNotifier<AsyncValue<MicrosoftUserProfil
     try {
       final profile = await repository.loginWithMicrosoft(authCode: code, codeVerifier: verifier);
       state = AsyncValue.data(profile);
+      if (profile != null) {
+        // Déclencher immédiatement le rattrapage initial dès la connexion MSAL réussie
+        unawaited(ref.read(backupOrchestratorProvider).triggerCatchUpSyncIfPending(profile.displayName));
+      }
       return profile != null;
     } catch (e, stack) {
       state = AsyncValue.error(e, stack);
@@ -102,7 +110,7 @@ class MicrosoftAuthNotifier extends StateNotifier<AsyncValue<MicrosoftUserProfil
 
 final microsoftAuthNotifierProvider =
     StateNotifierProvider<MicrosoftAuthNotifier, AsyncValue<MicrosoftUserProfile?>>((ref) {
-  return MicrosoftAuthNotifier(ref.watch(backupSyncRepositoryProvider));
+  return MicrosoftAuthNotifier(ref.watch(backupSyncRepositoryProvider), ref);
 });
 
 // State Notifier pour l'état des sauvegardes des missions

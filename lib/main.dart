@@ -17,6 +17,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:inspec_app/utils/image_compress_helper.dart';
 
+import 'package:inspec_app/features/backup/presentation/widgets/global_backup_progress_overlay.dart';
+import 'package:inspec_app/features/backup/presentation/providers/backup_providers.dart';
+import 'dart:async';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -37,7 +41,7 @@ void main() async {
   ImageCompressHelper.optimizeExistingPhotosProgressively();
   HiveService.synchronizeAllExistingMissions();
 
-  runApp(const ProviderScope(child: MyApp()));
+  runApp(const ProviderScope(child: GlobalBackupProgressOverlay(child: MyApp())));
 }
 
 class MyApp extends StatelessWidget {
@@ -59,16 +63,22 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthWrapper extends StatelessWidget {
+class AuthWrapper extends ConsumerWidget {
   const AuthWrapper({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isLoggedIn = di.sl<CheckLoginStatusUseCase>()();
     final verificateurEntity = di.sl<GetCurrentUserUseCase>()();
 
     if (isLoggedIn && verificateurEntity != null) {
       final currentUserModel = VerificateurMapper.toModel(verificateurEntity);
+
+      // Déclencher immédiatement l'auto-sync et la sauvegarde de rattrapage au démarrage de l'app !
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        unawaited(ref.read(backupOrchestratorProvider).initAutoSyncEngine(currentUserModel.matricule));
+      });
+
       return HomeScreen(user: currentUserModel);
     } else {
       return const LoginScreen();

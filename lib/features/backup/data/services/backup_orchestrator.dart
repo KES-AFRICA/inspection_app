@@ -1,6 +1,7 @@
 // lib/features/backup/data/services/backup_orchestrator.dart
 
 import 'dart:async';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
 import '../../domain/repositories/backup_sync_repository.dart';
 import '../datasources/backup_queue_service.dart';
@@ -57,12 +58,33 @@ class BackupOrchestrator {
     required this.migrationService,
   });
 
+  StreamSubscription? _connectivitySubscription;
+
   Stream<BackupOrchestratorState> get stateStream => _stateController.stream;
   BackupOrchestratorState get currentState => _currentState;
 
   void _updateState(BackupOrchestratorState newState) {
     _currentState = newState;
     _stateController.add(newState);
+  }
+
+  // Initialiser le moteur d'auto-sync au démarrage de l'app (main.dart)
+  Future<void> initAutoSyncEngine(String matricule) async {
+    // 1. Écouter la connectivité réseau pour auto-reprendre les sauvegardes si hors-ligne
+    _connectivitySubscription ??= Connectivity().onConnectivityChanged.listen((results) async {
+      if (!results.contains(ConnectivityResult.none)) {
+        // Réseau rétabli -> déclencher immédiatement le rattrapage s'il y a des missions en attente
+        await runOrchestration(matricule);
+      }
+    });
+
+    // 2. Déclencher immédiatement la vérification et sauvegarde de rattrapage
+    await runOrchestration(matricule);
+  }
+
+  // Déclencher immédiatement le rattrapage après une connexion MSAL réussie
+  Future<void> triggerCatchUpSyncIfPending(String matricule) async {
+    await runOrchestration(matricule);
   }
 
   // Lancer l'orchestration complète (migration post-update + traitement de la file)
