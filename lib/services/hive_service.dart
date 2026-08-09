@@ -106,6 +106,7 @@ class HiveService {
     await Hive.openBox('sync_cache');
     await Hive.openBox('backup_queue');
     await Hive.openBox('backup_preferences');
+    await Hive.openBox('executive_summary_cache');
 
     // Auto-purge automatique des éléments corbeille de +90 jours
     await TrashService.autoPurgeExpiredItems(retentionDays: 90);

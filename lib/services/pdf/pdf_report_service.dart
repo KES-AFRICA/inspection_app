@@ -23,6 +23,8 @@ import '../dispositions_constructives_registry.dart';
 import '../statistics/mission_statistics_collector.dart';
 import '../statistics/audit_finding.dart';
 import '../../components/safe_file_image.dart';
+import '../ai/executive_summary_data.dart';
+import '../ai/mission_executive_summary_service.dart';
 
 typedef PdfProgressCallback = void Function(double progress, String statusMessage);
 
@@ -1516,45 +1518,43 @@ class PdfReportService {
     );
   }
 
-  /// Construit la section « RÉSUMÉ EXÉCUTIF » entièrement dynamique, alimentée
-  /// par notre architecture statistique centralisée et les métadonnées de la mission.
+  static pw.Widget _buildSimpleBulletRow(String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(left: 14, bottom: 4),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text('•  ', style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey)),
+          pw.Expanded(
+            child: pw.Text(
+              text,
+              style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+              textAlign: pw.TextAlign.justify,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Construit la section « RÉSUMÉ EXÉCUTIF » entièrement dynamique et intelligente,
+  /// alimentée par notre architecture IA / Fallback 3 Niveaux et les statistiques certifiées.
   static List<pw.Widget> _buildResumeExecutif(
     Mission mission,
     Map<String, int> trackedPages,
     String numeroRapportDoc, {
+    ExecutiveSummaryData? summaryData,
     int offset = 0,
   }) {
     final widgets = <pw.Widget>[];
 
-    // Source unique de vérité pour les statistiques
+    // Source unique de vérité pour les statistiques officielles
     final summary = MissionStatisticsCollector.collectSummary(mission.id);
     final cStats = summary.criticalityStats;
 
-    // Renseignements généraux de la mission
     final rg = HiveService.getRenseignementsGenerauxByMissionId(mission.id);
-
-    // 1. Métadonnées dynamiques
-    final siteNameRaw = (rg?.nomSite != null && rg!.nomSite.trim().isNotEmpty)
-        ? rg.nomSite.trim()
-        : ((rg?.etablissement != null && rg!.etablissement.trim().isNotEmpty)
-            ? rg.etablissement.trim()
-            : mission.nomClient.trim());
-    
-    final siteNameLabel = siteNameRaw;
-
-    final natureMission = (rg?.verificationType != null && rg!.verificationType!.trim().isNotEmpty)
-        ? rg.verificationType!.trim()
-        : ((mission.natureMission != null && mission.natureMission!.trim().isNotEmpty)
-            ? mission.natureMission!.trim()
-            : 'vérification périodique réglementaire');
-
     final dateStart = rg?.dateDebut ?? mission.dateIntervention;
-    final dateEnd = rg?.dateFin;
-    final dateText = _formatDateRangeFrench(dateStart, dateEnd);
     final annee = (dateStart ?? DateTime.now()).year;
-
-    final tensionStats = summary.tensionDomainStats;
-    final domainStr = (tensionStats.mtCount > 0) ? 'moyenne et basse tension' : 'basse tension';
 
     final total = cStats.total;
     final critique = cStats.critique;
@@ -1574,27 +1574,18 @@ class PdfReportService {
     ));
     widgets.add(pw.SizedBox(height: 14));
 
-    // Paragraphe 1: Contexte et périmètre
-    widgets.add(pw.RichText(
-      textAlign: pw.TextAlign.justify,
-      text: pw.TextSpan(
+    // 1. Contexte et Périmètre (Overview)
+    final overviewText = summaryData?.overview.trim() ?? '';
+    if (overviewText.isNotEmpty) {
+      widgets.add(pw.Text(
+        overviewText,
         style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        children: [
-          pw.TextSpan(text: 'Dans le cadre de'),
-          pw.TextSpan(text: '${natureMission.toLowerCase()} ', style: pw.TextStyle(font: _fontBold)),
-          pw.TextSpan(text: 'des installations électriques du site '),
-          pw.TextSpan(text: siteNameLabel, style: pw.TextStyle(font: _fontBold)),
-          pw.TextSpan(text: ', KES INSPECTIONS & PROJECTS a procédé, '),
-          pw.TextSpan(text: '$dateText, ', style: pw.TextStyle(font: _fontBold)),
-          pw.TextSpan(text: 'à l\'examen des installations électriques '),
-          pw.TextSpan(text: domainStr),
-          pw.TextSpan(text: ' du site. La mission couvre l\'ensemble des installations électriques et vise notamment à apprécier leur état de conservation, leur niveau de sécurité et leur conformité aux prescriptions réglementaires et normatives applicables.'),
-        ],
-      ),
-    ));
-    widgets.add(pw.SizedBox(height: 12));
+        textAlign: pw.TextAlign.justify,
+      ));
+      widgets.add(pw.SizedBox(height: 12));
+    }
 
-    // Paragraphe 2: Synthèse chiffrée
+    // 2. Synthèse Chiffrée Certifiée (Source de Vérité Officielle Métier)
     widgets.add(pw.RichText(
       textAlign: pw.TextAlign.justify,
       text: pw.TextSpan(
@@ -1610,7 +1601,7 @@ class PdfReportService {
     ));
     widgets.add(pw.SizedBox(height: 8));
 
-    // Liste à puces des NCs
+    // Liste à puces des NCs officielles
     widgets.add(_buildBulletItemRow(
       countText: '$critique',
       label: ' non-conformité${critique > 1 ? 's' : ''} critique${critique > 1 ? 's' : ''}',
@@ -1631,51 +1622,52 @@ class PdfReportService {
     ));
     widgets.add(pw.SizedBox(height: 12));
 
-    // Paragraphe 3: Niveau de risque global
-    pw.TextSpan riskRich;
-    if (total == 0) {
-      riskRich = pw.TextSpan(
+    // 3. Synthèse des Risques Globaux (Critical Risks Summary)
+    final risksText = summaryData?.criticalRisksSummary.trim() ?? '';
+    if (risksText.isNotEmpty) {
+      widgets.add(pw.Text(
+        risksText,
         style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        children: [
-          pw.TextSpan(text: 'L\'examen approfondi des installations n\'a révélé '),
-          pw.TextSpan(text: 'aucune non-conformité', style: pw.TextStyle(font: _fontBold)),
-          pw.TextSpan(text: ' lors de la présente vérification, attestant d\'un excellent niveau de conservation et de conformité des équipements du site.'),
-        ],
-      );
-    } else if (critique > 0 || (critique + majeure) / total >= 0.4) {
-      riskRich = pw.TextSpan(
-        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        children: [
-          pw.TextSpan(text: 'La proportion élevée de non-conformités '),
-          pw.TextSpan(text: 'critiques et majeures', style: pw.TextStyle(font: _fontBold)),
-          pw.TextSpan(text: ' montre que le niveau de risque demeure significatif et nécessite la poursuite d\'un programme structuré de mise en conformité.'),
-        ],
-      );
-    } else {
-      riskRich = pw.TextSpan(
-        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        children: [
-          pw.TextSpan(text: 'La répartition des observations montre une prédominance de non-conformités '),
-          pw.TextSpan(text: 'mineures', style: pw.TextStyle(font: _fontBold)),
-          pw.TextSpan(text: ', traduisant un niveau de risque globalement maîtrisé, nécessitant néanmoins la programmation d\'actions correctives ciblées.'),
-        ],
-      );
+        textAlign: pw.TextAlign.justify,
+      ));
+      widgets.add(pw.SizedBox(height: 12));
     }
-    widgets.add(pw.RichText(textAlign: pw.TextAlign.justify, text: riskRich));
-    widgets.add(pw.SizedBox(height: 12));
 
-    // Paragraphe 4: Situation de référence (baseline)
-    widgets.add(pw.RichText(
-      textAlign: pw.TextAlign.justify,
-      text: pw.TextSpan(
+    // 4. Constats Clés Majeurs (Key Findings)
+    if (summaryData != null && summaryData.keyFindings.isNotEmpty) {
+      widgets.add(pw.Text(
+        'Observations et constats majeurs :',
+        style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey),
+      ));
+      widgets.add(pw.SizedBox(height: 6));
+      for (final finding in summaryData.keyFindings) {
+        widgets.add(_buildSimpleBulletRow(finding));
+      }
+      widgets.add(pw.SizedBox(height: 12));
+    }
+
+    // 5. Recommandations Prioritaires (Recommendations)
+    if (summaryData != null && summaryData.recommendations.isNotEmpty) {
+      widgets.add(pw.Text(
+        'Recommandations prioritaires d\'actions correctives :',
+        style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey),
+      ));
+      widgets.add(pw.SizedBox(height: 6));
+      for (final rec in summaryData.recommendations) {
+        widgets.add(_buildSimpleBulletRow(rec));
+      }
+      widgets.add(pw.SizedBox(height: 12));
+    }
+
+    // 6. Conclusion et Situation de Référence (Conclusion)
+    final conclusionText = summaryData?.conclusion.trim() ?? '';
+    if (conclusionText.isNotEmpty) {
+      widgets.add(pw.Text(
+        conclusionText,
         style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        children: [
-          pw.TextSpan(text: 'La campagne '),
-          pw.TextSpan(text: '$annee', style: pw.TextStyle(font: _fontBold)),
-          pw.TextSpan(text: ' doit ainsi servir de nouvelle situation de référence pour la mise en place d\'un suivi systématique des non-conformités, permettant, lors des prochaines vérifications, de distinguer clairement les observations levées, maintenues, nouvelles et devenues sans objet.'),
-        ],
-      ),
-    ));
+        textAlign: pw.TextAlign.justify,
+      ));
+    }
 
     return widgets;
   }
@@ -8244,6 +8236,10 @@ class PdfReportService {
 
     // ── Sub-chunk 1.3 : Résumé exécutif & Analyse statistique ──
     if (saveFilesToDisk) onProgress?.call(0.28, 'Génération du résumé exécutif et des statistiques...');
+    
+    // Récupération réactive du résumé exécutif (avec Fallback 3 Niveaux)
+    final summaryData = await MissionExecutiveSummaryService.getOrGenerateSummary(missionId);
+
     final pdfP1_3 = pw.Document(
       title: 'Résumé Exécutif & Stats - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
@@ -8258,7 +8254,7 @@ class PdfReportService {
         numeroRapport: numeroRapportDoc,
       ),
       build: (ctx) => [
-        ..._buildResumeExecutif(mission, trackedPages, numeroRapportDoc, offset: currentOffset),
+        ..._buildResumeExecutif(mission, trackedPages, numeroRapportDoc, summaryData: summaryData, offset: currentOffset),
         pw.NewPage(),
         ..._buildAnalyseStatistique(mission, trackedPages, numeroRapportDoc, offset: currentOffset),
       ],
