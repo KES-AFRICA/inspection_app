@@ -303,7 +303,7 @@ class _BackupScreenState extends State<BackupScreen> {
   /// Dialogue de sélection de missions avec cases à cocher (ouvert au clic sur EXPORTER)
   Future<List<String>?> _showMissionSelectionDialog(List<Mission> missions) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
-    final Set<String> selectedIds = missions.map((m) => m.id).toSet();
+    final Set<String> selectedIds = <String>{};
 
     return showDialog<List<String>>(
       context: context,

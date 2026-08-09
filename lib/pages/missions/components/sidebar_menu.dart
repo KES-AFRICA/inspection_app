@@ -214,12 +214,16 @@ class SidebarMenu extends ConsumerWidget {
                                   children: [
                                     const Icon(Icons.badge_rounded, size: 12, color: Colors.white70),
                                     const SizedBox(width: 4),
-                                    Text(
-                                      'Matricule : ${user.matricule}',
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.w600,
+                                    Flexible(
+                                      child: Text(
+                                        'Matricule : ${user.matricule}',
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                       ),
                                     ),
                                   ],

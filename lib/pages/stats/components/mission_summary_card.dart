@@ -177,15 +177,20 @@ class MissionSummaryCard extends StatelessWidget {
                     ],
                   ),
                 ),
-                const Spacer(),
+                const SizedBox(width: 8),
 
                 // Équipements & Photos
-                Text(
-                  '${data.totalEquipments} éq. • ${data.photoStats.totalPhotos} photos',
-                  style: TextStyle(
-                    fontSize: 11.5,
-                    color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                    fontWeight: FontWeight.w500,
+                Expanded(
+                  child: Text(
+                    '${data.totalEquipments} éq. • ${data.photoStats.totalPhotos} photos',
+                    textAlign: TextAlign.end,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      fontSize: 11.5,
+                      color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                 ),
               ],

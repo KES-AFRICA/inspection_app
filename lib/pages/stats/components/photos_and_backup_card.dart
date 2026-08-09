@@ -62,23 +62,29 @@ class PhotosAndBackupCard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                 children: [
-                  _buildStatPill(
-                    label: 'Photos Équipements',
-                    value: '${photo.equipmentPhotos}',
-                    icon: Icons.electrical_services_rounded,
-                    color: const Color(0xFF2563EB),
+                  Expanded(
+                    child: _buildStatPill(
+                      label: 'Photos Équipements',
+                      value: '${photo.equipmentPhotos}',
+                      icon: Icons.electrical_services_rounded,
+                      color: const Color(0xFF2563EB),
+                    ),
                   ),
-                  _buildStatPill(
-                    label: 'Photos Constats',
-                    value: '${photo.observationPhotos}',
-                    icon: Icons.camera_alt_rounded,
-                    color: const Color(0xFF7C3AED),
+                  Expanded(
+                    child: _buildStatPill(
+                      label: 'Photos Constats',
+                      value: '${photo.observationPhotos}',
+                      icon: Icons.camera_alt_rounded,
+                      color: const Color(0xFF7C3AED),
+                    ),
                   ),
-                  _buildStatPill(
-                    label: 'Total Observations',
-                    value: '${photo.totalObservations}',
-                    icon: Icons.note_alt_rounded,
-                    color: const Color(0xFF059669),
+                  Expanded(
+                    child: _buildStatPill(
+                      label: 'Total Observations',
+                      value: '${photo.totalObservations}',
+                      icon: Icons.note_alt_rounded,
+                      color: const Color(0xFF059669),
+                    ),
                   ),
                 ],
               ),
