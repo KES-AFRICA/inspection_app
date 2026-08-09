@@ -1,15 +1,21 @@
+// lib/pages/missions/components/sidebar_menu.dart
+
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/verificateur.dart';
 import 'package:inspec_app/features/backup/presentation/screens/sauvegardes_screen.dart';
+import 'package:inspec_app/features/backup/presentation/providers/backup_providers.dart';
+import 'package:inspec_app/features/backup/data/services/backup_orchestrator.dart';
+import 'package:inspec_app/features/backup/domain/models/mission_sync_state.dart';
 import 'package:inspec_app/pages/backup/backup_screen.dart';
 import 'package:inspec_app/pages/login_screen.dart';
 import 'package:inspec_app/pages/trash/corbeille_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/services/trash_service.dart';
 
-class SidebarMenu extends StatelessWidget {
+class SidebarMenu extends ConsumerWidget {
   final bool showSidebar;
   final Verificateur user;
   final List<Mission> filteredMissions;
@@ -52,20 +58,33 @@ class SidebarMenu extends StatelessWidget {
               child: const Icon(Icons.logout_rounded, color: Colors.red, size: 22),
             ),
             const SizedBox(width: 12),
-            const Text('Déconnexion', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17)),
+            Text(
+              'Confirmer la déconnexion',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+                color: isDarkMode ? Colors.white : const Color(0xFF0F172A),
+              ),
+            ),
           ],
         ),
         content: Text(
-          'Voulez-vous vraiment vous déconnecter de la session "${user.nom}" ?',
+          'Voulez-vous vraiment vous déconnecter de votre compte inspecteur (${user.prenom} ${user.nom}) ?',
           style: TextStyle(
             fontSize: 13.5,
-            color: isDarkMode ? Colors.grey.shade300 : Colors.grey.shade700,
+            color: isDarkMode ? const Color(0xFF94A3B8) : const Color(0xFF475569),
           ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: Text('Annuler', style: TextStyle(color: Colors.grey.shade600, fontWeight: FontWeight.w600)),
+            child: Text(
+              'Annuler',
+              style: TextStyle(
+                color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.of(context).pop(true),
@@ -74,6 +93,7 @@ class SidebarMenu extends StatelessWidget {
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 0,
+              padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 10),
             ),
             child: const Text('Déconnexion', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
           ),
@@ -92,34 +112,49 @@ class SidebarMenu extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
     final trashCount = TrashService.getTrashCount();
+
+    // Ingestion de l'état réactif de sauvegarde pour le badge dynamique
+    final syncStates = ref.watch(backupSyncNotifierProvider);
+    final orchestratorState = ref.watch(backupOrchestratorStateProvider).value ?? const BackupOrchestratorState();
+    final isGlobalSyncing = orchestratorState.isActive;
+    final hasPendingModifications = syncStates.values.any((s) => s.status == SyncStatus.localModifications);
 
     return AnimatedPositioned(
       duration: const Duration(milliseconds: 300),
       curve: Curves.easeOutCubic,
-      left: showSidebar ? 0 : -290,
+      left: showSidebar ? 0 : -295,
       top: 0,
       bottom: 0,
-      width: 290,
+      width: 295,
       child: Material(
-        elevation: 20,
-        shadowColor: Colors.black.withValues(alpha: 0.3),
+        elevation: 24,
+        shadowColor: Colors.black.withValues(alpha: 0.35),
         child: Container(
           color: isDarkMode ? const Color(0xFF0F172A) : Colors.white,
           child: Column(
             children: [
-              // 1. HEADER UTILISATEUR IMMERSIF
+              // 1. EN-TÊTE UTILISATEUR IMMERSIF ET ÉLÉGANT
               Container(
                 width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(20, 48, 20, 20),
-                decoration: const BoxDecoration(
+                padding: const EdgeInsets.fromLTRB(20, 52, 20, 22),
+                decoration: BoxDecoration(
                   gradient: LinearGradient(
-                    colors: [Color(0xFF1E3A8A), Color(0xFF2563EB)],
+                    colors: isDarkMode
+                        ? [const Color(0xFF0F172A), const Color(0xFF1E293B)]
+                        : [const Color(0xFF1E3A8A), const Color(0xFF2563EB)],
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -130,15 +165,24 @@ class SidebarMenu extends StatelessWidget {
                           padding: const EdgeInsets.all(3),
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white.withValues(alpha: 0.8), width: 2),
+                            border: Border.all(color: Colors.white.withValues(alpha: 0.9), width: 2),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withValues(alpha: 0.2),
+                                blurRadius: 8,
+                              ),
+                            ],
                           ),
                           child: CircleAvatar(
-                            radius: 30,
+                            radius: 28,
                             backgroundColor: Colors.white.withValues(alpha: 0.2),
-                            child: const Icon(
-                              Icons.person_rounded,
-                              size: 34,
-                              color: Colors.white,
+                            child: Text(
+                              '${user.prenom.isNotEmpty ? user.prenom[0].toUpperCase() : ""}${user.nom.isNotEmpty ? user.nom[0].toUpperCase() : ""}',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
                         ),
@@ -155,22 +199,30 @@ class SidebarMenu extends StatelessWidget {
                                   fontSize: 16,
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white,
+                                  letterSpacing: -0.2,
                                 ),
                               ),
-                              const SizedBox(height: 2),
+                              const SizedBox(height: 4),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                                 decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(10),
+                                  color: Colors.white.withValues(alpha: 0.18),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                child: Text(
-                                  'Matricule : ${user.matricule}',
-                                  style: const TextStyle(
-                                    fontSize: 11,
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    const Icon(Icons.badge_rounded, size: 12, color: Colors.white70),
+                                    const SizedBox(width: 4),
+                                    Text(
+                                      'Matricule : ${user.matricule}',
+                                      style: const TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                             ],
@@ -182,10 +234,11 @@ class SidebarMenu extends StatelessWidget {
                     if (selectedFilter != 'Tous' || searchQuery.isNotEmpty) ...[
                       const SizedBox(height: 14),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
                           color: Colors.black.withValues(alpha: 0.25),
                           borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -204,14 +257,14 @@ class SidebarMenu extends StatelessWidget {
                 ),
               ),
 
-              // 2. LISTE DES MENUS DE NAVIGATION
+              // 2. LISTE DES MENUS DE NAVIGATION HIÉRARCHISÉS
               Expanded(
                 child: ListView(
                   padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
                   physics: const BouncingScrollPhysics(),
                   children: [
-                    // Section GÉNÉRAL
-                    _buildSectionHeader('GÉNÉRAL', isDarkMode),
+                    // Section 1 : NAVIGATION PRINCIPALE
+                    _buildSectionHeader('NAVIGATION PRINCIPALE', isDarkMode),
                     _buildNavigationTile(
                       icon: Icons.space_dashboard_rounded,
                       title: 'Accueil Missions',
@@ -235,13 +288,18 @@ class SidebarMenu extends StatelessWidget {
 
                     const SizedBox(height: 16),
 
-                    // Section DONNÉES & SÉCURITÉ
-                    _buildSectionHeader('DONNÉES & SÉCURITÉ', isDarkMode),
+                    // Section 2 : SYNCHRONISATION & CLOUD
+                    _buildSectionHeader('SYNCHRONISATION & CLOUD', isDarkMode),
                     _buildNavigationTile(
                       icon: Icons.cloud_sync_rounded,
                       title: 'Sauvegardes Cloud M365',
                       isSelected: false,
                       isDarkMode: isDarkMode,
+                      statusBadge: isGlobalSyncing
+                          ? _buildStatusBadge('EN COURS', const Color(0xFFDBEAFE), const Color(0xFF1E40AF), Icons.sync_rounded)
+                          : hasPendingModifications
+                              ? _buildStatusBadge('MODIFIÉE', const Color(0xFFFEF3C7), const Color(0xFF92400E), Icons.edit_note_rounded)
+                              : _buildStatusBadge('À JOUR', const Color(0xFFD1FAE5), const Color(0xFF065F46), Icons.check_circle_rounded),
                       onTap: () {
                         onClose();
                         Navigator.of(context).push(
@@ -251,6 +309,25 @@ class SidebarMenu extends StatelessWidget {
                         );
                       },
                     ),
+                    _buildNavigationTile(
+                      icon: Icons.folder_zip_rounded,
+                      title: 'Import / Export Manuel',
+                      isSelected: false,
+                      isDarkMode: isDarkMode,
+                      onTap: () {
+                        onClose();
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) => BackupScreen(user: user),
+                          ),
+                        ).then((_) => onRefreshMissions?.call());
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // Section 3 : STOCKAGE & CORBEILLE (En dernier)
+                    _buildSectionHeader('STOCKAGE', isDarkMode),
                     _buildNavigationTile(
                       icon: Icons.delete_outline_rounded,
                       title: 'Corbeille Sécurisée',
@@ -268,27 +345,13 @@ class SidebarMenu extends StatelessWidget {
                         ).then((_) => onRefreshMissions?.call());
                       },
                     ),
-                    _buildNavigationTile(
-                      icon: Icons.cloud_sync_rounded,
-                      title: 'Import / Export',
-                      isSelected: false,
-                      isDarkMode: isDarkMode,
-                      onTap: () {
-                        onClose();
-                        Navigator.of(context).push(
-                          MaterialPageRoute(
-                            builder: (context) => BackupScreen(user: user),
-                          ),
-                        ).then((_) => onRefreshMissions?.call());
-                      },
-                    ),
                   ],
                 ),
               ),
 
-              // 3. PIED DE PAGE : DÉCONNEXION
+              // 3. PIED DE PAGE : DÉCONNEXION (Séparée et sécurisée)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 20),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 24),
                 child: SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
@@ -299,7 +362,8 @@ class SidebarMenu extends StatelessWidget {
                       style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 13),
                     ),
                     style: OutlinedButton.styleFrom(
-                      side: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
+                      side: BorderSide(color: Colors.red.withValues(alpha: 0.35), width: 1.5),
+                      backgroundColor: Colors.red.withValues(alpha: 0.04),
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     ),
@@ -322,8 +386,33 @@ class SidebarMenu extends StatelessWidget {
           fontSize: 10.5,
           fontWeight: FontWeight.w800,
           letterSpacing: 1.2,
-          color: isDarkMode ? Colors.grey.shade500 : Colors.grey.shade500,
+          color: isDarkMode ? const Color(0xFF64748B) : Colors.grey.shade500,
         ),
+      ),
+    );
+  }
+
+  Widget _buildStatusBadge(String text, Color bg, Color fg, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 11, color: fg),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: TextStyle(
+              fontSize: 9.5,
+              fontWeight: FontWeight.bold,
+              color: fg,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -334,6 +423,7 @@ class SidebarMenu extends StatelessWidget {
     required bool isSelected,
     required bool isDarkMode,
     required VoidCallback onTap,
+    Widget? statusBadge,
     int? badgeCount,
   }) {
     final activeBg = isDarkMode ? AppTheme.primaryBlue.withValues(alpha: 0.2) : const Color(0xFFEFF6FF);
@@ -368,6 +458,7 @@ class SidebarMenu extends StatelessWidget {
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
+            if (statusBadge != null) statusBadge,
             if (badgeCount != null && badgeCount > 0)
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
