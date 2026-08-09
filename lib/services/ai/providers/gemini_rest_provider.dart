@@ -16,7 +16,7 @@ class GeminiRestProvider implements AiProvider {
 
   GeminiRestProvider({
     required this.apiKey,
-    String modelName = 'gemini-2.5-flash',
+    String modelName = 'gemini-flash-latest',
   }) : _modelName = modelName;
 
   @override
@@ -29,7 +29,7 @@ class GeminiRestProvider implements AiProvider {
   Future<String> generateStructuredText({
     required String prompt,
     required Map<String, dynamic> responseSchema,
-    Duration timeout = const Duration(seconds: 10),
+    Duration timeout = const Duration(seconds: 18),
   }) async {
     if (apiKey.trim().isEmpty) {
       throw StateError('Clé API Gemini non configurée.');

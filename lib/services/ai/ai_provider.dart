@@ -10,6 +10,6 @@ abstract class AiProvider {
   Future<String> generateStructuredText({
     required String prompt,
     required Map<String, dynamic> responseSchema,
-    Duration timeout = const Duration(seconds: 10),
+    Duration timeout = const Duration(seconds: 18),
   });
 }

@@ -78,7 +78,7 @@ class MissionExecutiveSummaryService {
   static Future<ExecutiveSummaryData> getOrGenerateSummary(
     String missionId, {
     AiProvider? customProvider,
-    Duration timeout = const Duration(seconds: 8),
+    Duration timeout = const Duration(seconds: 18),
   }) async {
     // 1. Si une requête est déjà en cours pour cette mission, la réutiliser (Single-Flight)
     if (_pendingRequests.containsKey(missionId)) {

@@ -3914,7 +3914,7 @@ class PdfReportService {
                 ),
                 pw.SizedBox(width: 6),
                 pw.Text(
-                  '⚠ LOCAL INACCESSIBLE — NON INSPECTÉ',
+                  '[!] LOCAL INACCESSIBLE — NON INSPECTÉ',
                   style: pw.TextStyle(
                     color: PdfColors.red,
                     fontWeight: pw.FontWeight.bold,
@@ -4026,7 +4026,7 @@ class PdfReportService {
                 ),
                 pw.SizedBox(width: 6),
                 pw.Text(
-                  '⚠ LOCAL INACCESSIBLE — NON INSPECTÉ',
+                  '[!] LOCAL INACCESSIBLE — NON INSPECTÉ',
                   style: pw.TextStyle(
                     color: PdfColors.red,
                     fontWeight: pw.FontWeight.bold,

@@ -43,7 +43,7 @@ class ExecutiveSummaryCacheEntry {
       promptVersion: (json['promptVersion'] as num?)?.toInt() ?? 1,
       schemaVersion: (json['schemaVersion'] as num?)?.toInt() ?? 1,
       provider: json['provider'] as String? ?? 'gemini',
-      model: json['model'] as String? ?? 'gemini-2.5-flash',
+      model: json['model'] as String? ?? 'gemini-flash-latest',
       generatedAt: json['generatedAt'] != null
           ? DateTime.tryParse(json['generatedAt'].toString()) ?? DateTime.now()
           : DateTime.now(),
