@@ -38,12 +38,19 @@ class BackupOrchestratorState {
   bool get isActive => status == BackupEngineStatus.checking || status == BackupEngineStatus.syncing;
 }
 
+typedef BackupMissionDelegate = Future<bool> Function({
+  required String missionId,
+  required String matricule,
+  required void Function(double progress, String message) onProgress,
+});
+
 class BackupOrchestrator {
   final BackupSyncRepository repository;
   final MicrosoftAuthService authService;
   final BackupQueueService queueService;
   final BackupSchedulerService schedulerService;
   final AppUpdateMigrationService migrationService;
+  final BackupMissionDelegate? backupDelegate;
 
   final Set<String> _syncingMissionIds = {};
   final _stateController = StreamController<BackupOrchestratorState>.broadcast();
@@ -56,6 +63,7 @@ class BackupOrchestrator {
     required this.queueService,
     required this.schedulerService,
     required this.migrationService,
+    this.backupDelegate,
   });
 
   StreamSubscription? _connectivitySubscription;
@@ -129,20 +137,28 @@ class BackupOrchestrator {
           statusMessage: 'Sauvegarde de la mission ${i + 1}/$total...',
         ));
 
-        final success = await repository.backupSingleMission(
-          missionId: item.missionId,
-          matricule: item.matricule,
-          onProgress: (progress, message) {
-            _updateState(BackupOrchestratorState(
-              status: BackupEngineStatus.syncing,
-              totalMissions: total,
-              completedMissions: completed,
-              currentMissionName: 'Mission ${item.missionId}',
-              currentProgress: progress,
-              statusMessage: message,
-            ));
-          },
-        );
+        void onProgress(double progress, String message) {
+          _updateState(BackupOrchestratorState(
+            status: BackupEngineStatus.syncing,
+            totalMissions: total,
+            completedMissions: completed,
+            currentMissionName: 'Mission ${item.missionId}',
+            currentProgress: progress,
+            statusMessage: message,
+          ));
+        }
+
+        final success = backupDelegate != null
+            ? await backupDelegate!(
+                missionId: item.missionId,
+                matricule: item.matricule,
+                onProgress: onProgress,
+              )
+            : await repository.backupSingleMission(
+                missionId: item.missionId,
+                matricule: item.matricule,
+                onProgress: onProgress,
+              );
 
         _syncingMissionIds.remove(item.missionId);
 

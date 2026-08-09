@@ -57,6 +57,9 @@ final backupOrchestratorProvider = Provider<BackupOrchestrator>((ref) {
     queueService: ref.watch(backupQueueServiceProvider),
     schedulerService: ref.watch(backupSchedulerServiceProvider),
     migrationService: ref.watch(appUpdateMigrationServiceProvider),
+    backupDelegate: ({required missionId, required matricule, required onProgress}) {
+      return ref.read(backupSyncNotifierProvider.notifier).backupMission(missionId, matricule);
+    },
   );
 });
 
