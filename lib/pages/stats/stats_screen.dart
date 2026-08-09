@@ -355,53 +355,106 @@ class _StatsScreenState extends State<StatsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const Icon(Icons.calendar_today_rounded, color: AppTheme.primaryBlue),
-              title: const Text('Aujourd\'hui'),
+            const SizedBox(height: 8),
+            Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade300,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildPeriodTile(
+              ctx: ctx,
+              periodKey: 'today',
+              label: 'Aujourd\'hui',
+              icon: Icons.calendar_today_rounded,
               onTap: () {
                 Navigator.pop(ctx);
                 setState(() => _selectedPeriod = 'today');
                 _applyFilters();
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.calendar_view_week_rounded, color: AppTheme.primaryBlue),
-              title: const Text('Cette semaine'),
+            _buildPeriodTile(
+              ctx: ctx,
+              periodKey: 'week',
+              label: 'Cette semaine',
+              icon: Icons.calendar_today_rounded,
               onTap: () {
                 Navigator.pop(ctx);
                 setState(() => _selectedPeriod = 'week');
                 _applyFilters();
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.calendar_view_month_rounded, color: AppTheme.primaryBlue),
-              title: const Text('Ce mois'),
+            _buildPeriodTile(
+              ctx: ctx,
+              periodKey: 'month',
+              label: 'Ce mois',
+              icon: Icons.calendar_today_rounded,
               onTap: () {
                 Navigator.pop(ctx);
                 setState(() => _selectedPeriod = 'month');
                 _applyFilters();
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.event_note_rounded, color: AppTheme.primaryBlue),
-              title: const Text('Cette année'),
+            _buildPeriodTile(
+              ctx: ctx,
+              periodKey: 'year',
+              label: 'Cette année',
+              icon: Icons.calendar_today_rounded,
               onTap: () {
                 Navigator.pop(ctx);
                 setState(() => _selectedPeriod = 'year');
                 _applyFilters();
               },
             ),
-            ListTile(
-              leading: const Icon(Icons.date_range_rounded, color: AppTheme.primaryBlue),
-              title: const Text('Période personnalisée...'),
+            _buildPeriodTile(
+              ctx: ctx,
+              periodKey: 'custom',
+              label: 'Période personnalisée...',
+              icon: Icons.calendar_today_rounded,
               onTap: () {
                 Navigator.pop(ctx);
                 _showCustomDateRangeDialog();
               },
             ),
+            const SizedBox(height: 12),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPeriodTile({
+    required BuildContext ctx,
+    required String periodKey,
+    required String label,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    final isSelected = _selectedPeriod == periodKey;
+    final isDarkMode = Theme.of(ctx).brightness == Brightness.dark;
+
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: isSelected ? AppTheme.primaryBlue : (isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600),
+      ),
+      title: Text(
+        label,
+        style: TextStyle(
+          fontSize: 14,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+          color: isSelected
+              ? AppTheme.primaryBlue
+              : (isDarkMode ? Colors.white : Colors.black87),
+        ),
+      ),
+      trailing: isSelected
+          ? Icon(Icons.check_circle_rounded, color: AppTheme.primaryBlue, size: 20)
+          : null,
+      onTap: onTap,
     );
   }
 }

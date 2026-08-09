@@ -39,7 +39,7 @@ class _HomeScreenState extends State<HomeScreen> {
   String _selectedFilter = 'Tous';
 
   // Variable pour stocker la période sélectionnée pour les stats
-  String _statsSelectedPeriod = 'month';
+  String _statsSelectedPeriod = 'year';
 
   @override
   void initState() {
