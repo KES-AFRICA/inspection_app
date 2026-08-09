@@ -37,6 +37,7 @@ import '../models/renseignements_generaux.dart';
 import 'hive_service.dart';
 import 'sequence_progress_service.dart';
 import 'package:inspec_app/services/backup/backup_format_strategy.dart';
+import 'package:inspec_app/services/backup/operation_progress_state.dart';
 
 // ─────────────────────────────────────────────────────────────
 // RÉSULTATS TYPÉS
@@ -126,7 +127,11 @@ class BackupService {
   // EXPORT (MOTEUR V4 ZIP BUNDLE STREAMING - MÉMOIRE < 5 MO)
   // ═══════════════════════════════════════════════════════════
 
-  static Future<BackupResult> exporterMissions(String matricule) async {
+  static Future<BackupResult> exporterMissions(
+    String matricule, {
+    void Function(OperationProgressState)? onProgressState,
+    bool Function()? isCancelled,
+  }) async {
     try {
       final missions = HiveService.getMissionsByMatricule(matricule);
       if (missions.isEmpty) {
@@ -144,7 +149,24 @@ class BackupService {
       final fileName = 'inspec_backup_${matricule}_$ts.inspec';
 
       final serializedMissions = <Map<String, dynamic>>[];
-      for (final m in missions) {
+      for (int i = 0; i < missions.length; i++) {
+        if (isCancelled?.call() == true) {
+          return const BackupResult(
+            success: false,
+            message: 'Exportation annulée par l\'utilisateur.',
+          );
+        }
+        final m = missions[i];
+        onProgressState?.call(OperationProgressState(
+          type: OperationType.export,
+          status: OperationStatus.inProgress,
+          title: 'Exportation de ${missions.length} mission(s)',
+          currentMissionName: m.nomClient,
+          currentMissionIndex: i + 1,
+          totalMissions: missions.length,
+          currentStep: 'Préparation de la structure de données...',
+          overallProgress: (i / missions.length) * 0.4,
+        ));
         serializedMissions.add(await _serializeMissionStructureOnly(m));
       }
 
@@ -156,6 +178,8 @@ class BackupService {
         matricule: matricule,
         subject: 'Sauvegarde Inspec V4 — $ts',
         text: '${missions.length} mission(s) — $ts',
+        onProgressState: onProgressState,
+        isCancelled: isCancelled,
       );
     } catch (e, st) {
       if (kDebugMode) print('❌ Export V4: $e\n$st');
@@ -167,11 +191,92 @@ class BackupService {
     }
   }
 
+  // ── EXPORT DE MISSIONS SÉLECTIONNÉES ──
+
+  static Future<BackupResult> exporterMissionsSelection(
+    List<String> missionIds, {
+    required String matricule,
+    void Function(OperationProgressState)? onProgressState,
+    bool Function()? isCancelled,
+    bool openShareSheet = true,
+  }) async {
+    try {
+      if (missionIds.isEmpty) {
+        return const BackupResult(
+          success: false,
+          message: 'Aucune mission sélectionnée à exporter.',
+        );
+      }
+
+      final missions = HiveService.getMissionsByMatricule(matricule)
+          .where((m) => missionIds.contains(m.id))
+          .toList();
+
+      if (missions.isEmpty) {
+        return const BackupResult(
+          success: false,
+          message: 'Aucune mission correspondante trouvée.',
+        );
+      }
+
+      final ts = DateTime.now()
+          .toIso8601String()
+          .replaceAll(':', '-')
+          .replaceAll('.', '-')
+          .substring(0, 19);
+      final fileName = 'inspec_backup_${matricule}_$ts.inspec';
+
+      final serializedMissions = <Map<String, dynamic>>[];
+      for (int i = 0; i < missions.length; i++) {
+        if (isCancelled?.call() == true) {
+          return const BackupResult(
+            success: false,
+            message: 'Exportation annulée par l\'utilisateur.',
+          );
+        }
+        final m = missions[i];
+        onProgressState?.call(OperationProgressState(
+          type: OperationType.export,
+          status: OperationStatus.inProgress,
+          title: 'Exportation de ${missions.length} mission(s)',
+          currentMissionName: m.nomClient,
+          currentMissionIndex: i + 1,
+          totalMissions: missions.length,
+          currentStep: 'Préparation des données...',
+          overallProgress: (i / missions.length) * 0.4,
+        ));
+        serializedMissions.add(await _serializeMissionStructureOnly(m));
+      }
+
+      return await _exportV4Core(
+        fileName: fileName,
+        serializedMissions: serializedMissions,
+        missionIds: missions.map((m) => m.id).toList(),
+        exportType: missions.length == 1 ? 'single_mission' : 'selection_missions',
+        matricule: matricule,
+        subject: 'Sauvegarde Inspec V4 — ${missions.length} mission(s)',
+        text: 'Exportation ${missions.length} mission(s) ($ts)',
+        openShareSheet: openShareSheet,
+        onProgressState: onProgressState,
+        isCancelled: isCancelled,
+      );
+    } catch (e, st) {
+      if (kDebugMode) print('❌ Export selection V4: $e\n$st');
+      return BackupResult(
+        success: false,
+        message: "Erreur lors de l'export de la sélection.",
+        errorDetail: e.toString(),
+      );
+    }
+  }
+
   // ── EXPORT CIBLÉ D'UNE SEULE MISSION (FORMAT V4 ZIP BUNDLE) ──
 
   static Future<BackupResult> exporterMission(
     String missionId, {
     bool openShareSheet = true,
+    void Function(OperationProgressState)? onProgressState,
+    bool Function()? isCancelled,
   }) async {
     try {
       final mission = HiveService.getMissionById(missionId);
@@ -191,6 +296,17 @@ class BackupService {
           mission.nomClient.replaceAll(RegExp(r'[^a-zA-Z0-9_\-]'), '_');
       final fileName = 'inspec_${safeClient}_$ts.inspec';
 
+      onProgressState?.call(OperationProgressState(
+        type: OperationType.export,
+        status: OperationStatus.inProgress,
+        title: 'Exportation de 1 mission',
+        currentMissionName: mission.nomClient,
+        currentMissionIndex: 1,
+        totalMissions: 1,
+        currentStep: 'Préparation des données...',
+        overallProgress: 0.2,
+      ));
+
       final serializedMission = await _serializeMissionStructureOnly(mission);
 
       return await _exportV4Core(
@@ -201,6 +317,8 @@ class BackupService {
         subject: 'Sauvegarde V4 — ${mission.nomClient}',
         text: 'Export mission ${mission.nomClient} ($ts)',
         openShareSheet: openShareSheet,
+        onProgressState: onProgressState,
+        isCancelled: isCancelled,
       );
     } catch (e, st) {
       if (kDebugMode) print('❌ exporterMission V4: $e\n$st');
@@ -223,6 +341,8 @@ class BackupService {
     String? subject,
     String? text,
     bool openShareSheet = true,
+    void Function(OperationProgressState)? onProgressState,
+    bool Function()? isCancelled,
   }) async {
     try {
       if (serializedMissions.isEmpty) {
@@ -243,11 +363,24 @@ class BackupService {
       encoder.create(zipFile.path);
 
       final photoPaths = <String>{};
+      int totalItemsProcessed = 0;
 
       // 1. Ajouter les missions en micro JSON files et collecter les photos
       for (int i = 0; i < serializedMissions.length; i++) {
+        if (isCancelled?.call() == true) {
+          try {
+            await encoder.close();
+            if (await zipFile.exists()) await zipFile.delete();
+          } catch (_) {}
+          return const BackupResult(
+            success: false,
+            message: 'Exportation annulée par l\'utilisateur.',
+          );
+        }
+
         final mData = serializedMissions[i];
         final mId = _safeString(((mData['mission'] as Map?))?['id'], 'm_$i');
+        final mClient = _safeString(((mData['mission'] as Map?))?['nomClient'], 'Mission ${i + 1}');
 
         _collectPhotoPathsRecursively(mData, photoPaths);
 
@@ -256,6 +389,22 @@ class BackupService {
         await tempFile.writeAsString(mJson);
         await encoder.addFile(tempFile, 'missions/mission_$mId.json');
         if (await tempFile.exists()) await tempFile.delete();
+
+        totalItemsProcessed += 1;
+
+        final prg = 0.4 + ((i + 1) / serializedMissions.length) * 0.3;
+        onProgressState?.call(OperationProgressState(
+          type: OperationType.export,
+          status: OperationStatus.inProgress,
+          title: 'Exportation de ${serializedMissions.length} mission(s)',
+          currentMissionName: mClient,
+          currentMissionIndex: i + 1,
+          totalMissions: serializedMissions.length,
+          currentStep: 'Création du bundle de la mission...',
+          overallProgress: prg,
+          processedItemsCount: totalItemsProcessed,
+          processedPhotosCount: photoPaths.length,
+        ));
       }
 
       // 2. Écrire les brouillons
@@ -276,7 +425,20 @@ class BackupService {
       }
 
       // 3. Ajouter les photos sous forme de fichiers bruts (0% Base64 overhead)
-      for (final p in photoPaths) {
+      final photoList = photoPaths.toList();
+      for (int pIdx = 0; pIdx < photoList.length; pIdx++) {
+        if (isCancelled?.call() == true) {
+          try {
+            await encoder.close();
+            if (await zipFile.exists()) await zipFile.delete();
+          } catch (_) {}
+          return const BackupResult(
+            success: false,
+            message: 'Exportation annulée par l\'utilisateur.',
+          );
+        }
+
+        final p = photoList[pIdx];
         final photoFile = File(p);
         if (photoFile.existsSync()) {
           final normalizedPath = p.replaceAll('\\', '/');
@@ -289,6 +451,22 @@ class BackupService {
             relativePath = 'audit_photos/misc/${photoFile.path.split('/').last}';
           }
           await encoder.addFile(photoFile, 'photos/$relativePath');
+        }
+
+        if (photoList.isNotEmpty && pIdx % 3 == 0) {
+          final prg = 0.7 + ((pIdx + 1) / photoList.length) * 0.2;
+          onProgressState?.call(OperationProgressState(
+            type: OperationType.export,
+            status: OperationStatus.inProgress,
+            title: 'Exportation de ${serializedMissions.length} mission(s)',
+            currentMissionName: serializedMissions.first['mission']?['nomClient'],
+            currentMissionIndex: serializedMissions.length,
+            totalMissions: serializedMissions.length,
+            currentStep: 'Compression des médias (${pIdx + 1}/${photoList.length})...',
+            overallProgress: prg,
+            processedItemsCount: totalItemsProcessed,
+            processedPhotosCount: pIdx + 1,
+          ));
         }
       }
 
@@ -310,6 +488,19 @@ class BackupService {
 
       await encoder.close();
 
+      onProgressState?.call(OperationProgressState(
+        type: OperationType.export,
+        status: OperationStatus.inProgress,
+        title: 'Exportation de ${serializedMissions.length} mission(s)',
+        currentMissionName: serializedMissions.first['mission']?['nomClient'],
+        currentMissionIndex: serializedMissions.length,
+        totalMissions: serializedMissions.length,
+        currentStep: 'Finalisation et enregistrement...',
+        overallProgress: 0.95,
+        processedItemsCount: totalItemsProcessed,
+        processedPhotosCount: photoPaths.length,
+      ));
+
       // 5. Copie vers le dossier Downloads/Documents public
       Directory? exportDir;
       if (Platform.isAndroid) {
@@ -327,6 +518,20 @@ class BackupService {
       exportDir ??= await getApplicationDocumentsDirectory();
       final publicFile = File('${exportDir.path}/$fileName');
       await zipFile.copy(publicFile.path);
+
+      onProgressState?.call(OperationProgressState(
+        type: OperationType.export,
+        status: OperationStatus.completed,
+        title: 'Exportation terminée',
+        currentMissionName: null,
+        currentMissionIndex: serializedMissions.length,
+        totalMissions: serializedMissions.length,
+        currentStep: 'Exportation réussie.',
+        overallProgress: 1.0,
+        processedItemsCount: totalItemsProcessed,
+        processedPhotosCount: photoPaths.length,
+        message: '${serializedMissions.length} mission(s) exportée(s) avec succès dans Downloads.',
+      ));
 
       if (openShareSheet) {
         try {
