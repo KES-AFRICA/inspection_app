@@ -38,12 +38,16 @@ class MtBtComparisonCard extends StatelessWidget {
             children: [
               Icon(Icons.compare_arrows_rounded, size: 20, color: AppTheme.primaryBlue),
               const SizedBox(width: 8),
-              Text(
-                'Catégorie 6 — Analyse Moyenne Tension (MT) vs Basse Tension (BT)',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+              Expanded(
+                child: Text(
+                  'Catégorie 6 — Analyse MT vs BT',
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -55,7 +59,7 @@ class MtBtComparisonCard extends StatelessWidget {
               // Colonne MT
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFEFF6FF),
                     borderRadius: BorderRadius.circular(14),
@@ -68,12 +72,16 @@ class MtBtComparisonCard extends StatelessWidget {
                         children: [
                           Icon(Icons.bolt_rounded, size: 16, color: const Color(0xFF2563EB)),
                           const SizedBox(width: 4),
-                          const Text(
-                            'Moyenne Tension (MT)',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF2563EB),
+                          Expanded(
+                            child: Text(
+                              'MT (Moyenne T.)',
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF2563EB),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -82,29 +90,33 @@ class MtBtComparisonCard extends StatelessWidget {
                       Text(
                         '${stats.mtCount} NC (${stats.mtPct.toStringAsFixed(1)}%)',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 14.5,
                           fontWeight: FontWeight.w900,
                           color: isDarkMode ? Colors.white : AppTheme.darkBlue,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
                         'Locaux MT: ${data.locauxMTCount} | Cellules: ${data.cellulesMTCount}',
                         style: TextStyle(
-                          fontSize: 10.5,
+                          fontSize: 10,
                           color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 8),
 
               // Colonne BT
               Expanded(
                 child: Container(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(10),
                   decoration: BoxDecoration(
                     color: isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFECFDF5),
                     borderRadius: BorderRadius.circular(14),
@@ -117,12 +129,16 @@ class MtBtComparisonCard extends StatelessWidget {
                         children: [
                           Icon(Icons.power_rounded, size: 16, color: const Color(0xFF059669)),
                           const SizedBox(width: 4),
-                          const Text(
-                            'Basse Tension (BT)',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF059669),
+                          Expanded(
+                            child: Text(
+                              'BT (Basse T.)',
+                              style: const TextStyle(
+                                fontSize: 11.5,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF059669),
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
@@ -131,18 +147,22 @@ class MtBtComparisonCard extends StatelessWidget {
                       Text(
                         '${stats.btCount} NC (${stats.btPct.toStringAsFixed(1)}%)',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 14.5,
                           fontWeight: FontWeight.w900,
                           color: isDarkMode ? Colors.white : AppTheme.darkBlue,
                         ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Locaux BT: ${data.locauxBTCount} | TGBT/Armoires: ${data.tgbtCount + data.armoiresCount}',
+                        'Locaux BT: ${data.locauxBTCount} | TGBT/Arm: ${data.tgbtCount + data.armoiresCount}',
                         style: TextStyle(
-                          fontSize: 10.5,
+                          fontSize: 10,
                           color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ],
                   ),

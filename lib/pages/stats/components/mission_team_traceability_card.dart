@@ -45,12 +45,16 @@ class MissionTeamTraceabilityCard extends StatelessWidget {
               children: [
                 Icon(Icons.badge_rounded, size: 20, color: AppTheme.primaryBlue),
                 const SizedBox(width: 8),
-                Text(
-                  'Personnes ayant travaillé sur cette mission',
-                  style: TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.bold,
-                    color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+                Expanded(
+                  child: Text(
+                    'Personnes ayant travaillé sur cette mission',
+                    style: TextStyle(
+                      fontSize: 14.5,
+                      fontWeight: FontWeight.bold,
+                      color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
               ],
@@ -89,12 +93,16 @@ class MissionTeamTraceabilityCard extends StatelessWidget {
             children: [
               Icon(Icons.engineering_rounded, size: 20, color: AppTheme.primaryBlue),
               const SizedBox(width: 8),
-              Text(
-                'Personnes ayant travaillé sur cette mission',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+              Expanded(
+                child: Text(
+                  'Personnes ayant travaillé sur cette mission',
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

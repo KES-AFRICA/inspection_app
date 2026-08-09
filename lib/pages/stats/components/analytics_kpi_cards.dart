@@ -19,7 +19,7 @@ class AnalyticsKpiCards extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Titre de section avec Expanded pour éviter tout right overflowed
+        // Titre de section
         Row(
           children: [
             Icon(Icons.dashboard_customize_rounded, size: 18, color: AppTheme.primaryBlue),
@@ -40,12 +40,12 @@ class AnalyticsKpiCards extends StatelessWidget {
         ),
         const SizedBox(height: 10),
 
-        // Grille de cartes KPI avec ratio 1.65 suffisant pour éviter tout bottom overflowed
+        // Grille de cartes KPI avec ratio 1.35 donnant suffisamment de hauteur verticale
         GridView.count(
           crossAxisCount: 2,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: 1.65,
+          childAspectRatio: 1.35,
           crossAxisSpacing: 10,
           mainAxisSpacing: 10,
           children: [
@@ -96,7 +96,7 @@ class AnalyticsKpiCards extends StatelessWidget {
     required Color bgColor,
   }) {
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
       decoration: BoxDecoration(
         color: bgColor,
         borderRadius: BorderRadius.circular(16),
@@ -114,7 +114,7 @@ class AnalyticsKpiCards extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             children: [
@@ -141,18 +141,20 @@ class AnalyticsKpiCards extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 6),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: 12.5,
-              fontWeight: FontWeight.w900,
-              color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+          const SizedBox(height: 4),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+              ),
             ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 3),
+          const SizedBox(height: 2),
           Text(
             subtitle,
             style: TextStyle(

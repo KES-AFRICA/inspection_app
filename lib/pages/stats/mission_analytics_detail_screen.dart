@@ -45,61 +45,43 @@ class _MissionAnalyticsDetailScreenState extends State<MissionAnalyticsDetailScr
       appBar: AppBar(
         backgroundColor: isDarkMode ? const Color(0xFF1E293B) : Colors.white,
         elevation: 1,
+        centerTitle: false,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_rounded, color: isDarkMode ? Colors.white : AppTheme.darkBlue),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              mission.nomClient,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: isDarkMode ? Colors.white : AppTheme.darkBlue,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            Text(
-              '${mission.nomSite ?? 'Site Unifié KES'} • Dashboard Analytique',
-              style: TextStyle(
-                fontSize: 11.5,
-                color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
-                fontWeight: FontWeight.w500,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
-        ),
-        actions: [
-          // Filtre MT / BT réactif dans la TopBar
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: Row(
-              children: [
-                _buildTensionButton('Tous', isDarkMode),
-                const SizedBox(width: 4),
-                _buildTensionButton('MT', isDarkMode),
-                const SizedBox(width: 4),
-                _buildTensionButton('BT', isDarkMode),
-              ],
-            ),
+        // Titre d'AppBar lisible, grand et correctement positionné
+        title: Text(
+          mission.nomClient,
+          style: TextStyle(
+            fontSize: 17,
+            fontWeight: FontWeight.w800,
+            color: isDarkMode ? Colors.white : AppTheme.darkBlue,
           ),
-        ],
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 40),
         physics: const BouncingScrollPhysics(),
         children: [
-          // 1. Bannière de Contexte de la Mission
+
+          const SizedBox(height: 20),
+          // 1. Bannière de Contexte de la Mission (Nom, Site, Adresse, Dates & Filtre MT/BT)
           _buildMissionContextBanner(mission, isDarkMode),
 
           const SizedBox(height: 16),
 
-          // 2. Vue Synthétique Globale de la Mission
+          // 2. Traçabilité des personnes ayant travaillé sur la mission (Placé tout en haut)
+          MissionTeamTraceabilityCard(
+            mission: mission,
+            isDarkMode: isDarkMode,
+          ),
+
+          const SizedBox(height: 16),
+
+          // 3. Catégorie 1 : Vue Synthétique Globale de la Mission
           AnalyticsKpiCards(
             data: analyticsData,
             isDarkMode: isDarkMode,
@@ -107,7 +89,7 @@ class _MissionAnalyticsDetailScreenState extends State<MissionAnalyticsDetailScr
 
           const SizedBox(height: 16),
 
-          // 3. Santé de la Conformité & Jauge Tricolore
+          // 4. Catégorie 2 : Santé de la Conformité & Jauge Tricolore
           ComplianceHealthCard(
             data: analyticsData,
             isDarkMode: isDarkMode,
@@ -115,7 +97,7 @@ class _MissionAnalyticsDetailScreenState extends State<MissionAnalyticsDetailScr
 
           const SizedBox(height: 16),
 
-          // 4. Répartition des Criticités
+          // 5. Catégorie 3 : Répartition des Criticités
           CriticalityDistributionCard(
             data: analyticsData,
             isDarkMode: isDarkMode,
@@ -123,7 +105,7 @@ class _MissionAnalyticsDetailScreenState extends State<MissionAnalyticsDetailScr
 
           const SizedBox(height: 16),
 
-          // 5. Top 10 des Points de Vérification Problématiques
+          // 6. Catégorie 4 : Top 10 des Points de Vérification Problématiques
           TopDefectsCard(
             data: analyticsData,
             isDarkMode: isDarkMode,
@@ -131,7 +113,7 @@ class _MissionAnalyticsDetailScreenState extends State<MissionAnalyticsDetailScr
 
           const SizedBox(height: 16),
 
-          // 6. Tableau d'Analyse des 10 Catégories d'Équipements
+          // 7. Catégorie 5 : Tableau d'Analyse des 10 Catégories d'Équipements
           EquipmentBreakdownTable(
             data: analyticsData,
             isDarkMode: isDarkMode,
@@ -139,7 +121,7 @@ class _MissionAnalyticsDetailScreenState extends State<MissionAnalyticsDetailScr
 
           const SizedBox(height: 16),
 
-          // 7. Comparaisons MT vs BT
+          // 8. Catégorie 6 : Comparaisons MT vs BT
           MtBtComparisonCard(
             data: analyticsData,
             isDarkMode: isDarkMode,
@@ -147,7 +129,7 @@ class _MissionAnalyticsDetailScreenState extends State<MissionAnalyticsDetailScr
 
           const SizedBox(height: 16),
 
-          // 8. Installations à Risque & Références Normatives
+          // 9. Catégories 7, 8, 9 : Installations à Risque & Références Normatives
           RiskAnalysisCard(
             data: analyticsData,
             isDarkMode: isDarkMode,
@@ -155,47 +137,12 @@ class _MissionAnalyticsDetailScreenState extends State<MissionAnalyticsDetailScr
 
           const SizedBox(height: 16),
 
-          // 9. Photographies & Media
+          // 10. Catégories 10, 11, 12 : Photographies & Media
           PhotosAndBackupCard(
             data: analyticsData,
             isDarkMode: isDarkMode,
           ),
-
-          const SizedBox(height: 16),
-
-          // 10. Traçabilité des personnes ayant travaillé sur la mission
-          MissionTeamTraceabilityCard(
-            mission: mission,
-            isDarkMode: isDarkMode,
-          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTensionButton(String label, bool isDarkMode) {
-    final isSelected = _selectedTension == label;
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _selectedTension = label;
-        });
-      },
-      borderRadius: BorderRadius.circular(12),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryBlue : (isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9)),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 11,
-            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-            color: isSelected ? Colors.white : (isDarkMode ? Colors.white70 : Colors.black87),
-          ),
-        ),
       ),
     );
   }
@@ -217,6 +164,7 @@ class _MissionAnalyticsDetailScreenState extends State<MissionAnalyticsDetailScr
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Ligne 1 : Nom Client + Sélecteur Domaine MT/BT
           Row(
             children: [
               Container(
@@ -233,30 +181,39 @@ class _MissionAnalyticsDetailScreenState extends State<MissionAnalyticsDetailScr
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      mission.nomClient,
+                      'Site de ${mission.nomSite ?? 'Site Unifié KES'}',
                       style: TextStyle(
-                        fontSize: 17,
+                        fontSize: 14,
                         fontWeight: FontWeight.w900,
                         color: isDarkMode ? Colors.white : AppTheme.darkBlue,
                       ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Site : ${mission.nomSite ?? 'Site Unifié'} • ${mission.natureMission ?? 'Inspection Périodique Standard'}',
+                      mission.natureMission ?? 'Inspection Périodique Standard',
                       style: TextStyle(
                         fontSize: 12,
                         color: isDarkMode ? Colors.grey.shade400 : Colors.grey.shade600,
                         fontWeight: FontWeight.w500,
                       ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),
               ),
             ],
           ),
+
+          
+
           const SizedBox(height: 12),
           const Divider(height: 1),
           const SizedBox(height: 12),
+
+          // Ligne 2 : Informations d'intervention, dernière modification et adresse
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -282,7 +239,64 @@ class _MissionAnalyticsDetailScreenState extends State<MissionAnalyticsDetailScr
               ),
             ],
           ),
+
+          const SizedBox(height: 20),
+
+          // Ligne 3 : Filtres Tension (Tous / MT / BT) intégrés dans la carte de contexte
+          Row(
+            children: [
+              Text(
+                'Filtre tension :',
+                style: TextStyle(
+                  fontSize: 11.5,
+                  fontWeight: FontWeight.bold,
+                  color: isDarkMode ? Colors.grey.shade400 : AppTheme.darkBlue,
+                ),
+              ),
+              const SizedBox(width: 8),
+              _buildTensionChip('Tous', isDarkMode),
+              const SizedBox(width: 6),
+              _buildTensionChip('MT', isDarkMode),
+              const SizedBox(width: 6),
+              _buildTensionChip('BT', isDarkMode),
+            ],
+          ),
+
         ],
+      ),
+    );
+  }
+
+  Widget _buildTensionChip(String label, bool isDarkMode) {
+    final isSelected = _selectedTension == label;
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedTension = label;
+        });
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? AppTheme.primaryBlue
+              : (isDarkMode ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9)),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? AppTheme.primaryBlue
+                : (isDarkMode ? Colors.white10 : Colors.grey.shade300),
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+            color: isSelected ? Colors.white : (isDarkMode ? Colors.white70 : Colors.black87),
+          ),
+        ),
       ),
     );
   }

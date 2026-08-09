@@ -38,12 +38,16 @@ class TopDefectsCard extends StatelessWidget {
             children: [
               Icon(Icons.leaderboard_rounded, size: 20, color: const Color(0xFFD97706)),
               const SizedBox(width: 8),
-              Text(
-                'Catégorie 4 — Top 10 des Points Problématiques',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+              Expanded(
+                child: Text(
+                  'Catégorie 4 — Top 10 des Points Problématiques',
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

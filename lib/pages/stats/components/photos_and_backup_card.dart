@@ -43,12 +43,16 @@ class PhotosAndBackupCard extends StatelessWidget {
                 children: [
                   Icon(Icons.photo_library_rounded, size: 20, color: const Color(0xFF7C3AED)),
                   const SizedBox(width: 8),
-                  Text(
-                    'Catégorie 10 — Photographies & Observations',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+                  Expanded(
+                    child: Text(
+                      'Catégorie 10 — Photographies & Observations',
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],

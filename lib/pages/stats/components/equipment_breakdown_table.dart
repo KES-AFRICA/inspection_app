@@ -38,12 +38,16 @@ class EquipmentBreakdownTable extends StatelessWidget {
             children: [
               Icon(Icons.format_list_bulleted_rounded, size: 20, color: AppTheme.primaryBlue),
               const SizedBox(width: 8),
-              Text(
-                'Catégorie 5 — Répartition des 10 Catégories Métiers',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                  color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+              Expanded(
+                child: Text(
+                  'Catégorie 5 — Répartition des 10 Catégories Métiers',
+                  style: TextStyle(
+                    fontSize: 14.5,
+                    fontWeight: FontWeight.bold,
+                    color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],

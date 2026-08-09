@@ -43,12 +43,16 @@ class RiskAnalysisCard extends StatelessWidget {
                 children: [
                   Icon(Icons.warning_rounded, size: 20, color: const Color(0xFFEF4444)),
                   const SizedBox(width: 8),
-                  Text(
-                    'Catégorie 7 — Installations & Locaux à Risque',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+                  Expanded(
+                    child: Text(
+                      'Catégorie 7 — Installations & Locaux à Risque',
+                      style: TextStyle(
+                        fontSize: 14.5,
+                        fontWeight: FontWeight.bold,
+                        color: isDarkMode ? Colors.white : AppTheme.darkBlue,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ],
