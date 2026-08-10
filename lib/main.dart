@@ -20,14 +20,16 @@ import 'package:inspec_app/features/backup/presentation/widgets/global_backup_pr
 import 'package:inspec_app/features/backup/presentation/providers/backup_providers.dart';
 import 'dart:async';
 
+import 'package:inspec_app/config/api_keys.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialiser Hive
   await HiveService.init();
 
-  MissionExecutiveSummaryService.geminiApiKey =
-      'ApiKeys.geminiApiKey';
+  // Clé API Gemini chargée depuis la configuration locale non-suivie par Git
+  MissionExecutiveSummaryService.geminiApiKey = ApiKeys.geminiApiKey;
 
   // Migration silencieuse des données existantes
   await HiveService.migratePointsVerificationPriorite();
