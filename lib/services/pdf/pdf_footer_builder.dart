@@ -61,10 +61,11 @@ class PdfFooterBuilder {
                   bottom: 12,
                   child: pw.Container(
                     width: 195,
-                    alignment: pw.Alignment.center,
+                    padding: const pw.EdgeInsets.only(left: 40),
+                    alignment: pw.Alignment.centerLeft,
                     child: pw.Column(
                       mainAxisAlignment: pw.MainAxisAlignment.center,
-                      crossAxisAlignment: pw.CrossAxisAlignment.center,
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
                       children: [
                         pw.Text(
                           'RCCM : RC/DLN/2024/B/051',
@@ -73,7 +74,7 @@ class PdfFooterBuilder {
                             fontSize: 7.5,
                             color: PdfColors.white,
                           ),
-                          textAlign: pw.TextAlign.center,
+                          textAlign: pw.TextAlign.left,
                         ),
                         pw.SizedBox(height: 3),
                         pw.Text(
@@ -83,7 +84,7 @@ class PdfFooterBuilder {
                             fontSize: 7.5,
                             color: PdfColors.white,
                           ),
-                          textAlign: pw.TextAlign.center,
+                          textAlign: pw.TextAlign.left,
                         ),
                       ],
                     ),
