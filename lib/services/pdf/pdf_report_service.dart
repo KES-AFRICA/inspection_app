@@ -215,10 +215,23 @@ class PdfReportService {
       }
     }
     
-    _watermarkImage       = await tryLoad('assets/images/filigranne_image.png', targetWidth: 600, targetQuality: 70);
+    Future<pw.MemoryImage?> tryLoadRaw(String asset) async {
+      try {
+        final data = await rootBundle.load(asset);
+        final bytes = data.buffer.asUint8List();
+        if (bytes.isEmpty) return null;
+        return pw.MemoryImage(bytes);
+      } catch (e) {
+        if (kDebugMode) print('Image non trouvee: $asset');
+        return null;
+      }
+    }
+    
+    // Polices et filigranes/logos PNG avec transparence native (0 fond noir/gris)
+    _watermarkImage       = await tryLoadRaw('assets/images/filigranne_image.png');
+    _logoKesImage         = await tryLoadRaw('assets/images/logo.png');
     _firstPageFooterImage = await tryLoad('assets/images/firstpage_footer.png', targetWidth: 600, targetQuality: 70);
     _otherPageFooterImage = await tryLoad('assets/images/otherpage_footer.png', targetWidth: 600, targetQuality: 70);
-    _logoKesImage         = await tryLoad('assets/images/logo.png', targetWidth: 400, targetQuality: 75);
     _imgHabilitation      = await tryLoad('assets/images/image.png', targetWidth: 500, targetQuality: 70);
     _imgAccesGauche       = await tryLoad('assets/images/image copy.png', targetWidth: 400, targetQuality: 70);
     _imgAccesDroite1      = await tryLoad('assets/images/image copy 2.png', targetWidth: 400, targetQuality: 70);
@@ -251,7 +264,7 @@ class PdfReportService {
   //  THEMES DE PAGE (Couverture et Interieures)
   // ──────────────────────────────────────────────────────────────
   
-  /// Thème couverture (footer firstPage)
+  /// Thème couverture (footer firstPage - Aucun filigrane sur la première page)
   static pw.PageTheme _buildCoverPageTheme() {
     return pw.PageTheme(
       pageFormat: PdfPageFormat.a4,
@@ -262,7 +275,7 @@ class PdfReportService {
         right:  kRightMargin,
         bottom: kBottomMargin + 40,
       ),
-      buildBackground: (ctx) => _buildWatermarkBackground(),
+      buildBackground: (ctx) => pw.SizedBox(),
       buildForeground: (ctx) => _buildFooterAbsolute(isFirstPage: true, ctx: ctx),
     );
   }
@@ -423,19 +436,37 @@ class PdfReportService {
     _cachedClientQrImg = null;
 
     if (mission.logoClient != null && mission.logoClient!.trim().isNotEmpty) {
-      _cachedClientLogoImg = await _loadAndOptimizeImage(
-        mission.logoClient!,
-        photoContext: PdfPhotoContext.schema,
-        saveFilesToDisk: saveFilesToDisk,
-      );
+      if (!saveFilesToDisk) {
+        _cachedClientLogoImg = _placeholder1x1;
+      } else {
+        try {
+          final resolvedPath = await AppImageUtils.resolvePathAsync(mission.logoClient!.trim());
+          if (resolvedPath != null) {
+            final file = File(resolvedPath);
+            if (await file.exists()) {
+              final bytes = await file.readAsBytes();
+              if (bytes.isNotEmpty) _cachedClientLogoImg = pw.MemoryImage(bytes);
+            }
+          }
+        } catch (_) {}
+      }
     }
 
     if (mission.qrCodeClient != null && mission.qrCodeClient!.trim().isNotEmpty) {
-      _cachedClientQrImg = await _loadAndOptimizeImage(
-        mission.qrCodeClient!,
-        photoContext: PdfPhotoContext.equipmentObs,
-        saveFilesToDisk: saveFilesToDisk,
-      );
+      if (!saveFilesToDisk) {
+        _cachedClientQrImg = _placeholder1x1;
+      } else {
+        try {
+          final resolvedPath = await AppImageUtils.resolvePathAsync(mission.qrCodeClient!.trim());
+          if (resolvedPath != null) {
+            final file = File(resolvedPath);
+            if (await file.exists()) {
+              final bytes = await file.readAsBytes();
+              if (bytes.isNotEmpty) _cachedClientQrImg = pw.MemoryImage(bytes);
+            }
+          }
+        } catch (_) {}
+      }
     }
   }
 
