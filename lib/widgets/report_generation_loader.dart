@@ -159,7 +159,10 @@ class _ReportGenerationLoaderState extends State<ReportGenerationLoader>
   void _handleProgress(double progressRatio, String message) {
     if (!mounted || _isCompleted) return;
     setState(() {
-      _displayPercent = (progressRatio * 100).clamp(0, 99);
+      final double newPercent = (progressRatio * 100).clamp(0, 99);
+      if (newPercent >= _displayPercent) {
+        _displayPercent = newPercent;
+      }
       if (message.isNotEmpty) {
         _currentMessage = message;
       }

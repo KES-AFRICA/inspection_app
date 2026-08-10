@@ -176,6 +176,9 @@ class _MissionDetailScreenState extends State<MissionDetailScreen>
       message: 'Génération du rapport intermédiaire PDF...',
     );
 
+    // Céder la main à l'Event Loop UI pour peindre immédiatement la 1ère frame du dialogue
+    await Future.delayed(Duration.zero);
+
     try {
       final file = await PdfReportService.generateMissionReport(
         _currentMission.id,

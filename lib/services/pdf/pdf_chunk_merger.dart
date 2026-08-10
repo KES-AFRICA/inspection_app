@@ -52,7 +52,7 @@ class PdfMergerService {
       return outputFile;
     }
 
-    onProgress?.call(0.90, 'Fusion binaire du document final (${validChunks.length} sections)...');
+    onProgress?.call(0.96, 'Fusion binaire du document final (${validChunks.length} sections)...');
 
     // Tentative 1 : Moteur natif Android/iOS (pdf_merger)
     if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
@@ -82,7 +82,7 @@ class PdfMergerService {
     }
 
     // Tentative 2 (Fallback) : Fusion séquentielle par micro-lots (max 5 chunks par passe)
-    final tempSubDir = Directory('${outputFile.parent.path}/pdf_merge_temp_${DateTime.now().millisecondsSinceEpoch}');
+    final tempSubDir = Directory('${outputFile.parent.path}/pdf_merge_temp_${DateTime.now().millisecondsSinceEpoch}_${chunkFiles.hashCode}');
     await tempSubDir.create(recursive: true);
 
     List<File> currentLevelChunks = List<File>.from(validChunks);
@@ -104,7 +104,7 @@ class PdfMergerService {
             continue;
           }
 
-          final double stepProgress = 0.90 + (0.08 * (i / currentLevelChunks.length));
+          final double stepProgress = 0.96 + (0.03 * (i / currentLevelChunks.length));
           onProgress?.call(stepProgress, 'Assemblage du lot de sections ${i ~/ effectiveBatchSize + 1}...');
 
           final subBatchFile = File('${tempSubDir.path}/sub_batch_l${levelIndex}_b${i ~/ effectiveBatchSize}.pdf');

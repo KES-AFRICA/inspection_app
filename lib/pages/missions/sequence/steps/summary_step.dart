@@ -107,6 +107,9 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
       message: 'Génération du rapport ${reportType.toUpperCase()} en cours...',
     );
 
+    // Céder la main à l'Event Loop UI pour peindre immédiatement la 1ère frame du dialogue
+    await Future.delayed(Duration.zero);
+
     try {
       File? file;
       String fileName;

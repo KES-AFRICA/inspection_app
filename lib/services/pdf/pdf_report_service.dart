@@ -6948,6 +6948,7 @@ class PdfReportService {
           final photoChunkFile = File('${tempDir.path}/pdf_chunk_photos_${missionId}_$photoChunkIdx.pdf');
           await photoChunkFile.writeAsBytes(chunkBytes);
           chunkFiles.add(photoChunkFile);
+          await Future.delayed(Duration.zero);
         }
         currentOffset += pagesInCurrentChunk;
 
@@ -8235,7 +8236,10 @@ class PdfReportService {
     currentOffset += pdfP1_2.document.pdfPageList.pages.length;
 
     // ── Sub-chunk 1.3 : Résumé exécutif & Analyse statistique ──
-    if (saveFilesToDisk) onProgress?.call(0.28, 'Génération du résumé exécutif et des statistiques...');
+    if (saveFilesToDisk) {
+      onProgress?.call(0.28, 'Génération du résumé exécutif et des statistiques...');
+      await Future.delayed(Duration.zero);
+    }
     
     // Récupération réactive du résumé exécutif (avec Fallback 3 Niveaux)
     final summaryData = await MissionExecutiveSummaryService.getOrGenerateSummary(missionId);
@@ -8268,7 +8272,10 @@ class PdfReportService {
     currentOffset += pdfP1_3.document.pdfPageList.pages.length;
 
     // ── Sub-chunk 1.4 : Renseignements généraux & Description des installations ──
-    if (saveFilesToDisk) onProgress?.call(0.38, 'Génération de la description des installations...');
+    if (saveFilesToDisk) {
+      onProgress?.call(0.38, 'Génération de la description des installations...');
+      await Future.delayed(Duration.zero);
+    }
     final pdfP1_4 = pw.Document(
       title: 'Description Installations - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
@@ -8299,7 +8306,10 @@ class PdfReportService {
 
     // ── Section 6 & 7 : Synthèse Récapitulative et Audit par zone ──
     if (audit != null) {
-      if (saveFilesToDisk) onProgress?.call(0.48, 'Génération de la synthèse récapitulative...');
+      if (saveFilesToDisk) {
+        onProgress?.call(0.48, 'Génération de la synthèse récapitulative...');
+        await Future.delayed(Duration.zero);
+      }
       final recapResult = await _addListeRecapitulativeSectionChunked(
         mission,
         audit,
@@ -8313,7 +8323,10 @@ class PdfReportService {
       if (saveFilesToDisk) allChunkFiles.addAll(recapResult.files);
       currentOffset += recapResult.totalPages;
 
-      if (saveFilesToDisk) onProgress?.call(0.60, 'Audit détaillé des zones MT et BT...');
+      if (saveFilesToDisk) {
+        onProgress?.call(0.60, 'Audit détaillé des zones MT et BT...');
+        await Future.delayed(Duration.zero);
+      }
       final auditResult = await _addAuditSectionChunked(
         mission,
         audit,
@@ -8329,7 +8342,10 @@ class PdfReportService {
     }
 
     // ── Sub-chunk 2.1 : Classement, Foudre, Mesures & Essais, Signatures ──
-    if (saveFilesToDisk) onProgress?.call(0.75, 'Génération du classement, foudre et signatures...');
+    if (saveFilesToDisk) {
+      onProgress?.call(0.75, 'Génération du classement, foudre et signatures...');
+      await Future.delayed(Duration.zero);
+    }
     final pdfP2_1 = pw.Document(
       title: 'Classement & Mesures - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
@@ -8515,10 +8531,14 @@ class PdfReportService {
     PdfProgressCallback? onProgress,
   }) async {
     List<File> allChunkFiles = [];
+    Directory? sessionDir;
     try {
       onProgress?.call(0.02, 'Initialisation des ressources et des polices...');
       await _loadImages();
       await _loadFonts();
+      
+      // Permettre au Thread UI de traiter les callbacks de progression
+      await Future.delayed(Duration.zero);
       
       onProgress?.call(0.05, 'Chargement des données de la mission...');
       final mission = HiveService.getMissionById(missionId);
@@ -8538,10 +8558,15 @@ class PdfReportService {
           : (mission.nomSite ?? '');
       const String numeroRapportDoc = 'KES/IP/VE/2025/001';
 
-      final tempDir = await getTemporaryDirectory();
+      final systemTempDir = await getTemporaryDirectory();
+      final sessionTimestamp = DateTime.now().millisecondsSinceEpoch;
+      sessionDir = Directory('${systemTempDir.path}/pdf_session_${missionId}_$sessionTimestamp');
+      await sessionDir.create(recursive: true);
 
       // ── Passe 1 : Calcul préliminaire de la pagination totale et enregistrement des clés ──
       onProgress?.call(0.10, 'Calcul préliminaire de la pagination et du sommaire...');
+      await Future.delayed(Duration.zero);
+
       final pass1Result = await _generateReportPass(
         mission: mission,
         missionId: missionId,
@@ -8555,7 +8580,7 @@ class PdfReportService {
         currentUser: currentUser,
         nomSiteHeader: nomSiteHeader,
         numeroRapportDoc: numeroRapportDoc,
-        tempDir: tempDir,
+        tempDir: sessionDir,
         saveFilesToDisk: false,
       );
 
@@ -8563,6 +8588,8 @@ class PdfReportService {
 
       // ── Passe 2 : Génération finale avec numérotation Page X / N et enregistrement sur disque ──
       onProgress?.call(0.15, 'Génération des fichiers PDF avec pagination Page / $totalReportPages...');
+      await Future.delayed(Duration.zero);
+
       final pass2Result = await _generateReportPass(
         mission: mission,
         missionId: missionId,
@@ -8576,7 +8603,7 @@ class PdfReportService {
         currentUser: currentUser,
         nomSiteHeader: nomSiteHeader,
         numeroRapportDoc: numeroRapportDoc,
-        tempDir: tempDir,
+        tempDir: sessionDir,
         overrideTotalPages: totalReportPages,
         saveFilesToDisk: true,
         onProgress: onProgress,
@@ -8586,9 +8613,9 @@ class PdfReportService {
 
       // ── Assembly final par fusion binaire ──
       onProgress?.call(0.96, 'Fusion binaire haute performance du document final...');
-      final fileName = 'Rapport_${mission.nomClient}_${_formatDate(DateTime.now())}.pdf'
+      final fileName = 'Rapport_${mission.nomClient}_${_formatDate(DateTime.now())}_$sessionTimestamp.pdf'
           .replaceAll(RegExp(r'[<>:"/\\|?*\s]'), '_');
-      final outputFile = File('${tempDir.path}/$fileName');
+      final outputFile = File('${systemTempDir.path}/$fileName');
 
       final finalPdfFile = await PdfMergerService.mergePdfFiles(
         allChunkFiles,
@@ -8605,11 +8632,18 @@ class PdfReportService {
       }
       return null;
     } finally {
-      // Nettoyage final exhaustif de tous les fichiers chunks temporaires (Fix F11)
+      // Nettoyage final exhaustif de tous les fichiers chunks et du dossier de session temporaire
       for (final chunkFile in allChunkFiles) {
         try {
           if (chunkFile.existsSync()) {
             chunkFile.deleteSync();
+          }
+        } catch (_) {}
+      }
+      if (sessionDir != null) {
+        try {
+          if (await sessionDir.exists()) {
+            await sessionDir.delete(recursive: true);
           }
         } catch (_) {}
       }
