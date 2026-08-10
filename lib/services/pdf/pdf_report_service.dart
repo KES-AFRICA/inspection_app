@@ -319,7 +319,7 @@ class PdfReportService {
     int pageOffset = 0,
     int? overrideTotalPages,
   }) {
-    final double footerHeight = isFirstPage ? 62.0 : 38.0;
+    final double footerHeight = isFirstPage ? 72.0 : 40.0;
     const double descente = kBottomMargin + 40;
 
     final widget = isFirstPage

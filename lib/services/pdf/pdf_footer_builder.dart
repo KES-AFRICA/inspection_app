@@ -18,8 +18,8 @@ class PdfFooterBuilder {
     required pw.Font fontRegular,
     required pw.Font fontBold,
   }) {
-    const double mainBoxHeight = 48.0;
-    const double subFooterHeight = 18.0;
+    const double mainBoxHeight = 52.0;
+    const double subFooterHeight = 20.0;
     const double totalHeight = mainBoxHeight + subFooterHeight;
 
     return pw.Container(
@@ -27,17 +27,17 @@ class PdfFooterBuilder {
       height: totalHeight,
       child: pw.Column(
         children: [
-          // ── Zone Principale : Superposition & Biseau Bleu Inversé (Slant Outwards /) ──
+          // ── Zone Principale : Hauteur Augmentée, Centrage Parfait & Biseau Inversé (/) ──
           pw.Container(
             height: mainBoxHeight,
             width: kFullPageWidth,
             child: pw.Stack(
               children: [
-                // Arrière-plan vectoriel : Bloc Gris en 1er (Bas), Bloc Bleu en 2nd (Haut avec biseau inversé /)
+                // 1. Arrière-plan vectoriel (Gris en bas de y=0 à y=size.y-12, Bleu en haut de y=12 à y=size.y)
                 pw.CustomPaint(
                   size: const PdfPoint(kFullPageWidth, mainBoxHeight),
                   painter: (PdfGraphics canvas, PdfPoint size) {
-                    // 1. Polygon Gris Ardoise (Placé plus bas: de y=0 à y=size.y - 12)
+                    // Polygon Gris Ardoise (y=0 à y=size.y-12)
                     canvas.setFillColor(darkSlateGrey);
                     canvas.moveTo(165, size.y - 12);
                     canvas.lineTo(size.x, size.y - 12);
@@ -45,100 +45,101 @@ class PdfFooterBuilder {
                     canvas.lineTo(190, 0);
                     canvas.fillPath();
 
-                    // 2. Polygon Bleu KES (Forme inversée / : top-right à x=198, bottom-right s'évasant vers la droite à x=224)
+                    // Polygon Bleu KES (Forme inversée / : top-right à x=198, bottom-right évasé à x=224)
                     canvas.setFillColor(kesBlue);
                     canvas.moveTo(0, size.y);
                     canvas.lineTo(198, size.y);
-                    canvas.lineTo(224, 10);
-                    canvas.lineTo(0, 10);
+                    canvas.lineTo(224, 12);
+                    canvas.lineTo(0, 12);
                     canvas.fillPath();
                   },
                 ),
-                // Contenu textuel & icônes parfaitement centrés
-                pw.Positioned.fill(
-                  child: pw.Row(
-                    children: [
-                      // Bloc Bleu Gauche (RCCM & N° Contribuable - Centré horizontalement & verticalement)
-                      pw.Container(
-                        width: 195,
-                        padding: const pw.EdgeInsets.only(left: 12, right: 12, top: 8),
-                        alignment: pw.Alignment.center,
-                        child: pw.Column(
+                // 2. Zone Bleue Textes (Positionnée exactement sur la zone bleue : top=0, bottom=12 -> Centrage Parfait)
+                pw.Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 12,
+                  child: pw.Container(
+                    width: 195,
+                    alignment: pw.Alignment.center,
+                    child: pw.Column(
+                      mainAxisAlignment: pw.MainAxisAlignment.center,
+                      crossAxisAlignment: pw.CrossAxisAlignment.center,
+                      children: [
+                        pw.Text(
+                          'RCCM : RC/DLN/2024/B/051',
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            fontSize: 7.5,
+                            color: PdfColors.white,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                        pw.SizedBox(height: 3),
+                        pw.Text(
+                          'N° contribuable : M022416482134Z',
+                          style: pw.TextStyle(
+                            font: fontBold,
+                            fontSize: 7.5,
+                            color: PdfColors.white,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                // 3. Zone Grise Contacts (Positionnée exactement sur la zone grise : top=12, bottom=0 -> Centrage Parfait)
+                pw.Positioned(
+                  left: 195,
+                  right: 0,
+                  top: 12,
+                  bottom: 0,
+                  child: pw.Container(
+                    padding: const pw.EdgeInsets.only(left: 30, right: 14),
+                    alignment: pw.Alignment.center,
+                    child: pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                      crossAxisAlignment: pw.CrossAxisAlignment.center,
+                      children: [
+                        // Colonne 1 : Tél & Email
+                        pw.Column(
                           mainAxisAlignment: pw.MainAxisAlignment.center,
-                          crossAxisAlignment: pw.CrossAxisAlignment.center,
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
                           children: [
-                            pw.Text(
-                              'RCCM : RC/DLN/2024/B/051',
-                              style: pw.TextStyle(
-                                font: fontBold,
-                                fontSize: 7.5,
-                                color: PdfColors.white,
-                              ),
-                              textAlign: pw.TextAlign.center,
+                            _buildContactItem(
+                              iconType: 1, // Phone
+                              text: '(+237) 6 40 20 38 17 / 6 77 51 08 24',
+                              fontRegular: fontRegular,
                             ),
                             pw.SizedBox(height: 3),
-                            pw.Text(
-                              'N° contribuable : M022416482134Z',
-                              style: pw.TextStyle(
-                                font: fontBold,
-                                fontSize: 7.5,
-                                color: PdfColors.white,
-                              ),
-                              textAlign: pw.TextAlign.center,
+                            _buildContactItem(
+                              iconType: 2, // Email
+                              text: 'contact.cmr@kes-africa.com',
+                              fontRegular: fontRegular,
                             ),
                           ],
                         ),
-                      ),
-                      // Bloc Gris Droit (Contacts déplacés vers la droite & centrés)
-                      pw.Expanded(
-                        child: pw.Container(
-                          padding: const pw.EdgeInsets.only(left: 40, right: 14, top: 4, bottom: 8),
-                          alignment: pw.Alignment.center,
-                          child: pw.Row(
-                            mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
-                            crossAxisAlignment: pw.CrossAxisAlignment.center,
-                            children: [
-                              // Colonne 1 : Tél & Email
-                              pw.Column(
-                                mainAxisAlignment: pw.MainAxisAlignment.center,
-                                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                                children: [
-                                  _buildContactItem(
-                                    iconType: 1, // Phone
-                                    text: '(+237) 6 40 20 38 17 / 6 77 51 08 24',
-                                    fontRegular: fontRegular,
-                                  ),
-                                  pw.SizedBox(height: 3),
-                                  _buildContactItem(
-                                    iconType: 2, // Email
-                                    text: 'contact.cmr@kes-africa.com',
-                                    fontRegular: fontRegular,
-                                  ),
-                                ],
-                              ),
-                              // Colonne 2 : BP & Web
-                              pw.Column(
-                                mainAxisAlignment: pw.MainAxisAlignment.center,
-                                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                                children: [
-                                  _buildContactItem(
-                                    iconType: 3, // Map Pin
-                                    text: 'BP : 4489 Douala-Cameroun',
-                                    fontRegular: fontRegular,
-                                  ),
-                                  pw.SizedBox(height: 3),
-                                  _buildContactItem(
-                                    iconType: 4, // Globe
-                                    text: 'www.kes-africa.com',
-                                    fontRegular: fontRegular,
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
+                        // Colonne 2 : BP & Web
+                        pw.Column(
+                          mainAxisAlignment: pw.MainAxisAlignment.center,
+                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          children: [
+                            _buildContactItem(
+                              iconType: 3, // Map Pin
+                              text: 'BP : 4489 Douala-Cameroun',
+                              fontRegular: fontRegular,
+                            ),
+                            pw.SizedBox(height: 3),
+                            _buildContactItem(
+                              iconType: 4, // Globe
+                              text: 'www.kes-africa.com',
+                              fontRegular: fontRegular,
+                            ),
+                          ],
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],
@@ -173,7 +174,7 @@ class PdfFooterBuilder {
     required pw.Font fontRegular,
     required pw.Font fontBold,
   }) {
-    const double topRowHeight = 20.0;
+    const double topRowHeight = 22.0;
     const double bottomBarHeight = 18.0;
     const double totalHeight = topRowHeight + bottomBarHeight;
 
