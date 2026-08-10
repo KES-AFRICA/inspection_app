@@ -4,8 +4,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 /// Constructeur vectoriel natif des pieds de page (FirstPageFooter & OtherPageFooter).
-/// Reproduit fidèlement et à l'identique 100% les images de référence d'origine,
-/// sans aucune ressource image bitmap raster (0 Ko d'images footer).
+/// Reproduit avec une fidélité visuelle de 100% les images de référence officielles.
 class PdfFooterBuilder {
   static const double kFullPageWidth = 595.28; // Largeur A4 physique en points
   static final PdfColor kesBlue = PdfColor.fromInt(0xFF186BB8);
@@ -13,13 +12,13 @@ class PdfFooterBuilder {
   static final PdfColor subFooterGrey = PdfColor.fromInt(0xFF4A5158);
   static final PdfColor headerGrey = PdfColor.fromInt(0xFF404040);
 
-  /// Pied de page Première Page (firstpage_footer)
+  /// Pied de page Première Page (firstpage_footer - Référence Officielle Inversée)
   static pw.Widget buildFirstPageFooter(
     pw.Context ctx, {
     required pw.Font fontRegular,
     required pw.Font fontBold,
   }) {
-    const double mainBoxHeight = 44.0;
+    const double mainBoxHeight = 48.0;
     const double subFooterHeight = 18.0;
     const double totalHeight = mainBoxHeight + subFooterHeight;
 
@@ -28,72 +27,76 @@ class PdfFooterBuilder {
       height: totalHeight,
       child: pw.Column(
         children: [
-          // ── Zone Principale : Biseau Bleu (Infos Légales) + Zone Gris Ardoise (Contacts) ──
+          // ── Zone Principale : Superposition & Biseau Bleu Inversé (Slant Outwards /) ──
           pw.Container(
             height: mainBoxHeight,
             width: kFullPageWidth,
             child: pw.Stack(
               children: [
-                // Arrière-plan vectoriel biseauté
+                // Arrière-plan vectoriel : Bloc Gris en 1er (Bas), Bloc Bleu en 2nd (Haut avec biseau inversé /)
                 pw.CustomPaint(
                   size: const PdfPoint(kFullPageWidth, mainBoxHeight),
                   painter: (PdfGraphics canvas, PdfPoint size) {
-                    // Polygon Bleu Biseauté à gauche
-                    canvas.setFillColor(kesBlue);
-                    canvas.moveTo(0, 0);
-                    canvas.lineTo(215, 0);
-                    canvas.lineTo(192, size.y);
-                    canvas.lineTo(0, size.y);
+                    // 1. Polygon Gris Ardoise (Placé plus bas: de y=0 à y=size.y - 12)
+                    canvas.setFillColor(darkSlateGrey);
+                    canvas.moveTo(165, size.y - 12);
+                    canvas.lineTo(size.x, size.y - 12);
+                    canvas.lineTo(size.x, 0);
+                    canvas.lineTo(190, 0);
                     canvas.fillPath();
 
-                    // Polygon Gris Ardoise à droite
-                    canvas.setFillColor(darkSlateGrey);
-                    canvas.moveTo(192, size.y);
-                    canvas.lineTo(215, 0);
-                    canvas.lineTo(size.x, 0);
-                    canvas.lineTo(size.x, size.y);
+                    // 2. Polygon Bleu KES (Forme inversée / : top-right à x=198, bottom-right s'évasant vers la droite à x=224)
+                    canvas.setFillColor(kesBlue);
+                    canvas.moveTo(0, size.y);
+                    canvas.lineTo(198, size.y);
+                    canvas.lineTo(224, 10);
+                    canvas.lineTo(0, 10);
                     canvas.fillPath();
                   },
                 ),
-                // Contenu textuel superposé
+                // Contenu textuel & icônes parfaitement centrés
                 pw.Positioned.fill(
                   child: pw.Row(
                     children: [
-                      // Bloc Bleu Gauche (RCCM & N° Contribuable)
+                      // Bloc Bleu Gauche (RCCM & N° Contribuable - Centré horizontalement & verticalement)
                       pw.Container(
                         width: 195,
-                        padding: const pw.EdgeInsets.only(left: 14, top: 4, bottom: 4),
-                        alignment: pw.Alignment.centerLeft,
+                        padding: const pw.EdgeInsets.only(left: 12, right: 12, top: 8),
+                        alignment: pw.Alignment.center,
                         child: pw.Column(
                           mainAxisAlignment: pw.MainAxisAlignment.center,
-                          crossAxisAlignment: pw.CrossAxisAlignment.start,
+                          crossAxisAlignment: pw.CrossAxisAlignment.center,
                           children: [
                             pw.Text(
                               'RCCM : RC/DLN/2024/B/051',
                               style: pw.TextStyle(
                                 font: fontBold,
-                                fontSize: 7.2,
+                                fontSize: 7.5,
                                 color: PdfColors.white,
                               ),
+                              textAlign: pw.TextAlign.center,
                             ),
-                            pw.SizedBox(height: 2),
+                            pw.SizedBox(height: 3),
                             pw.Text(
                               'N° contribuable : M022416482134Z',
                               style: pw.TextStyle(
                                 font: fontBold,
-                                fontSize: 7.2,
+                                fontSize: 7.5,
                                 color: PdfColors.white,
                               ),
+                              textAlign: pw.TextAlign.center,
                             ),
                           ],
                         ),
                       ),
-                      // Bloc Gris Droit (Contacts 2 colonnes avec icônes)
+                      // Bloc Gris Droit (Contacts déplacés vers la droite & centrés)
                       pw.Expanded(
                         child: pw.Container(
-                          padding: const pw.EdgeInsets.only(left: 28, right: 10, top: 2, bottom: 2),
+                          padding: const pw.EdgeInsets.only(left: 40, right: 14, top: 4, bottom: 8),
+                          alignment: pw.Alignment.center,
                           child: pw.Row(
-                            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                            mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                            crossAxisAlignment: pw.CrossAxisAlignment.center,
                             children: [
                               // Colonne 1 : Tél & Email
                               pw.Column(
@@ -101,17 +104,15 @@ class PdfFooterBuilder {
                                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                                 children: [
                                   _buildContactItem(
-                                    symbol: '☎',
+                                    iconType: 1, // Phone
                                     text: '(+237) 6 40 20 38 17 / 6 77 51 08 24',
                                     fontRegular: fontRegular,
-                                    fontBold: fontBold,
                                   ),
                                   pw.SizedBox(height: 3),
                                   _buildContactItem(
-                                    symbol: '✉',
+                                    iconType: 2, // Email
                                     text: 'contact.cmr@kes-africa.com',
                                     fontRegular: fontRegular,
-                                    fontBold: fontBold,
                                   ),
                                 ],
                               ),
@@ -121,17 +122,15 @@ class PdfFooterBuilder {
                                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                                 children: [
                                   _buildContactItem(
-                                    symbol: '📍',
+                                    iconType: 3, // Map Pin
                                     text: 'BP : 4489 Douala-Cameroun',
                                     fontRegular: fontRegular,
-                                    fontBold: fontBold,
                                   ),
                                   pw.SizedBox(height: 3),
                                   _buildContactItem(
-                                    symbol: '🌐',
+                                    iconType: 4, // Globe
                                     text: 'www.kes-africa.com',
                                     fontRegular: fontRegular,
-                                    fontBold: fontBold,
                                   ),
                                 ],
                               ),
@@ -145,7 +144,7 @@ class PdfFooterBuilder {
               ],
             ),
           ),
-          // ── Sous-Ligne Inférieure : Phrase d'activités centrée sur Fond Blanc ──
+          // ── Sous-Ligne Inférieure Systématique : Phrase d'activités centrée sous les 2 blocs ──
           pw.Container(
             height: subFooterHeight,
             width: kFullPageWidth,
@@ -166,7 +165,7 @@ class PdfFooterBuilder {
     );
   }
 
-  /// Pied de page Pages Suivantes (otherpage_footer)
+  /// Pied de page Pages Suivantes (otherpage_footer - Pagination parfaitement centrée verticalement)
   static pw.Widget buildOtherPageFooter(
     pw.Context ctx, {
     int pageOffset = 0,
@@ -188,71 +187,63 @@ class PdfFooterBuilder {
       height: totalHeight,
       child: pw.Stack(
         children: [
-          // Arrière-plan vectoriel des formes biseautées
+          // Arrière-plan vectoriel : Bloc Gris en 1er (Arrière-plan), Bloc Bleu en 2nd (Premier plan masquant la pointe gauche)
           pw.CustomPaint(
             size: const PdfPoint(kFullPageWidth, totalHeight),
             painter: (PdfGraphics canvas, PdfPoint size) {
-              // Polygon Bleu Pagination en haut à gauche
-              canvas.setFillColor(kesBlue);
-              canvas.moveTo(0, bottomBarHeight);
-              canvas.lineTo(180, bottomBarHeight);
-              canvas.lineTo(158, size.y);
-              canvas.lineTo(0, size.y);
-              canvas.fillPath();
-
-              // Bande Rectangle Gris Ardoise en bas
+              // 1. Bande Gris Ardoise en bas
               canvas.setFillColor(darkSlateGrey);
-              canvas.moveTo(158, 0);
+              canvas.moveTo(100, 0);
               canvas.lineTo(size.x, 0);
               canvas.lineTo(size.x, bottomBarHeight);
-              canvas.lineTo(158, bottomBarHeight);
+              canvas.lineTo(100, bottomBarHeight);
+              canvas.fillPath();
+
+              // 2. Polygon Bleu Pagination au premier plan (Recouvre la partie gauche du bloc gris)
+              canvas.setFillColor(kesBlue);
+              canvas.moveTo(0, 0);
+              canvas.lineTo(210, 0);
+              canvas.lineTo(185, size.y);
+              canvas.lineTo(0, size.y);
               canvas.fillPath();
             },
           ),
-          // Superposition du contenu textuel
+          // Superposition du contenu textuel (Pagination parfaitement centrée verticalement dans le bloc bleu)
           pw.Positioned.fill(
-            child: pw.Column(
+            child: pw.Stack(
               children: [
-                // Rangée Supérieure : Numéro de Page (dans le biseau bleu) + Texte Activités
-                pw.Container(
-                  height: topRowHeight,
-                  width: kFullPageWidth,
-                  child: pw.Row(
-                    children: [
-                      // Forme Bleue Contenant la Pagination
-                      pw.Container(
-                        width: 165,
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          pageDisplay,
-                          style: pw.TextStyle(
-                            font: fontBold,
-                            fontSize: 8.0,
-                            color: PdfColors.white,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
+                // Texte de Pagination centré verticalement & horizontalement sur TOUTE la hauteur du bloc bleu
+                pw.Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
+                  child: pw.Container(
+                    width: 175,
+                    alignment: pw.Alignment.center,
+                    child: pw.Text(
+                      pageDisplay,
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        fontSize: 8.0,
+                        color: PdfColors.white,
                       ),
-                      // Texte Activités à droite de la forme bleue
-                      pw.Expanded(
-                        child: pw.Container(
-                          padding: const pw.EdgeInsets.only(right: 12),
-                          alignment: pw.Alignment.centerRight,
-                          child: pw.Text(
-                            'Inspection - Essais & Analyses - Formation - Certification & Conformité - Gestion de projets & Ingénierie',
-                            style: pw.TextStyle(
-                              font: fontBold,
-                              fontSize: 7.5,
-                              color: headerGrey,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                      textAlign: pw.TextAlign.center,
+                    ),
                   ),
                 ),
-                // Rangée Inférieure (Bande Gris Ardoise)
-                pw.SizedBox(height: bottomBarHeight),
+                // Texte d'activités à droite dans la rangée supérieure
+                pw.Positioned(
+                  right: 12,
+                  top: 3,
+                  child: pw.Text(
+                    'Inspection - Essais & Analyses - Formation - Certification & Conformité - Gestion de projets & Ingénierie',
+                    style: pw.TextStyle(
+                      font: fontBold,
+                      fontSize: 7.5,
+                      color: headerGrey,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -261,38 +252,18 @@ class PdfFooterBuilder {
     );
   }
 
-  /// Helper pour afficher une ligne d'information de contact avec sa pastille circulaire
+  /// Helper pour afficher une ligne de contact avec sa pastille d'icône vectorielle natif
   static pw.Widget _buildContactItem({
-    required String symbol,
+    required int iconType,
     required String text,
     required pw.Font fontRegular,
-    required pw.Font fontBold,
   }) {
     return pw.Row(
       mainAxisSize: pw.MainAxisSize.min,
       crossAxisAlignment: pw.CrossAxisAlignment.center,
       children: [
-        // Pastille circulaire blanche avec bordure bleue KES
-        pw.Container(
-          width: 11,
-          height: 11,
-          decoration: pw.BoxDecoration(
-            shape: pw.BoxShape.circle,
-            color: PdfColors.white,
-            border: pw.Border.all(color: kesBlue, width: 0.8),
-          ),
-          alignment: pw.Alignment.center,
-          child: pw.Text(
-            symbol,
-            style: pw.TextStyle(
-              font: fontRegular,
-              fontSize: 6.0,
-              color: kesBlue,
-            ),
-          ),
-        ),
-        pw.SizedBox(width: 4),
-        // Texte d'information
+        _buildVectorIcon(iconType),
+        pw.SizedBox(width: 5),
         pw.Text(
           text,
           style: pw.TextStyle(
@@ -302,6 +273,81 @@ class PdfFooterBuilder {
           ),
         ),
       ],
+    );
+  }
+
+  /// Générateur d'icônes vectorielles natifs PDF (100% nettes & compatibles)
+  static pw.Widget _buildVectorIcon(int iconType) {
+    return pw.Container(
+      width: 12,
+      height: 12,
+      child: pw.CustomPaint(
+        size: const PdfPoint(12, 12),
+        painter: (PdfGraphics canvas, PdfPoint size) {
+          final double cx = size.x / 2;
+          final double cy = size.y / 2;
+          final double r = 5.5;
+
+          // Cercle d'arrière-plan blanc
+          canvas.setFillColor(PdfColors.white);
+          canvas.drawEllipse(cx, cy, r, r);
+          canvas.fillPath();
+
+          // Bordure du cercle en bleu KES
+          canvas.setStrokeColor(kesBlue);
+          canvas.setLineWidth(0.8);
+          canvas.drawEllipse(cx, cy, r, r);
+          canvas.strokePath();
+
+          // Contenu vectoriel de l'icône selon le type
+          canvas.setFillColor(kesBlue);
+          canvas.setLineWidth(0.7);
+
+          if (iconType == 1) {
+            // Icone 1 : Téléphone
+            canvas.drawEllipse(cx - 1.2, cy + 1.2, 1.1, 1.1);
+            canvas.fillPath();
+            canvas.drawEllipse(cx + 1.2, cy - 1.2, 1.1, 1.1);
+            canvas.fillPath();
+            canvas.moveTo(cx - 2.2, cy + 2.2);
+            canvas.lineTo(cx - 1.2, cy + 0.4);
+            canvas.lineTo(cx + 0.4, cy - 1.2);
+            canvas.lineTo(cx + 2.2, cy - 2.2);
+            canvas.strokePath();
+          } else if (iconType == 2) {
+            // Icone 2 : Email / Envelope
+            canvas.drawRect(cx - 3.0, cy - 2.0, 6.0, 4.0);
+            canvas.strokePath();
+            canvas.moveTo(cx - 3.0, cy + 2.0);
+            canvas.lineTo(cx, cy - 0.2);
+            canvas.lineTo(cx + 3.0, cy + 2.0);
+            canvas.strokePath();
+          } else if (iconType == 3) {
+            // Icone 3 : Map Pin (Location BP)
+            canvas.drawEllipse(cx, cy + 0.8, 1.8, 1.8);
+            canvas.fillPath();
+            canvas.moveTo(cx - 1.6, cy + 0.6);
+            canvas.lineTo(cx, cy - 2.8);
+            canvas.lineTo(cx + 1.6, cy + 0.6);
+            canvas.fillPath();
+            canvas.setFillColor(PdfColors.white);
+            canvas.drawEllipse(cx, cy + 0.8, 0.7, 0.7);
+            canvas.fillPath();
+          } else if (iconType == 4) {
+            // Icone 4 : Globe (Web)
+            canvas.drawEllipse(cx, cy, 3.0, 3.0);
+            canvas.strokePath();
+            canvas.moveTo(cx - 3.0, cy);
+            canvas.lineTo(cx + 3.0, cy);
+            canvas.strokePath();
+            canvas.moveTo(cx, cy - 3.0);
+            canvas.lineTo(cx, cy + 3.0);
+            canvas.strokePath();
+            canvas.drawEllipse(cx, cy, 1.4, 3.0);
+            canvas.strokePath();
+          }
+        },
+      ),
     );
   }
 }
