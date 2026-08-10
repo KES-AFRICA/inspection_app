@@ -97,6 +97,8 @@ void main() {
     final currentUserBox = await Hive.openBox('current_user');
     await Hive.openBox<RenseignementsGeneraux>('renseignements_generaux');
     await Hive.openBox<ClassementZone>('classement_zones');
+    await Hive.openBox<JSA>('jsa');
+    await Hive.openBox<LastReport>('last_reports');
 
     final verificateur = Verificateur(
       id: 'v1',

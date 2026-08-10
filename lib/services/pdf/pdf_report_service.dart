@@ -28,6 +28,23 @@ import '../ai/mission_executive_summary_service.dart';
 
 typedef PdfProgressCallback = void Function(double progress, String statusMessage);
 
+/// Contexte d'affichage de photo pour l'optimisation adaptative de résolution et de qualité.
+enum PdfPhotoContext {
+  /// Grille photo 2x2 (Pages photographies dédiées)
+  grid2x2(maxWidth: 500, maxHeight: 375, quality: 60),
+
+  /// Photos d'équipements, coffrets, armoires et constats d'observations
+  equipmentObs(maxWidth: 320, maxHeight: 240, quality: 55),
+
+  /// Schémas d'exploitation, diagrammes et illustrations pleine largeur
+  schema(maxWidth: 800, maxHeight: 600, quality: 70);
+
+  final int maxWidth;
+  final int maxHeight;
+  final int quality;
+  const PdfPhotoContext({required this.maxWidth, required this.maxHeight, required this.quality});
+}
+
 // ================================================================
 //  PdfReportService
 // ================================================================
@@ -6468,24 +6485,51 @@ class PdfReportService {
     );
   }
 
-
+  static final pw.MemoryImage _placeholder1x1 = pw.MemoryImage(
+    Uint8List.fromList(<int>[
+      0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x0D,
+      0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+      0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, 0xC4, 0x89, 0x00, 0x00, 0x00,
+      0x0A, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00,
+      0x05, 0x00, 0x01, 0x0D, 0x0A, 0x2D, 0xB4, 0x00, 0x00, 0x00, 0x00, 0x49,
+      0x45, 0x4E, 0x44, 0xAE, 0x42, 0x60, 0x82
+    ]),
+  );
 
   static Future<pw.MemoryImage?> loadAndOptimizeImage(
     String path, {
-    int maxWidth = 600,
-    int maxHeight = 800,
-    int quality = 65,
+    PdfPhotoContext photoContext = PdfPhotoContext.equipmentObs,
+    int? maxWidth,
+    int? maxHeight,
+    int? quality,
+    bool saveFilesToDisk = true,
   }) =>
-      _loadAndOptimizeImage(path, maxWidth: maxWidth, maxHeight: maxHeight, quality: quality);
+      _loadAndOptimizeImage(
+        path,
+        photoContext: photoContext,
+        maxWidth: maxWidth,
+        maxHeight: maxHeight,
+        quality: quality,
+        saveFilesToDisk: saveFilesToDisk,
+      );
 
   static Future<pw.MemoryImage?> _loadAndOptimizeImage(
     String path, {
-    int maxWidth = 600,
-    int maxHeight = 800,
-    int quality = 65,
+    PdfPhotoContext photoContext = PdfPhotoContext.equipmentObs,
+    int? maxWidth,
+    int? maxHeight,
+    int? quality,
+    bool saveFilesToDisk = true,
   }) async {
+    // ── Passe 1 (Pagination) : Utilisation du Placeholder 1x1 ultra-rapide (Zero-Load) ──
+    if (!saveFilesToDisk) return _placeholder1x1;
+
     final trimmed = path.trim();
     if (trimmed.isEmpty) return null;
+
+    final targetWidth = maxWidth ?? photoContext.maxWidth;
+    final targetHeight = maxHeight ?? photoContext.maxHeight;
+    final targetQuality = quality ?? photoContext.quality;
 
     try {
       final resolvedPath = await AppImageUtils.resolvePathAsync(trimmed);
@@ -6495,7 +6539,7 @@ class PdfReportService {
 
       // ── Cache Disque de la Photo Optimisée (Évite les décodages Skia natifs répétés) ──
       final tempDir = await getTemporaryDirectory();
-      final cacheFileName = 'img_cache_${resolvedPath.hashCode}_${maxWidth}_${maxHeight}_$quality.jpg';
+      final cacheFileName = 'img_cache_${resolvedPath.hashCode}_${targetWidth}_${targetHeight}_$targetQuality.jpg';
       final cacheFile = File('${tempDir.path}/$cacheFileName');
 
       if (await cacheFile.exists()) {
@@ -6510,11 +6554,11 @@ class PdfReportService {
       try {
         final compressedBytes = await FlutterImageCompress.compressWithFile(
           file.absolute.path,
-          minWidth: maxWidth,
-          minHeight: maxHeight,
-          quality: quality,
+          minWidth: targetWidth,
+          minHeight: targetHeight,
+          quality: targetQuality,
           format: CompressFormat.jpeg,
-        );
+        ).timeout(const Duration(seconds: 2));
         if (compressedBytes != null && compressedBytes.isNotEmpty) {
           try {
             await cacheFile.writeAsBytes(compressedBytes);
@@ -6968,11 +7012,11 @@ class PdfReportService {
       final pageGroup = generalPhotos.sublist(gi, (gi + 4).clamp(0, generalPhotos.length));
       final pageImgs = <pw.MemoryImage?>[];
       for (final entry in pageGroup) {
-        if (saveFilesToDisk) {
-          pageImgs.add(await _loadAndOptimizeImage(entry.filePath, maxWidth: 600, maxHeight: 800, quality: 65));
-        } else {
-          pageImgs.add(null);
-        }
+        pageImgs.add(await _loadAndOptimizeImage(
+          entry.filePath,
+          photoContext: PdfPhotoContext.grid2x2,
+          saveFilesToDisk: saveFilesToDisk,
+        ));
       }
 
       final startPhotoNum = globalPhotoCounter;
@@ -7052,24 +7096,32 @@ class PdfReportService {
     }
 
     for (var group in activeEquipmentGroups) {
-      // Charger l'image extérieure et intérieure uniquement en Passe 2 (saveFilesToDisk == true)
+      // Charger l'image extérieure et intérieure avec le contexte adaptatif
       pw.MemoryImage? extImg;
-      if (group.extPhoto != null && saveFilesToDisk) {
-        extImg = await _loadAndOptimizeImage(group.extPhoto!.filePath, maxWidth: 600, maxHeight: 800, quality: 65);
+      if (group.extPhoto != null) {
+        extImg = await _loadAndOptimizeImage(
+          group.extPhoto!.filePath,
+          photoContext: PdfPhotoContext.equipmentObs,
+          saveFilesToDisk: saveFilesToDisk,
+        );
       }
       pw.MemoryImage? intImg;
-      if (group.intPhoto != null && saveFilesToDisk) {
-        intImg = await _loadAndOptimizeImage(group.intPhoto!.filePath, maxWidth: 600, maxHeight: 800, quality: 65);
+      if (group.intPhoto != null) {
+        intImg = await _loadAndOptimizeImage(
+          group.intPhoto!.filePath,
+          photoContext: PdfPhotoContext.equipmentObs,
+          saveFilesToDisk: saveFilesToDisk,
+        );
       }
 
-      // Charger les images d'observations uniquement en Passe 2 (saveFilesToDisk == true)
+      // Charger les images d'observations avec le contexte adaptatif
       final obsImgs = <pw.MemoryImage?>[];
       for (var obs in group.obsPhotos) {
-        if (saveFilesToDisk) {
-          obsImgs.add(await _loadAndOptimizeImage(obs.filePath, maxWidth: 600, maxHeight: 800, quality: 65));
-        } else {
-          obsImgs.add(null);
-        }
+        obsImgs.add(await _loadAndOptimizeImage(
+          obs.filePath,
+          photoContext: PdfPhotoContext.equipmentObs,
+          saveFilesToDisk: saveFilesToDisk,
+        ));
       }
 
       final extCellNum = group.extPhoto != null ? globalPhotoCounter++ : null;
@@ -7715,7 +7767,11 @@ class PdfReportService {
       for (final src in [...c.photosInternes, ...c.photos, ...c.photosExternes]) {
         final trimmed = src.trim();
         if (trimmed.isEmpty) continue;
-        final img = await _loadAndOptimizeImage(trimmed, maxWidth: 400, maxHeight: 300, quality: 60);
+        final img = await _loadAndOptimizeImage(
+          trimmed,
+          photoContext: PdfPhotoContext.equipmentObs,
+          saveFilesToDisk: loadImages,
+        );
         if (img != null) {
           cache[c] = img;
           break;
@@ -8623,6 +8679,11 @@ class PdfReportService {
         deleteChunksAfterMerge: false,
         onProgress: onProgress,
       );
+
+      if (kDebugMode && await finalPdfFile.exists()) {
+        final double sizeMb = (await finalPdfFile.length()) / (1024 * 1024);
+        print('⚡ [PDF Compression] Rapport généré avec succès avec compression adaptative : ${sizeMb.toStringAsFixed(2)} Mo ($totalReportPages pages)');
+      }
 
       onProgress?.call(1.0, 'Génération du rapport terminée avec succès.');
       return finalPdfFile;
