@@ -167,14 +167,46 @@ class PdfReportService {
     ],
   };
 
-  /// Charge toutes les images necessaires (appele une seule fois sans compression native)
+  /// Charge toutes les images necessaires avec compression adaptative des assets statiques
   static Future<void> _loadImages() async {
     if (_imagesLoaded) return;
     
-    Future<pw.MemoryImage?> tryLoad(String asset) async {
+    Future<pw.MemoryImage?> tryLoad(
+      String asset, {
+      int targetWidth = 500,
+      int targetQuality = 70,
+    }) async {
       try {
         final data = await rootBundle.load(asset);
         final bytes = data.buffer.asUint8List();
+        if (bytes.isEmpty) return null;
+
+        try {
+          final tempDir = await getTemporaryDirectory();
+          final cacheFile = File('${tempDir.path}/asset_${asset.hashCode}_${targetWidth}_$targetQuality.jpg');
+          if (await cacheFile.exists()) {
+            final cachedBytes = await cacheFile.readAsBytes();
+            if (cachedBytes.isNotEmpty) return pw.MemoryImage(cachedBytes);
+          }
+
+          final tempAssetFile = File('${tempDir.path}/raw_asset_${asset.hashCode}.png');
+          await tempAssetFile.writeAsBytes(bytes);
+
+          final compressedBytes = await FlutterImageCompress.compressWithFile(
+            tempAssetFile.absolute.path,
+            minWidth: targetWidth,
+            quality: targetQuality,
+            format: CompressFormat.jpeg,
+          ).timeout(const Duration(seconds: 2));
+
+          if (compressedBytes != null && compressedBytes.isNotEmpty) {
+            try {
+              await cacheFile.writeAsBytes(compressedBytes);
+            } catch (_) {}
+            return pw.MemoryImage(compressedBytes);
+          }
+        } catch (_) {}
+
         return pw.MemoryImage(bytes);
       } catch (e) {
         if (kDebugMode) print('Image non trouvee: $asset');
@@ -182,14 +214,14 @@ class PdfReportService {
       }
     }
     
-    _watermarkImage       = await tryLoad('assets/images/filigranne_image.png');
-    _firstPageFooterImage = await tryLoad('assets/images/firstpage_footer.png');
-    _otherPageFooterImage = await tryLoad('assets/images/otherpage_footer.png');
-    _logoKesImage         = await tryLoad('assets/images/logo.png');
-    _imgHabilitation      = await tryLoad('assets/images/image.png');
-    _imgAccesGauche       = await tryLoad('assets/images/image copy.png');
-    _imgAccesDroite1      = await tryLoad('assets/images/image copy 2.png');
-    _imgAccesDroite2      = await tryLoad('assets/images/image copy 3.png');
+    _watermarkImage       = await tryLoad('assets/images/filigranne_image.png', targetWidth: 600, targetQuality: 70);
+    _firstPageFooterImage = await tryLoad('assets/images/firstpage_footer.png', targetWidth: 600, targetQuality: 70);
+    _otherPageFooterImage = await tryLoad('assets/images/otherpage_footer.png', targetWidth: 600, targetQuality: 70);
+    _logoKesImage         = await tryLoad('assets/images/logo.png', targetWidth: 400, targetQuality: 75);
+    _imgHabilitation      = await tryLoad('assets/images/image.png', targetWidth: 500, targetQuality: 70);
+    _imgAccesGauche       = await tryLoad('assets/images/image copy.png', targetWidth: 400, targetQuality: 70);
+    _imgAccesDroite1      = await tryLoad('assets/images/image copy 2.png', targetWidth: 400, targetQuality: 70);
+    _imgAccesDroite2      = await tryLoad('assets/images/image copy 3.png', targetWidth: 400, targetQuality: 70);
     
     _imagesLoaded = true;
   }
@@ -396,6 +428,30 @@ class PdfReportService {
   //  PAGE DE COUVERTURE
   // ──────────────────────────────────────────────────────────────
   
+  static pw.MemoryImage? _cachedClientLogoImg;
+  static pw.MemoryImage? _cachedClientQrImg;
+
+  static Future<void> _preloadCoverImages(Mission mission, {required bool saveFilesToDisk}) async {
+    _cachedClientLogoImg = null;
+    _cachedClientQrImg = null;
+
+    if (mission.logoClient != null && mission.logoClient!.trim().isNotEmpty) {
+      _cachedClientLogoImg = await _loadAndOptimizeImage(
+        mission.logoClient!,
+        photoContext: PdfPhotoContext.schema,
+        saveFilesToDisk: saveFilesToDisk,
+      );
+    }
+
+    if (mission.qrCodeClient != null && mission.qrCodeClient!.trim().isNotEmpty) {
+      _cachedClientQrImg = await _loadAndOptimizeImage(
+        mission.qrCodeClient!,
+        photoContext: PdfPhotoContext.equipmentObs,
+        saveFilesToDisk: saveFilesToDisk,
+      );
+    }
+  }
+
   static pw.Widget _buildCoverPage(
       Mission mission, RenseignementsGeneraux? rg, pw.Context ctx,
       {String? subTitleOverride}) {
@@ -410,8 +466,8 @@ class PdfReportService {
       dateIntervention = '';
     }
 
-    pw.MemoryImage? clientLogoMemoryImg;
-    if (mission.logoClient != null && mission.logoClient!.isNotEmpty) {
+    pw.MemoryImage? clientLogoMemoryImg = _cachedClientLogoImg;
+    if (clientLogoMemoryImg == null && mission.logoClient != null && mission.logoClient!.isNotEmpty) {
       final logoFile = File(mission.logoClient!);
       if (logoFile.existsSync()) {
         try {
@@ -423,8 +479,8 @@ class PdfReportService {
       }
     }
 
-    pw.MemoryImage? clientQrMemoryImg;
-    if (mission.qrCodeClient != null && mission.qrCodeClient!.isNotEmpty) {
+    pw.MemoryImage? clientQrMemoryImg = _cachedClientQrImg;
+    if (clientQrMemoryImg == null && mission.qrCodeClient != null && mission.qrCodeClient!.isNotEmpty) {
       final qrFile = File(mission.qrCodeClient!);
       if (qrFile.existsSync()) {
         try {
@@ -8031,6 +8087,8 @@ class PdfReportService {
   }) async {
     final allChunkFiles = <File>[];
     final trackedPages = <String, int>{};
+
+    await _preloadCoverImages(mission, saveFilesToDisk: saveFilesToDisk);
 
     final sommaireEntries = _collectSommaireEntries(
       mission: mission,
