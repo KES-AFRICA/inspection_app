@@ -19,6 +19,7 @@ import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:inspec_app/services/pdf/pdf_chunk_merger.dart';
+import 'package:inspec_app/services/pdf/pdf_footer_builder.dart';
 import '../dispositions_constructives_registry.dart';
 import '../statistics/mission_statistics_collector.dart';
 import '../statistics/audit_finding.dart';
@@ -298,57 +299,43 @@ class PdfReportService {
     );
   }
 
-  // Footer bord à bord physique
+  // Footer bord à bord physique vectoriel natif
   static pw.Widget _buildFooterAbsolute({
     required bool isFirstPage,
     required pw.Context ctx,
     int pageOffset = 0,
     int? overrideTotalPages,
   }) {
-    final footerImg = isFirstPage ? _firstPageFooterImage : _otherPageFooterImage;
-    final double footerImgHeight = isFirstPage ? 80.0 : 50.0;
+    final double footerHeight = isFirstPage ? 62.0 : 38.0;
     const double descente = kBottomMargin + 40;
 
-    final pageNum = ctx.pageNumber + pageOffset;
-    final String pageDisplay = (overrideTotalPages != null)
-        ? 'Page $pageNum / $overrideTotalPages'
-        : 'Page $pageNum';
+    final widget = isFirstPage
+        ? PdfFooterBuilder.buildFirstPageFooter(
+            ctx,
+            fontRegular: _fontRegular,
+            fontBold: _fontBold,
+          )
+        : PdfFooterBuilder.buildOtherPageFooter(
+            ctx,
+            pageOffset: pageOffset,
+            overrideTotalPages: overrideTotalPages,
+            fontRegular: _fontRegular,
+            fontBold: _fontBold,
+          );
 
     return pw.Stack(
       overflow: pw.Overflow.visible,
       children: [
         pw.Positioned(
           bottom: -descente,
-          left:  -kLeftMargin,
+          left: -kLeftMargin,
           right: -kRightMargin,
           child: pw.SizedBox(
-            height: footerImgHeight,
+            height: footerHeight,
             width: PdfPageFormat.a4.width,
-            child: footerImg != null
-                ? pw.Image(footerImg, fit: pw.BoxFit.fill)
-                : pw.Container(
-                    color: PdfColors.blueGrey800,
-                    child: pw.Center(
-                      child: pw.Text('FOOTER MANQUANT',
-                          style: pw.TextStyle(color: PdfColors.white, fontSize: 8)),
-                    ),
-                  ),
+            child: widget,
           ),
         ),
-        if (!isFirstPage)
-          pw.Positioned(
-            bottom: -descente + 20,
-            left:   -kLeftMargin + kLeftMargin,
-            child: pw.Text(
-              pageDisplay,
-              style: pw.TextStyle(
-                font: _fontRegular,
-                fontSize: 7.5,
-                color: PdfColors.white,
-                fontWeight: pw.FontWeight.bold,
-              ),
-            ),
-          ),
       ],
     );
   }
