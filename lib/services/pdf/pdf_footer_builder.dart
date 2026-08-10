@@ -232,10 +232,10 @@ class PdfFooterBuilder {
                     ),
                   ),
                 ),
-                // Texte d'activités à droite dans la rangée supérieure
+                // Texte d'activités à droite dans la rangée supérieure (déplacé plus bas et plus à gauche)
                 pw.Positioned(
-                  right: 12,
-                  top: 3,
+                  right: 27,
+                  top: 8,
                   child: pw.Text(
                     'Inspection - Essais & Analyses - Formation - Certification & Conformité - Gestion de projets & Ingénierie',
                     style: pw.TextStyle(
