@@ -105,11 +105,11 @@ class PdfReportService {
   static const Map<String, List<String>> _columnOrderBySection = {
     'MT': [
       'TYPE DE CELLULE',
+      'TENSION DE SERVICE (kV)',
       'TENSION ASSIGNEE(KV)',
       'POUVOIR DE COUPURE ASSIGNE(KA)',
       'SECTION DU CABLE(mm2)',
       'NATURE DU RESEAU',
-      'OBSERVATIONS',
     ],
     'BT': [
       'PUISSANCE TRANSFORMATEUR (KVA)',
@@ -3002,6 +3002,9 @@ class PdfReportService {
       'INTENSITE': 'A',
       'Tension assignée': 'kV',
       'TENSION ASSIGNEE(KV)': 'kV',
+      'Tension de service': 'kV',
+      'TENSION DE SERVICE': 'kV',
+      'TENSION DE SERVICE (KV)': 'kV',
       'Tension': 'V',
       'TENSION': 'V',
       'PCC amont': 'MVA',
@@ -4501,11 +4504,25 @@ class PdfReportService {
       children: [
         tableDataRowInfo('Fonction de la cellule', safe(cellule.fonction), alt: false),
         tableDataRowInfo('Type de cellule', safe(cellule.type), alt: false),
+        tableDataRowInfo('Gamme de la cellule', safe(cellule.gamme ?? ''), alt: false),
         tableDataRowInfo('Marque / modèle / année', safe(cellule.marqueModeleAnnee), alt: false),
-        tableDataRowInfo('Tension assignée', safe(cellule.tensionAssignee), alt: false),
+        tableDataRowInfo('Tension assignée (kV)', safe(cellule.tensionAssignee), alt: false),
         tableDataRowInfo('Pouvoir de coupure assigné (kA)', safe(cellule.pouvoirCoupure), alt: false),
+        tableDataRowInfo('Calibre du disjoncteur (A)', safe(cellule.calibreDisjoncteur ?? ''), alt: false),
+        tableDataRowInfo('Section des câbles (mm²)', safe(cellule.sectionCables ?? ''), alt: false),
+        tableDataRowInfo('Nature du réseau', safe(cellule.natureReseau ?? ''), alt: false),
+        tableDataRowInfo('Présence IACM', safe(cellule.presenceIacm ?? ''), alt: false),
         tableDataRowInfo('Numérotation / repérage cellule', safe(cellule.numerotation), alt: false),
         tableDataRowInfo("Parafoudres installés sur l'arrivée", safe(cellule.parafoudres), alt: false),
+        if (cellule.observations != null && cellule.observations!.isNotEmpty)
+          tableDataRowInfo(
+            'Observations',
+            safe(cellule.observations!
+                .map((o) => (o.observation != null && o.observation!.isNotEmpty) ? o.observation! : o.elementControle)
+                .where((s) => s.isNotEmpty)
+                .join(', ')),
+            alt: false,
+          ),
       ],
     );
 
@@ -4739,12 +4756,29 @@ class PdfReportService {
       },
       children: [
         tableDataRowInfo('Type de transformateur', safe(transfo.typeTransformateur), alt: false),
-        tableDataRowInfo('Marque/ Année de fabrication', safe(transfo.marqueAnnee), alt: false),
+        tableDataRowInfo('Marque / Année de fabrication', safe(transfo.marqueAnnee), alt: false),
         tableDataRowInfo('Puissance assignée (kVA)', safe(transfo.puissanceAssignee), alt: false),
         tableDataRowInfo('Tension primaire / secondaire', safe(transfo.tensionPrimaireSecondaire), alt: false),
+        tableDataRowInfo('Intensité nominale (A)', safe(transfo.intensiteNominale ?? ''), alt: false),
+        tableDataRowInfo('Calibre du disjoncteur sortie transformateur (A)', safe(transfo.calibreDisjoncteur ?? ''), alt: false),
+        tableDataRowInfo('Section des câbles (mm²)', safe(transfo.sectionCables ?? ''), alt: false),
+        tableDataRowInfo('Couplage', safe(transfo.couplage ?? ''), alt: false),
+        tableDataRowInfo('Type de réseau', safe(transfo.typeReseau ?? ''), alt: false),
+        tableDataRowInfo('PCC amont (MVA)', safe(transfo.pccAmont ?? ''), alt: false),
+        tableDataRowInfo('Puissance UCC (%)', safe(transfo.puissanceUcc ?? ''), alt: false),
+        tableDataRowInfo('IK3 MAX (kA)', safe(transfo.ik3Max ?? ''), alt: false),
         tableDataRowInfo('Présence du relais Buchholz', safe(transfo.relaisBuchholz), alt: false),
         tableDataRowInfo('Type de refroidissement', safe(transfo.typeRefroidissement), alt: false),
         tableDataRowInfo('Régime du neutre', safe(transfo.regimeNeutre), alt: false),
+        if (transfo.observations != null && transfo.observations!.isNotEmpty)
+          tableDataRowInfo(
+            'Observations',
+            safe(transfo.observations!
+                .map((o) => (o.observation != null && o.observation!.isNotEmpty) ? o.observation! : o.elementControle)
+                .where((s) => s.isNotEmpty)
+                .join(', ')),
+            alt: false,
+          ),
       ],
     );
 

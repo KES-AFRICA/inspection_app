@@ -23,6 +23,8 @@ class InstallationDescriptionSyncService {
     normalizeKey('Type de cellule'): InstallationFieldsRegistry.keyTypeCellule,
     normalizeKey(InstallationFieldsRegistry.keyTensionAssignee): InstallationFieldsRegistry.keyTensionAssignee,
     normalizeKey(InstallationFieldsRegistry.keyTensionAssigneeMT): InstallationFieldsRegistry.keyTensionAssigneeMT,
+    normalizeKey(InstallationFieldsRegistry.keyTensionDeServiceMT): InstallationFieldsRegistry.keyTensionDeServiceMT,
+    normalizeKey('Tension de service'): InstallationFieldsRegistry.keyTensionDeServiceMT,
     normalizeKey(InstallationFieldsRegistry.keyPouvoirCoupure): InstallationFieldsRegistry.keyPouvoirCoupure,
     normalizeKey('POUVOIR DE COUPURE ASSIGNE(KA)'): InstallationFieldsRegistry.keyPouvoirCoupure,
     normalizeKey(InstallationFieldsRegistry.keyCalibreDisjoncteurMT): InstallationFieldsRegistry.keyCalibreDisjoncteurMT,
@@ -284,6 +286,9 @@ class InstallationDescriptionSyncService {
       String valTensionAssignee = cellule.tensionAssignee.isNotEmpty
           ? cellule.tensionAssignee
           : getFieldWithAlias(existingData, 'TENSION ASSIGNEE(KV)', _celluleAliases);
+      String valTensionService = (cellule.tensionService != null && cellule.tensionService!.isNotEmpty)
+          ? cellule.tensionService!
+          : getFieldWithAlias(existingData, 'Tension de service', _celluleAliases);
       String valPouvoirCoupure = cellule.pouvoirCoupure.isNotEmpty
           ? cellule.pouvoirCoupure
           : getFieldWithAlias(existingData, 'POUVOIR DE COUPURE ASSIGNE(KA)', _celluleAliases);
@@ -303,6 +308,7 @@ class InstallationDescriptionSyncService {
         'TYPE DE CELLULE': valType,
         'Tension assignée': valTensionAssignee,
         'TENSION ASSIGNEE(KV)': valTensionAssignee,
+        if (valTensionService.isNotEmpty) 'Tension de service': valTensionService,
         'Pouvoir de coupure assigné': valPouvoirCoupure,
         'POUVOIR DE COUPURE ASSIGNE(KA)': valPouvoirCoupure,
         'Calibre Du Disjoncteur': valCalibre,

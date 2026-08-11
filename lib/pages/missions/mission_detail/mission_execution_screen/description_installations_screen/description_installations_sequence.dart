@@ -51,6 +51,7 @@ class DescriptionInstallationsSequenceScreenState
       'champs': [
         'Gamme De Cellule',
         'Type De Cellule',
+        'Tension de service',
         'Tension assignée',
         'Section Du Cable',
         'Nature Du Reseau',

@@ -426,6 +426,9 @@ class Cellule {
   @HiveField(15)
   String? syncId;
 
+  @HiveField(16)
+  String? tensionService;
+
   Cellule({
     required this.fonction,
     required this.type,
@@ -443,6 +446,7 @@ class Cellule {
     List<ElementControle>? observations,
     this.presenceIacm,
     String? syncId,
+    this.tensionService,
   })  : elementsVerifies = elementsVerifies ?? [],
         photos = photos ?? [],
         observations = observations ?? [],

@@ -391,13 +391,14 @@ class CelluleAdapter extends TypeAdapter<Cellule> {
       observations: (fields[13] as List?)?.cast<ElementControle>(),
       presenceIacm: fields[14] as String?,
       syncId: fields[15] as String?,
+      tensionService: fields[16] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Cellule obj) {
     writer
-      ..writeByte(16)
+      ..writeByte(17)
       ..writeByte(0)
       ..write(obj.fonction)
       ..writeByte(1)
@@ -429,7 +430,9 @@ class CelluleAdapter extends TypeAdapter<Cellule> {
       ..writeByte(14)
       ..write(obj.presenceIacm)
       ..writeByte(15)
-      ..write(obj.syncId);
+      ..write(obj.syncId)
+      ..writeByte(16)
+      ..write(obj.tensionService);
   }
 
   @override

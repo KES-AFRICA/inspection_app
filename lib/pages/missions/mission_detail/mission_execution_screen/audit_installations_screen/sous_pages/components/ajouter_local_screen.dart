@@ -2289,7 +2289,28 @@ class _EtapeCelluleTransformateurMulti extends StatefulWidget {
 
 class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransformateurMulti> {
   static const List<String> _sectionCableOptions = [
-    '35 mm²', '50 mm²', '70 mm²', '95 mm²', '120 mm²', '150 mm²', '185 mm²', '240 mm²', 'Autre'
+    '0,5 mm²',
+    '0,75 mm²',
+    '1 mm²',
+    '1,5 mm²',
+    '2,5 mm²',
+    '4 mm²',
+    '6 mm²',
+    '10 mm²',
+    '16 mm²',
+    '25 mm²',
+    '35 mm²',
+    '50 mm²',
+    '70 mm²',
+    '95 mm²',
+    '120 mm²',
+    '150 mm²',
+    '185 mm²',
+    '240 mm²',
+    '300 mm²',
+    '400 mm²',
+    '500 mm²',
+    '630 mm²',
   ];
   // ============================================================
   // ÉTAT LOCAL
@@ -2315,6 +2336,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   String? _celluleSectionCables;
   String? _celluleNatureReseau;
   String? _cellulePresenceIacm;
+  String? _celluleTensionService;
   List<ElementControle> _celluleObservations = [];
   List<String> _cellulePhotos = [];
   String? _celluleSyncId;
@@ -2383,6 +2405,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _celluleSectionCables = null;
     _celluleNatureReseau = null;
     _cellulePresenceIacm = null;
+    _celluleTensionService = null;
     _celluleObservations = [];
     _cellulePhotos = [];
     _celluleSyncId = null;
@@ -2433,6 +2456,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _celluleSectionCables = cellule.sectionCables;
     _celluleNatureReseau = cellule.natureReseau;
     _cellulePresenceIacm = cellule.presenceIacm;
+    _celluleTensionService = cellule.tensionService;
     _celluleObservations = List.from(cellule.observations ?? []);
     _cellulePhotos = List.from(cellule.photos);
     _celluleSyncId = cellule.syncId;
@@ -2589,6 +2613,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       sectionCables: _celluleSectionCables,
       natureReseau: _celluleNatureReseau,
       presenceIacm: _cellulePresenceIacm,
+      tensionService: _celluleTensionService,
       observations: _celluleObservations,
       photos: _cellulePhotos,
       syncId: newSyncId,
@@ -3396,6 +3421,15 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
               optional: true,
             ),
           
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildDropdownVal(
+            _celluleTensionService,
+            'Tension de service',
+            InstallationFieldsRegistry.tensionDeServiceOptions,
+            isSmallScreen,
+            (value) => setState(() => _celluleTensionService = value),
+            optional: true,
+          ),
           SizedBox(height: isSmallScreen ? 12 : 16),
           _buildTextField(
             _celluleTensionController,

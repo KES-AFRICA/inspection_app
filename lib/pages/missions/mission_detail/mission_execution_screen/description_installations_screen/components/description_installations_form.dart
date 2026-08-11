@@ -1080,6 +1080,7 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
 
   bool _isGammeField(String c) => c == 'Gamme De Cellule';
   bool _isTypeCelluleField(String c) => c == 'Type De Cellule' || c == 'TYPE DE CELLULE';
+  bool _isTensionDeServiceField(String c) => c == 'Tension de service' || c == 'TENSION DE SERVICE';
   bool _isSectionCableField(String c) => c == 'Section Du Cable' || c == 'SECTION DU CABLE' || c == 'SECTION DU CABLE(mm2)';
   bool _isNatureReseauField(String c) => c == 'Nature Du Reseau' || c == 'NATURE DU RESEAU';
   bool _isTypeTransformateurField(String c) => c == 'Type de transformateur' || c == 'TYPE DE TRANSFORMATEUR';
@@ -1098,6 +1099,7 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
   bool _isDropdownField(String c) =>
       _isGammeField(c) ||
       _isTypeCelluleField(c) ||
+      _isTensionDeServiceField(c) ||
       _isSectionCableField(c) ||
       _isNatureReseauField(c) ||
       _isTypeTransformateurField(c) ||
@@ -1117,6 +1119,7 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
   List<String> _optionsFor(String champ) {
     if (_isTypeCelluleField(champ))
       return CelluleGammes.getTypesForGamme(_selectedGamme);
+    if (_isTensionDeServiceField(champ)) return InstallationFieldsRegistry.tensionDeServiceOptions;
     if (_isSectionCableField(champ)) return widget.sectionCableOptions;
     if (_isNatureReseauField(champ)) return widget.natureReseauOptions;
     if (_isTypeTransformateurField(champ)) return InstallationFieldsRegistry.typeTransformateurOptions;

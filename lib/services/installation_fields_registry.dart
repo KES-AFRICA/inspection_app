@@ -15,6 +15,7 @@ class InstallationFieldsRegistry {
   static const String keyMarqueModeleAnnee = 'Marque / Modèle / Année';
   static const String keyTensionAssignee = 'Tension assignée';
   static const String keyTensionAssigneeMT = 'TENSION ASSIGNEE(KV)';
+  static const String keyTensionDeServiceMT = 'Tension de service';
   static const String keyPouvoirCoupure = 'Pouvoir de coupure assigné';
   static const String keyNumerotationRepere = 'Numérotation / Repérage';
   static const String keyParafoudres = 'Parafoudres installés';
@@ -88,12 +89,14 @@ class InstallationFieldsRegistry {
     '10 000',
   ];
   static const List<String> puissanceUccOptions = ['4 %', '6 %', '8 %'];
+  static const List<String> tensionDeServiceOptions = ['15', '20', '30', '33'];
 
   // Map des unités par clé canonique
   static const Map<String, String> numericFieldsWithUnit = {
     keyCalibreDisjoncteurMT: 'A',
     keySectionCableMT: 'mm²',
     keyTensionAssignee: 'kV',
+    keyTensionDeServiceMT: 'kV',
     keyPuissanceTransformateur: 'kVA',
     keyCalibreDisjoncteurBT: 'A',
     keyIntensiteNominale: 'A',
