@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/models/classement_locaux.dart';
 import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
+import 'package:inspec_app/services/installation_fields_registry.dart';
 import 'package:inspec_app/utils/image_compress_helper.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
@@ -3245,6 +3246,32 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
                 ),
               ),
               Text('${_currentSlide + 1}/$_totalSlides', style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.blue.shade600)),
+              SizedBox(width: isSmallScreen ? 8 : 12),
+              InkWell(
+                onTap: cancelForm,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 6 : 8, vertical: isSmallScreen ? 3 : 4),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade100,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.close, size: isSmallScreen ? 14 : 16, color: Colors.blue.shade900),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Fermer',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 11 : 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue.shade900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -3263,7 +3290,10 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           child: PageView.builder(
             controller: _slideController,
             physics: const NeverScrollableScrollPhysics(),
-            onPageChanged: (index) => setState(() => _currentSlide = index),
+            onPageChanged: (index) {
+              setState(() => _currentSlide = index);
+              widget.onFormStateChanged?.call();
+            },
             itemCount: _totalSlides,
             itemBuilder: (context, slideIndex) {
               if (slideIndex == 0) {
@@ -3559,6 +3589,32 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
                 ),
               ),
               Text('${_currentSlide + 1}/$_totalSlides', style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.orange.shade600)),
+              SizedBox(width: isSmallScreen ? 8 : 12),
+              InkWell(
+                onTap: cancelForm,
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 6 : 8, vertical: isSmallScreen ? 3 : 4),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade100,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.close, size: isSmallScreen ? 14 : 16, color: Colors.orange.shade900),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Fermer',
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 11 : 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange.shade900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -3577,7 +3633,10 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           child: PageView.builder(
             controller: _slideController,
             physics: const NeverScrollableScrollPhysics(),
-            onPageChanged: (index) => setState(() => _currentSlide = index),
+            onPageChanged: (index) {
+              setState(() => _currentSlide = index);
+              widget.onFormStateChanged?.call();
+            },
             itemCount: _totalSlides,
             itemBuilder: (context, slideIndex) {
               if (slideIndex == 0) {
@@ -3602,45 +3661,48 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   }
   
   Widget _buildTransformateurDonneesSlide(bool isSmallScreen) {
+    void recalculateIk3Max() {
+      final ik3 = InstallationFieldsRegistry.calculateIk3Max(
+        puissanceKva: _transfoPuissanceController.text,
+        uccPercent: _transfoPuissanceUcc ?? '',
+      );
+      if (ik3.isNotEmpty) {
+        _transfoIk3MaxController.text = ik3;
+      }
+    }
+
     return SingleChildScrollView(
       padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       child: Column(
         children: [
-          _buildTextField(_transfoTypeController, 'Type de transformateur', isSmallScreen, optional: true),
-          SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(_transfoMarqueController, 'Marque / Année de fabrication', isSmallScreen,optional: true),
-          SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(
-            _transfoPuissanceController,
-            'Puissance assignée',
-            isSmallScreen,
-            optional: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
-            suffixText: 'kVA',
-          ),
-          SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(
-            _transfoTensionController,
-            'Tension primaire / secondaire',
-            isSmallScreen,
-            optional: true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[0-9/]*'))],
-            suffixText: 'V',
-          ),
-          SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildDropdown(_transfoBuchholzController, 'Présence du relais Buchholz', _ouiNonOptions, isSmallScreen, optional: true),
-          SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(_transfoRefroidissementController, 'Type de refroidissement', isSmallScreen,optional: true),
-          SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(_transfoRegimeController, 'Régime du neutre', isSmallScreen, optional: true),
+          // 1. Type de transformateur
+          _buildDropdown(_transfoTypeController, 'Type de transformateur', InstallationFieldsRegistry.typeTransformateurOptions, isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
 
-          // Nouveaux champs
+          // 2. Marque / Année de fabrication
+          _buildTextField(_transfoMarqueController, 'Marque / Année de fabrication', isSmallScreen, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // 3. Puissance assignée (kVA)
+          _buildDropdownVal(
+            _transfoPuissanceController.text.isNotEmpty ? _transfoPuissanceController.text : null,
+            'Puissance Transformateur (kVA)',
+            InstallationFieldsRegistry.puissanceTransformateurOptions,
+            isSmallScreen,
+            (value) {
+              setState(() {
+                _transfoPuissanceController.text = value ?? '';
+                recalculateIk3Max();
+              });
+            },
+            optional: true,
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // 4. Intensité nominale (A)
           _buildTextField(
-            _transfoCalibreDisjoncteurController,
-            'Calibre du disjoncteur',
+            _transfoIntensiteNominaleController,
+            'Intensité nominale',
             isSmallScreen,
             optional: true,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
@@ -3648,6 +3710,110 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
             suffixText: 'A',
           ),
           SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // 5. Tension primaire / secondaire
+          _buildTextField(
+            _transfoTensionController,
+            'Tension MT / BT',
+            isSmallScreen,
+            optional: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^[0-9/]*'))],
+            suffixText: 'V',
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // 6. Couplage
+          _buildDropdownVal(
+            _transfoCouplage,
+            'Couplage',
+            InstallationFieldsRegistry.couplageOptions,
+            isSmallScreen,
+            (value) => setState(() => _transfoCouplage = value),
+            optional: true,
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // 7. Type de réseau
+          _buildDropdownVal(
+            _transfoTypeReseau,
+            'Type de réseau',
+            InstallationFieldsRegistry.typeReseauOptions,
+            isSmallScreen,
+            (value) {
+              setState(() {
+                _transfoTypeReseau = value;
+                final pccSuggested = InstallationFieldsRegistry.getPccAmontForTypeReseau(value ?? '');
+                if (pccSuggested.isNotEmpty || value == 'Réseau industriel') {
+                  _transfoPccAmontController.text = pccSuggested;
+                }
+              });
+            },
+            optional: true,
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // 8. PCC amont
+          _buildTextField(
+            _transfoPccAmontController,
+            'PCC amont',
+            isSmallScreen,
+            optional: true,
+            suffixText: 'MVA',
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // 9. Puissance UCC (%)
+          _buildDropdownVal(
+            _transfoPuissanceUcc,
+            'Puissance UCC',
+            InstallationFieldsRegistry.puissanceUccOptions,
+            isSmallScreen,
+            (value) {
+              setState(() {
+                _transfoPuissanceUcc = value;
+                recalculateIk3Max();
+              });
+            },
+            optional: true,
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // 10. IK3 MAX (kA)
+          _buildTextField(
+            _transfoIk3MaxController,
+            'IK3 MAX',
+            isSmallScreen,
+            optional: true,
+            suffixText: 'kA',
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // 11. Présence du relais Buchholz
+          _buildDropdown(_transfoBuchholzController, 'Présence du relais Buchholz', _ouiNonOptions, isSmallScreen, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // 12. Type de refroidissement
+          _buildDropdown(_transfoRefroidissementController, 'Type de refroidissement', InstallationFieldsRegistry.typeRefroidissementOptions, isSmallScreen, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // 13. Régime du neutre
+          _buildDropdown(_transfoRegimeController, 'Régime du neutre', InstallationFieldsRegistry.regimeNeutreOptions, isSmallScreen, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // 14. Calibre du disjoncteur
+          _buildTextField(
+            _transfoCalibreDisjoncteurController,
+            'Calibre du disjoncteur sortie transformateur',
+            isSmallScreen,
+            optional: true,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*\.?\d*'))],
+            suffixText: 'A',
+          ),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // 15. Section des câbles
           _buildDropdownVal(
             _transfoSectionCables,
             'Section des câbles',
@@ -4005,8 +4171,13 @@ Widget _buildPrioriteButton({
   
   Widget _buildDropdown(TextEditingController controller, String label, List<String> options, bool isSmallScreen, {bool optional = false}) {
     final labelText = optional ? label : '$label *';
+    final hasValue = controller.text.isNotEmpty;
+    final effectiveOptions = List<String>.from(options);
+    if (hasValue && !effectiveOptions.contains(controller.text)) {
+      effectiveOptions.add(controller.text);
+    }
     return DropdownButtonFormField<String>(
-      value: controller.text.isNotEmpty ? controller.text : null,
+      initialValue: hasValue ? controller.text : '',
       isExpanded: true,
       hint: Text('Sélectionnez...', style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.grey.shade500)),
       decoration: InputDecoration(
@@ -4015,15 +4186,26 @@ Widget _buildPrioriteButton({
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10)),
         contentPadding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 12 : 14),
       ),
-      items: options.map((option) => DropdownMenuItem(value: option, child: Text(option, style: TextStyle(fontSize: isSmallScreen ? 13 : 14)))).toList(),
+      items: [
+        DropdownMenuItem<String>(
+          value: '',
+          child: Text('— Non renseigné —', style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.grey.shade500, fontStyle: FontStyle.italic)),
+        ),
+        ...effectiveOptions.map((option) => DropdownMenuItem(value: option, child: Text(option, style: TextStyle(fontSize: isSmallScreen ? 13 : 14)))),
+      ],
       onChanged: (value) => controller.text = value ?? '',
     );
   }
   
   Widget _buildDropdownVal(String? value, String label, List<String> options, bool isSmallScreen, void Function(String?) onChanged, {bool optional = false}) {
     final labelText = optional ? label : '$label *';
+    final hasValue = value != null && value.isNotEmpty;
+    final effectiveOptions = List<String>.from(options);
+    if (hasValue && !effectiveOptions.contains(value)) {
+      effectiveOptions.add(value!);
+    }
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: hasValue ? value : '',
       isExpanded: true,
       hint: Text('Sélectionnez...', style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.grey.shade500)),
       decoration: InputDecoration(
@@ -4032,8 +4214,14 @@ Widget _buildPrioriteButton({
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10)),
         contentPadding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 12 : 14),
       ),
-      items: options.map((option) => DropdownMenuItem(value: option, child: Text(option, style: TextStyle(fontSize: isSmallScreen ? 13 : 14)))).toList(),
-      onChanged: onChanged,
+      items: [
+        DropdownMenuItem<String>(
+          value: '',
+          child: Text('— Non renseigné —', style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.grey.shade500, fontStyle: FontStyle.italic)),
+        ),
+        ...effectiveOptions.map((option) => DropdownMenuItem(value: option, child: Text(option, style: TextStyle(fontSize: isSmallScreen ? 13 : 14)))),
+      ],
+      onChanged: (val) => onChanged(val == '' ? null : val),
     );
   }
   
