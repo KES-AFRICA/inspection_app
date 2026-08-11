@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/models/classement_locaux.dart';
 import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
+import 'package:inspec_app/services/installation_description_sync_service.dart';
 import 'package:inspec_app/services/installation_fields_registry.dart';
 import 'package:inspec_app/utils/image_compress_helper.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
@@ -2652,7 +2653,16 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   bool get isFormOpen => _isEditing;
   bool get isFormFirstSlide => _isEditing && _currentSlide == 0;
   bool get isFormLastSlide => _isEditing && _isLastSlide;
+  bool get isEditingExisting => _isEditing && _editingIndex != null;
   String get formNextLabel => _isLastSlide ? 'Terminer' : 'Suivant';
+
+  void sauvegarderEtFermer() {
+    if (_isEditingCellule) {
+      _sauvegarderCellule();
+    } else {
+      _sauvegarderTransformateur();
+    }
+  }
 
   void handleFormNext() {
     if (_isLastSlide) {
@@ -3248,7 +3258,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
               Text('${_currentSlide + 1}/$_totalSlides', style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.blue.shade600)),
               SizedBox(width: isSmallScreen ? 8 : 12),
               InkWell(
-                onTap: cancelForm,
+                onTap: _editingIndex != null ? sauvegarderEtFermer : cancelForm,
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 6 : 8, vertical: isSmallScreen ? 3 : 4),
                   decoration: BoxDecoration(
@@ -3258,10 +3268,10 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.close, size: isSmallScreen ? 14 : 16, color: Colors.blue.shade900),
+                      Icon(_editingIndex != null ? Icons.check : Icons.close, size: isSmallScreen ? 14 : 16, color: Colors.blue.shade900),
                       const SizedBox(width: 4),
                       Text(
-                        'Fermer',
+                        _editingIndex != null ? 'Terminer' : 'Fermer',
                         style: TextStyle(
                           fontSize: isSmallScreen ? 11 : 12,
                           fontWeight: FontWeight.bold,
@@ -3591,7 +3601,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
               Text('${_currentSlide + 1}/$_totalSlides', style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.orange.shade600)),
               SizedBox(width: isSmallScreen ? 8 : 12),
               InkWell(
-                onTap: cancelForm,
+                onTap: _editingIndex != null ? sauvegarderEtFermer : cancelForm,
                 child: Container(
                   padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 6 : 8, vertical: isSmallScreen ? 3 : 4),
                   decoration: BoxDecoration(
@@ -3601,10 +3611,10 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.close, size: isSmallScreen ? 14 : 16, color: Colors.orange.shade900),
+                      Icon(_editingIndex != null ? Icons.check : Icons.close, size: isSmallScreen ? 14 : 16, color: Colors.orange.shade900),
                       const SizedBox(width: 4),
                       Text(
-                        'Fermer',
+                        _editingIndex != null ? 'Terminer' : 'Fermer',
                         style: TextStyle(
                           fontSize: isSmallScreen ? 11 : 12,
                           fontWeight: FontWeight.bold,
@@ -4464,10 +4474,12 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   String? _draftLocalId;
   Timer? _autoSaveTimer;
   bool _hasUnsavedChanges = false;
+  int? _resolvedLocalIndex;
 
   @override
   void initState() {
     super.initState();
+    _resolvedLocalIndex = widget.localIndex;
     _etapeElementsKey = GlobalKey<_EtapeElementsControleState>();
 
     // Un local aReverifier traité comme nouvelle création : ID temporaire unique
@@ -4496,6 +4508,103 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       _conditionsValid = _validateElements(_conditionsExploitation);
     } else {
       _initializeElementsControle();
+    }
+  }
+
+  /// Sauvegarde immédiatement le local et ses équipements sur disque dans Hive
+  /// et déclenche la synchronisation permanente vers DescriptionInstallations.
+  Future<dynamic> _persisterEquipementEtLocalImmediatement() async {
+    try {
+      final nomLocal = _nomController.text.trim().isEmpty ? 'Nouveau Local' : _nomController.text.trim();
+      if (_nomController.text.trim().isEmpty) {
+        _nomController.text = nomLocal;
+        _nomValid = true;
+      }
+
+      dynamic nouveauLocal;
+      final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+
+      if (widget.isMoyenneTension) {
+        final localData = _creerMoyenneTensionLocal();
+        if (widget.isInZone && widget.zoneIndex != null) {
+          final zone = audit.moyenneTensionZones[widget.zoneIndex!];
+          int targetIndex = _resolvedLocalIndex ?? zone.locaux.indexWhere((l) => l.nom.trim() == localData.nom.trim());
+          if (targetIndex != -1 && targetIndex < zone.locaux.length) {
+            await HiveService.updateLocalInMoyenneTensionZone(
+              missionId: widget.mission.id,
+              zoneIndex: widget.zoneIndex!,
+              localIndex: targetIndex,
+              local: localData,
+            );
+            _resolvedLocalIndex = targetIndex;
+          } else {
+            await HiveService.addLocalToMoyenneTensionZone(
+              missionId: widget.mission.id,
+              zoneIndex: widget.zoneIndex!,
+              local: localData,
+            );
+            final updatedAudit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+            _resolvedLocalIndex = updatedAudit.moyenneTensionZones[widget.zoneIndex!].locaux.length - 1;
+          }
+          nouveauLocal = localData;
+        } else {
+          int targetIndex = _resolvedLocalIndex ?? audit.moyenneTensionLocaux.indexWhere((l) => l.nom.trim() == localData.nom.trim());
+          if (targetIndex != -1 && targetIndex < audit.moyenneTensionLocaux.length) {
+            await HiveService.updateMoyenneTensionLocal(
+              missionId: widget.mission.id,
+              localIndex: targetIndex,
+              local: localData,
+            );
+            _resolvedLocalIndex = targetIndex;
+          } else {
+            await HiveService.addMoyenneTensionLocal(
+              missionId: widget.mission.id,
+              local: localData,
+            );
+            final updatedAudit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+            _resolvedLocalIndex = updatedAudit.moyenneTensionLocaux.length - 1;
+          }
+          nouveauLocal = localData;
+        }
+      } else {
+        final localData = _creerBasseTensionLocal();
+        if (widget.zoneIndex != null) {
+          final zone = audit.basseTensionZones[widget.zoneIndex!];
+          int targetIndex = _resolvedLocalIndex ?? zone.locaux.indexWhere((l) => l.nom.trim() == localData.nom.trim());
+          if (targetIndex != -1 && targetIndex < zone.locaux.length) {
+            await HiveService.updateBasseTensionLocal(
+              missionId: widget.mission.id,
+              zoneIndex: widget.zoneIndex!,
+              localIndex: targetIndex,
+              local: localData,
+            );
+            _resolvedLocalIndex = targetIndex;
+          } else {
+            await HiveService.addLocalToBasseTensionZone(
+              missionId: widget.mission.id,
+              zoneIndex: widget.zoneIndex!,
+              local: localData,
+            );
+            final updatedAudit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+            _resolvedLocalIndex = updatedAudit.basseTensionZones[widget.zoneIndex!].locaux.length - 1;
+          }
+          nouveauLocal = localData;
+        }
+      }
+
+      // Synchronisation directe vers DescriptionInstallations
+      await InstallationDescriptionSyncService.repairAndSyncDescriptions(widget.mission.id);
+
+      // Suppression de l'éventuel draft résiduel car le local est définitivement enregistré
+      if (_draftLocalId != null && HiveService.hasActiveLocalDraft(_draftLocalId!)) {
+        await HiveService.deleteLocalDraft(_draftLocalId!);
+      }
+
+      return nouveauLocal;
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erreur _persisterEquipementEtLocalImmediatement: $e');
+      }
     }
   }
 
@@ -4909,7 +5018,11 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       final formState = _etapeCelluleTransfoKey.currentState;
       if (formState != null && formState.isFormOpen) {
         if (formState.isFormFirstSlide) {
-          formState.cancelForm();
+          if (formState.isEditingExisting) {
+            formState.sauvegarderEtFermer();
+          } else {
+            formState.cancelForm();
+          }
         } else {
           formState.handleFormPrevious();
         }
@@ -4984,7 +5097,9 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   String _getPreviousButtonText() {
     if (_flow == _LocalFlow.long && _currentStep == _stepCellulesTransfo) {
       final formState = _etapeCelluleTransfoKey.currentState;
-      if (formState != null && formState.isFormOpen && formState.isFormFirstSlide) return 'Fermer';
+      if (formState != null && formState.isFormOpen && formState.isFormFirstSlide) {
+        return formState.isEditingExisting ? 'Terminer' : 'Fermer';
+      }
     }
     return 'Précédent';
   }
@@ -5433,95 +5548,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     setState(() => _isLoading = true);
     
     try {
-      dynamic nouveauLocal;
-
-      if (widget.isMoyenneTension) {
-        if (widget.isInZone && widget.zoneIndex != null) {
-          if (widget.isEdition && widget.localIndex != null) {
-            await HiveService.updateLocalInMoyenneTensionZone(
-              missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, 
-              localIndex: widget.localIndex!, local: _creerMoyenneTensionLocal(),
-            );
-            nouveauLocal = _creerMoyenneTensionLocal();
-          } else {
-            final localData = _creerMoyenneTensionLocal();
-            final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-            final zone = audit.moyenneTensionZones[widget.zoneIndex!];
-            final existingIndex = zone.locaux.indexWhere((l) => l.nom.trim() == localData.nom.trim());
-            if (existingIndex != -1) {
-              await HiveService.updateLocalInMoyenneTensionZone(
-                missionId: widget.mission.id, zoneIndex: widget.zoneIndex!,
-                localIndex: existingIndex, local: localData,
-              );
-            } else {
-              await HiveService.addLocalToMoyenneTensionZone(
-                missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, local: localData,
-              );
-            }
-            nouveauLocal = localData;
-          }
-        } else {
-          if (widget.isEdition && widget.localIndex != null) {
-            await HiveService.updateMoyenneTensionLocal(
-              missionId: widget.mission.id,
-              localIndex: widget.localIndex!,
-              local: _creerMoyenneTensionLocal(),
-            );
-            nouveauLocal = _creerMoyenneTensionLocal();
-          } else {
-            final localData = _creerMoyenneTensionLocal();
-            final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-            final existingIndex = audit.moyenneTensionLocaux
-                .indexWhere((l) => l.nom.trim() == localData.nom.trim());
-            if (existingIndex != -1) {
-              await HiveService.updateMoyenneTensionLocal(
-                missionId: widget.mission.id,
-                localIndex: existingIndex,
-                local: localData,
-              );
-            } else {
-              await HiveService.addMoyenneTensionLocal(
-                missionId: widget.mission.id,
-                local: localData,
-              );
-            }
-            nouveauLocal = localData;
-          }
-        }
-      } else {
-        if (widget.zoneIndex != null) {
-          if (widget.isEdition && widget.localIndex != null) {
-            await HiveService.updateBasseTensionLocal(
-              missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, 
-              localIndex: widget.localIndex!, local: _creerBasseTensionLocal(),
-            );
-            nouveauLocal = _creerBasseTensionLocal();
-          } else {
-            final localData = _creerBasseTensionLocal();
-            final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-            final zone = audit.basseTensionZones[widget.zoneIndex!];
-            final existingIndex = zone.locaux.indexWhere((l) => l.nom.trim() == localData.nom.trim());
-            if (existingIndex != -1) {
-              await HiveService.updateBasseTensionLocal(
-                missionId: widget.mission.id, zoneIndex: widget.zoneIndex!,
-                localIndex: existingIndex, local: localData,
-              );
-            } else {
-              await HiveService.addLocalToBasseTensionZone(
-                missionId: widget.mission.id, zoneIndex: widget.zoneIndex!, local: localData,
-              );
-            }
-            nouveauLocal = localData;
-          }
-        } else {
-          _showError('Erreur: pour basse tension, un local doit être dans une zone');
-          setState(() => _isLoading = false);
-          return;
-        }
-      }
-      
-      // SUPPRIMER LE BROUILLON APRÈS SAUVEGARDE RÉUSSIE
-      await HiveService.deleteLocalDraft(_draftLocalId!);
+      final nouveauLocal = await _persisterEquipementEtLocalImmediatement();
       
       setState(() => _isLoading = false);
       
@@ -6114,18 +6141,18 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                     key: _etapeCelluleTransfoKey,
                     cellules: _cellules,
                     transformateurs: _transformateurs,
-                    onCellulesChanged: (nouvellesCellules) {
+                    onCellulesChanged: (nouvellesCellules) async {
                       setState(() { _cellules = nouvellesCellules; });
-                      _saveDraft();
+                      await _persisterEquipementEtLocalImmediatement();
                       _validateCelluleTransfoDonnees();
                     },
-                    onTransformateursChanged: (nouveauxTransformateurs) {
+                    onTransformateursChanged: (nouveauxTransformateurs) async {
                       setState(() { _transformateurs = nouveauxTransformateurs; });
-                      _saveDraft();
+                      await _persisterEquipementEtLocalImmediatement();
                       _validateCelluleTransfoDonnees();
                     },
-                    onDataChanged: () {
-                      _saveDraft();
+                    onDataChanged: () async {
+                      await _persisterEquipementEtLocalImmediatement();
                       _validateCelluleTransfoDonnees();
                     },
                     onFormStateChanged: () => setState(() {}),

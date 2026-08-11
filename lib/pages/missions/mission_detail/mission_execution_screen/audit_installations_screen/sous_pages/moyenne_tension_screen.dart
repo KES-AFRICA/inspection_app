@@ -14,6 +14,7 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/features/audit_installations/presentation/providers/audit_installations_provider.dart';
+import 'package:inspec_app/services/installation_description_sync_service.dart';
 
 class MoyenneTensionScreen extends ConsumerStatefulWidget {
   final Mission mission;
@@ -59,6 +60,7 @@ class _MoyenneTensionScreenState extends ConsumerState<MoyenneTensionScreen> {
   // Modifiez la méthode _loadData pour appeler refresh :
 
   Future<void> _loadData() async {
+    await InstallationDescriptionSyncService.repairAndSyncDescriptions(widget.mission.id);
     await _refreshAllData();
   }
 

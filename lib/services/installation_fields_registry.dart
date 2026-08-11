@@ -105,11 +105,11 @@ class InstallationFieldsRegistry {
   static String getPccAmontForTypeReseau(String typeReseau) {
     switch (typeReseau) {
       case 'Réseau rural':
-        return '100 à 250 MVA';
+        return '250';
       case 'Réseau urbain':
-        return '250 à 500 MVA';
+        return '500';
       case 'Poste source':
-        return '500 à 1 000 MVA';
+        return '1000';
       case 'Réseau industriel':
         return '';
       default:

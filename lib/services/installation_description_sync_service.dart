@@ -139,6 +139,29 @@ class InstallationDescriptionSyncService {
     }
   }
 
+  /// Mécanisme d'auto-réparation et de synchronisation idempotente pour une mission
+  static Future<void> repairAndSyncDescriptions(String missionId) async {
+    try {
+      Box<AuditInstallationsElectriques> auditBox;
+      if (Hive.isBoxOpen(_auditBox)) {
+        auditBox = Hive.box<AuditInstallationsElectriques>(_auditBox);
+      } else {
+        auditBox = await Hive.openBox<AuditInstallationsElectriques>(_auditBox);
+      }
+      
+      final audit = auditBox.values.firstWhere(
+        (a) => a.missionId == missionId,
+        orElse: () => auditBox.get(missionId) ?? AuditInstallationsElectriques(missionId: missionId, updatedAt: DateTime.now()),
+      );
+      
+      await syncAuditToDescription(audit);
+    } catch (e, st) {
+      if (kDebugMode) {
+        print('❌ Erreur repairAndSyncDescriptions pour mission $missionId: $e\n$st');
+      }
+    }
+  }
+
   /// Extraction de toutes les cellules dans tous les locaux (locaux MT directs, zones MT et zones BT)
   static List<Cellule> _collectAllCellulesMT(
       AuditInstallationsElectriques audit, List<bool> auditModifieRef) {
