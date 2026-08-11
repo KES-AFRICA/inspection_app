@@ -105,17 +105,23 @@ class PdfReportService {
   static const Map<String, List<String>> _columnOrderBySection = {
     'MT': [
       'TYPE DE CELLULE',
-      'CALIBRE DU DISJONCTEUR',
-      'SECTION DU CABLE',
+      'TENSION ASSIGNEE(KV)',
+      'POUVOIR DE COUPURE ASSIGNE(KA)',
+      'SECTION DU CABLE(mm2)',
       'NATURE DU RESEAU',
       'OBSERVATIONS',
     ],
     'BT': [
-      'PUISSANCE TRANSFORMATEUR',
+      'PUISSANCE TRANSFORMATEUR (KVA)',
+      'TYPE DE TRANSFORMATEUR',
+      'INTENSITE NOMINALE',
       'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR',
       'SECTION DU CABLE',
-      'TENSION',
-      'OBSERVATIONS',
+      'TENSION MT/BT',
+      'COUPLAGE',
+      'PCC AMONT EN MVA',
+      'UCC EN %',
+      'IK3 MAX(KA)',
     ],
     'GROUPE': [
       'N\u00B0',
@@ -2967,7 +2973,7 @@ class PdfReportService {
                 }
               }
               final unit = _unitForField(key);
-              final display = (raw != '-' && unit.isNotEmpty) ? '$raw $unit' : raw;
+              final display = (raw != '-' && raw.isNotEmpty && unit.isNotEmpty && !raw.toLowerCase().contains(unit.toLowerCase())) ? '$raw $unit' : raw;
               return _cell(display, isHeader: false, centered: true);
             }),
           ],
@@ -2984,16 +2990,24 @@ class PdfReportService {
       'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR': 'A',
       'Section Du Cable': 'mm²',
       'SECTION DU CABLE': 'mm²',
+      'SECTION DU CABLE(mm2)': 'mm²',
       'Puissance Transformateur': 'kVA',
+      'PUISSANCE TRANSFORMATEUR (KVA)': 'kVA',
       'PUISSANCE TRANSFORMATEUR': 'kVA',
       'Puissance (Kva)': 'kVA',
       'PUISSANCE (KVA)': 'kVA',
-      'Tension': 'V',
-      'TENSION': 'V',
+      'Intensité nominale': 'A',
+      'INTENSITE NOMINALE': 'A',
       'Intensite': 'A',
       'INTENSITE': 'A',
-      'Intensite (A)': 'A',
-      'INTENSITE (A)': 'A',
+      'Tension assignée': 'kV',
+      'TENSION ASSIGNEE(KV)': 'kV',
+      'Tension': 'V',
+      'TENSION': 'V',
+      'PCC amont': 'MVA',
+      'PCC AMONT EN MVA': 'MVA',
+      'IK3 MAX': 'kA',
+      'IK3 MAX(KA)': 'kA',
       'Entree': 'V',
       'ENTREE': 'V',
       'Sortie': 'V',
@@ -3001,7 +3015,7 @@ class PdfReportService {
       'Capacite': 'L',
       'CAPACITE': 'L',
     };
-    return units[fieldKey] ?? '';
+    return units[fieldKey] ?? units[fieldKey.toUpperCase()] ?? '';
   }
 
   static List<pw.Widget> _buildListeRecapitulativeMulti(AuditInstallationsElectriques audit, Map<String, int> trackedPages) {

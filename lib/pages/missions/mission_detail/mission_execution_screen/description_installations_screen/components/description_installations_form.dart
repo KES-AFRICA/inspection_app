@@ -9,6 +9,7 @@ import 'package:inspec_app/constants/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/installation_fields_registry.dart';
 
 // ============================================================
 // GAMMES DE CELLULES → TYPES ASSOCIÉS
@@ -195,10 +196,23 @@ class _DescriptionInstallationsFormState
 
   static const Map<String, String> _numericFieldsWithUnit = {
     'Calibre Du Disjoncteur': 'A',
+    'Tension assignée': 'kV',
+    'TENSION ASSIGNEE(KV)': 'kV',
     'Section Du Cable': 'mm²',
+    'SECTION DU CABLE': 'mm²',
+    'SECTION DU CABLE(mm2)': 'mm²',
     'Puissance Transformateur': 'kVA',
+    'PUISSANCE TRANSFORMATEUR (KVA)': 'kVA',
+    'Intensité nominale': 'A',
+    'INTENSITE NOMINALE': 'A',
     'Calibre Du Disjoncteur Sortie Transformateur': 'A',
+    'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR': 'A',
     'Tension': 'V',
+    'TENSION MT/BT': 'V',
+    'PCC amont': 'MVA',
+    'PCC AMONT EN MVA': 'MVA',
+    'IK3 MAX': 'kA',
+    'IK3 MAX(KA)': 'kA',
     'Puissance (Kva)': 'kVA',
     'Intensite': 'A',
     'Capacite': 'L',
@@ -1065,9 +1079,14 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
   }
 
   bool _isGammeField(String c) => c == 'Gamme De Cellule';
-  bool _isTypeCelluleField(String c) => c == 'Type De Cellule';
-  bool _isSectionCableField(String c) => c == 'Section Du Cable';
-  bool _isNatureReseauField(String c) => c == 'Nature Du Reseau';
+  bool _isTypeCelluleField(String c) => c == 'Type De Cellule' || c == 'TYPE DE CELLULE';
+  bool _isSectionCableField(String c) => c == 'Section Du Cable' || c == 'SECTION DU CABLE' || c == 'SECTION DU CABLE(mm2)';
+  bool _isNatureReseauField(String c) => c == 'Nature Du Reseau' || c == 'NATURE DU RESEAU';
+  bool _isTypeTransformateurField(String c) => c == 'Type de transformateur' || c == 'TYPE DE TRANSFORMATEUR';
+  bool _isCouplageField(String c) => c == 'Couplage' || c == 'COUPLAGE';
+  bool _isTypeReseauField(String c) => c == 'Type de réseau' || c == 'TYPE DE RESEAU';
+  bool _isPuissanceTransfoField(String c) => c == 'Puissance Transformateur' || c == 'PUISSANCE TRANSFORMATEUR (KVA)';
+  bool _isPuissanceUccField(String c) => c == 'Puissance UCC' || c == 'UCC EN %';
   bool _isModeField(String c) => c == 'Mode';
   bool _isOuiNonField(String c) =>
       c == 'Cuve De Retention' ||
@@ -1075,11 +1094,17 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
       c == 'Mise A La Terre';
   bool _isAnneeField(String c) =>
       c == 'Annee De Fabrication' || c == "Annee D'Installation";
+
   bool _isDropdownField(String c) =>
       _isGammeField(c) ||
       _isTypeCelluleField(c) ||
       _isSectionCableField(c) ||
       _isNatureReseauField(c) ||
+      _isTypeTransformateurField(c) ||
+      _isCouplageField(c) ||
+      _isTypeReseauField(c) ||
+      _isPuissanceTransfoField(c) ||
+      _isPuissanceUccField(c) ||
       _isModeField(c) ||
       _isOuiNonField(c) ||
       _isAnneeField(c);
@@ -1094,10 +1119,61 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
       return CelluleGammes.getTypesForGamme(_selectedGamme);
     if (_isSectionCableField(champ)) return widget.sectionCableOptions;
     if (_isNatureReseauField(champ)) return widget.natureReseauOptions;
+    if (_isTypeTransformateurField(champ)) return InstallationFieldsRegistry.typeTransformateurOptions;
+    if (_isCouplageField(champ)) return InstallationFieldsRegistry.couplageOptions;
+    if (_isTypeReseauField(champ)) return InstallationFieldsRegistry.typeReseauOptions;
+    if (_isPuissanceTransfoField(champ)) return InstallationFieldsRegistry.puissanceTransformateurOptions;
+    if (_isPuissanceUccField(champ)) return InstallationFieldsRegistry.puissanceUccOptions;
     if (_isModeField(champ)) return widget.modeOptions;
     if (_isOuiNonField(champ)) return widget.ouiNonOptions;
     if (_isAnneeField(champ)) return _getAnneeOptions();
     return [];
+  }
+
+  void _onDropdownValueChanged(String champ, String? value) {
+    setState(() {
+      _selectedValues[champ] = value;
+
+      if (_isTypeReseauField(champ)) {
+        final pccSuggested = InstallationFieldsRegistry.getPccAmontForTypeReseau(value ?? '');
+        for (var key in ['PCC amont', 'PCC AMONT EN MVA']) {
+          if (_controllers.containsKey(key)) {
+            _controllers[key]!.text = pccSuggested;
+          }
+        }
+      }
+
+      if (_isPuissanceTransfoField(champ) || _isPuissanceUccField(champ)) {
+        String puissanceVal = '';
+        for (var pKey in ['Puissance Transformateur', 'PUISSANCE TRANSFORMATEUR (KVA)']) {
+          if (_selectedValues.containsKey(pKey) && _selectedValues[pKey] != null) {
+            puissanceVal = _selectedValues[pKey]!;
+            break;
+          }
+        }
+
+        String uccVal = '';
+        for (var uKey in ['Puissance UCC', 'UCC EN %']) {
+          if (_selectedValues.containsKey(uKey) && _selectedValues[uKey] != null) {
+            uccVal = _selectedValues[uKey]!;
+            break;
+          }
+        }
+
+        final ik3Calculated = InstallationFieldsRegistry.calculateIk3Max(
+          puissanceKva: puissanceVal,
+          uccPercent: uccVal,
+        );
+
+        if (ik3Calculated.isNotEmpty) {
+          for (var ikKey in ['IK3 MAX', 'IK3 MAX(KA)']) {
+            if (_controllers.containsKey(ikKey)) {
+              _controllers[ikKey]!.text = ik3Calculated;
+            }
+          }
+        }
+      }
+    });
   }
 
   bool _hasAtLeastOneFieldFilled() {
@@ -1598,8 +1674,7 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
                       champ,
                       currentValue: _selectedValues[champ],
                       options: _optionsFor(champ),
-                      onChanged: (v) =>
-                          setState(() => _selectedValues[champ] = v),
+                      onChanged: (v) => _onDropdownValueChanged(champ, v),
                     );
                   }
                   // TextField

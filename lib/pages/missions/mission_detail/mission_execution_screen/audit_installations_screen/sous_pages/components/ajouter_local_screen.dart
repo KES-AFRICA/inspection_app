@@ -2328,6 +2328,12 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   final _transfoRegimeController = TextEditingController();
   final _transfoCalibreDisjoncteurController = TextEditingController();
   String? _transfoSectionCables;
+  final _transfoIntensiteNominaleController = TextEditingController();
+  String? _transfoCouplage;
+  String? _transfoTypeReseau;
+  final _transfoPccAmontController = TextEditingController();
+  String? _transfoPuissanceUcc;
+  final _transfoIk3MaxController = TextEditingController();
   List<ElementControle> _transfoObservations = [];
   String? _transfoSyncId;
   List<ElementControle> _transfoElements = [];
@@ -2395,6 +2401,12 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoRegimeController.text = '';
     _transfoCalibreDisjoncteurController.clear();
     _transfoSectionCables = null;
+    _transfoIntensiteNominaleController.clear();
+    _transfoCouplage = null;
+    _transfoTypeReseau = null;
+    _transfoPccAmontController.clear();
+    _transfoPuissanceUcc = null;
+    _transfoIk3MaxController.clear();
     _transfoObservations = [];
     _transfoSyncId = null;
     _transfoElements = _transfoElementsParDefaut.map((element) => ElementControle(
@@ -2447,6 +2459,12 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     // Nouveaux champs
     _transfoCalibreDisjoncteurController.text = transfo.calibreDisjoncteur ?? '';
     _transfoSectionCables = transfo.sectionCables;
+    _transfoIntensiteNominaleController.text = transfo.intensiteNominale ?? '';
+    _transfoCouplage = transfo.couplage;
+    _transfoTypeReseau = transfo.typeReseau;
+    _transfoPccAmontController.text = transfo.pccAmont ?? '';
+    _transfoPuissanceUcc = transfo.puissanceUcc;
+    _transfoIk3MaxController.text = transfo.ik3Max ?? '';
     _transfoObservations = List.from(transfo.observations ?? []);
     _transfoSyncId = transfo.syncId;
     
@@ -2725,6 +2743,12 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       sectionCables: _transfoSectionCables,
       observations: _transfoObservations,
       syncId: finalSyncId,
+      intensiteNominale: _transfoIntensiteNominaleController.text.trim(),
+      couplage: _transfoCouplage,
+      typeReseau: _transfoTypeReseau,
+      pccAmont: _transfoPccAmontController.text.trim(),
+      puissanceUcc: _transfoPuissanceUcc,
+      ik3Max: _transfoIk3MaxController.text.trim(),
     );
     
     final nouveauxTransformateurs = List<TransformateurMTBT>.from(widget.transformateurs);

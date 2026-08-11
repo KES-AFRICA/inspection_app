@@ -493,6 +493,24 @@ class TransformateurMTBT {
   @HiveField(12)
   String? syncId;
 
+  @HiveField(13)
+  String? intensiteNominale;
+
+  @HiveField(14)
+  String? couplage;
+
+  @HiveField(15)
+  String? typeReseau;
+
+  @HiveField(16)
+  String? pccAmont;
+
+  @HiveField(17)
+  String? puissanceUcc;
+
+  @HiveField(18)
+  String? ik3Max;
+
   TransformateurMTBT({
     required this.typeTransformateur,
     required this.marqueAnnee,
@@ -507,6 +525,12 @@ class TransformateurMTBT {
     this.sectionCables,
     List<ElementControle>? observations,
     String? syncId,
+    this.intensiteNominale,
+    this.couplage,
+    this.typeReseau,
+    this.pccAmont,
+    this.puissanceUcc,
+    this.ik3Max,
   })  : elementsVerifies = elementsVerifies ?? [],
         photos = photos ?? [],
         observations = observations ?? [],

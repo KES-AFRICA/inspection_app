@@ -147,7 +147,7 @@ class _DescriptionInstallationsScreenState extends ConsumerState<DescriptionInst
               'Caractéristiques de l\'alimentation moyenne tension',
               Icons.bolt_outlined,
               'alimentation_moyenne_tension',
-              ['TYPE DE CELLULE', 'CALIBRE DU DISJONCTEUR', 'SECTION DU CABLE', 'NATURE DU RESEAU', 'OBSERVATIONS'],
+              ['TYPE DE CELLULE', 'TENSION ASSIGNEE(KV)', 'POUVOIR DE COUPURE ASSIGNE(KA)', 'SECTION DU CABLE(mm2)', 'NATURE DU RESEAU', 'OBSERVATIONS'],
             ),
             
             _buildListTile(
@@ -155,7 +155,7 @@ class _DescriptionInstallationsScreenState extends ConsumerState<DescriptionInst
               'Caractéristiques de l\'alimentation basse tension sortie transformateur',
               Icons.bolt_outlined,
               'alimentation_basse_tension',
-              ['PUISSANCE TRANSFORMATEUR', 'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR', 'SECTION DU CABLE', 'TENSION', 'OBSERVATIONS'],
+              ['PUISSANCE TRANSFORMATEUR (KVA)', 'TYPE DE TRANSFORMATEUR', 'INTENSITE NOMINALE', 'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR', 'SECTION DU CABLE', 'TENSION MT/BT', 'COUPLAGE', 'PCC AMONT EN MVA', 'UCC EN %', 'IK3 MAX(KA)', 'OBSERVATIONS'],
             ),
             
             _buildListTile(

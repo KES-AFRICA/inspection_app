@@ -18,41 +18,69 @@ class InstallationDescriptionSyncService {
     normalizeKey('Gamme'): InstallationFieldsRegistry.keyGammeCellule,
     normalizeKey('Gamme de la cellule'): InstallationFieldsRegistry.keyGammeCellule,
     normalizeKey(InstallationFieldsRegistry.keyTypeCellule): InstallationFieldsRegistry.keyTypeCellule,
+    normalizeKey('TYPE DE CELLULE'): InstallationFieldsRegistry.keyTypeCellule,
     normalizeKey('Type'): InstallationFieldsRegistry.keyTypeCellule,
     normalizeKey('Type de cellule'): InstallationFieldsRegistry.keyTypeCellule,
+    normalizeKey(InstallationFieldsRegistry.keyTensionAssignee): InstallationFieldsRegistry.keyTensionAssignee,
+    normalizeKey(InstallationFieldsRegistry.keyTensionAssigneeMT): InstallationFieldsRegistry.keyTensionAssigneeMT,
+    normalizeKey(InstallationFieldsRegistry.keyPouvoirCoupure): InstallationFieldsRegistry.keyPouvoirCoupure,
+    normalizeKey('POUVOIR DE COUPURE ASSIGNE(KA)'): InstallationFieldsRegistry.keyPouvoirCoupure,
     normalizeKey(InstallationFieldsRegistry.keyCalibreDisjoncteurMT): InstallationFieldsRegistry.keyCalibreDisjoncteurMT,
     normalizeKey('Calibre disjoncteur'): InstallationFieldsRegistry.keyCalibreDisjoncteurMT,
     normalizeKey('Calibre'): InstallationFieldsRegistry.keyCalibreDisjoncteurMT,
     normalizeKey(InstallationFieldsRegistry.keySectionCableMT): InstallationFieldsRegistry.keySectionCableMT,
+    normalizeKey('SECTION DU CABLE(mm2)'): InstallationFieldsRegistry.keySectionCableMT,
     normalizeKey('Section cable'): InstallationFieldsRegistry.keySectionCableMT,
     normalizeKey('Section des cables'): InstallationFieldsRegistry.keySectionCableMT,
     normalizeKey(InstallationFieldsRegistry.keyNatureReseau): InstallationFieldsRegistry.keyNatureReseau,
+    normalizeKey('NATURE DU RESEAU'): InstallationFieldsRegistry.keyNatureReseau,
     normalizeKey('Nature reseau'): InstallationFieldsRegistry.keyNatureReseau,
     normalizeKey(InstallationFieldsRegistry.keyPresenceIacm): InstallationFieldsRegistry.keyPresenceIacm,
     normalizeKey('Presence IACM'): InstallationFieldsRegistry.keyPresenceIacm,
     normalizeKey('IACM'): InstallationFieldsRegistry.keyPresenceIacm,
     normalizeKey(InstallationFieldsRegistry.keyObservations): InstallationFieldsRegistry.keyObservations,
+    normalizeKey('OBSERVATIONS'): InstallationFieldsRegistry.keyObservations,
     normalizeKey('Observation'): InstallationFieldsRegistry.keyObservations,
   };
 
   /// Dictionnaire d'alias pour les champs de Transformateurs MT/BT
   static final Map<String, String> _transfoAliases = {
     normalizeKey(InstallationFieldsRegistry.keyPuissanceTransformateur): InstallationFieldsRegistry.keyPuissanceTransformateur,
+    normalizeKey('PUISSANCE TRANSFORMATEUR (KVA)'): InstallationFieldsRegistry.keyPuissanceTransformateur,
     normalizeKey('Puissance'): InstallationFieldsRegistry.keyPuissanceTransformateur,
     normalizeKey('Puissance (kVA)'): InstallationFieldsRegistry.keyPuissanceTransformateur,
+    normalizeKey(InstallationFieldsRegistry.keyTypeTransformateur): InstallationFieldsRegistry.keyTypeTransformateur,
+    normalizeKey('TYPE DE TRANSFORMATEUR'): InstallationFieldsRegistry.keyTypeTransformateur,
+    normalizeKey(InstallationFieldsRegistry.keyIntensiteNominale): InstallationFieldsRegistry.keyIntensiteNominale,
+    normalizeKey('INTENSITE NOMINALE'): InstallationFieldsRegistry.keyIntensiteNominale,
     normalizeKey(InstallationFieldsRegistry.keyCalibreDisjoncteurBT):
+        InstallationFieldsRegistry.keyCalibreDisjoncteurBT,
+    normalizeKey('CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR'):
         InstallationFieldsRegistry.keyCalibreDisjoncteurBT,
     normalizeKey('Calibre Disjoncteur Sortie'):
         InstallationFieldsRegistry.keyCalibreDisjoncteurBT,
     normalizeKey('Calibre Disjoncteur'):
         InstallationFieldsRegistry.keyCalibreDisjoncteurBT,
     normalizeKey(InstallationFieldsRegistry.keySectionCableBT): InstallationFieldsRegistry.keySectionCableBT,
+    normalizeKey('SECTION DU CABLE'): InstallationFieldsRegistry.keySectionCableBT,
     normalizeKey('Section cable'): InstallationFieldsRegistry.keySectionCableBT,
     normalizeKey('Section des cables'): InstallationFieldsRegistry.keySectionCableBT,
     normalizeKey(InstallationFieldsRegistry.keyTensionPrimaireSecondaire): InstallationFieldsRegistry.keyTensionPrimaireSecondaire,
+    normalizeKey('TENSION MT/BT'): InstallationFieldsRegistry.keyTensionPrimaireSecondaire,
     normalizeKey('Tension primaire / secondaire'): InstallationFieldsRegistry.keyTensionPrimaireSecondaire,
     normalizeKey('Tension primaire/secondaire'): InstallationFieldsRegistry.keyTensionPrimaireSecondaire,
+    normalizeKey(InstallationFieldsRegistry.keyCouplage): InstallationFieldsRegistry.keyCouplage,
+    normalizeKey('COUPLAGE'): InstallationFieldsRegistry.keyCouplage,
+    normalizeKey(InstallationFieldsRegistry.keyTypeReseau): InstallationFieldsRegistry.keyTypeReseau,
+    normalizeKey('TYPE DE RESEAU'): InstallationFieldsRegistry.keyTypeReseau,
+    normalizeKey(InstallationFieldsRegistry.keyPccAmont): InstallationFieldsRegistry.keyPccAmont,
+    normalizeKey('PCC AMONT EN MVA'): InstallationFieldsRegistry.keyPccAmont,
+    normalizeKey(InstallationFieldsRegistry.keyPuissanceUcc): InstallationFieldsRegistry.keyPuissanceUcc,
+    normalizeKey('UCC EN %'): InstallationFieldsRegistry.keyPuissanceUcc,
+    normalizeKey(InstallationFieldsRegistry.keyIk3Max): InstallationFieldsRegistry.keyIk3Max,
+    normalizeKey('IK3 MAX(KA)'): InstallationFieldsRegistry.keyIk3Max,
     normalizeKey(InstallationFieldsRegistry.keyObservations): InstallationFieldsRegistry.keyObservations,
+    normalizeKey('OBSERVATIONS'): InstallationFieldsRegistry.keyObservations,
     normalizeKey('Observation'): InstallationFieldsRegistry.keyObservations,
   };
 
@@ -225,20 +253,23 @@ class InstallationDescriptionSyncService {
 
       final Map<String, String> existingData = itemExistant?.data ?? {};
 
-      // Traitement précis de la source de vérité :
-      // Si la propriété dans l'objet Cellule est non-nulle, elle prévaut (permettant la mise à jour et l'effacement).
-      // Le fallback getFieldWithAlias n'intervient que si la propriété d'origine est nulle (données legacy uninitialized).
       String valGamme = cellule.gamme ??
           getFieldWithAlias(existingData, 'Gamme De Cellule', _celluleAliases);
       String valType = cellule.type.isNotEmpty
           ? cellule.type
-          : getFieldWithAlias(existingData, 'Type De Cellule', _celluleAliases);
+          : getFieldWithAlias(existingData, 'TYPE DE CELLULE', _celluleAliases);
+      String valTensionAssignee = cellule.tensionAssignee.isNotEmpty
+          ? cellule.tensionAssignee
+          : getFieldWithAlias(existingData, 'TENSION ASSIGNEE(KV)', _celluleAliases);
+      String valPouvoirCoupure = cellule.pouvoirCoupure.isNotEmpty
+          ? cellule.pouvoirCoupure
+          : getFieldWithAlias(existingData, 'POUVOIR DE COUPURE ASSIGNE(KA)', _celluleAliases);
       String valCalibre = cellule.calibreDisjoncteur ??
           getFieldWithAlias(existingData, 'Calibre Du Disjoncteur', _celluleAliases);
       String valSection = cellule.sectionCables ??
-          getFieldWithAlias(existingData, 'Section Du Cable', _celluleAliases);
+          getFieldWithAlias(existingData, 'SECTION DU CABLE(mm2)', _celluleAliases);
       String valNature = cellule.natureReseau ??
-          getFieldWithAlias(existingData, 'Nature Du Reseau', _celluleAliases);
+          getFieldWithAlias(existingData, 'NATURE DU RESEAU', _celluleAliases);
       String valIacm = cellule.presenceIacm ??
           getFieldWithAlias(existingData, 'PRESENCE IACM', _celluleAliases);
 
@@ -246,11 +277,19 @@ class InstallationDescriptionSyncService {
         'auditCelluleId': cellule.syncId!,
         'Gamme De Cellule': valGamme,
         'Type De Cellule': valType,
+        'TYPE DE CELLULE': valType,
+        'Tension assignée': valTensionAssignee,
+        'TENSION ASSIGNEE(KV)': valTensionAssignee,
+        'Pouvoir de coupure assigné': valPouvoirCoupure,
+        'POUVOIR DE COUPURE ASSIGNE(KA)': valPouvoirCoupure,
         'Calibre Du Disjoncteur': valCalibre,
         'Section Du Cable': valSection,
+        'SECTION DU CABLE(mm2)': valSection,
         'Nature Du Reseau': valNature,
+        'NATURE DU RESEAU': valNature,
         if (valNature == 'Aérien' || valIacm.isNotEmpty) 'PRESENCE IACM': valIacm,
         'Observations': observationsTxt,
+        'OBSERVATIONS': observationsTxt,
       };
 
       if (itemExistant != null) {
@@ -300,27 +339,59 @@ class InstallationDescriptionSyncService {
 
       final Map<String, String> existingData = itemExistant?.data ?? {};
 
-      // Traitement précis de la source de vérité :
-      // Si la propriété est non-nulle, elle prévaut. Le fallback getFieldWithAlias n'intervient que sur données legacy nulles.
       String valPuissance = transfo.puissanceAssignee.isNotEmpty
           ? transfo.puissanceAssignee
-          : getFieldWithAlias(existingData, 'Puissance Transformateur', _transfoAliases);
+          : getFieldWithAlias(existingData, 'PUISSANCE TRANSFORMATEUR (KVA)', _transfoAliases);
+      String valTypeTransfo = transfo.typeTransformateur.isNotEmpty
+          ? transfo.typeTransformateur
+          : getFieldWithAlias(existingData, 'TYPE DE TRANSFORMATEUR', _transfoAliases);
+      String valIntensiteNominale = transfo.intensiteNominale ??
+          getFieldWithAlias(existingData, 'INTENSITE NOMINALE', _transfoAliases);
       String valCalibre = transfo.calibreDisjoncteur ??
           getFieldWithAlias(
-              existingData, 'Calibre Du Disjoncteur Sortie Transformateur', _transfoAliases);
+              existingData, 'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR', _transfoAliases);
       String valSection = transfo.sectionCables ??
-          getFieldWithAlias(existingData, 'Section Du Cable', _transfoAliases);
+          getFieldWithAlias(existingData, 'SECTION DU CABLE', _transfoAliases);
       String valTension = transfo.tensionPrimaireSecondaire.isNotEmpty
           ? transfo.tensionPrimaireSecondaire
-          : getFieldWithAlias(existingData, 'Tension', _transfoAliases);
+          : getFieldWithAlias(existingData, 'TENSION MT/BT', _transfoAliases);
+      String valCouplage = transfo.couplage ??
+          getFieldWithAlias(existingData, 'COUPLAGE', _transfoAliases);
+      String valTypeReseau = transfo.typeReseau ??
+          getFieldWithAlias(existingData, 'TYPE DE RESEAU', _transfoAliases);
+      String valPccAmont = transfo.pccAmont ??
+          getFieldWithAlias(existingData, 'PCC AMONT EN MVA', _transfoAliases);
+      String valPuissanceUcc = transfo.puissanceUcc ??
+          getFieldWithAlias(existingData, 'UCC EN %', _transfoAliases);
+      String valIk3Max = transfo.ik3Max ??
+          getFieldWithAlias(existingData, 'IK3 MAX(KA)', _transfoAliases);
 
       final itemData = <String, String>{
         'auditTransformateurId': transfo.syncId!,
         'Puissance Transformateur': valPuissance,
+        'PUISSANCE TRANSFORMATEUR (KVA)': valPuissance,
+        'Type de transformateur': valTypeTransfo,
+        'TYPE DE TRANSFORMATEUR': valTypeTransfo,
+        'Intensité nominale': valIntensiteNominale,
+        'INTENSITE NOMINALE': valIntensiteNominale,
         'Calibre Du Disjoncteur Sortie Transformateur': valCalibre,
+        'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR': valCalibre,
         'Section Du Cable': valSection,
+        'SECTION DU CABLE': valSection,
         'Tension': valTension,
+        'TENSION MT/BT': valTension,
+        'Couplage': valCouplage,
+        'COUPLAGE': valCouplage,
+        'Type de réseau': valTypeReseau,
+        'TYPE DE RESEAU': valTypeReseau,
+        'PCC amont': valPccAmont,
+        'PCC AMONT EN MVA': valPccAmont,
+        'Puissance UCC': valPuissanceUcc,
+        'UCC EN %': valPuissanceUcc,
+        'IK3 MAX': valIk3Max,
+        'IK3 MAX(KA)': valIk3Max,
         'Observations': observationsTxt,
+        'OBSERVATIONS': observationsTxt,
       };
 
       if (itemExistant != null) {
