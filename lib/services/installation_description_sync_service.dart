@@ -92,7 +92,7 @@ class InstallationDescriptionSyncService {
       // 2. Synchronisation des Transformateurs MT/BT -> alimentationBasseTension
       auditModifie |= await _syncTransformateurs(audit, desc);
 
-      // Sauvegarde des modifications
+      // Sauvegarde des modifications de l'audit si des syncId ont été générés
       if (auditModifie) {
         final auditBox = Hive.box<AuditInstallationsElectriques>(_auditBox);
         await auditBox.put(audit.key, audit);
@@ -111,33 +111,41 @@ class InstallationDescriptionSyncService {
     }
   }
 
-  /// Extraction de toutes les cellules dans les locaux MT (directs et dans les zones MT)
+  /// Extraction de toutes les cellules dans tous les locaux (locaux MT directs, zones MT et zones BT)
   static List<Cellule> _collectAllCellulesMT(
       AuditInstallationsElectriques audit, List<bool> auditModifieRef) {
     final List<Cellule> cellules = [];
 
-    // Locaux MT directs
+    void checkAndAddCellule(Cellule c) {
+      if (c.syncId == null || c.syncId!.isEmpty) {
+        c.syncId =
+            'cellule_${DateTime.now().microsecondsSinceEpoch}_${cellules.length}';
+        auditModifieRef[0] = true;
+      }
+      cellules.add(c);
+    }
+
+    // 1. Locaux MT directs
     for (var local in audit.moyenneTensionLocaux) {
       for (var cellule in local.cellules) {
-        if (cellule.syncId == null || cellule.syncId!.isEmpty) {
-          cellule.syncId =
-              'cellule_${DateTime.now().microsecondsSinceEpoch}_${cellules.length}';
-          auditModifieRef[0] = true;
-        }
-        cellules.add(cellule);
+        checkAndAddCellule(cellule);
       }
     }
 
-    // Locaux des zones MT
+    // 2. Locaux des zones MT
     for (var zone in audit.moyenneTensionZones) {
       for (var local in zone.locaux) {
         for (var cellule in local.cellules) {
-          if (cellule.syncId == null || cellule.syncId!.isEmpty) {
-            cellule.syncId =
-                'cellule_${DateTime.now().microsecondsSinceEpoch}_${cellules.length}';
-            auditModifieRef[0] = true;
-          }
-          cellules.add(cellule);
+          checkAndAddCellule(cellule);
+        }
+      }
+    }
+
+    // 3. Locaux des zones BT
+    for (var zone in audit.basseTensionZones) {
+      for (var local in zone.locaux) {
+        for (var cellule in local.cellules) {
+          checkAndAddCellule(cellule);
         }
       }
     }
@@ -145,33 +153,41 @@ class InstallationDescriptionSyncService {
     return cellules;
   }
 
-  /// Extraction de tous les transformateurs dans les locaux MT (directs et dans les zones MT)
+  /// Extraction de tous les transformateurs dans tous les locaux (locaux MT directs, zones MT et zones BT)
   static List<TransformateurMTBT> _collectAllTransformateursMT(
       AuditInstallationsElectriques audit, List<bool> auditModifieRef) {
     final List<TransformateurMTBT> transfos = [];
 
-    // Locaux MT directs
+    void checkAndAddTransfo(TransformateurMTBT t) {
+      if (t.syncId == null || t.syncId!.isEmpty) {
+        t.syncId =
+            'transfo_${DateTime.now().microsecondsSinceEpoch}_${transfos.length}';
+        auditModifieRef[0] = true;
+      }
+      transfos.add(t);
+    }
+
+    // 1. Locaux MT directs
     for (var local in audit.moyenneTensionLocaux) {
       for (var transfo in local.transformateurs) {
-        if (transfo.syncId == null || transfo.syncId!.isEmpty) {
-          transfo.syncId =
-              'transfo_${DateTime.now().microsecondsSinceEpoch}_${transfos.length}';
-          auditModifieRef[0] = true;
-        }
-        transfos.add(transfo);
+        checkAndAddTransfo(transfo);
       }
     }
 
-    // Locaux des zones MT
+    // 2. Locaux des zones MT
     for (var zone in audit.moyenneTensionZones) {
       for (var local in zone.locaux) {
         for (var transfo in local.transformateurs) {
-          if (transfo.syncId == null || transfo.syncId!.isEmpty) {
-            transfo.syncId =
-                'transfo_${DateTime.now().microsecondsSinceEpoch}_${transfos.length}';
-            auditModifieRef[0] = true;
-          }
-          transfos.add(transfo);
+          checkAndAddTransfo(transfo);
+        }
+      }
+    }
+
+    // 3. Locaux des zones BT
+    for (var zone in audit.basseTensionZones) {
+      for (var local in zone.locaux) {
+        for (var transfo in local.transformateurs) {
+          checkAndAddTransfo(transfo);
         }
       }
     }
@@ -209,24 +225,22 @@ class InstallationDescriptionSyncService {
 
       final Map<String, String> existingData = itemExistant?.data ?? {};
 
-      String valGamme = (cellule.gamme != null && cellule.gamme!.isNotEmpty)
-          ? cellule.gamme!
-          : getFieldWithAlias(existingData, 'Gamme De Cellule', _celluleAliases);
+      // Traitement précis de la source de vérité :
+      // Si la propriété dans l'objet Cellule est non-nulle, elle prévaut (permettant la mise à jour et l'effacement).
+      // Le fallback getFieldWithAlias n'intervient que si la propriété d'origine est nulle (données legacy uninitialized).
+      String valGamme = cellule.gamme ??
+          getFieldWithAlias(existingData, 'Gamme De Cellule', _celluleAliases);
       String valType = cellule.type.isNotEmpty
           ? cellule.type
           : getFieldWithAlias(existingData, 'Type De Cellule', _celluleAliases);
-      String valCalibre = (cellule.calibreDisjoncteur != null && cellule.calibreDisjoncteur!.isNotEmpty)
-          ? cellule.calibreDisjoncteur!
-          : getFieldWithAlias(existingData, 'Calibre Du Disjoncteur', _celluleAliases);
-      String valSection = (cellule.sectionCables != null && cellule.sectionCables!.isNotEmpty)
-          ? cellule.sectionCables!
-          : getFieldWithAlias(existingData, 'Section Du Cable', _celluleAliases);
-      String valNature = (cellule.natureReseau != null && cellule.natureReseau!.isNotEmpty)
-          ? cellule.natureReseau!
-          : getFieldWithAlias(existingData, 'Nature Du Reseau', _celluleAliases);
-      String valIacm = (cellule.presenceIacm != null && cellule.presenceIacm!.isNotEmpty)
-          ? cellule.presenceIacm!
-          : getFieldWithAlias(existingData, 'PRESENCE IACM', _celluleAliases);
+      String valCalibre = cellule.calibreDisjoncteur ??
+          getFieldWithAlias(existingData, 'Calibre Du Disjoncteur', _celluleAliases);
+      String valSection = cellule.sectionCables ??
+          getFieldWithAlias(existingData, 'Section Du Cable', _celluleAliases);
+      String valNature = cellule.natureReseau ??
+          getFieldWithAlias(existingData, 'Nature Du Reseau', _celluleAliases);
+      String valIacm = cellule.presenceIacm ??
+          getFieldWithAlias(existingData, 'PRESENCE IACM', _celluleAliases);
 
       final itemData = <String, String>{
         'auditCelluleId': cellule.syncId!,
@@ -286,16 +300,16 @@ class InstallationDescriptionSyncService {
 
       final Map<String, String> existingData = itemExistant?.data ?? {};
 
+      // Traitement précis de la source de vérité :
+      // Si la propriété est non-nulle, elle prévaut. Le fallback getFieldWithAlias n'intervient que sur données legacy nulles.
       String valPuissance = transfo.puissanceAssignee.isNotEmpty
           ? transfo.puissanceAssignee
           : getFieldWithAlias(existingData, 'Puissance Transformateur', _transfoAliases);
-      String valCalibre = (transfo.calibreDisjoncteur != null && transfo.calibreDisjoncteur!.isNotEmpty)
-          ? transfo.calibreDisjoncteur!
-          : getFieldWithAlias(
+      String valCalibre = transfo.calibreDisjoncteur ??
+          getFieldWithAlias(
               existingData, 'Calibre Du Disjoncteur Sortie Transformateur', _transfoAliases);
-      String valSection = (transfo.sectionCables != null && transfo.sectionCables!.isNotEmpty)
-          ? transfo.sectionCables!
-          : getFieldWithAlias(existingData, 'Section Du Cable', _transfoAliases);
+      String valSection = transfo.sectionCables ??
+          getFieldWithAlias(existingData, 'Section Du Cable', _transfoAliases);
       String valTension = transfo.tensionPrimaireSecondaire.isNotEmpty
           ? transfo.tensionPrimaireSecondaire
           : getFieldWithAlias(existingData, 'Tension', _transfoAliases);

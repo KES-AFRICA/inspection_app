@@ -442,10 +442,13 @@ class Cellule {
     this.natureReseau,
     List<ElementControle>? observations,
     this.presenceIacm,
-    this.syncId,
+    String? syncId,
   })  : elementsVerifies = elementsVerifies ?? [],
         photos = photos ?? [],
-        observations = observations ?? [];
+        observations = observations ?? [],
+        syncId = (syncId != null && syncId.isNotEmpty)
+            ? syncId
+            : 'cellule_${DateTime.now().microsecondsSinceEpoch}';
 }
 
 @HiveType(typeId: 10)
@@ -503,10 +506,13 @@ class TransformateurMTBT {
     this.calibreDisjoncteur,
     this.sectionCables,
     List<ElementControle>? observations,
-    this.syncId,
+    String? syncId,
   })  : elementsVerifies = elementsVerifies ?? [],
         photos = photos ?? [],
-        observations = observations ?? [];
+        observations = observations ?? [],
+        syncId = (syncId != null && syncId.isNotEmpty)
+            ? syncId
+            : 'transfo_${DateTime.now().microsecondsSinceEpoch}';
 }
 
 // COFFRETS/ARMOIRES
