@@ -4471,16 +4471,23 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     _etapeElementsKey = GlobalKey<_EtapeElementsControleState>();
 
     // Un local aReverifier traité comme nouvelle création : ID temporaire unique
-    final _isReverification = widget.isEdition &&
+    final isReverification = widget.isEdition &&
         widget.local != null &&
         ((widget.local as dynamic).aReverifier == true);
 
-    _draftLocalId = widget.draftId ??
-        (widget.isEdition && !_isReverification && widget.local != null
-            ? 'EDIT_${widget.local.hashCode}'
-            : 'TEMP_${DateTime.now().millisecondsSinceEpoch}');
+    _draftLocalId = HiveService.getStableLocalDraftId(
+      missionId: widget.mission.id,
+      isMoyenneTension: widget.isMoyenneTension,
+      zoneIndex: widget.zoneIndex,
+      isInZone: widget.isInZone,
+      localIndex: widget.localIndex,
+      nomLocal: widget.local?.nom,
+      customDraftId: isReverification ? 'TEMP_${DateTime.now().millisecondsSinceEpoch}' : widget.draftId,
+    );
 
-    if (widget.isEdition) {
+    if (HiveService.hasActiveLocalDraft(_draftLocalId!)) {
+      _loadDraft();
+    } else if (widget.isEdition && !isReverification) {
       _chargerDonneesExistantes();
       _nomValid = true;
       _typeValid = true;
@@ -4489,10 +4496,6 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       _conditionsValid = _validateElements(_conditionsExploitation);
     } else {
       _initializeElementsControle();
-
-      if (widget.draftId != null) {
-        _loadDraft();
-      }
     }
   }
 

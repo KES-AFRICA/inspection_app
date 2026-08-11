@@ -6381,6 +6381,34 @@ static ClassementZone? getClassementZoneById(String id) {
   }
 }
 
+/// Obtenir un identifiant de brouillon stable et persistant pour un local
+static String getStableLocalDraftId({
+  required String missionId,
+  required bool isMoyenneTension,
+  int? zoneIndex,
+  bool isInZone = false,
+  int? localIndex,
+  String? nomLocal,
+  String? customDraftId,
+}) {
+  if (customDraftId != null && customDraftId.isNotEmpty && !customDraftId.startsWith('EDIT_')) {
+    return customDraftId;
+  }
+  final domain = isMoyenneTension ? 'MT' : 'BT';
+  final zonePart = isInZone && zoneIndex != null ? 'ZONE_$zoneIndex' : 'DIRECT';
+  final localPart = localIndex != null ? 'INDEX_$localIndex' : (nomLocal?.trim().replaceAll(' ', '_') ?? 'NEW');
+  return 'DRAFT_${missionId}_${domain}_${zonePart}_$localPart';
+}
+
+/// Vérifier si un brouillon actif existe pour une clé donnée
+static bool hasActiveLocalDraft(String draftKey) {
+  try {
+    final box = Hive.box(_localDraftsBox);
+    return box.containsKey(draftKey);
+  } catch (_) {
+    return false;
+  }
+}
 
 /// Sauvegarder un brouillon de local
 static Future<void> saveLocalDraft({

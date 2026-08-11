@@ -793,16 +793,26 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   }
 
   void _editerLocalMT(int index) async {
+    final local = _zone.locaux[index];
+    final draftKey = HiveService.getStableLocalDraftId(
+      missionId: widget.mission.id,
+      isMoyenneTension: true,
+      zoneIndex: widget.zoneIndex,
+      isInZone: true,
+      localIndex: index,
+      nomLocal: local.nom,
+    );
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AjouterLocalScreen(
           mission: widget.mission,
           isMoyenneTension: true,
-          local: _zone.locaux[index],
+          local: local,
           localIndex: index,
           zoneIndex: widget.zoneIndex,
           isInZone: true,
+          draftId: draftKey,
         ),
       ),
     );
@@ -816,24 +826,29 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer ce local ?'),
+        title: const Text('Confirmer la suppression'),
+        content: const Text('Voulez-vous vraiment supprimer ce local ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Annuler'),
+            child: const Text('Annuler'),
           ),
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
-
-              final success =
-                  await HiveService.deleteLocalFromMoyenneTensionZone(
-                    missionId: widget.mission.id,
-                    zoneIndex: widget.zoneIndex,
-                    localIndex: index,
-                  );
-
+              final success = await HiveService.deleteLocalFromMoyenneTensionZone(
+                missionId: widget.mission.id,
+                zoneIndex: widget.zoneIndex,
+                localIndex: index,
+              );
+              final draftKey = HiveService.getStableLocalDraftId(
+                missionId: widget.mission.id,
+                isMoyenneTension: true,
+                zoneIndex: widget.zoneIndex,
+                isInZone: true,
+                localIndex: index,
+              );
+              await HiveService.deleteLocalDraft(draftKey);
               if (success) {
                 _rechargerZone();
                 _showSuccess('Local supprimé');
@@ -841,7 +856,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                 _showError('Erreur lors de la suppression');
               }
             },
-            child: Text('Supprimer', style: TextStyle(color: Colors.red)),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -886,16 +901,26 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   }
 
   void _editerLocalBT(int index) async {
+    final local = _zone.locaux[index];
+    final draftKey = HiveService.getStableLocalDraftId(
+      missionId: widget.mission.id,
+      isMoyenneTension: false,
+      zoneIndex: widget.zoneIndex,
+      isInZone: true,
+      localIndex: index,
+      nomLocal: local.nom,
+    );
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AjouterLocalScreen(
           mission: widget.mission,
           isMoyenneTension: false,
-          local: _zone.locaux[index],
+          local: local,
           localIndex: index,
           zoneIndex: widget.zoneIndex,
           isInZone: true,
+          draftId: draftKey,
         ),
       ),
     );
@@ -909,12 +934,12 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer ce local ?'),
+        title: const Text('Confirmer la suppression'),
+        content: const Text('Voulez-vous vraiment supprimer ce local ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
-            child: Text('Annuler'),
+            child: const Text('Annuler'),
           ),
           TextButton(
             onPressed: () async {
@@ -932,12 +957,21 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                   );
                   await HiveService.saveAuditInstallations(audit);
 
+                  final draftKey = HiveService.getStableLocalDraftId(
+                    missionId: widget.mission.id,
+                    isMoyenneTension: false,
+                    zoneIndex: widget.zoneIndex,
+                    isInZone: true,
+                    localIndex: index,
+                  );
+                  await HiveService.deleteLocalDraft(draftKey);
+
                   _rechargerZone();
                   _showSuccess('Local supprimé');
                 }
               }
             },
-            child: Text('Supprimer', style: TextStyle(color: Colors.red)),
+            child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
           ),
         ],
       ),
@@ -1334,6 +1368,16 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     final inaccessible = !(local.accessible ?? true);
     final aReverifier = local.aReverifier ?? false;
 
+    final draftKey = HiveService.getStableLocalDraftId(
+      missionId: widget.mission.id,
+      isMoyenneTension: isMoyenneTension,
+      zoneIndex: widget.zoneIndex,
+      isInZone: true,
+      localIndex: index,
+      nomLocal: local.nom,
+    );
+    final hasDraft = HiveService.hasActiveLocalDraft(draftKey);
+
     // ── Icône et couleur selon l'état ──
     final Color cardColor = inaccessible ? Colors.red.shade50 : Colors.white;
     final Color borderColor = inaccessible
@@ -1419,6 +1463,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
+                      if (hasDraft) _buildBadge('Modifications non enregistrées', Colors.amber.shade900),
                       if ((local is MoyenneTensionLocal && local.isRiskZone == true) ||
                           (local is BasseTensionLocal && local.isRiskZone == true))
                         _buildRiskBadge(),
