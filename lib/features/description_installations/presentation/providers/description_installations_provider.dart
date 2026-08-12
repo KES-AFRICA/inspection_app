@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/core/providers/description_installations_providers.dart';
 import 'package:inspec_app/features/description_installations/data/mappers/description_installations_mapper.dart';
 import 'package:inspec_app/models/description_installations.dart';
+import 'package:inspec_app/services/installation_description_sync_service.dart';
 
 final descriptionInstallationsProvider = StateNotifierProvider.family
     .autoDispose<
@@ -26,6 +27,7 @@ class DescriptionInstallationsNotifier
   Future<DescriptionInstallations> load() async {
     try {
       state = const AsyncValue.loading();
+      await InstallationDescriptionSyncService.repairAndSyncDescriptions(missionId);
       final getUseCase = ref.read(getDescriptionInstallationsUseCaseProvider);
       final entity = await getUseCase(missionId);
       final model = DescriptionInstallationsMapper.toModel(entity);

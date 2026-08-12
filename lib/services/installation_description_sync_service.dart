@@ -106,13 +106,38 @@ class InstallationDescriptionSyncService {
     return '';
   }
 
+  /// Comparaison d'égalité profonde entre deux listes d'InstallationItem
+  static bool _areItemListsEqual(List<InstallationItem> a, List<InstallationItem> b) {
+    if (a.length != b.length) return false;
+    for (int i = 0; i < a.length; i++) {
+      final itemA = a[i];
+      final itemB = b[i];
+      if (itemA.photoPaths.length != itemB.photoPaths.length) return false;
+      for (int p = 0; p < itemA.photoPaths.length; p++) {
+        if (itemA.photoPaths[p] != itemB.photoPaths[p]) return false;
+      }
+      if (itemA.data.length != itemB.data.length) return false;
+      for (final entry in itemA.data.entries) {
+        if (itemB.data[entry.key] != entry.value) return false;
+      }
+    }
+    return true;
+  }
+
   /// Synchronise l'ensemble de l'Audit des Installations vers la Description des Installations
   static Future<void> syncAuditToDescription(AuditInstallationsElectriques audit) async {
     try {
       final missionId = audit.missionId;
       final descBox = await Hive.openBox<DescriptionInstallations>('description_installations');
-      var desc = descBox.get(missionId);
-      desc ??= DescriptionInstallations.create(missionId);
+      
+      DescriptionInstallations? desc = descBox.get(missionId);
+      desc ??= descBox.values.firstWhere(
+        (d) => d.missionId == missionId,
+        orElse: () => DescriptionInstallations.create(missionId),
+      );
+
+      final oldMTA = List<InstallationItem>.from(desc.alimentationMoyenneTension);
+      final oldBTA = List<InstallationItem>.from(desc.alimentationBasseTension);
 
       bool auditModifie = false;
 
@@ -124,15 +149,28 @@ class InstallationDescriptionSyncService {
 
       // Sauvegarde des modifications de l'audit si des syncId ont été générés
       if (auditModifie) {
-        final auditBox = Hive.box<AuditInstallationsElectriques>(_auditBox);
-        await auditBox.put(audit.key, audit);
+        Box<AuditInstallationsElectriques> auditBox;
+        if (Hive.isBoxOpen(_auditBox)) {
+          auditBox = Hive.box<AuditInstallationsElectriques>(_auditBox);
+        } else {
+          auditBox = await Hive.openBox<AuditInstallationsElectriques>(_auditBox);
+        }
+        await auditBox.put(audit.key ?? missionId, audit);
       }
 
-      desc.updatedAt = DateTime.now();
-      await descBox.put(missionId, desc);
+      final mtEqual = _areItemListsEqual(oldMTA, desc.alimentationMoyenneTension);
+      final btEqual = _areItemListsEqual(oldBTA, desc.alimentationBasseTension);
 
-      if (kDebugMode) {
-        print('✅ Synchronisation Audit ↔ Description réussie pour la mission $missionId');
+      if (!mtEqual || !btEqual || descBox.get(missionId) == null) {
+        desc.updatedAt = DateTime.now();
+        await descBox.put(missionId, desc);
+        if (kDebugMode) {
+          print('✅ Synchronisation Audit ↔ Description enregistrée pour la mission $missionId');
+        }
+      } else {
+        if (kDebugMode) {
+          print('ℹ️ Synchronisation Audit ↔ Description : Aucun changement (No-Op) pour $missionId');
+        }
       }
     } catch (e, st) {
       if (kDebugMode) {

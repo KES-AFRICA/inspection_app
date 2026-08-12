@@ -37,17 +37,18 @@ class DescriptionInstallationsLocalDataSourceImpl implements DescriptionInstalla
   Future<DescriptionInstallations> getOrCreateDescriptionInstallations(String missionId) async {
     final box = Hive.box<DescriptionInstallations>(_descriptionBox);
     try {
-      final existing = box.values.firstWhere((desc) => desc.missionId == missionId);
+      DescriptionInstallations? existing = box.get(missionId);
+      existing ??= box.values.firstWhere((desc) => desc.missionId == missionId);
       return existing;
     } catch (e) {
       final newDesc = DescriptionInstallations.create(missionId);
-      await box.add(newDesc);
+      await box.put(missionId, newDesc);
 
       // Mettre à jour la référence dans la mission
       final missionBox = Hive.box<Mission>(_missionBox);
       final mission = missionBox.get(missionId);
       if (mission != null) {
-        mission.descriptionInstallationsId = newDesc.key.toString();
+        mission.descriptionInstallationsId = missionId;
         await mission.save();
       }
 
@@ -59,12 +60,7 @@ class DescriptionInstallationsLocalDataSourceImpl implements DescriptionInstalla
   Future<void> saveDescriptionInstallations(DescriptionInstallations desc) async {
     final box = Hive.box<DescriptionInstallations>(_descriptionBox);
     desc.updatedAt = DateTime.now();
-    try {
-      final existing = box.values.firstWhere((element) => element.missionId == desc.missionId);
-      await box.put(existing.key, desc);
-    } catch (e) {
-      await box.add(desc);
-    }
+    await box.put(desc.missionId, desc);
   }
 
   @override

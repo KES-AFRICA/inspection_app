@@ -10,6 +10,7 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_zone_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/detail_zone_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/installation_description_sync_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/features/audit_installations/presentation/providers/audit_installations_provider.dart';
 
@@ -34,6 +35,7 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
 
   void _loadAudit() async {
     try {
+      await InstallationDescriptionSyncService.repairAndSyncDescriptions(widget.mission.id);
       final audit = await ref.read(auditInstallationsProvider(widget.mission.id).notifier).load();
       setState(() {
         _audit = audit;

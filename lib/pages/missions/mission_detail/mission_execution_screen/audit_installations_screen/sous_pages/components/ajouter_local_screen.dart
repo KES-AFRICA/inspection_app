@@ -2664,9 +2664,11 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       final nouvellesCellules = List<Cellule>.from(widget.cellules)..removeAt(index);
       widget.onCellulesChanged(nouvellesCellules);
       widget.onDataChanged();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Cellule supprimée'), backgroundColor: Colors.green, duration: Duration(seconds: 1)),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cellule supprimée'), backgroundColor: Colors.green, duration: Duration(seconds: 1)),
+        );
+      }
     }
   }
 
@@ -2832,9 +2834,11 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       final nouveauxTransformateurs = List<TransformateurMTBT>.from(widget.transformateurs)..removeAt(index);
       widget.onTransformateursChanged(nouveauxTransformateurs);
       widget.onDataChanged();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Transformateur supprimé'), backgroundColor: Colors.green, duration: Duration(seconds: 1)),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Transformateur supprimé'), backgroundColor: Colors.green, duration: Duration(seconds: 1)),
+        );
+      }
     }
   }
   

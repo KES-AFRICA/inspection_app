@@ -36,51 +36,54 @@ class HiveService {
   static const String _lightingInspectionBox = 'lighting_inspections';
   static const String _trashBox = 'trash_items';
 
+  // Enregistrer tous les adaptateurs
+  static void registerAdapters() {
+    if (!Hive.isAdapterRegistered(0)) Hive.registerAdapter(VerificateurAdapter());
+    if (!Hive.isAdapterRegistered(1)) Hive.registerAdapter(MissionAdapter());
+    if (!Hive.isAdapterRegistered(2)) Hive.registerAdapter(DescriptionInstallationsAdapter());
+    if (!Hive.isAdapterRegistered(3)) Hive.registerAdapter(AuditInstallationsElectriquesAdapter());
+    if (!Hive.isAdapterRegistered(4)) Hive.registerAdapter(MoyenneTensionLocalAdapter());
+    if (!Hive.isAdapterRegistered(5)) Hive.registerAdapter(MoyenneTensionZoneAdapter());
+    if (!Hive.isAdapterRegistered(6)) Hive.registerAdapter(BasseTensionZoneAdapter());
+    if (!Hive.isAdapterRegistered(7)) Hive.registerAdapter(BasseTensionLocalAdapter());
+    if (!Hive.isAdapterRegistered(8)) Hive.registerAdapter(ElementControleAdapter());
+    if (!Hive.isAdapterRegistered(9)) Hive.registerAdapter(CelluleAdapter());
+    if (!Hive.isAdapterRegistered(10)) Hive.registerAdapter(TransformateurMTBTAdapter());
+    if (!Hive.isAdapterRegistered(11)) Hive.registerAdapter(CoffretArmoireAdapter());
+    if (!Hive.isAdapterRegistered(12)) Hive.registerAdapter(AlimentationAdapter());
+    if (!Hive.isAdapterRegistered(13)) Hive.registerAdapter(PointVerificationAdapter());
+    if (!Hive.isAdapterRegistered(14)) Hive.registerAdapter(ClassementEmplacementAdapter());
+    if (!Hive.isAdapterRegistered(15)) Hive.registerAdapter(FoudreAdapter()); 
+    if (!Hive.isAdapterRegistered(16)) Hive.registerAdapter(MesuresEssaisAdapter());
+    if (!Hive.isAdapterRegistered(17)) Hive.registerAdapter(ConditionMesureAdapter());
+    if (!Hive.isAdapterRegistered(18)) Hive.registerAdapter(EssaiDemarrageAutoAdapter());
+    if (!Hive.isAdapterRegistered(19)) Hive.registerAdapter(TestArretUrgenceAdapter());
+    if (!Hive.isAdapterRegistered(20)) Hive.registerAdapter(PriseTerreAdapter());
+    if (!Hive.isAdapterRegistered(21)) Hive.registerAdapter(AvisMesuresTerreAdapter());
+    if (!Hive.isAdapterRegistered(22)) Hive.registerAdapter(EssaiDeclenchementDifferentielAdapter());
+    if (!Hive.isAdapterRegistered(23)) Hive.registerAdapter(ContinuiteResistanceAdapter());
+    if (!Hive.isAdapterRegistered(24)) Hive.registerAdapter(ObservationLibreAdapter());
+    if (!Hive.isAdapterRegistered(25)) Hive.registerAdapter(InstallationItemAdapter()); 
+    if (!Hive.isAdapterRegistered(34)) Hive.registerAdapter(RenseignementsGenerauxAdapter());
+    if (!Hive.isAdapterRegistered(35)) Hive.registerAdapter(TrashItemAdapter());
+    if (!Hive.isAdapterRegistered(39)) Hive.registerAdapter(JSAAdapter());
+    if (!Hive.isAdapterRegistered(40)) Hive.registerAdapter(JSAInspecteurAdapter());
+    if (!Hive.isAdapterRegistered(41)) Hive.registerAdapter(JSAPlanUrgenceAdapter());
+    if (!Hive.isAdapterRegistered(42)) Hive.registerAdapter(JSADangersAdapter());
+    if (!Hive.isAdapterRegistered(43)) Hive.registerAdapter(JSAExigencesGeneralesAdapter());
+    if (!Hive.isAdapterRegistered(44)) Hive.registerAdapter(JSAEPIAdapter());
+    if (!Hive.isAdapterRegistered(45)) Hive.registerAdapter(JSAVerificationFinaleAdapter());
+    if (!Hive.isAdapterRegistered(46)) Hive.registerAdapter(ClassementZoneAdapter());
+    if (!Hive.isAdapterRegistered(50)) Hive.registerAdapter(LastReportAdapter());
+    if (!Hive.isAdapterRegistered(60)) Hive.registerAdapter(LightingInspectionAdapter());
+    if (!Hive.isAdapterRegistered(61)) Hive.registerAdapter(NonConformingLuminaireAdapter());
+    if (!Hive.isAdapterRegistered(62)) Hive.registerAdapter(LuminaireQuestionAnswerAdapter());
+  }
+
   // Initialiser Hive
   static Future<void> init() async {
     await Hive.initFlutter();
-
-    // Enregistrer tous les adaptateurs
-    Hive.registerAdapter(VerificateurAdapter());
-    Hive.registerAdapter(MissionAdapter());
-    Hive.registerAdapter(DescriptionInstallationsAdapter());
-    Hive.registerAdapter(AuditInstallationsElectriquesAdapter());
-    Hive.registerAdapter(MoyenneTensionLocalAdapter());
-    Hive.registerAdapter(MoyenneTensionZoneAdapter());
-    Hive.registerAdapter(BasseTensionZoneAdapter());
-    Hive.registerAdapter(BasseTensionLocalAdapter());
-    Hive.registerAdapter(ElementControleAdapter());
-    Hive.registerAdapter(CelluleAdapter());
-    Hive.registerAdapter(TransformateurMTBTAdapter());
-    Hive.registerAdapter(CoffretArmoireAdapter());
-    Hive.registerAdapter(AlimentationAdapter());
-    Hive.registerAdapter(PointVerificationAdapter());
-    Hive.registerAdapter(ClassementEmplacementAdapter());
-    Hive.registerAdapter(FoudreAdapter()); 
-    Hive.registerAdapter(MesuresEssaisAdapter());
-    Hive.registerAdapter(ConditionMesureAdapter());
-    Hive.registerAdapter(EssaiDemarrageAutoAdapter());
-    Hive.registerAdapter(TestArretUrgenceAdapter());
-    Hive.registerAdapter(PriseTerreAdapter());
-    Hive.registerAdapter(AvisMesuresTerreAdapter());
-    Hive.registerAdapter(EssaiDeclenchementDifferentielAdapter());
-    Hive.registerAdapter(ContinuiteResistanceAdapter());
-    Hive.registerAdapter(ObservationLibreAdapter());
-    Hive.registerAdapter(InstallationItemAdapter()); 
-    Hive.registerAdapter(RenseignementsGenerauxAdapter());
-    Hive.registerAdapter(JSAAdapter());
-    Hive.registerAdapter(JSAInspecteurAdapter());
-    Hive.registerAdapter(JSAPlanUrgenceAdapter());
-    Hive.registerAdapter(JSADangersAdapter());
-    Hive.registerAdapter(JSAExigencesGeneralesAdapter());
-    Hive.registerAdapter(JSAEPIAdapter());
-    Hive.registerAdapter(JSAVerificationFinaleAdapter());
-    Hive.registerAdapter(ClassementZoneAdapter());
-    Hive.registerAdapter(LastReportAdapter());
-    Hive.registerAdapter(LuminaireQuestionAnswerAdapter());
-    Hive.registerAdapter(NonConformingLuminaireAdapter());
-    Hive.registerAdapter(LightingInspectionAdapter());
-    Hive.registerAdapter(TrashItemAdapter());
+    registerAdapters();
 
     // Ouvrir toutes les boxes avec le type correct
     await Hive.openBox('meta');

@@ -8,6 +8,7 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/paratonnerre_sequence_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/radio_sequence_screen.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/installation_description_sync_service.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/core/providers/description_installations_providers.dart';
 
@@ -287,6 +288,7 @@ class DescriptionInstallationsSequenceScreenState
     setState(() => _isLoading = true);
 
     try {
+      await InstallationDescriptionSyncService.repairAndSyncDescriptions(widget.mission.id);
       final progress = await HiveService.getMissionProgress(widget.mission.id);
 
       if (!mounted) return;
