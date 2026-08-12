@@ -5281,9 +5281,10 @@ class PdfReportService {
             _thCell("Origine de la source d'alimentation"),
             _thCell('Type protection'),
             _thCell('Courbe'),
-            _thCell('PDC kA'),
-            _thCell('Calibre'),
-            _thCell('Section de câble'),
+            _thCell('PDC (kA)'),
+            _thCell('Calibre (A)'),
+            _thCell('DDR (I\u0394n (mA))'),
+            _thCell('Section de câble (mm\u00B2)'),
           ],
         ));
 
@@ -5294,6 +5295,7 @@ class PdfReportService {
             _valueCell(a.courbe ?? ''),
             _valueCell(a.pdcKA),
             _valueCell(a.calibre),
+            _valueCell(a.ddr != null && a.ddr!.isNotEmpty ? '${a.ddr} mA' : '-'),
             _valueCell(a.sectionCable),
           ]));
         }
@@ -5308,12 +5310,13 @@ class PdfReportService {
             horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
           ),
           columnWidths: const {
-            0: pw.FlexColumnWidth(2.2),
-            1: pw.FlexColumnWidth(1.6),
-            2: pw.FlexColumnWidth(1.0),
+            0: pw.FlexColumnWidth(2.0),
+            1: pw.FlexColumnWidth(1.4),
+            2: pw.FlexColumnWidth(0.9),
             3: pw.FlexColumnWidth(0.8),
             4: pw.FlexColumnWidth(0.8),
-            5: pw.FlexColumnWidth(1.2),
+            5: pw.FlexColumnWidth(1.3),
+            6: pw.FlexColumnWidth(1.1),
           },
           children: alimentRows,
         ));
@@ -5332,8 +5335,8 @@ class PdfReportService {
             verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
           ),
           columnWidths: const {
-            0: pw.FlexColumnWidth(2.2),
-            1: pw.FlexColumnWidth(5.4),
+            0: pw.FlexColumnWidth(2.0),
+            1: pw.FlexColumnWidth(6.3),
           },
           children: [
             pw.TableRow(
@@ -5356,11 +5359,12 @@ class PdfReportService {
                     verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
                   ),
                   columnWidths: const {
-                    0: pw.FlexColumnWidth(1.6),
-                    1: pw.FlexColumnWidth(1.0),
+                    0: pw.FlexColumnWidth(1.4),
+                    1: pw.FlexColumnWidth(0.9),
                     2: pw.FlexColumnWidth(0.8),
                     3: pw.FlexColumnWidth(0.8),
-                    4: pw.FlexColumnWidth(1.2),
+                    4: pw.FlexColumnWidth(1.3),
+                    5: pw.FlexColumnWidth(1.1),
                   },
                   children: [
                     pw.TableRow(
@@ -5368,9 +5372,10 @@ class PdfReportService {
                       children: [
                         _thCell('Type protection'),
                         _thCell('Courbe'),
-                        _thCell('PDC kA'),
-                        _thCell('Calibre'),
-                        _thCell('Section de câble'),
+                        _thCell('PDC (kA)'),
+                        _thCell('Calibre (A)'),
+                        _thCell('DDR (I\u0394n (mA))'),
+                        _thCell('Section de câble (mm\u00B2)'),
                       ],
                     ),
                     pw.TableRow(
@@ -5379,6 +5384,7 @@ class PdfReportService {
                         _valueCell(pt.courbe ?? ''),
                         _valueCell(pt.pdcKA),
                         _valueCell(pt.calibre),
+                        _valueCell(pt.ddr != null && pt.ddr!.isNotEmpty ? '${pt.ddr} mA' : '-'),
                         _valueCell(pt.sectionCable),
                       ],
                     ),

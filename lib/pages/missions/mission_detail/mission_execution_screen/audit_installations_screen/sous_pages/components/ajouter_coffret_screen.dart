@@ -1212,15 +1212,29 @@ class _EtapeAlimentations extends StatefulWidget {
 
 class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
 
-  final List<String> _typeProtectionOptions = const [
-    'Sectionneur porte Fusibles',
-    'Fusibles',
-    'Disjoncteurs magnétothermiques',
-    'Interrupteurs-sectionneur',
-    'Disjoncteurs différentiels',
-    'Interrupteurs différentiels',
-    'Inconnu',
-    'Aucun', // AJOUTÉ
+  static const List<String> _typeProtectionOptions = [
+    'Disjoncteur',
+    'Sectionneur',
+    'Interrupteur',
+    'Interrupteur différentiel',
+    'Disjoncteur différentiel',
+    'Sectionneur porte-fusible',
+  ];
+
+  static const List<String> _courbeOptions = [
+    'Courbe-B',
+    'Courbe-C',
+    'Courbe-D',
+    'Courbe-K',
+    'Courbe-Z',
+  ];
+
+  static const List<String> _ddrOptions = [
+    '10',
+    '30',
+    '100',
+    '300',
+    '500',
   ];
 
   static const List<String> _sourceOptions = [
@@ -1247,13 +1261,11 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
   void _initControllers() {
     for (int i = 0; i < widget.alimentations.length; i++) {
       final a = widget.alimentations[i];
-      _controllers['alim${i}_courbe'] = TextEditingController(text: a.courbe ?? '');
       _controllers['alim${i}_pdc'] = TextEditingController(text: a.pdcKA);
       _controllers['alim${i}_calibre'] = TextEditingController(text: a.calibre);
       _controllers['alim${i}_source'] = TextEditingController(text: a.source);
     }
     if (widget.protectionTete != null) {
-      _controllers['prot_courbe'] = TextEditingController(text: widget.protectionTete!.courbe ?? '');
       _controllers['prot_pdc'] = TextEditingController(text: widget.protectionTete!.pdcKA);
       _controllers['prot_calibre'] = TextEditingController(text: widget.protectionTete!.calibre);
       _controllers['prot_source'] = TextEditingController(text: widget.protectionTete!.source);
@@ -1275,6 +1287,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
       switch (field) {
         case 'typeProtection': a.typeProtection = value; break;
         case 'courbe': a.courbe = value; break;
+        case 'ddr': a.ddr = value; break;
         case 'pdcKA': a.pdcKA = value; break;
         case 'calibre': a.calibre = value; break;
         case 'sectionCable': a.sectionCable = value; break;
@@ -1290,6 +1303,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
         switch (field) {
           case 'typeProtection': widget.protectionTete!.typeProtection = value; break;
           case 'courbe': widget.protectionTete!.courbe = value; break;
+          case 'ddr': widget.protectionTete!.ddr = value; break;
           case 'pdcKA': widget.protectionTete!.pdcKA = value; break;
           case 'calibre': widget.protectionTete!.calibre = value; break;
           case 'sectionCable': widget.protectionTete!.sectionCable = value; break;
@@ -1386,10 +1400,27 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     bool isProtectionTete = false,
     int index = 0,
   }) {
-    final courbeCtrl = _getController(isProtectionTete ? 'prot_courbe' : 'alim${index}_courbe', a.courbe ?? '');
     final sourceCtrl = _getController(isProtectionTete ? 'prot_source' : 'alim${index}_source', a.source);
     final pdcCtrl = _getController(isProtectionTete ? 'prot_pdc' : 'alim${index}_pdc', a.pdcKA);
     final calibreCtrl = _getController(isProtectionTete ? 'prot_calibre' : 'alim${index}_calibre', a.calibre);
+
+    final typeProtVal = a.typeProtection;
+    final typeProtectionItems = [..._typeProtectionOptions];
+    if (typeProtVal.isNotEmpty && !typeProtectionItems.contains(typeProtVal)) {
+      typeProtectionItems.insert(0, typeProtVal);
+    }
+
+    final courbeVal = a.courbe ?? '';
+    final courbeItems = [..._courbeOptions];
+    if (courbeVal.isNotEmpty && !courbeItems.contains(courbeVal)) {
+      courbeItems.insert(0, courbeVal);
+    }
+
+    final ddrVal = a.ddr ?? '';
+    final ddrItems = [..._ddrOptions];
+    if (ddrVal.isNotEmpty && !ddrItems.contains(ddrVal)) {
+      ddrItems.insert(0, ddrVal);
+    }
 
     return Container(
       padding: EdgeInsets.all(context.spacingM),
@@ -1410,9 +1441,9 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             child: Text(title, style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.bold, color: Colors.orange.shade800)),
           ),
           SizedBox(height: context.spacingM),
-          _buildModernDropdown(context, label: 'Type de protection', value: a.typeProtection, items: _typeProtectionOptions, onChanged: (v) => onChanged('typeProtection', v)),
+          _buildModernDropdown(context, label: 'Type de protection', value: typeProtVal, items: typeProtectionItems, onChanged: (v) => onChanged('typeProtection', v)),
           SizedBox(height: context.spacingS),
-          _buildModernTextField(context, label: 'Courbe', controller: courbeCtrl, onChanged: (v) => onChanged('courbe', v)),
+          _buildModernDropdown(context, label: 'Courbe', value: courbeVal, items: courbeItems, onChanged: (v) => onChanged('courbe', v)),
           SizedBox(height: context.spacingS),
           if (title == 'ORIGINE DE LA SOURCE') ...[
             _buildModernTextField(context, label: 'Source (ex: TGBT, Armoire RDC...)', controller: sourceCtrl, onChanged: (v) => onChanged('source', v)),
@@ -1422,6 +1453,8 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           SizedBox(height: context.spacingS),
           // Champ calibre avec suffixe "A"
           _buildModernTextFieldWithSuffix(context, label: isProtectionTete ? 'Calibre protection' : 'Calibre', suffix: 'A', controller: calibreCtrl, onChanged: (v) => onChanged('calibre', v)),
+          SizedBox(height: context.spacingS),
+          _buildModernDropdown(context, label: 'DDR IΔn (mA)', value: ddrVal, items: ddrItems, onChanged: (v) => onChanged('ddr', v)),
           SizedBox(height: context.spacingS),
           _buildModernDropdown(context, label: 'Section de câble', value: a.sectionCable, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCable', v)),
         ],

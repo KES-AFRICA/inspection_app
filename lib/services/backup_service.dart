@@ -802,6 +802,7 @@ class BackupService {
   static Map<String, dynamic> _serializeAlim(Alimentation a) => {
         'typeProtection': a.typeProtection,
         'courbe': a.courbe,
+        'ddr': a.ddr,
         'pdcKA': a.pdcKA,
         'calibre': a.calibre,
         'sectionCable': a.sectionCable,
@@ -2350,6 +2351,7 @@ class BackupService {
   static Alimentation _parseAlim(Map<String, dynamic> d) => Alimentation(
         typeProtection: d['typeProtection'] as String? ?? '',
         courbe: d['courbe'] as String? ?? '',
+        ddr: d['ddr'] as String?,
         pdcKA: d['pdcKA'] as String? ?? '',
         calibre: d['calibre'] as String? ?? '',
         sectionCable: d['sectionCable'] as String? ?? '',

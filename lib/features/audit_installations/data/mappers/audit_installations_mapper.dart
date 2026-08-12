@@ -122,6 +122,7 @@ class AuditInstallationsMapper {
     return AlimentationEntity(
       typeProtection: model.typeProtection,
       courbe: model.courbe,
+      ddr: model.ddr,
       pdcKA: model.pdcKA,
       calibre: model.calibre,
       sectionCable: model.sectionCable,
@@ -134,6 +135,7 @@ class AuditInstallationsMapper {
     return Alimentation(
       typeProtection: entity.typeProtection,
       courbe: entity.courbe ?? '',
+      ddr: entity.ddr,
       pdcKA: entity.pdcKA,
       calibre: entity.calibre,
       sectionCable: entity.sectionCable,

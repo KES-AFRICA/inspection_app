@@ -1054,6 +1054,8 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
               _buildInfoRow('Courbe', alimentation.courbe!),
             _buildInfoRow('PDC kA', alimentation.pdcKA),
             _buildInfoRow('Calibre', alimentation.calibre),
+            if (alimentation.ddr != null && alimentation.ddr!.isNotEmpty)
+              _buildInfoRow('DDR (IΔn)', '${alimentation.ddr} mA'),
             _buildInfoRow('Section de câble', alimentation.sectionCable),
           ],
         ),

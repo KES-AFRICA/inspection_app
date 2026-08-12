@@ -651,6 +651,7 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
     return Alimentation(
       typeProtection: fields[0] as String,
       courbe: (fields[6] as String?) ?? '',
+      ddr: fields[7] as String?,
       pdcKA: fields[1] as String,
       calibre: fields[2] as String,
       sectionCable: fields[3] as String,
@@ -662,7 +663,7 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
   @override
   void write(BinaryWriter writer, Alimentation obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.typeProtection)
       ..writeByte(1)
@@ -676,7 +677,9 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
       ..writeByte(5)
       ..write(obj.source)
       ..writeByte(6)
-      ..write(obj.courbe);
+      ..write(obj.courbe)
+      ..writeByte(7)
+      ..write(obj.ddr);
   }
 
   @override
