@@ -4546,6 +4546,15 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       _conditionsValid = _validateElements(_conditionsExploitation);
     } else {
       _initializeElementsControle();
+      if (widget.isMoyenneTension) {
+        _selectedType = 'LOCAL_TRANSFORMATEUR';
+        _typeValid = true;
+        _initializeElementsForType('LOCAL_TRANSFORMATEUR');
+      } else {
+        _selectedType = 'LOCAL_TGBT';
+        _typeValid = true;
+        _initializeElementsForType('LOCAL_TGBT');
+      }
     }
   }
 
@@ -4657,6 +4666,9 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       // Informations de base
       _nomController.text = local.nom ?? '';
       _selectedType = local.type;
+      if (_selectedType == null || _selectedType!.isEmpty) {
+        _selectedType = widget.isMoyenneTension ? 'LOCAL_TRANSFORMATEUR' : 'LOCAL_TGBT';
+      }
       _accessible = (local.accessible == false) ? false : true;
       _isRiskZone = (local is MoyenneTensionLocal || local is BasseTensionLocal) ? (local.isRiskZone ?? false) : false;
       _typeValid = true;
@@ -6066,40 +6078,48 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                 boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: context.spacingS, offset: const Offset(0, 2))],
               ),
               child: Row(
-                children: List.generate(totalSteps, (index) {
-                  final isActive = index <= _currentStep;
-                  final isCompleted = index < _currentStep;
-                  return Expanded(
-                    child: Row(
-                      children: [
-                        GestureDetector(
-                          onTap: widget.isEdition ? () => _changerEtapeDirecte(index) : null,
-                          child: Container(
-                            width: context.iconSizeL,
-                            height: context.iconSizeL,
-                            decoration: BoxDecoration(
-                              color: isActive ? AppTheme.primaryBlue : Colors.grey.shade300,
-                              shape: BoxShape.circle,
-                              boxShadow: isActive ? [BoxShadow(color: AppTheme.primaryBlue.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 2))] : null,
-                            ),
-                            child: Center(
-                              child: isCompleted
-                                  ? Icon(Icons.check, color: Colors.white, size: context.iconSizeS)
-                                  : Text('${index + 1}', style: TextStyle(color: isActive ? Colors.white : Colors.grey.shade600, fontWeight: FontWeight.bold, fontSize: context.fontSizeS)),
-                            ),
-                          ),
+                children: List.generate(totalSteps * 2 - 1, (i) {
+                  if (i.isEven) {
+                    final index = i ~/ 2;
+                    final isActive = index <= _currentStep;
+                    final isCompleted = index < _currentStep;
+                    return GestureDetector(
+                      onTap: widget.isEdition ? () => _changerEtapeDirecte(index) : null,
+                      child: Container(
+                        width: context.iconSizeL,
+                        height: context.iconSizeL,
+                        decoration: BoxDecoration(
+                          color: isActive ? AppTheme.primaryBlue : Colors.grey.shade300,
+                          shape: BoxShape.circle,
+                          boxShadow: isActive ? [BoxShadow(color: AppTheme.primaryBlue.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 2))] : null,
                         ),
-                        if (index < totalSteps - 1)
-                          Expanded(
-                            child: Container(
-                              height: 2,
-                              margin: EdgeInsets.symmetric(horizontal: context.spacingXS),
-                              color: index < _currentStep ? AppTheme.primaryBlue : Colors.grey.shade300,
-                            ),
-                          ),
-                      ],
-                    ),
-                  );
+                        child: Center(
+                          child: isCompleted
+                              ? Icon(Icons.check, color: Colors.white, size: context.iconSizeS)
+                              : Text(
+                                  '${index + 1}',
+                                  style: TextStyle(
+                                    color: isActive ? Colors.white : Colors.grey.shade600,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: context.fontSizeS,
+                                  ),
+                                ),
+                        ),
+                      ),
+                    );
+                  } else {
+                    final lineIndex = i ~/ 2;
+                    return Expanded(
+                      child: Container(
+                        height: 3,
+                        margin: EdgeInsets.symmetric(horizontal: context.spacingXS),
+                        decoration: BoxDecoration(
+                          color: lineIndex < _currentStep ? AppTheme.primaryBlue : Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(1.5),
+                        ),
+                      ),
+                    );
+                  }
                 }),
               ),
             ),
