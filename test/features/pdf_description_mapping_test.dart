@@ -1,159 +1,186 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/description_installations.dart';
+import 'package:inspec_app/models/pdf/installation_description_pdf_data.dart';
 import 'package:inspec_app/services/installation_description_sync_service.dart';
-import 'package:inspec_app/services/pdf/pdf_report_service.dart';
 
 void main() {
   group('Audit & Resolution PDF Table Mapping (MT & BT)', () {
-    test('MT - Cellule MT avec clés synchro, UI et legacy', () {
-      final itemSynchro = InstallationItem(
-        data: {
-          'auditCelluleId': 'cellule_1',
-          'Gamme De Cellule': 'SM6',
-          'Type De Cellule': 'IM',
-          'Tension de service': '20',
-          'TENSION ASSIGNEE(KV)': '24',
-          'POUVOIR DE COUPURE ASSIGNE(KA)': '12.5',
-          'Calibre Du Disjoncteur': '630',
-          'SECTION DU CABLE(mm2)': '95',
-          'NATURE DU RESEAU': 'Souterrain',
-          'PRESENCE IACM': 'Absent',
-          'Observations': 'RAS',
-        },
-        createdAt: DateTime.now(),
+    test('Direct extraction from Cellule real entities into InstallationDescriptionPdfData', () {
+      final audit = AuditInstallationsElectriques.create('mission_direct_cellules');
+      final localMT = MoyenneTensionLocal(
+        nom: 'Poste MT 1',
+        type: 'LOCAL_TRANSFORMATEUR',
+        cellules: [
+          Cellule(
+            fonction: 'Arrivée',
+            type: 'IMB : interrupteur',
+            marqueModeleAnnee: 'Schneider 2022',
+            tensionAssignee: '24',
+            pouvoirCoupure: '12.5',
+            numerotation: 'C1',
+            parafoudres: 'Non',
+            sectionCables: '95',
+            natureReseau: 'Souterrain',
+            tensionService: '20',
+          ),
+          Cellule(
+            fonction: 'Protection',
+            type: 'IM',
+            marqueModeleAnnee: 'Schneider 2021',
+            tensionAssignee: '17.5',
+            pouvoirCoupure: '16',
+            numerotation: 'C2',
+            parafoudres: 'Oui',
+            sectionCables: '70',
+            natureReseau: 'Aérien',
+            tensionService: '15',
+          ),
+          Cellule(
+            fonction: 'Comptage',
+            type: 'QM',
+            marqueModeleAnnee: 'ABB 2023',
+            tensionAssignee: '36',
+            pouvoirCoupure: '25',
+            numerotation: 'C3',
+            parafoudres: 'Non',
+            sectionCables: '120',
+            natureReseau: 'Souterrain',
+            tensionService: '30',
+          ),
+        ],
       );
+      audit.moyenneTensionLocaux.add(localMT);
 
-      final itemUIForm = InstallationItem(
-        data: {
-          'Gamme De Cellule': 'Premset',
-          'Type De Cellule': 'CB',
-          'Tension de service': '15',
-          'Tension assignée': '17.5',
-          'Pouvoir de coupure assigné': '16',
-          'Calibre Du Disjoncteur': '400',
-          'Section Du Cable': '70',
-          'Nature Du Reseau': 'Aérien',
-        },
-        createdAt: DateTime.now(),
-      );
+      final pdfData = InstallationDescriptionPdfData.fromDescription(desc: null, audit: audit);
 
-      // 1. Colonne 'TYPE DE CELLULE'
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemSynchro.data, 'TYPE DE CELLULE', InstallationDescriptionSyncService.celluleAliases),
-          'IM');
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemUIForm.data, 'TYPE DE CELLULE', InstallationDescriptionSyncService.celluleAliases),
-          'CB');
+      // Vérifier les 3 cellules MT extraites directement depuis l'entité audit
+      expect(pdfData.mtRows.length, 3);
 
-      // 2. Colonne 'TENSION DE SERVICE (kV)'
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemSynchro.data, 'TENSION DE SERVICE (kV)', InstallationDescriptionSyncService.celluleAliases),
-          '20');
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemUIForm.data, 'TENSION DE SERVICE (kV)', InstallationDescriptionSyncService.celluleAliases),
-          '15');
+      final row1 = pdfData.mtRows[0];
+      expect(row1.getValueForColumn('TYPE DE CELLULE', 'MT'), 'IMB : interrupteur');
+      expect(row1.getValueForColumn('TENSION ASSIGNEE(KV)', 'MT'), '24');
+      expect(row1.getValueForColumn('POUVOIR DE COUPURE ASSIGNE(KA)', 'MT'), '12.5');
+      expect(row1.getValueForColumn('SECTION DU CABLE(mm2)', 'MT'), '95');
+      expect(row1.getValueForColumn('NATURE DU RESEAU', 'MT'), 'Souterrain');
+      expect(row1.getValueForColumn('TENSION DE SERVICE (kV)', 'MT'), '20');
 
-      // 3. Colonne 'TENSION ASSIGNEE(KV)'
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemSynchro.data, 'TENSION ASSIGNEE(KV)', InstallationDescriptionSyncService.celluleAliases),
-          '24');
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemUIForm.data, 'TENSION ASSIGNEE(KV)', InstallationDescriptionSyncService.celluleAliases),
-          '17.5');
+      final row2 = pdfData.mtRows[1];
+      expect(row2.getValueForColumn('TYPE DE CELLULE', 'MT'), 'IM');
+      expect(row2.getValueForColumn('TENSION ASSIGNEE(KV)', 'MT'), '17.5');
+      expect(row2.getValueForColumn('POUVOIR DE COUPURE ASSIGNE(KA)', 'MT'), '16');
+      expect(row2.getValueForColumn('SECTION DU CABLE(mm2)', 'MT'), '70');
+      expect(row2.getValueForColumn('NATURE DU RESEAU', 'MT'), 'Aérien');
+      expect(row2.getValueForColumn('TENSION DE SERVICE (kV)', 'MT'), '15');
 
-      // 4. Colonne 'POUVOIR DE COUPURE ASSIGNE(KA)'
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemSynchro.data, 'POUVOIR DE COUPURE ASSIGNE(KA)', InstallationDescriptionSyncService.celluleAliases),
-          '12.5');
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemUIForm.data, 'POUVOIR DE COUPURE ASSIGNE(KA)', InstallationDescriptionSyncService.celluleAliases),
-          '16');
-
-      // 5. Colonne 'SECTION DU CABLE(mm2)'
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemSynchro.data, 'SECTION DU CABLE(mm2)', InstallationDescriptionSyncService.celluleAliases),
-          '95');
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemUIForm.data, 'SECTION DU CABLE(mm2)', InstallationDescriptionSyncService.celluleAliases),
-          '70');
+      final row3 = pdfData.mtRows[2];
+      expect(row3.getValueForColumn('TYPE DE CELLULE', 'MT'), 'QM');
+      expect(row3.getValueForColumn('TENSION ASSIGNEE(KV)', 'MT'), '36');
+      expect(row3.getValueForColumn('POUVOIR DE COUPURE ASSIGNE(KA)', 'MT'), '25');
+      expect(row3.getValueForColumn('SECTION DU CABLE(mm2)', 'MT'), '120');
+      expect(row3.getValueForColumn('NATURE DU RESEAU', 'MT'), 'Souterrain');
+      expect(row3.getValueForColumn('TENSION DE SERVICE (kV)', 'MT'), '30');
     });
 
-    test('BT - Transformateur MT/BT avec clés synchro, UI et calculées', () {
-      final itemTransfo = InstallationItem(
-        data: {
-          'auditTransformateurId': 'transfo_1',
-          'Puissance Transformateur': '630',
-          'Type de transformateur': 'IMMERGÉ',
-          'Intensité nominale': '909',
-          'Calibre Du Disjoncteur Sortie Transformateur': '1000',
-          'Section Du Cable': '240',
-          'Tension': '20 kV / 400 V',
-          'Couplage': 'Dyn11',
-          'Type de réseau': 'Réseau urbain',
-          'PCC amont': '500',
-          'Puissance UCC': '4 %',
-          'IK3 MAX': '21,55 kA',
-        },
-        createdAt: DateTime.now(),
+    test('Direct extraction from TransformateurMTBT real entities into InstallationDescriptionPdfData', () {
+      final audit = AuditInstallationsElectriques.create('mission_direct_transfos');
+      final localBT = MoyenneTensionLocal(
+        nom: 'Local TGBT',
+        type: 'LOCAL_TGBT',
+        transformateurs: [
+          TransformateurMTBT(
+            typeTransformateur: 'SEC',
+            marqueAnnee: 'France Transfo 2020',
+            puissanceAssignee: '400',
+            tensionPrimaireSecondaire: '15kV/400V',
+            relaisBuchholz: 'Absent',
+            typeRefroidissement: 'AN',
+            regimeNeutre: 'TN-S',
+            calibreDisjoncteur: '630',
+            sectionCables: '95',
+            intensiteNominale: '577',
+            couplage: 'Dyn11',
+            typeReseau: 'Réseau urbain',
+            pccAmont: '500',
+            puissanceUcc: '4 %',
+            ik3Max: '13.92 kA',
+          ),
+          TransformateurMTBT(
+            typeTransformateur: 'IMMERGÉ',
+            marqueAnnee: 'Schneider 2022',
+            puissanceAssignee: '630',
+            tensionPrimaireSecondaire: '20kV/400V',
+            relaisBuchholz: 'Présent',
+            typeRefroidissement: 'ONAN',
+            regimeNeutre: 'TT',
+            calibreDisjoncteur: '1000',
+            sectionCables: '240',
+            intensiteNominale: '909.3',
+            couplage: 'Dyn11',
+            typeReseau: 'Poste source',
+            pccAmont: '1000',
+            puissanceUcc: '4 %',
+            ik3Max: '21.55 kA',
+          ),
+        ],
       );
+      audit.moyenneTensionLocaux.add(localBT);
 
-      // 1. Colonne 'PUISSANCE TRANSFORMATEUR (KVA)'
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemTransfo.data, 'PUISSANCE TRANSFORMATEUR (KVA)', InstallationDescriptionSyncService.transfoAliases),
-          '630');
+      final pdfData = InstallationDescriptionPdfData.fromDescription(desc: null, audit: audit);
 
-      // 2. Colonne 'TYPE DE TRANSFORMATEUR'
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemTransfo.data, 'TYPE DE TRANSFORMATEUR', InstallationDescriptionSyncService.transfoAliases),
-          'IMMERGÉ');
+      // Vérifier les 2 transformateurs BT extraits directement depuis les entités réelles
+      expect(pdfData.btRows.length, 2);
 
-      // 3. Colonne 'INTENSITE NOMINALE'
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemTransfo.data, 'INTENSITE NOMINALE', InstallationDescriptionSyncService.transfoAliases),
-          '909');
+      final row1 = pdfData.btRows[0];
+      expect(row1.getValueForColumn('PUISSANCE TRANSFORMATEUR (KVA)', 'BT'), '400');
+      expect(row1.getValueForColumn('TYPE DE TRANSFORMATEUR', 'BT'), 'SEC');
+      expect(row1.getValueForColumn('INTENSITE NOMINALE', 'BT'), '577');
+      expect(row1.getValueForColumn('CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR', 'BT'), '630');
+      expect(row1.getValueForColumn('SECTION DU CABLE', 'BT'), '95');
+      expect(row1.getValueForColumn('TENSION MT/BT', 'BT'), '15kV/400V');
+      expect(row1.getValueForColumn('COUPLAGE', 'BT'), 'Dyn11');
+      expect(row1.getValueForColumn('PCC AMONT EN MVA', 'BT'), '500');
+      expect(row1.getValueForColumn('UCC EN %', 'BT'), '4 %');
+      expect(row1.getValueForColumn('IK3 MAX(KA)', 'BT'), '13.92 kA');
 
-      // 4. Colonne 'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR'
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemTransfo.data, 'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR', InstallationDescriptionSyncService.transfoAliases),
-          '1000');
+      final row2 = pdfData.btRows[1];
+      expect(row2.getValueForColumn('PUISSANCE TRANSFORMATEUR (KVA)', 'BT'), '630');
+      expect(row2.getValueForColumn('TYPE DE TRANSFORMATEUR', 'BT'), 'IMMERGÉ');
+      expect(row2.getValueForColumn('INTENSITE NOMINALE', 'BT'), '909.3');
+      expect(row2.getValueForColumn('CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR', 'BT'), '1000');
+      expect(row2.getValueForColumn('SECTION DU CABLE', 'BT'), '240');
+      expect(row2.getValueForColumn('TENSION MT/BT', 'BT'), '20kV/400V');
+      expect(row2.getValueForColumn('COUPLAGE', 'BT'), 'Dyn11');
+      expect(row2.getValueForColumn('PCC AMONT EN MVA', 'BT'), '1000');
+      expect(row2.getValueForColumn('UCC EN %', 'BT'), '4 %');
+      expect(row2.getValueForColumn('IK3 MAX(KA)', 'BT'), '21.55 kA');
+    });
 
-      // 5. Colonne 'TENSION MT/BT'
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemTransfo.data, 'TENSION MT/BT', InstallationDescriptionSyncService.transfoAliases),
-          '20 kV / 400 V');
+    test('Fallback to manual / legacy DescriptionInstallations items', () {
+      final desc = DescriptionInstallations.create('mission_legacy');
+      desc.alimentationMoyenneTension = [
+        InstallationItem(
+          data: {
+            'Type De Cellule': 'IM',
+            'Tension de service': '15',
+            'Tension assignée': '17.5',
+            'Pouvoir de coupure assigné': '16',
+            'Section Du Cable': '70',
+            'Nature Du Reseau': 'Aérien',
+          },
+          createdAt: DateTime.now(),
+        ),
+      ];
 
-      // 6. Colonne 'PCC AMONT EN MVA'
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemTransfo.data, 'PCC AMONT EN MVA', InstallationDescriptionSyncService.transfoAliases),
-          '500');
+      final pdfData = InstallationDescriptionPdfData.fromDescription(desc: desc, audit: null);
 
-      // 7. Colonne 'UCC EN %'
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemTransfo.data, 'UCC EN %', InstallationDescriptionSyncService.transfoAliases),
-          '4 %');
-
-      // 8. Colonne 'IK3 MAX(KA)'
-      expect(
-          InstallationDescriptionSyncService.getFieldWithAlias(
-              itemTransfo.data, 'IK3 MAX(KA)', InstallationDescriptionSyncService.transfoAliases),
-          '21,55 kA');
+      expect(pdfData.mtRows.length, 1);
+      final row = pdfData.mtRows[0];
+      expect(row.getValueForColumn('TYPE DE CELLULE', 'MT'), 'IM');
+      expect(row.getValueForColumn('TENSION DE SERVICE (kV)', 'MT'), '15');
+      expect(row.getValueForColumn('TENSION ASSIGNEE(KV)', 'MT'), '17.5');
+      expect(row.getValueForColumn('POUVOIR DE COUPURE ASSIGNE(KA)', 'MT'), '16');
+      expect(row.getValueForColumn('SECTION DU CABLE(mm2)', 'MT'), '70');
     });
   });
 }

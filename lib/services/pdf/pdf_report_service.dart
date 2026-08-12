@@ -18,6 +18,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:inspec_app/models/pdf/installation_description_pdf_data.dart';
 import 'package:inspec_app/services/installation_description_sync_service.dart';
 import 'package:inspec_app/services/installation_fields_registry.dart';
 import 'package:inspec_app/services/pdf/pdf_chunk_merger.dart';
@@ -2793,60 +2794,63 @@ class PdfReportService {
     ));
     widgets.add(pw.SizedBox(height: 8));
 
-    if (desc == null) {
+    if (desc == null && audit == null) {
       widgets.add(_bodyText('Aucune donnée disponible.'));
       return widgets;
     }
 
+    final pdfData = InstallationDescriptionPdfData.fromDescription(desc: desc, audit: audit);
+    final safeDesc = desc ?? DescriptionInstallations.create('');
+
     widgets.add(_subTitle('Caractéristiques de l\'alimentation moyenne tension'));
-    if (desc.alimentationMoyenneTension.isNotEmpty) {
-      widgets.add(_buildInstallationTable(desc.alimentationMoyenneTension, sectionKey: 'MT'));
+    if (pdfData.mtRows.isNotEmpty) {
+      widgets.add(_buildInstallationTableFromRows(pdfData.mtRows, sectionKey: 'MT'));
     } else {
       widgets.add(_bodyText('- Non renseignee'));
     }
     
     widgets.add(_subTitle('Caractéristiques de l\'alimentation basse tension sortie transformateur'));
-    if (desc.alimentationBasseTension.isNotEmpty) {
-      widgets.add(_buildInstallationTable(desc.alimentationBasseTension, sectionKey: 'BT'));
+    if (pdfData.btRows.isNotEmpty) {
+      widgets.add(_buildInstallationTableFromRows(pdfData.btRows, sectionKey: 'BT'));
     } else {
       widgets.add(_bodyText('- Non renseignee'));
     }
     
     widgets.add(_subTitle('Caractéristiques du groupe électrogène'));
-    if (desc.groupeElectrogene.isNotEmpty) {
-      widgets.add(_buildInstallationTable(desc.groupeElectrogene, sectionKey: 'GROUPE'));
+    if (safeDesc.groupeElectrogene.isNotEmpty) {
+      widgets.add(_buildInstallationTable(safeDesc.groupeElectrogene, sectionKey: 'GROUPE'));
     } else {
       widgets.add(_bodyText('- Absent'));
     }
     widgets.add(pw.SizedBox(height: 8));
 
     widgets.add(_subTitle('Alimentation du groupe électrogène en carburant'));
-    if (desc.alimentationCarburant.isNotEmpty) {
-      widgets.add(_buildInstallationTable(desc.alimentationCarburant, sectionKey: 'CARBURANT'));
+    if (safeDesc.alimentationCarburant.isNotEmpty) {
+      widgets.add(_buildInstallationTable(safeDesc.alimentationCarburant, sectionKey: 'CARBURANT'));
     } else {
       widgets.add(_bodyText('- Non applicable'));
     }
     widgets.add(pw.SizedBox(height: 8));
 
     widgets.add(_subTitle('Caractéristiques de l\'inverseur'));
-    if (desc.inverseur.isNotEmpty) {
-      widgets.add(_buildInstallationTable(desc.inverseur, sectionKey: 'INVERSEUR'));
+    if (safeDesc.inverseur.isNotEmpty) {
+      widgets.add(_buildInstallationTable(safeDesc.inverseur, sectionKey: 'INVERSEUR'));
     } else {
       widgets.add(_bodyText('- Absent'));
     }
     widgets.add(pw.SizedBox(height: 8));
 
     widgets.add(_subTitle('Caractéristiques du stabilisateur'));
-    if (desc.stabilisateur.isNotEmpty) {
-      widgets.add(_buildInstallationTable(desc.stabilisateur, sectionKey: 'STABILISATEUR'));
+    if (safeDesc.stabilisateur.isNotEmpty) {
+      widgets.add(_buildInstallationTable(safeDesc.stabilisateur, sectionKey: 'STABILISATEUR'));
     } else {
       widgets.add(_bodyText('- Absent'));
     }
     widgets.add(pw.SizedBox(height: 8));
 
     widgets.add(_subTitle('Caractéristiques des onduleurs'));
-    if (desc.onduleurs.isNotEmpty) {
-      widgets.add(_buildInstallationTable(desc.onduleurs, sectionKey: 'ONDULEUR'));
+    if (safeDesc.onduleurs.isNotEmpty) {
+      widgets.add(_buildInstallationTable(safeDesc.onduleurs, sectionKey: 'ONDULEUR'));
     } else {
       widgets.add(_bodyText('- Absent'));
     }
@@ -2854,38 +2858,38 @@ class PdfReportService {
 
     widgets.add(_subTitle('Régime de neutre'));
   
-    String regimeAffichage = desc.regimeNeutre ?? 'Non renseigné';
-    if (desc.regimeNeutre == 'TN' && desc.regimeNeutreDetail != null) {
-      regimeAffichage = 'TN (TN-${desc.regimeNeutreDetail})';
+    String regimeAffichage = safeDesc.regimeNeutre ?? 'Non renseigné';
+    if (safeDesc.regimeNeutre == 'TN' && safeDesc.regimeNeutreDetail != null) {
+      regimeAffichage = 'TN (TN-${safeDesc.regimeNeutreDetail})';
     }
     
     widgets.add(_bodyText('- $regimeAffichage'));
     widgets.add(pw.SizedBox(height: 5));
 
     widgets.add(_subTitle('Eclairage de sécurité'));
-    widgets.add(_bodyText('- ${desc.eclairageSecurite ?? 'Non renseigné'}'));
+    widgets.add(_bodyText('- ${safeDesc.eclairageSecurite ?? 'Non renseigné'}'));
     widgets.add(pw.SizedBox(height: 5));
 
     widgets.add(_subTitle('Modifications apportées aux installations'));
-    widgets.add(_bodyText(desc.modificationsInstallations ?? 'Sans objet'));
+    widgets.add(_bodyText(safeDesc.modificationsInstallations ?? 'Sans objet'));
     widgets.add(pw.SizedBox(height: 5));
 
     widgets.add(_subTitle('Note de calcul des installations électriques'));
-    widgets.add(_bodyText('- ${desc.noteCalcul ?? 'Non transmis'}'));
+    widgets.add(_bodyText('- ${safeDesc.noteCalcul ?? 'Non transmis'}'));
     widgets.add(pw.SizedBox(height: 5));
 
     widgets.add(_subTitle('Présence de paratonnerre'));
-    widgets.add(_bodyText('Présence : ${desc.presenceParatonnerre ?? 'NON'}'));
-    if (desc.analyseRisqueFoudre != null && desc.analyseRisqueFoudre!.isNotEmpty) {
-      widgets.add(_bodyText('Analyse risque foudre : ${desc.analyseRisqueFoudre}'));
+    widgets.add(_bodyText('Présence : ${safeDesc.presenceParatonnerre ?? 'NON'}'));
+    if (safeDesc.analyseRisqueFoudre != null && safeDesc.analyseRisqueFoudre!.isNotEmpty) {
+      widgets.add(_bodyText('Analyse risque foudre : ${safeDesc.analyseRisqueFoudre}'));
     }
-    if (desc.etudeTechniqueFoudre != null && desc.etudeTechniqueFoudre!.isNotEmpty) {
-      widgets.add(_bodyText('Etude technique foudre : ${desc.etudeTechniqueFoudre}'));
+    if (safeDesc.etudeTechniqueFoudre != null && safeDesc.etudeTechniqueFoudre!.isNotEmpty) {
+      widgets.add(_bodyText('Etude technique foudre : ${safeDesc.etudeTechniqueFoudre}'));
     }
     widgets.add(pw.SizedBox(height: 5));
 
     widgets.add(_subTitle('Registre de sécurité'));
-    widgets.add(_bodyText('- ${desc.registreSecurite ?? 'Non transmis'}'));
+    widgets.add(_bodyText('- ${safeDesc.registreSecurite ?? 'Non transmis'}'));
     widgets.add(pw.SizedBox(height: 5));
 
     widgets.add(PageTracker(
@@ -2971,6 +2975,63 @@ class PdfReportService {
             ),
             ...finalOrder.map((key) {
               final raw = _resolveInstallationValue(e.value, key, sectionKey);
+              final unit = _unitForField(key);
+              final display = (raw != '-' &&
+                      raw.isNotEmpty &&
+                      unit.isNotEmpty &&
+                      !raw.toLowerCase().contains(unit.toLowerCase()))
+                  ? '$raw $unit'
+                  : raw;
+              return _cell(display, isHeader: false, centered: true);
+            }),
+          ],
+        )),
+      ],
+    );
+  }
+
+  /// Construit un tableau PDF récapitulatif pour les installations à partir d'une liste de lignes normalisées
+  static pw.Widget _buildInstallationTableFromRows(
+      List<InstallationDescriptionPdfRow> rows,
+      {required String sectionKey}) {
+    if (rows.isEmpty) return _bodyText('- Non renseignee');
+
+    final finalOrder = _columnOrderBySection[sectionKey] ?? [];
+    if (finalOrder.isEmpty) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.all(4),
+        decoration: pw.BoxDecoration(border: pw.Border.all(color: borderColor, width: 0.4)),
+        child: _bodyText('Données non renseignees'),
+      );
+    }
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: borderColor, width: 0.4),
+      columnWidths: {
+        0: const pw.FixedColumnWidth(18),
+        ...{for (var i = 1; i <= finalOrder.length; i++) i: const pw.FlexColumnWidth(1)},
+      },
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: lightBlue),
+          children: [
+            _cell('N\u00B0', isHeader: true, centered: true),
+            ...finalOrder.map((c) => _cell(c, isHeader: true, centered: true)),
+          ],
+        ),
+        ...rows.asMap().entries.map((e) => pw.TableRow(
+          decoration: pw.BoxDecoration(color: e.key.isOdd ? tableRowAlt : PdfColors.white),
+          children: [
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+              alignment: pw.Alignment.center,
+              child: pw.Text(
+                '${e.key + 1}',
+                style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+              ),
+            ),
+            ...finalOrder.map((key) {
+              final raw = e.value.getValueForColumn(key, sectionKey);
               final unit = _unitForField(key);
               final display = (raw != '-' &&
                       raw.isNotEmpty &&

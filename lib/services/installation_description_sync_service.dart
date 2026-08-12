@@ -249,6 +249,7 @@ class InstallationDescriptionSyncService {
 
     // 1. Locaux MT directs
     for (var local in audit.moyenneTensionLocaux) {
+      local.migrateFromOldFields();
       for (var cellule in local.cellules) {
         checkAndAddCellule(cellule);
       }
@@ -257,6 +258,7 @@ class InstallationDescriptionSyncService {
     // 2. Locaux des zones MT
     for (var zone in audit.moyenneTensionZones) {
       for (var local in zone.locaux) {
+        local.migrateFromOldFields();
         for (var cellule in local.cellules) {
           checkAndAddCellule(cellule);
         }
@@ -291,6 +293,7 @@ class InstallationDescriptionSyncService {
 
     // 1. Locaux MT directs
     for (var local in audit.moyenneTensionLocaux) {
+      local.migrateFromOldFields();
       for (var transfo in local.transformateurs) {
         checkAndAddTransfo(transfo);
       }
@@ -299,6 +302,7 @@ class InstallationDescriptionSyncService {
     // 2. Locaux des zones MT
     for (var zone in audit.moyenneTensionZones) {
       for (var local in zone.locaux) {
+        local.migrateFromOldFields();
         for (var transfo in local.transformateurs) {
           checkAndAddTransfo(transfo);
         }
@@ -332,8 +336,11 @@ class InstallationDescriptionSyncService {
       }
     }
 
+    final processedIds = <String>{};
+
     // Mettre à jour / ajouter les cellules de l'audit
     for (var cellule in cellulesAudit) {
+      processedIds.add(cellule.syncId!);
       final observationsTxt = (cellule.observations ?? [])
           .map((o) => o.observation ?? '')
           .where((s) => s.isNotEmpty)
@@ -370,25 +377,37 @@ class InstallationDescriptionSyncService {
       String valIacm = cellule.presenceIacm ??
           getFieldWithAlias(existingData, 'PRESENCE IACM', _celluleAliases);
 
-      final itemData = <String, String>{
-        'auditCelluleId': cellule.syncId!,
-        'Gamme De Cellule': valGamme,
-        'Type De Cellule': valType,
-        'TYPE DE CELLULE': valType,
-        'Tension assignée': valTensionAssignee,
-        'TENSION ASSIGNEE(KV)': valTensionAssignee,
-        if (valTensionService.isNotEmpty) 'Tension de service': valTensionService,
-        'Pouvoir de coupure assigné': valPouvoirCoupure,
-        'POUVOIR DE COUPURE ASSIGNE(KA)': valPouvoirCoupure,
-        'Calibre Du Disjoncteur': valCalibre,
-        'Section Du Cable': valSection,
-        'SECTION DU CABLE(mm2)': valSection,
-        'Nature Du Reseau': valNature,
-        'NATURE DU RESEAU': valNature,
-        if (valNature == 'Aérien' || valIacm.isNotEmpty) 'PRESENCE IACM': valIacm,
-        'Observations': observationsTxt,
-        'OBSERVATIONS': observationsTxt,
-      };
+      final itemData = Map<String, String>.from(existingData);
+      itemData['auditCelluleId'] = cellule.syncId!;
+
+      void updateField(String k, String v) {
+        if (v.trim().isNotEmpty) {
+          itemData[k] = v.trim();
+        }
+      }
+
+      updateField('Gamme De Cellule', valGamme);
+      updateField('Type De Cellule', valType);
+      updateField('TYPE DE CELLULE', valType);
+      updateField('Tension assignée', valTensionAssignee);
+      updateField('TENSION ASSIGNEE(KV)', valTensionAssignee);
+      if (valTensionService.isNotEmpty) {
+        updateField('Tension de service', valTensionService);
+      }
+      updateField('Pouvoir de coupure assigné', valPouvoirCoupure);
+      updateField('POUVOIR DE COUPURE ASSIGNE(KA)', valPouvoirCoupure);
+      updateField('Calibre Du Disjoncteur', valCalibre);
+      updateField('Section Du Cable', valSection);
+      updateField('SECTION DU CABLE(mm2)', valSection);
+      updateField('Nature Du Reseau', valNature);
+      updateField('NATURE DU RESEAU', valNature);
+      if (valNature == 'Aérien' || valIacm.isNotEmpty) {
+        updateField('PRESENCE IACM', valIacm);
+      }
+      if (observationsTxt.isNotEmpty) {
+        itemData['Observations'] = observationsTxt;
+        itemData['OBSERVATIONS'] = observationsTxt;
+      }
 
       if (itemExistant != null) {
         itemExistant.data = itemData;
@@ -423,8 +442,11 @@ class InstallationDescriptionSyncService {
       }
     }
 
+    final processedIds = <String>{};
+
     // Mettre à jour / ajouter les transformateurs de l'audit
     for (var transfo in transfosAudit) {
+      processedIds.add(transfo.syncId!);
       final observationsTxt = (transfo.observations ?? [])
           .map((o) => o.observation ?? '')
           .where((s) => s.isNotEmpty)
@@ -465,33 +487,41 @@ class InstallationDescriptionSyncService {
       String valIk3Max = transfo.ik3Max ??
           getFieldWithAlias(existingData, 'IK3 MAX(KA)', _transfoAliases);
 
-      final itemData = <String, String>{
-        'auditTransformateurId': transfo.syncId!,
-        'Puissance Transformateur': valPuissance,
-        'PUISSANCE TRANSFORMATEUR (KVA)': valPuissance,
-        'Type de transformateur': valTypeTransfo,
-        'TYPE DE TRANSFORMATEUR': valTypeTransfo,
-        'Intensité nominale': valIntensiteNominale,
-        'INTENSITE NOMINALE': valIntensiteNominale,
-        'Calibre Du Disjoncteur Sortie Transformateur': valCalibre,
-        'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR': valCalibre,
-        'Section Du Cable': valSection,
-        'SECTION DU CABLE': valSection,
-        'Tension': valTension,
-        'TENSION MT/BT': valTension,
-        'Couplage': valCouplage,
-        'COUPLAGE': valCouplage,
-        'Type de réseau': valTypeReseau,
-        'TYPE DE RESEAU': valTypeReseau,
-        'PCC amont': valPccAmont,
-        'PCC AMONT EN MVA': valPccAmont,
-        'Puissance UCC': valPuissanceUcc,
-        'UCC EN %': valPuissanceUcc,
-        'IK3 MAX': valIk3Max,
-        'IK3 MAX(KA)': valIk3Max,
-        'Observations': observationsTxt,
-        'OBSERVATIONS': observationsTxt,
-      };
+      final itemData = Map<String, String>.from(existingData);
+      itemData['auditTransformateurId'] = transfo.syncId!;
+
+      void updateField(String k, String v) {
+        if (v.trim().isNotEmpty) {
+          itemData[k] = v.trim();
+        }
+      }
+
+      updateField('Puissance Transformateur', valPuissance);
+      updateField('PUISSANCE TRANSFORMATEUR (KVA)', valPuissance);
+      updateField('Type de transformateur', valTypeTransfo);
+      updateField('TYPE DE TRANSFORMATEUR', valTypeTransfo);
+      updateField('Intensité nominale', valIntensiteNominale);
+      updateField('INTENSITE NOMINALE', valIntensiteNominale);
+      updateField('Calibre Du Disjoncteur Sortie Transformateur', valCalibre);
+      updateField('CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR', valCalibre);
+      updateField('Section Du Cable', valSection);
+      updateField('SECTION DU CABLE', valSection);
+      updateField('Tension', valTension);
+      updateField('TENSION MT/BT', valTension);
+      updateField('Couplage', valCouplage);
+      updateField('COUPLAGE', valCouplage);
+      updateField('Type de réseau', valTypeReseau);
+      updateField('TYPE DE RESEAU', valTypeReseau);
+      updateField('PCC amont', valPccAmont);
+      updateField('PCC AMONT EN MVA', valPccAmont);
+      updateField('Puissance UCC', valPuissanceUcc);
+      updateField('UCC EN %', valPuissanceUcc);
+      updateField('IK3 MAX', valIk3Max);
+      updateField('IK3 MAX(KA)', valIk3Max);
+      if (observationsTxt.isNotEmpty) {
+        itemData['Observations'] = observationsTxt;
+        itemData['OBSERVATIONS'] = observationsTxt;
+      }
 
       if (itemExistant != null) {
         itemExistant.data = itemData;
