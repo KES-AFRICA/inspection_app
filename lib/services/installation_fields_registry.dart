@@ -165,6 +165,7 @@ class InstallationFieldsRegistry {
   static String normalizeKey(String key) {
     return key
         .toLowerCase()
+        .replaceAll(RegExp(r'\([^)]*\)'), '')
         .replaceAll('é', 'e')
         .replaceAll('è', 'e')
         .replaceAll('ê', 'e')

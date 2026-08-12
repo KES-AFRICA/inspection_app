@@ -230,24 +230,32 @@ class InstallationDescriptionPdfData {
     }
 
     addField('PUISSANCE TRANSFORMATEUR (KVA)', t.puissanceAssignee);
+    addField('PUISSANCE TRANSFORMATEUR(KVA)', t.puissanceAssignee);
     addField('Puissance Transformateur', t.puissanceAssignee);
     addField('TYPE DE TRANSFORMATEUR', t.typeTransformateur);
     addField('Type de transformateur', t.typeTransformateur);
     addField('INTENSITE NOMINALE', t.intensiteNominale ?? '');
+    addField('INTENSITE NOMINALE (A)', t.intensiteNominale ?? '');
+    addField('INTENSITE NOMINALE(A)', t.intensiteNominale ?? '');
     addField('Intensité nominale', t.intensiteNominale ?? '');
     addField('CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR', t.calibreDisjoncteur ?? '');
+    addField('CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR(A)', t.calibreDisjoncteur ?? '');
     addField('Calibre Du Disjoncteur Sortie Transformateur', t.calibreDisjoncteur ?? '');
     addField('SECTION DU CABLE', t.sectionCables ?? '');
+    addField('SECTION DU CABLE(mm2)', t.sectionCables ?? '');
     addField('Section Du Cable', t.sectionCables ?? '');
     addField('TENSION MT/BT', t.tensionPrimaireSecondaire);
+    addField('TENSION MT/BT(KV)', t.tensionPrimaireSecondaire);
     addField('Tension', t.tensionPrimaireSecondaire);
     addField('COUPLAGE', t.couplage ?? '');
     addField('Couplage', t.couplage ?? '');
     addField('TYPE DE RESEAU', t.typeReseau ?? '');
     addField('Type de réseau', t.typeReseau ?? '');
     addField('PCC AMONT EN MVA', t.pccAmont ?? '');
+    addField('PCC AMONT(MVA)', t.pccAmont ?? '');
     addField('PCC amont', t.pccAmont ?? '');
     addField('UCC EN %', t.puissanceUcc ?? '');
+    addField('UCC EN(%)', t.puissanceUcc ?? '');
     addField('Puissance UCC', t.puissanceUcc ?? '');
     addField('IK3 MAX(KA)', t.ik3Max ?? '');
     addField('IK3 MAX', t.ik3Max ?? '');

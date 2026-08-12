@@ -3081,6 +3081,7 @@ class PdfReportService {
   }
 
   static String _unitForField(String fieldKey) {
+    if (fieldKey.contains('(')) return '';
     const units = {
       'Calibre Du Disjoncteur': 'A',
       'CALIBRE DU DISJONCTEUR': 'A',
