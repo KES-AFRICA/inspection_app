@@ -515,6 +515,8 @@ class _DescriptionInstallationsFormState
             break;
         }
 
+        items.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (items.isNotEmpty && !widget.isComplete) {
             widget.onComplete(widget.sectionKey);

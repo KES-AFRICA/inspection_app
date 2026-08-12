@@ -2905,8 +2905,11 @@ class PdfReportService {
     return widgets;
   }
 
-  static pw.Widget _buildInstallationTable(List<InstallationItem> items, {String? sectionKey}) {
-    if (items.isEmpty) return pw.Container();
+  static pw.Widget _buildInstallationTable(List<InstallationItem> itemsInput, {String? sectionKey}) {
+    if (itemsInput.isEmpty) return pw.Container();
+
+    final items = List<InstallationItem>.from(itemsInput)
+      ..sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
     // Collecter tous les champs dans l'ORDRE D'APPARITION (pas de sort !)
     final fieldOrder = <String>[];

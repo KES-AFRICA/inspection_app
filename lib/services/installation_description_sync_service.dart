@@ -372,6 +372,7 @@ class InstallationDescriptionSyncService {
       }
     }
 
+    itemsMiseAJour.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     desc.alimentationMoyenneTension = itemsMiseAJour;
     return auditModifieRef[0];
   }
@@ -474,6 +475,7 @@ class InstallationDescriptionSyncService {
       }
     }
 
+    itemsMiseAJour.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     desc.alimentationBasseTension = itemsMiseAJour;
     return auditModifieRef[0];
   }
