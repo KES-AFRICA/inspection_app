@@ -21,17 +21,22 @@ class InstallationDescriptionSyncService {
     normalizeKey('TYPE DE CELLULE'): InstallationFieldsRegistry.keyTypeCellule,
     normalizeKey('Type'): InstallationFieldsRegistry.keyTypeCellule,
     normalizeKey('Type de cellule'): InstallationFieldsRegistry.keyTypeCellule,
-    normalizeKey(InstallationFieldsRegistry.keyTensionAssignee): InstallationFieldsRegistry.keyTensionAssignee,
+    normalizeKey(InstallationFieldsRegistry.keyTensionAssignee): InstallationFieldsRegistry.keyTensionAssigneeMT,
     normalizeKey(InstallationFieldsRegistry.keyTensionAssigneeMT): InstallationFieldsRegistry.keyTensionAssigneeMT,
+    normalizeKey('Tension assignée (kV)'): InstallationFieldsRegistry.keyTensionAssigneeMT,
     normalizeKey(InstallationFieldsRegistry.keyTensionDeServiceMT): InstallationFieldsRegistry.keyTensionDeServiceMT,
     normalizeKey('Tension de service'): InstallationFieldsRegistry.keyTensionDeServiceMT,
+    normalizeKey('TENSION DE SERVICE (kV)'): InstallationFieldsRegistry.keyTensionDeServiceMT,
+    normalizeKey('Tension de service (kV)'): InstallationFieldsRegistry.keyTensionDeServiceMT,
     normalizeKey(InstallationFieldsRegistry.keyPouvoirCoupure): InstallationFieldsRegistry.keyPouvoirCoupure,
     normalizeKey('POUVOIR DE COUPURE ASSIGNE(KA)'): InstallationFieldsRegistry.keyPouvoirCoupure,
+    normalizeKey('Pouvoir de coupure assigné (kA)'): InstallationFieldsRegistry.keyPouvoirCoupure,
     normalizeKey(InstallationFieldsRegistry.keyCalibreDisjoncteurMT): InstallationFieldsRegistry.keyCalibreDisjoncteurMT,
     normalizeKey('Calibre disjoncteur'): InstallationFieldsRegistry.keyCalibreDisjoncteurMT,
     normalizeKey('Calibre'): InstallationFieldsRegistry.keyCalibreDisjoncteurMT,
     normalizeKey(InstallationFieldsRegistry.keySectionCableMT): InstallationFieldsRegistry.keySectionCableMT,
     normalizeKey('SECTION DU CABLE(mm2)'): InstallationFieldsRegistry.keySectionCableMT,
+    normalizeKey('SECTION DU CABLE (mm²)'): InstallationFieldsRegistry.keySectionCableMT,
     normalizeKey('Section cable'): InstallationFieldsRegistry.keySectionCableMT,
     normalizeKey('Section des cables'): InstallationFieldsRegistry.keySectionCableMT,
     normalizeKey(InstallationFieldsRegistry.keyNatureReseau): InstallationFieldsRegistry.keyNatureReseau,
@@ -55,6 +60,7 @@ class InstallationDescriptionSyncService {
     normalizeKey('TYPE DE TRANSFORMATEUR'): InstallationFieldsRegistry.keyTypeTransformateur,
     normalizeKey(InstallationFieldsRegistry.keyIntensiteNominale): InstallationFieldsRegistry.keyIntensiteNominale,
     normalizeKey('INTENSITE NOMINALE'): InstallationFieldsRegistry.keyIntensiteNominale,
+    normalizeKey('Intensite nominale (A)'): InstallationFieldsRegistry.keyIntensiteNominale,
     normalizeKey(InstallationFieldsRegistry.keyCalibreDisjoncteurBT):
         InstallationFieldsRegistry.keyCalibreDisjoncteurBT,
     normalizeKey('CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR'):
@@ -77,32 +83,57 @@ class InstallationDescriptionSyncService {
     normalizeKey('TYPE DE RESEAU'): InstallationFieldsRegistry.keyTypeReseau,
     normalizeKey(InstallationFieldsRegistry.keyPccAmont): InstallationFieldsRegistry.keyPccAmont,
     normalizeKey('PCC AMONT EN MVA'): InstallationFieldsRegistry.keyPccAmont,
+    normalizeKey('PCC amont (MVA)'): InstallationFieldsRegistry.keyPccAmont,
     normalizeKey(InstallationFieldsRegistry.keyPuissanceUcc): InstallationFieldsRegistry.keyPuissanceUcc,
     normalizeKey('UCC EN %'): InstallationFieldsRegistry.keyPuissanceUcc,
+    normalizeKey('Puissance UCC (%)'): InstallationFieldsRegistry.keyPuissanceUcc,
     normalizeKey(InstallationFieldsRegistry.keyIk3Max): InstallationFieldsRegistry.keyIk3Max,
     normalizeKey('IK3 MAX(KA)'): InstallationFieldsRegistry.keyIk3Max,
+    normalizeKey('IK3 MAX (kA)'): InstallationFieldsRegistry.keyIk3Max,
     normalizeKey(InstallationFieldsRegistry.keyObservations): InstallationFieldsRegistry.keyObservations,
     normalizeKey('OBSERVATIONS'): InstallationFieldsRegistry.keyObservations,
     normalizeKey('Observation'): InstallationFieldsRegistry.keyObservations,
   };
+
+  /// Expose publiquement le dictionnaire d'alias pour les Cellules MT
+  static Map<String, String> get celluleAliases => _celluleAliases;
+
+  /// Expose publiquement le dictionnaire d'alias pour les Transformateurs MT/BT
+  static Map<String, String> get transfoAliases => _transfoAliases;
 
   /// Recherche une valeur dans un dictionnaire de données avec alias tolérant
   static String getFieldWithAlias(
       Map<String, String>? data, String targetField, Map<String, String> aliases) {
     if (data == null || data.isEmpty) return '';
 
-    if (data.containsKey(targetField) && data[targetField]!.isNotEmpty) {
-      return data[targetField]!;
+    // 1. Match exact par clé
+    if (data.containsKey(targetField) && data[targetField]!.trim().isNotEmpty) {
+      return data[targetField]!.trim();
     }
 
     final targetNorm = normalizeKey(targetField);
+    final targetCanonical = aliases[targetNorm];
+
     for (final entry in data.entries) {
+      if (entry.value.trim().isEmpty) continue;
       final entryNorm = normalizeKey(entry.key);
-      if (entryNorm == targetNorm ||
-          (aliases.containsKey(entryNorm) && aliases[entryNorm] == targetField)) {
-        if (entry.value.isNotEmpty) return entry.value;
+      
+      // 2. Match par clé normalisée directe
+      if (entryNorm == targetNorm) {
+        return entry.value.trim();
+      }
+      
+      // 3. Match via la clé canonique commune dans les alias
+      if (targetCanonical != null) {
+        final entryCanonical = aliases[entryNorm];
+        if (entryCanonical == targetCanonical || entryNorm == normalizeKey(targetCanonical)) {
+          return entry.value.trim();
+        }
+      } else if (aliases.containsKey(entryNorm) && normalizeKey(aliases[entryNorm]!) == targetNorm) {
+        return entry.value.trim();
       }
     }
+
     return '';
   }
 

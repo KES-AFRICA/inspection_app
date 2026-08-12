@@ -18,6 +18,8 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:inspec_app/services/installation_description_sync_service.dart';
+import 'package:inspec_app/services/installation_fields_registry.dart';
 import 'package:inspec_app/services/pdf/pdf_chunk_merger.dart';
 import 'package:inspec_app/services/pdf/pdf_footer_builder.dart';
 import '../dispositions_constructives_registry.dart';
@@ -2968,21 +2970,53 @@ class PdfReportService {
               ),
             ),
             ...finalOrder.map((key) {
-              String raw = '-';
-              for (var k in e.value.data.keys) {
-                if (k.toUpperCase().trim() == key.toUpperCase().trim()) {
-                  raw = e.value.data[k]?.toString() ?? '-';
-                  break;
-                }
-              }
+              final raw = _resolveInstallationValue(e.value, key, sectionKey);
               final unit = _unitForField(key);
-              final display = (raw != '-' && raw.isNotEmpty && unit.isNotEmpty && !raw.toLowerCase().contains(unit.toLowerCase())) ? '$raw $unit' : raw;
+              final display = (raw != '-' &&
+                      raw.isNotEmpty &&
+                      unit.isNotEmpty &&
+                      !raw.toLowerCase().contains(unit.toLowerCase()))
+                  ? '$raw $unit'
+                  : raw;
               return _cell(display, isHeader: false, centered: true);
             }),
           ],
         )),
       ],
     );
+  }
+
+  /// Résolution tolérante des valeurs pour un champ de colonne PDF donné
+  static String _resolveInstallationValue(
+      InstallationItem item, String columnHeader, String? sectionKey) {
+    if (item.data.isEmpty) return '-';
+
+    // 1. Déterminer le dictionnaire d'alias à utiliser selon la section
+    Map<String, String> aliases = {};
+    if (sectionKey == 'MT') {
+      aliases = InstallationDescriptionSyncService.celluleAliases;
+    } else if (sectionKey == 'BT') {
+      aliases = InstallationDescriptionSyncService.transfoAliases;
+    }
+
+    // 2. Tenter la résolution tolérante via InstallationDescriptionSyncService.getFieldWithAlias
+    final val = InstallationDescriptionSyncService.getFieldWithAlias(
+        item.data, columnHeader, aliases);
+    if (val.isNotEmpty) return val;
+
+    // 3. Fallback direct sur comparaison de clé normalisée
+    final targetNorm = InstallationFieldsRegistry.normalizeKey(columnHeader);
+    for (final entry in item.data.entries) {
+      if (entry.value.trim().isEmpty) continue;
+      final entryNorm = InstallationFieldsRegistry.normalizeKey(entry.key);
+      if (entryNorm == targetNorm ||
+          entryNorm.contains(targetNorm) ||
+          targetNorm.contains(entryNorm)) {
+        return entry.value.trim();
+      }
+    }
+
+    return '-';
   }
 
   static String _unitForField(String fieldKey) {
@@ -3008,8 +3042,7 @@ class PdfReportService {
       'Tension de service': 'kV',
       'TENSION DE SERVICE': 'kV',
       'TENSION DE SERVICE (KV)': 'kV',
-      'Tension': 'V',
-      'TENSION': 'V',
+      'TENSION DE SERVICE (kV)': 'kV',
       'PCC amont': 'MVA',
       'PCC AMONT EN MVA': 'MVA',
       'IK3 MAX': 'kA',
@@ -3021,7 +3054,15 @@ class PdfReportService {
       'Capacite': 'L',
       'CAPACITE': 'L',
     };
-    return units[fieldKey] ?? units[fieldKey.toUpperCase()] ?? '';
+    if (units.containsKey(fieldKey)) return units[fieldKey]!;
+    if (units.containsKey(fieldKey.toUpperCase())) return units[fieldKey.toUpperCase()]!;
+    final norm = InstallationFieldsRegistry.normalizeKey(fieldKey);
+    for (var entry in units.entries) {
+      if (InstallationFieldsRegistry.normalizeKey(entry.key) == norm) {
+        return entry.value;
+      }
+    }
+    return '';
   }
 
   static List<pw.Widget> _buildListeRecapitulativeMulti(AuditInstallationsElectriques audit, Map<String, int> trackedPages) {
