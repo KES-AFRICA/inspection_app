@@ -234,30 +234,12 @@ class DescriptionInstallationsSequenceScreenState
   void initState() {
     super.initState();
     _loadProgress();
-    _pageController.addListener(_onPageChanged);
   }
 
   @override
   void dispose() {
-    _pageController.removeListener(_onPageChanged);
     _pageController.dispose();
     super.dispose();
-  }
-
-  void _onPageChanged() {
-    if (_pageController.hasClients) {
-      final newPage = _pageController.page?.round() ?? 0;
-      if (_currentStep != newPage) {
-        setState(() {
-          _currentStep = newPage;
-        });
-        _saveCurrentPosition(newPage);
-      }
-    }
-
-    if (MediaQuery.of(context).viewInsets.bottom > 0) {
-      FocusScope.of(context).unfocus();
-    }
   }
 
   Future<void> _saveCurrentPosition(int position) async {
@@ -288,7 +270,6 @@ class DescriptionInstallationsSequenceScreenState
     setState(() => _isLoading = true);
 
     try {
-      await InstallationDescriptionSyncService.repairAndSyncDescriptions(widget.mission.id);
       final progress = await HiveService.getMissionProgress(widget.mission.id);
 
       if (!mounted) return;
@@ -400,6 +381,7 @@ class DescriptionInstallationsSequenceScreenState
   }
 
   void _onSectionComplete(String sectionKey) async {
+    if (_progress[sectionKey] == true) return;
     setState(() {
       _progress[sectionKey] = true;
     });
@@ -558,19 +540,24 @@ class DescriptionInstallationsSequenceScreenState
           ),
 
           Expanded(
-            child: PageView(
+            child: PageView.builder(
               controller: _pageController,
               physics: const NeverScrollableScrollPhysics(),
+              itemCount: _sections.length,
               onPageChanged: (index) {
-                setState(() => _currentStep = index);
-                if (widget.onSubStepChanged != null) widget.onSubStepChanged!();
+                if (_currentStep != index) {
+                  setState(() => _currentStep = index);
+                  _saveCurrentPosition(index);
+                  if (widget.onSubStepChanged != null) widget.onSubStepChanged!();
+                }
               },
-              children: _sections.map((section) {
+              itemBuilder: (context, index) {
+                final section = _sections[index];
                 return _buildSectionWidget(
                   section,
                   _progress[section['key']] ?? false,
                 );
-              }).toList(),
+              },
             ),
           ),
         ],

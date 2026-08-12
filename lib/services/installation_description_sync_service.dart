@@ -219,6 +219,139 @@ class InstallationDescriptionSyncService {
     }
   }
 
+  /// Supprime l'ensemble des descriptions pour une mission donnée,
+  /// SANS TOUCHER AUX CELLULES, TRANSFORMATEURS OU DONNÉES D'AUDIT.
+  static Future<void> clearAllDescriptions(String missionId) async {
+    try {
+      final descBox = await Hive.openBox<DescriptionInstallations>('description_installations');
+      DescriptionInstallations? desc = descBox.get(missionId);
+      desc ??= descBox.values.firstWhere(
+        (d) => d.missionId == missionId,
+        orElse: () => DescriptionInstallations.create(missionId),
+      );
+
+      desc.alimentationMoyenneTension = [];
+      desc.alimentationBasseTension = [];
+      desc.groupeElectrogene = [];
+      desc.alimentationCarburant = [];
+      desc.inverseur = [];
+      desc.stabilisateur = [];
+      desc.onduleurs = [];
+      desc.updatedAt = DateTime.now();
+
+      await descBox.put(missionId, desc);
+      if (kDebugMode) {
+        print('🗑️ Toutes les descriptions de la mission $missionId ont été supprimées proprement (Audit intact)');
+      }
+    } catch (e, st) {
+      if (kDebugMode) {
+        print('❌ Erreur lors de clearAllDescriptions pour la mission $missionId: $e\n$st');
+      }
+    }
+  }
+
+  /// Supprime uniquement les descriptions d'une section spécifique pour une mission donnée,
+  /// SANS TOUCHER AUX CELLULES, TRANSFORMATEURS OU DONNÉES D'AUDIT.
+  static Future<void> clearSectionDescriptions(String missionId, String sectionKey) async {
+    try {
+      final descBox = await Hive.openBox<DescriptionInstallations>('description_installations');
+      DescriptionInstallations? desc = descBox.get(missionId);
+      if (desc == null) return;
+
+      switch (sectionKey) {
+        case 'alimentation_moyenne_tension':
+          desc.alimentationMoyenneTension = [];
+          break;
+        case 'alimentation_basse_tension':
+          desc.alimentationBasseTension = [];
+          break;
+        case 'groupe_electrogene':
+          desc.groupeElectrogene = [];
+          break;
+        case 'alimentation_carburant':
+          desc.alimentationCarburant = [];
+          break;
+        case 'inverseur':
+          desc.inverseur = [];
+          break;
+        case 'stabilisateur':
+          desc.stabilisateur = [];
+          break;
+        case 'onduleurs':
+          desc.onduleurs = [];
+          break;
+      }
+
+      desc.updatedAt = DateTime.now();
+      await descBox.put(missionId, desc);
+      if (kDebugMode) {
+        print('🗑️ Section $sectionKey de la mission $missionId réinitialisée (Audit intact)');
+      }
+    } catch (e, st) {
+      if (kDebugMode) {
+        print('❌ Erreur lors de clearSectionDescriptions ($sectionKey) pour la mission $missionId: $e\n$st');
+      }
+    }
+  }
+
+  /// Construction synchrone en mémoire d'une carte mapping `syncId -> breadcrumb de localisation`
+  static Map<String, String> buildLocalisationMap(AuditInstallationsElectriques audit) {
+    final Map<String, String> map = {};
+
+    void processCellule(Cellule c, String path) {
+      if (c.syncId != null && c.syncId!.isNotEmpty) {
+        final cellName = c.type.isNotEmpty ? c.type : 'Cellule';
+        map[c.syncId!] = '$path ➔ $cellName';
+      }
+    }
+
+    void processTransfo(TransformateurMTBT t, String path) {
+      if (t.syncId != null && t.syncId!.isNotEmpty) {
+        final transfoName = t.puissanceAssignee.isNotEmpty ? '${t.puissanceAssignee} kVA' : 'Transformateur';
+        map[t.syncId!] = '$path ➔ $transfoName';
+      }
+    }
+
+    // 1. Locaux MT directs
+    for (var local in audit.moyenneTensionLocaux) {
+      final locPath = 'Moyenne Tension ➔ ${local.nom}';
+      for (var c in local.cellules) {
+        processCellule(c, locPath);
+      }
+      for (var t in local.transformateurs) {
+        processTransfo(t, locPath);
+      }
+    }
+
+    // 2. Zones MT
+    for (var zone in audit.moyenneTensionZones) {
+      for (var local in zone.locaux) {
+        final locPath = 'Moyenne Tension ➔ ${zone.nom} ➔ ${local.nom}';
+        for (var c in local.cellules) {
+          processCellule(c, locPath);
+        }
+        for (var t in local.transformateurs) {
+          processTransfo(t, locPath);
+        }
+      }
+    }
+
+    // 3. Zones BT
+    for (var zone in audit.basseTensionZones) {
+      for (var local in zone.locaux) {
+        final locPath = 'Basse Tension ➔ ${zone.nom} ➔ ${local.nom}';
+        for (var c in local.cellules) {
+          processCellule(c, locPath);
+        }
+        for (var t in local.transformateurs) {
+          processTransfo(t, locPath);
+        }
+      }
+    }
+
+    return map;
+  }
+
   /// Mécanisme d'auto-réparation et de synchronisation idempotente pour une mission
   static Future<void> repairAndSyncDescriptions(String missionId) async {
     try {

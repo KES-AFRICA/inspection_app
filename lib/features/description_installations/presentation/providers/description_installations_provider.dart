@@ -24,10 +24,12 @@ class DescriptionInstallationsNotifier
     load();
   }
 
-  Future<DescriptionInstallations> load() async {
+  Future<DescriptionInstallations> load({bool syncWithAudit = false}) async {
     try {
       state = const AsyncValue.loading();
-      await InstallationDescriptionSyncService.repairAndSyncDescriptions(missionId);
+      if (syncWithAudit) {
+        await InstallationDescriptionSyncService.repairAndSyncDescriptions(missionId);
+      }
       final getUseCase = ref.read(getDescriptionInstallationsUseCaseProvider);
       final entity = await getUseCase(missionId);
       final model = DescriptionInstallationsMapper.toModel(entity);
@@ -130,6 +132,32 @@ class DescriptionInstallationsNotifier
         await load();
       }
       return success;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> clearAllDescriptions() async {
+    try {
+      await InstallationDescriptionSyncService.clearAllDescriptions(missionId);
+      final getUseCase = ref.read(getDescriptionInstallationsUseCaseProvider);
+      final entity = await getUseCase(missionId);
+      final model = DescriptionInstallationsMapper.toModel(entity);
+      state = AsyncValue.data(model);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> clearSectionDescriptions(String sectionKey) async {
+    try {
+      await InstallationDescriptionSyncService.clearSectionDescriptions(missionId, sectionKey);
+      final getUseCase = ref.read(getDescriptionInstallationsUseCaseProvider);
+      final entity = await getUseCase(missionId);
+      final model = DescriptionInstallationsMapper.toModel(entity);
+      state = AsyncValue.data(model);
+      return true;
     } catch (e) {
       return false;
     }

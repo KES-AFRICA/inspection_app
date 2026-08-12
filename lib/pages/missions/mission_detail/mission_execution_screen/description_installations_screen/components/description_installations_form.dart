@@ -260,36 +260,20 @@ class _DescriptionInstallationsFormState
   ];
   static const List<String> _ouiNonOptions = ['Oui', 'Non'];
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _autoSync();
-    });
-  }
-
-  Future<void> _autoSync() async {
-    final audit = HiveService.getAuditInstallationsByMissionId(widget.mission.id);
-    if (audit != null) {
-      await InstallationDescriptionSyncService.syncAuditToDescription(audit);
-      if (mounted) {
-        ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).load();
-      }
-    }
-  }
-
   Future<void> _onRefresh() async {
     final audit = HiveService.getAuditInstallationsByMissionId(widget.mission.id);
     if (audit != null) {
       await InstallationDescriptionSyncService.syncAuditToDescription(audit);
     }
-    await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).load();
+    await ref
+        .read(descriptionInstallationsProvider(widget.mission.id).notifier)
+        .load(syncWithAudit: true);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Descriptions resynchronisées'),
+          content: Text('Descriptions régénérées depuis l\'audit'),
           backgroundColor: AppTheme.primaryBlue,
-          duration: Duration(seconds: 1),
+          duration: Duration(seconds: 2),
         ),
       );
     }
@@ -510,6 +494,99 @@ class _DescriptionInstallationsFormState
     }
   }
 
+  Future<void> _confirmDeleteAllDescriptions() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Supprimer les descriptions',
+                style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.red),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Êtes-vous sûr de vouloir supprimer toutes les descriptions ?',
+              style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFF3E0),
+                borderRadius: BorderRadius.all(Radius.circular(8)),
+                border: Border.fromBorderSide(BorderSide(color: Color(0xFFFFB74D))),
+              ),
+              child: const Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, color: Colors.orange, size: 18),
+                  SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Cette action concerne uniquement les descriptions. Aucune cellule, aucun transformateur et aucune donnée d\'audit ne sera supprimé.',
+                      style: TextStyle(fontSize: 12, color: Color(0xFFE65100)),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Un simple Pull-to-Refresh (glisser vers le bas) permettra ensuite de reconstruire automatiquement les descriptions si souhaité.',
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('ANNULER', style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            child: const Text('SUPPRIMER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      setState(() => _isSaving = true);
+      final notifier = ref.read(
+        descriptionInstallationsProvider(widget.mission.id).notifier,
+      );
+      final success = await notifier.clearAllDescriptions();
+      if (mounted) {
+        setState(() => _isSaving = false);
+        if (success) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Toutes les descriptions ont été supprimées (Audit intact). Glisser vers le bas pour régénérer.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
@@ -548,6 +625,11 @@ class _DescriptionInstallationsFormState
 
         items.sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
+        final audit = HiveService.getAuditInstallationsByMissionId(widget.mission.id);
+        final localisationMap = audit != null
+            ? InstallationDescriptionSyncService.buildLocalisationMap(audit)
+            : <String, String>{};
+
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (items.isNotEmpty && !widget.isComplete) {
             widget.onComplete(widget.sectionKey);
@@ -561,7 +643,7 @@ class _DescriptionInstallationsFormState
             children: [
               items.isEmpty
                   ? _buildEmpty(isSmallScreen)
-                  : _buildList(items, isSmallScreen),
+                  : _buildList(items, isSmallScreen, localisationMap),
               Positioned(
                 bottom: isSmallScreen ? 16 : 20,
                 right: isSmallScreen ? 16 : 20,
@@ -601,11 +683,15 @@ class _DescriptionInstallationsFormState
                   ),
                 ),
                 const SizedBox(height: 8),
-                Text(
-                  'Appuyez sur le bouton pour ajouter',
-                  style: TextStyle(
-                    fontSize: isSmallScreen ? 12 : 13,
-                    color: Colors.grey.shade400,
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Text(
+                    'Appuyez sur + pour ajouter ou glissez vers le bas (Pull-to-Refresh) pour régénérer automatiquement les descriptions.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 12 : 13,
+                      color: Colors.grey.shade400,
+                    ),
                   ),
                 ),
               ],
@@ -614,17 +700,65 @@ class _DescriptionInstallationsFormState
         ),
       );
 
-  Widget _buildList(List<InstallationItem> items, bool isSmallScreen) =>
-      ListView.builder(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: EdgeInsets.fromLTRB(
-          isSmallScreen ? 16 : 20,
-          isSmallScreen ? 16 : 20,
-          isSmallScreen ? 16 : 20,
-          90,
-        ),
-        itemCount: items.length,
-        itemBuilder: (ctx, i) => _buildCard(items, items[i], i, isSmallScreen),
+  Widget _buildList(
+    List<InstallationItem> items,
+    bool isSmallScreen,
+    Map<String, String> localisationMap,
+  ) =>
+      Column(
+        children: [
+          Padding(
+            padding: EdgeInsets.fromLTRB(
+              isSmallScreen ? 16 : 20,
+              isSmallScreen ? 10 : 12,
+              isSmallScreen ? 16 : 20,
+              0,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  '${items.length} élément${items.length > 1 ? 's' : ''}',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 13,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                TextButton.icon(
+                  onPressed: _isSaving ? null : _confirmDeleteAllDescriptions,
+                  icon: const Icon(Icons.delete_sweep_outlined, size: 18, color: Colors.red),
+                  label: const Text(
+                    'Tout supprimer',
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.red,
+                    ),
+                  ),
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    visualDensity: VisualDensity.compact,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              physics: const AlwaysScrollableScrollPhysics(),
+              padding: EdgeInsets.fromLTRB(
+                isSmallScreen ? 16 : 20,
+                6,
+                isSmallScreen ? 16 : 20,
+                90,
+              ),
+              itemCount: items.length,
+              itemBuilder: (ctx, i) =>
+                  _buildCard(items, items[i], i, isSmallScreen, localisationMap),
+            ),
+          ),
+        ],
       );
 
   Widget _buildCard(
@@ -632,10 +766,18 @@ class _DescriptionInstallationsFormState
     InstallationItem item,
     int index,
     bool isSmallScreen,
+    Map<String, String> localisationMap,
   ) {
     final isCelluleAuto = item.data.containsKey('auditCelluleId') && item.data['auditCelluleId']!.isNotEmpty;
     final isTransfoAuto = item.data.containsKey('auditTransformateurId') && item.data['auditTransformateurId']!.isNotEmpty;
     final isAutomatic = isCelluleAuto || isTransfoAuto;
+
+    String? loc;
+    if (isCelluleAuto) {
+      loc = localisationMap[item.data['auditCelluleId']!] ?? 'Moyenne Tension';
+    } else if (isTransfoAuto) {
+      loc = localisationMap[item.data['auditTransformateurId']!] ?? 'Basse Tension';
+    }
 
     return Container(
       margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
@@ -722,46 +864,31 @@ class _DescriptionInstallationsFormState
                 ],
               ),
 
-              // Encart d'Origine / Localisation
+              // Encart d'Origine / Localisation synchrone sans FutureBuilder
               isAutomatic
-                  ? FutureBuilder<String?>(
-                      future: isCelluleAuto
-                          ? HiveService.getCelluleLocalisation(
-                              widget.mission.id,
-                              item.data['auditCelluleId']!,
-                            )
-                          : HiveService.getTransformateurLocalisation(
-                              widget.mission.id,
-                              item.data['auditTransformateurId']!,
-                            ),
-                      builder: (context, snapshot) {
-                        final loc =
-                            snapshot.data ?? 'Moyenne Tension ➔ Chargement...';
-                        return Padding(
-                          padding: const EdgeInsets.only(top: 6, bottom: 10),
-                          child: Row(
-                            children: [
-                              Icon(
-                                Icons.location_on_outlined,
-                                size: 14,
-                                color: Colors.blue.shade700,
-                              ),
-                              const SizedBox(width: 4),
-                              Expanded(
-                                child: Text(
-                                  loc,
-                                  style: TextStyle(
-                                    fontSize: isSmallScreen ? 9.5 : 10.5,
-                                    color: Colors.blue.shade700,
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                  softWrap: true,
-                                ),
-                              ),
-                            ],
+                  ? Padding(
+                      padding: const EdgeInsets.only(top: 6, bottom: 10),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.location_on_outlined,
+                            size: 14,
+                            color: Colors.blue.shade700,
                           ),
-                        );
-                      },
+                          const SizedBox(width: 4),
+                          Expanded(
+                            child: Text(
+                              loc ?? 'Audit',
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 9.5 : 10.5,
+                                color: Colors.blue.shade700,
+                                fontWeight: FontWeight.w500,
+                              ),
+                              softWrap: true,
+                            ),
+                          ),
+                        ],
+                      ),
                     )
                   : Padding(
                       padding: const EdgeInsets.only(top: 6, bottom: 10),
