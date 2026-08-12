@@ -9,6 +9,7 @@ import 'package:inspec_app/constants/app_theme.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/installation_description_sync_service.dart';
 import 'package:inspec_app/services/installation_fields_registry.dart';
 
 // ============================================================
@@ -262,6 +263,36 @@ class _DescriptionInstallationsFormState
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _autoSync();
+    });
+  }
+
+  Future<void> _autoSync() async {
+    final audit = HiveService.getAuditInstallationsByMissionId(widget.mission.id);
+    if (audit != null) {
+      await InstallationDescriptionSyncService.syncAuditToDescription(audit);
+      if (mounted) {
+        ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).load();
+      }
+    }
+  }
+
+  Future<void> _onRefresh() async {
+    final audit = HiveService.getAuditInstallationsByMissionId(widget.mission.id);
+    if (audit != null) {
+      await InstallationDescriptionSyncService.syncAuditToDescription(audit);
+    }
+    await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).load();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Descriptions resynchronisées'),
+          backgroundColor: AppTheme.primaryBlue,
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
   }
 
   Future<void> _addItem() async {
@@ -523,58 +554,69 @@ class _DescriptionInstallationsFormState
           }
         });
 
-        return Stack(
-          children: [
-            items.isEmpty
-                ? _buildEmpty(isSmallScreen)
-                : _buildList(items, isSmallScreen),
-            Positioned(
-              bottom: isSmallScreen ? 16 : 20,
-              right: isSmallScreen ? 16 : 20,
-              child: FloatingActionButton(
-                onPressed: _isSaving ? null : _addItem,
-                backgroundColor: AppTheme.primaryBlue,
-                child: const Icon(Icons.add, color: Colors.white),
+        return RefreshIndicator(
+          onRefresh: _onRefresh,
+          color: AppTheme.primaryBlue,
+          child: Stack(
+            children: [
+              items.isEmpty
+                  ? _buildEmpty(isSmallScreen)
+                  : _buildList(items, isSmallScreen),
+              Positioned(
+                bottom: isSmallScreen ? 16 : 20,
+                right: isSmallScreen ? 16 : 20,
+                child: FloatingActionButton(
+                  onPressed: _isSaving ? null : _addItem,
+                  backgroundColor: AppTheme.primaryBlue,
+                  child: const Icon(Icons.add, color: Colors.white),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         );
       },
     );
   }
 
-  Widget _buildEmpty(bool isSmallScreen) => Center(
-    child: Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        Icon(
-          Icons.add_circle_outline,
-          size: isSmallScreen ? 56 : 64,
-          color: Colors.grey.shade300,
-        ),
-        const SizedBox(height: 16),
-        Text(
-          'Aucun élément',
-          style: TextStyle(
-            fontSize: isSmallScreen ? 16 : 18,
-            fontWeight: FontWeight.w600,
-            color: Colors.grey.shade500,
+  Widget _buildEmpty(bool isSmallScreen) => SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: SizedBox(
+          height: MediaQuery.of(context).size.height * 0.6,
+          child: Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.add_circle_outline,
+                  size: isSmallScreen ? 56 : 64,
+                  color: Colors.grey.shade300,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Aucun élément',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 16 : 18,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.grey.shade500,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Appuyez sur le bouton pour ajouter',
+                  style: TextStyle(
+                    fontSize: isSmallScreen ? 12 : 13,
+                    color: Colors.grey.shade400,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 8),
-        Text(
-          'Appuyez sur le bouton pour ajouter',
-          style: TextStyle(
-            fontSize: isSmallScreen ? 12 : 13,
-            color: Colors.grey.shade400,
-          ),
-        ),
-      ],
-    ),
-  );
+      );
 
   Widget _buildList(List<InstallationItem> items, bool isSmallScreen) =>
       ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.fromLTRB(
           isSmallScreen ? 16 : 20,
           isSmallScreen ? 16 : 20,

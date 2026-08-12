@@ -54,7 +54,7 @@ class InstallationDescriptionPdfRow {
 }
 
 /// Structure de données intermédiaire normalisée alimentée directement à partir des entités réelles d'audit
-/// (Cellule & TransformateurMTBT) et complétée par les descriptions historiques pour le rapport PDF.
+/// (Cellule & TransformateurMTBT) et synchronisées avec DescriptionInstallations pour le rapport PDF.
 class InstallationDescriptionPdfData {
   final List<InstallationDescriptionPdfRow> mtRows;
   final List<InstallationDescriptionPdfRow> btRows;
@@ -64,68 +64,106 @@ class InstallationDescriptionPdfData {
     required this.btRows,
   });
 
-  /// Construit la représentation normalisée directement depuis l'Audit (entités réelles)
-  /// et la Description (items historiques / manuels)
+  /// Construit la représentation normalisée pour le PDF en respectant :
+  /// 1. L'ordre exact de la liste des descriptions de l'application (du plus ancien au plus récent).
+  /// 2. Le filtrage strict : seules les descriptions correspondant à un équipement d'audit ACTIF sont affichées dans le PDF.
   factory InstallationDescriptionPdfData.fromDescription({
     required DescriptionInstallations? desc,
     AuditInstallationsElectriques? audit,
   }) {
     final mtRows = <InstallationDescriptionPdfRow>[];
     final btRows = <InstallationDescriptionPdfRow>[];
-    final processedCelluleIds = <String>{};
-    final processedTransfoIds = <String>{};
 
-    // ── 1. EXTRACTION DIRECTE DEPUIS LES ENTITÉS RÉELLES DE L'AUDIT ──
+    // Indexer les équipements d'audit actifs par leur syncId
+    final activeCellulesMap = <String, Cellule>{};
+    final activeTransfosMap = <String, TransformateurMTBT>{};
+
     if (audit != null) {
-      // a. Extraction des Cellules MT réelles
-      final cellulesAudit = _collectAllCellules(audit);
-      for (int i = 0; i < cellulesAudit.length; i++) {
-        final c = cellulesAudit[i];
+      for (var c in _collectAllCellules(audit)) {
         if (c.syncId != null && c.syncId!.isNotEmpty) {
-          processedCelluleIds.add(c.syncId!);
+          activeCellulesMap[c.syncId!] = c;
         }
-        mtRows.add(_createRowFromCellule(c, mtRows.length + 1));
       }
-
-      // b. Extraction des Transformateurs MT/BT réels
-      final transfosAudit = _collectAllTransformateurs(audit);
-      for (int i = 0; i < transfosAudit.length; i++) {
-        final t = transfosAudit[i];
+      for (var t in _collectAllTransformateurs(audit)) {
         if (t.syncId != null && t.syncId!.isNotEmpty) {
-          processedTransfoIds.add(t.syncId!);
+          activeTransfosMap[t.syncId!] = t;
         }
-        btRows.add(_createRowFromTransformateur(t, btRows.length + 1));
       }
     }
 
-    // ── 2. INTÉGRATION DES ITEMS MANUELS ET HISTORIQUES DE DESCRIPTION ──
+    final processedCelluleIds = <String>{};
+    final processedTransfoIds = <String>{};
+
+    // ── 1. CONSTRUCT DEPUIS LA LISTE DE DESCRIPTION (RESPECT DE L'ORDRE D'ORIGINE) ──
     if (desc != null) {
-      // a. Items MT historiques ou manuels sans Cellule d'audit liée
+      // MT : Ordre du plus ancien au plus récent
       final itemsMT = List<InstallationItem>.from(desc.alimentationMoyenneTension);
       itemsMT.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       for (var item in itemsMT) {
         final auditCelluleId = item.data['auditCelluleId'];
-        if (auditCelluleId == null ||
-            auditCelluleId.isEmpty ||
-            !processedCelluleIds.contains(auditCelluleId)) {
-          mtRows.add(_normalizeItemRow(item, mtRows.length + 1, 'MT'));
+        if (auditCelluleId != null && activeCellulesMap.containsKey(auditCelluleId)) {
+          final c = activeCellulesMap[auditCelluleId]!;
+          mtRows.add(_createRowFromCelluleAndItem(c, item, mtRows.length + 1));
+          processedCelluleIds.add(auditCelluleId);
         }
       }
 
-      // b. Items BT historiques ou manuels sans Transformateur d'audit lié
+      // BT : Ordre du plus ancien au plus récent
       final itemsBT = List<InstallationItem>.from(desc.alimentationBasseTension);
       itemsBT.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       for (var item in itemsBT) {
         final auditTransfoId = item.data['auditTransformateurId'];
-        if (auditTransfoId == null ||
-            auditTransfoId.isEmpty ||
-            !processedTransfoIds.contains(auditTransfoId)) {
-          btRows.add(_normalizeItemRow(item, btRows.length + 1, 'BT'));
+        if (auditTransfoId != null && activeTransfosMap.containsKey(auditTransfoId)) {
+          final t = activeTransfosMap[auditTransfoId]!;
+          btRows.add(_createRowFromTransformateurAndItem(t, item, btRows.length + 1));
+          processedTransfoIds.add(auditTransfoId);
+        }
+      }
+    }
+
+    // ── 2. COMPLÉMENTATION POUR TOUT ÉQUIPEMENT ACTIF SANS ITEM DESCRIPTIF CORRESPONDANT ──
+    if (audit != null) {
+      for (var entry in activeCellulesMap.entries) {
+        if (!processedCelluleIds.contains(entry.key)) {
+          mtRows.add(_createRowFromCellule(entry.value, mtRows.length + 1));
+        }
+      }
+      for (var entry in activeTransfosMap.entries) {
+        if (!processedTransfoIds.contains(entry.key)) {
+          btRows.add(_createRowFromTransformateur(entry.value, btRows.length + 1));
         }
       }
     }
 
     return InstallationDescriptionPdfData(mtRows: mtRows, btRows: btRows);
+  }
+
+  /// Construit une ligne de tableau PDF à partir d'une Cellule active et de son item descriptif
+  static InstallationDescriptionPdfRow _createRowFromCelluleAndItem(
+      Cellule c, InstallationItem item, int rowIndex) {
+    final row = _createRowFromCellule(c, rowIndex);
+    // Enrichir avec tout champ personnalisé présent dans item.data
+    for (final entry in item.data.entries) {
+      if (entry.value.trim().isNotEmpty && !row.normalizedFields.containsKey(entry.key)) {
+        row.normalizedFields[entry.key] = entry.value.trim();
+        row.normalizedFields[InstallationFieldsRegistry.normalizeKey(entry.key)] = entry.value.trim();
+      }
+    }
+    return row;
+  }
+
+  /// Construit une ligne de tableau PDF à partir d'un TransformateurMTBT actif et de son item descriptif
+  static InstallationDescriptionPdfRow _createRowFromTransformateurAndItem(
+      TransformateurMTBT t, InstallationItem item, int rowIndex) {
+    final row = _createRowFromTransformateur(t, rowIndex);
+    // Enrichir avec tout champ personnalisé présent dans item.data
+    for (final entry in item.data.entries) {
+      if (entry.value.trim().isNotEmpty && !row.normalizedFields.containsKey(entry.key)) {
+        row.normalizedFields[entry.key] = entry.value.trim();
+        row.normalizedFields[InstallationFieldsRegistry.normalizeKey(entry.key)] = entry.value.trim();
+      }
+    }
+    return row;
   }
 
   /// Construit une ligne de tableau PDF directement depuis les propriétés de l'entité Cellule
@@ -228,164 +266,6 @@ class InstallationDescriptionPdfData {
       rawId: t.syncId ?? 'transfo_$rowIndex',
       normalizedFields: normMap,
     );
-  }
-
-  /// Normalisation de secours pour les items manuels ou historiques
-  static InstallationDescriptionPdfRow _normalizeItemRow(
-      InstallationItem item, int rowIndex, String sectionKey) {
-    final Map<String, String> normMap = {};
-
-    for (final entry in item.data.entries) {
-      if (entry.value.trim().isNotEmpty) {
-        normMap[entry.key] = entry.value.trim();
-        normMap[InstallationFieldsRegistry.normalizeKey(entry.key)] = entry.value.trim();
-      }
-    }
-
-    if (sectionKey == 'MT') {
-      _mapFieldIfMissing(normMap, 'TYPE DE CELLULE', [
-        'TYPE DE CELLULE',
-        'Type De Cellule',
-        'type',
-        'Type',
-        'Type de cellule',
-        'Gamme De Cellule',
-        'gamme',
-      ]);
-      _mapFieldIfMissing(normMap, 'TENSION DE SERVICE (kV)', [
-        'TENSION DE SERVICE (kV)',
-        'Tension de service',
-        'tensionService',
-        'Tension de service (kV)',
-        'TENSION DE SERVICE',
-      ]);
-      _mapFieldIfMissing(normMap, 'TENSION ASSIGNEE(KV)', [
-        'TENSION ASSIGNEE(KV)',
-        'Tension assignée',
-        'tensionAssignee',
-        'Tension assignée (kV)',
-        'TENSION ASSIGNEE',
-      ]);
-      _mapFieldIfMissing(normMap, 'POUVOIR DE COUPURE ASSIGNE(KA)', [
-        'POUVOIR DE COUPURE ASSIGNE(KA)',
-        'Pouvoir de coupure assigné',
-        'pouvoirCoupure',
-        'Pouvoir de coupure',
-        'Pouvoir de coupure assigné (kA)',
-      ]);
-      _mapFieldIfMissing(normMap, 'SECTION DU CABLE(mm2)', [
-        'SECTION DU CABLE(mm2)',
-        'SECTION DU CABLE (mm²)',
-        'Section Du Cable',
-        'sectionCables',
-        'Section des cables',
-        'Section cable',
-      ]);
-      _mapFieldIfMissing(normMap, 'NATURE DU RESEAU', [
-        'NATURE DU RESEAU',
-        'Nature Du Reseau',
-        'natureReseau',
-        'Nature reseau',
-      ]);
-    } else if (sectionKey == 'BT') {
-      _mapFieldIfMissing(normMap, 'PUISSANCE TRANSFORMATEUR (KVA)', [
-        'PUISSANCE TRANSFORMATEUR (KVA)',
-        'Puissance Transformateur',
-        'puissanceAssignee',
-        'Puissance',
-        'Puissance (kVA)',
-      ]);
-      _mapFieldIfMissing(normMap, 'TYPE DE TRANSFORMATEUR', [
-        'TYPE DE TRANSFORMATEUR',
-        'Type de transformateur',
-        'typeTransformateur',
-        'Type transfo',
-        'Type',
-      ]);
-      _mapFieldIfMissing(normMap, 'INTENSITE NOMINALE', [
-        'INTENSITE NOMINALE',
-        'Intensité nominale',
-        'intensiteNominale',
-        'Intensite nominale',
-        'Intensite',
-      ]);
-      _mapFieldIfMissing(normMap, 'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR', [
-        'CALIBRE DU DISJONCTEUR SORTIE TRANSFORMATEUR',
-        'Calibre Du Disjoncteur Sortie Transformateur',
-        'calibreDisjoncteur',
-        'Calibre disjoncteur',
-        'Calibre',
-      ]);
-      _mapFieldIfMissing(normMap, 'SECTION DU CABLE', [
-        'SECTION DU CABLE',
-        'Section Du Cable',
-        'sectionCables',
-        'Section des cables',
-        'Section cable',
-      ]);
-      _mapFieldIfMissing(normMap, 'TENSION MT/BT', [
-        'TENSION MT/BT',
-        'Tension',
-        'tensionPrimaireSecondaire',
-        'Tension primaire / secondaire',
-      ]);
-      _mapFieldIfMissing(normMap, 'COUPLAGE', [
-        'COUPLAGE',
-        'Couplage',
-        'couplage',
-      ]);
-      _mapFieldIfMissing(normMap, 'TYPE DE RESEAU', [
-        'TYPE DE RESEAU',
-        'Type de réseau',
-        'typeReseau',
-        'Type reseau',
-      ]);
-      _mapFieldIfMissing(normMap, 'PCC AMONT EN MVA', [
-        'PCC AMONT EN MVA',
-        'PCC amont',
-        'pccAmont',
-        'PCC amont (MVA)',
-      ]);
-      _mapFieldIfMissing(normMap, 'UCC EN %', [
-        'UCC EN %',
-        'Puissance UCC',
-        'puissanceUcc',
-        'UCC (%)',
-      ]);
-      _mapFieldIfMissing(normMap, 'IK3 MAX(KA)', [
-        'IK3 MAX(KA)',
-        'IK3 MAX',
-        'ik3Max',
-        'IK3 MAX (kA)',
-      ]);
-    }
-
-    final rawId = item.data['auditCelluleId'] ??
-        item.data['auditTransformateurId'] ??
-        'row_${rowIndex}_${DateTime.now().microsecondsSinceEpoch}';
-
-    return InstallationDescriptionPdfRow(
-      index: rowIndex,
-      rawId: rawId,
-      normalizedFields: normMap,
-    );
-  }
-
-  static void _mapFieldIfMissing(
-      Map<String, String> map, String targetHeader, List<String> candidateKeys) {
-    if (map.containsKey(targetHeader) && map[targetHeader]!.trim().isNotEmpty) return;
-
-    for (final cand in candidateKeys) {
-      if (map.containsKey(cand) && map[cand]!.trim().isNotEmpty) {
-        map[targetHeader] = map[cand]!.trim();
-        return;
-      }
-      final candNorm = InstallationFieldsRegistry.normalizeKey(cand);
-      if (map.containsKey(candNorm) && map[candNorm]!.trim().isNotEmpty) {
-        map[targetHeader] = map[candNorm]!.trim();
-        return;
-      }
-    }
   }
 
   /// Helper interne pour collecter l'ensemble des Cellules de l'audit
