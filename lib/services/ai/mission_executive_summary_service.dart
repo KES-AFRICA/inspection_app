@@ -8,6 +8,7 @@ import 'executive_summary_cache_entry.dart';
 import 'executive_summary_data.dart';
 import 'executive_summary_snapshot.dart';
 import 'providers/gemini_rest_provider.dart';
+import 'providers/groq_rest_provider.dart';
 
 /// Service orchestrateur de la génération du « RÉSUMÉ EXÉCUTIF » intelligent pour le rapport PDF (7 sous-sections).
 ///
@@ -24,8 +25,9 @@ class MissionExecutiveSummaryService {
   static const int schemaVersion = 2;
   static const String _boxName = 'executive_summary_cache';
 
-  /// Clé API Gemini optionnelle
+  /// Clés API configurables
   static String? geminiApiKey;
+  static String? groqApiKey;
 
   /// Verrou de déduplication single-flight
   static final Map<String, Future<ExecutiveSummaryData>> _pendingRequests = {};
@@ -310,13 +312,13 @@ class MissionExecutiveSummaryService {
       if (kDebugMode) print('⚠️ Erreur d\'accès au cache Hive: $e');
     }
 
-    // ── TENTATIVE D'APPEL DE L'API IA ──
-    final provider = customProvider ?? _resolveDefaultProvider();
+    // ── TENTATIVE D'APPEL DE LA CHAÎNE IA (Groq -> OpenRouter -> Gemini) ──
+    final providerChain = customProvider != null ? [customProvider] : _resolveProviderChain();
 
-    if (provider != null) {
+    for (final provider in providerChain) {
       try {
         if (kDebugMode) {
-          print('🤖 [AI Executive Summary] Appel API IA (${provider.providerName}) pour mission $missionId...');
+          print('🤖 [AI Executive Summary] Essai provider IA (${provider.providerName}:${provider.modelName}) pour mission $missionId...');
         }
 
         final prompt = _buildPrompt(snapshot);
@@ -348,13 +350,16 @@ class MissionExecutiveSummaryService {
             if (kDebugMode) print('⚠️ Échec écriture cache Hive: $e');
           }
 
+          if (kDebugMode) {
+            print('✅ [AI Executive Summary] Succès de la génération IA via ${provider.providerName}:${provider.modelName} !');
+          }
           return aiSummaryData;
         } else {
-          if (kDebugMode) print('⚠️ Résumé IA invalide lors de la validation.');
+          if (kDebugMode) print('⚠️ Résumé IA invalide lors de la validation pour ${provider.providerName}.');
         }
       } catch (e) {
         if (kDebugMode) {
-          print('⚠️ Appel API IA échoué ou inaccessible ($e). Activation du Fallback...');
+          print('⚠️ [AI Executive Summary] Échec sur ${provider.providerName}:${provider.modelName} ($e). Bascule vers le fournisseur suivant...');
         }
       }
     }
@@ -387,11 +392,23 @@ class MissionExecutiveSummaryService {
     return offlineSummary;
   }
 
-  /// Résolution du fournisseur par défaut
-  static AiProvider? _resolveDefaultProvider() {
-    final key = geminiApiKey ?? const String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
-    if (key.trim().isEmpty) return null;
-    return GeminiRestProvider(apiKey: key);
+  /// Résolution de la chaîne de fournisseurs par ordre de priorité :
+  /// 1. Groq (GroqCloud REST API — llama-3.3-70b-versatile, 100% gratuit)
+  /// 2. Gemini (Google Gemini REST API — gemini-flash-latest)
+  static List<AiProvider> _resolveProviderChain() {
+    final chain = <AiProvider>[];
+
+    final groqKey = groqApiKey ?? const String.fromEnvironment('GROQ_API_KEY', defaultValue: '');
+    if (groqKey.trim().isNotEmpty) {
+      chain.add(GroqRestProvider(apiKey: groqKey.trim()));
+    }
+
+    final geminiKey = geminiApiKey ?? const String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
+    if (geminiKey.trim().isNotEmpty) {
+      chain.add(GeminiRestProvider(apiKey: geminiKey.trim(), modelName: 'gemini-flash-latest'));
+    }
+
+    return chain;
   }
 
   /// Construction du prompt strict en français avec données du snapshot

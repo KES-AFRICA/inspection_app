@@ -28,8 +28,9 @@ void main() async {
   // Initialiser Hive
   await HiveService.init();
 
-  // Clé API Gemini chargée depuis la configuration locale non-suivie par Git
+  // Clés API IA chargées depuis la configuration locale non-suivie par Git
   MissionExecutiveSummaryService.geminiApiKey = ApiKeys.geminiApiKey;
+  MissionExecutiveSummaryService.groqApiKey = ApiKeys.groqApiKey;
 
   // Migration silencieuse des données existantes
   await HiveService.migratePointsVerificationPriorite();
