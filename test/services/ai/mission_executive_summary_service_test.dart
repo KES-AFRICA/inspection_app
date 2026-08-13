@@ -197,8 +197,8 @@ void main() {
     });
   });
 
-  group('MissionExecutiveSummaryService - Fallback 3 Niveaux', () {
-    test('Niveau 1 : Génération IA réussie et mise en cache', () async {
+  group('MissionExecutiveSummaryService - Moteur IA + Hash + Offline', () {
+    test('Génération IA réussie et mise en cache avec hash', () async {
       final summary = await MissionExecutiveSummaryService.getOrGenerateSummary(
         'm_test_suite_1',
         customProvider: MockSuccessfulAiProvider(),
@@ -208,7 +208,7 @@ void main() {
       expect(summary.isFallback, isFalse);
     });
 
-    test('Niveau 2 : Si appel API échoue, réutiliser le dernier résumé en cache', () async {
+    test('Mission inchangée (même hash) + API hors-ligne : restitution immédiate du cache', () async {
       final summary = await MissionExecutiveSummaryService.getOrGenerateSummary(
         'm_test_suite_1',
         customProvider: MockFailingAiProvider(),
@@ -218,7 +218,7 @@ void main() {
       expect(summary.isFallback, isFalse);
     });
 
-    test('Niveau 3 : Si API échoue et aucun cache n\'existe, basculer sur le fallback déterministe', () async {
+    test('Mission sans cache + API hors-ligne : génération déterministe hors-ligne', () async {
       final summary = await MissionExecutiveSummaryService.getOrGenerateSummary(
         'm_test_suite_2_no_cache',
         customProvider: MockFailingAiProvider(),

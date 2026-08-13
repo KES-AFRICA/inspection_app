@@ -359,23 +359,32 @@ class MissionExecutiveSummaryService {
       }
     }
 
-    // ── NIVEAU 2 (FALLBACK 2) : UTILISER LE DERNIER RÉSUMÉ EN CACHE VALIDE POUR LA STRUCTURE ACTUELLE ──
-    if (cachedEntry != null &&
-        cachedEntry.schemaVersion == schemaVersion &&
-        cachedEntry.promptVersion == promptVersion &&
-        _validateAiSummary(cachedEntry.summaryData) &&
-        !cachedEntry.summaryData.isFallback) {
-      if (kDebugMode) {
-        print('🔄 [AI Executive Summary] Fallback Niveau 2: Utilisation du dernier résumé v$schemaVersion en cache pour $missionId');
-      }
-      return cachedEntry.summaryData;
+    // ── NIVEAU 2 (FALLBACK 2) : UTILISER UN RÉSULTAT HORS-LIGNE DÉTERMINISTE POUR LE HASH ACTUEL ──
+    if (kDebugMode) {
+      print('🛡️ [AI Executive Summary] Moteur Offline Déterministe pour mission $missionId (hash: ${currentHash.substring(0, 8)})');
     }
 
-    // ── NIVEAU 3 (FALLBACK 3) : RÉSUMÉ DÉTERMINISTE LOCAL ──
-    if (kDebugMode) {
-      print('🛡️ [AI Executive Summary] Fallback Niveau 3: Génération du résumé déterministe local pour $missionId');
+    final offlineSummary = buildDeterministicFallback(missionId, snapshot);
+
+    // Sauvegarder la version offline dans le cache Hive avec l'empreinte actuelle
+    final offlineEntry = ExecutiveSummaryCacheEntry(
+      missionId: missionId,
+      snapshotHash: currentHash,
+      promptVersion: promptVersion,
+      schemaVersion: schemaVersion,
+      provider: 'offline_engine',
+      model: 'deterministic_v2',
+      generatedAt: DateTime.now(),
+      summaryData: offlineSummary,
+    );
+
+    try {
+      await cacheBox?.put(missionId, offlineEntry.encodeJson());
+    } catch (e) {
+      if (kDebugMode) print('⚠️ Échec écriture cache Hive offline: $e');
     }
-    return buildDeterministicFallback(missionId, snapshot);
+
+    return offlineSummary;
   }
 
   /// Résolution du fournisseur par défaut
@@ -426,7 +435,7 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
     return true;
   }
 
-  /// Générateur déterministe de secours (Fallback Niveau 3 - 100% Hors-ligne)
+  /// Générateur déterministe (Moteur Offline Déterministe pour la version actuelle)
   static ExecutiveSummaryData buildDeterministicFallback(
     String missionId,
     ExecutiveSummarySnapshot snapshot,
@@ -462,14 +471,20 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
     final eqCount = snapshot.equipmentCount;
     final globalDensityStr = snapshot.globalDensityStr;
 
+    // Liste des catégories actives avec leurs effectifs
+    final activeCategoriesNames = snapshot.categoryStats
+        .where((c) => (c['equipmentCount'] as int? ?? 0) > 0)
+        .map((c) => '${c['categoryName']} (${c['equipmentCount']})')
+        .join(', ');
+
     final contextText =
         'La vérification périodique réglementaire des installations électriques du site ${snapshot.siteName} '
         'a été réalisée ${snapshot.dateRangeText} par ${snapshot.companyName} '
         '(rapport n° ${snapshot.reportNumber}, émis le ${snapshot.reportDateStr}). '
         'La mission a porté sur l\'ensemble des installations électriques ${snapshot.domainTension}, '
-        'depuis les sources d\'alimentation jusqu\'aux équipements terminaux, conformément au périmètre défini dans le rapport. '
-        'Soit ${snapshot.equipmentCount} installation${snapshot.equipmentCount > 1 ? 's' : ''} et équipement${snapshot.equipmentCount > 1 ? 's' : ''} '
-        'répartis en ${snapshot.installationsCount} catégorie${snapshot.installationsCount > 1 ? 's' : ''}.';
+        'depuis les sources d\'alimentation jusqu\'aux équipements terminaux, conformément au périmètre défini dans le rapport, '
+        'soit un total de ${snapshot.equipmentCount} installation${snapshot.equipmentCount > 1 ? 's' : ''} et équipement${snapshot.equipmentCount > 1 ? 's' : ''} '
+        'contrôlés (${activeCategoriesNames.isNotEmpty ? activeCategoriesNames : 'locaux techniques, armoires, coffrets et prises de terre'}).';
 
     final introSynthese =
         'Les vérifications ont permis de recenser $total non-conformité${total > 1 ? 's' : ''} sur l\'ensemble du périmètre, '
@@ -511,48 +526,68 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
             'largement les seuils habituellement considérés comme acceptables (généralement de l\'ordre de 10 à 15 % en exploitation maîtrisée) '
             'et caractérise un site en risque avéré nécessitant une intervention corrective immédiate.';
 
-    final topCat = snapshot.categoryStats.isNotEmpty ? snapshot.categoryStats.first : null;
-    final topCatName = topCat != null ? (topCat['categoryName'] as String? ?? 'équipements') : 'équipements';
-    final topCatNc = topCat != null ? (topCat['ncCount'] as int? ?? 0) : 0;
-    final topCatPct = topCat != null ? (topCat['pctOfTotalNc'] as String? ?? '0,0') : '0,0';
+    // Sélection déterministe des 2 catégories prépondérantes (Top 2 NCs)
+    final top1 = snapshot.categoryStats.isNotEmpty ? snapshot.categoryStats[0] : null;
+    final top2 = snapshot.categoryStats.length > 1 ? snapshot.categoryStats[1] : null;
 
-    final concentrationTitle = '1.3 Concentration du risque : les $topCatName concentrent l\'essentiel des écarts';
-    final primaryConcText = total == 0
-        ? 'L\'analyse ne révèle aucune concentration particulière d\'écarts.'
-        : 'L\'analyse croisée par catégorie d\'équipement fait apparaître une forte concentration du risque : les $topCatName '
-            'concentrent $topCatNc non-conformités, soit $topCatPct % du total relevé. Cette concentration a une conséquence opérationnelle directe : '
-            'un plan d\'action ciblé sur cette catégorie traiterait la majorité des écarts constatés.';
+    final top1Name = top1 != null ? (top1['categoryName'] as String? ?? 'équipements') : 'équipements';
+    final top1Nc = top1 != null ? (top1['ncCount'] as int? ?? 0) : 0;
+    final top1Pct = top1 != null ? (top1['pctOfTotalNc'] as String? ?? '0,0') : '0,0';
+    final top1Eq = top1 != null ? (top1['equipmentCount'] as int? ?? 0) : 0;
+    final top1PctEq = top1 != null ? (top1['pctOfTotalEquipment'] as String? ?? '0,0') : '0,0';
+    final top1Density = top1 != null ? (top1['densityStr'] as String? ?? '0,00') : '0,00';
 
-    final highestDensityText = total == 0
-        ? ''
-        : 'À l\'inverse, les locaux techniques Moyenne Tension, bien que représentant un effectif limité, '
-            'affichent une densité de non-conformités élevée et constituent des points de risque unitaire particulièrement sévères.';
+    final top2Name = top2 != null ? (top2['categoryName'] as String? ?? '') : '';
+    final top2Nc = top2 != null ? (top2['ncCount'] as int? ?? 0) : 0;
+    final top2Pct = top2 != null ? (top2['pctOfTotalNc'] as String? ?? '0,0') : '0,0';
 
-    final riskRows = snapshot.riskFamilies.take(3).map((r) {
+    final String concentrationTitle;
+    final String primaryConcText;
+    final String highestDensityText;
+
+    if (total == 0) {
+      concentrationTitle = '1.3 Concentration du risque';
+      primaryConcText = 'L\'analyse ne révèle aucune concentration particulière d\'écarts.';
+      highestDensityText = 'Toutes les installations examinées présentent un niveau de conformité satisfaisant.';
+    } else if (top2Name.isNotEmpty && top2Nc > 0) {
+      concentrationTitle = '1.3 Concentration du risque : les $top1Name et les $top2Name concentrent l\'essentiel des réfections';
+      primaryConcText = 'L\'analyse croisée par catégorie fait apparaître une forte concentration du risque : les $top1Name '
+          'concentrent $top1Nc non-conformités ($top1Pct % du total) et les $top2Name comptabilisent $top2Nc non-conformités ($top2Pct % du total). '
+          'Ces deux catégories regroupent à elles seules la majorité des anomalies du site.';
+      highestDensityText = 'En termes de densité unitaire, la catégorie $top1Name affiche une densité de $top1Density NC / équipement '
+          'sur un effectif de $top1Eq unité${top1Eq > 1 ? 's' : ''} (soit $top1PctEq % du parc contrôlé).';
+    } else {
+      concentrationTitle = '1.3 Concentration du risque : les $top1Name concentrent l\'essentiel des réfections';
+      primaryConcText = 'L\'analyse croisée fait apparaître une concentration majeure sur la catégorie $top1Name avec $top1Nc non-conformités, '
+          'représentant $top1Pct % de l\'ensemble des écarts constatés sur la mission.';
+      highestDensityText = 'Cette catégorie présente une densité de $top1Density NC / équipement sur $top1Eq unité${top1Eq > 1 ? 's' : ''}.';
+    }
+
+    final riskRows = snapshot.riskFamilies.take(4).map((r) {
       return RiskFactorRowData(
         natureRisque: r['name'] as String? ?? 'Famille de risque',
         constats: r['count']?.toString() ?? '0',
         partPct: '${r['percentage'] ?? '0,0'} %',
-        observation: 'Risque significatif identifié lors du contrôle',
+        observation: 'Facteur de risque identifié lors du contrôle',
       );
     }).toList();
 
     if (riskRows.isEmpty) {
       riskRows.add(RiskFactorRowData(
-        natureRisque: 'Erreur d\'exploitation / maintenance',
+        natureRisque: 'Risques généraux d\'exploitation',
         constats: '0',
         partPct: '0,0 %',
-        observation: '1er facteur de risque identifié',
+        observation: 'Aucun facteur de risque prépondérant identifié',
       ));
     }
 
     final riskCommentary = total == 0
         ? 'Aucun facteur de risque prépondérant décelé.'
-        : 'Ces facteurs de risque répertoriés concernent directement la sécurité des personnes intervenant sur les installations, '
-            'ce qui en fait la priorité absolue du plan d\'action correctif.';
+        : 'Ces facteurs de risque répertoriés concernent directement la sécurité des personnes et la protection des installations, '
+            'ce qui en fait la priorité du plan d\'actions correctives.';
 
-    final bulletPoints = snapshot.topDefects.map((d) {
-      return 'Défauts prédominants liés à ${d['title']} (${d['count']} constats, ${d['percentage']} %).';
+    final bulletPoints = snapshot.topDefects.take(5).map((d) {
+      return 'Défauts prédominants liés à ${d['title']} (${d['count']} constat${(d['count'] as int? ?? 0) > 1 ? 's' : ''}, ${d['percentage']} %).';
     }).toList();
 
     if (bulletPoints.isEmpty) {
@@ -561,14 +596,14 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
 
     final summaryObs = total == 0
         ? ''
-        : 'Les principales catégories de défauts concentrent plus de la moitié de l\'ensemble des occurrences relevées.';
+        : 'Les principales catégories de défauts concentrent le volume majeur des occurrences relevées lors des contrôles.';
 
     final priority1 = critique > 0
-        ? 'Priorité 1 — Immédiat : lever les $critique non-conformités critiques, en particulier sur les locaux techniques et armoires, pour neutraliser les risques directs d\'électrocution et d\'électrisation.'
+        ? 'Priorité 1 — Immédiat : lever les $critique non-conformités critiques, en particulier sur les $top1Name, pour neutraliser les risques directs d\'électrocution et d\'électrisation.'
         : 'Priorité 1 — Immédiat : maintenir l\'intégrité des équipements et organes de protection existants.';
 
     final priority2 = majeure > 0
-        ? 'Priorité 2 — Court terme : remettre en état les systèmes de protection contre les contacts indirects, mettre en conformité le câblage et vérifier l\'adéquation des disjoncteurs sur l\'ensemble du parc.'
+        ? 'Priorité 2 — Court terme : remettre en état les $majeure non-conformités majeures (systèmes de protection contre les contacts indirects, câblages et disjoncteurs).'
         : 'Priorité 2 — Court terme : planifier la maintenance préventive régulière.';
 
     final priority3 =
@@ -576,13 +611,13 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
 
     final assessment1 = total == 0
         ? 'La vérification périodique des installations électriques du site ${snapshot.siteName} met en évidence un bon niveau de maîtrise du risque électrique.'
-        : 'La vérification périodique des installations électriques du site ${snapshot.siteName} met en évidence un niveau de maîtrise du risque électrique insuffisant, traduisant une dégradation significative de l\'état général des installations.';
+        : 'La vérification périodique des installations électriques du site ${snapshot.siteName} met en évidence un niveau de maîtrise du risque électrique nécessitant une vigilance renforcée et des actions correctives structurées.';
 
     final assessment2 =
-        'L\'inspection a permis d\'identifier $total non-conformités, dont $critique critiques et $majeure majeures, avec une densité moyenne de $globalDensityStr non-conformités par équipement contrôlé. Cette situation traduit une accumulation d\'écarts susceptibles de compromettre la sécurité des personnes, la protection des biens et la continuité des activités.';
+        'L\'inspection a permis d\'identifier $total non-conformités, dont $critique critiques et $majeure majeures, avec une densité moyenne de $globalDensityStr non-conformité${total > 1 ? 's' : ''} par équipement contrôlé.';
 
     final assessment3 =
-        'L\'analyse des résultats met en évidence une concentration des anomalies sur les armoires électriques, coffrets de distribution, tableaux généraux basse tension (TGBT) et locaux techniques Moyenne Tension, qui constituent les équipements les plus sensibles au regard des risques d\'électrisation, de court-circuit, de surchauffe et de défaillance d\'exploitation.';
+        'L\'analyse des résultats met en évidence une concentration des anomalies sur la catégorie $top1Name${top2Name.isNotEmpty ? ' et $top2Name' : ''}, qui constituent les équipements les plus sensibles au regard de la sécurité et de la continuité d\'exploitation.';
 
     final actionSteps = <String>[
       'Supprimer immédiatement toutes les situations présentant un danger grave et imminent pour les personnes ou les installations.',

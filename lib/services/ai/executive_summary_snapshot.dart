@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/statistics/audit_finding.dart';
 import 'package:inspec_app/services/statistics/mission_statistics_collector.dart';
 
 /// Capture d'écran compacte, déterministe et versionnée des données d'une mission.
@@ -83,21 +84,33 @@ class ExecutiveSummarySnapshot {
 
       final companyName = 'KES INSPECTIONS AND PROJECTS';
       final reportNumber = mission?.id ?? 'KES/IP/VE/2026/001';
-      final reportDate = dateEnd ?? dateStart ?? DateTime.now();
-      final reportDateStr = '${reportDate.day.toString().padLeft(2, '0')}/${reportDate.month.toString().padLeft(2, '0')}/${reportDate.year}';
+      final now = DateTime.now();
+      final reportDateStr = '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
 
       final cStats = summary.criticalityStats;
       final tensionStats = summary.tensionDomainStats;
       final domainStr = (tensionStats.mtCount > 0) ? 'Moyenne et Basse Tension (MT/BT)' : 'Basse Tension (BT)';
 
-      final eqCount = summary.equipmentInventory.length;
+      final totalEquipments = summary.equipmentInventory.fold<int>(0, (sum, item) => sum + item.count);
+      final activeCategoriesCount = summary.equipmentInventory.where((i) => i.count > 0).length;
+      final eqCount = totalEquipments > 0 ? totalEquipments : summary.equipmentInventory.length;
       final totalNc = cStats.total;
 
       final double globalDensity = eqCount > 0 ? totalNc / eqCount : 0.0;
       final globalDensityStr = globalDensity.toStringAsFixed(2).replaceAll('.', ',');
 
-      // Category breakdown from summary.crossCategoryItems
-      final categoryStatsList = summary.crossCategoryItems.map((c) {
+      // Trier les catégories par nombre de non-conformités décroissant pour déterminer le Top 2
+      final sortedCategories = List<CategoryCrossItem>.from(summary.crossCategoryItems)
+        ..sort((a, b) {
+          final cmp = b.nonConformitiesCount.compareTo(a.nonConformitiesCount);
+          if (cmp != 0) return cmp;
+          final cmpDensity = b.density.compareTo(a.density);
+          if (cmpDensity != 0) return cmpDensity;
+          return a.categoryName.compareTo(b.categoryName);
+        });
+
+      // Category breakdown from sortedCategories
+      final List<Map<String, dynamic>> categoryStatsList = sortedCategories.map<Map<String, dynamic>>((c) {
         final double density = c.density;
         final double pctEq = eqCount > 0 ? (c.equipmentCount / eqCount) * 100 : 0.0;
         final double pctNc = totalNc > 0 ? (c.nonConformitiesCount / totalNc) * 100 : 0.0;
@@ -150,7 +163,7 @@ class ExecutiveSummarySnapshot {
         topDefects: topDefectsList,
         riskFamilies: riskFamiliesList,
         equipmentCount: eqCount,
-        installationsCount: summary.installationTypeStats.length,
+        installationsCount: activeCategoriesCount > 0 ? activeCategoriesCount : summary.installationTypeStats.length,
         globalDensityStr: globalDensityStr,
       );
     } catch (_) {
