@@ -769,6 +769,9 @@ class PdfReportService {
   }) {
     final entries = <_SommaireEntry>[];
 
+    // 0. Sommaire
+    entries.add(_SommaireEntry(titre: "SOMMAIRE", key: 'sommaire', level: 0, isBold: true, isUppercase: true));
+
     // 1. Objet de la vérification
     entries.add(_SommaireEntry(titre: "OBJET DE LA VÉRIFICATION", key: 'objet', level: 0, isBold: true, isUppercase: true));
     entries.add(_SommaireEntry(titre: "1. Références normatives et réglementaires", key: 'objet_normes', level: 1));
@@ -843,7 +846,20 @@ class PdfReportService {
 
     // 8. Description des installations
     entries.add(_SommaireEntry(titre: "DESCRIPTION DES INSTALLATIONS", key: 'description', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "1. Zones et Locaux à risque", key: 'desc_locaux_risques', level: 1));
+    entries.add(_SommaireEntry(titre: "1. Caractéristiques de l'alimentation moyenne tension", key: 'desc_mt', level: 1));
+    entries.add(_SommaireEntry(titre: "2. Caractéristiques de l'alimentation basse tension sortie transformateur", key: 'desc_bt', level: 1));
+    entries.add(_SommaireEntry(titre: "3. Caractéristiques du groupe électrogène", key: 'desc_ge', level: 1));
+    entries.add(_SommaireEntry(titre: "4. Alimentation du groupe électrogène en carburant", key: 'desc_carburant', level: 1));
+    entries.add(_SommaireEntry(titre: "5. Caractéristiques de l'inverseur", key: 'desc_inverseur', level: 1));
+    entries.add(_SommaireEntry(titre: "6. Caractéristiques du stabilisateur", key: 'desc_stabilisateur', level: 1));
+    entries.add(_SommaireEntry(titre: "7. Caractéristiques des onduleurs", key: 'desc_onduleurs', level: 1));
+    entries.add(_SommaireEntry(titre: "8. Régime de neutre", key: 'desc_regime_neutre', level: 1));
+    entries.add(_SommaireEntry(titre: "9. Eclairage de sécurité", key: 'desc_eclairage', level: 1));
+    entries.add(_SommaireEntry(titre: "10. Modifications apportées aux installations", key: 'desc_modifications', level: 1));
+    entries.add(_SommaireEntry(titre: "11. Note de calcul des installations électriques", key: 'desc_note_calcul', level: 1));
+    entries.add(_SommaireEntry(titre: "12. Présence de paratonnerre", key: 'desc_paratonnerre', level: 1));
+    entries.add(_SommaireEntry(titre: "13. Registre de sécurité", key: 'desc_registre', level: 1));
+    entries.add(_SommaireEntry(titre: "14. Zones et Locaux à risque", key: 'desc_locaux_risques', level: 1));
 
     // 9. Liste récapitulative (si audit)
     if (audit != null) {
@@ -916,14 +932,19 @@ class PdfReportService {
         numeroRapport: numeroRapport,
       ),
       build: (ctx) => [
-        pw.Center(
-          child: pw.Text(
-            'SOMMAIRE',
-            style: pw.TextStyle(
-              font: _fontBold,
-              fontSize: 14,
-              fontWeight: pw.FontWeight.bold,
-              color: accentColor,
+        PageTracker(
+          key: 'sommaire',
+          registry: trackedPages,
+          offset: pageOffset,
+          child: pw.Center(
+            child: pw.Text(
+              'SOMMAIRE',
+              style: pw.TextStyle(
+                font: _fontBold,
+                fontSize: 14,
+                fontWeight: pw.FontWeight.bold,
+                color: accentColor,
+              ),
             ),
           ),
         ),
@@ -938,7 +959,7 @@ class PdfReportService {
   }
 
   static pw.Widget _buildSommaireEntryLine(_SommaireEntry entry, Map<String, int> trackedPages) {
-    final double leftPadding = entry.level * 15.0;
+    final double leftPadding = entry.level * 14.0;
     
     // Choose font & size
     final double fontSize = entry.level == 0 
@@ -955,7 +976,7 @@ class PdfReportService {
         alignment: pw.Alignment.bottomRight,
         children: [
           pw.Padding(
-            padding: const pw.EdgeInsets.only(right: 32.0),
+            padding: const pw.EdgeInsets.only(right: 20.0),
             child: pw.Row(
               crossAxisAlignment: pw.CrossAxisAlignment.end,
               children: [
@@ -965,28 +986,20 @@ class PdfReportService {
                     titleText.trim(),
                     style: pw.TextStyle(font: font, fontSize: fontSize, color: color),
                     maxLines: 1,
-                    overflow: pw.TextOverflow.clip,
                   ),
                 ),
                 pw.SizedBox(width: 4),
                 pw.Expanded(
-                  child: pw.ClipRect(
-                    child: pw.Container(
-                      width: double.infinity,
-                      child: pw.Text(
-                        '.' * 400,
-                        style: pw.TextStyle(
-                          font: _fontRegular,
-                          fontSize: fontSize - 1,
-                          color: PdfColors.grey500,
-                          letterSpacing: 1.5,
-                        ),
-                        maxLines: 1,
-                      ),
-                    ),
+                  child: pw.CustomPaint(
+                    painter: (PdfGraphics canvas, PdfPoint size) {
+                      canvas.setStrokeColor(PdfColors.grey400);
+                      canvas.setLineWidth(0.8);
+                      canvas.setLineDashPattern([1, 2.5]);
+                      canvas.drawLine(0, 2, size.x, 2);
+                      canvas.strokePath();
+                    },
                   ),
                 ),
-                pw.SizedBox(width: 4),
               ],
             ),
           ),
@@ -1912,7 +1925,12 @@ class PdfReportService {
           child: pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text('${i + 1}. ', style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: accentColor)),
+              pw.Container(
+                width: 3.5,
+                height: 3.5,
+                margin: const pw.EdgeInsets.only(top: 4, right: 6),
+                decoration: pw.BoxDecoration(color: accentColor, shape: pw.BoxShape.circle),
+              ),
               pw.Expanded(
                 child: pw.Text(
                   step,
@@ -2091,13 +2109,16 @@ class PdfReportService {
     ));
     widgets.add(pw.SizedBox(height: 10));
 
+    int statIdx = 1;
+
     // I. Sous-section : Non-conformités de l'année passée
     widgets.add(PageTracker(
       key: 'stat_annee_passee',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('Non-conformités de l\'année passée'),
+      child: _subTitle('$statIdx. Non-conformités de l\'année passée'),
     ));
+    statIdx++;
     widgets.add(pw.SizedBox(height: 5));
     widgets.add(_buildCalloutBox(
       'Donnée non disponible',
@@ -2110,8 +2131,9 @@ class PdfReportService {
       key: 'stat_comparaison',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('Comparaison avec celles de cette année'),
+      child: _subTitle('$statIdx. Comparaison avec celles de cette année'),
     ));
+    statIdx++;
     widgets.add(pw.SizedBox(height: 5));
     widgets.add(_bodyText(
       'Non calculable en l\'absence de données de référence de l\'année précédente (voir ci-dessus). À titre indicatif, les non-conformités de la présente visite se répartissent comme suit :',
@@ -2129,8 +2151,9 @@ class PdfReportService {
       key: 'stat_taux_conformite',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('Taux de mise en conformité'),
+      child: _subTitle('$statIdx. Taux de mise en conformité'),
     ));
+    statIdx++;
     widgets.add(pw.SizedBox(height: 5));
     widgets.add(_buildCalloutBox(
       'Donnée partiellement disponible',
@@ -2149,8 +2172,9 @@ class PdfReportService {
         key: 'stat_defauts',
         registry: trackedPages,
         offset: offset,
-        child: _subTitle('Statistique par type de d\u00e9faut'),
+        child: _subTitle('$statIdx. Statistique par type de d\u00e9faut'),
       ));
+      statIdx++;
       widgets.add(pw.SizedBox(height: 5));
       widgets.add(_bodyText(
         'Les ${inventory.totalFindings} non-conformit\u00e9s relev\u00e9es ont \u00e9t\u00e9 regroup\u00e9es par nature de d\u00e9faut. Les dix cat\u00e9gories les plus repr\u00e9sent\u00e9es sont pr\u00e9sent\u00e9es ci-dessous ; elles concentrent \u00e0 elles seules la quasi-totalit\u00e9 des \u00e9carts constat\u00e9s.',
@@ -2167,8 +2191,9 @@ class PdfReportService {
         key: 'stat_tension',
         registry: trackedPages,
         offset: offset,
-        child: _buildTensionDomainSection(domainStats),
+        child: _buildTensionDomainSection(domainStats, statIdx),
       ));
+      statIdx++;
       widgets.add(pw.SizedBox(height: 12));
     }
 
@@ -2179,8 +2204,9 @@ class PdfReportService {
         key: 'stat_croisee',
         registry: trackedPages,
         offset: offset,
-        child: _buildCrossCategorySection(statsSummary.crossCategoryItems, statsSummary.crossAnalysisText),
+        child: _buildCrossCategorySection(statsSummary.crossCategoryItems, statsSummary.crossAnalysisText, statIdx),
       ));
+      statIdx++;
       widgets.add(pw.SizedBox(height: 12));
     }
 
@@ -2189,7 +2215,7 @@ class PdfReportService {
       key: 'stat_inventaire',
       registry: trackedPages,
       offset: offset,
-      child: _buildInventaireEquipementsSection(statsSummary.equipmentInventory),
+      child: _buildInventaireEquipementsSection(statsSummary.equipmentInventory, statIdx),
     ));
 
     return widgets;
@@ -2199,7 +2225,7 @@ class PdfReportService {
   //  GRAPHIQUES ET ANALYSES STATISTIQUES AVANCÉES
   // ──────────────────────────────────────────────────────────────
 
-  static pw.Widget _buildInventaireEquipementsSection(List<EquipmentInventoryItem> items) {
+  static pw.Widget _buildInventaireEquipementsSection(List<EquipmentInventoryItem> items, [int? index]) {
     final totalEquipementsBT = items
         .where((e) => e.label == 'TGBT' || e.label == 'Armoires' || e.label == 'Coffrets')
         .fold(0, (sum, e) => sum + e.count);
@@ -2207,7 +2233,7 @@ class PdfReportService {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        _subTitle('Inventaire chiffr\u00e9 des installations et \u00e9quipements'),
+        _subTitle('${index != null ? "$index. " : ""}Inventaire chiffr\u00e9 des installations et \u00e9quipements'),
         pw.SizedBox(height: 5),
         _bodyText(
           'Les effectifs ci-dessous sont \u00e9tablis \u00e0 partir du d\u00e9tail point par point du chapitre \u00ab Audit des installations \u00e9lectriques \u00bb (comptage des fiches de v\u00e9rification effectivement renseign\u00e9es pour chaque \u00e9quipement).',
@@ -2371,11 +2397,11 @@ class PdfReportService {
     );
   }
 
-  static pw.Widget _buildTensionDomainSection(TensionDomainStats stats) {
+  static pw.Widget _buildTensionDomainSection(TensionDomainStats stats, [int? index]) {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        _subTitle('R\u00e9partition des non-conformit\u00e9s par domaine de tension'),
+        _subTitle('${index != null ? "$index. " : ""}R\u00e9partition des non-conformit\u00e9s par domaine de tension'),
         pw.SizedBox(height: 6),
         pw.Container(
           height: 130,
@@ -2482,7 +2508,7 @@ class PdfReportService {
     );
   }
 
-  static pw.Widget _buildCrossCategorySection(List<CategoryCrossItem> items, String crossText) {
+  static pw.Widget _buildCrossCategorySection(List<CategoryCrossItem> items, String crossText, [int? index]) {
     if (items.isEmpty) return pw.SizedBox();
 
     final maxVal = items.map((e) => e.nonConformitiesCount).fold(1, (a, b) => a > b ? a : b);
@@ -2494,7 +2520,7 @@ class PdfReportService {
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        _subTitle('Non-conformit\u00e9s crois\u00e9es par cat\u00e9gorie d\'installation / d\'\u00e9quipement'),
+        _subTitle('${index != null ? "$index. " : ""}Non-conformit\u00e9s crois\u00e9es par cat\u00e9gorie d\'installation / d\'\u00e9quipement'),
         pw.SizedBox(height: 5),
         _bodyText('En crois\u00e0nt chaque cat\u00e9gorie ci-dessus avec les non-conformit\u00e9s relev\u00e9es, la r\u00e9partition et la densit\u00e9 moyenne par \u00e9quipement se pr\u00e9sentent comme suit :'),
         pw.SizedBox(height: 8),
@@ -2789,7 +2815,7 @@ class PdfReportService {
           key: 'renseignements_principaux',
           registry: trackedPages,
           offset: offset,
-          child: _subTitle('RENSEIGNEMENTS PRINCIPAUX'),
+          child: _subTitle('1. Renseignements principaux'),
         ),
 
         pw.SizedBox(height: 5),
@@ -2888,7 +2914,7 @@ class PdfReportService {
     key: 'renseignements_documents',
     registry: trackedPages,
     offset: offset,
-    child: _subTitle('DOCUMENTS NECESSAIRES A LA VERIFICATION'),
+    child: _subTitle('2. Documents nécessaires à la vérification'),
   ),
 
   pw.SizedBox(height: 5),
@@ -2969,7 +2995,7 @@ class PdfReportService {
     key: 'renseignements_habilitation',
     registry: trackedPages,
     offset: offset,
-    child: _subTitle('HABILITATION ÉLECTRIQUE DU PERSONNEL D\'INTERVENTION'),
+    child: _subTitle('3. Habilitation électrique du personnel d\'intervention'),
   ),
   pw.SizedBox(height: 6),
   () {
@@ -3091,21 +3117,36 @@ class PdfReportService {
     final pdfData = InstallationDescriptionPdfData.fromDescription(desc: desc, audit: audit);
     final safeDesc = desc ?? DescriptionInstallations.create('');
 
-    widgets.add(_subTitle('Caractéristiques de l\'alimentation moyenne tension'));
+    widgets.add(PageTracker(
+      key: 'desc_mt',
+      registry: trackedPages,
+      offset: offset,
+      child: _subTitle('1. Caractéristiques de l\'alimentation moyenne tension'),
+    ));
     if (pdfData.mtRows.isNotEmpty) {
       widgets.add(_buildInstallationTableFromRows(pdfData.mtRows, sectionKey: 'MT'));
     } else {
       widgets.add(_bodyText('- Non renseignee'));
     }
     
-    widgets.add(_subTitle('Caractéristiques de l\'alimentation basse tension sortie transformateur'));
+    widgets.add(PageTracker(
+      key: 'desc_bt',
+      registry: trackedPages,
+      offset: offset,
+      child: _subTitle('2. Caractéristiques de l\'alimentation basse tension sortie transformateur'),
+    ));
     if (pdfData.btRows.isNotEmpty) {
       widgets.add(_buildInstallationTableFromRows(pdfData.btRows, sectionKey: 'BT'));
     } else {
       widgets.add(_bodyText('- Non renseignee'));
     }
     
-    widgets.add(_subTitle('Caractéristiques du groupe électrogène'));
+    widgets.add(PageTracker(
+      key: 'desc_ge',
+      registry: trackedPages,
+      offset: offset,
+      child: _subTitle('3. Caractéristiques du groupe électrogène'),
+    ));
     if (safeDesc.groupeElectrogene.isNotEmpty) {
       widgets.add(_buildInstallationTable(safeDesc.groupeElectrogene, sectionKey: 'GROUPE'));
     } else {
@@ -3113,7 +3154,12 @@ class PdfReportService {
     }
     widgets.add(pw.SizedBox(height: 8));
 
-    widgets.add(_subTitle('Alimentation du groupe électrogène en carburant'));
+    widgets.add(PageTracker(
+      key: 'desc_carburant',
+      registry: trackedPages,
+      offset: offset,
+      child: _subTitle('4. Alimentation du groupe électrogène en carburant'),
+    ));
     if (safeDesc.alimentationCarburant.isNotEmpty) {
       widgets.add(_buildInstallationTable(safeDesc.alimentationCarburant, sectionKey: 'CARBURANT'));
     } else {
@@ -3121,7 +3167,12 @@ class PdfReportService {
     }
     widgets.add(pw.SizedBox(height: 8));
 
-    widgets.add(_subTitle('Caractéristiques de l\'inverseur'));
+    widgets.add(PageTracker(
+      key: 'desc_inverseur',
+      registry: trackedPages,
+      offset: offset,
+      child: _subTitle('5. Caractéristiques de l\'inverseur'),
+    ));
     if (safeDesc.inverseur.isNotEmpty) {
       widgets.add(_buildInstallationTable(safeDesc.inverseur, sectionKey: 'INVERSEUR'));
     } else {
@@ -3129,7 +3180,12 @@ class PdfReportService {
     }
     widgets.add(pw.SizedBox(height: 8));
 
-    widgets.add(_subTitle('Caractéristiques du stabilisateur'));
+    widgets.add(PageTracker(
+      key: 'desc_stabilisateur',
+      registry: trackedPages,
+      offset: offset,
+      child: _subTitle('6. Caractéristiques du stabilisateur'),
+    ));
     if (safeDesc.stabilisateur.isNotEmpty) {
       widgets.add(_buildInstallationTable(safeDesc.stabilisateur, sectionKey: 'STABILISATEUR'));
     } else {
@@ -3137,7 +3193,12 @@ class PdfReportService {
     }
     widgets.add(pw.SizedBox(height: 8));
 
-    widgets.add(_subTitle('Caractéristiques des onduleurs'));
+    widgets.add(PageTracker(
+      key: 'desc_onduleurs',
+      registry: trackedPages,
+      offset: offset,
+      child: _subTitle('7. Caractéristiques des onduleurs'),
+    ));
     if (safeDesc.onduleurs.isNotEmpty) {
       widgets.add(_buildInstallationTable(safeDesc.onduleurs, sectionKey: 'ONDULEUR'));
     } else {
@@ -3145,7 +3206,12 @@ class PdfReportService {
     }
     widgets.add(pw.SizedBox(height: 8));
 
-    widgets.add(_subTitle('Régime de neutre'));
+    widgets.add(PageTracker(
+      key: 'desc_regime_neutre',
+      registry: trackedPages,
+      offset: offset,
+      child: _subTitle('8. Régime de neutre'),
+    ));
   
     String regimeAffichage = safeDesc.regimeNeutre ?? 'Non renseigné';
     if (safeDesc.regimeNeutre == 'TN' && safeDesc.regimeNeutreDetail != null) {
@@ -3155,19 +3221,39 @@ class PdfReportService {
     widgets.add(_bodyText('- $regimeAffichage'));
     widgets.add(pw.SizedBox(height: 5));
 
-    widgets.add(_subTitle('Eclairage de sécurité'));
+    widgets.add(PageTracker(
+      key: 'desc_eclairage',
+      registry: trackedPages,
+      offset: offset,
+      child: _subTitle('9. Eclairage de sécurité'),
+    ));
     widgets.add(_bodyText('- ${safeDesc.eclairageSecurite ?? 'Non renseigné'}'));
     widgets.add(pw.SizedBox(height: 5));
 
-    widgets.add(_subTitle('Modifications apportées aux installations'));
+    widgets.add(PageTracker(
+      key: 'desc_modifications',
+      registry: trackedPages,
+      offset: offset,
+      child: _subTitle('10. Modifications apportées aux installations'),
+    ));
     widgets.add(_bodyText(safeDesc.modificationsInstallations ?? 'Sans objet'));
     widgets.add(pw.SizedBox(height: 5));
 
-    widgets.add(_subTitle('Note de calcul des installations électriques'));
+    widgets.add(PageTracker(
+      key: 'desc_note_calcul',
+      registry: trackedPages,
+      offset: offset,
+      child: _subTitle('11. Note de calcul des installations électriques'),
+    ));
     widgets.add(_bodyText('- ${safeDesc.noteCalcul ?? 'Non transmis'}'));
     widgets.add(pw.SizedBox(height: 5));
 
-    widgets.add(_subTitle('Présence de paratonnerre'));
+    widgets.add(PageTracker(
+      key: 'desc_paratonnerre',
+      registry: trackedPages,
+      offset: offset,
+      child: _subTitle('12. Présence de paratonnerre'),
+    ));
     widgets.add(_bodyText('Présence : ${safeDesc.presenceParatonnerre ?? 'NON'}'));
     if (safeDesc.analyseRisqueFoudre != null && safeDesc.analyseRisqueFoudre!.isNotEmpty) {
       widgets.add(_bodyText('Analyse risque foudre : ${safeDesc.analyseRisqueFoudre}'));
@@ -3177,7 +3263,12 @@ class PdfReportService {
     }
     widgets.add(pw.SizedBox(height: 5));
 
-    widgets.add(_subTitle('Registre de sécurité'));
+    widgets.add(PageTracker(
+      key: 'desc_registre',
+      registry: trackedPages,
+      offset: offset,
+      child: _subTitle('13. Registre de sécurité'),
+    ));
     widgets.add(_bodyText('- ${safeDesc.registreSecurite ?? 'Non transmis'}'));
     widgets.add(pw.SizedBox(height: 5));
 
@@ -3185,7 +3276,7 @@ class PdfReportService {
       key: 'desc_locaux_risques',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('Zones et Locaux \u00e0 risque'),
+      child: _subTitle('14. Zones et Locaux à risque'),
     ));
 
     final riskItems = _collectRiskZonesAndLocaux(audit);
@@ -3423,7 +3514,7 @@ class PdfReportService {
     widgets.add(PageTracker(
       key: 'liste_recap_mt',
       registry: trackedPages,
-      child: _subSectionBar('Moyenne tension'),
+      child: _subSectionBar('1. Moyenne tension'),
     ));
     widgets.add(pw.SizedBox(height: 5));
     final obsMT = _collectObservationsMT(audit);
@@ -3434,7 +3525,7 @@ class PdfReportService {
     widgets.add(PageTracker(
       key: 'liste_recap_bt',
       registry: trackedPages,
-      child: _subSectionBar('Basse tension'),
+      child: _subSectionBar('2. Basse tension'),
     ));
     widgets.add(pw.SizedBox(height: 5));
     final obsBT = _collectObservationsBT(audit);
@@ -4602,15 +4693,9 @@ class PdfReportService {
     return widgets;
   }
 
-  // Barre de section principale (bleue)
+  // En-tête de sous-section épuré textuel (sans bloc graphique)
   static pw.Widget _subSectionBar(String title) {
-    return pw.Container(
-      width: double.infinity,
-      color: accentColor,
-      padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-      child: pw.Text(title,
-          style: pw.TextStyle(fontSize: fsH3, fontWeight: pw.FontWeight.bold, color: PdfColors.white)),
-    );
+    return _subTitle(title);
   }
 
   // Barre de nom de local (vert clair — comme la trame)
@@ -4897,8 +4982,8 @@ class PdfReportService {
         horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(4.4),
-        1: pw.FlexColumnWidth(3.1),
+        0: pw.FlexColumnWidth(5.0),
+        1: pw.FlexColumnWidth(4.0),
       },
       children: [
         tableDataRowInfo('Fonction de la cellule', safe(cellule.fonction), alt: false),
@@ -5154,8 +5239,8 @@ class PdfReportService {
         horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(4.4),
-        1: pw.FlexColumnWidth(3.1),
+        0: pw.FlexColumnWidth(5.0),
+        1: pw.FlexColumnWidth(4.0),
       },
       children: [
         tableDataRowInfo('Type de transformateur', safe(transfo.typeTransformateur), alt: false),
@@ -6449,7 +6534,7 @@ class PdfReportService {
           key: 'foudre_equipements',
           registry: trackedPages,
           offset: offset,
-          child: _subSectionBar("Observations par équipement"),
+          child: _subSectionBar("1. Observations par équipement"),
         ),
         pw.SizedBox(height: 6),
 
@@ -6513,7 +6598,7 @@ class PdfReportService {
             key: 'mesures_conditions',
             registry: trackedPages,
             offset: pageOffset,
-            child: _subSectionBar("Conditions de mesure"),
+            child: _subSectionBar("1. Conditions de mesure"),
           ),
           pw.SizedBox(height: 10),
           
@@ -6540,7 +6625,7 @@ class PdfReportService {
             key: 'mesures_demarrage',
             registry: trackedPages,
             offset: pageOffset,
-            child: _subSectionBar('Essais de démarrage automatique du groupe électrogène'),
+            child: _subSectionBar('2. Essais de démarrage automatique du groupe électrogène'),
           ),
           pw.SizedBox(height: 5),
           _resultBox(mesures.essaiDemarrageAuto.observation ?? 'Non satisfaisant'),
@@ -6552,7 +6637,7 @@ class PdfReportService {
             key: 'mesures_arret',
             registry: trackedPages,
             offset: pageOffset,
-            child: _subSectionBar("Test de fonctionnement de l'arrêt d'urgence"),
+            child: _subSectionBar("3. Test de fonctionnement de l'arrêt d'urgence"),
           ),
           pw.SizedBox(height: 5),
           _resultBox(mesures.testArretUrgence.observation ?? 'Satisfaisant'),
@@ -6569,33 +6654,36 @@ class PdfReportService {
           key: 'mesures_terre',
           registry: trackedPages,
           offset: pageOffset,
-          child: _subSectionBar('Prise de terre'),
+          child: _subSectionBar('4. Prise de terre'),
         ),
         pw.SizedBox(height: 8),
-        pw.Table(
-          border: pw.TableBorder.all(color: borderColor, width: 0.4),
-          columnWidths: const {
-            0: pw.FlexColumnWidth(1.2), // Localisation
-            1: pw.FlexColumnWidth(1.6), // Identification de la prise de terre
-            2: pw.FlexColumnWidth(1.2), // Condition de mesure
-            3: pw.FlexColumnWidth(1.4), // Nature de la prise de terre
-            4: pw.FlexColumnWidth(1.2), // Méthode de mesure
-            5: pw.FlexColumnWidth(0.8), // Valeur de la mesure
-            6: pw.FlexColumnWidth(1.2), // Observation
-          },
-          children: [
-            _tableHeaderRow([
-              'Localisation',
-              'Identification de la prise de terre',
-              'Condition de mésure',
-              'Nature de la prise de terre',
-              'Méthode de mésure',
-              'Valeur de la mésure',
-              'Observation'
-            ]),
-            if (mesures.prisesTerre.isEmpty)
-              pw.TableRow(children: List.generate(7, (_) => _cell('', isHeader: false)))
-            else
+        if (mesures.prisesTerre.isEmpty)
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 4),
+            child: _bodyText('Aucune valeur.'),
+          )
+        else
+          pw.Table(
+            border: pw.TableBorder.all(color: borderColor, width: 0.4),
+            columnWidths: const {
+              0: pw.FlexColumnWidth(1.2), // Localisation
+              1: pw.FlexColumnWidth(1.6), // Identification de la prise de terre
+              2: pw.FlexColumnWidth(1.2), // Condition de mesure
+              3: pw.FlexColumnWidth(1.4), // Nature de la prise de terre
+              4: pw.FlexColumnWidth(1.2), // Méthode de mesure
+              5: pw.FlexColumnWidth(0.8), // Valeur de la mesure
+              6: pw.FlexColumnWidth(1.2), // Observation
+            },
+            children: [
+              _tableHeaderRow([
+                'Localisation',
+                'Identification de la prise de terre',
+                'Condition de mésure',
+                'Nature de la prise de terre',
+                'Méthode de mésure',
+                'Valeur de la mésure',
+                'Observation'
+              ]),
               ...mesures.prisesTerre.asMap().entries.map((e) {
                 final pt = e.value;
                 final obs = pt.observation ?? '';
@@ -6627,25 +6715,27 @@ class PdfReportService {
                   ],
                 );
               }),
-          ],
-        ),
+            ],
+          ),
         if (mesures.avisMesuresTerre.observation != null && mesures.avisMesuresTerre.observation!.isNotEmpty) ...[
           pw.SizedBox(height: 12),
-          pw.Text('❖ Avis sur les mésures', style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: headerColor)),
+          pw.Text('4.1. Avis sur les mesures', style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: headerColor)),
           pw.SizedBox(height: 4),
           ...mesures.avisMesuresTerre.observation!.split('\n').map((line) {
             if (line.trim().isEmpty) return pw.SizedBox();
-            final isSat = line.toLowerCase().contains('satisfaisant') && !line.toLowerCase().contains('non');
-            final isNonSat = line.toLowerCase().contains('non');
-            final bulletColor = isSat ? PdfColor.fromInt(0xFF1B5E20) : (isNonSat ? PdfColor.fromInt(0xFFB71C1C) : darkGrey);
             return pw.Padding(
               padding: const pw.EdgeInsets.only(left: 10, bottom: 3),
               child: pw.Row(
                 crossAxisAlignment: pw.CrossAxisAlignment.start,
                 children: [
-                  pw.Text('➢  ', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: bulletColor)),
+                  pw.Container(
+                    width: 3.5,
+                    height: 3.5,
+                    margin: const pw.EdgeInsets.only(top: 4, right: 6),
+                    decoration: pw.BoxDecoration(color: darkGrey, shape: pw.BoxShape.circle),
+                  ),
                   pw.Expanded(
-                    child: pw.Text(line.trim(), style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall, color: bulletColor)),
+                    child: pw.Text(line.trim(), style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall, color: darkGrey)),
                   ),
                 ],
               ),
@@ -6668,7 +6758,7 @@ class PdfReportService {
           key: 'mesures_ddr',
           registry: trackedPages,
           offset: pageOffset,
-          child: _subSectionBar("Essais de déclenchement des dispositifs différentiels et mesure d'isolement"),
+          child: _subSectionBar("5. Essais de déclenchement des dispositifs différentiels et mesure d'isolement"),
         ));
         widgets.add(pw.SizedBox(height: 8));
 
@@ -6751,27 +6841,17 @@ class PdfReportService {
         widgets.add(headerTable);
 
         if (mesures.essaisDeclenchement.isEmpty) {
-          widgets.add(pw.Table(
-            border: pw.TableBorder(
-              left: pw.BorderSide(color: borderColor, width: 0.4),
-              right: pw.BorderSide(color: borderColor, width: 0.4),
-              bottom: pw.BorderSide(color: borderColor, width: 0.4),
-              verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
-            ),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(0.6),
-              1: pw.FlexColumnWidth(2.0),
-              2: pw.FlexColumnWidth(1.0),
-              3: pw.FlexColumnWidth(0.9),
-              4: pw.FlexColumnWidth(0.9),
-              5: pw.FlexColumnWidth(0.8),
-              6: pw.FlexColumnWidth(1.0),
-            },
-            children: [
-              pw.TableRow(
-                children: List.generate(7, (_) => _cell("", isHeader: false)),
+          widgets.add(pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(6),
+            decoration: pw.BoxDecoration(
+              border: pw.Border(
+                left: pw.BorderSide(color: borderColor, width: 0.4),
+                right: pw.BorderSide(color: borderColor, width: 0.4),
+                bottom: pw.BorderSide(color: borderColor, width: 0.4),
               ),
-            ],
+            ),
+            child: _bodyText('Aucune valeur.'),
           ));
         } else {
           // Groupement sémantique par local puis par coffret
@@ -6870,23 +6950,26 @@ class PdfReportService {
           key: 'mesures_continuite',
           registry: trackedPages,
           offset: pageOffset,
-          child: _subSectionBar('Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles'),
+          child: _subSectionBar('6. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles'),
         ),
         pw.SizedBox(height: 8),
-        pw.Table(
-          border: pw.TableBorder.all(color: borderColor, width: 0.4),
-          columnWidths: {0: const pw.FlexColumnWidth(2), 1: const pw.FlexColumnWidth(2.5), 2: const pw.FlexColumnWidth(1.5), 3: const pw.FlexColumnWidth(2)},
-          children: [
-            _tableHeaderRow(['Localisation', 'Désignation Tableau / Equipement', 'Origine Mésure', 'Observation']),
-            if (mesures.continuiteResistances.isEmpty)
-              pw.TableRow(children: List.generate(4, (_) => _cell('', isHeader: false)))
-            else
+        if (mesures.continuiteResistances.isEmpty)
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 4),
+            child: _bodyText('Aucune valeur.'),
+          )
+        else
+          pw.Table(
+            border: pw.TableBorder.all(color: borderColor, width: 0.4),
+            columnWidths: {0: const pw.FlexColumnWidth(2), 1: const pw.FlexColumnWidth(2.5), 2: const pw.FlexColumnWidth(1.5), 3: const pw.FlexColumnWidth(2)},
+            children: [
+              _tableHeaderRow(['Localisation', 'Désignation Tableau / Equipement', 'Origine Mésure', 'Observation']),
               ...mesures.continuiteResistances.asMap().entries.map((e) {
                 final c = e.value;
                 return _tableDataRow([c.localisation, c.designationTableau, c.origineMesure, c.observation ?? ''], alt: e.key.isOdd, centered: true);
               }),
-          ],
-        ),
+            ],
+          ),
       ],
     ));
   }
@@ -7555,7 +7638,7 @@ class PdfReportService {
       globalPhotoCounter += pageGroup.length;
 
       photoDoc.addPage(pw.Page(
-        pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
+        pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages, showWatermark: false),
         build: (ctx) {
           final cells = <pw.Widget>[];
           for (int ci = 0; ci < 4; ci++) {
@@ -7598,7 +7681,7 @@ class PdfReportService {
       currentPageEquipRows.clear();
 
       photoDoc.addPage(pw.Page(
-        pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
+        pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages, showWatermark: false),
         build: (ctx) {
           return pw.Column(
             children: [
@@ -7980,21 +8063,13 @@ class PdfReportService {
   static pw.Widget _subTitle(String title) {
     return pw.Padding(
       padding: const pw.EdgeInsets.only(top: 10, bottom: 5),
-      child: pw.Container(
-        padding: const pw.EdgeInsets.only(left: 8, top: 2, bottom: 2),
-        decoration: pw.BoxDecoration(
-          border: pw.Border(
-            left: pw.BorderSide(color: accentColor, width: 2.5),
-          ),
-        ),
-        child: pw.Text(
-          _normalizeText(title),
-          style: pw.TextStyle(
-            font: _fontBold,
-            fontSize: fsH3,
-            fontWeight: pw.FontWeight.bold,
-            color: accentColor,
-          ),
+      child: pw.Text(
+        _normalizeText(title),
+        style: pw.TextStyle(
+          font: _fontBold,
+          fontSize: fsH3,
+          fontWeight: pw.FontWeight.bold,
+          color: accentColor,
         ),
       ),
     );
@@ -8180,7 +8255,7 @@ class PdfReportService {
         key: 'liste_recap_mt',
         registry: trackedPages,
         offset: currentOffset,
-        child: _subSectionBar('Moyenne tension'),
+        child: _subSectionBar('1. Moyenne tension'),
       ),
       pw.SizedBox(height: 5),
       ..._buildObsRecapTableMT(obsMT),
@@ -8226,7 +8301,7 @@ class PdfReportService {
             key: 'liste_recap_bt',
             registry: trackedPages,
             offset: currentOffset,
-            child: _subSectionBar('Basse tension'),
+            child: _subSectionBar('2. Basse tension'),
           ),
           pw.SizedBox(height: 5),
           pw.Container(
@@ -8259,7 +8334,7 @@ class PdfReportService {
             key: 'liste_recap_bt',
             registry: trackedPages,
             offset: currentOffset,
-            child: _subSectionBar('Basse tension'),
+            child: _subSectionBar('2. Basse tension'),
           ));
           btWidgets.add(pw.SizedBox(height: 5));
         }
@@ -8642,7 +8717,7 @@ class PdfReportService {
           key: 'objet_normes',
           registry: trackedPages,
           offset: currentOffset,
-          child: _subTitle('Références normatives et réglementaires'),
+          child: _subTitle('1. Références normatives et réglementaires'),
         ),
         pw.SizedBox(height: 5),
         _buildNormesTable(),
@@ -8651,7 +8726,7 @@ class PdfReportService {
           key: 'objet_materiel',
           registry: trackedPages,
           offset: currentOffset,
-          child: _subTitle('Matériel utilisé'),
+          child: _subTitle('2. Matériel utilisé'),
         ),
         pw.SizedBox(height: 5),
         _buildMaterielTable(),
@@ -8682,7 +8757,7 @@ class PdfReportService {
           key: 'rappel_accompagnement',
           registry: trackedPages,
           offset: currentOffset,
-          child: _subTitle('Responsabilité et accompagnement'),
+          child: _subTitle('1. Responsabilité et accompagnement'),
         ),
         _bodyText(
           'Dans le cadre de la mission, il appartient à l\'employeur de désigner une personne qualifiée et informée des installations, chargée d\'accompagner le vérificateur durant l\'intervention.\n'
@@ -8695,7 +8770,7 @@ class PdfReportService {
           key: 'rappel_conditions',
           registry: trackedPages,
           offset: currentOffset,
-          child: _subTitle('Conditions de réalisation'),
+          child: _subTitle('2. Conditions de réalisation'),
         ),
         _bodyText('Afin d\'assurer le bon déroulement des opérations, l\'employeur doit\u00a0:'),
         _bulletItem('Veiller à ce que la vérification soit réalisée dans des conditions de sécurité optimales, en particulier lors des accès en zone électrique\u00a0;'),
@@ -8712,7 +8787,7 @@ class PdfReportService {
           key: 'rappel_complementaires',
           registry: trackedPages,
           offset: currentOffset,
-          child: _subTitle('Vérifications complémentaires'),
+          child: _subTitle('3. Vérifications complémentaires'),
         ),
         _bodyText(
           'Lorsque des éléments du poste ou de l\'installation n\'ont pu être contrôlés lors de la visite initiale, une intervention complémentaire pourra être programmée à la demande de l\'employeur.\n'
@@ -8723,7 +8798,7 @@ class PdfReportService {
           key: 'rappel_maintenance',
           registry: trackedPages,
           offset: currentOffset,
-          child: _subTitle('Surveillance et maintenance des installations électriques'),
+          child: _subTitle('4. Surveillance et maintenance des installations électriques'),
         ),
         _bodyText(
           'La vérification de conformité des installations électriques ne constitue qu\'un des éléments concourant à la sécurité des personnes et des biens. Conformément à la norme et aux textes réglementaires applicables, '
@@ -8735,7 +8810,7 @@ class PdfReportService {
           key: 'rappel_formation',
           registry: trackedPages,
           offset: currentOffset,
-          child: _subTitle('Formation du personnel intervenant sur les installations et à proximité'),
+          child: _subTitle('5. Formation du personnel intervenant sur les installations et à proximité'),
         ),
         _bodyText(
           'Conformément aux dispositions réglementaires en vigueur, l\'employeur doit s\'assurer que le personnel appelé à intervenir sur ou à proximité des installations électriques dispose d\'une habilitation électrique adaptée au domaine de tension concerné '
@@ -8798,7 +8873,7 @@ class PdfReportService {
           key: 'mesures_technicien',
           registry: trackedPages,
           offset: currentOffset,
-          child: _subTitle('Technicien en maintenance des installations'),
+          child: _subTitle('1. Technicien en maintenance des installations'),
         ),
         pw.SizedBox(height: 5),
         _bodyText('Il est fortement recommandé à l\'employeur de faire participer les employés à des séances de formation sur les modules suivants\u00a0:'),
@@ -8809,7 +8884,7 @@ class PdfReportService {
           key: 'mesures_engagement',
           registry: trackedPages,
           offset: currentOffset,
-          child: _subTitle('Engagement de KES INSPECTIONS AND PROJECTS'),
+          child: _subTitle('2. Engagement de KES INSPECTIONS AND PROJECTS'),
         ),
         _bodyText(
           'KES INSPECTIONS AND PROJECTS s\'engage à réaliser ses vérifications dans le strict respect des normes et règlements applicables, '
@@ -9429,25 +9504,28 @@ class PageNumberText extends pw.Widget {
 
   PageNumberText({required this.keyName, required this.registry, required this.style});
 
+  String _getText() {
+    final pageNum = registry[keyName];
+    return pageNum != null ? pageNum.toString() : '--';
+  }
+
   @override
   void layout(pw.Context context, pw.BoxConstraints constraints, {bool parentUsesSize = false}) {
-    final dummy = pw.Text('999', style: style);
-    dummy.layout(context, constraints, parentUsesSize: parentUsesSize);
-    box = dummy.box;
+    final textWidget = pw.Text(_getText(), style: style);
+    textWidget.layout(context, constraints, parentUsesSize: parentUsesSize);
+    box = textWidget.box;
   }
 
   @override
   void paint(pw.Context context) {
     super.paint(context);
-    final pageNum = registry[keyName];
-    final textStr = pageNum != null ? pageNum.toString() : '--';
-    
     final textWidget = pw.Text(
-      textStr,
+      _getText(),
       style: style,
       textAlign: pw.TextAlign.right,
     );
     textWidget.layout(context, pw.BoxConstraints.tight(box!.size));
+    textWidget.box = box;
     textWidget.paint(context);
   }
 }
