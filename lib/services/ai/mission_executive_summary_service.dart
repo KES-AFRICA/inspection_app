@@ -274,6 +274,20 @@ class MissionExecutiveSummaryService {
             );
           }
 
+          // Purge automatique du cache si la version du schéma est obsolète (< schemaVersion) ou invalide
+          if (cachedEntry != null &&
+              (cachedEntry.schemaVersion < schemaVersion ||
+               cachedEntry.promptVersion < promptVersion ||
+               !_validateAiSummary(cachedEntry.summaryData))) {
+            if (kDebugMode) {
+              print('🧹 [AI Executive Summary] Purge automatique du cache obsolète (v${cachedEntry.schemaVersion} vs v$schemaVersion) pour $missionId...');
+            }
+            try {
+              await cacheBox?.delete(missionId);
+            } catch (_) {}
+            cachedEntry = null;
+          }
+
           if (cachedEntry != null &&
               cachedEntry.snapshotHash == currentHash &&
               cachedEntry.promptVersion == promptVersion &&
@@ -286,6 +300,10 @@ class MissionExecutiveSummaryService {
           }
         } catch (e) {
           if (kDebugMode) print('⚠️ Erreur lecture cache entry: $e');
+          try {
+            await cacheBox?.delete(missionId);
+          } catch (_) {}
+          cachedEntry = null;
         }
       }
     } catch (e) {
@@ -341,10 +359,14 @@ class MissionExecutiveSummaryService {
       }
     }
 
-    // ── NIVEAU 2 (FALLBACK 2) : UTILISER LE DERNIER RÉSUMÉ EN CACHE DE CETTE MISSION ──
-    if (cachedEntry != null && !cachedEntry.summaryData.isFallback) {
+    // ── NIVEAU 2 (FALLBACK 2) : UTILISER LE DERNIER RÉSUMÉ EN CACHE VALIDE POUR LA STRUCTURE ACTUELLE ──
+    if (cachedEntry != null &&
+        cachedEntry.schemaVersion == schemaVersion &&
+        cachedEntry.promptVersion == promptVersion &&
+        _validateAiSummary(cachedEntry.summaryData) &&
+        !cachedEntry.summaryData.isFallback) {
       if (kDebugMode) {
-        print('🔄 [AI Executive Summary] Fallback Niveau 2: Utilisation du dernier résumé valide en cache pour $missionId');
+        print('🔄 [AI Executive Summary] Fallback Niveau 2: Utilisation du dernier résumé v$schemaVersion en cache pour $missionId');
       }
       return cachedEntry.summaryData;
     }

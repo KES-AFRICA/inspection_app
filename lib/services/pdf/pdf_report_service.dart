@@ -792,6 +792,13 @@ class PdfReportService {
 
     // 5. Résumé Exécutif
     entries.add(_SommaireEntry(titre: "RESUME EXECUTIF", key: 'resume_executif', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "1.1 Contexte et périmètre de la mission", key: 'resume_executif_1_1', level: 1));
+    entries.add(_SommaireEntry(titre: "1.2 Synthèse des résultats", key: 'resume_executif_1_2', level: 1));
+    entries.add(_SommaireEntry(titre: "1.3 Concentration du risque", key: 'resume_executif_1_3', level: 1));
+    entries.add(_SommaireEntry(titre: "1.4 Facteurs de risque prépondérants", key: 'resume_executif_1_4', level: 1));
+    entries.add(_SommaireEntry(titre: "1.5 Observations et constats majeurs", key: 'resume_executif_1_5', level: 1));
+    entries.add(_SommaireEntry(titre: "1.6 Recommandations prioritaires hiérarchisées", key: 'resume_executif_1_6', level: 1));
+    entries.add(_SommaireEntry(titre: "1.7 Appréciation globale", key: 'resume_executif_1_7', level: 1));
 
     // 6. Analyse Statistique
     entries.add(_SommaireEntry(titre: "ANALYSE STATISTIQUE", key: 'analyse_statistique', level: 0, isBold: true, isUppercase: true));
@@ -1662,26 +1669,45 @@ class PdfReportService {
     widgets.add(pw.SizedBox(height: 12));
 
     // ── 1.1 Contexte et périmètre de la mission ──
-    widgets.add(_subSectionHeader('1.1 Contexte et périmètre de la mission'));
-    widgets.add(pw.SizedBox(height: 4));
-    widgets.add(pw.Text(
-      data.contexte.paragraph,
-      style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-      textAlign: pw.TextAlign.justify,
+    widgets.add(pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PageTracker(
+          key: 'resume_executif_1_1',
+          registry: trackedPages,
+          offset: offset,
+          child: _subSectionHeader('1.1 Contexte et périmètre de la mission'),
+        ),
+        pw.SizedBox(height: 4),
+        pw.Text(
+          data.contexte.paragraph,
+          style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+          textAlign: pw.TextAlign.justify,
+        ),
+      ],
     ));
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 1.2 Synthèse des résultats ──
-    widgets.add(_subSectionHeader('1.2 Synthèse des résultats'));
-    widgets.add(pw.SizedBox(height: 4));
-    if (data.syntheseResultats.introParagraph.isNotEmpty) {
-      widgets.add(pw.Text(
-        data.syntheseResultats.introParagraph,
-        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        textAlign: pw.TextAlign.justify,
-      ));
-      widgets.add(pw.SizedBox(height: 6));
-    }
+    widgets.add(pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PageTracker(
+          key: 'resume_executif_1_2',
+          registry: trackedPages,
+          offset: offset,
+          child: _subSectionHeader('1.2 Synthèse des résultats'),
+        ),
+        pw.SizedBox(height: 4),
+        if (data.syntheseResultats.introParagraph.isNotEmpty)
+          pw.Text(
+            data.syntheseResultats.introParagraph,
+            style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+            textAlign: pw.TextAlign.justify,
+          ),
+      ],
+    ));
+    widgets.add(pw.SizedBox(height: 6));
 
     // Tableau de criticité (1.2)
     if (data.syntheseResultats.tableRows.isNotEmpty) {
@@ -1702,16 +1728,25 @@ class PdfReportService {
     }
 
     // ── 1.3 Concentration du risque ──
-    widgets.add(_subSectionHeader(data.concentrationRisque.title));
+    widgets.add(pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PageTracker(
+          key: 'resume_executif_1_3',
+          registry: trackedPages,
+          offset: offset,
+          child: _subSectionHeader(data.concentrationRisque.title),
+        ),
+        pw.SizedBox(height: 4),
+        if (data.concentrationRisque.primaryConcentrationParagraph.isNotEmpty)
+          pw.Text(
+            data.concentrationRisque.primaryConcentrationParagraph,
+            style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+            textAlign: pw.TextAlign.justify,
+          ),
+      ],
+    ));
     widgets.add(pw.SizedBox(height: 4));
-    if (data.concentrationRisque.primaryConcentrationParagraph.isNotEmpty) {
-      widgets.add(pw.Text(
-        data.concentrationRisque.primaryConcentrationParagraph,
-        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        textAlign: pw.TextAlign.justify,
-      ));
-      widgets.add(pw.SizedBox(height: 4));
-    }
     if (data.concentrationRisque.highestDensityParagraph.isNotEmpty) {
       widgets.add(pw.Text(
         data.concentrationRisque.highestDensityParagraph,
@@ -1722,16 +1757,25 @@ class PdfReportService {
     }
 
     // ── 1.4 Facteurs de risque prépondérants ──
-    widgets.add(_subSectionHeader('1.4 Facteurs de risque prépondérants'));
-    widgets.add(pw.SizedBox(height: 4));
-    if (data.facteursRisque.introParagraph.isNotEmpty) {
-      widgets.add(pw.Text(
-        data.facteursRisque.introParagraph,
-        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        textAlign: pw.TextAlign.justify,
-      ));
-      widgets.add(pw.SizedBox(height: 6));
-    }
+    widgets.add(pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PageTracker(
+          key: 'resume_executif_1_4',
+          registry: trackedPages,
+          offset: offset,
+          child: _subSectionHeader('1.4 Facteurs de risque prépondérants'),
+        ),
+        pw.SizedBox(height: 4),
+        if (data.facteursRisque.introParagraph.isNotEmpty)
+          pw.Text(
+            data.facteursRisque.introParagraph,
+            style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+            textAlign: pw.TextAlign.justify,
+          ),
+      ],
+    ));
+    widgets.add(pw.SizedBox(height: 6));
 
     // Tableau des facteurs de risque (1.4)
     if (data.facteursRisque.tableRows.isNotEmpty) {
@@ -1749,10 +1793,22 @@ class PdfReportService {
     }
 
     // ── 1.5 Observations et constats majeurs ──
-    widgets.add(_subSectionHeader('1.5 Observations et constats majeurs'));
-    widgets.add(pw.SizedBox(height: 4));
-    for (final bp in data.observationsMajores.bulletPoints) {
-      widgets.add(_buildSimpleBulletRow(bp));
+    widgets.add(pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PageTracker(
+          key: 'resume_executif_1_5',
+          registry: trackedPages,
+          offset: offset,
+          child: _subSectionHeader('1.5 Observations et constats majeurs'),
+        ),
+        pw.SizedBox(height: 4),
+        if (data.observationsMajores.bulletPoints.isNotEmpty)
+          _buildSimpleBulletRow(data.observationsMajores.bulletPoints.first),
+      ],
+    ));
+    for (int i = 1; i < data.observationsMajores.bulletPoints.length; i++) {
+      widgets.add(_buildSimpleBulletRow(data.observationsMajores.bulletPoints[i]));
     }
     if (data.observationsMajores.summaryParagraph.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 4));
@@ -1765,16 +1821,25 @@ class PdfReportService {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 1.6 Recommandations prioritaires hiérarchisées ──
-    widgets.add(_subSectionHeader('1.6 Recommandations prioritaires hiérarchisées'));
+    widgets.add(pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PageTracker(
+          key: 'resume_executif_1_6',
+          registry: trackedPages,
+          offset: offset,
+          child: _subSectionHeader('1.6 Recommandations prioritaires hiérarchisées'),
+        ),
+        pw.SizedBox(height: 4),
+        if (data.recommandationsPrioritaires.introParagraph.isNotEmpty)
+          pw.Text(
+            data.recommandationsPrioritaires.introParagraph,
+            style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+            textAlign: pw.TextAlign.justify,
+          ),
+      ],
+    ));
     widgets.add(pw.SizedBox(height: 4));
-    if (data.recommandationsPrioritaires.introParagraph.isNotEmpty) {
-      widgets.add(pw.Text(
-        data.recommandationsPrioritaires.introParagraph,
-        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        textAlign: pw.TextAlign.justify,
-      ));
-      widgets.add(pw.SizedBox(height: 4));
-    }
     if (data.recommandationsPrioritaires.priority1Immediate.isNotEmpty) {
       widgets.add(_buildSimpleBulletRow(data.recommandationsPrioritaires.priority1Immediate));
     }
@@ -1787,16 +1852,25 @@ class PdfReportService {
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 1.7 Appréciation globale ──
-    widgets.add(_subSectionHeader('1.7 Appréciation globale'));
+    widgets.add(pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PageTracker(
+          key: 'resume_executif_1_7',
+          registry: trackedPages,
+          offset: offset,
+          child: _subSectionHeader('1.7 Appréciation globale'),
+        ),
+        pw.SizedBox(height: 4),
+        if (data.appreciationGlobale.assessmentParagraph1.isNotEmpty)
+          pw.Text(
+            data.appreciationGlobale.assessmentParagraph1,
+            style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+            textAlign: pw.TextAlign.justify,
+          ),
+      ],
+    ));
     widgets.add(pw.SizedBox(height: 4));
-    if (data.appreciationGlobale.assessmentParagraph1.isNotEmpty) {
-      widgets.add(pw.Text(
-        data.appreciationGlobale.assessmentParagraph1,
-        style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        textAlign: pw.TextAlign.justify,
-      ));
-      widgets.add(pw.SizedBox(height: 4));
-    }
     if (data.appreciationGlobale.assessmentParagraph2.isNotEmpty) {
       widgets.add(pw.Text(
         data.appreciationGlobale.assessmentParagraph2,
