@@ -304,6 +304,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
     required Function(String) onChanged,
     bool isRequired = true,
   }) {
+    final showBorderError = isRequired && !isValid;
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -318,12 +319,35 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
         style: TextStyle(fontSize: context.fontSizeM),
         decoration: InputDecoration(
           labelText: isRequired ? '$label *' : label,
-          labelStyle: TextStyle(color: Colors.grey.shade600, fontSize: context.fontSizeM),
-          prefixIcon: Icon(icon, color: AppTheme.primaryBlue, size: context.iconSizeM),
-          suffixIcon: isValid ? Icon(Icons.check_circle, color: Colors.green, size: context.iconSizeS) : null,
+          labelStyle: TextStyle(
+            color: showBorderError ? Colors.red.shade400 : Colors.grey.shade600,
+            fontSize: context.fontSizeM,
+          ),
+          prefixIcon: Icon(
+            icon,
+            color: showBorderError ? Colors.red.shade400 : AppTheme.primaryBlue,
+            size: context.iconSizeM,
+          ),
+          suffixIcon: isValid
+              ? Icon(Icons.check_circle, color: Colors.green, size: context.iconSizeS)
+              : (showBorderError
+                  ? Icon(Icons.error_outline, color: Colors.red.shade300, size: context.iconSizeS)
+                  : null),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingM), borderSide: BorderSide.none),
-          enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingM), borderSide: BorderSide(color: Colors.grey.shade200, width: 1.5)),
-          focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingM), borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2)),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(context.spacingM),
+            borderSide: BorderSide(
+              color: showBorderError ? Colors.red.shade300 : Colors.grey.shade200,
+              width: 1.5,
+            ),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(context.spacingM),
+            borderSide: BorderSide(
+              color: showBorderError ? Colors.red.shade400 : AppTheme.primaryBlue,
+              width: 2,
+            ),
+          ),
           filled: true,
           fillColor: Colors.white,
           contentPadding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingM),

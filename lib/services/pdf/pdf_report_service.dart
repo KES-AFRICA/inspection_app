@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/widgets.dart';
 import 'package:inspec_app/models/classement_zone.dart';
+import 'package:inspec_app/services/ai/executive_summary_snapshot.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:inspec_app/models/audit_installations_electriques.dart';
@@ -1638,8 +1639,7 @@ class PdfReportService {
     );
   }
 
-  /// Construit la section « RÉSUMÉ EXÉCUTIF » entièrement dynamique et intelligente,
-  /// alimentée par notre architecture IA / Fallback 3 Niveaux et les statistiques certifiées.
+  /// Construit la section « RÉSUMÉ EXÉCUTIF » structurée en 7 sous-sections officielles.
   static List<pw.Widget> _buildResumeExecutif(
     Mission mission,
     Map<String, int> trackedPages,
@@ -1649,22 +1649,8 @@ class PdfReportService {
   }) {
     final widgets = <pw.Widget>[];
 
-    // Source unique de vérité pour les statistiques officielles
-    final summary = MissionStatisticsCollector.collectSummary(mission.id);
-    final cStats = summary.criticalityStats;
-
-    final rg = HiveService.getRenseignementsGenerauxByMissionId(mission.id);
-    final dateStart = rg?.dateDebut ?? mission.dateIntervention;
-    final annee = (dateStart ?? DateTime.now()).year;
-
-    final total = cStats.total;
-    final critique = cStats.critique;
-    final majeure = cStats.majeure;
-    final mineure = cStats.mineure;
-
-    final pctCritiqueStr = cStats.pctCritique.toStringAsFixed(1).replaceAll('.', ',');
-    final pctMajeureStr = cStats.pctMajeure.toStringAsFixed(1).replaceAll('.', ',');
-    final pctMineureStr = cStats.pctMineure.toStringAsFixed(1).replaceAll('.', ',');
+    final snapshot = ExecutiveSummarySnapshot.fromMission(mission.id);
+    final data = summaryData ?? MissionExecutiveSummaryService.buildDeterministicFallback(mission.id, snapshot);
 
     // Entête de section RÉSUMÉ EXÉCUTIF
     widgets.add(PageTracker(
@@ -1673,104 +1659,325 @@ class PdfReportService {
       offset: offset,
       child: _sectionBox('RESUME EXECUTIF'),
     ));
-    widgets.add(pw.SizedBox(height: 14));
-
-    // 1. Contexte et Périmètre (Overview)
-    final overviewText = summaryData?.overview.trim() ?? '';
-    if (overviewText.isNotEmpty) {
-      widgets.add(pw.Text(
-        overviewText,
-        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        textAlign: pw.TextAlign.justify,
-      ));
-      widgets.add(pw.SizedBox(height: 12));
-    }
-
-    // 2. Synthèse Chiffrée Certifiée (Source de Vérité Officielle Métier)
-    widgets.add(pw.RichText(
-      textAlign: pw.TextAlign.justify,
-      text: pw.TextSpan(
-        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        children: [
-          pw.TextSpan(text: 'L\'analyse de la campagne '),
-          pw.TextSpan(text: '$annee', style: pw.TextStyle(font: _fontBold)),
-          pw.TextSpan(text: ' fait ressortir un total de '),
-          pw.TextSpan(text: '$total non-conformité${total > 1 ? 's' : ''}', style: pw.TextStyle(font: _fontBold)),
-          pw.TextSpan(text: ', réparties comme suit :'),
-        ],
-      ),
-    ));
-    widgets.add(pw.SizedBox(height: 8));
-
-    // Liste à puces des NCs officielles
-    widgets.add(_buildBulletItemRow(
-      countText: '$critique',
-      label: ' non-conformité${critique > 1 ? 's' : ''} critique${critique > 1 ? 's' : ''}',
-      pctText: pctCritiqueStr,
-      isLast: false,
-    ));
-    widgets.add(_buildBulletItemRow(
-      countText: '$majeure',
-      label: ' non-conformité${majeure > 1 ? 's' : ''} majeure${majeure > 1 ? 's' : ''}',
-      pctText: pctMajeureStr,
-      isLast: false,
-    ));
-    widgets.add(_buildBulletItemRow(
-      countText: '$mineure',
-      label: ' non-conformité${mineure > 1 ? 's' : ''} mineure${mineure > 1 ? 's' : ''}',
-      pctText: pctMineureStr,
-      isLast: true,
-    ));
     widgets.add(pw.SizedBox(height: 12));
 
-    // 3. Synthèse des Risques Globaux (Critical Risks Summary)
-    final risksText = summaryData?.criticalRisksSummary.trim() ?? '';
-    if (risksText.isNotEmpty) {
+    // ── 1.1 Contexte et périmètre de la mission ──
+    widgets.add(_subSectionHeader('1.1 Contexte et périmètre de la mission'));
+    widgets.add(pw.SizedBox(height: 4));
+    widgets.add(pw.Text(
+      data.contexte.paragraph,
+      style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+      textAlign: pw.TextAlign.justify,
+    ));
+    widgets.add(pw.SizedBox(height: 10));
+
+    // ── 1.2 Synthèse des résultats ──
+    widgets.add(_subSectionHeader('1.2 Synthèse des résultats'));
+    widgets.add(pw.SizedBox(height: 4));
+    if (data.syntheseResultats.introParagraph.isNotEmpty) {
       widgets.add(pw.Text(
-        risksText,
+        data.syntheseResultats.introParagraph,
         style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
         textAlign: pw.TextAlign.justify,
       ));
-      widgets.add(pw.SizedBox(height: 12));
+      widgets.add(pw.SizedBox(height: 6));
     }
 
-    // 4. Constats Clés Majeurs (Key Findings)
-    if (summaryData != null && summaryData.keyFindings.isNotEmpty) {
-      widgets.add(pw.Text(
-        'Observations et constats majeurs :',
-        style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey),
+    // Tableau de criticité (1.2)
+    if (data.syntheseResultats.tableRows.isNotEmpty) {
+      widgets.add(_buildCriticalitySummaryTable(
+        data.syntheseResultats.tableRows,
+        data.syntheseResultats.tableTotalRow,
       ));
       widgets.add(pw.SizedBox(height: 6));
-      for (final finding in summaryData.keyFindings) {
-        widgets.add(_buildSimpleBulletRow(finding));
-      }
-      widgets.add(pw.SizedBox(height: 12));
     }
 
-    // 5. Recommandations Prioritaires (Recommendations)
-    if (summaryData != null && summaryData.recommendations.isNotEmpty) {
+    if (data.syntheseResultats.commentaryParagraph.isNotEmpty) {
       widgets.add(pw.Text(
-        'Recommandations prioritaires d\'actions correctives :',
-        style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey),
+        data.syntheseResultats.commentaryParagraph,
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        textAlign: pw.TextAlign.justify,
+      ));
+      widgets.add(pw.SizedBox(height: 10));
+    }
+
+    // ── 1.3 Concentration du risque ──
+    widgets.add(_subSectionHeader(data.concentrationRisque.title));
+    widgets.add(pw.SizedBox(height: 4));
+    if (data.concentrationRisque.primaryConcentrationParagraph.isNotEmpty) {
+      widgets.add(pw.Text(
+        data.concentrationRisque.primaryConcentrationParagraph,
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        textAlign: pw.TextAlign.justify,
+      ));
+      widgets.add(pw.SizedBox(height: 4));
+    }
+    if (data.concentrationRisque.highestDensityParagraph.isNotEmpty) {
+      widgets.add(pw.Text(
+        data.concentrationRisque.highestDensityParagraph,
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        textAlign: pw.TextAlign.justify,
+      ));
+      widgets.add(pw.SizedBox(height: 10));
+    }
+
+    // ── 1.4 Facteurs de risque prépondérants ──
+    widgets.add(_subSectionHeader('1.4 Facteurs de risque prépondérants'));
+    widgets.add(pw.SizedBox(height: 4));
+    if (data.facteursRisque.introParagraph.isNotEmpty) {
+      widgets.add(pw.Text(
+        data.facteursRisque.introParagraph,
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        textAlign: pw.TextAlign.justify,
       ));
       widgets.add(pw.SizedBox(height: 6));
-      for (final rec in summaryData.recommendations) {
-        widgets.add(_buildSimpleBulletRow(rec));
-      }
-      widgets.add(pw.SizedBox(height: 12));
     }
 
-    // 6. Conclusion et Situation de Référence (Conclusion)
-    final conclusionText = summaryData?.conclusion.trim() ?? '';
-    if (conclusionText.isNotEmpty) {
+    // Tableau des facteurs de risque (1.4)
+    if (data.facteursRisque.tableRows.isNotEmpty) {
+      widgets.add(_buildRiskFactorsSummaryTable(data.facteursRisque.tableRows));
+      widgets.add(pw.SizedBox(height: 6));
+    }
+
+    if (data.facteursRisque.commentaryParagraph.isNotEmpty) {
       widgets.add(pw.Text(
-        conclusionText,
+        data.facteursRisque.commentaryParagraph,
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        textAlign: pw.TextAlign.justify,
+      ));
+      widgets.add(pw.SizedBox(height: 10));
+    }
+
+    // ── 1.5 Observations et constats majeurs ──
+    widgets.add(_subSectionHeader('1.5 Observations et constats majeurs'));
+    widgets.add(pw.SizedBox(height: 4));
+    for (final bp in data.observationsMajores.bulletPoints) {
+      widgets.add(_buildSimpleBulletRow(bp));
+    }
+    if (data.observationsMajores.summaryParagraph.isNotEmpty) {
+      widgets.add(pw.SizedBox(height: 4));
+      widgets.add(pw.Text(
+        data.observationsMajores.summaryParagraph,
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        textAlign: pw.TextAlign.justify,
+      ));
+    }
+    widgets.add(pw.SizedBox(height: 10));
+
+    // ── 1.6 Recommandations prioritaires hiérarchisées ──
+    widgets.add(_subSectionHeader('1.6 Recommandations prioritaires hiérarchisées'));
+    widgets.add(pw.SizedBox(height: 4));
+    if (data.recommandationsPrioritaires.introParagraph.isNotEmpty) {
+      widgets.add(pw.Text(
+        data.recommandationsPrioritaires.introParagraph,
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        textAlign: pw.TextAlign.justify,
+      ));
+      widgets.add(pw.SizedBox(height: 4));
+    }
+    if (data.recommandationsPrioritaires.priority1Immediate.isNotEmpty) {
+      widgets.add(_buildSimpleBulletRow(data.recommandationsPrioritaires.priority1Immediate));
+    }
+    if (data.recommandationsPrioritaires.priority2ShortTerm.isNotEmpty) {
+      widgets.add(_buildSimpleBulletRow(data.recommandationsPrioritaires.priority2ShortTerm));
+    }
+    if (data.recommandationsPrioritaires.priority3MediumTerm.isNotEmpty) {
+      widgets.add(_buildSimpleBulletRow(data.recommandationsPrioritaires.priority3MediumTerm));
+    }
+    widgets.add(pw.SizedBox(height: 10));
+
+    // ── 1.7 Appréciation globale ──
+    widgets.add(_subSectionHeader('1.7 Appréciation globale'));
+    widgets.add(pw.SizedBox(height: 4));
+    if (data.appreciationGlobale.assessmentParagraph1.isNotEmpty) {
+      widgets.add(pw.Text(
+        data.appreciationGlobale.assessmentParagraph1,
+        style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        textAlign: pw.TextAlign.justify,
+      ));
+      widgets.add(pw.SizedBox(height: 4));
+    }
+    if (data.appreciationGlobale.assessmentParagraph2.isNotEmpty) {
+      widgets.add(pw.Text(
+        data.appreciationGlobale.assessmentParagraph2,
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        textAlign: pw.TextAlign.justify,
+      ));
+      widgets.add(pw.SizedBox(height: 4));
+    }
+    if (data.appreciationGlobale.assessmentParagraph3.isNotEmpty) {
+      widgets.add(pw.Text(
+        data.appreciationGlobale.assessmentParagraph3,
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        textAlign: pw.TextAlign.justify,
+      ));
+      widgets.add(pw.SizedBox(height: 8));
+    }
+
+    if (data.appreciationGlobale.actionPlanHeader.isNotEmpty) {
+      widgets.add(pw.Text(
+        data.appreciationGlobale.actionPlanHeader,
+        style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        textAlign: pw.TextAlign.justify,
+      ));
+      widgets.add(pw.SizedBox(height: 4));
+    }
+
+    if (data.appreciationGlobale.actionPlanSteps.isNotEmpty) {
+      for (int i = 0; i < data.appreciationGlobale.actionPlanSteps.length; i++) {
+        final step = data.appreciationGlobale.actionPlanSteps[i];
+        widgets.add(pw.Padding(
+          padding: const pw.EdgeInsets.only(left: 10, bottom: 3),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('${i + 1}. ', style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: accentColor)),
+              pw.Expanded(
+                child: pw.Text(
+                  step,
+                  style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+                  textAlign: pw.TextAlign.justify,
+                ),
+              ),
+            ],
+          ),
+        ));
+      }
+      widgets.add(pw.SizedBox(height: 6));
+    }
+
+    if (data.appreciationGlobale.counterVisitParagraph.isNotEmpty) {
+      widgets.add(pw.Text(
+        data.appreciationGlobale.counterVisitParagraph,
         style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
         textAlign: pw.TextAlign.justify,
       ));
     }
 
     return widgets;
+  }
+
+  static pw.Widget _subSectionHeader(String title) {
+    return pw.Text(
+      title,
+      style: pw.TextStyle(
+        font: _fontBold,
+        fontSize: fsH2,
+        color: accentColor,
+      ),
+    );
+  }
+
+  static pw.Widget _buildCriticalitySummaryTable(
+    List<CriticalityRowData> rows,
+    CriticalityRowData totalRow,
+  ) {
+    return pw.Table(
+      border: pw.TableBorder.all(color: borderColor, width: 0.5),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(2.2),
+        1: pw.FlexColumnWidth(1.2),
+        2: pw.FlexColumnWidth(1.6),
+        3: pw.FlexColumnWidth(3.5),
+      },
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: accentColor),
+          children: [
+            _buildTableHeaderCell('Criticité'),
+            _buildTableHeaderCell('Nombre'),
+            _buildTableHeaderCell('Part du total'),
+            _buildTableHeaderCell('Densité (/ équip.)'),
+          ],
+        ),
+        for (int i = 0; i < rows.length; i++)
+          pw.TableRow(
+            decoration: pw.BoxDecoration(
+              color: i % 2 == 1 ? tableRowAlt : PdfColors.white,
+            ),
+            children: [
+              _buildTableCell(rows[i].criticite, isBold: true),
+              _buildTableCell('${rows[i].nombre}', align: pw.TextAlign.center),
+              _buildTableCell(rows[i].partPct, align: pw.TextAlign.center),
+              _buildTableCell(rows[i].densiteStr),
+            ],
+          ),
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: lightBlue),
+          children: [
+            _buildTableCell(totalRow.criticite, isBold: true),
+            _buildTableCell('${totalRow.nombre}', isBold: true, align: pw.TextAlign.center),
+            _buildTableCell(totalRow.partPct, isBold: true, align: pw.TextAlign.center),
+            _buildTableCell(totalRow.densiteStr, isBold: true),
+          ],
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildRiskFactorsSummaryTable(List<RiskFactorRowData> rows) {
+    return pw.Table(
+      border: pw.TableBorder.all(color: borderColor, width: 0.5),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(3.5),
+        1: pw.FlexColumnWidth(1.3),
+        2: pw.FlexColumnWidth(1.4),
+        3: pw.FlexColumnWidth(3.8),
+      },
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: accentColor),
+          children: [
+            _buildTableHeaderCell('Nature du risque'),
+            _buildTableHeaderCell('Constats'),
+            _buildTableHeaderCell('Part (%)'),
+            _buildTableHeaderCell('Observation'),
+          ],
+        ),
+        for (int i = 0; i < rows.length; i++)
+          pw.TableRow(
+            decoration: pw.BoxDecoration(
+              color: i % 2 == 1 ? tableRowAlt : PdfColors.white,
+            ),
+            children: [
+              _buildTableCell(rows[i].natureRisque, isBold: true),
+              _buildTableCell(rows[i].constats, align: pw.TextAlign.center),
+              _buildTableCell(rows[i].partPct, align: pw.TextAlign.center),
+              _buildTableCell(rows[i].observation),
+            ],
+          ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildTableHeaderCell(String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white),
+        textAlign: pw.TextAlign.center,
+      ),
+    );
+  }
+
+  static pw.Widget _buildTableCell(
+    String text, {
+    bool isBold = false,
+    pw.TextAlign align = pw.TextAlign.left,
+  }) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+      child: pw.Text(
+        text,
+        style: pw.TextStyle(
+          font: isBold ? _fontBold : _fontRegular,
+          fontSize: fsSmall,
+          color: darkGrey,
+        ),
+        textAlign: align,
+      ),
+    );
   }
 
   static List<pw.Widget> _buildAnalyseStatistique(

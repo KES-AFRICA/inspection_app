@@ -38,11 +38,56 @@ class MockSuccessfulAiProvider implements AiProvider {
   }) async {
     return '''
 {
-  "overview": "Synthèse IA générée avec succès pour le test.",
-  "keyFindings": ["Point fort 1", "Point fort 2"],
-  "criticalRisksSummary": "Synthèse des risques critiques générée par l'IA.",
-  "recommendations": ["Action 1", "Action 2"],
-  "conclusion": "Conclusion IA de la mission."
+  "contexte": {
+    "paragraph": "Synthèse IA générée avec succès pour le test du contexte 1.1."
+  },
+  "syntheseResultats": {
+    "introParagraph": "Introduction chiffrée de la synthèse 1.2.",
+    "tableRows": [
+      {"criticite": "Critique", "nombre": 2, "partPct": "20,0 %", "densiteStr": "0,20"},
+      {"criticite": "Majeure", "nombre": 5, "partPct": "50,0 %", "densiteStr": "0,50"},
+      {"criticite": "Mineure", "nombre": 3, "partPct": "30,0 %", "densiteStr": "0,30"}
+    ],
+    "tableTotalRow": {"criticite": "TOTAL", "nombre": 10, "partPct": "100 %", "densiteStr": "1,00"},
+    "commentaryParagraph": "Commentaire d'analyse de la synthèse des résultats."
+  },
+  "concentrationRisque": {
+    "title": "1.3 Concentration du risque : les armoires concentrent l'essentiel des écarts",
+    "primaryConcentrationParagraph": "Paragraphe de concentration sur les armoires.",
+    "highestDensityParagraph": "Paragraphe sur la densité unitaire des locaux MT."
+  },
+  "facteursRisque": {
+    "introParagraph": "Introduction aux facteurs de risques.",
+    "tableRows": [
+      {"natureRisque": "Erreur de maintenance", "constats": "6", "partPct": "60,0 %", "observation": "Sensible"}
+    ],
+    "commentaryParagraph": "Commentaire sur les facteurs de risques."
+  },
+  "observationsMajores": {
+    "bulletPoints": ["Point d'observation 1", "Point d'observation 2"],
+    "summaryParagraph": "Part cumulée concentrée."
+  },
+  "recommandationsPrioritaires": {
+    "introParagraph": "Introduction des recommandations.",
+    "priority1Immediate": "Priorité 1 : Action immédiate sur non-conformités critiques.",
+    "priority2ShortTerm": "Priorité 2 : Action court terme sur protections.",
+    "priority3MediumTerm": "Priorité 3 : Action moyen terme sur repérage."
+  },
+  "appreciationGlobale": {
+    "assessmentParagraph1": "Constat global sur le niveau de maîtrise du risque.",
+    "assessmentParagraph2": "Synthèse du nombre de NCs.",
+    "assessmentParagraph3": "Synthèse des équipements sensibles.",
+    "actionPlanHeader": "Plan d'actions recommandées :",
+    "actionPlanSteps": [
+      "1. Action 1",
+      "2. Action 2",
+      "3. Action 3",
+      "4. Action 4",
+      "5. Action 5",
+      "6. Action 6"
+    ],
+    "counterVisitParagraph": "Une contre-visite devra être programmée."
+  }
 }
 ''';
   }
@@ -70,20 +115,27 @@ void main() {
         natureMission: 'Inspection Périodique',
         dateRangeText: 'du 01/01/2026 au 05/01/2026',
         domainTension: 'Basse Tension (BT)',
+        companyName: 'KES INSPECTIONS AND PROJECTS',
+        reportNumber: 'KES/IP/VE/2026/001',
+        reportDateStr: '10/08/2026',
         officialStats: {
           'totalNC': 10,
           'critique': 2,
           'majeure': 5,
           'mineure': 3,
         },
+        categoryStats: [
+          {'categoryName': 'Armoires', 'equipmentCount': 5, 'ncCount': 8, 'densityStr': '1.60', 'pctOfTotalEquipment': '50.0', 'pctOfTotalNc': '80.0'}
+        ],
         topDefects: [
-          {'label': 'Prise de terre', 'count': 4}
+          {'title': 'Prise de terre', 'count': 4, 'percentage': '40,0'}
         ],
         riskFamilies: [
-          {'family': 'Choc électrique', 'count': 6}
+          {'name': 'Choc électrique', 'count': 6, 'percentage': '60,0'}
         ],
         equipmentCount: 12,
         installationsCount: 3,
+        globalDensityStr: '0,83',
       );
 
       final hash1 = snapshot.computeHash();
@@ -95,21 +147,52 @@ void main() {
   });
 
   group('ExecutiveSummaryData Tests', () {
-    test('Sérialisation et Décodage JSON', () {
+    test('Sérialisation et Décodage JSON (7 sous-sections)', () {
       final data = ExecutiveSummaryData(
-        overview: 'Overview test',
-        keyFindings: ['Observation 1'],
-        criticalRisksSummary: 'Risks test',
-        recommendations: ['Recommandation 1'],
-        conclusion: 'Conclusion test',
+        contexte: SectionContexte(paragraph: 'Contexte test'),
+        syntheseResultats: SectionSyntheseResultats(
+          introParagraph: 'Intro synthé test',
+          tableRows: [CriticalityRowData(criticite: 'Critique', nombre: 1, partPct: '100 %', densiteStr: '1.0')],
+          tableTotalRow: CriticalityRowData(criticite: 'TOTAL', nombre: 1, partPct: '100 %', densiteStr: '1.0'),
+          commentaryParagraph: 'Commentaire test',
+        ),
+        concentrationRisque: SectionConcentrationRisque(
+          title: 'Concentration du risque',
+          primaryConcentrationParagraph: 'Conc 1',
+          highestDensityParagraph: 'Conc 2',
+        ),
+        facteursRisque: SectionFacteursRisque(
+          introParagraph: 'Intro FR',
+          tableRows: [RiskFactorRowData(natureRisque: 'Risque A', constats: '2', partPct: '50 %', observation: 'Obs A')],
+          commentaryParagraph: 'Comm FR',
+        ),
+        observationsMajores: SectionObservationsMajores(
+          bulletPoints: ['Point 1'],
+          summaryParagraph: 'Summary obs',
+        ),
+        recommandationsPrioritaires: SectionRecommandationsPrioritaires(
+          introParagraph: 'Intro recs',
+          priority1Immediate: 'P1',
+          priority2ShortTerm: 'P2',
+          priority3MediumTerm: 'P3',
+        ),
+        appreciationGlobale: SectionAppreciationGlobale(
+          assessmentParagraph1: 'App 1',
+          assessmentParagraph2: 'App 2',
+          assessmentParagraph3: 'App 3',
+          actionPlanHeader: 'Plan :',
+          actionPlanSteps: ['1. Etape 1'],
+          counterVisitParagraph: 'Contre-visite',
+        ),
         isFallback: false,
       );
 
       final jsonStr = data.encodeJson();
       final decoded = ExecutiveSummaryData.decodeJson(jsonStr);
 
-      expect(decoded.overview, equals('Overview test'));
-      expect(decoded.keyFindings, contains('Observation 1'));
+      expect(decoded.contexte.paragraph, equals('Contexte test'));
+      expect(decoded.syntheseResultats.tableRows.length, equals(1));
+      expect(decoded.observationsMajores.bulletPoints, contains('Point 1'));
       expect(decoded.isFallback, isFalse);
     });
   });
@@ -121,7 +204,7 @@ void main() {
         customProvider: MockSuccessfulAiProvider(),
       );
 
-      expect(summary.overview, contains('Synthèse IA générée avec succès'));
+      expect(summary.contexte.paragraph, contains('Synthèse IA générée avec succès'));
       expect(summary.isFallback, isFalse);
     });
 
@@ -131,8 +214,7 @@ void main() {
         customProvider: MockFailingAiProvider(),
       );
 
-      // Doit réutiliser le résumé IA généré dans le test précédent (Hit Cache Niveau 2)
-      expect(summary.overview, contains('Synthèse IA générée avec succès'));
+      expect(summary.contexte.paragraph, contains('Synthèse IA générée avec succès'));
       expect(summary.isFallback, isFalse);
     });
 
@@ -143,7 +225,7 @@ void main() {
       );
 
       expect(summary.isFallback, isTrue);
-      expect(summary.overview, contains('Dans le cadre de'));
+      expect(summary.contexte.paragraph, contains('La vérification périodique réglementaire'));
     });
   });
 }
