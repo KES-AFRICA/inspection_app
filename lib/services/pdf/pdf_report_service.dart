@@ -771,78 +771,85 @@ class PdfReportService {
 
     // 1. Objet de la vérification
     entries.add(_SommaireEntry(titre: "OBJET DE LA VÉRIFICATION", key: 'objet', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "Références normatives et réglementaires", key: 'objet_normes', level: 1));
-    entries.add(_SommaireEntry(titre: "Matériel utilisé", key: 'objet_materiel', level: 1));
+    entries.add(_SommaireEntry(titre: "1. Références normatives et réglementaires", key: 'objet_normes', level: 1));
+    entries.add(_SommaireEntry(titre: "2. Matériel utilisé", key: 'objet_materiel', level: 1));
 
     // 2. Périmètre de la mission
     entries.add(_SommaireEntry(titre: "PERIMETRE DE LA MISSION", key: 'perimetre', level: 0, isBold: true, isUppercase: true));
 
     // 3. Rappel des responsabilités
     entries.add(_SommaireEntry(titre: "RAPPEL DES RESPONSABILITÉS DE L'EMPLOYEUR", key: 'rappel', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "Responsabilité et accompagnement", key: 'rappel_accompagnement', level: 1));
-    entries.add(_SommaireEntry(titre: "Conditions de réalisation", key: 'rappel_conditions', level: 1));
-    entries.add(_SommaireEntry(titre: "Vérifications complémentaires", key: 'rappel_complementaires', level: 1));
-    entries.add(_SommaireEntry(titre: "Surveillance et maintenance des installations électriques", key: 'rappel_maintenance', level: 1));
-    entries.add(_SommaireEntry(titre: "Formation du personnel intervenant sur les installations et à proximité", key: 'rappel_formation', level: 1));
+    entries.add(_SommaireEntry(titre: "1. Responsabilité et accompagnement", key: 'rappel_accompagnement', level: 1));
+    entries.add(_SommaireEntry(titre: "2. Conditions de réalisation", key: 'rappel_conditions', level: 1));
+    entries.add(_SommaireEntry(titre: "3. Vérifications complémentaires", key: 'rappel_complementaires', level: 1));
+    entries.add(_SommaireEntry(titre: "4. Surveillance et maintenance des installations électriques", key: 'rappel_maintenance', level: 1));
+    entries.add(_SommaireEntry(titre: "5. Formation du personnel intervenant sur les installations et à proximité", key: 'rappel_formation', level: 1));
 
     // 4. Mesures de sécurité autour des installations
     entries.add(_SommaireEntry(titre: "MESURES DE SÉCURITÉ AUTOUR DES INSTALLATIONS", key: 'mesures_securite', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "Technicien en maintenance des installations", key: 'mesures_technicien', level: 1));
-    entries.add(_SommaireEntry(titre: "Engagement de KES INSPECTIONS AND PROJECTS", key: 'mesures_engagement', level: 1));
+    entries.add(_SommaireEntry(titre: "1. Technicien en maintenance des installations", key: 'mesures_technicien', level: 1));
+    entries.add(_SommaireEntry(titre: "2. Engagement de KES INSPECTIONS AND PROJECTS", key: 'mesures_engagement', level: 1));
 
     // 5. Résumé Exécutif
     entries.add(_SommaireEntry(titre: "RESUME EXECUTIF", key: 'resume_executif', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "1.1 Contexte et périmètre de la mission", key: 'resume_executif_1_1', level: 1));
-    entries.add(_SommaireEntry(titre: "1.2 Synthèse des résultats", key: 'resume_executif_1_2', level: 1));
-    entries.add(_SommaireEntry(titre: "1.3 Concentration du risque", key: 'resume_executif_1_3', level: 1));
-    entries.add(_SommaireEntry(titre: "1.4 Facteurs de risque prépondérants", key: 'resume_executif_1_4', level: 1));
-    entries.add(_SommaireEntry(titre: "1.5 Observations et constats majeurs", key: 'resume_executif_1_5', level: 1));
-    entries.add(_SommaireEntry(titre: "1.6 Recommandations prioritaires hiérarchisées", key: 'resume_executif_1_6', level: 1));
-    entries.add(_SommaireEntry(titre: "1.7 Appréciation globale", key: 'resume_executif_1_7', level: 1));
+    entries.add(_SommaireEntry(titre: "1. Contexte et périmètre de la mission", key: 'resume_executif_1_1', level: 1));
+    entries.add(_SommaireEntry(titre: "2. Synthèse des résultats", key: 'resume_executif_1_2', level: 1));
+    entries.add(_SommaireEntry(titre: "3. Concentration du risque", key: 'resume_executif_1_3', level: 1));
+    entries.add(_SommaireEntry(titre: "4. Facteurs de risque prépondérants", key: 'resume_executif_1_4', level: 1));
+    entries.add(_SommaireEntry(titre: "5. Observations et constats majeurs", key: 'resume_executif_1_5', level: 1));
+    entries.add(_SommaireEntry(titre: "6. Recommandations prioritaires hiérarchisées", key: 'resume_executif_1_6', level: 1));
+    entries.add(_SommaireEntry(titre: "7. Appréciation globale", key: 'resume_executif_1_7', level: 1));
 
     // 6. Analyse Statistique
     entries.add(_SommaireEntry(titre: "ANALYSE STATISTIQUE", key: 'analyse_statistique', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "Non-conformités de l'année passée", key: 'stat_annee_passee', level: 1));
-    entries.add(_SommaireEntry(titre: "Comparaison avec celles de cette année", key: 'stat_comparaison', level: 1));
-    entries.add(_SommaireEntry(titre: "Taux de mise en conformité", key: 'stat_taux_conformite', level: 1));
+    int statIdx = 1;
+    entries.add(_SommaireEntry(titre: "$statIdx. Non-conformités de l'année passée", key: 'stat_annee_passee', level: 1));
+    statIdx++;
+    entries.add(_SommaireEntry(titre: "$statIdx. Comparaison avec celles de cette année", key: 'stat_comparaison', level: 1));
+    statIdx++;
+    entries.add(_SommaireEntry(titre: "$statIdx. Taux de mise en conformité", key: 'stat_taux_conformite', level: 1));
+    statIdx++;
 
     try {
       final inventory = MissionStatisticsCollector.getInventory(mission.id);
       final topDefects = inventory.getTopDefects(limit: 10);
       if (topDefects.isNotEmpty) {
-        entries.add(_SommaireEntry(titre: "Statistique par type de défaut", key: 'stat_defauts', level: 1));
+        entries.add(_SommaireEntry(titre: "$statIdx. Statistique par type de défaut", key: 'stat_defauts', level: 1));
+        statIdx++;
       }
 
       final domainStats = inventory.getTensionDomainStats();
       if (domainStats.totalCount > 0) {
-        entries.add(_SommaireEntry(titre: "Répartition par domaine de tension", key: 'stat_tension', level: 1));
+        entries.add(_SommaireEntry(titre: "$statIdx. Répartition par domaine de tension", key: 'stat_tension', level: 1));
+        statIdx++;
       }
 
       final statsSummary = MissionStatisticsCollector.collectSummary(mission.id);
       if (statsSummary.crossCategoryItems.isNotEmpty) {
-        entries.add(_SommaireEntry(titre: "Non-conformités croisées par catégorie d'équipement", key: 'stat_croisee', level: 1));
+        entries.add(_SommaireEntry(titre: "$statIdx. Non-conformités croisées par catégorie d'équipement", key: 'stat_croisee', level: 1));
+        statIdx++;
       }
     } catch (_) {
       // En environnement de test ou sans Hive, omis silencieusement sans provoquer d'erreur.
     }
 
-    entries.add(_SommaireEntry(titre: "Inventaire chiffré des installations et équipements", key: 'stat_inventaire', level: 1));
+    entries.add(_SommaireEntry(titre: "$statIdx. Inventaire chiffré des installations et équipements", key: 'stat_inventaire', level: 1));
 
     // 7. Renseignements généraux
     entries.add(_SommaireEntry(titre: "RENSEIGNEMENTS GÉNÉRAUX DE L'ÉTABLISSEMENT", key: 'renseignements', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "Renseignements principaux", key: 'renseignements_principaux', level: 1));
-    entries.add(_SommaireEntry(titre: "Documents nécessaires à la vérification", key: 'renseignements_documents', level: 1));
-    entries.add(_SommaireEntry(titre: "Habilitation électrique du personnel d'intervention", key: 'renseignements_habilitation', level: 1));
+    entries.add(_SommaireEntry(titre: "1. Renseignements principaux", key: 'renseignements_principaux', level: 1));
+    entries.add(_SommaireEntry(titre: "2. Documents nécessaires à la vérification", key: 'renseignements_documents', level: 1));
+    entries.add(_SommaireEntry(titre: "3. Habilitation électrique du personnel d'intervention", key: 'renseignements_habilitation', level: 1));
 
     // 8. Description des installations
     entries.add(_SommaireEntry(titre: "DESCRIPTION DES INSTALLATIONS", key: 'description', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "Zones et Locaux à risque", key: 'desc_locaux_risques', level: 1));
+    entries.add(_SommaireEntry(titre: "1. Zones et Locaux à risque", key: 'desc_locaux_risques', level: 1));
 
     // 9. Liste récapitulative (si audit)
     if (audit != null) {
       entries.add(_SommaireEntry(titre: "SYNTHÈSE RÉCAPITULATIVE DES OBSERVATIONS", key: 'liste_recap', level: 0, isBold: true, isUppercase: true));
-      entries.add(_SommaireEntry(titre: "Moyenne tension", key: 'liste_recap_mt', level: 1));
-      entries.add(_SommaireEntry(titre: "Basse tension", key: 'liste_recap_bt', level: 1));
+      entries.add(_SommaireEntry(titre: "1. Moyenne tension", key: 'liste_recap_mt', level: 1));
+      entries.add(_SommaireEntry(titre: "2. Basse tension", key: 'liste_recap_bt', level: 1));
     }
 
     // 10. Audit des installations (si audit)
@@ -855,17 +862,17 @@ class PdfReportService {
 
     // 12. Foudre
     entries.add(_SommaireEntry(titre: "FOUDRE", key: 'foudre', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "Observations par équipement", key: 'foudre_equipements', level: 1));
+    entries.add(_SommaireEntry(titre: "1. Observations par équipement", key: 'foudre_equipements', level: 1));
 
     // 13. Mesures et essais (si mesures)
     if (mesures != null) {
       entries.add(_SommaireEntry(titre: "RESULTATS DES MESURES ET ESSAIS", key: 'mesures', level: 0, isBold: true, isUppercase: true));
-      entries.add(_SommaireEntry(titre: "Conditions de mesure", key: 'mesures_conditions', level: 1));
-      entries.add(_SommaireEntry(titre: "Essais de démarrage automatique du groupe électrogène", key: 'mesures_demarrage', level: 1));
-      entries.add(_SommaireEntry(titre: "Test de fonctionnement de l'arrêt d'urgence", key: 'mesures_arret', level: 1));
-      entries.add(_SommaireEntry(titre: "Prise de terre", key: 'mesures_terre', level: 1));
-      entries.add(_SommaireEntry(titre: "Essais de déclenchement des dispositifs différentiels et mesure d'isolement", key: 'mesures_ddr', level: 1));
-      entries.add(_SommaireEntry(titre: "Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles", key: 'mesures_continuite', level: 1));
+      entries.add(_SommaireEntry(titre: "1. Conditions de mesure", key: 'mesures_conditions', level: 1));
+      entries.add(_SommaireEntry(titre: "2. Essais de démarrage automatique du groupe électrogène", key: 'mesures_demarrage', level: 1));
+      entries.add(_SommaireEntry(titre: "3. Test de fonctionnement de l'arrêt d'urgence", key: 'mesures_arret', level: 1));
+      entries.add(_SommaireEntry(titre: "4. Prise de terre", key: 'mesures_terre', level: 1));
+      entries.add(_SommaireEntry(titre: "5. Essais de déclenchement des dispositifs différentiels et mesure d'isolement", key: 'mesures_ddr', level: 1));
+      entries.add(_SommaireEntry(titre: "6. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles", key: 'mesures_continuite', level: 1));
     }
 
     // 14. Photos
@@ -1668,7 +1675,7 @@ class PdfReportService {
     ));
     widgets.add(pw.SizedBox(height: 12));
 
-    // ── 1.1 Contexte et périmètre de la mission ──
+    // ── 1. Contexte et périmètre de la mission ──
     widgets.add(pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -1676,7 +1683,7 @@ class PdfReportService {
           key: 'resume_executif_1_1',
           registry: trackedPages,
           offset: offset,
-          child: _subSectionHeader('1.1 Contexte et périmètre de la mission'),
+          child: _subSectionHeader('1. Contexte et périmètre de la mission'),
         ),
         pw.SizedBox(height: 4),
         pw.Text(
@@ -1688,7 +1695,7 @@ class PdfReportService {
     ));
     widgets.add(pw.SizedBox(height: 10));
 
-    // ── 1.2 Synthèse des résultats ──
+    // ── 2. Synthèse des résultats ──
     widgets.add(pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -1696,7 +1703,7 @@ class PdfReportService {
           key: 'resume_executif_1_2',
           registry: trackedPages,
           offset: offset,
-          child: _subSectionHeader('1.2 Synthèse des résultats'),
+          child: _subSectionHeader('2. Synthèse des résultats'),
         ),
         pw.SizedBox(height: 4),
         if (data.syntheseResultats.introParagraph.isNotEmpty)
@@ -1727,7 +1734,7 @@ class PdfReportService {
       widgets.add(pw.SizedBox(height: 10));
     }
 
-    // ── 1.3 Concentration du risque ──
+    // ── 3. Concentration du risque ──
     widgets.add(pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -1756,7 +1763,7 @@ class PdfReportService {
       widgets.add(pw.SizedBox(height: 10));
     }
 
-    // ── 1.4 Facteurs de risque prépondérants ──
+    // ── 4. Facteurs de risque prépondérants ──
     widgets.add(pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -1764,7 +1771,7 @@ class PdfReportService {
           key: 'resume_executif_1_4',
           registry: trackedPages,
           offset: offset,
-          child: _subSectionHeader('1.4 Facteurs de risque prépondérants'),
+          child: _subSectionHeader('4. Facteurs de risque prépondérants'),
         ),
         pw.SizedBox(height: 4),
         if (data.facteursRisque.introParagraph.isNotEmpty)
@@ -1792,7 +1799,7 @@ class PdfReportService {
       widgets.add(pw.SizedBox(height: 10));
     }
 
-    // ── 1.5 Observations et constats majeurs ──
+    // ── 5. Observations et constats majeurs ──
     widgets.add(pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -1800,7 +1807,7 @@ class PdfReportService {
           key: 'resume_executif_1_5',
           registry: trackedPages,
           offset: offset,
-          child: _subSectionHeader('1.5 Observations et constats majeurs'),
+          child: _subSectionHeader('5. Observations et constats majeurs'),
         ),
         pw.SizedBox(height: 4),
         if (data.observationsMajores.bulletPoints.isNotEmpty)
@@ -1820,7 +1827,7 @@ class PdfReportService {
     }
     widgets.add(pw.SizedBox(height: 10));
 
-    // ── 1.6 Recommandations prioritaires hiérarchisées ──
+    // ── 6. Recommandations prioritaires hiérarchisées ──
     widgets.add(pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -1828,7 +1835,7 @@ class PdfReportService {
           key: 'resume_executif_1_6',
           registry: trackedPages,
           offset: offset,
-          child: _subSectionHeader('1.6 Recommandations prioritaires hiérarchisées'),
+          child: _subSectionHeader('6. Recommandations prioritaires hiérarchisées'),
         ),
         pw.SizedBox(height: 4),
         if (data.recommandationsPrioritaires.introParagraph.isNotEmpty)
@@ -1851,7 +1858,7 @@ class PdfReportService {
     }
     widgets.add(pw.SizedBox(height: 10));
 
-    // ── 1.7 Appréciation globale ──
+    // ── 7. Appréciation globale ──
     widgets.add(pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -1859,7 +1866,7 @@ class PdfReportService {
           key: 'resume_executif_1_7',
           registry: trackedPages,
           offset: offset,
-          child: _subSectionHeader('1.7 Appréciation globale'),
+          child: _subSectionHeader('7. Appréciation globale'),
         ),
         pw.SizedBox(height: 4),
         if (data.appreciationGlobale.assessmentParagraph1.isNotEmpty)
@@ -6647,16 +6654,7 @@ class PdfReportService {
         ],
       ],
     ));
-    
-    // Mesures d'isolement des circuits BT (nouvelle page)
-    pdf.addPage(pw.Page(
-      pageTheme: _buildInnerPageTheme(pageOffset: pageOffset, overrideTotalPages: overrideTotalPages),
-      build: (ctx) => pw.Column(crossAxisAlignment: pw.CrossAxisAlignment.start, children: [
-        _buildPageHeaderWidget(), pw.SizedBox(height: 10),
-        _subSectionBar("Mésures d'isolement des circuits BT"),
-        pw.SizedBox(height: 8),
-      ]),
-    ));
+
     
     // Essais de declenchement des DDR (nouvelle page)
     pdf.addPage(pw.MultiPage(

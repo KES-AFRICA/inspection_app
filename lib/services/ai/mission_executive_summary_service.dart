@@ -94,7 +94,7 @@ class MissionExecutiveSummaryService {
         'properties': {
           'title': {
             'type': 'STRING',
-            'description': 'Titre de la sous-section 1.3 précisant les catégories concentrant le risque.',
+            'description': 'Titre de la sous-section 3 précisant les catégories concentrant le risque.',
           },
           'primaryConcentrationParagraph': {
             'type': 'STRING',
@@ -546,18 +546,18 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
     final String highestDensityText;
 
     if (total == 0) {
-      concentrationTitle = '1.3 Concentration du risque';
+      concentrationTitle = '3. Concentration du risque';
       primaryConcText = 'L\'analyse ne révèle aucune concentration particulière d\'écarts.';
       highestDensityText = 'Toutes les installations examinées présentent un niveau de conformité satisfaisant.';
     } else if (top2Name.isNotEmpty && top2Nc > 0) {
-      concentrationTitle = '1.3 Concentration du risque : les $top1Name et les $top2Name concentrent l\'essentiel des réfections';
+      concentrationTitle = '3. Concentration du risque : les $top1Name et les $top2Name concentrent l\'essentiel des réfections';
       primaryConcText = 'L\'analyse croisée par catégorie fait apparaître une forte concentration du risque : les $top1Name '
           'concentrent $top1Nc non-conformités ($top1Pct % du total) et les $top2Name comptabilisent $top2Nc non-conformités ($top2Pct % du total). '
           'Ces deux catégories regroupent à elles seules la majorité des anomalies du site.';
       highestDensityText = 'En termes de densité unitaire, la catégorie $top1Name affiche une densité de $top1Density NC / équipement '
           'sur un effectif de $top1Eq unité${top1Eq > 1 ? 's' : ''} (soit $top1PctEq % du parc contrôlé).';
     } else {
-      concentrationTitle = '1.3 Concentration du risque : les $top1Name concentrent l\'essentiel des réfections';
+      concentrationTitle = '3. Concentration du risque : les $top1Name concentrent l\'essentiel des réfections';
       primaryConcText = 'L\'analyse croisée fait apparaître une concentration majeure sur la catégorie $top1Name avec $top1Nc non-conformités, '
           'représentant $top1Pct % de l\'ensemble des écarts constatés sur la mission.';
       highestDensityText = 'Cette catégorie présente une densité de $top1Density NC / équipement sur $top1Eq unité${top1Eq > 1 ? 's' : ''}.';
