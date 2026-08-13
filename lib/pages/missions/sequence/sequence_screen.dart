@@ -768,10 +768,11 @@ class _SequenceScreenState extends State<SequenceScreen>
                   minHeight: 4,
                 ),
                 Expanded(
-                  child: PageView(
+                  child: PageView.builder(
                     controller: _pageController,
                     physics: const NeverScrollableScrollPhysics(),
-                    children: _steps.map((s) => s['widget'] as Widget).toList(),
+                    itemCount: _steps.length,
+                    itemBuilder: (ctx, idx) => _steps[idx]['widget'] as Widget,
                   ),
                 ),
                 if (_currentStep != 5) _buildNavButtons(isLast),

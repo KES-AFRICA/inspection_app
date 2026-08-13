@@ -2754,7 +2754,11 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   }
 
   void _sauvegarder() async {
+    if (_isSaving) return;
     if (!_validateAllFields()) { _showError('Veuillez remplir tous les champs obligatoires'); return; }
+    
+    setState(() => _isSaving = true);
+
     for (var obs in _observationsParafoudre) {
       obs.priorite = null;
     }
@@ -2826,7 +2830,9 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
           Navigator.pop(context, true);
         }
       } else { _showError('Erreur lors de la sauvegarde'); }
-    } catch (e) { _showError('Erreur: $e'); }
+    } catch (e) { _showError('Erreur: $e'); } finally {
+      if (mounted) setState(() => _isSaving = false);
+    }
   }
 
   void _showExitConfirmation() {
@@ -2948,6 +2954,123 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
 
   int _getTotalSteps() => 4;
 
+  void _navigateToStep(int targetStep) {
+    if (_isSaving) return;
+    if (targetStep < 0 || targetStep >= _getTotalSteps()) return;
+    if (targetStep == _currentStep) return;
+
+    if (!widget.isEdition && targetStep > _currentStep) {
+      if (_currentStep == 0) {
+        if (!_nomValid) { _showError('Veuillez saisir le nom de l\'équipement'); return; }
+        if (!_typeValid) { _showError('Veuillez sélectionner le type d\'équipement'); return; }
+        if (!_repereValid) { _showError('Veuillez saisir le repère'); return; }
+        if (!_photosExterneValid) { _showError('La photo EXTERNE est obligatoire'); return; }
+        if (!_photosInterneValid) { _showError('La photo INTERNE est obligatoire'); return; }
+      }
+    }
+
+    FocusScope.of(context).unfocus();
+
+    if (_mainPageController.hasClients) {
+      _mainPageController.animateToPage(
+        targetStep,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
+  Widget _buildStepCircle(int index) {
+    final isCurrent = index == _currentStep;
+    final isCompleted = index < _currentStep;
+    final isActive = index <= _currentStep;
+    final canNavigate = widget.isEdition || index <= _currentStep;
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: canNavigate ? () => _navigateToStep(index) : null,
+        borderRadius: BorderRadius.circular(20),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          padding: const EdgeInsets.all(2),
+          child: Container(
+            width: context.iconSizeL,
+            height: context.iconSizeL,
+            decoration: BoxDecoration(
+              color: isCurrent
+                  ? AppTheme.primaryBlue
+                  : isCompleted
+                      ? AppTheme.primaryBlue.withOpacity(0.85)
+                      : Colors.grey.shade200,
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: isCurrent
+                    ? AppTheme.primaryBlue
+                    : isCompleted
+                        ? AppTheme.primaryBlue
+                        : Colors.grey.shade400,
+                width: isCurrent ? 2 : 1,
+              ),
+              boxShadow: isCurrent
+                  ? [
+                      BoxShadow(
+                        color: AppTheme.primaryBlue.withOpacity(0.35),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ]
+                  : null,
+            ),
+            child: Center(
+              child: isCompleted && !isCurrent
+                  ? Icon(Icons.check, color: Colors.white, size: context.iconSizeS)
+                  : Text(
+                      '${index + 1}',
+                      style: TextStyle(
+                        color: isActive ? Colors.white : Colors.grey.shade600,
+                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.w600,
+                        fontSize: context.fontSizeS,
+                      ),
+                    ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStepperHeader(int totalSteps) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingM),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: context.spacingS,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          for (int index = 0; index < totalSteps; index++) ...[
+            _buildStepCircle(index),
+            if (index < totalSteps - 1)
+              Expanded(
+                child: Container(
+                  height: 2,
+                  margin: EdgeInsets.symmetric(horizontal: context.spacingXS),
+                  color: index < _currentStep ? AppTheme.primaryBlue : Colors.grey.shade300,
+                ),
+              ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final totalSteps = _getTotalSteps();
@@ -2968,28 +3091,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         ),
         body: Column(
           children: [
-            Container(
-              padding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingM),
-              decoration: BoxDecoration(color: Colors.white, boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: context.spacingS, offset: const Offset(0, 2))]),
-              child: Row(
-                children: List.generate(totalSteps, (index) {
-                  final isActive = index <= _currentStep;
-                  final isCompleted = index < _currentStep;
-                  return Expanded(
-                    child: Row(
-                      children: [
-                        Container(
-                          width: context.iconSizeL, height: context.iconSizeL,
-                          decoration: BoxDecoration(color: isActive ? AppTheme.primaryBlue : Colors.grey.shade300, shape: BoxShape.circle, boxShadow: isActive ? [BoxShadow(color: AppTheme.primaryBlue.withOpacity(0.3), blurRadius: 6, offset: const Offset(0, 2))] : null),
-                          child: Center(child: isCompleted ? Icon(Icons.check, color: Colors.white, size: context.iconSizeS) : Text('${index + 1}', style: TextStyle(color: isActive ? Colors.white : Colors.grey.shade600, fontWeight: FontWeight.bold, fontSize: context.fontSizeS))),
-                        ),
-                        if (index < totalSteps - 1) Expanded(child: Container(height: 2, margin: EdgeInsets.symmetric(horizontal: context.spacingXS), color: index < _currentStep ? AppTheme.primaryBlue : Colors.grey.shade300)),
-                      ],
-                    ),
-                  );
-                }),
-              ),
-            ),
+            _buildStepperHeader(totalSteps),
             Expanded(
               child: PageView(
                 controller: _mainPageController,
