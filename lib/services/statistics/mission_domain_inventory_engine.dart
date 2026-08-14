@@ -155,6 +155,11 @@ class MissionDomainInventory {
 
   /// Top N des types de défauts récurrents.
   List<TopDefectItem> getTopDefects({int limit = 10}) {
+    return getParetoAnalysis(limit: limit).items;
+  }
+
+  /// Analyse de Pareto mathématique dynamique sur les points de vérification (réponses "Non").
+  ParetoAnalysisResult getParetoAnalysis({int limit = 10}) {
     final counts = <String, int>{};
     for (final f in allFindings) {
       final key = f.verificationPoint.trim();
@@ -163,20 +168,137 @@ class MissionDomainInventory {
       }
     }
 
+    final total = allFindings.length;
     final sortedEntries = counts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
-    final total = allFindings.length;
-    final topList = sortedEntries.take(limit).map((entry) {
-      final pct = total > 0 ? (entry.value / total) * 100 : 0.0;
-      return TopDefectItem(
+    double runningCumul = 0.0;
+    int paretoK = 0;
+    double paretoCumulPct = 0.0;
+    final topList = <TopDefectItem>[];
+
+    for (int i = 0; i < sortedEntries.length && i < limit; i++) {
+      final entry = sortedEntries[i];
+      final pct = total > 0 ? (entry.value / total) * 100.0 : 0.0;
+      runningCumul += pct;
+
+      if (paretoK == 0 && (runningCumul >= 80.0 || i == sortedEntries.length - 1)) {
+        paretoK = i + 1;
+        paretoCumulPct = runningCumul;
+      }
+
+      topList.add(TopDefectItem(
         title: entry.key,
         count: entry.value,
         percentage: pct,
-      );
-    }).toList();
+        cumulativePercentage: runningCumul,
+      ));
+    }
 
-    return topList;
+    if (paretoK == 0 && sortedEntries.isNotEmpty) {
+      paretoK = sortedEntries.length;
+      paretoCumulPct = runningCumul;
+    }
+
+    final summary = total > 0
+        ? 'Les $total occurrences de non-conformités par nature de défaut ont été classées par fréquence décroissante. L\'analyse de Pareto ci-dessous met en évidence que les $paretoK principales catégories concentrent ${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % du total.'
+        : 'Aucune non-conformité recensée pour l\'analyse de Pareto.';
+
+    return ParetoAnalysisResult(
+      items: topList,
+      totalOccurrences: total,
+      paretoCategoryCount: paretoK,
+      paretoCumulativePercentage: paretoCumulPct,
+      summaryText: summary,
+    );
+  }
+
+  /// Calcule dynamiquement les 2 catégories d'équipements générant le plus de non-conformités.
+  TopNonConformityCategoriesResult getTopTwoNonConformityCategories() {
+    final crossList = getCrossCategoryAnalysis();
+    final totalNC = allFindings.length;
+    final totalEq = instances.length;
+
+    if (crossList.isEmpty || totalNC == 0) {
+      return TopNonConformityCategoriesResult(
+        label: 'Concentration Équipements',
+        cat1Name: 'Équipements',
+        combinedNC: 0,
+        pctTotalNC: 0.0,
+        combinedEquipments: 0,
+        pctParc: 0.0,
+        formattedValue: '0 NC (0,0 %), sur 0 équipement',
+      );
+    }
+
+    final sorted = List<CategoryCrossItem>.from(crossList)
+      ..sort((a, b) {
+        final cmpNC = b.nonCompliantPointsCount.compareTo(a.nonCompliantPointsCount);
+        if (cmpNC != 0) return cmpNC;
+        final cmpCrit = b.critiqueCount.compareTo(a.critiqueCount);
+        if (cmpCrit != 0) return cmpCrit;
+        return a.categoryName.compareTo(b.categoryName);
+      });
+
+    final cat1 = sorted.first;
+    if (sorted.length == 1 || sorted[1].nonCompliantPointsCount == 0) {
+      final combinedNC = cat1.nonCompliantPointsCount;
+      final pctNC = totalNC > 0 ? (combinedNC / totalNC) * 100 : 0.0;
+      final combinedEq = cat1.equipmentCount;
+      final pctParc = totalEq > 0 ? (combinedEq / totalEq) * 100 : 0.0;
+      final labelStr = 'Concentration ${cat1.categoryName}';
+      final valStr = '$combinedNC NC, soit ${pctNC.toStringAsFixed(1).replaceAll('.', ',')} % du total, sur $combinedEq équipement(s) (${pctParc.toStringAsFixed(1).replaceAll('.', ',')} % du parc)';
+      return TopNonConformityCategoriesResult(
+        label: labelStr,
+        cat1Name: cat1.categoryName,
+        combinedNC: combinedNC,
+        pctTotalNC: pctNC,
+        combinedEquipments: combinedEq,
+        pctParc: pctParc,
+        formattedValue: valStr,
+      );
+    }
+
+    final cat2 = sorted[1];
+    final combinedNC = cat1.nonCompliantPointsCount + cat2.nonCompliantPointsCount;
+    final pctNC = totalNC > 0 ? (combinedNC / totalNC) * 100 : 0.0;
+    final combinedEq = cat1.equipmentCount + cat2.equipmentCount;
+    final pctParc = totalEq > 0 ? (combinedEq / totalEq) * 100 : 0.0;
+    final labelStr = 'Concentration ${cat1.categoryName} + ${cat2.categoryName}';
+    final valStr = '$combinedNC NC, soit ${pctNC.toStringAsFixed(1).replaceAll('.', ',')} % du total, sur $combinedEq équipements (${pctParc.toStringAsFixed(1).replaceAll('.', ',')} % du parc)';
+
+    return TopNonConformityCategoriesResult(
+      label: labelStr,
+      cat1Name: cat1.categoryName,
+      cat2Name: cat2.categoryName,
+      combinedNC: combinedNC,
+      pctTotalNC: pctNC,
+      combinedEquipments: combinedEq,
+      pctParc: pctParc,
+      formattedValue: valStr,
+    );
+  }
+
+  /// Calcule dynamiquement la catégorie la plus dense en non-conformités par équipement.
+  String getDensestCategoryFormatted() {
+    final crossList = getCrossCategoryAnalysis().where((c) => c.equipmentCount > 0).toList();
+    if (crossList.isEmpty) return 'Aucun équipement recensé (0,0 NC/équipement)';
+
+    crossList.sort((a, b) {
+      final cmpDens = b.density.compareTo(a.density);
+      if (cmpDens != 0) return cmpDens;
+      final cmpCrit = b.critiqueCount.compareTo(a.critiqueCount);
+      if (cmpCrit != 0) return cmpCrit;
+      return b.nonCompliantPointsCount.compareTo(a.nonCompliantPointsCount);
+    });
+
+    final densest = crossList.first;
+    if (densest.nonCompliantPointsCount == 0) {
+      return 'Toutes catégories conformes (0,0 NC/équipement)';
+    }
+
+    final critPct = (densest.critiqueCount / densest.nonCompliantPointsCount) * 100;
+    return '${densest.categoryName} : ${densest.density.toStringAsFixed(1).replaceAll('.', ',')} NC/équipement (dont ${densest.critiqueCount} critique(s) sur ${densest.nonCompliantPointsCount}, soit ${critPct.toStringAsFixed(1).replaceAll('.', ',')} %)';
   }
 
   /// Statistiques par famille de risque.

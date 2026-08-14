@@ -805,38 +805,14 @@ class PdfReportService {
 
     // 6. Analyse Statistique
     entries.add(_SommaireEntry(titre: "ANALYSE STATISTIQUE", key: 'analyse_statistique', level: 0, isBold: true, isUppercase: true));
-    int statIdx = 1;
-    entries.add(_SommaireEntry(titre: "$statIdx. Non-conformités de l'année passée", key: 'stat_annee_passee', level: 1));
-    statIdx++;
-    entries.add(_SommaireEntry(titre: "$statIdx. Comparaison avec celles de cette année", key: 'stat_comparaison', level: 1));
-    statIdx++;
-    entries.add(_SommaireEntry(titre: "$statIdx. Taux de mise en conformité", key: 'stat_taux_conformite', level: 1));
-    statIdx++;
-
-    try {
-      final inventory = MissionStatisticsCollector.getInventory(mission.id);
-      final topDefects = inventory.getTopDefects(limit: 10);
-      if (topDefects.isNotEmpty) {
-        entries.add(_SommaireEntry(titre: "$statIdx. Statistique par type de défaut", key: 'stat_defauts', level: 1));
-        statIdx++;
-      }
-
-      final domainStats = inventory.getTensionDomainStats();
-      if (domainStats.totalCount > 0) {
-        entries.add(_SommaireEntry(titre: "$statIdx. Répartition par domaine de tension", key: 'stat_tension', level: 1));
-        statIdx++;
-      }
-
-      final statsSummary = MissionStatisticsCollector.collectSummary(mission.id);
-      if (statsSummary.crossCategoryItems.isNotEmpty) {
-        entries.add(_SommaireEntry(titre: "$statIdx. Non-conformités croisées par catégorie d'équipement", key: 'stat_croisee', level: 1));
-        statIdx++;
-      }
-    } catch (_) {
-      // En environnement de test ou sans Hive, omis silencieusement sans provoquer d'erreur.
-    }
-
-    entries.add(_SommaireEntry(titre: "$statIdx. Inventaire chiffré des installations et équipements", key: 'stat_inventaire', level: 1));
+    entries.add(_SommaireEntry(titre: "1. Indicateurs clés de la mission", key: 'stat_indicateurs', level: 1));
+    entries.add(_SommaireEntry(titre: "2. Répartition par criticité", key: 'stat_criticite', level: 1));
+    entries.add(_SommaireEntry(titre: "3. Non-conformités de l'année passée et taux de mise en conformité", key: 'stat_annee_passee', level: 1));
+    entries.add(_SommaireEntry(titre: "4. Statistique par type de défaut — analyse de Pareto", key: 'stat_pareto', level: 1));
+    entries.add(_SommaireEntry(titre: "5. Répartition par domaine de tension", key: 'stat_tension', level: 1));
+    entries.add(_SommaireEntry(titre: "6. Non-conformités croisées par catégorie d'équipement — vue enrichie", key: 'stat_croisee', level: 1));
+    entries.add(_SommaireEntry(titre: "7. Inventaire chiffré des installations et équipements", key: 'stat_inventaire', level: 1));
+    entries.add(_SommaireEntry(titre: "8. Synthèse de l'analyse statistique", key: 'stat_synthese', level: 1));
 
     // 7. Renseignements généraux
     entries.add(_SommaireEntry(titre: "RENSEIGNEMENTS GÉNÉRAUX DE L'ÉTABLISSEMENT", key: 'renseignements', level: 0, isBold: true, isUppercase: true));
@@ -2109,116 +2085,338 @@ class PdfReportService {
     ));
     widgets.add(pw.SizedBox(height: 10));
 
-    int statIdx = 1;
+    // 1. Indicateurs clés de la mission
+    final totalEq = summary.totalEquipments;
+    final activeCats = summary.crossCategoryItems.length;
+    final densestStr = summary.domainInventory?.getDensestCategoryFormatted() ?? "Non renseigné";
+    final topTwo = summary.topTwoCategoriesResult;
+    final domainStats = summary.tensionDomainStats;
 
-    // I. Sous-section : Non-conformités de l'année passée
+    widgets.add(PageTracker(
+      key: 'stat_indicateurs',
+      registry: trackedPages,
+      offset: offset,
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _subTitle('1. Indicateurs clés de la mission'),
+          pw.SizedBox(height: 5),
+          _bodyText('Tableau synthétique des indicateurs majeurs de la mission (gravité, concentration et volume) :'),
+          pw.SizedBox(height: 8),
+          pw.Table(
+            border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+            columnWidths: const {
+              0: pw.FlexColumnWidth(3.8),
+              1: pw.FlexColumnWidth(6.2),
+            },
+            children: [
+              pw.TableRow(
+                decoration: pw.BoxDecoration(color: headerColor),
+                children: [
+                  pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('INDICATEUR', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
+                  pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('VALEUR ET DESCRIPTION', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
+                ],
+              ),
+              _buildIndicateurRow('Périmètre couvert', '$totalEq installations et équipements répartis en $activeCats catégories (MT et BT)'),
+              _buildIndicateurRow('Total des non-conformités', '$total (recensement par installation/équipement)'),
+              _buildIndicateurRow('Densité moyenne globale', '${(total / (totalEq > 0 ? totalEq : 1)).toStringAsFixed(2).replaceAll('.', ',')} NC/équipement'),
+              _buildIndicateurRow('Part des NC critiques', '${pctCritique.toStringAsFixed(1).replaceAll('.', ',')} % — niveau de risque élevé'),
+              _buildIndicateurRow(topTwo.label, topTwo.formattedValue),
+              _buildIndicateurRow('Catégorie la plus dense', densestStr),
+              _buildIndicateurRow('Répartition MT / BT', 'MT : ${domainStats.mtCount} NC (${domainStats.mtPct.toStringAsFixed(1).replaceAll('.', ',')} %) — BT : ${domainStats.btCount} NC (${domainStats.btPct.toStringAsFixed(1).replaceAll('.', ',')} %)'),
+            ],
+          ),
+        ],
+      ),
+    ));
+    widgets.add(pw.SizedBox(height: 12));
+
+    // 2. Répartition par criticité
+    final ratioCritMinStr = mineure > 0 ? (critique / mineure).toStringAsFixed(1).replaceAll('.', ',') : '$critique';
+    final pctCritMajStr = (pctCritique + pctMajeure).toStringAsFixed(1).replaceAll('.', ',');
+
+    widgets.add(PageTracker(
+      key: 'stat_criticite',
+      registry: trackedPages,
+      offset: offset,
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _subTitle('2. Répartition par criticité'),
+          pw.SizedBox(height: 5),
+          _bodyText('Distribution des non-conformités selon les 3 niveaux de gravité réglementaires KES :'),
+          pw.SizedBox(height: 8),
+          _buildBarChart(critique, majeure, mineure),
+          pw.SizedBox(height: 8),
+          _buildCriticiteTable(critique, majeure, mineure, total, pctCritique, pctMajeure, pctMineure),
+          pw.SizedBox(height: 8),
+          _buildCalloutBox(
+            '2.1 Ratio de sévérité',
+            'Le rapport de $critique non-conformité(s) critique(s) pour $mineure non-conformité(s) mineure(s) (soit un ratio de $ratioCritMinStr) confirme la prédominance des défauts majeurs à haut risque.',
+          ),
+          pw.SizedBox(height: 5),
+          _buildCalloutBox(
+            '2.2 Niveau de risque dominant',
+            'Les non-conformités de niveaux Critique et Majeur concentrent $pctCritMajStr % de l\'ensemble des écarts constatés sur l\'établissement.',
+          ),
+          pw.SizedBox(height: 5),
+          _buildCalloutBox(
+            '2.3 Signal de gravité global',
+            'Cette distribution réclame une mobilisation prioritaire des ressources correctives sur les équipements à criticité élevée.',
+          ),
+        ],
+      ),
+    ));
+    widgets.add(pw.SizedBox(height: 12));
+
+    // 3. Non-conformités de l'année passée et taux de mise en conformité
     widgets.add(PageTracker(
       key: 'stat_annee_passee',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('$statIdx. Non-conformités de l\'année passée'),
-    ));
-    statIdx++;
-    widgets.add(pw.SizedBox(height: 5));
-    widgets.add(_buildCalloutBox(
-      'Donnée non disponible',
-      'Le présent rapport porte sur la première visite de vérification périodique disposant d\'une check-list numérique structurée pour ce site (Rapport n° $numeroRapportDoc). Aucun rapport antérieur exploitable au même format n\'a été fourni pour extraire le nombre de non-conformités de l\'année passée. Si un rapport antérieur existe, merci de le transmettre : cette section et la comparaison ci-dessous seront complétées automatiquement.',
-    ));
-    widgets.add(pw.SizedBox(height: 10));
-
-    // II. Sous-section : Comparaison avec celles de cette année
-    widgets.add(PageTracker(
-      key: 'stat_comparaison',
-      registry: trackedPages,
-      offset: offset,
-      child: _subTitle('$statIdx. Comparaison avec celles de cette année'),
-    ));
-    statIdx++;
-    widgets.add(pw.SizedBox(height: 5));
-    widgets.add(_bodyText(
-      'Non calculable en l\'absence de données de référence de l\'année précédente (voir ci-dessus). À titre indicatif, les non-conformités de la présente visite se répartissent comme suit :',
-    ));
-    widgets.add(pw.SizedBox(height: 8));
-
-    // III & IV. Graphique & Tableau des criticités
-    widgets.add(_buildBarChart(critique, majeure, mineure));
-    widgets.add(pw.SizedBox(height: 8));
-    widgets.add(_buildCriticiteTable(critique, majeure, mineure, total, pctCritique, pctMajeure, pctMineure));
-    widgets.add(pw.SizedBox(height: 10));
-
-    // V. Sous-section : Taux de mise en conformité
-    widgets.add(PageTracker(
-      key: 'stat_taux_conformite',
-      registry: trackedPages,
-      offset: offset,
-      child: _subTitle('$statIdx. Taux de mise en conformité'),
-    ));
-    statIdx++;
-    widgets.add(pw.SizedBox(height: 5));
-    widgets.add(_buildCalloutBox(
-      'Donnée partiellement disponible',
-      'Le taux de mise en conformité (évolution entre deux visites successives : non-conformités soldées / non-conformités totales de l\'année précédente) ne peut pas être calculé sans le rapport de l\'année passée. Il pourra être renseigné dès réception de ce document de référence.',
-    ));
-    widgets.add(pw.SizedBox(height: 8));
-    widgets.add(_bodyText(
-      'Le taux de conformit\u00e9 global mesur\u00e9 lors de la pr\u00e9sente visite (part des points de v\u00e9rification jug\u00e9s conformes sur l\'ensemble des points contr\u00f4l\u00e9s) n\u00e9cessite l\'export du d\u00e9tail base de donn\u00e9es de la check-list pour \u00eatre calcul\u00e9 avec pr\u00e9cision (d\u00e9nominateur exact des points \u00ab Sans objet \u00bb exclus). Il est recommand\u00e9 de le g\u00e9n\u00e9rer directement depuis l\'outil de check-list utilis\u00e9 sur le terrain.',
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _subTitle('3. Non-conformités de l\'année passée et taux de mise en conformité'),
+          pw.SizedBox(height: 5),
+          _buildCalloutBox(
+            'Donnée non disponible',
+            'Le présent rapport porte sur la première visite de vérification périodique disposant d\'une check-list numérique structurée pour ce site (Rapport n° $numeroRapportDoc). Aucun rapport antérieur exploitable au même format n\'a été fourni pour extraire le nombre de non-conformités de l\'année passée. Si un rapport antérieur existe, merci de le transmettre : cette section et la comparaison ci-dessous seront complétées automatiquement.',
+          ),
+        ],
+      ),
     ));
     widgets.add(pw.SizedBox(height: 12));
 
-    // VI. Sous-section : Statistique par type de défaut (10 principales)
-    final topDefects = inventory.getTopDefects(limit: 10);
-    if (topDefects.isNotEmpty) {
-      widgets.add(PageTracker(
-        key: 'stat_defauts',
-        registry: trackedPages,
-        offset: offset,
-        child: _subTitle('$statIdx. Statistique par type de d\u00e9faut'),
-      ));
-      statIdx++;
-      widgets.add(pw.SizedBox(height: 5));
-      widgets.add(_bodyText(
-        'Les ${inventory.totalFindings} non-conformit\u00e9s relev\u00e9es ont \u00e9t\u00e9 regroup\u00e9es par nature de d\u00e9faut. Les dix cat\u00e9gories les plus repr\u00e9sent\u00e9es sont pr\u00e9sent\u00e9es ci-dessous ; elles concentrent \u00e0 elles seules la quasi-totalit\u00e9 des \u00e9carts constat\u00e9s.',
-      ));
-      widgets.add(pw.SizedBox(height: 8));
-      widgets.add(_buildTopDefectsHorizontalChart(topDefects));
-      widgets.add(pw.SizedBox(height: 12));
-    }
+    // 4. Statistique par type de défaut — analyse de Pareto
+    final pareto = summary.paretoResult;
+    widgets.add(PageTracker(
+      key: 'stat_pareto',
+      registry: trackedPages,
+      offset: offset,
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _subTitle('4. Statistique par type de défaut — analyse de Pareto'),
+          pw.SizedBox(height: 5),
+          _bodyText(pareto.summaryText),
+          pw.SizedBox(height: 8),
+          _buildParetoChartWidget(pareto),
+        ],
+      ),
+    ));
+    widgets.add(pw.SizedBox(height: 12));
 
-    // VII. Sous-section : Répartition par domaine de tension (MT vs BT)
-    final domainStats = inventory.getTensionDomainStats();
+    // 5. Répartition par domaine de tension
     if (domainStats.totalCount > 0) {
       widgets.add(PageTracker(
         key: 'stat_tension',
         registry: trackedPages,
         offset: offset,
-        child: _buildTensionDomainSection(domainStats, statIdx),
+        child: _buildTensionDomainSection(domainStats, 5),
       ));
-      statIdx++;
       widgets.add(pw.SizedBox(height: 12));
     }
 
-    // VIII. Sous-section : Non-conformités croisées par catégorie d'installation / d'équipement
-    final statsSummary = MissionStatisticsCollector.collectSummary(mission.id);
-    if (statsSummary.crossCategoryItems.isNotEmpty) {
+    // 6. Non-conformités croisées par catégorie d'équipement — vue enrichie
+    if (summary.crossCategoryItems.isNotEmpty) {
       widgets.add(PageTracker(
         key: 'stat_croisee',
         registry: trackedPages,
         offset: offset,
-        child: _buildCrossCategorySection(statsSummary.crossCategoryItems, statsSummary.crossAnalysisText, statIdx),
+        child: _buildCrossCategorySection(summary.crossCategoryItems, summary.crossAnalysisText, 6),
       ));
-      statIdx++;
       widgets.add(pw.SizedBox(height: 12));
     }
 
-    // IX. Sous-section : Inventaire chiffré des installations et équipements
+    // 7. Inventaire chiffré des installations et équipements
     widgets.add(PageTracker(
       key: 'stat_inventaire',
       registry: trackedPages,
       offset: offset,
-      child: _buildInventaireEquipementsSection(statsSummary.equipmentInventory, statIdx),
+      child: _buildInventaireEquipementsSection(summary.equipmentInventory, 7),
+    ));
+    widgets.add(pw.SizedBox(height: 12));
+
+    // 8. Synthèse de l'analyse statistique
+    widgets.add(PageTracker(
+      key: 'stat_synthese',
+      registry: trackedPages,
+      offset: offset,
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _subTitle('8. Synthèse de l\'analyse statistique'),
+          pw.SizedBox(height: 6),
+          _buildBulletItem('Périmètre : $totalEq installations et équipements répertoriés en $activeCats catégories métiers (MT et BT).'),
+          _buildBulletItem('Gravité globale : $critique non-conformité(s) critique(s) (${pctCritique.toStringAsFixed(1).replaceAll('.', ',')} %) et $majeure majeure(s) (${pctMajeure.toStringAsFixed(1).replaceAll('.', ',')} %).'),
+          _buildBulletItem('Concentration majeure : ${topTwo.label} concentrent ${topTwo.formattedValue}.'),
+          _buildBulletItem('Levier d\'action Pareto : ${pareto.paretoCategoryCount} type(s) de défauts concentrent ${pareto.paretoCumulativePercentage.toStringAsFixed(1).replaceAll('.', ',')} % des écarts relevés.'),
+        ],
+      ),
     ));
 
     return widgets;
+  }
+
+  static pw.TableRow _buildIndicateurRow(String label, String value) {
+    return pw.TableRow(
+      children: [
+        pw.Padding(
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Text(label, style: pw.TextStyle(font: _fontBold, fontSize: 8)),
+        ),
+        pw.Padding(
+          padding: const pw.EdgeInsets.all(5),
+          child: pw.Text(value, style: pw.TextStyle(font: _fontRegular, fontSize: 8)),
+        ),
+      ],
+    );
+  }
+
+  static pw.Widget _buildBulletItem(String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 4, left: 4),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Container(
+            margin: const pw.EdgeInsets.only(top: 4, right: 6),
+            width: 4,
+            height: 4,
+            decoration: pw.BoxDecoration(
+              color: accentColor,
+              shape: pw.BoxShape.circle,
+            ),
+          ),
+          pw.Expanded(
+            child: pw.Text(text, style: pw.TextStyle(font: _fontRegular, fontSize: 8.5)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _buildParetoChartWidget(ParetoAnalysisResult pareto) {
+    if (pareto.items.isEmpty) return pw.SizedBox();
+
+    final maxVal = pareto.items.map((e) => e.count).reduce((a, b) => a > b ? a : b);
+    final yMax = ((maxVal * 1.2) / 5).ceil() * 5 > 0
+        ? ((maxVal * 1.2) / 5).ceil() * 5
+        : 5;
+
+    return pw.Container(
+      padding: const pw.EdgeInsets.all(10),
+      decoration: pw.BoxDecoration(
+        border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+        color: PdfColors.white,
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Center(
+            child: pw.Text(
+              'Analyse de Pareto des non-conformités (Occurrences & % Cumulé 80%)',
+              style: pw.TextStyle(
+                font: _fontBold,
+                fontSize: 9.5,
+                fontWeight: pw.FontWeight.bold,
+                color: headerColor,
+              ),
+            ),
+          ),
+          pw.SizedBox(height: 10),
+          pw.Column(
+            children: pareto.items.map((item) {
+              final isParetoZone = item.cumulativePercentage <= pareto.paretoCumulativePercentage ||
+                  pareto.items.indexOf(item) < pareto.paretoCategoryCount;
+              final barColor = isParetoZone ? headerColor : PdfColor.fromHex('#64748B');
+              final barWidthPct = yMax > 0 ? (item.count / yMax) : 0.0;
+
+              return pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(vertical: 2.5),
+                child: pw.Row(
+                  children: [
+                    pw.SizedBox(
+                      width: 170,
+                      child: pw.Text(
+                        item.title,
+                        style: pw.TextStyle(
+                          font: isParetoZone ? _fontBold : _fontRegular,
+                          fontSize: 7.5,
+                          color: isParetoZone ? PdfColors.black : PdfColors.grey800,
+                        ),
+                        maxLines: 1,
+                        overflow: pw.TextOverflow.clip,
+                        textAlign: pw.TextAlign.right,
+                      ),
+                    ),
+                    pw.SizedBox(width: 8),
+                    pw.Expanded(
+                      child: pw.Stack(
+                        children: [
+                          pw.Container(
+                            height: 10,
+                            decoration: const pw.BoxDecoration(
+                              color: PdfColors.grey100,
+                              borderRadius: pw.BorderRadius.all(pw.Radius.circular(2)),
+                            ),
+                          ),
+                          pw.Container(
+                            width: (barWidthPct * 240).clamp(2.0, 240.0),
+                            height: 10,
+                            decoration: pw.BoxDecoration(
+                              color: barColor,
+                              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(2)),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    pw.SizedBox(width: 6),
+                    pw.SizedBox(
+                      width: 65,
+                      child: pw.Text(
+                        '${item.count} (${item.cumulativePercentage.toStringAsFixed(1).replaceAll('.', ',')}%)',
+                        style: pw.TextStyle(
+                          font: _fontBold,
+                          fontSize: 7.5,
+                          color: isParetoZone ? PdfColor.fromHex('#B71C1C') : PdfColors.grey700,
+                        ),
+                        textAlign: pw.TextAlign.right,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }).toList(),
+          ),
+          pw.SizedBox(height: 6),
+          pw.Divider(color: PdfColors.grey300, thickness: 0.5),
+          pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            children: [
+              pw.Row(
+                children: [
+                  pw.Container(width: 8, height: 8, color: headerColor),
+                  pw.SizedBox(width: 4),
+                  pw.Text('Zone Pareto 80%', style: pw.TextStyle(font: _fontBold, fontSize: 7, color: headerColor)),
+                  pw.SizedBox(width: 10),
+                  pw.Container(width: 8, height: 8, color: PdfColor.fromHex('#64748B')),
+                  pw.SizedBox(width: 4),
+                  pw.Text('Autres défauts', style: pw.TextStyle(font: _fontRegular, fontSize: 7, color: PdfColors.grey700)),
+                ],
+              ),
+              pw.Text(
+                'Seuil Pareto atteint à ${pareto.paretoCategoryCount} catégorie(s) (${pareto.paretoCumulativePercentage.toStringAsFixed(1).replaceAll('.', ',')} %)',
+                style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColor.fromHex('#B71C1C')),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 
   // ──────────────────────────────────────────────────────────────

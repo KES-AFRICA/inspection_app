@@ -65,11 +65,53 @@ class TopDefectItem {
   final String title;
   final int count;
   final double percentage;
+  final double cumulativePercentage;
 
   TopDefectItem({
     required this.title,
     required this.count,
     required this.percentage,
+    this.cumulativePercentage = 0.0,
+  });
+}
+
+/// Résultat de la sélection dynamique des 2 catégories d'équipements générant le plus de non-conformités.
+class TopNonConformityCategoriesResult {
+  final String label;
+  final String cat1Name;
+  final String? cat2Name;
+  final int combinedNC;
+  final double pctTotalNC;
+  final int combinedEquipments;
+  final double pctParc;
+  final String formattedValue;
+
+  TopNonConformityCategoriesResult({
+    required this.label,
+    required this.cat1Name,
+    this.cat2Name,
+    required this.combinedNC,
+    required this.pctTotalNC,
+    required this.combinedEquipments,
+    required this.pctParc,
+    required this.formattedValue,
+  });
+}
+
+/// Résultat complet de l'analyse de Pareto (80/20) dynamique sur les points de vérification.
+class ParetoAnalysisResult {
+  final List<TopDefectItem> items;
+  final int totalOccurrences;
+  final int paretoCategoryCount;
+  final double paretoCumulativePercentage;
+  final String summaryText;
+
+  ParetoAnalysisResult({
+    required this.items,
+    required this.totalOccurrences,
+    required this.paretoCategoryCount,
+    required this.paretoCumulativePercentage,
+    required this.summaryText,
   });
 }
 
@@ -233,6 +275,7 @@ class AuditFindingInventory {
   }) : crossCategoryItems = crossCategoryItems ?? [];
 
   int get totalFindings => findings.length;
+  int get totalEquipments => crossCategoryItems.fold<int>(0, (sum, e) => sum + e.equipmentCount);
 
   int get critiqueCount => findings.where((f) => f.criticality == 'Critique').length;
   int get majeureCount => findings.where((f) => f.criticality == 'Majeure').length;

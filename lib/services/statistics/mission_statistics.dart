@@ -123,8 +123,11 @@ class MissionStatistics {
 class MissionStatisticsSummary {
   final String missionId;
   final AuditFindingInventory inventory;
+  final MissionDomainInventory? domainInventory;
   final CriticalityStats criticalityStats;
   final List<TopDefectItem> topDefects;
+  final ParetoAnalysisResult paretoResult;
+  final TopNonConformityCategoriesResult topTwoCategoriesResult;
   final List<RiskFamilyItem> riskFamilyStats;
   final TensionDomainStats tensionDomainStats;
   final List<InstallationTypeItem> installationTypeStats;
@@ -135,8 +138,11 @@ class MissionStatisticsSummary {
   MissionStatisticsSummary({
     required this.missionId,
     required this.inventory,
+    this.domainInventory,
     required this.criticalityStats,
     required this.topDefects,
+    required this.paretoResult,
+    required this.topTwoCategoriesResult,
     required this.riskFamilyStats,
     required this.tensionDomainStats,
     required this.installationTypeStats,
@@ -144,6 +150,8 @@ class MissionStatisticsSummary {
     required this.crossAnalysisText,
     required this.equipmentInventory,
   });
+
+  int get totalEquipments => domainInventory?.instances.length ?? equipmentInventory.fold<int>(0, (sum, e) => sum + e.count);
 
   factory MissionStatisticsSummary.fromInventory(AuditFindingInventory inventory) {
     final cStats = CriticalityStats(
@@ -164,11 +172,33 @@ class MissionStatisticsSummary {
       count: ci.equipmentCount,
     )).toList();
 
+    final topDefectsList = inventory.getTopDefects(limit: 10);
+    final pareto = ParetoAnalysisResult(
+      items: topDefectsList,
+      totalOccurrences: inventory.classifiedCount,
+      paretoCategoryCount: topDefectsList.length,
+      paretoCumulativePercentage: topDefectsList.fold(0.0, (s, e) => s + e.percentage),
+      summaryText: 'Analyse des principaux défauts.',
+    );
+
+    final defaultTopTwo = TopNonConformityCategoriesResult(
+      label: 'Concentration Équipements',
+      cat1Name: 'Équipements',
+      combinedNC: inventory.classifiedCount,
+      pctTotalNC: 100.0,
+      combinedEquipments: eqInventory.fold(0, (s, e) => s + e.count),
+      pctParc: 100.0,
+      formattedValue: '${inventory.classifiedCount} NC',
+    );
+
     return MissionStatisticsSummary(
       missionId: inventory.missionId,
       inventory: inventory,
+      domainInventory: null,
       criticalityStats: cStats,
-      topDefects: inventory.getTopDefects(limit: 10),
+      topDefects: topDefectsList,
+      paretoResult: pareto,
+      topTwoCategoriesResult: defaultTopTwo,
       riskFamilyStats: inventory.getRiskFamilyStats(),
       tensionDomainStats: inventory.getTensionDomainStats(),
       installationTypeStats: inventory.getInstallationTypeStats(),
@@ -201,12 +231,17 @@ class MissionStatisticsSummary {
     final crossItems = domainInventory.getCrossCategoryAnalysis();
     final crossText = CategoryCrossAnalysisTextGenerator.generate(crossItems);
     final eqInventory = domainInventory.getEquipmentInventorySummary();
+    final pareto = domainInventory.getParetoAnalysis(limit: 10);
+    final topTwo = domainInventory.getTopTwoNonConformityCategories();
 
     return MissionStatisticsSummary(
       missionId: inventory.missionId,
       inventory: inventory,
+      domainInventory: domainInventory,
       criticalityStats: cStats,
-      topDefects: inventory.getTopDefects(limit: 10),
+      topDefects: pareto.items,
+      paretoResult: pareto,
+      topTwoCategoriesResult: topTwo,
       riskFamilyStats: inventory.getRiskFamilyStats(),
       tensionDomainStats: inventory.getTensionDomainStats(),
       installationTypeStats: inventory.getInstallationTypeStats(),
