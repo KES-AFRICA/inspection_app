@@ -115,6 +115,42 @@ class ParetoAnalysisResult {
   });
 }
 
+/// Item de Pareto par catégorie d'équipement / d'installation
+class CategoryParetoItem {
+  final String categoryName;
+  final String categoryKey;
+  final int nonConformitiesCount;
+  final int equipmentCount;
+  final double percentage;
+  final double cumulativePercentage;
+
+  CategoryParetoItem({
+    required this.categoryName,
+    required this.categoryKey,
+    required this.nonConformitiesCount,
+    required this.equipmentCount,
+    required this.percentage,
+    required this.cumulativePercentage,
+  });
+}
+
+/// Résultat de l'analyse de Pareto (80/20) appliquée aux 10 catégories d'équipements
+class CategoryParetoResult {
+  final List<CategoryParetoItem> items;
+  final int totalNonConformities;
+  final int paretoCategoryCount;
+  final double paretoCumulativePercentage;
+  final String summaryText;
+
+  CategoryParetoResult({
+    required this.items,
+    required this.totalNonConformities,
+    required this.paretoCategoryCount,
+    required this.paretoCumulativePercentage,
+    required this.summaryText,
+  });
+}
+
 /// Modèle d'analyse par domaine de tension (MT vs BT)
 class TensionDomainStats {
   final int mtCount;

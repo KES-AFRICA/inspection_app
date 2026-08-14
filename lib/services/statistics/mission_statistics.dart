@@ -128,6 +128,7 @@ class MissionStatisticsSummary {
   final List<TopDefectItem> topDefects;
   final ParetoAnalysisResult paretoResult;
   final TopNonConformityCategoriesResult topTwoCategoriesResult;
+  final CategoryParetoResult? categoryParetoResult;
   final List<RiskFamilyItem> riskFamilyStats;
   final TensionDomainStats tensionDomainStats;
   final List<InstallationTypeItem> installationTypeStats;
@@ -143,6 +144,7 @@ class MissionStatisticsSummary {
     required this.topDefects,
     required this.paretoResult,
     required this.topTwoCategoriesResult,
+    this.categoryParetoResult,
     required this.riskFamilyStats,
     required this.tensionDomainStats,
     required this.installationTypeStats,
@@ -152,6 +154,27 @@ class MissionStatisticsSummary {
   });
 
   int get totalEquipments => domainInventory?.instances.length ?? equipmentInventory.fold<int>(0, (sum, e) => sum + e.count);
+
+  String get densestCategoryFormatted {
+    if (domainInventory != null) {
+      return domainInventory!.getDensestCategoryFormatted();
+    }
+    final list = crossCategoryItems.where((c) => c.equipmentCount > 0).toList();
+    if (list.isEmpty) return 'Aucun équipement recensé (0,0 NC/équipement)';
+    list.sort((a, b) {
+      final cmpDens = b.density.compareTo(a.density);
+      if (cmpDens != 0) return cmpDens;
+      final cmpCrit = b.critiqueCount.compareTo(a.critiqueCount);
+      if (cmpCrit != 0) return cmpCrit;
+      return b.nonCompliantPointsCount.compareTo(a.nonCompliantPointsCount);
+    });
+    final densest = list.first;
+    if (densest.nonCompliantPointsCount == 0) {
+      return 'Toutes catégories conformes (0,0 NC/équipement)';
+    }
+    final critPct = (densest.critiqueCount / densest.nonCompliantPointsCount) * 100;
+    return '${densest.categoryName} : ${densest.density.toStringAsFixed(1).replaceAll('.', ',')} NC/équipement (dont ${densest.critiqueCount} critique(s) sur ${densest.nonCompliantPointsCount}, soit ${critPct.toStringAsFixed(1).replaceAll('.', ',')} %)';
+  }
 
   factory MissionStatisticsSummary.fromInventory(AuditFindingInventory inventory) {
     final cStats = CriticalityStats(
@@ -199,6 +222,7 @@ class MissionStatisticsSummary {
       topDefects: topDefectsList,
       paretoResult: pareto,
       topTwoCategoriesResult: defaultTopTwo,
+      categoryParetoResult: null,
       riskFamilyStats: inventory.getRiskFamilyStats(),
       tensionDomainStats: inventory.getTensionDomainStats(),
       installationTypeStats: inventory.getInstallationTypeStats(),
@@ -233,6 +257,7 @@ class MissionStatisticsSummary {
     final eqInventory = domainInventory.getEquipmentInventorySummary();
     final pareto = domainInventory.getParetoAnalysis(limit: 10);
     final topTwo = domainInventory.getTopTwoNonConformityCategories();
+    final catPareto = domainInventory.getCategoryParetoAnalysis();
 
     return MissionStatisticsSummary(
       missionId: inventory.missionId,
@@ -242,6 +267,7 @@ class MissionStatisticsSummary {
       topDefects: pareto.items,
       paretoResult: pareto,
       topTwoCategoriesResult: topTwo,
+      categoryParetoResult: catPareto,
       riskFamilyStats: inventory.getRiskFamilyStats(),
       tensionDomainStats: inventory.getTensionDomainStats(),
       installationTypeStats: inventory.getInstallationTypeStats(),

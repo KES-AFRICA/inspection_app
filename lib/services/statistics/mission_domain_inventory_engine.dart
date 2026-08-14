@@ -279,6 +279,71 @@ class MissionDomainInventory {
     );
   }
 
+  /// Analyse de Pareto mathématique dynamique sur les 10 catégories d'équipements/installations.
+  CategoryParetoResult getCategoryParetoAnalysis() {
+    final crossList = getCrossCategoryAnalysis();
+    final totalNC = allFindings.length;
+
+    if (crossList.isEmpty || totalNC == 0) {
+      return CategoryParetoResult(
+        items: [],
+        totalNonConformities: 0,
+        paretoCategoryCount: 0,
+        paretoCumulativePercentage: 0.0,
+        summaryText: 'Aucune non-conformité recensée pour l\'analyse de Pareto par catégorie.',
+      );
+    }
+
+    final sorted = List<CategoryCrossItem>.from(crossList)
+      ..sort((a, b) {
+        final cmpNC = b.nonCompliantPointsCount.compareTo(a.nonCompliantPointsCount);
+        if (cmpNC != 0) return cmpNC;
+        final cmpCrit = b.critiqueCount.compareTo(a.critiqueCount);
+        if (cmpCrit != 0) return cmpCrit;
+        return a.categoryName.compareTo(b.categoryName);
+      });
+
+    double runningCumul = 0.0;
+    int paretoK = 0;
+    double paretoCumulPct = 0.0;
+    final paretoItems = <CategoryParetoItem>[];
+
+    for (int i = 0; i < sorted.length; i++) {
+      final item = sorted[i];
+      final pct = (item.nonCompliantPointsCount / totalNC) * 100.0;
+      runningCumul += pct;
+
+      if (paretoK == 0 && (runningCumul >= 80.0 || i == sorted.length - 1)) {
+        paretoK = i + 1;
+        paretoCumulPct = runningCumul;
+      }
+
+      paretoItems.add(CategoryParetoItem(
+        categoryName: item.categoryName,
+        categoryKey: item.categoryKey,
+        nonConformitiesCount: item.nonCompliantPointsCount,
+        equipmentCount: item.equipmentCount,
+        percentage: pct,
+        cumulativePercentage: runningCumul,
+      ));
+    }
+
+    if (paretoK == 0 && sorted.isNotEmpty) {
+      paretoK = sorted.length;
+      paretoCumulPct = runningCumul;
+    }
+
+    final summary = 'Les $totalNC non-conformités relevées sur les 10 catégories d\'équipements ont été classées par fréquence décroissante. L\'analyse de Pareto ci-dessous met en évidence que les $paretoK principales catégories concentrent ${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % du volume global des défauts.';
+
+    return CategoryParetoResult(
+      items: paretoItems,
+      totalNonConformities: totalNC,
+      paretoCategoryCount: paretoK,
+      paretoCumulativePercentage: paretoCumulPct,
+      summaryText: summary,
+    );
+  }
+
   /// Calcule dynamiquement la catégorie la plus dense en non-conformités par équipement.
   String getDensestCategoryFormatted() {
     final crossList = getCrossCategoryAnalysis().where((c) => c.equipmentCount > 0).toList();
