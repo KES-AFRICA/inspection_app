@@ -8766,12 +8766,28 @@ class PdfReportService {
     );
   }
 
+  /// Formate les intitulés d'en-tête de colonnes contenant une unité de mesure entre parenthèses
+  /// pour garantir que l'unité "(unité)" forme un bloc indivisible précédé d'un espace.
+  static String formatHeaderUnit(String text) {
+    if (text.isEmpty || !text.contains('(')) return text;
+
+    final unitRegex = RegExp(r'\s*\(([^)]+)\)');
+    return text.replaceAllMapped(unitRegex, (match) {
+      final unitContent = match.group(1)?.trim() ?? '';
+      if (unitContent.isEmpty) return match.group(0)!;
+
+      final nonBreakingUnitContent = unitContent.replaceAll(' ', '\u00A0');
+      return ' ($nonBreakingUnitContent)';
+    });
+  }
+
   static pw.Widget _cell(String text, {required bool isHeader, PdfColor? color, int colspan = 1, bool centered = false}) {
+    final displayText = isHeader ? formatHeaderUnit(text) : text;
     return pw.Container(
       color: color,
       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
       child: pw.Text(
-        _normalizeText(text),
+        _normalizeText(displayText),
         style: pw.TextStyle(
           fontSize: isHeader ? fsSmall : fsSmall,
           fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
