@@ -68,6 +68,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
   Future<void> _loadProgress() async {
     await SequenceProgressService.markStepCompleted(widget.mission.id, 5);
     final progress = await SequenceProgressService.getProgress(widget.mission.id);
+    if (!mounted) return;
     setState(() {
       _progress = progress;
     });
@@ -80,6 +81,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
     for (var report in reports) {
       final file = File(report.filePath);
       if (await file.exists()) {
+        if (!mounted) return;
         if (report.reportType == 'pdf') {
           setState(() {
             _pdfFile = file;
@@ -98,6 +100,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
   }
 
   Future<void> _generateReport(String reportType) async {
+    if (!mounted) return;
     setState(() => _isGenerating = true);
 
     final loaderController = ReportGenerationLoaderController();
@@ -187,7 +190,9 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
         );
       }
     } finally {
-      setState(() => _isGenerating = false);
+      if (mounted) {
+        setState(() => _isGenerating = false);
+      }
     }
   }
 

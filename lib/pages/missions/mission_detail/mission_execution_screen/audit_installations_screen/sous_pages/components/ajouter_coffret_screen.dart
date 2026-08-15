@@ -1225,6 +1225,7 @@ class _EtapeAlimentations extends StatefulWidget {
   final Function(int index)? onDeleteSortie;
 
   const _EtapeAlimentations({
+    super.key,
     required this.selectedType,
     required this.alimentations,
     required this.protectionTete,
@@ -1239,6 +1240,37 @@ class _EtapeAlimentations extends StatefulWidget {
 }
 
 class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
+  int _currentSubSlide = 0;
+
+  int get currentSubSlide => _currentSubSlide;
+
+  bool nextSubSlide() {
+    if (widget.selectedType == 'INVERSEUR' && _currentSubSlide == 0) {
+      setState(() {
+        _currentSubSlide = 1;
+      });
+      return true;
+    }
+    return false;
+  }
+
+  bool previousSubSlide() {
+    if (widget.selectedType == 'INVERSEUR' && _currentSubSlide == 1) {
+      setState(() {
+        _currentSubSlide = 0;
+      });
+      return true;
+    }
+    return false;
+  }
+
+  @override
+  void didUpdateWidget(covariant _EtapeAlimentations oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedType != oldWidget.selectedType) {
+      _currentSubSlide = 0;
+    }
+  }
 
   static const List<String> _typeProtectionOptions = [
     'Disjoncteur',
@@ -1344,69 +1376,59 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
   @override
   Widget build(BuildContext context) {
     return ListView(
+      key: ValueKey('alim_subslide_${_currentSubSlide}_${widget.selectedType}'),
       padding: EdgeInsets.all(context.spacingL),
       children: [
         _buildModernHeader(context, 'Alimentations', 3, 4),
         SizedBox(height: context.spacingXL),
         
-        Container(
-          padding: EdgeInsets.all(context.spacingM),
-          margin: EdgeInsets.only(bottom: context.spacingL),
-          decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(context.spacingS), border: Border.all(color: Colors.blue.shade200)),
-          child: Row(
-            children: [
-              Icon(Icons.info_outline, color: Colors.blue, size: context.iconSizeS),
-              SizedBox(width: context.spacingS),
-              Expanded(child: Text('Les champs d\'alimentation sont optionnels. Remplissez uniquement les informations disponibles.', style: TextStyle(fontSize: context.fontSizeXS, color: Colors.blue.shade700))),
-            ],
-          ),
-        ),
-        
         if (widget.selectedType == 'INVERSEUR') ...[
-          if (widget.alimentations.length >= 2) ...[
-            _buildAlimentationCard(context, 'ALIMENTATION 1', widget.alimentations[0], (field, value) => _updateAlimentation(widget.alimentations[0], field, value), index: 0),
-            SizedBox(height: context.spacingM),
-            _buildAlimentationCard(context, 'ALIMENTATION 2', widget.alimentations[1], (field, value) => _updateAlimentation(widget.alimentations[1], field, value), index: 1),
-            SizedBox(height: context.spacingM),
-          ],
-          ...() {
-            final cards = <Widget>[];
-            final sortiesCount = widget.alimentations.length - 2;
-            for (int i = 2; i < widget.alimentations.length; i++) {
-              final sortieNumber = i - 1;
-              final cardTitle = sortiesCount > 1 ? 'SORTIE INVERSEUR $sortieNumber' : 'SORTIE INVERSEUR';
-              final aliment = widget.alimentations[i];
-              cards.add(
-                _buildAlimentationCard(
-                  context,
-                  cardTitle,
-                  aliment,
-                  (field, value) => _updateAlimentation(aliment, field, value),
-                  index: i,
-                  canDelete: i >= 3,
-                  onDelete: () => widget.onDeleteSortie?.call(i),
+          if (_currentSubSlide == 0) ...[
+            if (widget.alimentations.length >= 2) ...[
+              _buildAlimentationCard(context, 'ALIMENTATION 1', widget.alimentations[0], (field, value) => _updateAlimentation(widget.alimentations[0], field, value), index: 0),
+              SizedBox(height: context.spacingM),
+              _buildAlimentationCard(context, 'ALIMENTATION 2', widget.alimentations[1], (field, value) => _updateAlimentation(widget.alimentations[1], field, value), index: 1),
+            ],
+          ] else ...[
+            ...() {
+              final cards = <Widget>[];
+              final sortiesCount = widget.alimentations.length - 2;
+              for (int i = 2; i < widget.alimentations.length; i++) {
+                final sortieNumber = i - 1;
+                final cardTitle = sortiesCount > 1 ? 'SORTIE INVERSEUR $sortieNumber' : 'SORTIE INVERSEUR';
+                final aliment = widget.alimentations[i];
+                cards.add(
+                  _buildAlimentationCard(
+                    context,
+                    cardTitle,
+                    aliment,
+                    (field, value) => _updateAlimentation(aliment, field, value),
+                    index: i,
+                    canDelete: i >= 3,
+                    onDelete: () => widget.onDeleteSortie?.call(i),
+                  ),
+                );
+                cards.add(SizedBox(height: context.spacingM));
+              }
+              return cards;
+            }(),
+            SizedBox(height: context.spacingS),
+            Center(
+              child: OutlinedButton.icon(
+                onPressed: widget.onAddSortie,
+                icon: const Icon(Icons.add_circle_outline, color: Colors.orange),
+                label: const Text(
+                  '+ Ajouter une sortie',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
                 ),
-              );
-              cards.add(SizedBox(height: context.spacingM));
-            }
-            return cards;
-          }(),
-          SizedBox(height: context.spacingS),
-          Center(
-            child: OutlinedButton.icon(
-              onPressed: widget.onAddSortie,
-              icon: const Icon(Icons.add_circle_outline, color: Colors.orange),
-              label: const Text(
-                '+ Ajouter une sortie',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
-              ),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                side: BorderSide(color: Colors.orange.shade400, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  side: BorderSide(color: Colors.orange.shade400, width: 1.5),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
               ),
             ),
-          ),
+          ],
         ] else ...[
           if (widget.alimentations.isNotEmpty)
             _buildAlimentationCard(context, 'ORIGINE DE LA SOURCE', widget.alimentations[0], (field, value) => _updateAlimentation(widget.alimentations[0], field, value), index: 0),
@@ -1419,14 +1441,28 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
   }
 
   Widget _buildModernHeader(BuildContext context, String title, int currentStep, int totalSteps) {
+    final String stepSubtitle = widget.selectedType == 'INVERSEUR'
+        ? (_currentSubSlide == 0 ? 'Alimentations · 1/2' : 'Sorties inverseur · 2/2')
+        : 'Étape $currentStep sur $totalSteps';
+
+    final String displayTitle = widget.selectedType == 'INVERSEUR'
+        ? 'Alimentations & Sorties Inverseur'
+        : title;
+
+    final double progressValue = widget.selectedType == 'INVERSEUR'
+        ? ((currentStep - 1) + (_currentSubSlide + 1) / 2.0) / totalSteps
+        : currentStep / totalSteps;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Container(
               width: context.iconSizeXL * 1.2,
               height: context.iconSizeXL * 1.2,
+              alignment: Alignment.center,
               decoration: BoxDecoration(
                 gradient: LinearGradient(colors: [Colors.orange.shade400, Colors.orange.shade300]),
                 borderRadius: BorderRadius.circular(context.spacingS),
@@ -1438,10 +1474,11 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text(title, style: TextStyle(fontSize: context.fontSizeXXL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
+                  Text(displayTitle, style: TextStyle(fontSize: context.fontSizeXXL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
                   SizedBox(height: context.spacingXS),
-                  Text('Étape $currentStep sur $totalSteps', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+                  Text(stepSubtitle, style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
                 ],
               ),
             ),
@@ -1449,9 +1486,9 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
         ),
         SizedBox(height: context.spacingM),
         LinearProgressIndicator(
-          value: currentStep / totalSteps,
+          value: progressValue,
           backgroundColor: Colors.grey.shade200,
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.orange),
+          valueColor: const AlwaysStoppedAnimation<Color>(Colors.orange),
           minHeight: 4,
           borderRadius: BorderRadius.circular(2),
         ),
@@ -2204,6 +2241,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   int _currentStep = 0;
   
   GlobalKey<_EtapePointsVerificationState>? _etapePointsKey;
+  GlobalKey<_EtapeAlimentationsState>? _etapeAlimentationsKey;
 
   bool _isSaving = false;
   bool _hasUnsavedChanges = false;
@@ -2220,6 +2258,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   void initState() {
     super.initState();
     _etapePointsKey = GlobalKey<_EtapePointsVerificationState>();
+    _etapeAlimentationsKey = GlobalKey<_EtapeAlimentationsState>();
     _autoFillRepere();
     
     if (widget.qrCode != null) {
@@ -3023,7 +3062,12 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     } else if (_currentStep == 1) {
       _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     } else if (_currentStep == 2) {
-      _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      final alimState = _etapeAlimentationsKey?.currentState;
+      if (alimState != null && alimState.nextSubSlide()) {
+        setState(() {});
+      } else {
+        _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      }
     } else if (_currentStep == 3) {
       final pointsState = _etapePointsKey?.currentState;
       if (pointsState != null) {
@@ -3034,11 +3078,20 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   }
 
   void _handlePrevious() {
-    if (_currentStep == 3) {
+    if (_currentStep == 2) {
+      final alimState = _etapeAlimentationsKey?.currentState;
+      if (alimState != null && alimState.previousSubSlide()) {
+        setState(() {});
+      } else {
+        _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      }
+    } else if (_currentStep == 3) {
       final pointsState = _etapePointsKey?.currentState;
       if (pointsState != null && pointsState._currentSlide > 0) pointsState.previousSlide();
       else _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
-    } else if (_currentStep > 0) _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    } else if (_currentStep > 0) {
+      _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    }
   }
 
   String _getNextButtonText() {
@@ -3261,6 +3314,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                     ),
                   if (_selectedType != null)
                     _EtapeAlimentations(
+                      key: _etapeAlimentationsKey,
                       selectedType: _selectedType,
                       alimentations: _alimentations,
                       protectionTete: _protectionTete,

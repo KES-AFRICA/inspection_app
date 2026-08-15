@@ -1046,13 +1046,7 @@ void _ouvrirClassementZone(ClassementZone classement) async {
     final inaccessible = !local.accessible;
     final aReverifier = local.aReverifier;
 
-    final draftKey = HiveService.getStableLocalDraftId(
-      missionId: widget.mission.id,
-      isMoyenneTension: true,
-      localIndex: localIndex,
-      nomLocal: local.nom,
-    );
-    final hasDraft = HiveService.hasActiveLocalDraft(draftKey);
+
 
     final Color accentColor = inaccessible
         ? Colors.red
@@ -1117,7 +1111,6 @@ void _ouvrirClassementZone(ClassementZone classement) async {
                   ],
                 )),
                 Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                  if (hasDraft) _buildBadge('Modifications non enregistrées', Colors.amber.shade900),
                   if (local.isRiskZone == true) _buildRiskBadge(),
                   if (aReverifier) _buildBadge('À revérifier', Colors.orange),
                   if (inaccessible) _buildBadge('Inaccessible', Colors.red),

@@ -1368,15 +1368,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     final inaccessible = !(local.accessible ?? true);
     final aReverifier = local.aReverifier ?? false;
 
-    final draftKey = HiveService.getStableLocalDraftId(
-      missionId: widget.mission.id,
-      isMoyenneTension: isMoyenneTension,
-      zoneIndex: widget.zoneIndex,
-      isInZone: true,
-      localIndex: index,
-      nomLocal: local.nom,
-    );
-    final hasDraft = HiveService.hasActiveLocalDraft(draftKey);
+
 
     // ── Icône et couleur selon l'état ──
     final Color cardColor = inaccessible ? Colors.red.shade50 : Colors.white;
@@ -1463,7 +1455,6 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      if (hasDraft) _buildBadge('Modifications non enregistrées', Colors.amber.shade900),
                       if ((local is MoyenneTensionLocal && local.isRiskZone == true) ||
                           (local is BasseTensionLocal && local.isRiskZone == true))
                         _buildRiskBadge(),
