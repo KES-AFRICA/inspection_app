@@ -44,7 +44,7 @@ class ClassementEmplacement extends HiveObject {
   @HiveField(13)
   String typeEmplacement; // 'zone' ou 'local'
   
-  @HiveField(14)
+  @HiveField(14, defaultValue: false)
   bool heriteDeZone; // true si le local hérite du classement de sa zone
   
   @HiveField(15)

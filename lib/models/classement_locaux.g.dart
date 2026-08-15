@@ -31,7 +31,7 @@ class ClassementEmplacementAdapter extends TypeAdapter<ClassementEmplacement> {
       updatedAt: fields[11] as DateTime,
       typeLocal: fields[12] as String?,
       typeEmplacement: fields[13] as String,
-      heriteDeZone: fields[14] as bool,
+      heriteDeZone: fields[14] == null ? false : fields[14] as bool,
       zoneParenteId: fields[15] as String?,
     );
   }

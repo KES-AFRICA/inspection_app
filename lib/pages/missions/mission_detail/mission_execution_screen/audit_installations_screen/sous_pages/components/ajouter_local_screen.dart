@@ -2323,6 +2323,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   int? _editingIndex;
   
   // Contrôleurs pour le formulaire cellule (réutilisés depuis l'existant)
+  final _celluleNomController = TextEditingController();
   final _celluleFonctionController = TextEditingController();
   final _celluleTypeController = TextEditingController();
   final _celluleMarqueController = TextEditingController();
@@ -2337,6 +2338,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   String? _celluleNatureReseau;
   String? _cellulePresenceIacm;
   String? _celluleTensionService;
+  String? _cellulePhoto;
   List<ElementControle> _celluleObservations = [];
   List<String> _cellulePhotos = [];
   String? _celluleSyncId;
@@ -2367,6 +2369,60 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   final Map<ElementControle, TextEditingController> _obsControllersCellule = {};
   final Map<ElementControle, TextEditingController> _obsControllersTransfo = {};
 
+  // Gestionnaire d'images et utilitaires
+  final ImagePicker _picker = ImagePicker();
+
+  void _showError(String message) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _showFullScreenPhoto(List<String> photos, int index) {
+    if (photos.isEmpty || index < 0 || index >= photos.length) return;
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Stack(
+          children: [
+            Container(
+              decoration: BoxDecoration(borderRadius: BorderRadius.circular(16)),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: SafeFileImage(path: photos[index], fit: BoxFit.contain),
+              ),
+            ),
+            Positioned(
+              top: 10,
+              right: 10,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<String> _savePhotoToAppDirectory(File photoFile, String subDir) async {
+    final appDir = await getApplicationDocumentsDirectory();
+    final mediaDir = Directory('${appDir.path}/mission_photos/$subDir');
+    if (!await mediaDir.exists()) {
+      await mediaDir.create(recursive: true);
+    }
+    final fileName = '${DateTime.now().millisecondsSinceEpoch}_${photoFile.path.split('/').last}';
+    final savedFile = await photoFile.copy('${mediaDir.path}/$fileName');
+    return savedFile.path;
+  }
+
   // Navigation slides pour le formulaire
   final PageController _slideController = PageController();
   int _currentSlide = 0;
@@ -2393,6 +2449,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   }
   
   void _resetCelluleForm() {
+    _celluleNomController.clear();
     _celluleFonctionController.clear();
     _celluleTypeController.clear();
     _celluleMarqueController.clear();
@@ -2406,6 +2463,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _celluleNatureReseau = null;
     _cellulePresenceIacm = null;
     _celluleTensionService = null;
+    _cellulePhoto = null;
     _celluleObservations = [];
     _cellulePhotos = [];
     _celluleSyncId = null;
@@ -2442,6 +2500,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   }
   
   void _chargerCellulePourEdition(Cellule cellule) {
+    _celluleNomController.text = cellule.nom ?? '';
     _celluleFonctionController.text = cellule.fonction;
     _celluleTypeController.text = cellule.type;
     _celluleMarqueController.text = cellule.marqueModeleAnnee;
@@ -2457,6 +2516,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _celluleNatureReseau = cellule.natureReseau;
     _cellulePresenceIacm = cellule.presenceIacm;
     _celluleTensionService = cellule.tensionService;
+    _cellulePhoto = cellule.photo;
     _celluleObservations = List.from(cellule.observations ?? []);
     _cellulePhotos = List.from(cellule.photos);
     _celluleSyncId = cellule.syncId;
@@ -2617,6 +2677,8 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       observations: _celluleObservations,
       photos: _cellulePhotos,
       syncId: newSyncId,
+      nom: _celluleNomController.text.trim().isNotEmpty ? _celluleNomController.text.trim() : null,
+      photo: _cellulePhoto,
     );
     
     final nouvellesCellules = List<Cellule>.from(widget.cellules);
@@ -3085,7 +3147,9 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
                 SizedBox(width: isSmallScreen ? 10 : 12),
                 Expanded(
                   child: Text(
-                    cellule.type.isNotEmpty ? cellule.type : 'Cellule',
+                    (cellule.nom != null && cellule.nom!.trim().isNotEmpty)
+                        ? (cellule.type.isNotEmpty ? '${cellule.nom!.trim()} (${cellule.type})' : cellule.nom!.trim())
+                        : (cellule.type.isNotEmpty ? cellule.type : 'Cellule'),
                     style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.w600, color: Colors.blue.shade800),
                     overflow: TextOverflow.ellipsis,
                   ),
@@ -3109,6 +3173,33 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
             padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
             child: Column(
               children: [
+                if (cellule.nom != null && cellule.nom!.trim().isNotEmpty)
+                  _buildInfoRow('Nom de la cellule', cellule.nom!.trim(), isSmallScreen),
+                if (cellule.photo != null && cellule.photo!.trim().isNotEmpty) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: Row(
+                      children: [
+                        Text(
+                          'Photo :',
+                          style: TextStyle(fontSize: isSmallScreen ? 11 : 12, color: Colors.grey.shade600),
+                        ),
+                        const SizedBox(width: 8),
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(6),
+                          child: SizedBox(
+                            width: 50,
+                            height: 50,
+                            child: SafeFileImage(
+                              path: cellule.photo!.trim(),
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
                 if (cellule.fonction.isNotEmpty)
                   _buildInfoRow('Fonction', cellule.fonction, isSmallScreen),
                 if (cellule.gamme != null && cellule.gamme!.isNotEmpty)
@@ -3366,9 +3457,13 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           // Section 1 : Identification
           _buildFormSectionHeader('IDENTIFICATION', isSmallScreen),
           SizedBox(height: isSmallScreen ? 8 : 10),
+          _buildTextField(_celluleNomController, 'Nom de la cellule (ex: Cellule Arrivée 1)', isSmallScreen, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
           _buildTextField(_celluleFonctionController, 'Fonction de la cellule', isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
           _buildTextField(_celluleMarqueController, 'Marque / modèle / année', isSmallScreen, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildCellulePhotoPicker(isSmallScreen),
           
           SizedBox(height: isSmallScreen ? 20 : 26),
           
@@ -3592,6 +3687,165 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
         ],
       ),
     );
+  }
+
+  Widget _buildCellulePhotoPicker(bool isSmallScreen) {
+    final hasPhoto = _cellulePhoto != null && _cellulePhoto!.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Photo de la cellule',
+              style: TextStyle(
+                fontSize: isSmallScreen ? 13 : 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade800,
+              ),
+            ),
+            Text(
+              '(Optionnel)',
+              style: TextStyle(
+                fontSize: isSmallScreen ? 11 : 12,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (hasPhoto)
+          Stack(
+            children: [
+              GestureDetector(
+                onTap: () => _showFullScreenPhoto([_cellulePhoto!], 0),
+                child: Container(
+                  height: isSmallScreen ? 160 : 180,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: SafeFileImage(
+                      path: _cellulePhoto!,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Row(
+                  children: [
+                    IconButton.filledTonal(
+                      icon: const Icon(Icons.edit, size: 18),
+                      onPressed: _showCellulePhotoOptions,
+                      tooltip: 'Remplacer la photo',
+                    ),
+                    const SizedBox(width: 6),
+                    IconButton.filledTonal(
+                      icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                      onPressed: () => setState(() => _cellulePhoto = null),
+                      tooltip: 'Supprimer la photo',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          )
+        else
+          InkWell(
+            onTap: _showCellulePhotoOptions,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              height: isSmallScreen ? 100 : 110,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_a_photo_outlined, size: isSmallScreen ? 26 : 30, color: AppTheme.primaryBlue),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Ajouter une photo de la cellule',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 12 : 13,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.primaryBlue,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _showCellulePhotoOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppTheme.primaryBlue),
+              title: const Text('Prendre une photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _prendrePhotoCellule();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppTheme.primaryBlue),
+              title: const Text('Choisir dans la galerie'),
+              onTap: () {
+                Navigator.pop(context);
+                _choisirPhotoCelluleDepuisGalerie();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _prendrePhotoCellule() async {
+    try {
+      final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
+      if (photo != null) {
+        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'cellules');
+        setState(() => _cellulePhoto = savedPath);
+      }
+    } catch (e) {
+      _showError('Erreur lors de la prise de photo: $e');
+    }
+  }
+
+  Future<void> _choisirPhotoCelluleDepuisGalerie() async {
+    try {
+      final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
+      if (photo != null) {
+        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'cellules');
+        setState(() => _cellulePhoto = savedPath);
+      }
+    } catch (e) {
+      _showError('Erreur lors de la sélection: $e');
+    }
   }
 
   Widget _buildFormSectionHeader(String title, bool isSmallScreen) {
@@ -4369,6 +4623,7 @@ Widget _buildPrioriteButton({
   @override
   void dispose() {
     _slideController.dispose();
+    _celluleNomController.dispose();
     _celluleFonctionController.dispose();
     _celluleTypeController.dispose();
     _celluleMarqueController.dispose();

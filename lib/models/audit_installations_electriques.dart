@@ -429,6 +429,12 @@ class Cellule {
   @HiveField(16)
   String? tensionService;
 
+  @HiveField(17)
+  String? nom;
+
+  @HiveField(18)
+  String? photo;
+
   Cellule({
     required this.fonction,
     required this.type,
@@ -447,12 +453,58 @@ class Cellule {
     this.presenceIacm,
     String? syncId,
     this.tensionService,
+    this.nom,
+    this.photo,
   })  : elementsVerifies = elementsVerifies ?? [],
         photos = photos ?? [],
         observations = observations ?? [],
         syncId = (syncId != null && syncId.isNotEmpty)
             ? syncId
             : 'cellule_${DateTime.now().microsecondsSinceEpoch}';
+
+  Cellule copyWith({
+    String? fonction,
+    String? type,
+    String? marqueModeleAnnee,
+    String? tensionAssignee,
+    String? pouvoirCoupure,
+    String? numerotation,
+    String? parafoudres,
+    List<ElementControle>? elementsVerifies,
+    List<String>? photos,
+    String? gamme,
+    String? calibreDisjoncteur,
+    String? sectionCables,
+    String? natureReseau,
+    List<ElementControle>? observations,
+    String? presenceIacm,
+    String? syncId,
+    String? tensionService,
+    String? nom,
+    String? photo,
+  }) {
+    return Cellule(
+      fonction: fonction ?? this.fonction,
+      type: type ?? this.type,
+      marqueModeleAnnee: marqueModeleAnnee ?? this.marqueModeleAnnee,
+      tensionAssignee: tensionAssignee ?? this.tensionAssignee,
+      pouvoirCoupure: pouvoirCoupure ?? this.pouvoirCoupure,
+      numerotation: numerotation ?? this.numerotation,
+      parafoudres: parafoudres ?? this.parafoudres,
+      elementsVerifies: elementsVerifies ?? this.elementsVerifies,
+      photos: photos ?? this.photos,
+      gamme: gamme ?? this.gamme,
+      calibreDisjoncteur: calibreDisjoncteur ?? this.calibreDisjoncteur,
+      sectionCables: sectionCables ?? this.sectionCables,
+      natureReseau: natureReseau ?? this.natureReseau,
+      observations: observations ?? this.observations,
+      presenceIacm: presenceIacm ?? this.presenceIacm,
+      syncId: syncId ?? this.syncId,
+      tensionService: tensionService ?? this.tensionService,
+      nom: nom ?? this.nom,
+      photo: photo ?? this.photo,
+    );
+  }
 }
 
 @HiveType(typeId: 10)
@@ -562,25 +614,25 @@ class CoffretArmoire {
   String? repere;
 
   // INFORMATIONS GÉNÉRALES (Oui/Non)
-  @HiveField(5)
+  @HiveField(5, defaultValue: false)
   bool zoneAtex;
 
-  @HiveField(6)
+  @HiveField(6, defaultValue: '')
   String domaineTension;
 
-  @HiveField(7)
+  @HiveField(7, defaultValue: false)
   bool identificationArmoire;
 
-  @HiveField(8)
+  @HiveField(8, defaultValue: false)
   bool signalisationDanger;
 
-  @HiveField(9)
+  @HiveField(9, defaultValue: false)
   bool presenceSchema;
 
-  @HiveField(10)
+  @HiveField(10, defaultValue: false)
   bool presenceParafoudre;
 
-  @HiveField(11)
+  @HiveField(11, defaultValue: false)
   bool verificationThermographie;
 
   // ALIMENTATIONS (dépend du type)

@@ -80,7 +80,7 @@ class MoyenneTensionLocalAdapter extends TypeAdapter<MoyenneTensionLocal> {
       transformateurs: (fields[31] as List?)?.cast<TransformateurMTBT>(),
       accessible: fields[32] as bool?,
       aReverifier: fields[33] as bool?,
-      isRiskZone: (fields[34] as bool?) ?? false,
+      isRiskZone: fields[34] as bool?,
     );
   }
 
@@ -147,7 +147,7 @@ class MoyenneTensionZoneAdapter extends TypeAdapter<MoyenneTensionZone> {
       photos: (fields[4] as List?)?.cast<String>(),
       locaux: (fields[5] as List?)?.cast<MoyenneTensionLocal>(),
       classementZoneId: fields[6] as String?,
-      isRiskZone: (fields[7] as bool?) ?? false,
+      isRiskZone: fields[7] as bool?,
     );
   }
 
@@ -202,7 +202,7 @@ class BasseTensionZoneAdapter extends TypeAdapter<BasseTensionZone> {
       observationsLibres: (fields[4] as List?)?.cast<ObservationLibre>(),
       photos: (fields[5] as List?)?.cast<String>(),
       classementZoneId: fields[6] as String?,
-      isRiskZone: (fields[7] as bool?) ?? false,
+      isRiskZone: fields[7] as bool?,
     );
   }
 
@@ -261,7 +261,7 @@ class BasseTensionLocalAdapter extends TypeAdapter<BasseTensionLocal> {
       aReverifier: fields[8] as bool?,
       cellules: (fields[9] as List?)?.cast<Cellule>(),
       transformateurs: (fields[10] as List?)?.cast<TransformateurMTBT>(),
-      isRiskZone: (fields[11] as bool?) ?? false,
+      isRiskZone: fields[11] as bool?,
     );
   }
 
@@ -392,13 +392,15 @@ class CelluleAdapter extends TypeAdapter<Cellule> {
       presenceIacm: fields[14] as String?,
       syncId: fields[15] as String?,
       tensionService: fields[16] as String?,
+      nom: fields[17] as String?,
+      photo: fields[18] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Cellule obj) {
     writer
-      ..writeByte(17)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.fonction)
       ..writeByte(1)
@@ -432,7 +434,11 @@ class CelluleAdapter extends TypeAdapter<Cellule> {
       ..writeByte(15)
       ..write(obj.syncId)
       ..writeByte(16)
-      ..write(obj.tensionService);
+      ..write(obj.tensionService)
+      ..writeByte(17)
+      ..write(obj.nom)
+      ..writeByte(18)
+      ..write(obj.photo);
   }
 
   @override
@@ -550,13 +556,14 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       type: fields[2] as String,
       description: fields[3] as String?,
       repere: fields[4] as String?,
-      zoneAtex: fields[5] as bool,
-      domaineTension: fields[6] as String,
-      identificationArmoire: fields[7] as bool,
-      signalisationDanger: fields[8] as bool,
-      presenceSchema: fields[9] as bool,
-      presenceParafoudre: fields[10] as bool,
-      verificationThermographie: fields[11] as bool,
+      zoneAtex: fields[5] == null ? false : fields[5] as bool,
+      domaineTension: fields[6] == null ? '' : fields[6] as String,
+      identificationArmoire: fields[7] == null ? false : fields[7] as bool,
+      signalisationDanger: fields[8] == null ? false : fields[8] as bool,
+      presenceSchema: fields[9] == null ? false : fields[9] as bool,
+      presenceParafoudre: fields[10] == null ? false : fields[10] as bool,
+      verificationThermographie:
+          fields[11] == null ? false : fields[11] as bool,
       alimentations: (fields[12] as List?)?.cast<Alimentation>(),
       protectionTete: fields[13] as Alimentation?,
       pointsVerification: (fields[14] as List?)?.cast<PointVerification>(),
@@ -650,7 +657,7 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
     };
     return Alimentation(
       typeProtection: fields[0] as String,
-      courbe: (fields[6] as String?) ?? '',
+      courbe: fields[6] as String?,
       ddr: fields[7] as String?,
       pdcKA: fields[1] as String,
       calibre: fields[2] as String,

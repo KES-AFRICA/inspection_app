@@ -57,11 +57,12 @@ class JSAPlanUrgenceAdapter extends TypeAdapter<JSAPlanUrgence> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return JSAPlanUrgence(
-      voiesIssuesIdentifiees: fields[0] as bool,
-      zonesRassemblementIdentifiees: fields[1] as bool,
-      consignesSecuriteInternes: fields[2] as bool,
-      personneContactClient: fields[3] as String,
-      personneContactKES: fields[4] as String,
+      voiesIssuesIdentifiees: fields[0] == null ? false : fields[0] as bool,
+      zonesRassemblementIdentifiees:
+          fields[1] == null ? false : fields[1] as bool,
+      consignesSecuriteInternes: fields[2] == null ? false : fields[2] as bool,
+      personneContactClient: fields[3] == null ? '' : fields[3] as String,
+      personneContactKES: fields[4] == null ? '' : fields[4] as String,
     );
   }
 

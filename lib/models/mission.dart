@@ -44,40 +44,40 @@ class Mission extends HiveObject {
   @HiveField(12)
   int? dureeMissionJours;
 
-  @HiveField(13)
+  @HiveField(13, defaultValue: false)
   bool docCahierPrescriptions;
 
-  @HiveField(14)
+  @HiveField(14, defaultValue: false)
   bool docNotesCalculs;
 
-  @HiveField(15)
+  @HiveField(15, defaultValue: false)
   bool docSchemasUnifilaires;
 
-  @HiveField(16)
+  @HiveField(16, defaultValue: false)
   bool docPlanMasse;
 
-  @HiveField(17)
+  @HiveField(17, defaultValue: false)
   bool docPlansArchitecturaux;
 
-  @HiveField(18)
+  @HiveField(18, defaultValue: false)
   bool docDeclarationsCe;
 
-  @HiveField(19)
+  @HiveField(19, defaultValue: false)
   bool docListeInstallations;
 
-  @HiveField(20)
+  @HiveField(20, defaultValue: false)
   bool docPlanLocauxRisques;
 
-  @HiveField(21)
+  @HiveField(21, defaultValue: false)
   bool docRapportAnalyseFoudre;
 
-  @HiveField(22)
+  @HiveField(22, defaultValue: false)
   bool docRapportEtudeFoudre;
 
-  @HiveField(23)
+  @HiveField(23, defaultValue: false)
   bool docRegistreSecurite;
 
-  @HiveField(24)
+  @HiveField(24, defaultValue: false)
   bool docRapportDerniereVerif;
 
   @HiveField(25)
@@ -86,7 +86,7 @@ class Mission extends HiveObject {
   @HiveField(26)
   DateTime updatedAt;
 
-  @HiveField(27)
+  @HiveField(27, defaultValue: 'brouillon')
   String status;
 
   @HiveField(28)
@@ -95,7 +95,7 @@ class Mission extends HiveObject {
   @HiveField(29)
   String? auditInstallationsElectriquesId;
 
-  @HiveField(30)
+  @HiveField(30, defaultValue: false)
   bool docAutre;
 
   @HiveField(31)
@@ -140,7 +140,7 @@ class Mission extends HiveObject {
   @HiveField(44)
   String? classementReglementaireCategorie;
 
-  @HiveField(45)
+  @HiveField(45, defaultValue: false)
   bool afficherTableauFoudre;
 
   Mission({

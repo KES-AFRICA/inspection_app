@@ -56,6 +56,8 @@ class AuditInstallationsMapper {
       presenceIacm: model.presenceIacm,
       syncId: model.syncId,
       observations: model.observations?.map(toElementEntity).toList(),
+      nom: model.nom,
+      photo: model.photo,
     );
   }
 
@@ -77,6 +79,8 @@ class AuditInstallationsMapper {
       presenceIacm: entity.presenceIacm,
       syncId: entity.syncId,
       observations: entity.observations?.map(toElementModel).toList(),
+      nom: entity.nom,
+      photo: entity.photo,
     );
   }
 

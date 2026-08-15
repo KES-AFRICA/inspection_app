@@ -2532,13 +2532,30 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
               SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  cellule.type.isNotEmpty ? cellule.type : 'Cellule',
+                  (cellule.nom != null && cellule.nom!.trim().isNotEmpty)
+                      ? (cellule.type.isNotEmpty ? '${cellule.nom!.trim()} (${cellule.type})' : cellule.nom!.trim())
+                      : (cellule.type.isNotEmpty ? cellule.type : 'Cellule'),
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                 ),
               ),
             ],
           ),
           SizedBox(height: 12),
+          if (cellule.nom != null && cellule.nom!.trim().isNotEmpty)
+            _buildInfoRow('Nom de la cellule', cellule.nom!.trim()),
+          if (cellule.photo != null && cellule.photo!.trim().isNotEmpty) ...[
+            SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: SafeFileImage(
+                path: cellule.photo!,
+                height: 120,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+            SizedBox(height: 8),
+          ],
           if (cellule.fonction.isNotEmpty)
             _buildInfoRow('Fonction', cellule.fonction),
           if (cellule.marqueModeleAnnee.isNotEmpty)

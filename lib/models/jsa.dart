@@ -28,19 +28,19 @@ class JSAInspecteur {
 // ───────────────────────────────────────────────────
 @HiveType(typeId: 41)
 class JSAPlanUrgence {
-  @HiveField(0)
+  @HiveField(0, defaultValue: false)
   bool voiesIssuesIdentifiees;
 
-  @HiveField(1)
+  @HiveField(1, defaultValue: false)
   bool zonesRassemblementIdentifiees;
 
-  @HiveField(2)
+  @HiveField(2, defaultValue: false)
   bool consignesSecuriteInternes;
 
-  @HiveField(3)
+  @HiveField(3, defaultValue: '')
   String personneContactClient;
 
-  @HiveField(4)
+  @HiveField(4, defaultValue: '')
   String personneContactKES;
 
   JSAPlanUrgence({

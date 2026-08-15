@@ -19,7 +19,7 @@ class LuminaireQuestionAnswerAdapter
     };
     return LuminaireQuestionAnswer(
       questionIndex: fields[0] as int,
-      isConform: fields[1] as bool,
+      isConform: fields[1] == null ? true : fields[1] as bool,
       commentaire: fields[2] as String?,
       photoPaths: (fields[3] as List?)?.cast<String>(),
     );

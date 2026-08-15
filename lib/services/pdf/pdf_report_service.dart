@@ -5092,7 +5092,8 @@ class PdfReportService {
   static List<pw.Widget> _buildLocalMT(
     MoyenneTensionLocal local,
     Map<String, int> trackedPages, {
-    Map<CoffretArmoire, pw.MemoryImage?>? photoCache,
+    Map<dynamic, pw.MemoryImage?>? photoCache,
+    bool saveFilesToDisk = true,
   }) {
     final widgets = <pw.Widget>[
       PageTracker(
@@ -5186,7 +5187,11 @@ class PdfReportService {
 
     for (int i = 0; i < local.cellules.length; i++) {
       widgets.add(pw.NewPage());
-      widgets.addAll(_buildCelluleSection(local.cellules[i]));
+      widgets.addAll(_buildCelluleSection(
+        local.cellules[i],
+        photoCache: photoCache,
+        saveFilesToDisk: saveFilesToDisk,
+      ));
     }
     for (int i = 0; i < local.transformateurs.length; i++) {
       widgets.add(pw.NewPage());
@@ -5204,7 +5209,7 @@ class PdfReportService {
   static List<pw.Widget> _buildLocalBT(
     BasseTensionLocal local,
     Map<String, int> trackedPages, {
-    Map<CoffretArmoire, pw.MemoryImage?>? photoCache,
+    Map<dynamic, pw.MemoryImage?>? photoCache,
   }) {
     final widgets = <pw.Widget>[
       PageTracker(
@@ -5542,9 +5547,28 @@ class PdfReportService {
     ];
   }
 
-  static List<pw.Widget> _buildCelluleSection(Cellule cellule) {
+  static List<pw.Widget> _buildCelluleSection(
+    Cellule cellule, {
+    Map<dynamic, pw.MemoryImage?>? photoCache,
+    bool saveFilesToDisk = true,
+  }) {
     DispositionsConstructivesRegistry.ensureCompleteCelluleChecklist(cellule.elementsVerifies);
     String safe(String v) => v.trim().isEmpty ? 'Non renseigné' : v;
+
+    final hasNom = cellule.nom != null && cellule.nom!.trim().isNotEmpty;
+    final rawPhotoPath = (cellule.photo != null && cellule.photo!.trim().isNotEmpty)
+        ? cellule.photo!.trim()
+        : (cellule.photos.isNotEmpty ? cellule.photos.first.trim() : null);
+    final hasPhoto = rawPhotoPath != null && rawPhotoPath.isNotEmpty;
+
+    pw.MemoryImage? photoImg;
+    if (hasPhoto) {
+      if (photoCache != null && photoCache.containsKey(cellule)) {
+        photoImg = photoCache[cellule];
+      } else if (!saveFilesToDisk) {
+        photoImg = _placeholder1x1;
+      }
+    }
 
     pw.TableRow tableDataRowInfo(String label, String value, {required bool alt}) {
       return pw.TableRow(
@@ -5590,7 +5614,7 @@ class PdfReportService {
           decoration: pw.BoxDecoration(color: lightBlue),
           children: [
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
               alignment: pw.Alignment.center,
               child: pw.Text('CELLULE MOYENNE TENSION',
                   style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
@@ -5598,22 +5622,46 @@ class PdfReportService {
             ),
           ],
         ),
+        if (hasNom)
+          pw.TableRow(
+            decoration: pw.BoxDecoration(color: lightBlue),
+            children: [
+              pw.Container(
+                padding: const pw.EdgeInsets.only(left: 6, right: 6, bottom: 4),
+                alignment: pw.Alignment.center,
+                child: pw.Text(cellule.nom!.trim(),
+                    style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+                    textAlign: pw.TextAlign.center),
+              ),
+            ],
+          ),
       ],
     );
 
     final infoTable = pw.Table(
       defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
-      border: pw.TableBorder(
-        left: pw.BorderSide(color: borderColor, width: 0.4),
-        right: pw.BorderSide(color: borderColor, width: 0.4),
-        bottom: pw.BorderSide(color: borderColor, width: 0.4),
-        verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
-        horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
-      ),
-      columnWidths: const {
-        0: pw.FlexColumnWidth(5.0),
-        1: pw.FlexColumnWidth(4.0),
-      },
+      border: photoImg != null
+          ? pw.TableBorder(
+              bottom: pw.BorderSide(color: borderColor, width: 0.4),
+              verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+              horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+            )
+          : pw.TableBorder(
+              left: pw.BorderSide(color: borderColor, width: 0.4),
+              right: pw.BorderSide(color: borderColor, width: 0.4),
+              bottom: pw.BorderSide(color: borderColor, width: 0.4),
+              verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+              horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+            ),
+      columnWidths: photoImg != null
+          ? const {
+              0: pw.FlexColumnWidth(3.8),
+              1: pw.FlexColumnWidth(2.8),
+            }
+          : const {
+              0: pw.FlexColumnWidth(5.0),
+              1: pw.FlexColumnWidth(4.0),
+            },
       children: [
         tableDataRowInfo('Fonction de la cellule', safe(cellule.fonction), alt: false),
         tableDataRowInfo('Type de cellule', safe(cellule.type), alt: false),
@@ -5638,6 +5686,37 @@ class PdfReportService {
           ),
       ],
     );
+
+    pw.Widget topSectionTable;
+    if (photoImg != null) {
+      topSectionTable = pw.Table(
+        defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+        border: pw.TableBorder(
+          left: pw.BorderSide(color: borderColor, width: 0.4),
+          right: pw.BorderSide(color: borderColor, width: 0.4),
+          bottom: pw.BorderSide(color: borderColor, width: 0.4),
+          verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+        ),
+        columnWidths: const {
+          0: pw.FlexColumnWidth(6.6),
+          1: pw.FlexColumnWidth(2.4),
+        },
+        children: [
+          pw.TableRow(
+            children: [
+              infoTable,
+              pw.Container(
+                padding: const pw.EdgeInsets.all(4),
+                alignment: pw.Alignment.center,
+                child: pw.Image(photoImg, width: 140, height: 140, fit: pw.BoxFit.contain),
+              ),
+            ],
+          ),
+        ],
+      );
+    } else {
+      topSectionTable = infoTable;
+    }
 
     final headerTable = pw.Table(
       defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
@@ -5792,7 +5871,7 @@ class PdfReportService {
     return [
       pw.SizedBox(height: 6),
       titleTable,
-      infoTable,
+      topSectionTable,
       headerTable,
       dataTable,
       pw.SizedBox(height: 5),
@@ -6064,7 +6143,7 @@ class PdfReportService {
     CoffretArmoire coffret,
     Map<String, int> trackedPages,
     String parentName, {
-    Map<CoffretArmoire, pw.MemoryImage?>? photoCache,
+    Map<dynamic, pw.MemoryImage?>? photoCache,
   }) {
     final widgets = <pw.Widget>[pw.SizedBox(height: 6)];
     String safe(String v) => v.trim().isEmpty ? 'Non renseigné' : v;
@@ -9126,43 +9205,69 @@ class PdfReportService {
     return _ChunkSectionResult(files: chunkFiles, totalPages: currentOffset - pageOffset);
   }
 
-  static Future<Map<CoffretArmoire, pw.MemoryImage?>> _preloadCoffretsList(
-    List<CoffretArmoire> coffrets, {
+  static Future<Map<dynamic, pw.MemoryImage?>> _preloadEquipmentPhotos(
+    List<dynamic> items, {
     bool loadImages = true,
   }) async {
-    final cache = <CoffretArmoire, pw.MemoryImage?>{};
+    final cache = <dynamic, pw.MemoryImage?>{};
     if (!loadImages) return cache;
 
-    for (final c in coffrets) {
-      for (final src in [...c.photosInternes, ...c.photos, ...c.photosExternes]) {
-        final trimmed = src.trim();
-        if (trimmed.isEmpty) continue;
-        final img = await _loadAndOptimizeImage(
-          trimmed,
-          photoContext: PdfPhotoContext.equipmentObs,
-          saveFilesToDisk: loadImages,
-        );
-        if (img != null) {
-          cache[c] = img;
-          break;
+    for (final item in items) {
+      if (item is CoffretArmoire) {
+        for (final src in [...item.photosInternes, ...item.photos, ...item.photosExternes]) {
+          final trimmed = src.trim();
+          if (trimmed.isEmpty) continue;
+          final img = await _loadAndOptimizeImage(
+            trimmed,
+            photoContext: PdfPhotoContext.equipmentObs,
+            saveFilesToDisk: loadImages,
+          );
+          if (img != null) {
+            cache[item] = img;
+            break;
+          }
+        }
+      } else if (item is Cellule) {
+        final rawPath = (item.photo != null && item.photo!.trim().isNotEmpty)
+            ? item.photo!.trim()
+            : (item.photos.isNotEmpty ? item.photos.first.trim() : null);
+        if (rawPath != null && rawPath.isNotEmpty) {
+          final img = await _loadAndOptimizeImage(
+            rawPath,
+            photoContext: PdfPhotoContext.equipmentObs,
+            saveFilesToDisk: loadImages,
+          );
+          if (img != null) {
+            cache[item] = img;
+          }
         }
       }
     }
     return cache;
   }
 
-  static Future<Map<CoffretArmoire, pw.MemoryImage?>> _preloadZoneMTCoffrets(
+  static Future<Map<dynamic, pw.MemoryImage?>> _preloadCoffretsList(
+    List<CoffretArmoire> coffrets, {
+    List<Cellule>? cellules,
+    bool loadImages = true,
+  }) async {
+    final list = <dynamic>[...coffrets, ...?cellules];
+    return _preloadEquipmentPhotos(list, loadImages: loadImages);
+  }
+
+  static Future<Map<dynamic, pw.MemoryImage?>> _preloadZoneMTCoffrets(
     MoyenneTensionZone zone, {
     bool loadImages = true,
   }) async {
-    final coffrets = <CoffretArmoire>[...zone.coffrets];
+    final list = <dynamic>[...zone.coffrets];
     for (final local in zone.locaux) {
-      coffrets.addAll(local.coffrets);
+      list.addAll(local.coffrets);
+      list.addAll(local.cellules);
     }
-    return _preloadCoffretsList(coffrets, loadImages: loadImages);
+    return _preloadEquipmentPhotos(list, loadImages: loadImages);
   }
 
-  static Future<Map<CoffretArmoire, pw.MemoryImage?>> _preloadZoneBTCoffrets(
+  static Future<Map<dynamic, pw.MemoryImage?>> _preloadZoneBTCoffrets(
     BasseTensionZone zone, {
     bool loadImages = true,
   }) async {
@@ -9250,10 +9355,12 @@ class PdfReportService {
     // 2. MT Locaux Directs (si présents)
     if (audit.moyenneTensionLocaux.isNotEmpty) {
       final mtCoffrets = <CoffretArmoire>[];
+      final mtCellules = <Cellule>[];
       for (final local in audit.moyenneTensionLocaux) {
         mtCoffrets.addAll(local.coffrets);
+        mtCellules.addAll(local.cellules);
       }
-      final mtPhotoCache = await _preloadCoffretsList(mtCoffrets, loadImages: saveFilesToDisk);
+      final mtPhotoCache = await _preloadCoffretsList(mtCoffrets, cellules: mtCellules, loadImages: saveFilesToDisk);
 
       final mtDoc = pw.Document(
         title: 'Audit MT Directs - ${mission.nomClient}',
@@ -9270,7 +9377,12 @@ class PdfReportService {
       ];
       for (int i = 0; i < audit.moyenneTensionLocaux.length; i++) {
         if (i > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildLocalMT(audit.moyenneTensionLocaux[i], trackedPages, photoCache: mtPhotoCache));
+        widgets.addAll(_buildLocalMT(
+          audit.moyenneTensionLocaux[i],
+          trackedPages,
+          photoCache: mtPhotoCache,
+          saveFilesToDisk: saveFilesToDisk,
+        ));
       }
       mtDoc.addPage(pw.MultiPage(
         maxPages: 200,
@@ -9307,7 +9419,12 @@ class PdfReportService {
       int elemIdx = 0;
       for (int i = 0; i < zone.locaux.length; i++) {
         if (elemIdx > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildLocalMT(zone.locaux[i], trackedPages, photoCache: zonePhotoCache));
+        widgets.addAll(_buildLocalMT(
+          zone.locaux[i],
+          trackedPages,
+          photoCache: zonePhotoCache,
+          saveFilesToDisk: saveFilesToDisk,
+        ));
         elemIdx++;
       }
       for (int i = 0; i < zone.coffrets.length; i++) {

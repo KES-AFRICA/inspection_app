@@ -41,6 +41,8 @@ class CelluleEntity {
   final String? presenceIacm;
   final String? syncId;
   final List<ElementControleEntity>? observations;
+  final String? nom;
+  final String? photo;
 
   const CelluleEntity({
     required this.fonction,
@@ -59,7 +61,51 @@ class CelluleEntity {
     this.presenceIacm,
     this.syncId,
     this.observations,
+    this.nom,
+    this.photo,
   });
+
+  CelluleEntity copyWith({
+    String? fonction,
+    String? type,
+    String? marqueModeleAnnee,
+    String? tensionAssignee,
+    String? pouvoirCoupure,
+    String? numerotation,
+    String? parafoudres,
+    List<ElementControleEntity>? elementsVerifies,
+    List<String>? photos,
+    String? gamme,
+    String? calibreDisjoncteur,
+    String? sectionCables,
+    String? natureReseau,
+    String? presenceIacm,
+    String? syncId,
+    List<ElementControleEntity>? observations,
+    String? nom,
+    String? photo,
+  }) {
+    return CelluleEntity(
+      fonction: fonction ?? this.fonction,
+      type: type ?? this.type,
+      marqueModeleAnnee: marqueModeleAnnee ?? this.marqueModeleAnnee,
+      tensionAssignee: tensionAssignee ?? this.tensionAssignee,
+      pouvoirCoupure: pouvoirCoupure ?? this.pouvoirCoupure,
+      numerotation: numerotation ?? this.numerotation,
+      parafoudres: parafoudres ?? this.parafoudres,
+      elementsVerifies: elementsVerifies ?? this.elementsVerifies,
+      photos: photos ?? this.photos,
+      gamme: gamme ?? this.gamme,
+      calibreDisjoncteur: calibreDisjoncteur ?? this.calibreDisjoncteur,
+      sectionCables: sectionCables ?? this.sectionCables,
+      natureReseau: natureReseau ?? this.natureReseau,
+      presenceIacm: presenceIacm ?? this.presenceIacm,
+      syncId: syncId ?? this.syncId,
+      observations: observations ?? this.observations,
+      nom: nom ?? this.nom,
+      photo: photo ?? this.photo,
+    );
+  }
 }
 
 class TransformateurMTBTEntity {

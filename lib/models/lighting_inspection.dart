@@ -8,7 +8,7 @@ class LuminaireQuestionAnswer extends HiveObject {
   @HiveField(0)
   final int questionIndex;
 
-  @HiveField(1)
+  @HiveField(1, defaultValue: true)
   bool isConform;
 
   @HiveField(2)
