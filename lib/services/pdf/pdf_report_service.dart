@@ -5655,12 +5655,12 @@ class PdfReportService {
             ),
       columnWidths: photoImg != null
           ? const {
-              0: pw.FlexColumnWidth(3.8),
+              0: pw.FlexColumnWidth(3.6),
               1: pw.FlexColumnWidth(2.8),
             }
           : const {
-              0: pw.FlexColumnWidth(5.0),
-              1: pw.FlexColumnWidth(4.0),
+              0: pw.FlexColumnWidth(3.6),
+              1: pw.FlexColumnWidth(5.4),
             },
       children: [
         tableDataRowInfo('Fonction de la cellule', safe(cellule.fonction), alt: false),
@@ -5698,8 +5698,8 @@ class PdfReportService {
           verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
         ),
         columnWidths: const {
-          0: pw.FlexColumnWidth(6.6),
-          1: pw.FlexColumnWidth(2.4),
+          0: pw.FlexColumnWidth(6.4),
+          1: pw.FlexColumnWidth(2.6),
         },
         children: [
           pw.TableRow(
@@ -5947,8 +5947,8 @@ class PdfReportService {
         horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(5.0),
-        1: pw.FlexColumnWidth(4.0),
+        0: pw.FlexColumnWidth(3.6),
+        1: pw.FlexColumnWidth(5.4),
       },
       children: [
         tableDataRowInfo('Type de transformateur', safe(transfo.typeTransformateur), alt: false),
