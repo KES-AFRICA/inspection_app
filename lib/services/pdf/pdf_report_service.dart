@@ -6287,54 +6287,172 @@ class PdfReportService {
       final List<pw.Widget> tables = <pw.Widget>[];
 
       if (coffret.alimentations.isNotEmpty) {
-        final alimentRows = <pw.TableRow>[];
+        if (coffret.type == 'INVERSEUR') {
+          // ══════════════════════════════════════════════════════════════════
+          // INVERSEUR : 1. Tableau ORIGINE DE LA SOURCE (Alimentation 1 & 2 - MAX 2 LIGNES)
+          // ══════════════════════════════════════════════════════════════════
+          final entrees = coffret.alimentationsInverseurEntree;
+          if (entrees.isNotEmpty) {
+            final alimentRows = <pw.TableRow>[];
+            alimentRows.add(pw.TableRow(
+              decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
+              children: [
+                _thCell("Origine de la source d'alimentation"),
+                _thCell('Type protection'),
+                _thCell('Courbe'),
+                _thCell('PDC (kA)'),
+                _thCell('Calibre (A)'),
+                _thCell('DDR (I\u0394n (mA))'),
+                _thCell('Section de câble (mm\u00B2)'),
+              ],
+            ));
 
-        // En-tête alimentation
-        alimentRows.add(pw.TableRow(
-          decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
-          children: [
-            _thCell("Origine de la source d'alimentation"),
-            _thCell('Type protection'),
-            _thCell('Courbe'),
-            _thCell('PDC (kA)'),
-            _thCell('Calibre (A)'),
-            _thCell('DDR (I\u0394n (mA))'),
-            _thCell('Section de câble (mm\u00B2)'),
-          ],
-        ));
+            for (int i = 0; i < entrees.length; i++) {
+              final a = entrees[i];
+              final label = a.source.isNotEmpty ? a.source : 'Alimentation ${i + 1}';
+              alimentRows.add(pw.TableRow(children: [
+                _valueCell(label),
+                _valueCell(a.typeProtection),
+                _valueCell(a.courbe ?? ''),
+                _valueCell(a.pdcKA),
+                _valueCell(a.calibre),
+                _valueCell(a.ddr != null && a.ddr!.isNotEmpty ? '${a.ddr} mA' : '-'),
+                _valueCell(a.sectionCable),
+              ]));
+            }
 
-        for (final a in coffret.alimentations) {
-          alimentRows.add(pw.TableRow(children: [
-            _valueCell(a.source.isEmpty ? '-' : a.source),
-            _valueCell(a.typeProtection),
-            _valueCell(a.courbe ?? ''),
-            _valueCell(a.pdcKA),
-            _valueCell(a.calibre),
-            _valueCell(a.ddr != null && a.ddr!.isNotEmpty ? '${a.ddr} mA' : '-'),
-            _valueCell(a.sectionCable),
-          ]));
+            tables.add(pw.Table(
+              border: pw.TableBorder(
+                left: pw.BorderSide(color: borderColor, width: 0.4),
+                right: pw.BorderSide(color: borderColor, width: 0.4),
+                bottom: pw.BorderSide(color: borderColor, width: 0.4),
+                top: pw.BorderSide(color: borderColor, width: 0.4),
+                verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+                horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+              ),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(2.0),
+                1: pw.FlexColumnWidth(1.4),
+                2: pw.FlexColumnWidth(0.9),
+                3: pw.FlexColumnWidth(0.8),
+                4: pw.FlexColumnWidth(0.8),
+                5: pw.FlexColumnWidth(1.3),
+                6: pw.FlexColumnWidth(1.1),
+              },
+              children: alimentRows,
+            ));
+          }
+
+          // ══════════════════════════════════════════════════════════════════
+          // INVERSEUR : 2. NOUVEAU TABLEAU DÉDIÉ "SORTIE INVERSEUR" (DYNAMIQUE : 1 à N LIGNES)
+          // ══════════════════════════════════════════════════════════════════
+          final sorties = coffret.sortiesInverseur;
+          if (sorties.isNotEmpty) {
+            if (tables.isNotEmpty) {
+              tables.add(pw.SizedBox(height: 3));
+            }
+
+            final sortieRows = <pw.TableRow>[];
+            sortieRows.add(pw.TableRow(
+              decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
+              children: [
+                _thCell('SORTIE INVERSEUR'),
+                _thCell('Type protection'),
+                _thCell('Courbe'),
+                _thCell('PDC (kA)'),
+                _thCell('Calibre (A)'),
+                _thCell('DDR (I\u0394n (mA))'),
+                _thCell('Section de câble (mm\u00B2)'),
+              ],
+            ));
+
+            for (int i = 0; i < sorties.length; i++) {
+              final s = sorties[i];
+              final label = s.source.isNotEmpty
+                  ? s.source
+                  : (sorties.length > 1 ? 'Sortie inverseur ${i + 1}' : 'Sortie inverseur');
+              sortieRows.add(pw.TableRow(children: [
+                _valueCell(label),
+                _valueCell(s.typeProtection),
+                _valueCell(s.courbe ?? ''),
+                _valueCell(s.pdcKA),
+                _valueCell(s.calibre),
+                _valueCell(s.ddr != null && s.ddr!.isNotEmpty ? '${s.ddr} mA' : '-'),
+                _valueCell(s.sectionCable),
+              ]));
+            }
+
+            tables.add(pw.Table(
+              border: pw.TableBorder(
+                left: pw.BorderSide(color: borderColor, width: 0.4),
+                right: pw.BorderSide(color: borderColor, width: 0.4),
+                bottom: pw.BorderSide(color: borderColor, width: 0.4),
+                top: pw.BorderSide(color: borderColor, width: 0.4),
+                verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+                horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+              ),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(2.0),
+                1: pw.FlexColumnWidth(1.4),
+                2: pw.FlexColumnWidth(0.9),
+                3: pw.FlexColumnWidth(0.8),
+                4: pw.FlexColumnWidth(0.8),
+                5: pw.FlexColumnWidth(1.3),
+                6: pw.FlexColumnWidth(1.1),
+              },
+              children: sortieRows,
+            ));
+          }
+        } else {
+          // AUTRES ÉQUIPEMENTS (TGBT, ARMOIRE, COFFRET CLASSIQUE)
+          final alimentRows = <pw.TableRow>[];
+
+          alimentRows.add(pw.TableRow(
+            decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
+            children: [
+              _thCell("Origine de la source d'alimentation"),
+              _thCell('Type protection'),
+              _thCell('Courbe'),
+              _thCell('PDC (kA)'),
+              _thCell('Calibre (A)'),
+              _thCell('DDR (I\u0394n (mA))'),
+              _thCell('Section de câble (mm\u00B2)'),
+            ],
+          ));
+
+          for (final a in coffret.alimentations) {
+            alimentRows.add(pw.TableRow(children: [
+              _valueCell(a.source.isEmpty ? '-' : a.source),
+              _valueCell(a.typeProtection),
+              _valueCell(a.courbe ?? ''),
+              _valueCell(a.pdcKA),
+              _valueCell(a.calibre),
+              _valueCell(a.ddr != null && a.ddr!.isNotEmpty ? '${a.ddr} mA' : '-'),
+              _valueCell(a.sectionCable),
+            ]));
+          }
+
+          tables.add(pw.Table(
+            border: pw.TableBorder(
+              left: pw.BorderSide(color: borderColor, width: 0.4),
+              right: pw.BorderSide(color: borderColor, width: 0.4),
+              bottom: pw.BorderSide(color: borderColor, width: 0.4),
+              top: pw.BorderSide(color: borderColor, width: 0.4),
+              verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+              horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+            ),
+            columnWidths: const {
+              0: pw.FlexColumnWidth(2.0),
+              1: pw.FlexColumnWidth(1.4),
+              2: pw.FlexColumnWidth(0.9),
+              3: pw.FlexColumnWidth(0.8),
+              4: pw.FlexColumnWidth(0.8),
+              5: pw.FlexColumnWidth(1.3),
+              6: pw.FlexColumnWidth(1.1),
+            },
+            children: alimentRows,
+          ));
         }
-
-        tables.add(pw.Table(
-          border: pw.TableBorder(
-            left: pw.BorderSide(color: borderColor, width: 0.4),
-            right: pw.BorderSide(color: borderColor, width: 0.4),
-            bottom: pw.BorderSide(color: borderColor, width: 0.4),
-            top: pw.BorderSide(color: borderColor, width: 0.4),
-            verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
-            horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
-          ),
-          columnWidths: const {
-            0: pw.FlexColumnWidth(2.0),
-            1: pw.FlexColumnWidth(1.4),
-            2: pw.FlexColumnWidth(0.9),
-            3: pw.FlexColumnWidth(0.8),
-            4: pw.FlexColumnWidth(0.8),
-            5: pw.FlexColumnWidth(1.3),
-            6: pw.FlexColumnWidth(1.1),
-          },
-          children: alimentRows,
-        ));
       }
 
       if (coffret.protectionTete != null) {

@@ -1221,6 +1221,8 @@ class _EtapeAlimentations extends StatefulWidget {
   final Alimentation? protectionTete;
   final VoidCallback onDataChanged;
   final List<String> sourcesDisponibles;
+  final VoidCallback? onAddSortie;
+  final Function(int index)? onDeleteSortie;
 
   const _EtapeAlimentations({
     required this.selectedType,
@@ -1228,6 +1230,8 @@ class _EtapeAlimentations extends StatefulWidget {
     required this.protectionTete,
     required this.onDataChanged,
     required this.sourcesDisponibles,
+    this.onAddSortie,
+    this.onDeleteSortie,
   });
 
   @override
@@ -1359,11 +1363,50 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
         ),
         
         if (widget.selectedType == 'INVERSEUR') ...[
-          if (widget.alimentations.length >= 3) ...[
+          if (widget.alimentations.length >= 2) ...[
             _buildAlimentationCard(context, 'ALIMENTATION 1', widget.alimentations[0], (field, value) => _updateAlimentation(widget.alimentations[0], field, value), index: 0),
+            SizedBox(height: context.spacingM),
             _buildAlimentationCard(context, 'ALIMENTATION 2', widget.alimentations[1], (field, value) => _updateAlimentation(widget.alimentations[1], field, value), index: 1),
-            _buildAlimentationCard(context, 'SORTIE INVERSEUR', widget.alimentations[2], (field, value) => _updateAlimentation(widget.alimentations[2], field, value), index: 2),
+            SizedBox(height: context.spacingM),
           ],
+          ...() {
+            final cards = <Widget>[];
+            final sortiesCount = widget.alimentations.length - 2;
+            for (int i = 2; i < widget.alimentations.length; i++) {
+              final sortieNumber = i - 1;
+              final cardTitle = sortiesCount > 1 ? 'SORTIE INVERSEUR $sortieNumber' : 'SORTIE INVERSEUR';
+              final aliment = widget.alimentations[i];
+              cards.add(
+                _buildAlimentationCard(
+                  context,
+                  cardTitle,
+                  aliment,
+                  (field, value) => _updateAlimentation(aliment, field, value),
+                  index: i,
+                  canDelete: i >= 3,
+                  onDelete: () => widget.onDeleteSortie?.call(i),
+                ),
+              );
+              cards.add(SizedBox(height: context.spacingM));
+            }
+            return cards;
+          }(),
+          SizedBox(height: context.spacingS),
+          Center(
+            child: OutlinedButton.icon(
+              onPressed: widget.onAddSortie,
+              icon: const Icon(Icons.add_circle_outline, color: Colors.orange),
+              label: const Text(
+                '+ Ajouter une sortie',
+                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.orange),
+              ),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                side: BorderSide(color: Colors.orange.shade400, width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+            ),
+          ),
         ] else ...[
           if (widget.alimentations.isNotEmpty)
             _buildAlimentationCard(context, 'ORIGINE DE LA SOURCE', widget.alimentations[0], (field, value) => _updateAlimentation(widget.alimentations[0], field, value), index: 0),
@@ -1423,6 +1466,8 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     Function(String field, String value) onChanged, {
     bool isProtectionTete = false,
     int index = 0,
+    bool canDelete = false,
+    VoidCallback? onDelete,
   }) {
     final sourceCtrl = _getController(isProtectionTete ? 'prot_source' : 'alim${index}_source', a.source);
     final pdcCtrl = _getController(isProtectionTete ? 'prot_pdc' : 'alim${index}_pdc', a.pdcKA);
@@ -1459,10 +1504,21 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: context.spacingS, vertical: context.spacingXS),
-            decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(context.spacingS)),
-            child: Text(title, style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.bold, color: Colors.orange.shade800)),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(horizontal: context.spacingS, vertical: context.spacingXS),
+                decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(context.spacingS)),
+                child: Text(title, style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.bold, color: Colors.orange.shade800)),
+              ),
+              if (canDelete && onDelete != null)
+                IconButton(
+                  icon: Icon(Icons.delete_outline, color: Colors.red.shade600, size: 20),
+                  tooltip: 'Supprimer cette sortie',
+                  onPressed: onDelete,
+                ),
+            ],
           ),
           SizedBox(height: context.spacingM),
           _buildModernDropdown(context, label: 'Type de protection', value: typeProtVal, items: typeProtectionItems, onChanged: (v) => onChanged('typeProtection', v)),
@@ -2520,6 +2576,11 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       }
     }
     _alimentations = List.from(coffret.alimentations);
+    if (_selectedType == 'INVERSEUR') {
+      while (_alimentations.length < 3) {
+        _alimentations.add(Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: ''));
+      }
+    }
     _protectionTete = coffret.protectionTete;
     _pointsVerification = List.from(coffret.pointsVerification.map((point) => PointVerification(
       pointVerification: point.pointVerification,
@@ -2688,6 +2749,24 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   }
 
   void _showError(String message) => ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message), backgroundColor: Colors.red, duration: const Duration(seconds: 3)));
+
+  void _addSortieInverseur() {
+    setState(() {
+      _alimentations.add(Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: ''));
+      _hasUnsavedChanges = true;
+    });
+    _scheduleAutoSave();
+  }
+
+  void _deleteSortieInverseur(int index) {
+    if (index < 2 || index >= _alimentations.length) return;
+    if (_alimentations.length <= 3) return; // Conserver au moins 1 sortie
+    setState(() {
+      _alimentations.removeAt(index);
+      _hasUnsavedChanges = true;
+    });
+    _scheduleAutoSave();
+  }
 
   void _initializeAlimentations() {
     _alimentations = [];
@@ -3187,6 +3266,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                       protectionTete: _protectionTete,
                       onDataChanged: () { _validateAlimentations(); setState(() {}); },
                       sourcesDisponibles: _getSourcesDisponibles(),
+                      onAddSortie: _addSortieInverseur,
+                      onDeleteSortie: _deleteSortieInverseur,
                     ),
                   if (_selectedType != null && _pointsVerification.isNotEmpty)
                     _EtapePointsVerification(

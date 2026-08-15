@@ -657,6 +657,19 @@ class CoffretArmoire {
         photosInternes = photosInternes ?? [],
         observationsParafoudre = observationsParafoudre ?? [],
         observationsParafoudreEnrichies = observationsParafoudreEnrichies ?? [];
+
+  /// Pour un Inverseur, retourne les alimentations d'entrée (Alimentation 1 & Alimentation 2)
+  List<Alimentation> get alimentationsInverseurEntree {
+    if (type != 'INVERSEUR') return alimentations;
+    return alimentations.take(2).toList();
+  }
+
+  /// Pour un Inverseur, retourne la liste dynamique des sorties inverseur (éléments à partir de l'index 2)
+  List<Alimentation> get sortiesInverseur {
+    if (type != 'INVERSEUR') return [];
+    if (alimentations.length <= 2) return [];
+    return alimentations.skip(2).toList();
+  }
 }
 
 @HiveType(typeId: 12)
