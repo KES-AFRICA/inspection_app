@@ -7851,8 +7851,9 @@ class PdfReportService {
           )
         else
           pw.Table(
+            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
             border: pw.TableBorder.all(color: borderColor, width: 0.4),
-            columnWidths: {0: const pw.FlexColumnWidth(2), 1: const pw.FlexColumnWidth(2.5), 2: const pw.FlexColumnWidth(1.5), 3: const pw.FlexColumnWidth(2)},
+            columnWidths: const {0: pw.FlexColumnWidth(2), 1: pw.FlexColumnWidth(2.5), 2: pw.FlexColumnWidth(1.5), 3: pw.FlexColumnWidth(2)},
             children: [
               _tableHeaderRow(['Localisation', 'Désignation Tableau / Equipement', 'Origine Mésure', 'Observation']),
               ...mesures.continuiteResistances.asMap().entries.map((e) {
