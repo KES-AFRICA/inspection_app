@@ -7931,12 +7931,6 @@ class PdfReportService {
                 ),
                 child: pw.Row(
                   children: [
-                    pw.Container(
-                      width: 3.5,
-                      height: 10,
-                      color: headerColor,
-                      margin: const pw.EdgeInsets.only(right: 6),
-                    ),
                     pw.Text(
                       title,
                       style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
@@ -8052,16 +8046,6 @@ class PdfReportService {
                 ),
                 pw.SizedBox(height: 16),
                 pw.Text(
-                  'Fait \u00E0 Douala le ${_formatDate(DateTime.now())}',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: 14,
-                    color: darkGrey,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-                pw.SizedBox(height: 40),
-                pw.Text(
                   'Patrick ESSAME ESSAME',
                   style: pw.TextStyle(
                     font: _fontBold,
@@ -8071,13 +8055,25 @@ class PdfReportService {
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
+                
+                pw.SizedBox(height: 40),
+                pw.Text(
+                  'Fait \u00E0 Douala le ${_formatDate(DateTime.now())}',
+                  style: pw.TextStyle(
+                    font: _fontBold,
+                    fontSize: 14,
+                    color: darkGrey,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+                
                 pw.SizedBox(height: 25),
                 pw.Container(
                   width: 200, height: 1, color: PdfColors.grey400,
                 ),
                 pw.SizedBox(height: 4),
                 pw.Text(
-                  'Nom, signature et cachet',
+                  'Signature et cachet',
                   style: pw.TextStyle(
                     font: _fontRegular, fontSize: 8, color: PdfColors.grey500,
                   ),

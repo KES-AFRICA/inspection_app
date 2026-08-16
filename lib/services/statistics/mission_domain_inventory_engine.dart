@@ -349,11 +349,13 @@ class MissionDomainInventory {
     final crossList = getCrossCategoryAnalysis().where((c) => c.equipmentCount > 0).toList();
     if (crossList.isEmpty) return 'Aucun équipement recensé (0,0 NC/équipement)';
 
+    // Départage :
+    // 1. Densité NC/équipement (décroissante)
+    // 2. Volume total de NC (décroissant)
+    // 3. Ordre métier canonique déterministe (conservé par la position dans crossList)
     crossList.sort((a, b) {
       final cmpDens = b.density.compareTo(a.density);
       if (cmpDens != 0) return cmpDens;
-      final cmpCrit = b.critiqueCount.compareTo(a.critiqueCount);
-      if (cmpCrit != 0) return cmpCrit;
       return b.nonCompliantPointsCount.compareTo(a.nonCompliantPointsCount);
     });
 
@@ -362,8 +364,8 @@ class MissionDomainInventory {
       return 'Toutes catégories conformes (0,0 NC/équipement)';
     }
 
-    final critPct = (densest.critiqueCount / densest.nonCompliantPointsCount) * 100;
-    return '${densest.categoryName} : ${densest.density.toStringAsFixed(1).replaceAll('.', ',')} NC/équipement (dont ${densest.critiqueCount} critique(s) sur ${densest.nonCompliantPointsCount}, soit ${critPct.toStringAsFixed(1).replaceAll('.', ',')} %)';
+    final critPct = (densest.critiqueCount / densest.equipmentCount) * 100;
+    return '${densest.categoryName} : ${densest.density.toStringAsFixed(1).replaceAll('.', ',')} NC/équipement (dont ${densest.critiqueCount} critique(s) sur ${densest.equipmentCount}, soit ${critPct.toStringAsFixed(1).replaceAll('.', ',')} %)';
   }
 
   /// Statistiques par famille de risque.
