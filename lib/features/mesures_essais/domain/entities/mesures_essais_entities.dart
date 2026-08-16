@@ -88,6 +88,26 @@ class ContinuiteResistanceEntity {
   });
 }
 
+class EssaiIsolementEntity {
+  final String syncId;
+  final String equipmentSyncId;
+  final String pointControle;
+  final double isolement;
+  final String appreciation;
+  final String? localisation;
+  final String? designation;
+
+  const EssaiIsolementEntity({
+    required this.syncId,
+    required this.equipmentSyncId,
+    required this.pointControle,
+    required this.isolement,
+    required this.appreciation,
+    this.localisation,
+    this.designation,
+  });
+}
+
 class MesuresEssaisEntity {
   final dynamic id;
   final String missionId;
@@ -98,6 +118,7 @@ class MesuresEssaisEntity {
   final List<PriseTerreEntity> prisesTerre;
   final AvisMesuresTerreEntity avisMesuresTerre;
   final List<EssaiDeclenchementDifferentielEntity> essaisDeclenchement;
+  final List<EssaiIsolementEntity> essaisIsolement;
   final List<ContinuiteResistanceEntity> continuiteResistances;
 
   const MesuresEssaisEntity({
@@ -110,6 +131,7 @@ class MesuresEssaisEntity {
     required this.prisesTerre,
     required this.avisMesuresTerre,
     required this.essaisDeclenchement,
+    this.essaisIsolement = const [],
     required this.continuiteResistances,
   });
 }

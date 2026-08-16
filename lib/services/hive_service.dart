@@ -62,6 +62,7 @@ class HiveService {
     if (!Hive.isAdapterRegistered(21)) Hive.registerAdapter(AvisMesuresTerreAdapter());
     if (!Hive.isAdapterRegistered(22)) Hive.registerAdapter(EssaiDeclenchementDifferentielAdapter());
     if (!Hive.isAdapterRegistered(23)) Hive.registerAdapter(ContinuiteResistanceAdapter());
+    if (!Hive.isAdapterRegistered(63)) Hive.registerAdapter(EssaiIsolementAdapter());
     if (!Hive.isAdapterRegistered(24)) Hive.registerAdapter(ObservationLibreAdapter());
     if (!Hive.isAdapterRegistered(25)) Hive.registerAdapter(InstallationItemAdapter()); 
     if (!Hive.isAdapterRegistered(34)) Hive.registerAdapter(RenseignementsGenerauxAdapter());
@@ -4387,6 +4388,80 @@ static Future<bool> deleteEssaiDeclenchement({
 static List<EssaiDeclenchementDifferentiel> getEssaisDeclenchement(String missionId) {
   final mesures = getMesuresEssaisByMissionId(missionId);
   return mesures?.essaisDeclenchement ?? [];
+}
+
+// ============================================================
+//          SECTION 7: ESSAIS DE MESURE D'ISOLEMENT
+// ============================================================
+
+/// Ajouter ou mettre à jour un essai d'isolement (remplace l'essai existant pour le même équipment/pointControle)
+static Future<bool> saveEssaiIsolement({
+  required String missionId,
+  required EssaiIsolement essai,
+}) async {
+  try {
+    final mesures = await getOrCreateMesuresEssais(missionId);
+    final existingIndex = mesures.essaisIsolement.indexWhere(
+      (e) => e.equipmentSyncId == essai.equipmentSyncId && e.pointControle == essai.pointControle,
+    );
+    if (existingIndex >= 0) {
+      mesures.essaisIsolement[existingIndex] = essai;
+    } else {
+      mesures.essaisIsolement.add(essai);
+    }
+    await saveMesuresEssais(mesures);
+    if (kDebugMode) print('✅ Essai isolement sauvegardé: ${essai.designation} (${essai.pointControle})');
+    return true;
+  } catch (e) {
+    if (kDebugMode) print('❌ Erreur saveEssaiIsolement: $e');
+    return false;
+  }
+}
+
+/// Supprimer un essai d'isolement
+static Future<bool> deleteEssaiIsolement({
+  required String missionId,
+  required String equipmentSyncId,
+  required String pointControle,
+}) async {
+  try {
+    final mesures = await getOrCreateMesuresEssais(missionId);
+    final initialCount = mesures.essaisIsolement.length;
+    mesures.essaisIsolement.removeWhere(
+      (e) => e.equipmentSyncId == equipmentSyncId && e.pointControle == pointControle,
+    );
+    if (mesures.essaisIsolement.length < initialCount) {
+      await saveMesuresEssais(mesures);
+      if (kDebugMode) print('✅ Essai isolement supprimé pour: $equipmentSyncId - $pointControle');
+      return true;
+    }
+    return false;
+  } catch (e) {
+    if (kDebugMode) print('❌ Erreur deleteEssaiIsolement: $e');
+    return false;
+  }
+}
+
+/// Récupérer tous les essais d'isolement d'une mission
+static List<EssaiIsolement> getEssaisIsolement(String missionId) {
+  final mesures = getMesuresEssaisByMissionId(missionId);
+  return mesures?.essaisIsolement ?? [];
+}
+
+/// Récupérer l'essai d'isolement pour un point spécifique d'un équipement
+static EssaiIsolement? getEssaiIsolementForPoint({
+  required String missionId,
+  required String equipmentSyncId,
+  required String pointControle,
+}) {
+  final essais = getEssaisIsolement(missionId);
+  try {
+    return essais.firstWhere(
+      (e) => e.equipmentSyncId == equipmentSyncId && e.pointControle == pointControle,
+    );
+  } catch (_) {
+    return null;
+  }
 }
 
 /// Récupérer les localisations disponibles depuis l'audit pour les essais

@@ -35,7 +35,11 @@ class MesuresEssais extends HiveObject {
   @HiveField(7)
   List<EssaiDeclenchementDifferentiel> essaisDeclenchement;
 
-  // ================= SECTION 7: CONTINUITÉ ET RÉSISTANCE =================
+  // ================= SECTION 7: ESSAIS DE MESURE D'ISOLEMENT =================
+  @HiveField(9, defaultValue: [])
+  List<EssaiIsolement> essaisIsolement;
+
+  // ================= SECTION 8: CONTINUITÉ ET RÉSISTANCE =================
   @HiveField(8)
   List<ContinuiteResistance> continuiteResistances;
 
@@ -48,6 +52,7 @@ class MesuresEssais extends HiveObject {
     List<PriseTerre>? prisesTerre,
     AvisMesuresTerre? avisMesuresTerre,
     List<EssaiDeclenchementDifferentiel>? essaisDeclenchement,
+    List<EssaiIsolement>? essaisIsolement,
     List<ContinuiteResistance>? continuiteResistances,
   })  : conditionMesure = conditionMesure ?? ConditionMesure(),
         essaiDemarrageAuto = essaiDemarrageAuto ?? EssaiDemarrageAuto(),
@@ -55,6 +60,7 @@ class MesuresEssais extends HiveObject {
         prisesTerre = prisesTerre ?? [],
         avisMesuresTerre = avisMesuresTerre ?? AvisMesuresTerre(),
         essaisDeclenchement = essaisDeclenchement ?? [],
+        essaisIsolement = essaisIsolement ?? [],
         continuiteResistances = continuiteResistances ?? [];
 
   factory MesuresEssais.create(String missionId) {
@@ -310,4 +316,60 @@ class ContinuiteResistance {
     return origineMesure.isNotEmpty && 
            (observation != null && observation!.isNotEmpty);
   }
+}
+
+// SECTION 8: ESSAIS DE MESURE D'ISOLEMENT
+@HiveType(typeId: 63)
+class EssaiIsolement {
+  @HiveField(0)
+  String syncId;
+
+  @HiveField(1)
+  String equipmentSyncId;
+
+  @HiveField(2)
+  String pointControle; // Ex: "Alimentation 1", "Alimentation 2", "Origine de la source"
+
+  @HiveField(3)
+  double isolement; // En MΩ
+
+  @HiveField(4)
+  String appreciation; // "Satisfaisant", "Non satisfaisant", "Sans objet"
+
+  @HiveField(5)
+  String? localisation; // Nom du local ou zone
+
+  @HiveField(6)
+  String? designation; // Nom de l'équipement
+
+  EssaiIsolement({
+    required this.syncId,
+    required this.equipmentSyncId,
+    required this.pointControle,
+    required this.isolement,
+    required this.appreciation,
+    this.localisation,
+    this.designation,
+  });
+
+  factory EssaiIsolement.create({
+    required String equipmentSyncId,
+    required String pointControle,
+    required double isolement,
+    required String appreciation,
+    String? localisation,
+    String? designation,
+  }) {
+    return EssaiIsolement(
+      syncId: 'iso_${DateTime.now().microsecondsSinceEpoch}',
+      equipmentSyncId: equipmentSyncId,
+      pointControle: pointControle,
+      isolement: isolement,
+      appreciation: appreciation,
+      localisation: localisation,
+      designation: designation,
+    );
+  }
+
+  bool get isComplete => isolement > 0 && appreciation.isNotEmpty;
 }

@@ -46,6 +46,17 @@ class MesuresEssaisMapper {
           observation: ed.observation,
         );
       }).toList(),
+      essaisIsolement: model.essaisIsolement.map((ei) {
+        return EssaiIsolementEntity(
+          syncId: ei.syncId,
+          equipmentSyncId: ei.equipmentSyncId,
+          pointControle: ei.pointControle,
+          isolement: ei.isolement,
+          appreciation: ei.appreciation,
+          localisation: ei.localisation,
+          designation: ei.designation,
+        );
+      }).toList(),
       continuiteResistances: model.continuiteResistances.map((cr) {
         return ContinuiteResistanceEntity(
           localisation: cr.localisation,
@@ -97,6 +108,17 @@ class MesuresEssaisMapper {
           isolement: ed.isolement,
           essai: ed.essai,
           observation: ed.observation,
+        );
+      }).toList(),
+      essaisIsolement: entity.essaisIsolement.map((ei) {
+        return EssaiIsolement(
+          syncId: ei.syncId,
+          equipmentSyncId: ei.equipmentSyncId,
+          pointControle: ei.pointControle,
+          isolement: ei.isolement,
+          appreciation: ei.appreciation,
+          localisation: ei.localisation,
+          designation: ei.designation,
         );
       }).toList(),
       continuiteResistances: entity.continuiteResistances.map((cr) {

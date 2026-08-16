@@ -26,6 +26,8 @@ class MesuresEssaisAdapter extends TypeAdapter<MesuresEssais> {
       avisMesuresTerre: fields[6] as AvisMesuresTerre?,
       essaisDeclenchement:
           (fields[7] as List?)?.cast<EssaiDeclenchementDifferentiel>(),
+      essaisIsolement:
+          fields[9] == null ? [] : (fields[9] as List?)?.cast<EssaiIsolement>(),
       continuiteResistances: (fields[8] as List?)?.cast<ContinuiteResistance>(),
     );
   }
@@ -33,7 +35,7 @@ class MesuresEssaisAdapter extends TypeAdapter<MesuresEssais> {
   @override
   void write(BinaryWriter writer, MesuresEssais obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)
@@ -50,6 +52,8 @@ class MesuresEssaisAdapter extends TypeAdapter<MesuresEssais> {
       ..write(obj.avisMesuresTerre)
       ..writeByte(7)
       ..write(obj.essaisDeclenchement)
+      ..writeByte(9)
+      ..write(obj.essaisIsolement)
       ..writeByte(8)
       ..write(obj.continuiteResistances);
   }
@@ -357,6 +361,58 @@ class ContinuiteResistanceAdapter extends TypeAdapter<ContinuiteResistance> {
   bool operator ==(Object other) =>
       identical(this, other) ||
       other is ContinuiteResistanceAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class EssaiIsolementAdapter extends TypeAdapter<EssaiIsolement> {
+  @override
+  final int typeId = 63;
+
+  @override
+  EssaiIsolement read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return EssaiIsolement(
+      syncId: fields[0] as String,
+      equipmentSyncId: fields[1] as String,
+      pointControle: fields[2] as String,
+      isolement: fields[3] as double,
+      appreciation: fields[4] as String,
+      localisation: fields[5] as String?,
+      designation: fields[6] as String?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, EssaiIsolement obj) {
+    writer
+      ..writeByte(7)
+      ..writeByte(0)
+      ..write(obj.syncId)
+      ..writeByte(1)
+      ..write(obj.equipmentSyncId)
+      ..writeByte(2)
+      ..write(obj.pointControle)
+      ..writeByte(3)
+      ..write(obj.isolement)
+      ..writeByte(4)
+      ..write(obj.appreciation)
+      ..writeByte(5)
+      ..write(obj.localisation)
+      ..writeByte(6)
+      ..write(obj.designation);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is EssaiIsolementAdapter &&
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }

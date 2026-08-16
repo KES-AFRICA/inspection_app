@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
 import 'package:inspec_app/services/dispositions_constructives_registry.dart';
 import 'package:inspec_app/services/normative_reference_service.dart';
@@ -1574,6 +1575,34 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           _buildModernDropdown(context, label: 'DDR IΔn (mA)', value: ddrVal, items: ddrItems, onChanged: (v) => onChanged('ddr', v)),
           SizedBox(height: context.spacingS),
           _buildModernDropdown(context, label: 'Section de câble', value: a.sectionCable, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCable', v)),
+          ...() {
+            String? pointControle;
+            if (widget.selectedType == 'INVERSEUR') {
+              if (index == 0) pointControle = 'Alimentation 1';
+              if (index == 1) pointControle = 'Alimentation 2';
+            } else if (!isProtectionTete && index == 0) {
+              pointControle = 'Origine de la source';
+            }
+            final parentState = context.findAncestorStateOfType<_AjouterCoffretScreenState>();
+            if (parentState != null) {
+              final eqNom = parentState._nomController.text.trim();
+              final missionId = parentState.widget.mission.id;
+              if (pointControle != null && eqNom.isNotEmpty) {
+                return [
+                  _buildTestIsolationSection(
+                    context: context,
+                    missionId: missionId,
+                    equipmentSyncId: eqNom,
+                    pointControle: pointControle,
+                    localisation: _getLocalisationForIsolement(),
+                    designation: eqNom,
+                    onChanged: () => setState(() {}),
+                  )
+                ];
+              }
+            }
+            return <Widget>[];
+          }(),
         ],
       ),
     );
@@ -1637,6 +1666,370 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
         ],
         onChanged: (v) => onChanged(v ?? ''),
       ),
+    );
+  }
+
+  String _getLocalisationForIsolement() {
+    final state = context.findAncestorStateOfType<_AjouterCoffretScreenState>();
+    if (state != null) {
+      final parentType = state.widget.parentType;
+      final isMoyenneTension = state.widget.isMoyenneTension;
+      final isInZone = state.widget.isInZone;
+      final zoneIndex = state.widget.zoneIndex;
+      final parentIndex = state.widget.parentIndex;
+      final missionId = state.widget.mission.id;
+
+      final audit = HiveService.getAuditInstallationsByMissionId(missionId);
+      if (audit != null) {
+        String loc = '';
+        if (parentType == 'local') {
+          if (isMoyenneTension) {
+            if (isInZone && zoneIndex != null && zoneIndex < audit.moyenneTensionZones.length) {
+              final zone = audit.moyenneTensionZones[zoneIndex];
+              if (parentIndex < zone.locaux.length) loc = zone.locaux[parentIndex].nom;
+            } else if (parentIndex < audit.moyenneTensionLocaux.length) {
+              loc = audit.moyenneTensionLocaux[parentIndex].nom;
+            }
+          } else if (zoneIndex != null && zoneIndex < audit.basseTensionZones.length) {
+            final zone = audit.basseTensionZones[zoneIndex];
+            if (parentIndex < zone.locaux.length) loc = zone.locaux[parentIndex].nom;
+          }
+        } else {
+          if (isMoyenneTension && parentIndex < audit.moyenneTensionZones.length) {
+            loc = audit.moyenneTensionZones[parentIndex].nom;
+          } else if (!isMoyenneTension && parentIndex < audit.basseTensionZones.length) {
+            loc = audit.basseTensionZones[parentIndex].nom;
+          }
+        }
+        if (loc.isNotEmpty) return loc;
+      }
+    }
+    return 'Localisation non définie';
+  }
+
+  Widget _buildTestIsolationSection({
+    required BuildContext context,
+    required String missionId,
+    required String equipmentSyncId,
+    required String pointControle,
+    required String localisation,
+    required String designation,
+    required VoidCallback onChanged,
+  }) {
+    final essai = HiveService.getEssaiIsolementForPoint(
+      missionId: missionId,
+      equipmentSyncId: equipmentSyncId,
+      pointControle: pointControle,
+    );
+
+    if (essai == null) {
+      return Padding(
+        padding: const EdgeInsets.only(top: 12),
+        child: SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: () => _showModalTestIsolation(
+              context: context,
+              missionId: missionId,
+              equipmentSyncId: equipmentSyncId,
+              pointControle: pointControle,
+              localisation: localisation,
+              designation: designation,
+              onSaved: onChanged,
+            ),
+            icon: const Icon(Icons.speed, size: 18, color: Colors.blue),
+            label: const Text(
+              "Test d'isolation",
+              style: TextStyle(fontWeight: FontWeight.w600, color: Colors.blue),
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              side: BorderSide(color: Colors.blue.shade300),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ),
+      );
+    }
+
+    Color badgeColor;
+    Color badgeBgColor;
+    if (essai.appreciation == 'Satisfaisant') {
+      badgeColor = Colors.green.shade800;
+      badgeBgColor = Colors.green.shade50;
+    } else if (essai.appreciation == 'Non satisfaisant') {
+      badgeColor = Colors.red.shade800;
+      badgeBgColor = Colors.red.shade50;
+    } else {
+      badgeColor = Colors.grey.shade800;
+      badgeBgColor = Colors.grey.shade200;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.speed, size: 20, color: badgeColor),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Test d'isolation : ${essai.isolement} MΩ",
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: badgeBgColor,
+                    borderRadius: BorderRadius.circular(4),
+                    border: Border.all(color: badgeColor.withOpacity(0.5)),
+                  ),
+                  child: Text(
+                    essai.appreciation,
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: badgeColor),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.edit, size: 18, color: Colors.blue),
+            tooltip: 'Modifier',
+            onPressed: () => _showModalTestIsolation(
+              context: context,
+              missionId: missionId,
+              equipmentSyncId: equipmentSyncId,
+              pointControle: pointControle,
+              localisation: localisation,
+              designation: designation,
+              existingEssai: essai,
+              onSaved: onChanged,
+            ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+            tooltip: 'Supprimer',
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text("Supprimer l'essai d'isolement ?"),
+                  content: const Text("Cette action supprimera définitivement le résultat du test."),
+                  actions: [
+                    TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Annuler')),
+                    TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Supprimer', style: TextStyle(color: Colors.red))),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                await HiveService.deleteEssaiIsolement(
+                  missionId: missionId,
+                  equipmentSyncId: equipmentSyncId,
+                  pointControle: pointControle,
+                );
+                onChanged();
+              }
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _showModalTestIsolation({
+    required BuildContext context,
+    required String missionId,
+    required String equipmentSyncId,
+    required String pointControle,
+    required String localisation,
+    required String designation,
+    EssaiIsolement? existingEssai,
+    required VoidCallback onSaved,
+  }) async {
+    final isolementController = TextEditingController(
+      text: existingEssai != null ? existingEssai.isolement.toString() : '',
+    );
+    String? selectedAppreciation = existingEssai?.appreciation;
+
+    await showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            final parsedVal = double.tryParse(isolementController.text.replaceAll(',', '.'));
+            final isIsolementValid = parsedVal != null && parsedVal > 0;
+            final isValid = isIsolementValid && (selectedAppreciation != null && selectedAppreciation!.isNotEmpty);
+
+            Widget buildAppreciationOption(String label, Color activeColor, Color activeBgColor) {
+              final isSelected = selectedAppreciation == label;
+              return Expanded(
+                child: InkWell(
+                  onTap: () {
+                    setModalState(() {
+                      selectedAppreciation = label;
+                    });
+                  },
+                  borderRadius: BorderRadius.circular(8),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 150),
+                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: isSelected ? activeBgColor : Colors.grey.shade100,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: isSelected ? activeColor : Colors.grey.shade300,
+                        width: isSelected ? 2 : 1,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        label,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                          color: isSelected ? activeColor : Colors.grey.shade700,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }
+
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Row(
+                children: [
+                  Icon(Icons.speed, color: AppTheme.primaryBlue),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      "Test d'isolation",
+                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(Icons.info_outline, size: 18, color: Colors.blue.shade700),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '$designation — $pointControle',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.blue.shade900,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Isolement (MΩ) *',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    TextField(
+                      controller: isolementController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (_) => setModalState(() {}),
+                      decoration: InputDecoration(
+                        hintText: 'Ex: 100 ou 2.5',
+                        suffixText: 'MΩ',
+                        suffixStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Appréciation *',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        buildAppreciationOption('Satisfaisant', Colors.green.shade800, Colors.green.shade50),
+                        const SizedBox(width: 6),
+                        buildAppreciationOption('Non satisfaisant', Colors.red.shade800, Colors.red.shade50),
+                        const SizedBox(width: 6),
+                        buildAppreciationOption('Sans objet', Colors.grey.shade800, Colors.grey.shade200),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Annuler'),
+                ),
+                ElevatedButton(
+                  onPressed: isValid
+                      ? () async {
+                          final isoVal = double.parse(isolementController.text.replaceAll(',', '.'));
+                          final essai = EssaiIsolement(
+                            syncId: existingEssai?.syncId ?? 'iso_${DateTime.now().microsecondsSinceEpoch}',
+                            equipmentSyncId: equipmentSyncId,
+                            pointControle: pointControle,
+                            isolement: isoVal,
+                            appreciation: selectedAppreciation!,
+                            localisation: localisation,
+                            designation: designation,
+                          );
+                          await HiveService.saveEssaiIsolement(
+                            missionId: missionId,
+                            essai: essai,
+                          );
+                          Navigator.pop(context);
+                          onSaved();
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryBlue,
+                    disabledBackgroundColor: Colors.grey.shade300,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  child: Text(existingEssai != null ? 'Mettre à jour' : 'Enregistrer'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }

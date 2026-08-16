@@ -863,8 +863,9 @@ class PdfReportService {
       entries.add(_SommaireEntry(titre: "2. Essais de démarrage automatique du groupe électrogène", key: 'mesures_demarrage', level: 1));
       entries.add(_SommaireEntry(titre: "3. Test de fonctionnement de l'arrêt d'urgence", key: 'mesures_arret', level: 1));
       entries.add(_SommaireEntry(titre: "4. Prise de terre", key: 'mesures_terre', level: 1));
-      entries.add(_SommaireEntry(titre: "5. Essais de déclenchement des dispositifs différentiels et mesure d'isolement", key: 'mesures_ddr', level: 1));
-      entries.add(_SommaireEntry(titre: "6. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles", key: 'mesures_continuite', level: 1));
+      entries.add(_SommaireEntry(titre: "5. Essais de déclenchement des dispositifs différentiels", key: 'mesures_ddr', level: 1));
+      entries.add(_SommaireEntry(titre: "6. Essais de mesure d'isolement", key: 'mesures_isolement', level: 1));
+      entries.add(_SommaireEntry(titre: "7. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles", key: 'mesures_continuite', level: 1));
     }
 
     // 14. Photos
@@ -1738,7 +1739,7 @@ class PdfReportService {
           key: 'resume_executif_1_3',
           registry: trackedPages,
           offset: offset,
-          child: _subSectionHeader('3. ${data.concentrationRisque.title}'),
+          child: _subSectionHeader('${data.concentrationRisque.title}'),
         ),
         pw.SizedBox(height: 4),
         if (concRows.isNotEmpty)
@@ -7584,7 +7585,7 @@ class PdfReportService {
           key: 'mesures_ddr',
           registry: trackedPages,
           offset: pageOffset,
-          child: _subSectionBar("5. Essais de déclenchement des dispositifs différentiels et mesure d'isolement"),
+          child: _subSectionBar("5. Essais de déclenchement des dispositifs différentiels"),
         ));
         widgets.add(pw.SizedBox(height: 8));
 
@@ -7598,12 +7599,11 @@ class PdfReportService {
             verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
           ),
           columnWidths: const {
-            0: pw.FlexColumnWidth(0.6), // Quantité
-            1: pw.FlexColumnWidth(2.0), // Désignation circuit
-            2: pw.FlexColumnWidth(1.0), // Type dispositif
-            3: pw.FlexColumnWidth(1.8), // Réglage (divided into IAn and Tempo)
-            4: pw.FlexColumnWidth(0.8), // Essai
-            5: pw.FlexColumnWidth(1.0), // Isolement
+            0: pw.FlexColumnWidth(0.8), // Quantité
+            1: pw.FlexColumnWidth(2.8), // Désignation circuit
+            2: pw.FlexColumnWidth(1.6), // Type dispositif
+            3: pw.FlexColumnWidth(2.4), // Réglage (divided into IAn and Tempo)
+            4: pw.FlexColumnWidth(1.4), // Essai
           },
           children: [
             pw.TableRow(
@@ -7635,8 +7635,8 @@ class PdfReportService {
                     pw.Table(
                       border: pw.TableBorder(verticalInside: pw.BorderSide(color: borderColor, width: 0.4)),
                       columnWidths: const {
-                        0: pw.FlexColumnWidth(0.9),
-                        1: pw.FlexColumnWidth(0.9),
+                        0: pw.FlexColumnWidth(1.2),
+                        1: pw.FlexColumnWidth(1.2),
                       },
                       children: [
                         pw.TableRow(
@@ -7653,11 +7653,6 @@ class PdfReportService {
                   alignment: pw.Alignment.center,
                   padding: const pw.EdgeInsets.symmetric(vertical: 8),
                   child: pw.Text("Essai", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
-                ),
-                pw.Container(
-                  alignment: pw.Alignment.center,
-                  padding: const pw.EdgeInsets.symmetric(vertical: 8),
-                  child: pw.Text("Isolement\n(M\u2126)", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
                 ),
               ],
             ),
@@ -7720,7 +7715,7 @@ class PdfReportService {
                 localRows.add(pw.TableRow(
                   decoration: pw.BoxDecoration(color: rowBg),
                   children: [
-                    _cell("", isHeader: false, centered: true), // Quantité (empty in reference image)
+                    _cell("", isHeader: false, centered: true), // Quantité
                     _cell(circuitText, isHeader: false),
                     _cell(es.typeDispositif, isHeader: false, centered: true),
                     _cell(es.reglageIAn?.toString() ?? "-", isHeader: false, centered: true),
@@ -7731,7 +7726,6 @@ class PdfReportService {
                       alignment: pw.Alignment.center,
                       child: pw.Text(es.essai, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
                     ),
-                    _cell(es.isolement?.toString() ?? "-", isHeader: false, centered: true),
                   ],
                 ));
               }
@@ -7746,13 +7740,12 @@ class PdfReportService {
                 horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
               ),
               columnWidths: const {
-                0: pw.FlexColumnWidth(0.6), // Quantité
-                1: pw.FlexColumnWidth(2.0), // Désignation circuit
-                2: pw.FlexColumnWidth(1.0), // Type dispositif
-                3: pw.FlexColumnWidth(0.9), // IAn
-                4: pw.FlexColumnWidth(0.9), // Tempo
-                5: pw.FlexColumnWidth(0.8), // Essai
-                6: pw.FlexColumnWidth(1.0), // Isolement
+                0: pw.FlexColumnWidth(0.8), // Quantité
+                1: pw.FlexColumnWidth(2.8), // Désignation circuit
+                2: pw.FlexColumnWidth(1.6), // Type dispositif
+                3: pw.FlexColumnWidth(1.2), // IAn
+                4: pw.FlexColumnWidth(1.2), // Tempo
+                5: pw.FlexColumnWidth(1.4), // Essai
               },
               children: localRows,
             ));
@@ -7765,6 +7758,94 @@ class PdfReportService {
         return widgets;
       },
     ));
+
+    // 6. Essais de mesure d'isolement (nouvelle page)
+    pdf.addPage(pw.MultiPage(
+      maxPages: 10000,
+      pageTheme: _buildInnerPageTheme(pageOffset: pageOffset, overrideTotalPages: overrideTotalPages),
+      header: (ctx) => _buildPageHeaderWidget(),
+      build: (ctx) => [
+        PageTracker(
+          key: 'mesures_isolement',
+          registry: trackedPages,
+          offset: pageOffset,
+          child: _subSectionBar("6. Essais de mesure d'isolement"),
+        ),
+        pw.SizedBox(height: 8),
+        if (mesures.essaisIsolement.isEmpty)
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 4),
+            child: _bodyText('Aucune valeur.'),
+          )
+        else
+          pw.Table(
+            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+            border: pw.TableBorder.all(color: borderColor, width: 0.4),
+            columnWidths: const {
+              0: pw.FlexColumnWidth(2.2), // Localisation
+              1: pw.FlexColumnWidth(2.6), // Désignation
+              2: pw.FlexColumnWidth(1.8), // Isolement
+              3: pw.FlexColumnWidth(2.4), // Appréciation
+            },
+            children: [
+              _tableHeaderRow([
+                'Localisation',
+                'Désignation',
+                'Isolement',
+                'Appréciation',
+              ]),
+              ...mesures.essaisIsolement.asMap().entries.map((e) {
+                final ei = e.value;
+                final app = ei.appreciation;
+                final isSat = app == 'Satisfaisant';
+                final isNonSat = app == 'Non satisfaisant';
+                final appBgColor = isSat
+                    ? conformeColor
+                    : (isNonSat ? nonConformeColor : PdfColor.fromInt(0xFFEEEEEE));
+
+                final desigText = (ei.designation != null && ei.designation!.isNotEmpty)
+                    ? '${ei.designation!} (${ei.pointControle})'
+                    : ei.pointControle;
+
+                return pw.TableRow(
+                  decoration: pw.BoxDecoration(color: e.key.isOdd ? tableRowAlt : PdfColors.white),
+                  children: [
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(ei.localisation ?? '-', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
+                    ),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(desigText, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
+                    ),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text('${ei.isolement} M\u2126', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
+                    ),
+                    pw.Container(
+                      color: appBgColor,
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        app,
+                        style: pw.TextStyle(
+                          font: _fontBold,
+                          fontSize: fsSmall,
+                          color: PdfColors.black,
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ],
+          ),
+      ],
+    ));
     
     // Continuite (nouvelle page)
     pdf.addPage(pw.MultiPage(
@@ -7776,7 +7857,7 @@ class PdfReportService {
           key: 'mesures_continuite',
           registry: trackedPages,
           offset: pageOffset,
-          child: _subSectionBar('6. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles'),
+          child: _subSectionBar('7. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles'),
         ),
         pw.SizedBox(height: 8),
         if (mesures.continuiteResistances.isEmpty)
