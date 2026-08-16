@@ -1288,6 +1288,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     'Courbe-D',
     'Courbe-K',
     'Courbe-Z',
+    'Courbe-MA',
   ];
 
   static const List<String> _ddrOptions = [
