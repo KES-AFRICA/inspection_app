@@ -7520,10 +7520,6 @@ class PdfReportService {
               ...mesures.prisesTerre.asMap().entries.map((e) {
                 final pt = e.value;
                 final obs = pt.observation ?? '';
-                final isSat = obs.toLowerCase().contains('satisfaisant') && !obs.toLowerCase().contains('non');
-                final isNonSat = obs.toLowerCase().contains('non') || obs.toLowerCase().contains('accessible');
-                final obsColor = isSat ? PdfColor.fromInt(0xFF1B5E20) : (isNonSat ? PdfColor.fromInt(0xFFB71C1C) : darkGrey);
-
                 return pw.TableRow(
                   decoration: pw.BoxDecoration(color: e.key.isOdd ? tableRowAlt : PdfColors.white),
                   children: [
@@ -7533,19 +7529,7 @@ class PdfReportService {
                     _cell(pt.naturePriseTerre, isHeader: false, centered: true),
                     _cell(pt.methodeMesure, isHeader: false, centered: true),
                     _cell(pt.valeurMesure?.toStringAsFixed(2) ?? '-', isHeader: false, centered: true),
-                    pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                      alignment: pw.Alignment.center,
-                      child: pw.Text(
-                        obs,
-                        style: pw.TextStyle(
-                          font: _fontBold,
-                          fontSize: fsSmall,
-                          color: obsColor,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
+                    _cell(obs.isEmpty ? '-' : obs, isHeader: false, centered: true),
                   ],
                 );
               }),
@@ -7974,6 +7958,7 @@ class PdfReportService {
     );
 
     final dataTable = pw.Table(
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
       border: pw.TableBorder(
         left: pw.BorderSide(color: borderColor, width: 0.4),
         right: pw.BorderSide(color: borderColor, width: 0.4),
@@ -7987,14 +7972,14 @@ class PdfReportService {
       },
       children: [
         _tableHeaderRow(["Abréviation", "Signification"]),
-        _tableDataRow(["DDR", "Disjoncteur Différentiel"], alt: false),
-        _tableDataRow(["RD", "Relais Différentiel"], alt: true),
-        _tableDataRow(["B", "Bon fonctionnement"], alt: false),
-        _tableDataRow(["NE", "Non essayé"], alt: true),
-        _tableDataRow(["IDR", "Interrupteur Différentiel"], alt: false),
-        _tableDataRow(["I\u0394n", "Intensité différentielle"], alt: true),
-        _tableDataRow(["M", "Fonctionnement incorrect"], alt: false),
-        _tableDataRow(["Tempo", "Temporisation"], alt: true),
+        _tableDataRow(["DDR", "Disjoncteur Différentiel"], alt: false, centered: true),
+        _tableDataRow(["RD", "Relais Différentiel"], alt: true, centered: true),
+        _tableDataRow(["B", "Bon fonctionnement"], alt: false, centered: true),
+        _tableDataRow(["NE", "Non essayé"], alt: true, centered: true),
+        _tableDataRow(["IDR", "Interrupteur Différentiel"], alt: false, centered: true),
+        _tableDataRow(["I\u0394n", "Intensité différentielle"], alt: true, centered: true),
+        _tableDataRow(["M", "Fonctionnement incorrect"], alt: false, centered: true),
+        _tableDataRow(["Tempo", "Temporisation"], alt: true, centered: true),
       ],
     );
 
@@ -9063,6 +9048,7 @@ class PdfReportService {
     final displayText = isHeader ? formatHeaderUnit(text) : text;
     return pw.Container(
       color: color,
+      alignment: centered ? pw.Alignment.center : pw.Alignment.centerLeft,
       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
       child: pw.Text(
         _normalizeText(displayText),

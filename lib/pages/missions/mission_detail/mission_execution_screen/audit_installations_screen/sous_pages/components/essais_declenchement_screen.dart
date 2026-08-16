@@ -339,16 +339,6 @@ class _EssaisDeclenchementScreenState extends ConsumerState<EssaisDeclenchementS
                               icon: Icons.timer,
                             ),
                           ),
-                        SizedBox(width: _spacingM(context)),
-                        if (essai.isolement != null)
-                          Expanded(
-                            child: _buildInfoChip(
-                              context,
-                              label: 'Isolement',
-                              value: '${essai.isolement} MΩ',
-                              icon: Icons.insights,
-                            ),
-                          ),
                       ],
                     ),
                     
@@ -641,7 +631,7 @@ class _AjouterEssaiDeclenchementScreenState extends ConsumerState<AjouterEssaiDe
     if (_circuitController.text.trim().isEmpty) { _circuitValid = false; allValid = false; }
     if (_reglageController.text.trim().isEmpty) { _reglageValid = false; allValid = false; }
     if (_tempoController.text.trim().isEmpty) { _tempoValid = false; allValid = false; }
-    if (_isolementController.text.trim().isEmpty) { _isolementValid = false; allValid = false; }
+    _isolementValid = true;
     setState(() {});
     return allValid;
   }
@@ -1111,13 +1101,6 @@ class _AjouterEssaiDeclenchementScreenState extends ConsumerState<AjouterEssaiDe
                         ],
                       ),
                     
-                    _buildTextField(
-                      'Isolement (MΩ)',
-                      _isolementController,
-                      isRequired: true,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      onChanged: _validateIsolement,
-                    ),
                     _buildTextField('Observation', _observationController, isRequired: false, maxLines: 3),
                   ],
                 ),
