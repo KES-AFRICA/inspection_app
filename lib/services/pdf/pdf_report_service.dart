@@ -9530,6 +9530,10 @@ class PdfReportService {
     final tempDir = await getTemporaryDirectory();
     int currentOffset = pageOffset;
 
+    final bool hasNoAuditContent = audit.moyenneTensionLocaux.isEmpty &&
+        audit.moyenneTensionZones.isEmpty &&
+        audit.basseTensionZones.isEmpty;
+
     // 1. Page de Garde / Titre de l'Audit
     final coverDoc = pw.Document(
       title: 'Audit Cover - ${mission.nomClient}',
@@ -9577,6 +9581,19 @@ class PdfReportService {
               ),
               pw.SizedBox(height: 24),
               pw.Container(width: 350, height: 2, color: accentColor),
+              if (hasNoAuditContent) ...[
+                pw.SizedBox(height: 20),
+                pw.Text(
+                  'Aucune installation enregistrée dans cet audit.',
+                  style: pw.TextStyle(
+                    font: _fontRegular,
+                    fontSize: 10,
+                    color: darkGrey,
+                    fontStyle: pw.FontStyle.italic,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ],
             ],
           ),
         ),
