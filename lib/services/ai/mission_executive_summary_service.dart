@@ -488,20 +488,13 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
     final eqCount = snapshot.equipmentCount;
     final globalDensityStr = snapshot.globalDensityStr;
 
-    // Liste des catégories actives avec leurs effectifs
-    final activeCategoriesNames = snapshot.categoryStats
-        .where((c) => (c['equipmentCount'] as int? ?? 0) > 0)
-        .map((c) => '${c['categoryName']} (${c['equipmentCount']})')
-        .join(', ');
-
     final contextText =
         'La vérification périodique réglementaire des installations électriques du site ${snapshot.siteName} '
         'a été réalisée ${snapshot.dateRangeText} par ${snapshot.companyName} '
         '(rapport n° ${snapshot.reportNumber}, émis le ${snapshot.reportDateStr}). '
         'La mission a porté sur l\'ensemble des installations électriques ${snapshot.domainTension}, '
         'depuis les sources d\'alimentation jusqu\'aux équipements terminaux, conformément au périmètre défini dans le rapport, '
-        'soit un total de ${snapshot.equipmentCount} installation${snapshot.equipmentCount > 1 ? 's' : ''} et équipement${snapshot.equipmentCount > 1 ? 's' : ''} '
-        'contrôlés (${activeCategoriesNames.isNotEmpty ? activeCategoriesNames : 'locaux techniques, armoires, coffrets et prises de terre'}).';
+        'soit un total de ${snapshot.equipmentCount} installation${snapshot.equipmentCount > 1 ? 's' : ''} et équipement${snapshot.equipmentCount > 1 ? 's' : ''} contrôlés.';
 
     final introSynthese =
         'Les vérifications ont permis de recenser $total non-conformité${total > 1 ? 's' : ''} sur l\'ensemble du périmètre, '
