@@ -37,17 +37,13 @@ class JsaNotifier extends StateNotifier<AsyncValue<JSA>> {
           : null;
 
       if (currentUser != null) {
-        if (model.inspecteurs.isEmpty) {
-          model.inspecteurs = [];
-        }
-        final hasCurrentUser = model.inspecteurs.any((i) =>
-            i.nom == currentUser.nom && i.prenom == currentUser.prenom);
+        final added = JSAUtils.addInspectorIfAbsent(
+          model.inspecteurs,
+          currentUser.nom,
+          currentUser.prenom,
+        );
 
-        if (!hasCurrentUser) {
-          model.inspecteurs.add(JSAInspecteur(
-            nom: currentUser.nom,
-            prenom: currentUser.prenom,
-          ));
+        if (added) {
           final saveUseCase = ref.read(saveJsaUseCaseProvider);
           final saveEntity = JsaMapper.toEntity(model);
           await saveUseCase(saveEntity);

@@ -6062,6 +6062,29 @@ static JSA? getJSAByMissionId(String missionId) {
   }
 }
 
+/// S'assure que l'inspecteur connecté actuel est présent dans la liste des inspecteurs JSA (sans doublon)
+static Future<void> ensureCurrentUserInJSA(String missionId) async {
+  try {
+    final currentUser = getCurrentUser();
+    if (currentUser == null) return;
+    if (currentUser.nom.trim().isEmpty && currentUser.prenom.trim().isEmpty) return;
+
+    final jsa = getJSAByMissionId(missionId);
+    if (jsa != null) {
+      final added = JSAUtils.addInspectorIfAbsent(
+        jsa.inspecteurs,
+        currentUser.nom,
+        currentUser.prenom,
+      );
+      if (added) {
+        await saveJSA(jsa);
+      }
+    }
+  } catch (e) {
+    if (kDebugMode) print('⚠️ Erreur ensureCurrentUserInJSA: $e');
+  }
+}
+
 /// Vérifie si les 6 sous-sections du JSA d'une mission sont intégralement complétées
 static bool isJsaCompleted(String missionId) {
   final jsa = getJSAByMissionId(missionId);

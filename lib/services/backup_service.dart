@@ -238,6 +238,7 @@ class BackupService {
           );
         }
         final m = missions[i];
+        await HiveService.ensureCurrentUserInJSA(m.id);
         onProgressState?.call(OperationProgressState(
           type: OperationType.export,
           status: OperationStatus.inProgress,

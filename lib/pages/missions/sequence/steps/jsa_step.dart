@@ -723,6 +723,11 @@ class JsaStepState extends ConsumerState<JsaStep> with AutomaticKeepAliveClientM
       return;
     }
     
+    if (JSAUtils.hasInspector(_jsa.inspecteurs, nom, prenom)) {
+      _showError('Cet inspecteur est déjà présent dans la liste');
+      return;
+    }
+    
     // ✅ Limite de 6 inspecteurs
     if (_jsa.inspecteurs.length >= 6) {
       _showError('Nombre maximum d\'inspecteurs atteint (6)');

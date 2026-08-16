@@ -15,6 +15,7 @@ import 'package:inspec_app/models/foudre.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/renseignements_generaux.dart';
+import 'package:inspec_app/models/jsa.dart';
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
@@ -7866,6 +7867,153 @@ class PdfReportService {
     ));
   }
 
+  // Page "INTERVENANTS ET RESPONSABILITÉS"
+  static pw.Widget _buildIntervenantsEtResponsabilitesPage(
+    JSA? jsa,
+    RenseignementsGeneraux? rg,
+    dynamic currentUser,
+  ) {
+    final List<String> inspecteursNoms = [];
+    if (jsa != null && jsa.inspecteurs.isNotEmpty) {
+      for (final insp in jsa.inspecteurs) {
+        final fullName = '${insp.prenom} ${insp.nom}'.trim();
+        if (fullName.isNotEmpty &&
+            !inspecteursNoms.any((existing) =>
+                JSAUtils.normalizeInspectorName(existing) == JSAUtils.normalizeInspectorName(fullName))) {
+          inspecteursNoms.add(fullName);
+        }
+      }
+    }
+
+    if (inspecteursNoms.isEmpty) {
+      final userFullName = currentUser != null && currentUser.fullName != null
+          ? currentUser.fullName.toString().trim()
+          : '';
+      if (userFullName.isNotEmpty) {
+        inspecteursNoms.add(userFullName);
+      } else if (rg != null && rg.verificateurs.isNotEmpty) {
+        for (final v in rg.verificateurs) {
+          final nom = '${v['prenom'] ?? ''} ${v['nom'] ?? ''}'.trim();
+          if (nom.isNotEmpty) inspecteursNoms.add(nom);
+        }
+      }
+      if (inspecteursNoms.isEmpty) {
+        inspecteursNoms.add('Inspecteur non renseigné');
+      }
+    }
+
+    pw.Widget buildCard({
+      required String title,
+      required pw.Widget contentWidget,
+    }) {
+      return pw.Container(
+        width: double.infinity,
+        margin: const pw.EdgeInsets.only(bottom: 12),
+        decoration: pw.BoxDecoration(
+          color: PdfColor.fromInt(0xFFF8FAFC),
+          border: pw.Border.all(color: borderColor, width: 0.5),
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+        ),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Container(
+              width: double.infinity,
+              padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: pw.BoxDecoration(
+                color: lightBlue,
+                border: pw.Border(bottom: pw.BorderSide(color: borderColor, width: 0.5)),
+                borderRadius: const pw.BorderRadius.only(
+                  topLeft: pw.Radius.circular(3.5),
+                  topRight: pw.Radius.circular(3.5),
+                ),
+              ),
+              child: pw.Row(
+                children: [
+                  pw.Container(
+                    width: 3.5,
+                    height: 10,
+                    color: headerColor,
+                    margin: const pw.EdgeInsets.only(right: 6),
+                  ),
+                  pw.Text(
+                    title,
+                    style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+                  ),
+                ],
+              ),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: contentWidget,
+            ),
+          ],
+        ),
+      );
+    }
+
+    pw.Widget buildInspecteursListWidget(List<String> list) {
+      return pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: list.map((name) {
+          return pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(vertical: 2),
+            child: pw.Row(
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                pw.Container(
+                  width: 4,
+                  height: 4,
+                  margin: const pw.EdgeInsets.only(right: 8),
+                  decoration: pw.BoxDecoration(
+                    color: headerColor,
+                    shape: pw.BoxShape.circle,
+                  ),
+                ),
+                pw.Text(
+                  name,
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      );
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        _buildPageHeaderWidget(),
+        pw.SizedBox(height: 8),
+        _sectionBox('INTERVENANTS ET RESPONSABILITÉS'),
+        pw.SizedBox(height: 12),
+        buildCard(
+          title: 'INSPECTION RÉALISÉE PAR',
+          contentWidget: buildInspecteursListWidget(inspecteursNoms),
+        ),
+        buildCard(
+          title: 'RAPPORT RÉDIGÉ PAR',
+          contentWidget: buildInspecteursListWidget(inspecteursNoms),
+        ),
+        buildCard(
+          title: 'RAPPORT VÉRIFIÉ PAR',
+          contentWidget: pw.Text(
+            'Lucien BOYOMO et Patrick ESSAME',
+            style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey),
+          ),
+        ),
+        buildCard(
+          title: 'RAPPORT VALIDÉ PAR',
+          contentWidget: pw.Text(
+            'Patrick ESSAME',
+            style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey),
+          ),
+        ),
+      ],
+    );
+  }
+
   // Page signature "LA DIRECTION"
   static pw.Widget _buildSignaturePage(RenseignementsGeneraux? rg, String? nomInspecteur) {
     return pw.Column(
@@ -7897,13 +8045,24 @@ class PdfReportService {
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
-                pw.SizedBox(height: 60),
+                pw.SizedBox(height: 40),
+                pw.Text(
+                  'Patrick ESSAME ESSAME',
+                  style: pw.TextStyle(
+                    font: _fontBold,
+                    fontSize: 14,
+                    fontWeight: pw.FontWeight.bold,
+                    color: headerColor,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+                pw.SizedBox(height: 25),
                 pw.Container(
                   width: 200, height: 1, color: PdfColors.grey400,
                 ),
                 pw.SizedBox(height: 4),
                 pw.Text(
-                  'Signature et cachet',
+                  'Nom, Signature et cachet',
                   style: pw.TextStyle(
                     font: _fontRegular, fontSize: 8, color: PdfColors.grey500,
                   ),
@@ -9976,13 +10135,19 @@ class PdfReportService {
       pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
       build: (ctx) => [_buildFoudre(audit, foudres, trackedPages, afficherTableauFoudre: mission.afficherTableauFoudre, offset: currentOffset)],
     ));
+    final jsa = HiveService.getJSAByMissionId(missionId);
+
     if (mesures != null) {
       _addMesuresEssaisPages(pdfP2_1, mesures, trackedPages, pageOffset: currentOffset, overrideTotalPages: overrideTotalPages);
-      pdfP2_1.addPage(pw.Page(
-        pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
-        build: (ctx) => _buildSignaturePage(renseignements, currentUser?.fullName),
-      ));
     }
+    pdfP2_1.addPage(pw.Page(
+      pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
+      build: (ctx) => _buildIntervenantsEtResponsabilitesPage(jsa, renseignements, currentUser),
+    ));
+    pdfP2_1.addPage(pw.Page(
+      pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
+      build: (ctx) => _buildSignaturePage(renseignements, currentUser?.fullName),
+    ));
     final bytesP2_1 = await pdfP2_1.save();
     if (saveFilesToDisk) {
       final chunkP2_1 = File('${tempDir.path}/pdf_chunk_p2_1_$missionId.pdf');

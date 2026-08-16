@@ -23,6 +23,46 @@ class JSAInspecteur {
   });
 }
 
+class JSAUtils {
+  /// Normalise un nom et prénom d'inspecteur pour la comparaison (insensible à la casse, espaces unifiés)
+  static String normalizeInspectorName(String nom, [String prenom = '']) {
+    return '$prenom $nom'
+        .trim()
+        .replaceAll(RegExp(r'\s+'), ' ')
+        .toLowerCase();
+  }
+
+  /// Vérifie si un inspecteur est déjà présent dans la liste (insensible à la casse)
+  static bool hasInspector(List<JSAInspecteur> list, String nom, [String prenom = '']) {
+    final targetKey = normalizeInspectorName(nom, prenom);
+    if (targetKey.isEmpty) return false;
+    return list.any((i) => normalizeInspectorName(i.nom, i.prenom) == targetKey);
+  }
+
+  /// Ajoute un inspecteur s'il n'est pas déjà présent (insensible à la casse)
+  /// Conserve la casse originale transmise lors de l'ajout
+  static bool addInspectorIfAbsent(
+    List<JSAInspecteur> list,
+    String nom,
+    String prenom, {
+    String signature = '',
+  }) {
+    final cleanNom = nom.trim();
+    final cleanPrenom = prenom.trim();
+    if (cleanNom.isEmpty && cleanPrenom.isEmpty) return false;
+
+    if (!hasInspector(list, cleanNom, cleanPrenom)) {
+      list.add(JSAInspecteur(
+        nom: cleanNom,
+        prenom: cleanPrenom,
+        signature: signature,
+      ));
+      return true;
+    }
+    return false;
+  }
+}
+
 // ───────────────────────────────────────────────────
 // SOUS-CATÉGORIE 2 : Plan d'urgence
 // ───────────────────────────────────────────────────
