@@ -2274,16 +2274,23 @@ Future<void> _supprimerEssai(EssaiDeclenchementDifferentiel essai) async {
     );
     String? selectedAppreciation = existingEssai?.appreciation;
 
-    await showDialog(
+    await showModalBottomSheet(
       context: context,
-      builder: (dialogContext) {
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (sheetContext) {
         return StatefulBuilder(
           builder: (context, setModalState) {
             final parsedVal = double.tryParse(isolementController.text.replaceAll(',', '.'));
             final isIsolementValid = parsedVal != null && parsedVal > 0;
             final isValid = isIsolementValid && (selectedAppreciation != null && selectedAppreciation!.isNotEmpty);
 
-            Widget buildAppreciationOption(String label, Color activeColor, Color activeBgColor) {
+            Widget buildAppreciationCard({
+              required String label,
+              required IconData icon,
+              required Color activeColor,
+              required Color activeBgColor,
+            }) {
               final isSelected = selectedAppreciation == label;
               return Expanded(
                 child: InkWell(
@@ -2292,154 +2299,321 @@ Future<void> _supprimerEssai(EssaiDeclenchementDifferentiel essai) async {
                       selectedAppreciation = label;
                     });
                   },
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(12),
                   child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 150),
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+                    duration: const Duration(milliseconds: 180),
+                    padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
                     decoration: BoxDecoration(
-                      color: isSelected ? activeBgColor : Colors.grey.shade100,
-                      borderRadius: BorderRadius.circular(8),
+                      color: isSelected ? activeBgColor : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: isSelected ? activeColor : Colors.grey.shade300,
                         width: isSelected ? 2 : 1,
                       ),
+                      boxShadow: isSelected
+                          ? [
+                              BoxShadow(
+                                color: activeColor.withOpacity(0.15),
+                                blurRadius: 6,
+                                offset: const Offset(0, 2),
+                              )
+                            ]
+                          : null,
                     ),
-                    child: Center(
-                      child: Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-                          color: isSelected ? activeColor : Colors.grey.shade700,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          icon,
+                          size: 22,
+                          color: isSelected ? activeColor : Colors.grey.shade600,
                         ),
-                        textAlign: TextAlign.center,
-                      ),
+                        const SizedBox(height: 6),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.w600,
+                            color: isSelected ? activeColor : Colors.grey.shade800,
+                          ),
+                          textAlign: TextAlign.center,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
                     ),
                   ),
                 ),
               );
             }
 
-            return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              title: Row(
-                children: [
-                  Icon(Icons.speed, color: AppTheme.primaryBlue),
-                  const SizedBox(width: 8),
-                  const Expanded(
-                    child: Text(
-                      "Test d'isolation",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ],
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
               ),
-              content: SingleChildScrollView(
+              padding: EdgeInsets.only(
+                left: 20,
+                right: 20,
+                top: 12,
+                bottom: MediaQuery.of(sheetContext).viewInsets.bottom + 20,
+              ),
+              child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Poignée de glissement
+                    Center(
+                      child: Container(
+                        width: 40,
+                        height: 4,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade300,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // En-tête
+                    Row(
+                      children: [
+                        Container(
+                          width: 42,
+                          height: 42,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [AppTheme.primaryBlue, AppTheme.primaryBlue.withOpacity(0.8)],
+                            ),
+                            borderRadius: BorderRadius.circular(12),
+                            boxShadow: [
+                              BoxShadow(
+                                color: AppTheme.primaryBlue.withOpacity(0.3),
+                                blurRadius: 8,
+                                offset: const Offset(0, 3),
+                              ),
+                            ],
+                          ),
+                          child: const Icon(Icons.speed, color: Colors.white, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Test d'isolation",
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.darkBlue,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                "Saisie de l'isolement électrique",
+                                style: TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.grey.shade600,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: Icon(Icons.close, color: Colors.grey.shade500),
+                          onPressed: () => Navigator.pop(sheetContext),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Badge équipement
                     Container(
-                      padding: const EdgeInsets.all(10),
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       decoration: BoxDecoration(
-                        color: Colors.blue.shade50,
-                        borderRadius: BorderRadius.circular(8),
+                        color: AppTheme.primaryBlue.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.2)),
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.info_outline, size: 18, color: Colors.blue.shade700),
+                          Icon(Icons.location_on_outlined, size: 18, color: AppTheme.primaryBlue),
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              '$designation — $pointControle',
+                              '$localisation • $designation ($pointControle)',
                               style: TextStyle(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
-                                color: Colors.blue.shade900,
+                                color: AppTheme.darkBlue,
                               ),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
+
+                    // Champ Isolement
                     Text(
                       'Isolement (MΩ) *',
                       style: TextStyle(
                         fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.grey.shade800,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    TextField(
-                      controller: isolementController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      onChanged: (_) => setModalState(() {}),
-                      decoration: InputDecoration(
-                        hintText: 'Ex: 100 ou 2.5',
-                        suffixText: 'MΩ',
-                        suffixStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Appréciation *',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
+                        fontWeight: FontWeight.bold,
                         color: Colors.grey.shade800,
                       ),
                     ),
                     const SizedBox(height: 8),
+                    TextField(
+                      controller: isolementController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onChanged: (_) => setModalState(() {}),
+                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+                      decoration: InputDecoration(
+                        hintText: 'Ex: 100 ou 2.5',
+                        hintStyle: TextStyle(color: Colors.grey.shade400, fontWeight: FontWeight.normal),
+                        prefixIcon: Icon(Icons.speed, size: 20, color: Colors.grey.shade600),
+                        suffixIcon: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          child: Text(
+                            'MΩ',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryBlue,
+                            ),
+                          ),
+                        ),
+                        filled: true,
+                        fillColor: Colors.grey.shade50,
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey.shade300),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: AppTheme.primaryBlue, width: 2),
+                        ),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Section Appréciation
+                    Text(
+                      'Appréciation *',
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey.shade800,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
                     Row(
                       children: [
-                        buildAppreciationOption('Satisfaisant', Colors.green.shade800, Colors.green.shade50),
-                        const SizedBox(width: 6),
-                        buildAppreciationOption('Non satisfaisant', Colors.red.shade800, Colors.red.shade50),
-                        const SizedBox(width: 6),
-                        buildAppreciationOption('Sans objet', Colors.grey.shade800, Colors.grey.shade200),
+                        buildAppreciationCard(
+                          label: 'Satisfaisant',
+                          icon: Icons.check_circle_outline,
+                          activeColor: Colors.green.shade800,
+                          activeBgColor: Colors.green.shade50,
+                        ),
+                        const SizedBox(width: 8),
+                        buildAppreciationCard(
+                          label: 'Non satisfaisant',
+                          icon: Icons.cancel_outlined,
+                          activeColor: Colors.red.shade800,
+                          activeBgColor: Colors.red.shade50,
+                        ),
+                        const SizedBox(width: 8),
+                        buildAppreciationCard(
+                          label: 'Sans objet',
+                          icon: Icons.remove_circle_outline,
+                          activeColor: Colors.grey.shade800,
+                          activeBgColor: Colors.grey.shade200,
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Actions alignées côte à côte
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 1,
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(sheetContext),
+                            style: OutlinedButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              side: BorderSide(color: Colors.grey.shade300),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              'Annuler',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          flex: 2,
+                          child: ElevatedButton(
+                            onPressed: isValid
+                                ? () async {
+                                    final isoVal = double.parse(isolementController.text.replaceAll(',', '.'));
+                                    final essai = EssaiIsolement(
+                                      syncId: existingEssai?.syncId ?? 'iso_${DateTime.now().microsecondsSinceEpoch}',
+                                      equipmentSyncId: equipmentSyncId,
+                                      pointControle: pointControle,
+                                      isolement: isoVal,
+                                      appreciation: selectedAppreciation!,
+                                      localisation: localisation,
+                                      designation: designation,
+                                    );
+                                    await HiveService.saveEssaiIsolement(
+                                      missionId: missionId,
+                                      essai: essai,
+                                    );
+                                    Navigator.pop(sheetContext);
+                                    onSaved();
+                                  }
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryBlue,
+                              disabledBackgroundColor: Colors.grey.shade200,
+                              foregroundColor: Colors.white,
+                              disabledForegroundColor: Colors.grey.shade400,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              existingEssai != null ? 'Mettre à jour' : 'Enregistrer',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
                       ],
                     ),
                   ],
                 ),
               ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Annuler'),
-                ),
-                ElevatedButton(
-                  onPressed: isValid
-                      ? () async {
-                          final isoVal = double.parse(isolementController.text.replaceAll(',', '.'));
-                          final essai = EssaiIsolement(
-                            syncId: existingEssai?.syncId ?? 'iso_${DateTime.now().microsecondsSinceEpoch}',
-                            equipmentSyncId: equipmentSyncId,
-                            pointControle: pointControle,
-                            isolement: isoVal,
-                            appreciation: selectedAppreciation!,
-                            localisation: localisation,
-                            designation: designation,
-                          );
-                          await HiveService.saveEssaiIsolement(
-                            missionId: missionId,
-                            essai: essai,
-                          );
-                          Navigator.pop(context);
-                          onSaved();
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    disabledBackgroundColor: Colors.grey.shade300,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                  ),
-                  child: Text(existingEssai != null ? 'Mettre à jour' : 'Enregistrer'),
-                ),
-              ],
             );
           },
         );
