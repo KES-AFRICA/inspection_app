@@ -869,6 +869,16 @@ class PdfReportService {
       entries.add(_SommaireEntry(titre: "7. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles", key: 'mesures_continuite', level: 1));
     }
 
+    // Intervenants et responsabilités
+    entries.add(_SommaireEntry(titre: "INTERVENANTS ET RESPONSABILITÉS", key: 'intervenants', level: 0, isBold: true, isUppercase: true));
+    entries.add(_SommaireEntry(titre: "1. Inspection réalisée par", key: 'intervenants_inspection', level: 1));
+    entries.add(_SommaireEntry(titre: "2. Rapport rédigé par", key: 'intervenants_redaction', level: 1));
+    entries.add(_SommaireEntry(titre: "3. Rapport vérifié par", key: 'intervenants_verification', level: 1));
+    entries.add(_SommaireEntry(titre: "4. Rapport validé par", key: 'intervenants_validation', level: 1));
+
+    // Signature du rapport
+    entries.add(_SommaireEntry(titre: "Signature du rapport", key: 'signature_rapport', level: 0, isBold: true, isUppercase: false));
+
     // 14. Photos
     entries.add(_SommaireEntry(titre: "PHOTOS", key: 'photos', level: 0, isBold: true, isUppercase: true));
 
@@ -7490,34 +7500,34 @@ class PdfReportService {
           child: _subSectionBar('4. Prise de terre'),
         ),
         pw.SizedBox(height: 8),
-        if (mesures.prisesTerre.isEmpty)
-          pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(vertical: 4),
-            child: _bodyText('Aucune valeur.'),
-          )
-        else
-          pw.Table(
-            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-            border: pw.TableBorder.all(color: borderColor, width: 0.4),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(1.2), // Localisation
-              1: pw.FlexColumnWidth(1.6), // Identification de la prise de terre
-              2: pw.FlexColumnWidth(1.2), // Condition de mesure
-              3: pw.FlexColumnWidth(1.4), // Nature de la prise de terre
-              4: pw.FlexColumnWidth(1.2), // Méthode de mesure
-              5: pw.FlexColumnWidth(0.8), // Valeur de la mesure
-              6: pw.FlexColumnWidth(1.4), // Observation
-            },
-            children: [
-              _tableHeaderRow([
-                'Localisation',
-                'Identification de la prise de terre',
-                'Condition de mesure',
-                'Nature de la prise de terre',
-                'Méthode de mesure',
-                'Valeur de la mesure',
-                'Observation'
-              ]),
+        pw.Table(
+          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+          border: pw.TableBorder.all(color: borderColor, width: 0.4),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(1.2), // Localisation
+            1: pw.FlexColumnWidth(1.6), // Identification de la prise de terre
+            2: pw.FlexColumnWidth(1.2), // Condition de mesure
+            3: pw.FlexColumnWidth(1.4), // Nature de la prise de terre
+            4: pw.FlexColumnWidth(1.2), // Méthode de mesure
+            5: pw.FlexColumnWidth(0.8), // Valeur de la mesure
+            6: pw.FlexColumnWidth(1.4), // Observation
+          },
+          children: [
+            _tableHeaderRow([
+              'Localisation',
+              'Identification de la prise de terre',
+              'Condition de mesure',
+              'Nature de la prise de terre',
+              'Méthode de mesure',
+              'Valeur de la mesure',
+              'Observation'
+            ]),
+            if (mesures.prisesTerre.isEmpty)
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.white),
+                children: List.generate(7, (_) => _cell('', isHeader: false, centered: true)),
+              )
+            else
               ...mesures.prisesTerre.asMap().entries.map((e) {
                 final pt = e.value;
                 final obs = pt.observation ?? '';
@@ -7534,8 +7544,8 @@ class PdfReportService {
                   ],
                 );
               }),
-            ],
-          ),
+          ],
+        ),
         if (mesures.avisMesuresTerre.observation != null && mesures.avisMesuresTerre.observation!.isNotEmpty) ...[
           pw.SizedBox(height: 12),
           pw.Container(
@@ -7674,21 +7684,13 @@ class PdfReportService {
 
         widgets.add(headerTable);
 
+        final ddrRows = <pw.TableRow>[];
         if (mesures.essaisDeclenchement.isEmpty) {
-          widgets.add(pw.Container(
-            width: double.infinity,
-            padding: const pw.EdgeInsets.all(6),
-            decoration: pw.BoxDecoration(
-              border: pw.Border(
-                left: pw.BorderSide(color: borderColor, width: 0.4),
-                right: pw.BorderSide(color: borderColor, width: 0.4),
-                bottom: pw.BorderSide(color: borderColor, width: 0.4),
-              ),
-            ),
-            child: _bodyText('Aucune valeur.'),
+          ddrRows.add(pw.TableRow(
+            decoration: const pw.BoxDecoration(color: PdfColors.white),
+            children: List.generate(6, (_) => _cell('', isHeader: false, centered: true)),
           ));
         } else {
-          final ddrRows = <pw.TableRow>[];
           int altIdx = 0;
           for (final es in mesures.essaisDeclenchement) {
             altIdx++;
@@ -7716,26 +7718,27 @@ class PdfReportService {
               ],
             ));
           }
-          widgets.add(pw.Table(
-            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-            border: pw.TableBorder(
-              left: pw.BorderSide(color: borderColor, width: 0.4),
-              right: pw.BorderSide(color: borderColor, width: 0.4),
-              bottom: pw.BorderSide(color: borderColor, width: 0.4),
-              verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
-              horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
-            ),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(1.8), // LOCALISATION
-              1: pw.FlexColumnWidth(2.6), // Désignation circuit
-              2: pw.FlexColumnWidth(1.4), // Type dispositif
-              3: pw.FlexColumnWidth(1.1), // IAn
-              4: pw.FlexColumnWidth(1.1), // Tempo
-              5: pw.FlexColumnWidth(1.2), // Essai
-            },
-            children: ddrRows,
-          ));
         }
+
+        widgets.add(pw.Table(
+          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+          border: pw.TableBorder(
+            left: pw.BorderSide(color: borderColor, width: 0.4),
+            right: pw.BorderSide(color: borderColor, width: 0.4),
+            bottom: pw.BorderSide(color: borderColor, width: 0.4),
+            verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+            horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+          ),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(1.8), // LOCALISATION
+            1: pw.FlexColumnWidth(2.6), // Désignation circuit
+            2: pw.FlexColumnWidth(1.4), // Type dispositif
+            3: pw.FlexColumnWidth(1.1), // IAn
+            4: pw.FlexColumnWidth(1.1), // Tempo
+            5: pw.FlexColumnWidth(1.2), // Essai
+          },
+          children: ddrRows,
+        ));
 
         widgets.add(pw.SizedBox(height: 12));
         widgets.add(_buildAbreviationsTable());
@@ -7757,28 +7760,28 @@ class PdfReportService {
           child: _subSectionBar("6. Essais de mesure d'isolement"),
         ),
         pw.SizedBox(height: 8),
-        if (mesures.essaisIsolement.isEmpty)
-          pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(vertical: 4),
-            child: _bodyText('Aucune valeur.'),
-          )
-        else
-          pw.Table(
-            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-            border: pw.TableBorder.all(color: borderColor, width: 0.4),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(2.2), // Localisation
-              1: pw.FlexColumnWidth(2.6), // Désignation
-              2: pw.FlexColumnWidth(1.8), // Isolement
-              3: pw.FlexColumnWidth(2.4), // Appréciation
-            },
-            children: [
-              _tableHeaderRow([
-                'Localisation',
-                'Désignation',
-                'Isolement',
-                'Appréciation',
-              ]),
+        pw.Table(
+          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+          border: pw.TableBorder.all(color: borderColor, width: 0.4),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(2.2), // Localisation
+            1: pw.FlexColumnWidth(2.6), // Désignation
+            2: pw.FlexColumnWidth(1.8), // Isolement
+            3: pw.FlexColumnWidth(2.4), // Appréciation
+          },
+          children: [
+            _tableHeaderRow([
+              'Localisation',
+              'Désignation',
+              'Isolement',
+              'Appréciation',
+            ]),
+            if (mesures.essaisIsolement.isEmpty)
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.white),
+                children: List.generate(4, (_) => _cell('', isHeader: false, centered: true)),
+              )
+            else
               ...mesures.essaisIsolement.asMap().entries.map((e) {
                 final ei = e.value;
                 final app = ei.appreciation;
@@ -7827,8 +7830,8 @@ class PdfReportService {
                   ],
                 );
               }),
-            ],
-          ),
+          ],
+        ),
       ],
     ));
     
@@ -7845,24 +7848,21 @@ class PdfReportService {
           child: _subSectionBar('7. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles'),
         ),
         pw.SizedBox(height: 8),
-        if (mesures.continuiteResistances.isEmpty)
-          pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(vertical: 4),
-            child: _bodyText('Aucune valeur.'),
-          )
-        else
-          pw.Table(
-            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-            border: pw.TableBorder.all(color: borderColor, width: 0.4),
-            columnWidths: const {0: pw.FlexColumnWidth(2), 1: pw.FlexColumnWidth(2.5), 2: pw.FlexColumnWidth(1.5), 3: pw.FlexColumnWidth(2)},
-            children: [
-              _tableHeaderRow(['Localisation', 'Désignation Tableau / Equipement', 'Origine Mésure', 'Observation']),
+        pw.Table(
+          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+          border: pw.TableBorder.all(color: borderColor, width: 0.4),
+          columnWidths: const {0: pw.FlexColumnWidth(2), 1: pw.FlexColumnWidth(2.5), 2: pw.FlexColumnWidth(1.5), 3: pw.FlexColumnWidth(2)},
+          children: [
+            _tableHeaderRow(['Localisation', 'Désignation Tableau / Equipement', 'Origine Mésure', 'Observation']),
+            if (mesures.continuiteResistances.isEmpty)
+              _tableDataRow(['', '', '', ''], alt: false, centered: true)
+            else
               ...mesures.continuiteResistances.asMap().entries.map((e) {
                 final c = e.value;
                 return _tableDataRow([c.localisation, c.designationTableau, c.origineMesure, c.observation ?? ''], alt: e.key.isOdd, centered: true);
               }),
-            ],
-          ),
+          ],
+        ),
       ],
     ));
   }
@@ -7872,6 +7872,8 @@ class PdfReportService {
     JSA? jsa,
     RenseignementsGeneraux? rg,
     dynamic currentUser,
+    Map<String, int> trackedPages,
+    int pageOffset,
   ) {
     final List<String> inspecteursNoms = [];
     if (jsa != null && jsa.inspecteurs.isNotEmpty) {
@@ -7904,50 +7906,51 @@ class PdfReportService {
 
     pw.Widget buildCard({
       required String title,
+      required String trackerKey,
       required pw.Widget contentWidget,
     }) {
-      return pw.Container(
-        width: double.infinity,
-        margin: const pw.EdgeInsets.only(bottom: 12),
-        decoration: pw.BoxDecoration(
-          color: PdfColor.fromInt(0xFFF8FAFC),
-          border: pw.Border.all(color: borderColor, width: 0.5),
-          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-        ),
-        child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.Container(
-              width: double.infinity,
-              padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-              decoration: pw.BoxDecoration(
-                color: lightBlue,
-                border: pw.Border(bottom: pw.BorderSide(color: borderColor, width: 0.5)),
-                borderRadius: const pw.BorderRadius.only(
-                  topLeft: pw.Radius.circular(3.5),
-                  topRight: pw.Radius.circular(3.5),
+      return PageTracker(
+        key: trackerKey,
+        registry: trackedPages,
+        offset: pageOffset,
+        child: pw.Container(
+          width: double.infinity,
+          margin: const pw.EdgeInsets.only(bottom: 12),
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromInt(0xFFF8FAFC),
+            border: pw.Border.all(color: borderColor, width: 0.5),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Container(
+                width: double.infinity,
+                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: pw.BoxDecoration(
+                  color: lightBlue,
+                ),
+                child: pw.Row(
+                  children: [
+                    pw.Container(
+                      width: 3.5,
+                      height: 10,
+                      color: headerColor,
+                      margin: const pw.EdgeInsets.only(right: 6),
+                    ),
+                    pw.Text(
+                      title,
+                      style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+                    ),
+                  ],
                 ),
               ),
-              child: pw.Row(
-                children: [
-                  pw.Container(
-                    width: 3.5,
-                    height: 10,
-                    color: headerColor,
-                    margin: const pw.EdgeInsets.only(right: 6),
-                  ),
-                  pw.Text(
-                    title,
-                    style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
-                  ),
-                ],
+              pw.Container(height: 0.5, color: borderColor),
+              pw.Padding(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: contentWidget,
               ),
-            ),
-            pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              child: contentWidget,
-            ),
-          ],
+            ],
+          ),
         ),
       );
     }
@@ -7967,7 +7970,6 @@ class PdfReportService {
                   margin: const pw.EdgeInsets.only(right: 8),
                   decoration: pw.BoxDecoration(
                     color: headerColor,
-                    shape: pw.BoxShape.circle,
                   ),
                 ),
                 pw.Text(
@@ -7986,36 +7988,44 @@ class PdfReportService {
       children: [
         _buildPageHeaderWidget(),
         pw.SizedBox(height: 8),
-        _sectionBox('INTERVENANTS ET RESPONSABILITÉS'),
+        PageTracker(
+          key: 'intervenants',
+          registry: trackedPages,
+          offset: pageOffset,
+          child: _sectionBox('INTERVENANTS ET RESPONSABILITÉS'),
+        ),
         pw.SizedBox(height: 12),
         buildCard(
-          title: 'INSPECTION RÉALISÉE PAR',
+          title: '1. INSPECTION RÉALISÉE PAR',
+          trackerKey: 'intervenants_inspection',
           contentWidget: buildInspecteursListWidget(inspecteursNoms),
         ),
         buildCard(
-          title: 'RAPPORT RÉDIGÉ PAR',
+          title: '2. RAPPORT RÉDIGÉ PAR',
+          trackerKey: 'intervenants_redaction',
           contentWidget: buildInspecteursListWidget(inspecteursNoms),
         ),
         buildCard(
-          title: 'RAPPORT VÉRIFIÉ PAR',
-          contentWidget: pw.Text(
-            'Lucien BOYOMO et Patrick ESSAME',
-            style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey),
-          ),
+          title: '3. RAPPORT VÉRIFIÉ PAR',
+          trackerKey: 'intervenants_verification',
+          contentWidget: buildInspecteursListWidget(['Lucien BOYOMO', 'Patrick ESSAME']),
         ),
         buildCard(
-          title: 'RAPPORT VALIDÉ PAR',
-          contentWidget: pw.Text(
-            'Patrick ESSAME',
-            style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey),
-          ),
+          title: '4. RAPPORT VALIDÉ PAR',
+          trackerKey: 'intervenants_validation',
+          contentWidget: buildInspecteursListWidget(['Patrick ESSAME']),
         ),
       ],
     );
   }
 
   // Page signature "LA DIRECTION"
-  static pw.Widget _buildSignaturePage(RenseignementsGeneraux? rg, String? nomInspecteur) {
+  static pw.Widget _buildSignaturePage(
+    RenseignementsGeneraux? rg,
+    String? nomInspecteur,
+    Map<String, int> trackedPages,
+    int pageOffset,
+  ) {
     return pw.Column(
       children: [
         _buildPageHeaderWidget(),
@@ -8025,15 +8035,20 @@ class PdfReportService {
               mainAxisAlignment: pw.MainAxisAlignment.center,
               crossAxisAlignment: pw.CrossAxisAlignment.center,
               children: [
-                pw.Text(
-                  'LA DIRECTION',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: 16,
-                    fontWeight: pw.FontWeight.bold,
-                    color: headerColor,
+                PageTracker(
+                  key: 'signature_rapport',
+                  registry: trackedPages,
+                  offset: pageOffset,
+                  child: pw.Text(
+                    'LA DIRECTION',
+                    style: pw.TextStyle(
+                      font: _fontBold,
+                      fontSize: 16,
+                      fontWeight: pw.FontWeight.bold,
+                      color: headerColor,
+                    ),
+                    textAlign: pw.TextAlign.center,
                   ),
-                  textAlign: pw.TextAlign.center,
                 ),
                 pw.SizedBox(height: 16),
                 pw.Text(
@@ -8062,7 +8077,7 @@ class PdfReportService {
                 ),
                 pw.SizedBox(height: 4),
                 pw.Text(
-                  'Nom, Signature et cachet',
+                  'Nom, signature et cachet',
                   style: pw.TextStyle(
                     font: _fontRegular, fontSize: 8, color: PdfColors.grey500,
                   ),
@@ -10142,11 +10157,11 @@ class PdfReportService {
     }
     pdfP2_1.addPage(pw.Page(
       pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
-      build: (ctx) => _buildIntervenantsEtResponsabilitesPage(jsa, renseignements, currentUser),
+      build: (ctx) => _buildIntervenantsEtResponsabilitesPage(jsa, renseignements, currentUser, trackedPages, currentOffset),
     ));
     pdfP2_1.addPage(pw.Page(
       pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
-      build: (ctx) => _buildSignaturePage(renseignements, currentUser?.fullName),
+      build: (ctx) => _buildSignaturePage(renseignements, currentUser?.fullName, trackedPages, currentOffset),
     ));
     final bytesP2_1 = await pdfP2_1.save();
     if (saveFilesToDisk) {
