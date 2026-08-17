@@ -107,17 +107,20 @@ class SectionConcentrationRisque {
   final String title;
   final String primaryConcentrationParagraph;
   final String highestDensityParagraph;
+  final String qualitativeRiskCallout;
 
   SectionConcentrationRisque({
     required this.title,
     required this.primaryConcentrationParagraph,
     required this.highestDensityParagraph,
+    this.qualitativeRiskCallout = '',
   });
 
   Map<String, dynamic> toJson() => {
         'title': title,
         'primaryConcentrationParagraph': primaryConcentrationParagraph,
         'highestDensityParagraph': highestDensityParagraph,
+        'qualitativeRiskCallout': qualitativeRiskCallout,
       };
 
   factory SectionConcentrationRisque.fromJson(Map<String, dynamic> json) =>
@@ -125,6 +128,7 @@ class SectionConcentrationRisque {
         title: json['title'] as String? ?? 'Concentration du risque : analyse par catégorie',
         primaryConcentrationParagraph: json['primaryConcentrationParagraph'] as String? ?? '',
         highestDensityParagraph: json['highestDensityParagraph'] as String? ?? '',
+        qualitativeRiskCallout: json['qualitativeRiskCallout'] as String? ?? '',
       );
 }
 

@@ -493,14 +493,14 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
         'La vérification périodique réglementaire des installations électriques du site ${snapshot.siteName} '
         'a été réalisée ${snapshot.dateRangeText} par ${snapshot.companyName} '
         '(rapport n° ${snapshot.reportNumber}, émis le ${snapshot.reportDateStr}). '
-        'La mission a porté sur l\'ensemble des installations électriques ${snapshot.domainTension}, '
+        'La mission a couvert l\'ensemble des installations électriques ${snapshot.domainTension}, '
         'depuis les sources d\'alimentation jusqu\'aux équipements terminaux, conformément au périmètre défini dans le rapport, '
-        'soit un total de ${snapshot.equipmentCount} installation${snapshot.equipmentCount > 1 ? 's' : ''} et équipement${snapshot.equipmentCount > 1 ? 's' : ''} contrôlés.';
+        'soit un total de ${snapshot.equipmentCount} installation${snapshot.equipmentCount > 1 ? 's' : ''} et équipement${snapshot.equipmentCount > 1 ? 's' : ''} '
+        'répartis en ${snapshot.installationsCount} catégories.';
 
     final introSynthese =
         'Les vérifications ont permis de recenser $total non-conformité${total > 1 ? 's' : ''} sur l\'ensemble du périmètre, '
-        'soit une densité moyenne de $globalDensityStr non-conformité${total > 1 ? 's' : ''} par équipement.'
-        '${total > 0 ? " Cette densité traduit un état de vétusté ou de maintenance insuffisante généralisé plutôt que des défauts ponctuels isolés." : ""}';
+        'soit une densité moyenne de $globalDensityStr non-conformité${total > 1 ? 's' : ''} par équipement :';
 
     final critRows = [
       CriticalityRowData(
@@ -531,11 +531,22 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
     );
 
     final pctCritVal = total > 0 ? (critique / total) * 100 : 0.0;
-    final commentarySynthese = total == 0
-        ? 'Aucune non-conformité n\'a été décelée lors de cette campagne de vérification.'
-        : 'Avec ${pctCritVal.toStringAsFixed(1).replaceAll('.', ',')} % de non-conformités classées critiques, la situation constatée dépasse '
-            'largement les seuils habituellement considérés comme acceptables (généralement de l\'ordre de 10 à 15 % en exploitation maîtrisée) '
-            'et caractérise un site en risque avéré nécessitant une intervention corrective immédiate.';
+    final pctMajVal = total > 0 ? (majeure / total) * 100 : 0.0;
+    final pctSumVal = pctCritVal + pctMajVal;
+
+    final String commentarySynthese;
+    if (total == 0) {
+      commentarySynthese = 'Aucune non-conformité n\'a été décelée lors de cette campagne de vérification.';
+    } else {
+      final pctCritStrText = pctCritVal.toStringAsFixed(1).replaceAll('.', ',');
+      final pctMajStrText = pctMajVal.toStringAsFixed(1).replaceAll('.', ',');
+      final pctSumStrText = pctSumVal.toStringAsFixed(1).replaceAll('.', ',');
+      commentarySynthese =
+          'Avec $pctCritStrText % de non-conformités classées critiques et $pctMajStrText % classées majeures '
+          '— soit $pctSumStrText % des écarts relevant des deux niveaux de gravité les plus élevés —, '
+          'la situation dépasse très largement les seuils habituellement considérés comme acceptables '
+          '(de l\'ordre de 10 à 15 % en exploitation maîtrisée) et caractérise un site en risque avéré nécessitant une intervention corrective immédiate.';
+    }
 
     // Sélection déterministe des 2 catégories prépondérantes (Top 2 NCs)
     final top1 = snapshot.categoryStats.isNotEmpty ? snapshot.categoryStats[0] : null;
@@ -550,7 +561,6 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
 
     final top2Name = top2 != null ? (top2['categoryName'] as String? ?? '') : '';
     final top2Nc = top2 != null ? (top2['ncCount'] as int? ?? 0) : 0;
-    final top2Pct = top2 != null ? (top2['pctOfTotalNc'] as String? ?? '0,0') : '0,0';
 
     final String concentrationTitle;
     final String primaryConcText;
@@ -561,19 +571,51 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
       primaryConcText = 'L\'analyse ne révèle aucune concentration particulière d\'écarts.';
       highestDensityText = 'Toutes les installations examinées présentent un niveau de conformité satisfaisant.';
     } else if (top2Name.isNotEmpty && top2Nc > 0) {
-      concentrationTitle = '3. Concentration du risque : les $top1Name et les $top2Name concentrent l\'essentiel des réfections';
-      primaryConcText = '• L\'analyse croisée par catégorie fait apparaître une forte concentration du risque :\n'
-          '  * Les $top1Name concentrent $top1Nc non-conformités ($top1Pct % du total)\n'
-          '  * Les $top2Name comptabilisent $top2Nc non-conformités ($top2Pct % du total)\n'
-          '• Ces deux catégories regroupent à elles seules la majorité des anomalies du site.';
-      highestDensityText = 'En termes de densité unitaire, la catégorie $top1Name affiche une densité de $top1Density NC / équipement '
-          'sur un effectif de $top1Eq unité${top1Eq > 1 ? 's' : ''} (soit $top1PctEq % du parc contrôlé).';
+      final combinedNc = top1Nc + top2Nc;
+      final combinedPctNc = total > 0 ? ((combinedNc / total) * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
+      final top2Eq = top2 != null ? (top2['equipmentCount'] as int? ?? 0) : 0;
+      final combinedEqCount = top1Eq + top2Eq;
+      final combinedEqPct = eqCount > 0 ? ((combinedEqCount / eqCount) * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
+
+      concentrationTitle = '3. Concentration du risque : $top1Name et $top2Name en tête';
+      primaryConcText = 'Les catégories $top1Name et $top2Name concentrent, à elles deux, $combinedNc non-conformités ($combinedPctNc % du total), '
+          'sur $combinedEqCount équipements ($combinedEqPct % du parc contrôlé). '
+          'Cette concentration a une conséquence opérationnelle directe : un plan d\'action ciblé sur ces deux catégories traiterait, '
+          'à lui seul, la majorité des écarts constatés.';
+      highestDensityText = 'La catégorie $top1Name affiche par ailleurs une densité de $top1Density NC/équipement sur $top1Eq unités ($top1PctEq % du parc), '
+          'confirmant qu\'il s\'agit d\'un point de concentration à la fois en volume et en intensité.';
     } else {
-      concentrationTitle = '3. Concentration du risque : les $top1Name concentrent l\'essentiel des réfections';
+      concentrationTitle = '3. Concentration du risque : $top1Name en tête';
       primaryConcText = 'L\'analyse croisée fait apparaître une concentration majeure sur la catégorie $top1Name avec $top1Nc non-conformités, '
           'représentant $top1Pct % de l\'ensemble des écarts constatés sur la mission.';
-      highestDensityText = 'Cette catégorie présente une densité de $top1Density NC / équipement sur $top1Eq unité${top1Eq > 1 ? 's' : ''}.';
+      highestDensityText = 'Cette catégorie présente une densité de $top1Density NC/équipement sur $top1Eq unité${top1Eq > 1 ? 's' : ''}.';
     }
+
+    // Calcul du Point de risque qualitatif (catégorie ayant la plus forte proportion de NC critiques)
+    String qualitativeCalloutText = '';
+    try {
+      final summaryStats = MissionStatisticsCollector.collectSummary(missionId);
+      final sortedByCritiqueRate = summaryStats.crossCategoryItems
+          .where((c) => c.nonConformitiesCount > 0 && c.critiqueCount > 0)
+          .toList();
+      sortedByCritiqueRate.sort((a, b) {
+        final rateA = a.critiqueCount / a.nonConformitiesCount;
+        final rateB = b.critiqueCount / b.nonConformitiesCount;
+        final cmp = rateB.compareTo(rateA);
+        if (cmp != 0) return cmp;
+        return a.equipmentCount.compareTo(b.equipmentCount);
+      });
+
+      if (sortedByCritiqueRate.isNotEmpty) {
+        final qualCat = sortedByCritiqueRate.first;
+        final qualCritPct = ((qualCat.critiqueCount / qualCat.nonConformitiesCount) * 100).toStringAsFixed(1).replaceAll('.', ',');
+        final qualEqPct = eqCount > 0 ? ((qualCat.equipmentCount / eqCount) * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
+        qualitativeCalloutText =
+            'Les ${qualCat.categoryName}, bien que ne représentant que ${qualCat.equipmentCount} équipement${qualCat.equipmentCount > 1 ? 's' : ''} sur les $eqCount inspectés ($qualEqPct % du parc), '
+            'affichent le taux de criticité le plus élevé du site : $qualCritPct % de leurs non-conformités (${qualCat.critiqueCount} sur ${qualCat.nonConformitiesCount}) sont classées critiques. '
+            'Ce point mérite un traitement prioritaire malgré son faible poids statistique en volume.';
+      }
+    } catch (_) {}
 
     final riskRows = snapshot.riskFamilies.take(5).map((r) {
       final name = r['name'] as String? ?? 'Famille de risque';
@@ -663,9 +705,10 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
         title: concentrationTitle,
         primaryConcentrationParagraph: primaryConcText,
         highestDensityParagraph: highestDensityText,
+        qualitativeRiskCallout: qualitativeCalloutText,
       ),
       facteursRisque: SectionFacteursRisque(
-        introParagraph: 'Au-delà de la répartition par équipement, l\'analyse par nature de risque met en évidence les facteurs dominants suivants :',
+        introParagraph: 'Au-delà de la répartition par équipement, l\'analyse par nature de risque identifie les facteurs suivants, qui concernent directement la sécurité des personnes et la protection des biens :',
         tableRows: riskRows,
         commentaryParagraph: riskCommentary,
       ),

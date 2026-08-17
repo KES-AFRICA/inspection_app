@@ -1727,6 +1727,7 @@ class PdfReportService {
       widgets.add(_buildCriticalitySummaryTable(
         data.syntheseResultats.tableRows,
         data.syntheseResultats.tableTotalRow,
+        totalEquipments: snapshot.equipmentCount,
       ));
       widgets.add(pw.SizedBox(height: 6));
     }
@@ -1778,6 +1779,10 @@ class PdfReportService {
               ...concRows,
             ],
           ),
+        if (data.concentrationRisque.qualitativeRiskCallout.isNotEmpty) ...[
+          pw.SizedBox(height: 6),
+          _buildCalloutBox('Point de risque qualitatif :', data.concentrationRisque.qualitativeRiskCallout),
+        ],
       ],
     ));
     widgets.add(pw.SizedBox(height: 10));
@@ -2045,8 +2050,13 @@ class PdfReportService {
 
   static pw.Widget _buildCriticalitySummaryTable(
     List<CriticalityRowData> rows,
-    CriticalityRowData totalRow,
-  ) {
+    CriticalityRowData totalRow, {
+    int? totalEquipments,
+  }) {
+    final densityHeader = (totalEquipments != null && totalEquipments > 0)
+        ? 'Densité (/$totalEquipments équip.)'
+        : 'Densité (/ équip.)';
+
     return pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.5),
       columnWidths: const {
@@ -2062,7 +2072,7 @@ class PdfReportService {
             _buildTableHeaderCell('Criticité'),
             _buildTableHeaderCell('Nombre'),
             _buildTableHeaderCell('Part du total'),
-            _buildTableHeaderCell('Densité (/ équip.)'),
+            _buildTableHeaderCell(densityHeader),
           ],
         ),
         for (int i = 0; i < rows.length; i++)
