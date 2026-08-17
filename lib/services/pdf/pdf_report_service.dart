@@ -2400,9 +2400,11 @@ class PdfReportService {
     required Map<int, pw.TableColumnWidth> columnWidths,
     pw.TableCellVerticalAlignment defaultVerticalAlignment = pw.TableCellVerticalAlignment.middle,
     pw.TableBorder? border,
+    double minFreeSpace = 115,
   }) {
     if (dataRows.isEmpty) {
       return [
+        pw.NewPage(freeSpace: minFreeSpace),
         headerWidget,
         if (introWidget != null) ...[pw.SizedBox(height: 4), introWidget],
       ];
@@ -2411,6 +2413,7 @@ class PdfReportService {
     final tableBorder = border ?? pw.TableBorder.all(color: borderColor, width: 0.5);
 
     final block1Children = <pw.Widget>[
+      pw.NewPage(freeSpace: minFreeSpace),
       headerWidget,
       if (introWidget != null) ...[pw.SizedBox(height: 4), introWidget],
       pw.SizedBox(height: 4),
