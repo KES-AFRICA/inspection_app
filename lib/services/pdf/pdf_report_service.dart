@@ -5128,6 +5128,47 @@ class PdfReportService {
     ));
     widgets.add(pw.SizedBox(height: 5));
 
+    // Photo du local (si présente, alignée à droite)
+    pw.MemoryImage? localPhotoImg;
+    if (photoCache != null && photoCache.containsKey(local)) {
+      localPhotoImg = photoCache[local];
+    } else if (local.photos.isNotEmpty) {
+      final rawPath = local.photos.first.trim();
+      if (rawPath.isNotEmpty && File(rawPath).existsSync()) {
+        try {
+          final f = File(rawPath);
+          if (f.lengthSync() < 500000) {
+            final bytes = f.readAsBytesSync();
+            if (bytes.isNotEmpty) {
+              localPhotoImg = pw.MemoryImage(bytes);
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (localPhotoImg != null) {
+      widgets.add(
+        pw.Container(
+          alignment: pw.Alignment.centerRight,
+          margin: const pw.EdgeInsets.only(top: 2, bottom: 6),
+          child: pw.Container(
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: borderColor, width: 0.4),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+            ),
+            padding: const pw.EdgeInsets.all(3),
+            child: pw.Image(
+              localPhotoImg,
+              height: 120,
+              width: 160,
+              fit: pw.BoxFit.contain,
+            ),
+          ),
+        ),
+      );
+    }
+
     // Local inaccessible : mention claire dans le rapport
     if (local.accessible == false) {
       widgets.add(
@@ -5247,6 +5288,47 @@ class PdfReportService {
       ],
     ));
     widgets.add(pw.SizedBox(height: 5));
+
+    // Photo du local (si présente, alignée à droite)
+    pw.MemoryImage? localPhotoImg;
+    if (photoCache != null && photoCache.containsKey(local)) {
+      localPhotoImg = photoCache[local];
+    } else if (local.photos.isNotEmpty) {
+      final rawPath = local.photos.first.trim();
+      if (rawPath.isNotEmpty && File(rawPath).existsSync()) {
+        try {
+          final f = File(rawPath);
+          if (f.lengthSync() < 500000) {
+            final bytes = f.readAsBytesSync();
+            if (bytes.isNotEmpty) {
+              localPhotoImg = pw.MemoryImage(bytes);
+            }
+          }
+        } catch (_) {}
+      }
+    }
+
+    if (localPhotoImg != null) {
+      widgets.add(
+        pw.Container(
+          alignment: pw.Alignment.centerRight,
+          margin: const pw.EdgeInsets.only(top: 2, bottom: 6),
+          child: pw.Container(
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: borderColor, width: 0.4),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+            ),
+            padding: const pw.EdgeInsets.all(3),
+            child: pw.Image(
+              localPhotoImg,
+              height: 120,
+              width: 160,
+              fit: pw.BoxFit.contain,
+            ),
+          ),
+        ),
+      );
+    }
 
     // Local inaccessible : mention claire dans le rapport
     if (local.accessible == false) {
@@ -9573,6 +9655,34 @@ class PdfReportService {
             cache[item] = img;
           }
         }
+      } else if (item is MoyenneTensionLocal) {
+        if (item.photos.isNotEmpty) {
+          final rawPath = item.photos.first.trim();
+          if (rawPath.isNotEmpty) {
+            final img = await _loadAndOptimizeImage(
+              rawPath,
+              photoContext: PdfPhotoContext.equipmentObs,
+              saveFilesToDisk: loadImages,
+            );
+            if (img != null) {
+              cache[item] = img;
+            }
+          }
+        }
+      } else if (item is BasseTensionLocal) {
+        if (item.photos.isNotEmpty) {
+          final rawPath = item.photos.first.trim();
+          if (rawPath.isNotEmpty) {
+            final img = await _loadAndOptimizeImage(
+              rawPath,
+              photoContext: PdfPhotoContext.equipmentObs,
+              saveFilesToDisk: loadImages,
+            );
+            if (img != null) {
+              cache[item] = img;
+            }
+          }
+        }
       }
     }
     return cache;
@@ -9582,9 +9692,10 @@ class PdfReportService {
     List<CoffretArmoire> coffrets, {
     List<Cellule>? cellules,
     List<TransformateurMTBT>? transformateurs,
+    List<dynamic>? locaux,
     bool loadImages = true,
   }) async {
-    final list = <dynamic>[...coffrets, ...?cellules, ...?transformateurs];
+    final list = <dynamic>[...coffrets, ...?cellules, ...?transformateurs, ...?locaux];
     return _preloadEquipmentPhotos(list, loadImages: loadImages);
   }
 
@@ -9708,7 +9819,9 @@ class PdfReportService {
       final mtCoffrets = <CoffretArmoire>[];
       final mtCellules = <Cellule>[];
       final mtTransfos = <TransformateurMTBT>[];
+      final mtLocaux = <dynamic>[];
       for (final local in audit.moyenneTensionLocaux) {
+        mtLocaux.add(local);
         mtCoffrets.addAll(local.coffrets);
         mtCellules.addAll(local.cellules);
         mtTransfos.addAll(local.transformateurs);
@@ -9717,6 +9830,7 @@ class PdfReportService {
         mtCoffrets,
         cellules: mtCellules,
         transformateurs: mtTransfos,
+        locaux: mtLocaux,
         loadImages: saveFilesToDisk,
       );
 
