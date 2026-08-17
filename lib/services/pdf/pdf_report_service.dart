@@ -1768,10 +1768,11 @@ class PdfReportService {
             },
             children: [
               pw.TableRow(
+                verticalAlignment: pw.TableCellVerticalAlignment.middle,
                 decoration: pw.BoxDecoration(color: accentColor),
                 children: [
                   pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('AXE DE CONCENTRATION', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
-                  pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('ANALYSE ET CONSTAT', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
+                  pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('ANALYSE ET CONSTAT', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
                 ],
               ),
               ...concRows,
@@ -1820,21 +1821,28 @@ class PdfReportService {
     // ── 5. Observations et constats majeurs ──
     final obsRows = <pw.TableRow>[];
     for (int i = 0; i < data.observationsMajores.bulletPoints.length; i++) {
+      final parsed = _parseObservationRow(data.observationsMajores.bulletPoints[i]);
       obsRows.add(
         pw.TableRow(
+          verticalAlignment: pw.TableCellVerticalAlignment.middle,
           children: [
             pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('${i + 1}', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: headerColor), textAlign: pw.TextAlign.center)),
-            pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(data.observationsMajores.bulletPoints[i], style: pw.TextStyle(font: _fontRegular, fontSize: 8))),
+            pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(parsed.observation, style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: headerColor))),
+            pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(parsed.stats, style: pw.TextStyle(font: _fontRegular, fontSize: 7.5, color: darkGrey), textAlign: pw.TextAlign.center)),
+            pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(parsed.constatMajeur, style: pw.TextStyle(font: _fontRegular, fontSize: 7.5))),
           ],
         ),
       );
     }
 
     final obsHeaderRow = pw.TableRow(
+      verticalAlignment: pw.TableCellVerticalAlignment.middle,
       decoration: pw.BoxDecoration(color: accentColor),
       children: [
         pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('N°', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
-        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('OBSERVATION ET CONSTAT MAJEUR', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
+        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('OBSERVATION', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
+        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('STATS', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
+        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('CONSTAT MAJEUR', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
       ],
     );
 
@@ -1850,8 +1858,10 @@ class PdfReportService {
       headerRow: obsHeaderRow,
       dataRows: obsRows,
       columnWidths: const {
-        0: pw.FlexColumnWidth(1.0),
-        1: pw.FlexColumnWidth(9.0),
+        0: pw.FlexColumnWidth(0.8),
+        1: pw.FlexColumnWidth(3.2),
+        2: pw.FlexColumnWidth(2.2),
+        3: pw.FlexColumnWidth(3.8),
       },
     );
 
@@ -2394,6 +2404,38 @@ class PdfReportService {
     return widgets;
   }
 
+  static _ParsedObservationRow _parseObservationRow(String rawText) {
+    final trimmed = rawText.trim();
+    final regExp = RegExp(r'^(.*?)\s*\((.*?)\)\s*(?::\s*(.*))?$');
+    final match = regExp.firstMatch(trimmed);
+
+    if (match != null) {
+      final obs = match.group(1)?.trim() ?? trimmed;
+      final stats = match.group(2)?.trim() ?? '';
+      final constat = match.group(3)?.trim() ?? '';
+      return _ParsedObservationRow(
+        observation: obs.replaceAll(RegExp(r'^[•\-\*]\s*'), ''),
+        stats: stats,
+        constatMajeur: constat.isNotEmpty ? constat : obs,
+      );
+    }
+
+    if (trimmed.contains(' : ')) {
+      final parts = trimmed.split(' : ');
+      return _ParsedObservationRow(
+        observation: parts[0].replaceAll(RegExp(r'^[•\-\*]\s*'), '').trim(),
+        stats: '',
+        constatMajeur: parts.sublist(1).join(' : ').trim(),
+      );
+    }
+
+    return _ParsedObservationRow(
+      observation: trimmed.replaceAll(RegExp(r'^[•\-\*]\s*'), ''),
+      stats: '',
+      constatMajeur: trimmed,
+    );
+  }
+
   static String _cleanRecommendationText(String text) {
     var cleaned = text.trim();
     cleaned = cleaned.replaceAll(
@@ -2504,13 +2546,18 @@ class PdfReportService {
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       mainAxisAlignment: pw.MainAxisAlignment.center,
       children: items.map((item) {
-        final cleanText = item.startsWith('•') || item.startsWith('-') ? item.substring(1).trim() : item;
+        final isSubBullet = item.startsWith('*') || item.startsWith('  *');
+        final cleanText = item.replaceAll(RegExp(r'^[•\-\*]\s*'), '').trim();
+        final leftPadding = isSubBullet ? 12.0 : 0.0;
+        final bulletChar = isSubBullet ? '* ' : '• ';
+        final bulletColor = isSubBullet ? darkGrey : accentColor;
+
         return pw.Padding(
-          padding: const pw.EdgeInsets.symmetric(vertical: 2),
+          padding: pw.EdgeInsets.only(top: 2, bottom: 2, left: leftPadding),
           child: pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
-              pw.Text('• ', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: accentColor)),
+              pw.Text(bulletChar, style: pw.TextStyle(font: _fontBold, fontSize: 8, color: bulletColor)),
               pw.Expanded(
                 child: pw.Text(
                   cleanText,
@@ -10636,6 +10683,7 @@ class PdfReportService {
           ],
         ),
         pw.SizedBox(height: 7),
+        pw.NewPage(freeSpace: 110),
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
@@ -11355,5 +11403,17 @@ class _GeneratedReportResult {
     required this.files,
     required this.trackedPages,
     required this.totalReportPages,
+  });
+}
+
+class _ParsedObservationRow {
+  final String observation;
+  final String stats;
+  final String constatMajeur;
+
+  _ParsedObservationRow({
+    required this.observation,
+    required this.stats,
+    required this.constatMajeur,
   });
 }

@@ -27,6 +27,22 @@ class CanonicalRiskFamilyRegistry {
         'Mauvaise répartition de charge, serrages défectueux et utilisation inadaptée des répartiteurs.',
   };
 
+  /// Vérifie si une non-conformité possède une famille de risque ou un point de contrôle valide.
+  static bool hasValidRiskFamily(String? rawRisk, {String? verificationPoint}) {
+    final riskStr = (rawRisk ?? '').trim();
+    if (riskStr.isNotEmpty &&
+        riskStr.toLowerCase() != 'non spécifiée' &&
+        riskStr.toLowerCase() != 'non specifiee' &&
+        riskStr.toLowerCase() != 'indéterminée') {
+      return true;
+    }
+    final pointStr = (verificationPoint ?? '').trim();
+    if (pointStr.isNotEmpty) {
+      return true;
+    }
+    return false;
+  }
+
   /// Mappe n'importe quel libellé brut de risque ou point de contrôle vers l'une des 5 familles canoniques.
   static String mapToCanonical(String? rawRisk, {String? verificationPoint}) {
     final riskStr = (rawRisk ?? '').trim().toLowerCase();

@@ -562,9 +562,10 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
       highestDensityText = 'Toutes les installations examinées présentent un niveau de conformité satisfaisant.';
     } else if (top2Name.isNotEmpty && top2Nc > 0) {
       concentrationTitle = '3. Concentration du risque : les $top1Name et les $top2Name concentrent l\'essentiel des réfections';
-      primaryConcText = 'L\'analyse croisée par catégorie fait apparaître une forte concentration du risque : les $top1Name '
-          'concentrent $top1Nc non-conformités ($top1Pct % du total) et les $top2Name comptabilisent $top2Nc non-conformités ($top2Pct % du total). '
-          'Ces deux catégories regroupent à elles seules la majorité des anomalies du site.';
+      primaryConcText = '• L\'analyse croisée par catégorie fait apparaître une forte concentration du risque :\n'
+          '  * Les $top1Name concentrent $top1Nc non-conformités ($top1Pct % du total)\n'
+          '  * Les $top2Name comptabilisent $top2Nc non-conformités ($top2Pct % du total)\n'
+          '• Ces deux catégories regroupent à elles seules la majorité des anomalies du site.';
       highestDensityText = 'En termes de densité unitaire, la catégorie $top1Name affiche une densité de $top1Density NC / équipement '
           'sur un effectif de $top1Eq unité${top1Eq > 1 ? 's' : ''} (soit $top1PctEq % du parc contrôlé).';
     } else {

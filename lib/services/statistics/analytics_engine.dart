@@ -372,9 +372,11 @@ class AnalyticsEngine {
           normRefsMap[norm] = (normRefsMap[norm] ?? 0) + 1;
         }
 
-        // Familles de risques (Classification Canonique)
-        final canonicalRisk = CanonicalRiskFamilyRegistry.mapToCanonical(f.riskFamily, verificationPoint: f.verificationPoint);
-        riskFamiliesMap[canonicalRisk] = (riskFamiliesMap[canonicalRisk] ?? 0) + 1;
+        // Familles de risques (Classification Canonique — Uniquement si valide)
+        if (CanonicalRiskFamilyRegistry.hasValidRiskFamily(f.riskFamily, verificationPoint: f.verificationPoint)) {
+          final canonicalRisk = CanonicalRiskFamilyRegistry.mapToCanonical(f.riskFamily, verificationPoint: f.verificationPoint);
+          riskFamiliesMap[canonicalRisk] = (riskFamiliesMap[canonicalRisk] ?? 0) + 1;
+        }
 
         // Photos rattachées aux constatations
         observationPhotos += f.photos.length;
@@ -514,8 +516,9 @@ class AnalyticsEngine {
         return CanonicalRiskFamilyRegistry.canonicalFamilies.indexOf(a.key)
             .compareTo(CanonicalRiskFamilyRegistry.canonicalFamilies.indexOf(b.key));
       });
+    final totalValidRiskFindings = riskFamiliesMap.values.fold<int>(0, (sum, count) => sum + count);
     final riskFamiliesStats = sortedRisks.map((e) {
-      final pct = totalFindingsCount > 0 ? (e.value / totalFindingsCount) * 100.0 : 0.0;
+      final pct = totalValidRiskFindings > 0 ? (e.value / totalValidRiskFindings) * 100.0 : 0.0;
       return RiskFamilyItem(
         name: e.key,
         count: e.value,

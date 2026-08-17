@@ -365,8 +365,10 @@ class AuditFindingInventory {
 
     final counts = <String, int>{};
     for (final f in findings) {
-      final family = CanonicalRiskFamilyRegistry.mapToCanonical(f.riskFamily, verificationPoint: f.verificationPoint);
-      counts[family] = (counts[family] ?? 0) + 1;
+      if (CanonicalRiskFamilyRegistry.hasValidRiskFamily(f.riskFamily, verificationPoint: f.verificationPoint)) {
+        final family = CanonicalRiskFamilyRegistry.mapToCanonical(f.riskFamily, verificationPoint: f.verificationPoint);
+        counts[family] = (counts[family] ?? 0) + 1;
+      }
     }
 
     for (final family in CanonicalRiskFamilyRegistry.canonicalFamilies) {
@@ -380,10 +382,10 @@ class AuditFindingInventory {
         return CanonicalRiskFamilyRegistry.canonicalFamilies.indexOf(a.key)
             .compareTo(CanonicalRiskFamilyRegistry.canonicalFamilies.indexOf(b.key));
       });
-    final tot = totalFindings;
+    final totValid = counts.values.fold<int>(0, (sum, count) => sum + count);
 
     return sortedEntries.map((e) {
-      final pct = tot > 0 ? (e.value / tot) * 100 : 0.0;
+      final pct = totValid > 0 ? (e.value / totValid) * 100 : 0.0;
       return RiskFamilyItem(
         name: e.key,
         count: e.value,
