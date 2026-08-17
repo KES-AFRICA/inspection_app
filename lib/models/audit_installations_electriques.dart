@@ -567,6 +567,12 @@ class TransformateurMTBT {
   @HiveField(18)
   String? ik3Max;
 
+  @HiveField(19)
+  String? nom;
+
+  @HiveField(20)
+  String? photo;
+
   TransformateurMTBT({
     required this.typeTransformateur,
     required this.marqueAnnee,
@@ -587,12 +593,62 @@ class TransformateurMTBT {
     this.pccAmont,
     this.puissanceUcc,
     this.ik3Max,
+    this.nom,
+    this.photo,
   })  : elementsVerifies = elementsVerifies ?? [],
         photos = photos ?? [],
         observations = observations ?? [],
         syncId = (syncId != null && syncId.isNotEmpty)
             ? syncId
             : 'transfo_${DateTime.now().microsecondsSinceEpoch}';
+
+  TransformateurMTBT copyWith({
+    String? typeTransformateur,
+    String? marqueAnnee,
+    String? puissanceAssignee,
+    String? tensionPrimaireSecondaire,
+    String? relaisBuchholz,
+    String? typeRefroidissement,
+    String? regimeNeutre,
+    List<ElementControle>? elementsVerifies,
+    List<String>? photos,
+    String? calibreDisjoncteur,
+    String? sectionCables,
+    List<ElementControle>? observations,
+    String? syncId,
+    String? intensiteNominale,
+    String? couplage,
+    String? typeReseau,
+    String? pccAmont,
+    String? puissanceUcc,
+    String? ik3Max,
+    String? nom,
+    String? photo,
+  }) {
+    return TransformateurMTBT(
+      typeTransformateur: typeTransformateur ?? this.typeTransformateur,
+      marqueAnnee: marqueAnnee ?? this.marqueAnnee,
+      puissanceAssignee: puissanceAssignee ?? this.puissanceAssignee,
+      tensionPrimaireSecondaire: tensionPrimaireSecondaire ?? this.tensionPrimaireSecondaire,
+      relaisBuchholz: relaisBuchholz ?? this.relaisBuchholz,
+      typeRefroidissement: typeRefroidissement ?? this.typeRefroidissement,
+      regimeNeutre: regimeNeutre ?? this.regimeNeutre,
+      elementsVerifies: elementsVerifies ?? this.elementsVerifies,
+      photos: photos ?? this.photos,
+      calibreDisjoncteur: calibreDisjoncteur ?? this.calibreDisjoncteur,
+      sectionCables: sectionCables ?? this.sectionCables,
+      observations: observations ?? this.observations,
+      syncId: syncId ?? this.syncId,
+      intensiteNominale: intensiteNominale ?? this.intensiteNominale,
+      couplage: couplage ?? this.couplage,
+      typeReseau: typeReseau ?? this.typeReseau,
+      pccAmont: pccAmont ?? this.pccAmont,
+      puissanceUcc: puissanceUcc ?? this.puissanceUcc,
+      ik3Max: ik3Max ?? this.ik3Max,
+      nom: nom ?? this.nom,
+      photo: photo ?? this.photo,
+    );
+  }
 }
 
 // COFFRETS/ARMOIRES

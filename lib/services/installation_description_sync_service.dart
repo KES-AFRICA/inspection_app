@@ -307,7 +307,9 @@ class InstallationDescriptionSyncService {
 
     void processTransfo(TransformateurMTBT t, String path) {
       if (t.syncId != null && t.syncId!.isNotEmpty) {
-        final transfoName = t.puissanceAssignee.isNotEmpty ? '${t.puissanceAssignee} kVA' : 'Transformateur';
+        final transfoName = (t.nom != null && t.nom!.trim().isNotEmpty)
+            ? t.nom!.trim()
+            : (t.puissanceAssignee.isNotEmpty ? '${t.puissanceAssignee} kVA' : 'Transformateur');
         map[t.syncId!] = '$path ➔ $transfoName';
       }
     }

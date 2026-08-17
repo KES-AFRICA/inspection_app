@@ -482,13 +482,15 @@ class TransformateurMTBTAdapter extends TypeAdapter<TransformateurMTBT> {
       pccAmont: fields[16] as String?,
       puissanceUcc: fields[17] as String?,
       ik3Max: fields[18] as String?,
+      nom: fields[19] as String?,
+      photo: fields[20] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TransformateurMTBT obj) {
     writer
-      ..writeByte(19)
+      ..writeByte(21)
       ..writeByte(0)
       ..write(obj.typeTransformateur)
       ..writeByte(1)
@@ -526,7 +528,11 @@ class TransformateurMTBTAdapter extends TypeAdapter<TransformateurMTBT> {
       ..writeByte(17)
       ..write(obj.puissanceUcc)
       ..writeByte(18)
-      ..write(obj.ik3Max);
+      ..write(obj.ik3Max)
+      ..writeByte(19)
+      ..write(obj.nom)
+      ..writeByte(20)
+      ..write(obj.photo);
   }
 
   @override

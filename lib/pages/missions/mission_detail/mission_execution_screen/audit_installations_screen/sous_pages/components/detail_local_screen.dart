@@ -2643,15 +2643,30 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
               SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  transfo.typeTransformateur.isNotEmpty
-                      ? transfo.typeTransformateur
-                      : 'Transformateur',
+                  (transfo.nom != null && transfo.nom!.trim().isNotEmpty)
+                      ? (transfo.typeTransformateur.isNotEmpty ? '${transfo.nom!.trim()} (${transfo.typeTransformateur})' : transfo.nom!.trim())
+                      : (transfo.typeTransformateur.isNotEmpty ? transfo.typeTransformateur : 'Transformateur'),
                   style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                 ),
               ),
             ],
           ),
           SizedBox(height: 12),
+          if (transfo.nom != null && transfo.nom!.trim().isNotEmpty)
+            _buildInfoRow('Nom du transformateur', transfo.nom!.trim()),
+          if (transfo.photo != null && transfo.photo!.trim().isNotEmpty) ...[
+            SizedBox(height: 8),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(6),
+              child: SafeFileImage(
+                path: transfo.photo!,
+                height: 120,
+                width: double.infinity,
+                fit: BoxFit.cover,
+              ),
+            ),
+            SizedBox(height: 8),
+          ],
           if (transfo.marqueAnnee.isNotEmpty)
             _buildInfoRow('Marque/Année', transfo.marqueAnnee),
           if (transfo.puissanceAssignee.isNotEmpty)

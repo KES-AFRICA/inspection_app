@@ -2345,6 +2345,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   List<ElementControle> _celluleElements = [];
   
   // Contrôleurs pour le formulaire transformateur
+  final _transfoNomController = TextEditingController();
   final _transfoTypeController = TextEditingController();
   final _transfoMarqueController = TextEditingController();
   final _transfoPuissanceController = TextEditingController();
@@ -2360,6 +2361,8 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   final _transfoPccAmontController = TextEditingController();
   String? _transfoPuissanceUcc;
   final _transfoIk3MaxController = TextEditingController();
+  String? _transfoPhoto;
+  List<String> _transfoPhotos = [];
   List<ElementControle> _transfoObservations = [];
   String? _transfoSyncId;
   List<ElementControle> _transfoElements = [];
@@ -2475,6 +2478,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   }
   
   void _resetTransformateurForm() {
+    _transfoNomController.clear();
     _transfoTypeController.clear();
     _transfoMarqueController.clear();
     _transfoPuissanceController.clear();
@@ -2490,6 +2494,8 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoPccAmontController.clear();
     _transfoPuissanceUcc = null;
     _transfoIk3MaxController.clear();
+    _transfoPhoto = null;
+    _transfoPhotos = [];
     _transfoObservations = [];
     _transfoSyncId = null;
     _transfoElements = _transfoElementsParDefaut.map((element) => ElementControle(
@@ -2534,6 +2540,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   }
   
   void _chargerTransformateurPourEdition(TransformateurMTBT transfo) {
+    _transfoNomController.text = transfo.nom ?? '';
     _transfoTypeController.text = transfo.typeTransformateur;
     _transfoMarqueController.text = transfo.marqueAnnee;
     _transfoPuissanceController.text = transfo.puissanceAssignee;
@@ -2551,6 +2558,8 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoPccAmontController.text = transfo.pccAmont ?? '';
     _transfoPuissanceUcc = transfo.puissanceUcc;
     _transfoIk3MaxController.text = transfo.ik3Max ?? '';
+    _transfoPhoto = transfo.photo;
+    _transfoPhotos = List.from(transfo.photos);
     _transfoObservations = List.from(transfo.observations ?? []);
     _transfoSyncId = transfo.syncId;
     
@@ -2849,6 +2858,9 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       pccAmont: _transfoPccAmontController.text.trim(),
       puissanceUcc: _transfoPuissanceUcc,
       ik3Max: _transfoIk3MaxController.text.trim(),
+      nom: _transfoNomController.text.trim().isNotEmpty ? _transfoNomController.text.trim() : null,
+      photo: _transfoPhoto,
+      photos: _transfoPhotos,
     );
     
     final nouveauxTransformateurs = List<TransformateurMTBT>.from(widget.transformateurs);
@@ -3848,6 +3860,165 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     }
   }
 
+  Widget _buildTransfoPhotoPicker(bool isSmallScreen) {
+    final hasPhoto = _transfoPhoto != null && _transfoPhoto!.isNotEmpty;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              'Photo du transformateur',
+              style: TextStyle(
+                fontSize: isSmallScreen ? 13 : 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey.shade800,
+              ),
+            ),
+            Text(
+              '(Optionnel)',
+              style: TextStyle(
+                fontSize: isSmallScreen ? 11 : 12,
+                color: Colors.grey.shade500,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (hasPhoto)
+          Stack(
+            children: [
+              GestureDetector(
+                onTap: () => _showFullScreenPhoto([_transfoPhoto!], 0),
+                child: Container(
+                  height: isSmallScreen ? 160 : 180,
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(10),
+                    child: SafeFileImage(
+                      path: _transfoPhoto!,
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: Row(
+                  children: [
+                    IconButton.filledTonal(
+                      icon: const Icon(Icons.edit, size: 18),
+                      onPressed: _showTransfoPhotoOptions,
+                      tooltip: 'Remplacer la photo',
+                    ),
+                    const SizedBox(width: 6),
+                    IconButton.filledTonal(
+                      icon: const Icon(Icons.delete, size: 18, color: Colors.red),
+                      onPressed: () => setState(() => _transfoPhoto = null),
+                      tooltip: 'Supprimer la photo',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          )
+        else
+          InkWell(
+            onTap: _showTransfoPhotoOptions,
+            borderRadius: BorderRadius.circular(10),
+            child: Container(
+              height: isSmallScreen ? 100 : 110,
+              width: double.infinity,
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+              ),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.add_a_photo_outlined, size: isSmallScreen ? 26 : 30, color: Colors.orange.shade800),
+                  const SizedBox(height: 6),
+                  Text(
+                    'Ajouter une photo du transformateur',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 12 : 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.orange.shade800,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  void _showTransfoPhotoOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => Container(
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.camera_alt, color: Colors.orange.shade800),
+              title: const Text('Prendre une photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _prendrePhotoTransfo();
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.photo_library, color: Colors.orange.shade800),
+              title: const Text('Choisir dans la galerie'),
+              onTap: () {
+                Navigator.pop(context);
+                _choisirPhotoTransfoDepuisGalerie();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _prendrePhotoTransfo() async {
+    try {
+      final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
+      if (photo != null) {
+        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'transformateurs');
+        setState(() => _transfoPhoto = savedPath);
+      }
+    } catch (e) {
+      _showError('Erreur lors de la prise de photo: $e');
+    }
+  }
+
+  Future<void> _choisirPhotoTransfoDepuisGalerie() async {
+    try {
+      final XFile? photo = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
+      if (photo != null) {
+        final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'transformateurs');
+        setState(() => _transfoPhoto = savedPath);
+      }
+    } catch (e) {
+      _showError('Erreur lors de la sélection: $e');
+    }
+  }
+
   Widget _buildFormSectionHeader(String title, bool isSmallScreen) {
     return Container(
       width: double.infinity,
@@ -3977,6 +4148,10 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       child: Column(
         children: [
+          // 0. Nom du transformateur
+          _buildTextField(_transfoNomController, 'Nom du transformateur (ex: Transfo T1)', isSmallScreen, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+
           // 1. Type de transformateur
           _buildDropdown(_transfoTypeController, 'Type de transformateur', InstallationFieldsRegistry.typeTransformateurOptions, isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
@@ -4124,6 +4299,10 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
             (value) => setState(() => _transfoSectionCables = value),
             optional: true,
           ),
+          SizedBox(height: isSmallScreen ? 16 : 20),
+
+          // Photo du transformateur
+          _buildTransfoPhotoPicker(isSmallScreen),
           SizedBox(height: isSmallScreen ? 20 : 26),
 
           // Observations
@@ -4632,6 +4811,7 @@ Widget _buildPrioriteButton({
     _celluleNumerotationController.dispose();
     _celluleParafoudresController.dispose();
     _celluleCalibreDisjoncteurController.dispose();
+    _transfoNomController.dispose();
     _transfoTypeController.dispose();
     _transfoMarqueController.dispose();
     _transfoPuissanceController.dispose();

@@ -5207,7 +5207,11 @@ class PdfReportService {
     }
     for (int i = 0; i < local.transformateurs.length; i++) {
       widgets.add(pw.NewPage());
-      widgets.addAll(_buildTransformateurSection(local.transformateurs[i]));
+      widgets.addAll(_buildTransformateurSection(
+        local.transformateurs[i],
+        photoCache: photoCache,
+        saveFilesToDisk: saveFilesToDisk,
+      ));
     }
 
     for (int i = 0; i < local.coffrets.length; i++) {
@@ -5652,28 +5656,15 @@ class PdfReportService {
 
     final infoTable = pw.Table(
       defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
-      border: photoImg != null
-          ? pw.TableBorder(
-              bottom: pw.BorderSide(color: borderColor, width: 0.4),
-              verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
-              horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
-            )
-          : pw.TableBorder(
-              left: pw.BorderSide(color: borderColor, width: 0.4),
-              right: pw.BorderSide(color: borderColor, width: 0.4),
-              bottom: pw.BorderSide(color: borderColor, width: 0.4),
-              verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
-              horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
-            ),
-      columnWidths: photoImg != null
-          ? const {
-              0: pw.FlexColumnWidth(3.6),
-              1: pw.FlexColumnWidth(2.8),
-            }
-          : const {
-              0: pw.FlexColumnWidth(3.6),
-              1: pw.FlexColumnWidth(5.4),
-            },
+      border: pw.TableBorder(
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+        horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(3.6),
+        1: pw.FlexColumnWidth(2.8),
+      },
       children: [
         tableDataRowInfo('Fonction de la cellule', safe(cellule.fonction), alt: false),
         tableDataRowInfo('Type de cellule', safe(cellule.type), alt: false),
@@ -5699,36 +5690,33 @@ class PdfReportService {
       ],
     );
 
-    pw.Widget topSectionTable;
-    if (photoImg != null) {
-      topSectionTable = pw.Table(
-        defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
-        border: pw.TableBorder(
-          left: pw.BorderSide(color: borderColor, width: 0.4),
-          right: pw.BorderSide(color: borderColor, width: 0.4),
-          bottom: pw.BorderSide(color: borderColor, width: 0.4),
-          verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+    final topSectionTable = pw.Table(
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+      border: pw.TableBorder(
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(6.4),
+        1: pw.FlexColumnWidth(2.6),
+      },
+      children: [
+        pw.TableRow(
+          children: [
+            infoTable,
+            pw.Container(
+              padding: const pw.EdgeInsets.all(4),
+              alignment: pw.Alignment.center,
+              child: photoImg != null
+                  ? pw.Image(photoImg, width: 140, height: 140, fit: pw.BoxFit.contain)
+                  : pw.SizedBox(width: 140, height: 140),
+            ),
+          ],
         ),
-        columnWidths: const {
-          0: pw.FlexColumnWidth(6.4),
-          1: pw.FlexColumnWidth(2.6),
-        },
-        children: [
-          pw.TableRow(
-            children: [
-              infoTable,
-              pw.Container(
-                padding: const pw.EdgeInsets.all(4),
-                alignment: pw.Alignment.center,
-                child: pw.Image(photoImg, width: 140, height: 140, fit: pw.BoxFit.contain),
-              ),
-            ],
-          ),
-        ],
-      );
-    } else {
-      topSectionTable = infoTable;
-    }
+      ],
+    );
 
     final headerTable = pw.Table(
       defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
@@ -5890,9 +5878,27 @@ class PdfReportService {
     ];
   }
 
-  static List<pw.Widget> _buildTransformateurSection(TransformateurMTBT transfo) {
+  static List<pw.Widget> _buildTransformateurSection(
+    TransformateurMTBT transfo, {
+    Map<dynamic, pw.MemoryImage?>? photoCache,
+    bool saveFilesToDisk = true,
+  }) {
     DispositionsConstructivesRegistry.ensureCompleteTransformateurChecklist(transfo.elementsVerifies);
     String safe(String v) => v.trim().isEmpty ? 'Non renseigné' : v;
+
+    final rawPhotoPath = (transfo.photo != null && transfo.photo!.trim().isNotEmpty)
+        ? transfo.photo!.trim()
+        : (transfo.photos.isNotEmpty ? transfo.photos.first.trim() : null);
+    final hasPhoto = rawPhotoPath != null && rawPhotoPath.isNotEmpty;
+
+    pw.MemoryImage? photoImg;
+    if (hasPhoto) {
+      if (photoCache != null && photoCache.containsKey(transfo)) {
+        photoImg = photoCache[transfo];
+      } else if (!saveFilesToDisk) {
+        photoImg = _placeholder1x1;
+      }
+    }
 
     pw.TableRow tableDataRowInfo(String label, String value, {required bool alt}) {
       return pw.TableRow(
@@ -5923,6 +5929,8 @@ class PdfReportService {
       5: pw.FlexColumnWidth(1.7), // OBSERVATION
     };
 
+    final hasNom = transfo.nom != null && transfo.nom!.trim().isNotEmpty;
+
     final titleTable = pw.Table(
       border: pw.TableBorder(
         top: pw.BorderSide(color: borderColor, width: 0.4),
@@ -5946,21 +5954,32 @@ class PdfReportService {
             ),
           ],
         ),
+        if (hasNom)
+          pw.TableRow(
+            decoration: pw.BoxDecoration(color: lightBlue),
+            children: [
+              pw.Container(
+                padding: const pw.EdgeInsets.only(left: 6, right: 6, bottom: 4),
+                alignment: pw.Alignment.center,
+                child: pw.Text(transfo.nom!.trim(),
+                    style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+                    textAlign: pw.TextAlign.center),
+              ),
+            ],
+          ),
       ],
     );
 
     final infoTable = pw.Table(
       defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
       border: pw.TableBorder(
-        left: pw.BorderSide(color: borderColor, width: 0.4),
-        right: pw.BorderSide(color: borderColor, width: 0.4),
         bottom: pw.BorderSide(color: borderColor, width: 0.4),
         verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
         horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
       ),
       columnWidths: const {
         0: pw.FlexColumnWidth(3.6),
-        1: pw.FlexColumnWidth(5.4),
+        1: pw.FlexColumnWidth(2.8),
       },
       children: [
         tableDataRowInfo('Type de transformateur', safe(transfo.typeTransformateur), alt: false),
@@ -5987,6 +6006,34 @@ class PdfReportService {
                 .join(', ')),
             alt: false,
           ),
+      ],
+    );
+
+    final topSectionTable = pw.Table(
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+      border: pw.TableBorder(
+        left: pw.BorderSide(color: borderColor, width: 0.4),
+        right: pw.BorderSide(color: borderColor, width: 0.4),
+        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+      ),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(6.4),
+        1: pw.FlexColumnWidth(2.6),
+      },
+      children: [
+        pw.TableRow(
+          children: [
+            infoTable,
+            pw.Container(
+              padding: const pw.EdgeInsets.all(4),
+              alignment: pw.Alignment.center,
+              child: photoImg != null
+                  ? pw.Image(photoImg, width: 140, height: 140, fit: pw.BoxFit.contain)
+                  : pw.SizedBox(width: 140, height: 140),
+            ),
+          ],
+        ),
       ],
     );
 
@@ -6143,7 +6190,7 @@ class PdfReportService {
     return [
       pw.SizedBox(height: 6),
       titleTable,
-      infoTable,
+      topSectionTable,
       headerTable,
       dataTable,
       pw.SizedBox(height: 5),
@@ -9479,6 +9526,20 @@ class PdfReportService {
             cache[item] = img;
           }
         }
+      } else if (item is TransformateurMTBT) {
+        final rawPath = (item.photo != null && item.photo!.trim().isNotEmpty)
+            ? item.photo!.trim()
+            : (item.photos.isNotEmpty ? item.photos.first.trim() : null);
+        if (rawPath != null && rawPath.isNotEmpty) {
+          final img = await _loadAndOptimizeImage(
+            rawPath,
+            photoContext: PdfPhotoContext.equipmentObs,
+            saveFilesToDisk: loadImages,
+          );
+          if (img != null) {
+            cache[item] = img;
+          }
+        }
       }
     }
     return cache;
@@ -9487,9 +9548,10 @@ class PdfReportService {
   static Future<Map<dynamic, pw.MemoryImage?>> _preloadCoffretsList(
     List<CoffretArmoire> coffrets, {
     List<Cellule>? cellules,
+    List<TransformateurMTBT>? transformateurs,
     bool loadImages = true,
   }) async {
-    final list = <dynamic>[...coffrets, ...?cellules];
+    final list = <dynamic>[...coffrets, ...?cellules, ...?transformateurs];
     return _preloadEquipmentPhotos(list, loadImages: loadImages);
   }
 
@@ -9501,6 +9563,7 @@ class PdfReportService {
     for (final local in zone.locaux) {
       list.addAll(local.coffrets);
       list.addAll(local.cellules);
+      list.addAll(local.transformateurs);
     }
     return _preloadEquipmentPhotos(list, loadImages: loadImages);
   }
@@ -9611,11 +9674,18 @@ class PdfReportService {
     if (audit.moyenneTensionLocaux.isNotEmpty) {
       final mtCoffrets = <CoffretArmoire>[];
       final mtCellules = <Cellule>[];
+      final mtTransfos = <TransformateurMTBT>[];
       for (final local in audit.moyenneTensionLocaux) {
         mtCoffrets.addAll(local.coffrets);
         mtCellules.addAll(local.cellules);
+        mtTransfos.addAll(local.transformateurs);
       }
-      final mtPhotoCache = await _preloadCoffretsList(mtCoffrets, cellules: mtCellules, loadImages: saveFilesToDisk);
+      final mtPhotoCache = await _preloadCoffretsList(
+        mtCoffrets,
+        cellules: mtCellules,
+        transformateurs: mtTransfos,
+        loadImages: saveFilesToDisk,
+      );
 
       final mtDoc = pw.Document(
         title: 'Audit MT Directs - ${mission.nomClient}',

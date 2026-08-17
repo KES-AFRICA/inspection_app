@@ -122,6 +122,8 @@ class TransformateurMTBTEntity {
   final String? sectionCables;
   final String? syncId;
   final List<ElementControleEntity>? observations;
+  final String? nom;
+  final String? photo;
 
   const TransformateurMTBTEntity({
     required this.typeTransformateur,
@@ -137,6 +139,8 @@ class TransformateurMTBTEntity {
     this.sectionCables,
     this.syncId,
     this.observations,
+    this.nom,
+    this.photo,
   });
 }
 

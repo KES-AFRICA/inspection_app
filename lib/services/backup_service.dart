@@ -766,6 +766,8 @@ class BackupService {
         'typeRefroidissement': t.typeRefroidissement,
         'regimeNeutre': t.regimeNeutre,
         'photos': t.photos,
+        'nom': t.nom,
+        'photo': t.photo,
         'elementsVerifies':
             t.elementsVerifies.map(_serializeElement).toList(),
       };
@@ -2306,6 +2308,8 @@ class BackupService {
         regimeNeutre: d['regimeNeutre'] as String? ?? '',
         photos: _strList(d['photos']),
         elementsVerifies: _parseElements(d['elementsVerifies']),
+        nom: d['nom'] as String?,
+        photo: d['photo'] as String?,
       );
 
   static List<CoffretArmoire> _parseCoffrets(dynamic raw) {

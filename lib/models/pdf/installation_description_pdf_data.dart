@@ -229,6 +229,12 @@ class InstallationDescriptionPdfData {
       }
     }
 
+    if (t.nom != null && t.nom!.trim().isNotEmpty) {
+      addField('NOM DU TRANSFORMATEUR', t.nom!.trim());
+      addField('Nom du transformateur', t.nom!.trim());
+      addField('DESIGNATION', t.nom!.trim());
+    }
+
     addField('PUISSANCE TRANSFORMATEUR (KVA)', t.puissanceAssignee);
     addField('PUISSANCE TRANSFORMATEUR(KVA)', t.puissanceAssignee);
     addField('Puissance Transformateur', t.puissanceAssignee);

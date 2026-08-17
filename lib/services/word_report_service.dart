@@ -801,9 +801,17 @@ class WordReportService {
 
   static void _addTransformateurDetails(Document doc, TransformateurMTBT t, List<String> photos) {
     photos.addAll(t.photos);
-    doc.addParagraph(Paragraph.heading('Transformateur', level: 6));
+    if (t.photo != null && t.photo!.trim().isNotEmpty) {
+      photos.add(t.photo!.trim());
+    }
+    final titleLabel = (t.nom != null && t.nom!.trim().isNotEmpty)
+        ? 'Transformateur : ${t.nom!.trim()}'
+        : 'Transformateur';
+    doc.addParagraph(Paragraph.heading(titleLabel, level: 6));
     doc.addTable(Table(rows: [
       _headerRow(['Champ', 'Valeur']),
+      if (t.nom != null && t.nom!.trim().isNotEmpty)
+        _dataRow(['Nom du transformateur', t.nom!.trim()]),
       _dataRow(['Type', t.typeTransformateur]),
       _dataRow(['Marque / Année', t.marqueAnnee]),
       _dataRow(['Puissance assignée', t.puissanceAssignee]),

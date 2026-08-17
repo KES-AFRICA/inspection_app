@@ -100,6 +100,8 @@ class AuditInstallationsMapper {
       sectionCables: model.sectionCables,
       syncId: model.syncId,
       observations: model.observations?.map(toElementEntity).toList(),
+      nom: model.nom,
+      photo: model.photo,
     );
   }
 
@@ -118,6 +120,8 @@ class AuditInstallationsMapper {
       sectionCables: entity.sectionCables,
       syncId: entity.syncId,
       observations: entity.observations?.map(toElementModel).toList(),
+      nom: entity.nom,
+      photo: entity.photo,
     );
   }
 
