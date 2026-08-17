@@ -80,6 +80,7 @@ class PdfReportService {
   static final PdfColor priorite3Color = PdfColor.fromInt(0xFFFFCDD2);
   static final PdfColor conformeColor = PdfColor.fromInt(0xFFE8F5E9);
   static final PdfColor nonConformeColor = PdfColor.fromInt(0xFFFFEBEE);
+  static final PdfColor sansObjetColor = PdfColor.fromInt(0xFFEEEEEE);
 
   // ──────────────────────────────────────────────────────────────
   //  TAILLES DE POLICE
@@ -6268,6 +6269,36 @@ class PdfReportService {
       );
     }
 
+    pw.TableRow tableRowThermoDefect(String label, String? state) {
+      PdfColor color;
+      String text;
+      if (state == 'Oui') {
+        color = conformeColor;
+        text = 'Oui';
+      } else if (state == 'Non') {
+        color = nonConformeColor;
+        text = 'Non';
+      } else {
+        color = sansObjetColor;
+        text = 'Sans objet';
+      }
+      return pw.TableRow(
+        children: [
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+            alignment: pw.Alignment.centerLeft,
+            child: pw.Text(label, style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
+          ),
+          pw.Container(
+            color: color,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(text, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall)),
+          ),
+        ],
+      );
+    }
+
     // ══════════════════════════════════════════════════════════════════════
     // TABLEAU 1 : Titre + Caractéristiques + Photo
     // ══════════════════════════════════════════════════════════════════════
@@ -6331,6 +6362,8 @@ class PdfReportService {
         tableRowCharBool('Présence de schéma électrique', coffret.presenceSchema),
         tableRowCharBool('Présence de parafoudre', coffret.presenceParafoudre),
         tableRowCharBool('Vérification par thermographie infrarouge', coffret.verificationThermographie),
+        if (coffret.verificationThermographie)
+          tableRowThermoDefect('Présence de défaut thermo', coffret.effectivePresenceDefautThermo),
       ],
     );
 

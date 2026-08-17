@@ -788,6 +788,7 @@ class BackupService {
         'presenceSchema': c.presenceSchema,
         'presenceParafoudre': c.presenceParafoudre,
         'verificationThermographie': c.verificationThermographie,
+        'presenceDefautThermo': c.presenceDefautThermo,
         'photos': c.photos,
         'photosExternes': c.photosExternes,
         'photosInternes': c.photosInternes,
@@ -2333,6 +2334,7 @@ class BackupService {
         presenceParafoudre: d['presenceParafoudre'] as bool? ?? false,
         verificationThermographie:
             d['verificationThermographie'] as bool? ?? false,
+        presenceDefautThermo: d['presenceDefautThermo'] as String?,
         photos: _strList(d['photos']),
         photosExternes: _strList(d['photosExternes']),
         photosInternes: _strList(d['photosInternes']),

@@ -920,6 +920,8 @@ class _EtapeInformationsGenerales extends StatefulWidget {
   final Function(bool?) onPresenceParafoudreChanged;
   final bool verificationThermographie;
   final Function(bool?) onVerificationThermographieChanged;
+  final String? presenceDefautThermo;
+  final Function(String?) onPresenceDefautThermoChanged;
   final String domaineTension;
   final Function(String?) onDomaineTensionChanged;
   final bool domaineTensionValid;
@@ -942,6 +944,8 @@ class _EtapeInformationsGenerales extends StatefulWidget {
     required this.onPresenceParafoudreChanged,
     required this.verificationThermographie,
     required this.onVerificationThermographieChanged,
+    required this.presenceDefautThermo,
+    required this.onPresenceDefautThermoChanged,
     required this.domaineTension,
     required this.onDomaineTensionChanged,
     required this.domaineTensionValid,
@@ -989,6 +993,92 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
     );
   }
 
+  Widget _buildThermoDefectTile(BuildContext context) {
+    final currentVal = widget.presenceDefautThermo;
+    final isHistoricalSansObjet = currentVal == 'Sans objet';
+    final isChecked = currentVal == 'Oui';
+
+    return Container(
+      margin: const EdgeInsets.only(left: 16, top: 4, bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: isHistoricalSansObjet
+            ? Colors.grey.shade100
+            : (isChecked ? Colors.green.shade50 : Colors.grey.shade50),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isHistoricalSansObjet
+              ? Colors.grey.shade400
+              : (isChecked ? Colors.green.shade300 : Colors.grey.shade300),
+        ),
+      ),
+      child: InkWell(
+        onTap: () {
+          if (currentVal == 'Sans objet') {
+            widget.onPresenceDefautThermoChanged('Oui');
+          } else if (currentVal == 'Oui') {
+            widget.onPresenceDefautThermoChanged('Non');
+          } else {
+            widget.onPresenceDefautThermoChanged('Oui');
+          }
+        },
+        borderRadius: BorderRadius.circular(8),
+        child: Row(
+          children: [
+            Checkbox(
+              value: isHistoricalSansObjet ? null : isChecked,
+              tristate: isHistoricalSansObjet,
+              onChanged: (bool? val) {
+                if (currentVal == 'Sans objet') {
+                  widget.onPresenceDefautThermoChanged('Oui');
+                } else if (currentVal == 'Oui') {
+                  widget.onPresenceDefautThermoChanged('Non');
+                } else {
+                  widget.onPresenceDefautThermoChanged('Oui');
+                }
+              },
+              activeColor: AppTheme.primaryBlue,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    'Présence de défaut thermo',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                  if (isHistoricalSansObjet)
+                    Text(
+                      '(Non renseigné historiquement - Sans objet)',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontStyle: FontStyle.italic,
+                        color: Colors.grey.shade600,
+                      ),
+                    )
+                  else
+                    Text(
+                      isChecked ? 'Défaut thermo présent (Oui)' : 'Aucun défaut thermo (Non)',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: isChecked ? Colors.green.shade800 : Colors.grey.shade700,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -1004,6 +1094,11 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
         _buildModernCheckbox(context, 'Présence de schéma électrique', widget.presenceSchema, widget.onPresenceSchemaChanged),
         _buildModernCheckbox(context, 'Présence de parafoudre', widget.presenceParafoudre, widget.onPresenceParafoudreChanged),
         _buildModernCheckbox(context, 'Vérification par thermographie', widget.verificationThermographie, widget.onVerificationThermographieChanged),
+        
+        if (widget.verificationThermographie) ...[
+          const SizedBox(height: 4),
+          _buildThermoDefectTile(context),
+        ],
         
         SizedBox(height: context.spacingXL),
         
@@ -2775,6 +2870,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   bool _presenceSchema = false;
   bool _presenceParafoudre = false;
   bool _verificationThermographie = false;
+  String? _presenceDefautThermo;
 
   List<Alimentation> _alimentations = [];
   Alimentation? _protectionTete;
@@ -2861,6 +2957,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         _presenceSchema = draft.presenceSchema;
         _presenceParafoudre = draft.presenceParafoudre;
         _verificationThermographie = draft.verificationThermographie;
+        _presenceDefautThermo = draft.presenceDefautThermo;
         _alimentations = List.from(draft.alimentations);
         _protectionTete = draft.protectionTete;
         _pointsVerification = List.from(draft.pointsVerification.map((point) => PointVerification(
@@ -2943,6 +3040,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         _presenceSchema = draft.presenceSchema;
         _presenceParafoudre = draft.presenceParafoudre;
         _verificationThermographie = draft.verificationThermographie;
+        _presenceDefautThermo = draft.presenceDefautThermo;
         _alimentations = List.from(draft.alimentations);
         _protectionTete = draft.protectionTete;
         _pointsVerification = List.from(draft.pointsVerification.map((point) => PointVerification(
@@ -3046,6 +3144,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       presenceSchema: _presenceSchema,
       presenceParafoudre: _presenceParafoudre,
       verificationThermographie: _verificationThermographie,
+      presenceDefautThermo: _presenceDefautThermo,
       alimentations: _alimentations,
       protectionTete: _protectionTete,
       pointsVerification: _pointsVerification,
@@ -3171,6 +3270,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _presenceSchema = coffret.presenceSchema;
     _presenceParafoudre = coffret.presenceParafoudre;
     _verificationThermographie = coffret.verificationThermographie;
+    _presenceDefautThermo = coffret.presenceDefautThermo;
     _observationsParafoudre = List.from(coffret.observationsParafoudreEnrichies ?? []);
     if (_observationsParafoudre.isEmpty && coffret.observationsParafoudre.isNotEmpty) {
       for (var obs in coffret.observationsParafoudre) {
@@ -3487,6 +3587,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         presenceSchema: _presenceSchema,
         presenceParafoudre: _presenceParafoudre,
         verificationThermographie: _verificationThermographie,
+        presenceDefautThermo: _presenceDefautThermo,
         alimentations: _alimentations,
         protectionTete: _protectionTete,
         pointsVerification: _pointsVerification,
@@ -3869,7 +3970,19 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                       presenceParafoudre: _presenceParafoudre,
                       onPresenceParafoudreChanged: _onPresenceParafoudreChanged,
                       verificationThermographie: _verificationThermographie,
-                      onVerificationThermographieChanged: (v) => setState(() => _verificationThermographie = v ?? false),
+                      onVerificationThermographieChanged: (v) {
+                        final newVal = v ?? false;
+                        setState(() {
+                          _verificationThermographie = newVal;
+                          if (newVal) {
+                            _presenceDefautThermo ??= 'Non';
+                          } else {
+                            _presenceDefautThermo = null;
+                          }
+                        });
+                      },
+                      presenceDefautThermo: _presenceDefautThermo,
+                      onPresenceDefautThermoChanged: (v) => setState(() => _presenceDefautThermo = v),
                       domaineTension: _domaineTension,
                       onDomaineTensionChanged: (v) { if (v != null && mounted) { setState(() { _domaineTension = v; _validateDomaineTension(v); }); } },
                       domaineTensionValid: _domaineTensionValid,

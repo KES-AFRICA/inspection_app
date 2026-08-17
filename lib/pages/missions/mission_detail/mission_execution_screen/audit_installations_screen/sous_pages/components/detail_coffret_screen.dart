@@ -2065,7 +2065,8 @@ Future<void> _supprimerEssai(EssaiDeclenchementDifferentiel essai) async {
                                 ),
                               ),
                             _buildBooleanInfo('Vérification thermographie', _coffret.verificationThermographie),
-                            _buildBooleanInfo('Vérification thermographie', _coffret.verificationThermographie),
+                            if (_coffret.verificationThermographie)
+                              _buildInfoRow('Présence de défaut thermo', _coffret.effectivePresenceDefautThermo ?? 'Sans objet'),
 
                             // Alimentations
                             if (_coffret.alimentations.isNotEmpty) ...[

@@ -211,6 +211,7 @@ class CoffretArmoireEntity {
   final bool presenceSchema;
   final bool presenceParafoudre;
   final bool verificationThermographie;
+  final String? presenceDefautThermo;
   final List<AlimentationEntity> alimentations;
   final AlimentationEntity? protectionTete;
   final List<PointVerificationEntity> pointsVerification;
@@ -222,6 +223,14 @@ class CoffretArmoireEntity {
   final List<String> photosExternes;
   final List<String> photosInternes;
   final List<ObservationLibreEntity> observationsParafoudre;
+
+  String? get effectivePresenceDefautThermo {
+    if (!verificationThermographie) return null;
+    if (presenceDefautThermo != null && presenceDefautThermo!.isNotEmpty) {
+      return presenceDefautThermo;
+    }
+    return 'Sans objet';
+  }
 
   const CoffretArmoireEntity({
     required this.qrCode,
@@ -236,6 +245,7 @@ class CoffretArmoireEntity {
     this.presenceSchema = false,
     this.presenceParafoudre = false,
     this.verificationThermographie = false,
+    this.presenceDefautThermo,
     this.alimentations = const [],
     this.protectionTete,
     this.pointsVerification = const [],
