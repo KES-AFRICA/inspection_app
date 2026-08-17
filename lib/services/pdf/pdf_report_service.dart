@@ -1014,46 +1014,55 @@ class PdfReportService {
 
   static pw.Widget _buildNormesTable() {
     final normes = [
-      'Articles 6, 112, 113 \u2013 Arr\u00eat\u00e9 039/MTPS/IMT du 26 novembre 1984 fixant les mesures g\u00e9n\u00e9rales d\'hygi\u00e8ne et de s\u00e9curit\u00e9 sur les lieux de travail',
-      'Cahier de prescription technique applicable au D\u00e9cret N\u00b0\u00a020181969/PM du 15 mars 2018, fixant les r\u00e8gles de base de s\u00e9curit\u00e9 incendie dans les b\u00e2timents',
-      'Arr\u00eat\u00e9 conjoint 002164 du 21 juin 2012 MNIMIDT/MINEE',
-      'Loi N\u00b0\u00a0896/PJL/AN du 15/11/2011',
-      'NC 244 C 15 100 \u2013 Installation \u00e9lectrique \u00e0 basse tension',
-      'NF C 15 100 \u2013 Installation \u00e9lectrique \u00e0 basse tension',
-      'Norme NF C 13 100 \u2013 Poste de livraison \u00e9tabli \u00e0 l\'int\u00e9rieur d\'un b\u00e2timent et aliment\u00e9 par un r\u00e9seau de distribution publique de deuxi\u00e8me cat\u00e9gorie',
+      ['Articles 6, 112, 113 – Arrêté 039/MTPS/IMT du 26 novembre 1984', 'Fixant les mesures générales d\'hygiène et de sécurité sur les lieux de travail'],
+      ['Décret N° 20181969/PM du 15 mars 2018', 'Cahier de prescription technique applicable, fixant les règles de base de sécurité incendie dans les bâtiments'],
+      ['Arrêté conjoint 002164 du 21 juin 2012 MNIMIDT/MINEE', '—'],
+      ['Loi N° 896/PJL/AN du 15/11/2011', '—'],
+      ['NC 244 C 15 100', 'Installation électrique à basse tension'],
+      ['NF C 15 100', 'Installation électrique à basse tension'],
+      ['Norme NF C 13 100', 'Poste de livraison établi à l\'intérieur d\'un bâtiment et alimenté par un réseau de distribution publique de deuxième catégorie'],
     ];
     return pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.4),
-      children: normes.asMap().entries.map((e) {
-        return pw.TableRow(
-          decoration: pw.BoxDecoration(color: e.key.isEven ? PdfColors.white : tableRowAlt),
-          children: [
-            _cell(e.value, isHeader: false),
-          ],
-        );
-      }).toList(),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(4.5),
+        1: pw.FlexColumnWidth(5.5),
+      },
+      children: [
+        _tableHeaderRow(['Référence', 'Objet']),
+        ...normes.asMap().entries.map((e) =>
+          _tableDataRow(e.value, alt: e.key.isOdd)),
+      ],
     );
   }
 
   static pw.Widget _buildMaterielTable() {
     final materiel = [
-      ['Mesure de la r\u00e9sistance de prises de terre', 'FLUKE \u2013 1630 2 FC'],
+      ['Mesure de la résistance de prises de terre', 'FLUKE – 1630 2 FC'],
       ['Mesure de l\'isolement', 'CHAUVIN ARNOUX CA 6462'],
-      ['V\u00e9rification de la continuit\u00e9 et de la r\u00e9sistance des conducteurs de protection et des liaisons \u00e9quipotentielles', 'CHAUVIN ARNOUX CA 6462'],
-      ['Test de d\u00e9clenchement des dispositifs diff\u00e9rentiels et mesure des imp\u00e9dances de boucle', 'CHAUVIN ARNOUX CA 6462'],
-      ['Contr\u00f4leur d\'installation \u00e9lectrique', 'CHAUVIN ARNOUX CA 6116N'],
-      ['Analyseur de r\u00e9seaux', 'CHAUVIN ARNOUX PEL 103 140631NFH'],
+      ['Vérification de la continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles', 'CHAUVIN ARNOUX CA 6462'],
+      ['Test de déclenchement des dispositifs différentiels et mesure des impédances de boucle', 'CHAUVIN ARNOUX CA 6462'],
+      ['Contrôleur d\'installation électrique', 'CHAUVIN ARNOUX CA 6116N'],
+      ['Analyseur de réseaux', 'CHAUVIN ARNOUX PEL 103 140631NFH'],
     ];
     return pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.4),
-      columnWidths: {
-        0: const pw.FlexColumnWidth(3),
-        1: const pw.FlexColumnWidth(2),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(6.0),
+        1: pw.FlexColumnWidth(4.0),
       },
       children: [
-        _tableHeaderRow(['Description', 'Appareil / R\u00e9f\u00e9rence']),
-        ...materiel.asMap().entries.map((e) =>
-          _tableDataRow(e.value, alt: e.key.isOdd)),
+        _tableHeaderRow(['Description', 'Appareil / Référence']),
+        ...materiel.asMap().entries.map((e) {
+          final isOdd = e.key.isOdd;
+          return pw.TableRow(
+            decoration: isOdd ? pw.BoxDecoration(color: tableRowAlt) : null,
+            children: [
+              _cell(e.value[0], isHeader: false, centered: false),
+              _cell(e.value[1], isHeader: false, centered: true),
+            ],
+          );
+        }),
       ],
     );
   }
@@ -7605,23 +7614,111 @@ class PdfReportService {
             offset: pageOffset,
             child: _subSectionBar("1. Conditions de mesure"),
           ),
-          pw.SizedBox(height: 10),
+          pw.SizedBox(height: 6),
           
-          // Conditions générales
-          _bodyBold("MESURES D'ISOLEMENT"),
-          _bodyText("Les mésures d'isolement par rapport a la terre sont effectuées sous 500 V continu sur les canalisations en aval des DDR defectueux. La valeur est satisfaisante si supérieure a 0,5 M.ohms."),
-          pw.SizedBox(height: 5),
-          
-          _bodyBold('VERIFICATION DE LA CONTINUITE ET RESISTANCE DES CONDUCTEURS DE PROTECTION'),
-          _bodyText('Correcte si la valeur mesurée satisfait aux prescriptions du guide UTE C 15-105 \u00A7 D6.'),
-          pw.SizedBox(height: 5),
-          
-          _bodyBold('ESSAIS DE DECLENCHEMENT DES DISPOSITIFS DIFFERENTIELS RESIDUELS'),
-          _bodyText('La valeur du seuil de déclenchement est correcte si elle est comprise entre 0,5 IAn et IAn.'),
-          pw.SizedBox(height: 5),
-          
-          _bodyBold('MESURE DES IMPEDANCES DE BOUCLE (PROTECTION \u00AB CONTACTS INDIRECTS \u00BB)'),
-          _bodyText('Correcte si le temps de coupure, pour le courant de défaut déterminé, satisfait aux prescriptions du guide UTE C 15-105.'),
+          _bodyText("Les mesures et essais sont réalisés conformément aux conditions de mesure, aux méthodes d’essai et aux critères d’acceptation définis ci-après."),
+          pw.SizedBox(height: 4),
+
+          // 1. Mesure de la résistance d'isolement
+          _buildBlueBoxBanner("Mesure de la résistance d’isolement"),
+          _para([
+            const pw.TextSpan(text: "Les mesures de résistance d’isolement par rapport à la terre sont réalisées sous une "),
+            pw.TextSpan(text: "tension continue de 500 V", style: pw.TextStyle(font: _fontBold)),
+            const pw.TextSpan(text: "."),
+          ]),
+          _para([
+            const pw.TextSpan(text: "La valeur mesurée est considérée comme "),
+            pw.TextSpan(text: "satisfaisante lorsqu’elle est supérieure à 0,5 MΩ", style: pw.TextStyle(font: _fontBold)),
+            const pw.TextSpan(text: "."),
+          ]),
+
+          // 2. Vérification de la continuité et de la résistance des conducteurs de protection
+          _buildBlueBoxBanner("Vérification de la continuité et de la résistance des conducteurs de protection"),
+          _bodyText("La continuité et la résistance des conducteurs de protection (PE) sont vérifiées afin de s’assurer de leur capacité à assurer efficacement la protection des personnes en cas de défaut d’isolement."),
+          _para([
+            const pw.TextSpan(text: "Le résultat est considéré comme "),
+            pw.TextSpan(
+              text: "conforme lorsque les valeurs mesurées satisfont aux prescriptions du guide UTE C 15-105, notamment celles relatives à la continuité des conducteurs de protection",
+              style: pw.TextStyle(font: _fontBold),
+            ),
+            const pw.TextSpan(text: "."),
+          ]),
+
+          // 3. Essai de déclenchement des dispositifs différentiels résiduels (DDR)
+          _buildBlueBoxBanner("Essai de déclenchement des dispositifs différentiels résiduels (DDR)"),
+          _bodyText("Les essais de déclenchement permettent de vérifier le bon fonctionnement des dispositifs différentiels résiduels ainsi que leur seuil effectif de déclenchement."),
+          _para([
+            const pw.TextSpan(text: "Le seuil de déclenchement est considéré comme "),
+            pw.TextSpan(
+              text: "satisfaisant lorsque la valeur mesurée est comprise entre 0,5 IΔn et IΔn, où IΔn",
+              style: pw.TextStyle(font: _fontBold),
+            ),
+            const pw.TextSpan(text: " représente le courant différentiel résiduel assigné du dispositif."),
+          ]),
+          _bodyText("Les essais permettent également de vérifier le comportement du dispositif dans les conditions prévues de fonctionnement."),
+
+          // 4. Mesure des impédances de boucle – Protection contre les contacts indirects
+          _buildBlueBoxBanner("Mesure des impédances de boucle – Protection contre les contacts indirects"),
+          _bodyText("La mesure de l’impédance de boucle permet de vérifier l’efficacité du dispositif de protection contre les contacts indirects."),
+          _bodyText("Elle permet notamment de déterminer le courant de défaut susceptible de circuler en cas de défaut d’isolement et de vérifier que le dispositif de protection est susceptible de provoquer la coupure du circuit dans le temps requis."),
+          _para([
+            const pw.TextSpan(text: "Le résultat est considéré comme "),
+            pw.TextSpan(
+              text: "conforme lorsque les conditions de coupure correspondant au courant de défaut déterminé satisfont aux prescriptions du référentiel applicable, notamment celles du guide UTE C 15-105 lorsque celui-ci est retenu comme référentiel de vérification",
+              style: pw.TextStyle(font: _fontBold),
+            ),
+            const pw.TextSpan(text: "."),
+          ]),
+
+          // 5. Mesure de la résistance des prises de terre
+          _buildBlueBoxBanner("Mesure de la résistance des prises de terre"),
+          _bodyText("La mesure de la résistance des prises de terre est réalisée afin de vérifier l’efficacité du système de mise à la terre et son aptitude à contribuer à la protection des personnes et au fonctionnement des dispositifs de protection."),
+          _para([
+            const pw.TextSpan(text: "Avant toute mesure, "),
+            pw.TextSpan(
+              text: "la position de la barrette principale de terre ou de la barrette de coupure est vérifiée et mentionnée dans le rapport",
+              style: pw.TextStyle(font: _fontBold),
+            ),
+            const pw.TextSpan(text: "."),
+          ]),
+          _bodyText("La mesure peut être réalisée selon deux méthodes principales :"),
+          pw.SizedBox(height: 2),
+
+          _subMethodHeader("❖  Méthode des trois piquets – Barrette ouverte"),
+          _para([
+            const pw.TextSpan(text: "La méthode des trois piquets est réalisée avec la "),
+            pw.TextSpan(text: "barrette de terre ouverte", style: pw.TextStyle(font: _fontBold)),
+            const pw.TextSpan(text: ", lorsque la configuration de l'installation permet d'isoler la prise de terre à meuser."),
+          ]),
+          _bodyText("Elle utilise :"),
+          _bulletPoint("La prise de terre à mesurer ;"),
+          _bulletPoint("Un piquet auxiliaire de courant ;"),
+          _bulletPoint("Un piquet auxiliaire de potentiel."),
+          _bodyText("Cette méthode permet de mesurer la résistance de la prise de terre selon le principe de la chute de potentiel."),
+          pw.SizedBox(height: 3),
+
+          _bodyBold("Position de la barrette lors de la mesure :"),
+          pw.SizedBox(height: 3),
+          _checkboxRow("Barrette ouverte"),
+          _checkboxRow("Barrette fermée"),
+          pw.SizedBox(height: 3),
+          _bodyText("Lorsque la barrette est ouverte, il convient de s'assurer que les conditions de sécurité sont maîtrisées et que la coupure temporaire de la liaison de terre ne met pas les personnes ou les équipements en danger."),
+          pw.SizedBox(height: 4),
+
+          _subMethodHeader("❖  Méthode à la pince de terre – Barrette fermée"),
+          _bodyText("La mesure à la pince de terre peut être utilisée lorsque la configuration de l'installation permet ce type de mesure et qu'il n'est pas possible ou souhaitable d'implanter des piquets auxiliaires."),
+          _bodyText("Cette méthode est particulièrement adaptée aux sites :"),
+          _bulletPoint("Fortement bétonnés ou asphaltés ;"),
+          _bulletPoint("Industriels ;"),
+          _bulletPoint("Présentant des contraintes d'accès ;"),
+          _bulletPoint("Dans lesquels l'implantation de piquets est difficile ;"),
+          _bulletPoint("Où l'interruption du réseau de terre n'est pas souhaitable."),
+          pw.SizedBox(height: 3),
+          _para([
+            const pw.TextSpan(text: "Dans ce cas, la mesure est généralement réalisée "),
+            pw.TextSpan(text: "barrette fermée", style: pw.TextStyle(font: _fontBold)),
+            const pw.TextSpan(text: ", afin de conserver le réseau de terre dans sa configuration normale de fonctionnement."),
+          ]),
           
           pw.SizedBox(height: 16),
           
@@ -9229,6 +9326,92 @@ class PdfReportService {
   // ──────────────────────────────────────────────────────────────
   //  UTILITAIRES PDF (cellules, lignes, titres...)
   // ──────────────────────────────────────────────────────────────
+
+  static pw.Widget _buildBlueBoxBanner(String title) {
+    return pw.Container(
+      width: double.infinity,
+      color: lightBlue,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      margin: const pw.EdgeInsets.only(top: 8, bottom: 4),
+      child: pw.Text(
+        _normalizeText(title),
+        style: pw.TextStyle(
+          font: _fontBold,
+          fontSize: fsBody,
+          fontWeight: pw.FontWeight.bold,
+          color: headerColor,
+        ),
+      ),
+    );
+  }
+
+  static pw.Widget _para(List<pw.InlineSpan> spans) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(bottom: 4),
+      child: pw.RichText(
+        text: pw.TextSpan(
+          style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: PdfColors.black),
+          children: spans,
+        ),
+      ),
+    );
+  }
+
+  static pw.Widget _subMethodHeader(String title) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(top: 6, bottom: 4),
+      child: pw.Text(
+        _normalizeText(title),
+        style: pw.TextStyle(
+          font: _fontBold,
+          fontSize: fsBody,
+          fontWeight: pw.FontWeight.bold,
+          color: headerColor,
+        ),
+      ),
+    );
+  }
+
+  static pw.Widget _bulletPoint(String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(left: 12, bottom: 2),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text("• ", style: pw.TextStyle(font: _fontBold, fontSize: fsBody)),
+          pw.Expanded(
+            child: pw.Text(
+              _normalizeText(text),
+              style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: PdfColors.black),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  static pw.Widget _checkboxRow(String label) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.only(left: 12, bottom: 3),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.Container(
+            width: 8,
+            height: 8,
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.black, width: 0.8),
+            ),
+          ),
+          pw.SizedBox(width: 6),
+          pw.Text(
+            _normalizeText(label),
+            style: pw.TextStyle(font: _fontBold, fontSize: fsBody, fontWeight: pw.FontWeight.bold),
+          ),
+        ],
+      ),
+    );
+  }
 
   /// Convertit les caractères spéciaux en versions compatibles avec les polices standard
   /// Normalise le texte pour l'encodage PDF.
