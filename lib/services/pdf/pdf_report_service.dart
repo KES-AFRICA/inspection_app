@@ -1871,68 +1871,70 @@ class PdfReportService {
     final recoRows = <pw.TableRow>[];
     if (data.recommandationsPrioritaires.priority1Immediate.isNotEmpty) {
       recoRows.add(pw.TableRow(
+        verticalAlignment: pw.TableCellVerticalAlignment.middle,
         decoration: pw.BoxDecoration(color: PdfColor.fromHex('#FEF2F2')),
         children: [
-          pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Priorité 1 — Action Immédiate', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColor.fromHex('#B71C1C')))),
-          pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(data.recommandationsPrioritaires.priority1Immediate, style: pw.TextStyle(font: _fontRegular, fontSize: 7.5))),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Priorité 1 — Action Immédiate', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColor.fromHex('#B71C1C')))),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(_cleanRecommendationText(data.recommandationsPrioritaires.priority1Immediate), style: pw.TextStyle(font: _fontRegular, fontSize: 7.5))),
         ],
       ));
     }
     if (data.recommandationsPrioritaires.priority2ShortTerm.isNotEmpty) {
       recoRows.add(pw.TableRow(
+        verticalAlignment: pw.TableCellVerticalAlignment.middle,
         decoration: pw.BoxDecoration(color: PdfColor.fromHex('#FFF7ED')),
         children: [
-          pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Priorité 2 — Court Terme', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColor.fromHex('#C2410C')))),
-          pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(data.recommandationsPrioritaires.priority2ShortTerm, style: pw.TextStyle(font: _fontRegular, fontSize: 7.5))),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Priorité 2 — Court Terme', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColor.fromHex('#C2410C')))),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(_cleanRecommendationText(data.recommandationsPrioritaires.priority2ShortTerm), style: pw.TextStyle(font: _fontRegular, fontSize: 7.5))),
         ],
       ));
     }
     if (data.recommandationsPrioritaires.priority3MediumTerm.isNotEmpty) {
       recoRows.add(pw.TableRow(
+        verticalAlignment: pw.TableCellVerticalAlignment.middle,
         children: [
-          pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('Priorité 3 — Moyen Terme', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColors.grey800))),
-          pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text(data.recommandationsPrioritaires.priority3MediumTerm, style: pw.TextStyle(font: _fontRegular, fontSize: 7.5))),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Priorité 3 — Moyen Terme', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColors.grey800))),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(_cleanRecommendationText(data.recommandationsPrioritaires.priority3MediumTerm), style: pw.TextStyle(font: _fontRegular, fontSize: 7.5))),
         ],
       ));
     }
 
-    widgets.add(pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
+    final recoHeaderRow = pw.TableRow(
+      verticalAlignment: pw.TableCellVerticalAlignment.middle,
+      decoration: pw.BoxDecoration(color: accentColor),
       children: [
-        PageTracker(
-          key: 'resume_executif_1_6',
-          registry: trackedPages,
-          offset: offset,
-          child: _subSectionHeader('6. Recommandations prioritaires hiérarchisées'),
-        ),
-        pw.SizedBox(height: 4),
-        if (data.recommandationsPrioritaires.introParagraph.isNotEmpty)
-          pw.Text(
+        pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('NIVEAU DE PRIORITÉ', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
+        pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('ACTION CORRECTIVE RECOMMANDÉE', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
+      ],
+    );
+
+    final recoHeaderWidget = PageTracker(
+      key: 'resume_executif_1_6',
+      registry: trackedPages,
+      offset: offset,
+      child: _subSectionHeader('6. Recommandations prioritaires hiérarchisées'),
+    );
+
+    final recoIntroWidget = data.recommandationsPrioritaires.introParagraph.isNotEmpty
+        ? pw.Text(
             data.recommandationsPrioritaires.introParagraph,
             style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
             textAlign: pw.TextAlign.justify,
-          ),
-        pw.SizedBox(height: 4),
-        if (recoRows.isNotEmpty)
-          pw.Table(
-            border: pw.TableBorder.all(color: borderColor, width: 0.5),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(3.5),
-              1: pw.FlexColumnWidth(6.5),
-            },
-            children: [
-              pw.TableRow(
-                decoration: pw.BoxDecoration(color: accentColor),
-                children: [
-                  pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('NIVEAU DE PRIORITÉ', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
-                  pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('ACTION CORRECTIVE RECOMMANDÉE', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
-                ],
-              ),
-              ...recoRows,
-            ],
-          ),
-      ],
-    ));
+          )
+        : null;
+
+    final recoBlocks = _buildHeaderWithTableList(
+      headerWidget: recoHeaderWidget,
+      introWidget: recoIntroWidget,
+      headerRow: recoHeaderRow,
+      dataRows: recoRows,
+      columnWidths: const {
+        0: pw.FlexColumnWidth(3.5),
+        1: pw.FlexColumnWidth(6.5),
+      },
+    );
+
+    widgets.addAll(recoBlocks);
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 7. Appréciation globale ──
@@ -2390,6 +2392,19 @@ class PdfReportService {
     ));
 
     return widgets;
+  }
+
+  static String _cleanRecommendationText(String text) {
+    var cleaned = text.trim();
+    cleaned = cleaned.replaceAll(
+      RegExp(r'^Priorit[eé]\s*\d+\s*[—\-:]?\s*(Action\s+Immédiate|Immédiat|Court\s+[Tt]erme|Moyen\s+[Tt]erme)?\s*:\s*', caseSensitive: false),
+      '',
+    ).trim();
+
+    if (cleaned.isNotEmpty) {
+      cleaned = '${cleaned[0].toUpperCase()}${cleaned.substring(1)}';
+    }
+    return cleaned;
   }
 
   static List<pw.Widget> _buildHeaderWithTableList({
