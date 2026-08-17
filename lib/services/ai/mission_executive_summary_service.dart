@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:inspec_app/services/statistics/mission_statistics_collector.dart';
 
+import '../statistics/canonical_risk_family_registry.dart';
 import 'ai_provider.dart';
 import 'executive_summary_cache_entry.dart';
 import 'executive_summary_data.dart';
@@ -573,12 +574,15 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
       highestDensityText = 'Cette catégorie présente une densité de $top1Density NC / équipement sur $top1Eq unité${top1Eq > 1 ? 's' : ''}.';
     }
 
-    final riskRows = snapshot.riskFamilies.take(4).map((r) {
+    final riskRows = snapshot.riskFamilies.take(5).map((r) {
+      final name = r['name'] as String? ?? 'Famille de risque';
+      final defaultObs = CanonicalRiskFamilyRegistry.defaultObservations[name] ??
+          'Facteur de risque identifié lors du contrôle';
       return RiskFactorRowData(
-        natureRisque: r['name'] as String? ?? 'Famille de risque',
+        natureRisque: name,
         constats: r['count']?.toString() ?? '0',
         partPct: '${r['percentage'] ?? '0,0'} %',
-        observation: 'Facteur de risque identifié lors du contrôle',
+        observation: defaultObs,
       );
     }).toList();
 

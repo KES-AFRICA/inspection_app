@@ -3,6 +3,7 @@
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/services/hive_service.dart';
 import 'audit_finding.dart';
+import 'canonical_risk_family_registry.dart';
 import 'domain_entity_instance.dart';
 import 'mission_domain_inventory_engine.dart';
 
@@ -371,11 +372,9 @@ class AnalyticsEngine {
           normRefsMap[norm] = (normRefsMap[norm] ?? 0) + 1;
         }
 
-        // Familles de risques
-        final risk = f.riskFamily?.trim();
-        if (risk != null && risk.isNotEmpty) {
-          riskFamiliesMap[risk] = (riskFamiliesMap[risk] ?? 0) + 1;
-        }
+        // Familles de risques (Classification Canonique)
+        final canonicalRisk = CanonicalRiskFamilyRegistry.mapToCanonical(f.riskFamily, verificationPoint: f.verificationPoint);
+        riskFamiliesMap[canonicalRisk] = (riskFamiliesMap[canonicalRisk] ?? 0) + 1;
 
         // Photos rattachées aux constatations
         observationPhotos += f.photos.length;
@@ -504,8 +503,17 @@ class AnalyticsEngine {
       );
     }).toList();
 
-    // Familles de risques
-    final sortedRisks = riskFamiliesMap.entries.toList()..sort((a, b) => b.value.compareTo(a.value));
+    // Familles de risques canoniques
+    for (final family in CanonicalRiskFamilyRegistry.canonicalFamilies) {
+      riskFamiliesMap.putIfAbsent(family, () => 0);
+    }
+    final sortedRisks = riskFamiliesMap.entries.toList()
+      ..sort((a, b) {
+        final cmp = b.value.compareTo(a.value);
+        if (cmp != 0) return cmp;
+        return CanonicalRiskFamilyRegistry.canonicalFamilies.indexOf(a.key)
+            .compareTo(CanonicalRiskFamilyRegistry.canonicalFamilies.indexOf(b.key));
+      });
     final riskFamiliesStats = sortedRisks.map((e) {
       final pct = totalFindingsCount > 0 ? (e.value / totalFindingsCount) * 100.0 : 0.0;
       return RiskFamilyItem(

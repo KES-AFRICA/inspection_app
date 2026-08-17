@@ -2083,6 +2083,7 @@ class PdfReportService {
 
   static pw.Widget _buildRiskFactorsSummaryTable(List<RiskFactorRowData> rows) {
     return pw.Table(
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
       border: pw.TableBorder.all(color: borderColor, width: 0.5),
       columnWidths: const {
         0: pw.FlexColumnWidth(3.5),

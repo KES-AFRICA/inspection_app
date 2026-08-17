@@ -1,6 +1,7 @@
 // lib/services/statistics/audit_finding.dart
 
 import '../hive_service.dart';
+import 'canonical_risk_family_registry.dart';
 import 'mission_domain_inventory_engine.dart';
 
 /// Modèle d'item d'inventaire chiffré des installations et équipements
@@ -364,14 +365,21 @@ class AuditFindingInventory {
 
     final counts = <String, int>{};
     for (final f in findings) {
-      final family = (f.riskFamily?.trim().isNotEmpty == true)
-          ? f.riskFamily!.trim()
-          : 'Non spécifiée';
+      final family = CanonicalRiskFamilyRegistry.mapToCanonical(f.riskFamily, verificationPoint: f.verificationPoint);
       counts[family] = (counts[family] ?? 0) + 1;
     }
 
+    for (final family in CanonicalRiskFamilyRegistry.canonicalFamilies) {
+      counts.putIfAbsent(family, () => 0);
+    }
+
     final sortedEntries = counts.entries.toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+      ..sort((a, b) {
+        final cmp = b.value.compareTo(a.value);
+        if (cmp != 0) return cmp;
+        return CanonicalRiskFamilyRegistry.canonicalFamilies.indexOf(a.key)
+            .compareTo(CanonicalRiskFamilyRegistry.canonicalFamilies.indexOf(b.key));
+      });
     final tot = totalFindings;
 
     return sortedEntries.map((e) {
