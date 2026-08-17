@@ -91,13 +91,10 @@ class ExecutiveSummarySnapshot {
       final tensionStats = summary.tensionDomainStats;
       final domainStr = (tensionStats.mtCount > 0) ? 'Moyenne et Basse Tension (MT/BT)' : 'Basse Tension (BT)';
 
-      final totalEquipments = summary.equipmentInventory.fold<int>(0, (sum, item) => sum + item.count);
+      final eqCount = summary.totalEquipments;
+      final totalNc = summary.totalNC;
+      final globalDensityStr = summary.globalDensityStr;
       final activeCategoriesCount = summary.equipmentInventory.where((i) => i.count > 0).length;
-      final eqCount = totalEquipments > 0 ? totalEquipments : summary.equipmentInventory.length;
-      final totalNc = cStats.total;
-
-      final double globalDensity = eqCount > 0 ? totalNc / eqCount : 0.0;
-      final globalDensityStr = globalDensity.toStringAsFixed(2).replaceAll('.', ',');
 
       // Trier les catégories par nombre de non-conformités décroissant pour déterminer le Top 2
       final sortedCategories = List<CategoryCrossItem>.from(summary.crossCategoryItems)

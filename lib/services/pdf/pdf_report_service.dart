@@ -2220,7 +2220,7 @@ class PdfReportService {
               ),
               _buildIndicateurRow('Périmètre couvert', '$totalEq installations et équipements répartis en $activeCats catégories (MT et BT)'),
               _buildIndicateurRow('Total des non-conformités', '$total (recensement par installation/équipement)'),
-              _buildIndicateurRow('Densité moyenne globale', '${(total / (totalEq > 0 ? totalEq : 1)).toStringAsFixed(2).replaceAll('.', ',')} NC/équipement'),
+              _buildIndicateurRow('Densité moyenne globale', '${summary.globalDensityStr} NC/équipement'),
               _buildIndicateurRow('Part des NC critiques', '${pctCritique.toStringAsFixed(1).replaceAll('.', ',')} % — niveau de risque élevé'),
               _buildIndicateurRow(topTwo.label, topTwo.formattedValue),
               _buildIndicateurRow('Catégorie la plus dense', densestStr),

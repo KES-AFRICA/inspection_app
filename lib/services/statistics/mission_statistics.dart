@@ -153,7 +153,21 @@ class MissionStatisticsSummary {
     required this.equipmentInventory,
   });
 
-  int get totalEquipments => domainInventory?.instances.length ?? equipmentInventory.fold<int>(0, (sum, e) => sum + e.count);
+  /// Nombre total de non-conformités pertinentes pour l'ensemble du rapport.
+  int get totalNC => criticalityStats.total > 0 ? criticalityStats.total : inventory.totalFindings;
+
+  /// Nombre total d'équipements et de locaux physiques contrôlés (Source de vérité unifiée).
+  int get totalEquipments {
+    final eqSum = equipmentInventory.fold<int>(0, (sum, e) => sum + e.count);
+    if (eqSum > 0) return eqSum;
+    return domainInventory?.instances.length ?? 0;
+  }
+
+  /// Densité moyenne globale unique certifiée (NC par équipement).
+  double get globalDensity => totalEquipments > 0 ? totalNC / totalEquipments : 0.0;
+
+  /// Formatage texte unique certifié de la densité moyenne globale (ex: "3,90").
+  String get globalDensityStr => globalDensity.toStringAsFixed(2).replaceAll('.', ',');
 
   String get densestCategoryFormatted {
     if (domainInventory != null) {
