@@ -7077,29 +7077,29 @@ class PdfReportService {
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: lightBlue), // LightBlue background matching the report
+          decoration: pw.BoxDecoration(color: accentColor),
           children: [
             pw.Container(
               alignment: pw.Alignment.center,
               padding: const pw.EdgeInsets.symmetric(vertical: 8),
-              child: pw.Text('Localisation', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+              child: pw.Text('Localisation', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
             ),
             pw.Container(
               alignment: pw.Alignment.center,
               padding: const pw.EdgeInsets.symmetric(vertical: 8),
-              child: pw.Text('Zone', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+              child: pw.Text('Zone', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
             ),
             pw.Container(
               alignment: pw.Alignment.center,
               padding: const pw.EdgeInsets.symmetric(vertical: 8),
-              child: pw.Text('Origine\nclassement', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+              child: pw.Text('Origine\nclassement', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
             ),
             // Influences externes (double level with vertical inside borders)
             pw.Column(
               children: [
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                  child: pw.Text('Influences externes', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                  child: pw.Text('Influences externes', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
                 ),
                 pw.Divider(height: 0.4, color: borderColor),
                 pw.Table(
@@ -7114,11 +7114,11 @@ class PdfReportService {
                   children: [
                     pw.TableRow(
                       children: [
-                        pw.Text('AF', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
-                        pw.Text('BE', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
-                        pw.Text('AE', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
-                        pw.Text('AD', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
-                        pw.Text('AG', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                        pw.Text('AF', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
+                        pw.Text('BE', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
+                        pw.Text('AE', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
+                        pw.Text('AD', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
+                        pw.Text('AG', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
                       ],
                     ),
                   ],
@@ -7130,7 +7130,7 @@ class PdfReportService {
               children: [
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                  child: pw.Text('Indice mini de\nprotection', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                  child: pw.Text('Indice mini de\nprotection', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
                 ),
                 pw.Divider(height: 0.4, color: borderColor),
                 pw.Table(
@@ -7142,8 +7142,8 @@ class PdfReportService {
                   children: [
                     pw.TableRow(
                       children: [
-                        pw.Text('IP', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
-                        pw.Text('IK', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                        pw.Text('IP', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
+                        pw.Text('IK', style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
                       ],
                     ),
                   ],
@@ -7271,14 +7271,14 @@ class PdfReportService {
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: lightBlue), // Uniform lightBlue background
+          decoration: pw.BoxDecoration(color: accentColor),
           children: [
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
               alignment: pw.Alignment.center,
               child: pw.Text(
                 "CODIFICATION DES INFLUENCES EXTERNES – INDICES ET DEGRÉS DE PROTECTION",
-                style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor), // H3 size, headerColor text
+                style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: PdfColors.white),
                 textAlign: pw.TextAlign.center,
               ),
             ),
@@ -7889,29 +7889,29 @@ class PdfReportService {
           },
           children: [
             pw.TableRow(
-              decoration: pw.BoxDecoration(color: lightBlue),
+              decoration: pw.BoxDecoration(color: accentColor),
               children: [
                 pw.Container(
                   alignment: pw.Alignment.center,
                   padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                  child: pw.Text("LOCALISATION", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                  child: pw.Text("LOCALISATION", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
                 ),
                 pw.Container(
                   alignment: pw.Alignment.center,
                   padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                  child: pw.Text("Désignation circuit", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                  child: pw.Text("Désignation circuit", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
                 ),
                 pw.Container(
                   alignment: pw.Alignment.center,
                   padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                  child: pw.Text("Type de dispositif", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                  child: pw.Text("Type de dispositif", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
                 ),
                 // Réglage (double level with vertical inside borders)
                 pw.Column(
                   children: [
                     pw.Container(
                       padding: const pw.EdgeInsets.symmetric(vertical: 2),
-                      child: pw.Text("Réglage", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                      child: pw.Text("Réglage", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
                     ),
                     pw.Divider(height: 0.4, color: borderColor),
                     pw.Table(
@@ -7923,8 +7923,8 @@ class PdfReportService {
                       children: [
                         pw.TableRow(
                           children: [
-                            pw.Text("I\u0394n (mA)", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
-                            pw.Text("Tempo (s)", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                            pw.Text("I\u0394n (mA)", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
+                            pw.Text("Tempo (s)", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
                           ],
                         ),
                       ],
@@ -7934,7 +7934,7 @@ class PdfReportService {
                 pw.Container(
                   alignment: pw.Alignment.center,
                   padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-                  child: pw.Text("Essai", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor), textAlign: pw.TextAlign.center),
+                  child: pw.Text("Essai", style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white), textAlign: pw.TextAlign.center),
                 ),
               ],
             ),
@@ -8371,14 +8371,14 @@ class PdfReportService {
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: lightBlue),
+          decoration: pw.BoxDecoration(color: accentColor),
           children: [
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
               alignment: pw.Alignment.center,
               child: pw.Text(
                 "Signification des abréviations utilisées",
-                style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+                style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: PdfColors.white),
                 textAlign: pw.TextAlign.center,
               ),
             ),
@@ -8401,7 +8401,13 @@ class PdfReportService {
         1: pw.FlexColumnWidth(3.0),
       },
       children: [
-        _tableHeaderRow(["Abréviation", "Signification"]),
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: lightBlue),
+          children: [
+            _cell("Abréviation", isHeader: true, centered: true, color: headerColor),
+            _cell("Signification", isHeader: true, centered: true, color: headerColor),
+          ],
+        ),
         _tableDataRow(["DDR", "Disjoncteur Différentiel"], alt: false, centered: true),
         _tableDataRow(["RD", "Relais Différentiel"], alt: true, centered: true),
         _tableDataRow(["B", "Bon fonctionnement"], alt: false, centered: true),
@@ -10362,15 +10368,19 @@ class PdfReportService {
           'C\'est dans le cadre de ces opérations que les dispositions doivent être prises afin de remédier aux défectuosités constatées pendant la vérification ou celles qui peuvent se manifester après la vérification.',
         ),
         pw.SizedBox(height: 7),
-        PageTracker(
-          key: 'rappel_formation',
-          registry: trackedPages,
-          offset: currentOffset,
-          child: _subTitle('5. Formation du personnel intervenant sur les installations et à proximité'),
-        ),
-        _bodyText(
-          'Conformément aux dispositions réglementaires en vigueur, l\'employeur doit s\'assurer que le personnel appelé à intervenir sur ou à proximité des installations électriques dispose d\'une habilitation électrique adaptée au domaine de tension concerné '
-          'et à la nature des opérations à réaliser.',
+        pw.Wrap(
+          children: [
+            PageTracker(
+              key: 'rappel_formation',
+              registry: trackedPages,
+              offset: currentOffset,
+              child: _subTitle('5. Formation du personnel intervenant sur les installations et à proximité'),
+            ),
+            _bodyText(
+              'Conformément aux dispositions réglementaires en vigueur, l\'employeur doit s\'assurer que le personnel appelé à intervenir sur ou à proximité des installations électriques dispose d\'une habilitation électrique adaptée au domaine de tension concerné '
+              'et à la nature des opérations à réaliser.',
+            ),
+          ],
         ),
         pw.SizedBox(height: 15),
         PageTracker(
