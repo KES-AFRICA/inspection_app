@@ -994,7 +994,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
   }
 
   Widget _buildThermoDefectTile(BuildContext context) {
-    final currentVal = widget.presenceDefautThermo;
+    final currentVal = widget.presenceDefautThermo ?? (widget.verificationThermographie ? 'Sans objet' : null);
     final isHistoricalSansObjet = currentVal == 'Sans objet';
     final isChecked = currentVal == 'Oui';
 
@@ -3702,6 +3702,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         target.presenceSchema = newCoffret.presenceSchema;
         target.presenceParafoudre = newCoffret.presenceParafoudre;
         target.verificationThermographie = newCoffret.verificationThermographie;
+        target.presenceDefautThermo = newCoffret.presenceDefautThermo;
         target.alimentations = newCoffret.alimentations;
         target.protectionTete = newCoffret.protectionTete;
         target.pointsVerification = newCoffret.pointsVerification;
