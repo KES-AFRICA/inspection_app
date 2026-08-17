@@ -2417,6 +2417,9 @@ class PdfReportService {
   static _ParsedObservationRow _parseObservationRow(String rawText) {
     var trimmed = rawText.trim();
     trimmed = trimmed.replaceAll(RegExp(r'^[•\-\*]\s*'), '').replaceAll(RegExp(r'^\d+[\.\)]\s*'), '');
+    if (trimmed.endsWith(';')) {
+      trimmed = trimmed.substring(0, trimmed.length - 1).trim();
+    }
 
     final regExp = RegExp(r'^(.*?)\s*\((.*?)\)\s*(?::\s*(.*))?$');
     final match = regExp.firstMatch(trimmed);

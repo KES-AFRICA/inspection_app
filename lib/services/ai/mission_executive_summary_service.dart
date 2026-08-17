@@ -617,17 +617,34 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
       }
     } catch (_) {}
 
-    final riskRows = snapshot.riskFamilies.take(5).map((r) {
+    final topRiskFamilies = snapshot.riskFamilies.take(4).toList();
+    final riskRows = <RiskFactorRowData>[];
+    for (int i = 0; i < topRiskFamilies.length; i++) {
+      final r = topRiskFamilies[i];
       final name = r['name'] as String? ?? 'Famille de risque';
-      final defaultObs = CanonicalRiskFamilyRegistry.defaultObservations[name] ??
-          'Facteur de risque identifié lors du contrôle';
-      return RiskFactorRowData(
+      final nameLower = name.toLowerCase();
+
+      String obs;
+      if (i == 0) {
+        obs = '1er facteur de risque identifié';
+      } else if (nameLower.contains('électrisation') || nameLower.contains('électrocution')) {
+        obs = 'Risque direct pour les personnes';
+      } else if (nameLower.contains('dégradation') || nameLower.contains('canalisations') || nameLower.contains('échauffement')) {
+        obs = 'Risque de dégradation matérielle';
+      } else if (nameLower.contains('surintensité') || nameLower.contains('incendie') || nameLower.contains('court-circuit')) {
+        obs = 'Risque incendie d\'origine électrique';
+      } else {
+        obs = CanonicalRiskFamilyRegistry.defaultObservations[name] ??
+            'Facteur de risque identifié lors du contrôle';
+      }
+
+      riskRows.add(RiskFactorRowData(
         natureRisque: name,
         constats: r['count']?.toString() ?? '0',
         partPct: '${r['percentage'] ?? '0,0'} %',
-        observation: defaultObs,
-      );
-    }).toList();
+        observation: obs,
+      ));
+    }
 
     if (riskRows.isEmpty) {
       riskRows.add(RiskFactorRowData(
@@ -638,27 +655,31 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
       ));
     }
 
+    final int topRiskCount = topRiskFamilies.fold<int>(0, (sum, r) => sum + ((r['count'] as int?) ?? 0));
+    final String pctSumRiskStr = total > 0 ? ((topRiskCount / total) * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
     final riskCommentary = total == 0
         ? 'Aucun facteur de risque prépondérant décelé.'
-        : 'Ces facteurs de risque répertoriés concernent directement la sécurité des personnes et la protection des installations, '
-            'ce qui en fait la priorité du plan d\'actions correctives.';
+        : 'Ces ${riskRows.length} facteurs représentent ensemble $pctSumRiskStr % des occurrences répertoriées '
+            '(sur la base des $total occurrences de la statistique par nature de défaut), ce qui en fait la priorité du plan d\'actions correctives.';
 
-    final bulletPoints = snapshot.topDefects.take(5).map((d) {
+    final top5Defects = snapshot.topDefects.take(5).toList();
+    final bulletPoints = top5Defects.map((d) {
       final title = d['title'] as String? ?? 'Défaut constaté';
       final count = d['count'] as int? ?? 0;
       final pct = d['percentage'] as String? ?? '0,0';
-      final detail = CanonicalRiskFamilyRegistry.defaultObservations[title] ??
-          'Anomalies et écarts réglementaires relevés lors des vérifications.';
-      return '$title ($count constat${count > 1 ? 's' : ''}, $pct %) : $detail';
+      return '$title ($count constat${count > 1 ? 's' : ''}, $pct %) ;';
     }).toList();
 
     if (bulletPoints.isEmpty) {
       bulletPoints.add('Examen conforme de l\'ensemble des organes de protection et de câblage.');
     }
 
+    final int top5DefectCount = top5Defects.fold<int>(0, (sum, d) => sum + ((d['count'] as int?) ?? 0));
+    final String top5PctStr = total > 0 ? ((top5DefectCount / total) * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
     final summaryObs = total == 0
         ? ''
-        : 'Les principales catégories de défauts concentrent le volume majeur des occurrences relevées lors des contrôles.';
+        : 'Ces ${top5Defects.length} premières catégories concentrent à elles seules $top5PctStr % de l\'ensemble des occurrences relevées '
+            '— voir l\'analyse de Pareto complète dans la section ANALYSE STATISTIQUE.';
 
     final priority1 = critique > 0
         ? 'Priorité 1 — Immédiat : lever les $critique non-conformités critiques, en particulier sur les $top1Name, pour neutraliser les risques directs d\'électrocution et d\'électrisation.'
