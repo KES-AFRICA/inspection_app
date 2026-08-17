@@ -533,6 +533,7 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
     final pctCritVal = total > 0 ? (critique / total) * 100 : 0.0;
     final pctMajVal = total > 0 ? (majeure / total) * 100 : 0.0;
     final pctSumVal = pctCritVal + pctMajVal;
+    final pctSumStrText = pctSumVal.toStringAsFixed(1).replaceAll('.', ',');
 
     final String commentarySynthese;
     if (total == 0) {
@@ -540,7 +541,6 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
     } else {
       final pctCritStrText = pctCritVal.toStringAsFixed(1).replaceAll('.', ',');
       final pctMajStrText = pctMajVal.toStringAsFixed(1).replaceAll('.', ',');
-      final pctSumStrText = pctSumVal.toStringAsFixed(1).replaceAll('.', ',');
       commentarySynthese =
           'Avec $pctCritStrText % de non-conformités classées critiques et $pctMajStrText % classées majeures '
           '— soit $pctSumStrText % des écarts relevant des deux niveaux de gravité les plus élevés —, '
@@ -681,20 +681,21 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
         : 'Ces ${top5Defects.length} premières catégories concentrent à elles seules $top5PctStr % de l\'ensemble des occurrences relevées '
             '— voir l\'analyse de Pareto complète dans la section ANALYSE STATISTIQUE.';
 
+    final top1CritCount = top1 != null ? (top1['critiqueCount'] as int? ?? 0) : 0;
     final priority1 = critique > 0
-        ? 'Priorité 1 — Immédiat : lever les $critique non-conformités critiques, en particulier sur les $top1Name, pour neutraliser les risques directs d\'électrocution et d\'électrisation.'
-        : 'Priorité 1 — Immédiat : maintenir l\'intégrité des équipements et organes de protection existants.';
+        ? 'Priorité 1 — Immédiat : lever les $critique non-conformités critiques, en particulier sur les $top1Name${top1CritCount > 0 ? ' ($top1CritCount critiques)' : ''}, pour neutraliser les risques directs d\'électrisation et d\'électrocution ;'
+        : 'Priorité 1 — Immédiat : maintenir l\'intégrité des équipements et organes de protection existants ;';
 
     final priority2 = majeure > 0
-        ? 'Priorité 2 — Court terme : remettre en état les $majeure non-conformités majeures (systèmes de protection contre les contacts indirects, câblages et disjoncteurs).'
-        : 'Priorité 2 — Court terme : planifier la maintenance préventive régulière.';
+        ? 'Priorité 2 — Court terme : remettre en état les $majeure non-conformités majeures, notamment les systèmes de protection contre les contacts indirects, le câblage et les disjoncteurs ;'
+        : 'Priorité 2 — Court terme : planifier la maintenance préventive régulière ;';
 
     final priority3 =
-        'Priorité 3 — Moyen terme : finaliser l\'identification complète des circuits, le repérage et la conformité des répartiteurs afin de sécuriser durablement l\'exploitation et la maintenance du site.';
+        'Priorité 3 — Moyen terme : finaliser l\'identification complète des circuits, le repérage et la conformité des répartiteurs, afin de sécuriser durablement l\'exploitation et la maintenance du site.';
 
     final assessment1 = total == 0
         ? 'La vérification périodique des installations électriques du site ${snapshot.siteName} met en évidence un bon niveau de maîtrise du risque électrique.'
-        : 'La vérification périodique des installations électriques du site ${snapshot.siteName} met en évidence un niveau de maîtrise du risque électrique nécessitant une vigilance renforcée et des actions correctives structurées.';
+        : 'La vérification périodique des installations électriques du site ${snapshot.siteName} met en évidence un niveau de maîtrise du risque électrique insuffisant, nécessitant une vigilance renforcée et des actions correctives structurées. Avec une densité de $globalDensityStr NC/équipement et $pctSumStrText % des écarts classés critiques ou majeurs, le site présente un profil de risque nécessitant un plan de remise à niveau structuré, hiérarchisé selon les priorités de la sous-section 6.';
 
     final assessment2 =
         'L\'inspection a permis d\'identifier $total non-conformités, dont $critique critiques et $majeure majeures, avec une densité moyenne de $globalDensityStr non-conformité${total > 1 ? 's' : ''} par équipement contrôlé.';
