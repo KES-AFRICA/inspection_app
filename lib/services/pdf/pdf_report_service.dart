@@ -10367,20 +10367,16 @@ class PdfReportService {
           'le chef d\'établissement doit mettre en place une organisation pour les opérations de surveillance et la maintenance des installations électriques. '
           'C\'est dans le cadre de ces opérations que les dispositions doivent être prises afin de remédier aux défectuosités constatées pendant la vérification ou celles qui peuvent se manifester après la vérification.',
         ),
-        pw.SizedBox(height: 7),
-        pw.Wrap(
-          children: [
-            PageTracker(
-              key: 'rappel_formation',
-              registry: trackedPages,
-              offset: currentOffset,
-              child: _subTitle('5. Formation du personnel intervenant sur les installations et à proximité'),
-            ),
-            _bodyText(
-              'Conformément aux dispositions réglementaires en vigueur, l\'employeur doit s\'assurer que le personnel appelé à intervenir sur ou à proximité des installations électriques dispose d\'une habilitation électrique adaptée au domaine de tension concerné '
-              'et à la nature des opérations à réaliser.',
-            ),
-          ],
+        pw.NewPage(),
+        PageTracker(
+          key: 'rappel_formation',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _subTitle('5. Formation du personnel intervenant sur les installations et à proximité'),
+        ),
+        _bodyText(
+          'Conformément aux dispositions réglementaires en vigueur, l\'employeur doit s\'assurer que le personnel appelé à intervenir sur ou à proximité des installations électriques dispose d\'une habilitation électrique adaptée au domaine de tension concerné '
+          'et à la nature des opérations à réaliser.',
         ),
         pw.SizedBox(height: 15),
         PageTracker(
