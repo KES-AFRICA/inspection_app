@@ -3987,7 +3987,7 @@ class PdfReportService {
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: lightBlue),
+          decoration: pw.BoxDecoration(color: accentColor),
           children: [
             _cell('N\u00B0', isHeader: true, centered: true),
             ...finalOrder.map((c) => _cell(c, isHeader: true, centered: true)),
@@ -4044,7 +4044,7 @@ class PdfReportService {
       },
       children: [
         pw.TableRow(
-          decoration: pw.BoxDecoration(color: lightBlue),
+          decoration: pw.BoxDecoration(color: accentColor),
           children: [
             _cell('N\u00B0', isHeader: true, centered: true),
             ...finalOrder.map((c) => _cell(c, isHeader: true, centered: true)),
@@ -7684,7 +7684,7 @@ class PdfReportService {
           _bodyText("La mesure peut être réalisée selon deux méthodes principales :"),
           pw.SizedBox(height: 2),
 
-          _subMethodHeader("❖  Méthode des trois piquets – Barrette ouverte"),
+          _subMethodHeader("Méthode des trois piquets – Barrette ouverte"),
           _para([
             const pw.TextSpan(text: "La méthode des trois piquets est réalisée avec la "),
             pw.TextSpan(text: "barrette de terre ouverte", style: pw.TextStyle(font: _fontBold)),
@@ -7705,7 +7705,7 @@ class PdfReportService {
           _bodyText("Lorsque la barrette est ouverte, il convient de s'assurer que les conditions de sécurité sont maîtrisées et que la coupure temporaire de la liaison de terre ne met pas les personnes ou les équipements en danger."),
           pw.SizedBox(height: 4),
 
-          _subMethodHeader("❖  Méthode à la pince de terre – Barrette fermée"),
+          _subMethodHeader("Méthode à la pince de terre – Barrette fermée"),
           _bodyText("La mesure à la pince de terre peut être utilisée lorsque la configuration de l'installation permet ce type de mesure et qu'il n'est pas possible ou souhaitable d'implanter des piquets auxiliaires."),
           _bodyText("Cette méthode est particulièrement adaptée aux sites :"),
           _bulletPoint("Fortement bétonnés ou asphaltés ;"),
@@ -9360,14 +9360,28 @@ class PdfReportService {
   static pw.Widget _subMethodHeader(String title) {
     return pw.Padding(
       padding: const pw.EdgeInsets.only(top: 6, bottom: 4),
-      child: pw.Text(
-        _normalizeText(title),
-        style: pw.TextStyle(
-          font: _fontBold,
-          fontSize: fsBody,
-          fontWeight: pw.FontWeight.bold,
-          color: headerColor,
-        ),
+      child: pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.Container(
+            width: 5,
+            height: 5,
+            decoration: pw.BoxDecoration(
+              color: accentColor,
+              shape: pw.BoxShape.rectangle,
+            ),
+          ),
+          pw.SizedBox(width: 6),
+          pw.Text(
+            _normalizeText(title),
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: fsBody,
+              fontWeight: pw.FontWeight.bold,
+              color: headerColor,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -9378,7 +9392,15 @@ class PdfReportService {
       child: pw.Row(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
-          pw.Text("• ", style: pw.TextStyle(font: _fontBold, fontSize: fsBody)),
+          pw.Container(
+            margin: const pw.EdgeInsets.only(top: 4, right: 6),
+            width: 3.5,
+            height: 3.5,
+            decoration: pw.BoxDecoration(
+              color: accentColor,
+              shape: pw.BoxShape.circle,
+            ),
+          ),
           pw.Expanded(
             child: pw.Text(
               _normalizeText(text),
@@ -9571,7 +9593,7 @@ class PdfReportService {
         style: pw.TextStyle(
           fontSize: isHeader ? fsSmall : fsSmall,
           fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
-          color: color != null ? PdfColors.white : (isHeader ? headerColor : darkGrey),
+          color: color ?? (isHeader ? PdfColors.white : darkGrey),
         ),
         textAlign: centered ? pw.TextAlign.center : pw.TextAlign.left,
       ),
@@ -9580,7 +9602,7 @@ class PdfReportService {
 
   static pw.TableRow _tableHeaderRow(List<String> headers) {
     return pw.TableRow(
-      decoration: pw.BoxDecoration(color: lightBlue),
+      decoration: pw.BoxDecoration(color: accentColor),
       children: headers.map((h) => _cell(h, isHeader: true, centered: true)).toList(),
     );
   }
