@@ -10489,26 +10489,37 @@ class PdfReportService {
           '(cas des locaux réservés aux électriciens et dans lesquels la réglementation n\'interdit pas la présence de pièces nues sous tension).',
         ),
         pw.SizedBox(height: 7),
-        PageTracker(
-          key: 'mesures_technicien',
-          registry: trackedPages,
-          offset: currentOffset,
-          child: _subTitle('1. Technicien en maintenance des installations'),
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            PageTracker(
+              key: 'mesures_technicien',
+              registry: trackedPages,
+              offset: currentOffset,
+              child: _subTitle('1. Technicien en maintenance des installations'),
+            ),
+            pw.SizedBox(height: 5),
+            _bodyText('Il est fortement recommandé à l\'employeur de faire participer les employés à des séances de formation sur les modules suivants\u00a0:'),
+            _bulletItem('Connaissance des normes en électricité (NC 244 C15 00\u2026)\u00a0;'),
+            _bulletItem('Maintenance des installations électriques.'),
+          ],
         ),
-        pw.SizedBox(height: 5),
-        _bodyText('Il est fortement recommandé à l\'employeur de faire participer les employés à des séances de formation sur les modules suivants\u00a0:'),
-        _bulletItem('Connaissance des normes en électricité (NC 244 C15 00\u2026)\u00a0;'),
-        _bulletItem('Maintenance des installations électriques.'),
         pw.SizedBox(height: 7),
-        PageTracker(
-          key: 'mesures_engagement',
-          registry: trackedPages,
-          offset: currentOffset,
-          child: _subTitle('2. Engagement de KES INSPECTIONS AND PROJECTS'),
-        ),
-        _bodyText(
-          'KES INSPECTIONS AND PROJECTS s\'engage à réaliser ses vérifications dans le strict respect des normes et règlements applicables, '
-          'avec le souci constant de la sécurité, de la fiabilité technique et de l\'impartialité des constats.',
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            PageTracker(
+              key: 'mesures_engagement',
+              registry: trackedPages,
+              offset: currentOffset,
+              child: _subTitle('2. Engagement de KES INSPECTIONS AND PROJECTS'),
+            ),
+            pw.SizedBox(height: 5),
+            _bodyText(
+              'KES INSPECTIONS AND PROJECTS s\'engage à réaliser ses vérifications dans le strict respect des normes et règlements applicables, '
+              'avec le souci constant de la sécurité, de la fiabilité technique et de l\'impartialité des constats.',
+            ),
+          ],
         ),
       ],
     ));
