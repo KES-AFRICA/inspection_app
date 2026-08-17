@@ -278,7 +278,7 @@ class AnalyticsEngine {
       final inventory = MissionDomainInventoryEngine.buildInventory(mission.id);
 
       // Filtrage éventuel par Domaine de Tension (MT vs BT)
-      var findings = inventory.allFindings;
+      var findings = inventory.pertinentFindings;
       if (tensionFilter == 'MT') {
         findings = findings.where((f) => f.tensionDomain == TensionDomain.mt).toList();
       } else if (tensionFilter == 'BT') {

@@ -59,6 +59,10 @@ class AuditFinding {
     this.normativeReference,
     List<String>? photos,
   }) : photos = photos ?? [];
+
+  /// Indique si la non-conformité est assortie d'une référence normative valide.
+  bool get hasValidNormativeReference =>
+      normativeReference != null && normativeReference!.trim().isNotEmpty;
 }
 
 /// Modèle d'item du Top 10 des défauts
@@ -311,19 +315,25 @@ class AuditFindingInventory {
     List<CategoryCrossItem>? crossCategoryItems,
   }) : crossCategoryItems = crossCategoryItems ?? [];
 
-  int get totalFindings => findings.length;
+  /// Non-conformités pertinentes disposant d'une référence normative valide.
+  List<AuditFinding> get pertinentFindings {
+    final list = findings.where((f) => f.hasValidNormativeReference).toList();
+    return list.isNotEmpty ? list : findings;
+  }
+
+  int get totalFindings => pertinentFindings.length;
   int get totalEquipments => crossCategoryItems.fold<int>(0, (sum, e) => sum + e.equipmentCount);
 
-  int get critiqueCount => findings.where((f) => f.criticality == 'Critique').length;
-  int get majeureCount => findings.where((f) => f.criticality == 'Majeure').length;
-  int get mineureCount => findings.where((f) => f.criticality == 'Mineure').length;
-  int get unspecifiedCount => findings.where((f) => f.criticality != 'Critique' && f.criticality != 'Majeure' && f.criticality != 'Mineure').length;
+  int get critiqueCount => pertinentFindings.where((f) => f.criticality == 'Critique').length;
+  int get majeureCount => pertinentFindings.where((f) => f.criticality == 'Majeure').length;
+  int get mineureCount => pertinentFindings.where((f) => f.criticality == 'Mineure').length;
+  int get unspecifiedCount => pertinentFindings.where((f) => f.criticality != 'Critique' && f.criticality != 'Majeure' && f.criticality != 'Mineure').length;
 
   /// Nombre de findings possédant une criticité normative résolue (Critique, Majeure ou Mineure).
   int get classifiedCount => critiqueCount + majeureCount + mineureCount;
 
   /// Findings possédant une criticité normative résolue.
-  List<AuditFinding> get classifiedFindings => findings.where(
+  List<AuditFinding> get classifiedFindings => pertinentFindings.where(
     (f) => f.criticality == 'Critique' || f.criticality == 'Majeure' || f.criticality == 'Mineure'
   ).toList();
 
@@ -333,10 +343,10 @@ class AuditFindingInventory {
 
   /// Récupère le Top N des points de vérification les plus fréquemment non conformes.
   List<TopDefectItem> getTopDefects({int limit = 10}) {
-    if (findings.isEmpty) return [];
+    if (pertinentFindings.isEmpty) return [];
 
     final counts = <String, int>{};
-    for (final f in findings) {
+    for (final f in pertinentFindings) {
       final point = f.verificationPoint.trim();
       if (point.isNotEmpty) {
         counts[point] = (counts[point] ?? 0) + 1;
@@ -361,10 +371,10 @@ class AuditFindingInventory {
 
   /// Calcule la répartition des non-conformités par famille de risque.
   List<RiskFamilyItem> getRiskFamilyStats() {
-    if (findings.isEmpty) return [];
+    if (pertinentFindings.isEmpty) return [];
 
     final counts = <String, int>{};
-    for (final f in findings) {
+    for (final f in pertinentFindings) {
       if (CanonicalRiskFamilyRegistry.hasValidRiskFamily(f.riskFamily, verificationPoint: f.verificationPoint)) {
         final family = CanonicalRiskFamilyRegistry.mapToCanonical(f.riskFamily, verificationPoint: f.verificationPoint);
         counts[family] = (counts[family] ?? 0) + 1;
@@ -396,10 +406,10 @@ class AuditFindingInventory {
 
   /// Calcule la répartition des non-conformités par type d'installation / d'équipement.
   List<InstallationTypeItem> getInstallationTypeStats() {
-    if (findings.isEmpty) return [];
+    if (pertinentFindings.isEmpty) return [];
 
     final counts = <String, int>{};
-    for (final f in findings) {
+    for (final f in pertinentFindings) {
       final typeStr = f.objectType.trim().isNotEmpty ? f.objectType.trim() : 'Installation';
       counts[typeStr] = (counts[typeStr] ?? 0) + 1;
     }
@@ -423,7 +433,7 @@ class AuditFindingInventory {
     int mt = 0;
     int bt = 0;
 
-    for (final f in findings) {
+    for (final f in pertinentFindings) {
       if (f.tensionDomain == TensionDomain.mt) {
         mt++;
       } else {
@@ -431,7 +441,7 @@ class AuditFindingInventory {
       }
     }
 
-    final tot = findings.length;
+    final tot = pertinentFindings.length;
     final mtPct = tot > 0 ? (mt / tot) * 100 : 0.0;
     final btPct = tot > 0 ? (bt / tot) * 100 : 0.0;
 

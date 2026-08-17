@@ -22,6 +22,12 @@ class MissionDomainInventory {
     required this.allFindings,
   });
 
+  /// Non-conformités pertinentes pour l'ensemble du Résumé Exécutif.
+  List<AuditFinding> get pertinentFindings {
+    final list = allFindings.where((f) => f.hasValidNormativeReference).toList();
+    return list.isNotEmpty ? list : allFindings;
+  }
+
   /// Retourne toutes les instances d'une catégorie donnée.
   List<DomainEntityInstance> getInstancesByCategory(DomainObjectType cat) {
     return instances.where((i) => i.category == cat).toList();
@@ -43,11 +49,13 @@ class MissionDomainInventory {
     for (final inst in catInstances) {
       totalPoints += inst.totalCheckpoints;
       compliant += inst.compliantCheckpoints;
-      nonCompliant += inst.nonCompliantCheckpoints;
+      final instPertinentFindings = inst.findings.where((f) => f.hasValidNormativeReference).toList();
+      final ncCount = instPertinentFindings.isNotEmpty ? instPertinentFindings.length : inst.nonCompliantCheckpoints;
+      nonCompliant += ncCount;
       na += inst.naCheckpoints;
-      critique += inst.critiqueCount;
-      majeure += inst.majeureCount;
-      mineure += inst.mineureCount;
+      critique += (instPertinentFindings.isNotEmpty ? instPertinentFindings : inst.findings).where((f) => f.criticality == 'Critique').length;
+      majeure += (instPertinentFindings.isNotEmpty ? instPertinentFindings : inst.findings).where((f) => f.criticality == 'Majeure').length;
+      mineure += (instPertinentFindings.isNotEmpty ? instPertinentFindings : inst.findings).where((f) => f.criticality == 'Mineure').length;
     }
 
     final evaluated = compliant + nonCompliant;
@@ -132,7 +140,7 @@ class MissionDomainInventory {
     int mt = 0;
     int bt = 0;
 
-    for (final finding in allFindings) {
+    for (final finding in pertinentFindings) {
       if (finding.tensionDomain == TensionDomain.mt) {
         mt++;
       } else {
@@ -140,7 +148,7 @@ class MissionDomainInventory {
       }
     }
 
-    final tot = allFindings.length;
+    final tot = pertinentFindings.length;
     final mtPct = tot > 0 ? (mt / tot) * 100 : 0.0;
     final btPct = tot > 0 ? (bt / tot) * 100 : 0.0;
 
@@ -161,14 +169,14 @@ class MissionDomainInventory {
   /// Analyse de Pareto mathématique dynamique sur les points de vérification (réponses "Non").
   ParetoAnalysisResult getParetoAnalysis({int limit = 10}) {
     final counts = <String, int>{};
-    for (final f in allFindings) {
+    for (final f in pertinentFindings) {
       final key = f.verificationPoint.trim();
       if (key.isNotEmpty) {
         counts[key] = (counts[key] ?? 0) + 1;
       }
     }
 
-    final total = allFindings.length;
+    final total = pertinentFindings.length;
     final sortedEntries = counts.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
 
@@ -216,7 +224,7 @@ class MissionDomainInventory {
   /// Calcule dynamiquement les 2 catégories d'équipements générant le plus de non-conformités.
   TopNonConformityCategoriesResult getTopTwoNonConformityCategories() {
     final crossList = getCrossCategoryAnalysis();
-    final totalNC = allFindings.length;
+    final totalNC = pertinentFindings.length;
     final totalEq = instances.length;
 
     if (crossList.isEmpty || totalNC == 0) {
@@ -282,7 +290,7 @@ class MissionDomainInventory {
   /// Analyse de Pareto mathématique dynamique sur les 10 catégories d'équipements/installations.
   CategoryParetoResult getCategoryParetoAnalysis() {
     final crossList = getCrossCategoryAnalysis();
-    final totalNC = allFindings.length;
+    final totalNC = pertinentFindings.length;
 
     if (crossList.isEmpty || totalNC == 0) {
       return CategoryParetoResult(

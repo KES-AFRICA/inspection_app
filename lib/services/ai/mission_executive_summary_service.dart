@@ -602,7 +602,12 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
             'ce qui en fait la priorité du plan d\'actions correctives.';
 
     final bulletPoints = snapshot.topDefects.take(5).map((d) {
-      return 'Défauts prédominants liés à ${d['title']} (${d['count']} constat${(d['count'] as int? ?? 0) > 1 ? 's' : ''}, ${d['percentage']} %).';
+      final title = d['title'] as String? ?? 'Défaut constaté';
+      final count = d['count'] as int? ?? 0;
+      final pct = d['percentage'] as String? ?? '0,0';
+      final detail = CanonicalRiskFamilyRegistry.defaultObservations[title] ??
+          'Anomalies et écarts réglementaires relevés lors des vérifications.';
+      return '$title ($count constat${count > 1 ? 's' : ''}, $pct %) : $detail';
     }).toList();
 
     if (bulletPoints.isEmpty) {

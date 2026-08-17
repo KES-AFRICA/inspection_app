@@ -2405,34 +2405,43 @@ class PdfReportService {
   }
 
   static _ParsedObservationRow _parseObservationRow(String rawText) {
-    final trimmed = rawText.trim();
+    var trimmed = rawText.trim();
+    trimmed = trimmed.replaceAll(RegExp(r'^[•\-\*]\s*'), '').replaceAll(RegExp(r'^\d+[\.\)]\s*'), '');
+
     final regExp = RegExp(r'^(.*?)\s*\((.*?)\)\s*(?::\s*(.*))?$');
     final match = regExp.firstMatch(trimmed);
 
     if (match != null) {
-      final obs = match.group(1)?.trim() ?? trimmed;
+      var obs = match.group(1)?.trim() ?? trimmed;
+      obs = obs.replaceAll(RegExp(r'^Défauts?\s+prédominants?\s+liés?\s+[àa]\s*', caseSensitive: false), '').trim();
       final stats = match.group(2)?.trim() ?? '';
-      final constat = match.group(3)?.trim() ?? '';
+      var constat = match.group(3)?.trim() ?? '';
+      if (constat.isEmpty) {
+        constat = obs;
+      }
       return _ParsedObservationRow(
-        observation: obs.replaceAll(RegExp(r'^[•\-\*]\s*'), ''),
+        observation: obs,
         stats: stats,
-        constatMajeur: constat.isNotEmpty ? constat : obs,
+        constatMajeur: constat,
       );
     }
 
     if (trimmed.contains(' : ')) {
       final parts = trimmed.split(' : ');
+      var obs = parts[0].trim();
+      obs = obs.replaceAll(RegExp(r'^Défauts?\s+prédominants?\s+liés?\s+[àa]\s*', caseSensitive: false), '').trim();
       return _ParsedObservationRow(
-        observation: parts[0].replaceAll(RegExp(r'^[•\-\*]\s*'), '').trim(),
+        observation: obs,
         stats: '',
         constatMajeur: parts.sublist(1).join(' : ').trim(),
       );
     }
 
+    var obs = trimmed.replaceAll(RegExp(r'^Défauts?\s+prédominants?\s+liés?\s+[àa]\s*', caseSensitive: false), '').trim();
     return _ParsedObservationRow(
-      observation: trimmed.replaceAll(RegExp(r'^[•\-\*]\s*'), ''),
+      observation: obs,
       stats: '',
-      constatMajeur: trimmed,
+      constatMajeur: obs,
     );
   }
 
