@@ -1375,6 +1375,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     'Interrupteur différentiel',
     'Disjoncteur différentiel',
     'Sectionneur porte-fusible',
+    'Coupe-circuit(porte-fusible)',
   ];
 
   static const List<String> _courbeOptions = [
