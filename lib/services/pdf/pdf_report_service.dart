@@ -1756,7 +1756,7 @@ class PdfReportService {
           key: 'resume_executif_1_3',
           registry: trackedPages,
           offset: offset,
-          child: _subSectionHeader('${data.concentrationRisque.title}'),
+          child: _subSectionHeader(_formatConcentrationTitle(data.concentrationRisque.title)),
         ),
         pw.SizedBox(height: 4),
         if (concRows.isNotEmpty)
@@ -2394,16 +2394,73 @@ class PdfReportService {
     return widgets;
   }
 
+  static String _formatConcentrationTitle(String rawTitle) {
+    final trimmed = rawTitle.trim();
+    if (trimmed.isEmpty) return '3. Concentration du risque';
+    if (RegExp(r'^3\.\s*').hasMatch(trimmed)) return trimmed;
+    return '3. $trimmed';
+  }
+
+  static pw.Widget _buildMultiLineValueWidget(String value) {
+    final trimmed = value.trim();
+    if (trimmed.isEmpty) return pw.SizedBox();
+
+    List<String> items = [];
+    if (trimmed.contains('\n')) {
+      items = trimmed.split('\n').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();
+    } else {
+      final parts = trimmed.split('. ');
+      if (parts.length > 1) {
+        for (var i = 0; i < parts.length; i++) {
+          var part = parts[i].trim();
+          if (part.isEmpty) continue;
+          if (!part.endsWith('.')) part = '$part.';
+          items.add(part);
+        }
+      } else {
+        items = [trimmed];
+      }
+    }
+
+    if (items.length <= 1) {
+      return pw.Text(trimmed, style: pw.TextStyle(font: _fontRegular, fontSize: 8));
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      mainAxisAlignment: pw.MainAxisAlignment.center,
+      children: items.map((item) {
+        final cleanText = item.startsWith('•') || item.startsWith('-') ? item.substring(1).trim() : item;
+        return pw.Padding(
+          padding: const pw.EdgeInsets.symmetric(vertical: 2),
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('• ', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: accentColor)),
+              pw.Expanded(
+                child: pw.Text(
+                  cleanText,
+                  style: pw.TextStyle(font: _fontRegular, fontSize: 8, color: darkGrey),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
   static pw.TableRow _buildIndicateurRow(String label, String value) {
     return pw.TableRow(
+      verticalAlignment: pw.TableCellVerticalAlignment.middle,
       children: [
         pw.Padding(
           padding: const pw.EdgeInsets.all(5),
-          child: pw.Text(label, style: pw.TextStyle(font: _fontBold, fontSize: 8)),
+          child: pw.Text(label, style: pw.TextStyle(font: _fontBold, fontSize: 8, color: headerColor)),
         ),
         pw.Padding(
           padding: const pw.EdgeInsets.all(5),
-          child: pw.Text(value, style: pw.TextStyle(font: _fontRegular, fontSize: 8)),
+          child: _buildMultiLineValueWidget(value),
         ),
       ],
     );
