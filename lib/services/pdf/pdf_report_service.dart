@@ -1830,44 +1830,41 @@ class PdfReportService {
       );
     }
 
-    widgets.add(pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
+    final obsHeaderRow = pw.TableRow(
+      decoration: pw.BoxDecoration(color: accentColor),
       children: [
-        PageTracker(
-          key: 'resume_executif_1_5',
-          registry: trackedPages,
-          offset: offset,
-          child: _subSectionHeader('5. Observations et constats majeurs'),
-        ),
-        pw.SizedBox(height: 4),
-        if (obsRows.isNotEmpty)
-          pw.Table(
-            border: pw.TableBorder.all(color: borderColor, width: 0.5),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(1.0),
-              1: pw.FlexColumnWidth(9.0),
-            },
-            children: [
-              pw.TableRow(
-                decoration: pw.BoxDecoration(color: accentColor),
-                children: [
-                  pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('N°', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
-                  pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('OBSERVATION ET CONSTAT MAJEUR', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
-                ],
-              ),
-              ...obsRows,
-            ],
-          ),
-        if (data.observationsMajores.summaryParagraph.isNotEmpty) ...[
-          pw.SizedBox(height: 4),
-          pw.Text(
-            data.observationsMajores.summaryParagraph,
-            style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-            textAlign: pw.TextAlign.justify,
-          ),
-        ],
+        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('N°', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
+        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('OBSERVATION ET CONSTAT MAJEUR', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
       ],
-    ));
+    );
+
+    final obsHeaderWidget = PageTracker(
+      key: 'resume_executif_1_5',
+      registry: trackedPages,
+      offset: offset,
+      child: _subSectionHeader('5. Observations et constats majeurs'),
+    );
+
+    final obsBlocks = _buildHeaderWithTableList(
+      headerWidget: obsHeaderWidget,
+      headerRow: obsHeaderRow,
+      dataRows: obsRows,
+      columnWidths: const {
+        0: pw.FlexColumnWidth(1.0),
+        1: pw.FlexColumnWidth(9.0),
+      },
+    );
+
+    widgets.addAll(obsBlocks);
+
+    if (data.observationsMajores.summaryParagraph.isNotEmpty) {
+      widgets.add(pw.SizedBox(height: 4));
+      widgets.add(pw.Text(
+        data.observationsMajores.summaryParagraph,
+        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+        textAlign: pw.TextAlign.justify,
+      ));
+    }
     widgets.add(pw.SizedBox(height: 10));
 
     // ── 6. Recommandations prioritaires hiérarchisées ──
@@ -2393,6 +2390,64 @@ class PdfReportService {
     ));
 
     return widgets;
+  }
+
+  static List<pw.Widget> _buildHeaderWithTableList({
+    required pw.Widget headerWidget,
+    pw.Widget? introWidget,
+    required pw.TableRow headerRow,
+    required List<pw.TableRow> dataRows,
+    required Map<int, pw.TableColumnWidth> columnWidths,
+    pw.TableCellVerticalAlignment defaultVerticalAlignment = pw.TableCellVerticalAlignment.middle,
+    pw.TableBorder? border,
+  }) {
+    if (dataRows.isEmpty) {
+      return [
+        headerWidget,
+        if (introWidget != null) ...[pw.SizedBox(height: 4), introWidget],
+      ];
+    }
+
+    final tableBorder = border ?? pw.TableBorder.all(color: borderColor, width: 0.5);
+
+    final block1Children = <pw.Widget>[
+      headerWidget,
+      if (introWidget != null) ...[pw.SizedBox(height: 4), introWidget],
+      pw.SizedBox(height: 4),
+      pw.Table(
+        defaultVerticalAlignment: defaultVerticalAlignment,
+        border: tableBorder,
+        columnWidths: columnWidths,
+        children: [
+          headerRow,
+          dataRows.first,
+        ],
+      ),
+    ];
+
+    if (dataRows.length == 1) {
+      return [
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: block1Children,
+        ),
+      ];
+    }
+
+    final block2Table = pw.Table(
+      defaultVerticalAlignment: defaultVerticalAlignment,
+      border: tableBorder,
+      columnWidths: columnWidths,
+      children: dataRows.sublist(1),
+    );
+
+    return [
+      pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: block1Children,
+      ),
+      block2Table,
+    ];
   }
 
   static String _formatConcentrationTitle(String rawTitle) {
