@@ -2616,7 +2616,16 @@ class PdfReportService {
     );
   }
 
-  static pw.Widget _buildBulletItem(String text) {
+  static pw.Widget _buildBulletItem(String text, {String? boldPrefix}) {
+    String prefix = boldPrefix ?? '';
+    String body = text;
+
+    if (boldPrefix == null && text.contains(' : ')) {
+      final parts = text.split(' : ');
+      prefix = '${parts[0]} : ';
+      body = parts.sublist(1).join(' : ');
+    }
+
     return pw.Padding(
       padding: const pw.EdgeInsets.only(bottom: 4, left: 4),
       child: pw.Row(
@@ -2632,7 +2641,16 @@ class PdfReportService {
             ),
           ),
           pw.Expanded(
-            child: pw.Text(text, style: pw.TextStyle(font: _fontRegular, fontSize: 8.5)),
+            child: prefix.isNotEmpty
+                ? pw.RichText(
+                    text: pw.TextSpan(
+                      children: [
+                        pw.TextSpan(text: prefix, style: pw.TextStyle(font: _fontBold, fontSize: 8.5, color: darkGrey)),
+                        pw.TextSpan(text: body, style: pw.TextStyle(font: _fontRegular, fontSize: 8.5, color: darkGrey)),
+                      ],
+                    ),
+                  )
+                : pw.Text(text, style: pw.TextStyle(font: _fontRegular, fontSize: 8.5, color: darkGrey)),
           ),
         ],
       ),
