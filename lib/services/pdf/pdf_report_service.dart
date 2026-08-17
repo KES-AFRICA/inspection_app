@@ -771,7 +771,10 @@ class PdfReportService {
   }) {
     final entries = <_SommaireEntry>[];
 
-    // 0. Sommaire
+    // Intervenants et responsabilités (Page 2)
+    entries.add(_SommaireEntry(titre: "INTERVENANTS ET RESPONSABILITÉS", key: 'intervenants', level: 0, isBold: true, isUppercase: true));
+
+    // 0. Sommaire (Page 3)
     entries.add(_SommaireEntry(titre: "SOMMAIRE", key: 'sommaire', level: 0, isBold: true, isUppercase: true));
 
     // 1. Objet de la vérification
@@ -869,13 +872,6 @@ class PdfReportService {
       entries.add(_SommaireEntry(titre: "6. Essais de mesure d'isolement", key: 'mesures_isolement', level: 1));
       entries.add(_SommaireEntry(titre: "7. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles", key: 'mesures_continuite', level: 1));
     }
-
-    // Intervenants et responsabilités
-    entries.add(_SommaireEntry(titre: "INTERVENANTS ET RESPONSABILITÉS", key: 'intervenants', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "1. Inspection réalisée par", key: 'intervenants_inspection', level: 1));
-    entries.add(_SommaireEntry(titre: "2. Rapport rédigé par", key: 'intervenants_redaction', level: 1));
-    entries.add(_SommaireEntry(titre: "3. Rapport vérifié par", key: 'intervenants_verification', level: 1));
-    entries.add(_SommaireEntry(titre: "4. Rapport validé par", key: 'intervenants_validation', level: 1));
 
     // Signature du rapport
     entries.add(_SommaireEntry(titre: "Signature du rapport", key: 'signature_rapport', level: 0, isBold: true, isUppercase: false));
@@ -8163,111 +8159,157 @@ class PdfReportService {
       }
     }
 
-    pw.Widget buildCard({
-      required String title,
-      required String trackerKey,
-      required pw.Widget contentWidget,
-    }) {
+    pw.Widget buildBulletList(List<String> list, {required String trackerKey}) {
       return PageTracker(
         key: trackerKey,
         registry: trackedPages,
         offset: pageOffset,
-        child: pw.Container(
-          width: double.infinity,
-          margin: const pw.EdgeInsets.only(bottom: 12),
-          decoration: pw.BoxDecoration(
-            color: PdfColor.fromInt(0xFFF8FAFC),
-            border: pw.Border.all(color: borderColor, width: 0.5),
-          ),
-          child: pw.Column(
-            crossAxisAlignment: pw.CrossAxisAlignment.start,
-            children: [
-              pw.Container(
-                width: double.infinity,
-                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                decoration: pw.BoxDecoration(
-                  color: lightBlue,
-                ),
-                child: pw.Row(
-                  children: [
-                    pw.Text(
-                      title,
-                      style: pw.TextStyle(font: _fontBold, fontSize: fsH3, color: headerColor),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          mainAxisAlignment: pw.MainAxisAlignment.center,
+          children: list.map((name) {
+            return pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(vertical: 2),
+              child: pw.Row(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                mainAxisSize: pw.MainAxisSize.min,
+                children: [
+                  pw.Container(
+                    width: 3.5,
+                    height: 3.5,
+                    margin: const pw.EdgeInsets.only(right: 5),
+                    decoration: pw.BoxDecoration(color: headerColor),
+                  ),
+                  pw.Expanded(
+                    child: pw.Text(
+                      name,
+                      style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              pw.Container(height: 0.5, color: borderColor),
-              pw.Padding(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                child: contentWidget,
-              ),
-            ],
-          ),
+            );
+          }).toList(),
         ),
       );
     }
 
-    pw.Widget buildInspecteursListWidget(List<String> list) {
-      return pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: list.map((name) {
-          return pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(vertical: 2),
-            child: pw.Row(
-              crossAxisAlignment: pw.CrossAxisAlignment.center,
-              children: [
-                pw.Container(
-                  width: 4,
-                  height: 4,
-                  margin: const pw.EdgeInsets.only(right: 8),
-                  decoration: pw.BoxDecoration(
-                    color: headerColor,
-                  ),
-                ),
-                pw.Text(
-                  name,
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey),
-                ),
-              ],
-            ),
-          );
-        }).toList(),
+    pw.Widget buildHeaderCell(String text) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        alignment: pw.Alignment.center,
+        child: pw.Text(
+          text,
+          style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.white),
+          textAlign: pw.TextAlign.center,
+        ),
       );
     }
+
+    pw.Widget buildRowHeaderCell(String text) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        alignment: pw.Alignment.center,
+        child: pw.Text(
+          text,
+          style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: headerColor),
+          textAlign: pw.TextAlign.center,
+        ),
+      );
+    }
+
+    final table = pw.Table(
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+      border: pw.TableBorder.all(color: borderColor, width: 0.4),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(1.4),
+        1: pw.FlexColumnWidth(2.15),
+        2: pw.FlexColumnWidth(2.15),
+        3: pw.FlexColumnWidth(2.15),
+        4: pw.FlexColumnWidth(2.15),
+      },
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: accentColor),
+          children: [
+            pw.Container(),
+            buildHeaderCell("INSPECTION\nRÉALISÉE PAR"),
+            buildHeaderCell("RAPPORT\nRÉDIGÉ PAR"),
+            buildHeaderCell("RAPPORT\nVÉRIFIÉ PAR"),
+            buildHeaderCell("RAPPORT\nVALIDÉ PAR"),
+          ],
+        ),
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.white),
+          children: [
+            pw.Container(
+              decoration: pw.BoxDecoration(color: lightBlue),
+              padding: const pw.EdgeInsets.all(6),
+              alignment: pw.Alignment.center,
+              child: buildRowHeaderCell("NOM"),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(6),
+              child: buildBulletList(inspecteursNoms, trackerKey: 'intervenants_inspection'),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(6),
+              child: buildBulletList(inspecteursNoms, trackerKey: 'intervenants_redaction'),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(6),
+              child: buildBulletList(['Lucien BOYOMO', 'Patrick ESSAME'], trackerKey: 'intervenants_verification'),
+            ),
+            pw.Padding(
+              padding: const pw.EdgeInsets.all(6),
+              child: buildBulletList(['Patrick ESSAME'], trackerKey: 'intervenants_validation'),
+            ),
+          ],
+        ),
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.white),
+          children: [
+            pw.Container(
+              decoration: pw.BoxDecoration(color: lightBlue),
+              padding: const pw.EdgeInsets.symmetric(vertical: 12),
+              alignment: pw.Alignment.center,
+              child: buildRowHeaderCell("Date"),
+            ),
+            pw.Container(height: 35),
+            pw.Container(height: 35),
+            pw.Container(height: 35),
+            pw.Container(height: 35),
+          ],
+        ),
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.white),
+          children: [
+            pw.Container(
+              decoration: pw.BoxDecoration(color: lightBlue),
+              padding: const pw.EdgeInsets.symmetric(vertical: 30),
+              alignment: pw.Alignment.center,
+              child: buildRowHeaderCell("Signature"),
+            ),
+            pw.Container(height: 75),
+            pw.Container(height: 75),
+            pw.Container(height: 75),
+            pw.Container(height: 75),
+          ],
+        ),
+      ],
+    );
 
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
-        _buildPageHeaderWidget(),
-        pw.SizedBox(height: 8),
         PageTracker(
           key: 'intervenants',
           registry: trackedPages,
           offset: pageOffset,
           child: _sectionBox('INTERVENANTS ET RESPONSABILITÉS'),
         ),
-        pw.SizedBox(height: 12),
-        buildCard(
-          title: '1. INSPECTION RÉALISÉE PAR',
-          trackerKey: 'intervenants_inspection',
-          contentWidget: buildInspecteursListWidget(inspecteursNoms),
-        ),
-        buildCard(
-          title: '2. RAPPORT RÉDIGÉ PAR',
-          trackerKey: 'intervenants_redaction',
-          contentWidget: buildInspecteursListWidget(inspecteursNoms),
-        ),
-        buildCard(
-          title: '3. RAPPORT VÉRIFIÉ PAR',
-          trackerKey: 'intervenants_verification',
-          contentWidget: buildInspecteursListWidget(['Lucien BOYOMO', 'Patrick ESSAME']),
-        ),
-        buildCard(
-          title: '4. RAPPORT VALIDÉ PAR',
-          trackerKey: 'intervenants_validation',
-          contentWidget: buildInspecteursListWidget(['Patrick ESSAME']),
-        ),
+        pw.SizedBox(height: 14),
+        table,
       ],
     );
   }
@@ -10215,14 +10257,32 @@ class PdfReportService {
 
     // Pre-flight réel du Sub-chunk 1.1 pour mesurer sans estimation le nombre de pages initial
     final preflightP1_1 = pw.Document(
-      title: 'Couverture & Sommaire Preflight - ${mission.nomClient}',
+      title: 'Couverture, Intervenants & Sommaire Preflight - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
       compress: saveFilesToDisk,
     );
+    final jsaPreflight = HiveService.getJSAByMissionId(mission.id);
     preflightP1_1.addPage(
       pw.Page(
         pageTheme: _buildCoverPageTheme(),
         build: (ctx) => _buildCoverPage(mission, renseignements, ctx),
+      ),
+    );
+    preflightP1_1.addPage(
+      pw.Page(
+        pageTheme: _buildInnerPageTheme(pageOffset: 0, overrideTotalPages: overrideTotalPages),
+        build: (ctx) => pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            _buildPageHeaderWidget(
+              nomClient: mission.nomClient,
+              nomSite: nomSiteHeader,
+              numeroRapport: numeroRapportDoc,
+            ),
+            pw.SizedBox(height: 8),
+            _buildIntervenantsEtResponsabilitesPage(jsaPreflight, renseignements, currentUser, trackedPages, 0),
+          ],
+        ),
       ),
     );
     _addSommairePages(
@@ -10591,15 +10651,10 @@ class PdfReportService {
       pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
       build: (ctx) => [_buildFoudre(audit, foudres, trackedPages, afficherTableauFoudre: mission.afficherTableauFoudre, offset: currentOffset)],
     ));
-    final jsa = HiveService.getJSAByMissionId(missionId);
 
     if (mesures != null) {
       _addMesuresEssaisPages(pdfP2_1, mesures, trackedPages, pageOffset: currentOffset, overrideTotalPages: overrideTotalPages);
     }
-    pdfP2_1.addPage(pw.Page(
-      pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
-      build: (ctx) => _buildIntervenantsEtResponsabilitesPage(jsa, renseignements, currentUser, trackedPages, currentOffset),
-    ));
     pdfP2_1.addPage(pw.Page(
       pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),
       build: (ctx) => _buildSignaturePage(renseignements, currentUser?.fullName, trackedPages, currentOffset),
@@ -10719,18 +10774,36 @@ class PdfReportService {
 
     final totalReportPages = currentOffset;
 
-    // ── Sub-chunk 1.1 : Couverture & Sommaire (Généré en dernier) ──
+    // ── Sub-chunk 1.1 : Couverture, Intervenants & Sommaire (Généré en dernier) ──
     if (saveFilesToDisk) {
       onProgress?.call(0.92, 'Génération du sommaire dynamique et finalisation...');
       final pdfP1_1 = pw.Document(
-        title: 'Couverture & Sommaire - ${mission.nomClient}',
+        title: 'Couverture, Intervenants & Sommaire - ${mission.nomClient}',
         author: 'KES INSPECTIONS AND PROJECTS',
         compress: saveFilesToDisk,
       );
+      final jsaP1_1 = HiveService.getJSAByMissionId(mission.id);
       pdfP1_1.addPage(
         pw.Page(
           pageTheme: _buildCoverPageTheme(),
           build: (ctx) => _buildCoverPage(mission, renseignements, ctx),
+        ),
+      );
+      pdfP1_1.addPage(
+        pw.Page(
+          pageTheme: _buildInnerPageTheme(pageOffset: 0, overrideTotalPages: totalReportPages),
+          build: (ctx) => pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              _buildPageHeaderWidget(
+                nomClient: mission.nomClient,
+                nomSite: nomSiteHeader,
+                numeroRapport: numeroRapportDoc,
+              ),
+              pw.SizedBox(height: 8),
+              _buildIntervenantsEtResponsabilitesPage(jsaP1_1, renseignements, currentUser, trackedPages, 0),
+            ],
+          ),
         ),
       );
       _addSommairePages(
