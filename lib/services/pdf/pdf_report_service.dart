@@ -1325,6 +1325,15 @@ class PdfReportService {
   }
 
   static pw.Widget _buildBarChart(int critique, int majeure, int mineure) {
+    final total = critique + majeure + mineure;
+    final pctCritique = total > 0 ? (critique / total) * 100.0 : 0.0;
+    final pctMajeure = total > 0 ? (majeure / total) * 100.0 : 0.0;
+    final pctMineure = total > 0 ? (mineure / total) * 100.0 : 0.0;
+
+    final pctCritStr = pctCritique.toStringAsFixed(1).replaceAll('.', ',');
+    final pctMajStr = pctMajeure.toStringAsFixed(1).replaceAll('.', ',');
+    final pctMinStr = pctMineure.toStringAsFixed(1).replaceAll('.', ',');
+
     final maxVal = [critique, majeure, mineure, 1].reduce((a, b) => a > b ? a : b);
     final yMax = ((maxVal * 1.25) / 10).ceil() * 10 > 0
         ? ((maxVal * 1.25) / 10).ceil() * 10
@@ -1332,7 +1341,7 @@ class PdfReportService {
     final yMid = (yMax / 2).round();
 
     const double chartHeight = 100.0;
-    const double barWidth = 46.0;
+    const double barWidth = 54.0;
 
     double calcBarHeight(int val) {
       if (yMax == 0) return 0;
@@ -1401,7 +1410,11 @@ class PdfReportService {
                     pw.Column(
                       mainAxisAlignment: pw.MainAxisAlignment.end,
                       children: [
-                        pw.Text('$critique', style: pw.TextStyle(font: _fontBold, fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
+                        pw.Text(
+                          '$critique ($pctCritStr %)',
+                          style: pw.TextStyle(font: _fontBold, fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.black),
+                          textAlign: pw.TextAlign.center,
+                        ),
                         pw.SizedBox(height: 2),
                         pw.Container(
                           width: barWidth,
@@ -1416,13 +1429,17 @@ class PdfReportService {
                         pw.Text('Critique', style: pw.TextStyle(font: _fontBold, fontSize: 8.5, color: accentColor)),
                       ],
                     ),
-                    pw.SizedBox(width: 28),
+                    pw.SizedBox(width: 24),
 
                     // Majeure
                     pw.Column(
                       mainAxisAlignment: pw.MainAxisAlignment.end,
                       children: [
-                        pw.Text('$majeure', style: pw.TextStyle(font: _fontBold, fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
+                        pw.Text(
+                          '$majeure ($pctMajStr %)',
+                          style: pw.TextStyle(font: _fontBold, fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.black),
+                          textAlign: pw.TextAlign.center,
+                        ),
                         pw.SizedBox(height: 2),
                         pw.Container(
                           width: barWidth,
@@ -1437,13 +1454,17 @@ class PdfReportService {
                         pw.Text('Majeure', style: pw.TextStyle(font: _fontBold, fontSize: 8.5, color: accentColor)),
                       ],
                     ),
-                    pw.SizedBox(width: 28),
+                    pw.SizedBox(width: 24),
 
                     // Mineure
                     pw.Column(
                       mainAxisAlignment: pw.MainAxisAlignment.end,
                       children: [
-                        pw.Text('$mineure', style: pw.TextStyle(font: _fontBold, fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: PdfColors.black)),
+                        pw.Text(
+                          '$mineure ($pctMinStr %)',
+                          style: pw.TextStyle(font: _fontBold, fontSize: 8, fontWeight: pw.FontWeight.bold, color: PdfColors.black),
+                          textAlign: pw.TextAlign.center,
+                        ),
                         pw.SizedBox(height: 2),
                         pw.Container(
                           width: barWidth,
@@ -2285,8 +2306,34 @@ class PdfReportService {
     widgets.add(pw.SizedBox(height: 12));
 
     // 3. Répartition par criticité
-    final ratioCritMinStr = mineure > 0 ? (critique / mineure).toStringAsFixed(1).replaceAll('.', ',') : '$critique';
-    final pctCritMajStr = (pctCritique + pctMajeure).toStringAsFixed(1).replaceAll('.', ',');
+    final pctCritStr = pctCritique.toStringAsFixed(1).replaceAll('.', ',');
+    final pctMajStr = pctMajeure.toStringAsFixed(1).replaceAll('.', ',');
+    final pctMinStr = pctMineure.toStringAsFixed(1).replaceAll('.', ',');
+
+    final totalCritMaj = critique + majeure;
+    final pctCritMaj = total > 0 ? ((totalCritMaj / total) * 100.0) : 0.0;
+    final pctCritMajStr = pctCritMaj.toStringAsFixed(1).replaceAll('.', ',');
+
+    String textRatioSeverite;
+    if (mineure > 0) {
+      final ratioVal = (critique / mineure).toStringAsFixed(1).replaceAll('.', ',');
+      textRatioSeverite = 'L\'analyse recense $critique non-conformité(s) de niveau Critique ($pctCritStr %) pour $mineure non-conformité(s) de niveau Mineur ($pctMinStr %), soit un ratio de $ratioVal NC critique(s) pour 1 NC mineure. Ce rapport traduit la sévérité relative des anomalies constatées sur l\'installation.';
+    } else if (critique > 0) {
+      textRatioSeverite = 'L\'analyse recense $critique non-conformité(s) de niveau Critique ($pctCritStr %) et 0 non-conformité mineure (0,0 %). L\'absence de défauts mineurs atteste que l\'intégralité des défaillances relevées présente un niveau de sévérité élevé.';
+    } else {
+      textRatioSeverite = 'L\'analyse recense 0 non-conformité de niveau Critique (0,0 %) et $mineure non-conformité(s) de niveau Mineur ($pctMinStr %). Aucun défaut à sévérité critique n\'a été constaté.';
+    }
+
+    final textNiveauRisqueDominant = 'Les non-conformités à fort impact (niveaux Critique et Majeur) cumulent $totalCritMaj constat(s) sur un total de $total, soit $pctCritMajStr % de l\'ensemble des défaillances de la mission ($critique critique(s), soit $pctCritStr % + $majeure majeure(s), soit $pctMajStr %). Ce regroupement confirme la prédominance nette des risques majeurs pour la sécurité des personnes et la continuité d\'exploitation.';
+
+    String textSignalGraviteGlobal;
+    if (pctCritMaj >= 70.0) {
+      textSignalGraviteGlobal = 'La forte concentration des écarts sur les niveaux de gravité Critique et Majeur ($pctCritMajStr %) constitue un signal de risque très élevé. Il est vivement recommandé d\'engager en priorité les interventions de levée de réserves sur les $critique équipement(s)/point(s) critique(s) et les $majeure élément(s) majeur(s) afin de prévenir tout incident électrique ou dommage matériel.';
+    } else if (pctCritMaj >= 40.0) {
+      textSignalGraviteGlobal = 'La répartition des défauts montre un niveau de risque modéré à élevé ($pctCritMajStr % d\'écarts critiques et majeurs). Les travaux de remise en conformité doivent prioriser les $critique constat(s) critique(s), tout en intégrant les $majeure anomalie(s) majeure(s) dans le plan de maintenance à moyen terme.';
+    } else {
+      textSignalGraviteGlobal = 'La majorité des non-conformités identifiées relève de niveaux de gravité mineurs ou modérés. Le plan d\'action peut s\'inscrire dans le cadre des opérations de maintenance préventive et d\'entretien courant de l\'établissement.';
+    }
 
     widgets.add(PageTracker(
       key: 'stat_criticite',
@@ -2300,21 +2347,10 @@ class PdfReportService {
           _bodyText('Distribution des non-conformités selon les 3 niveaux de gravité réglementaires KES :'),
           pw.SizedBox(height: 8),
           _buildBarChart(critique, majeure, mineure),
-          pw.SizedBox(height: 8),
-          _buildCriticiteTable(critique, majeure, mineure, total, pctCritique, pctMajeure, pctMineure),
-          pw.SizedBox(height: 8),
-          _buildTextBulletPoint(
-            '3.1 Ratio de sévérité',
-            'Le rapport de $critique non-conformité(s) critique(s) pour $mineure non-conformité(s) mineure(s) (soit un ratio de $ratioCritMinStr) confirme la prédominance des défauts majeurs à haut risque.',
-          ),
-          _buildTextBulletPoint(
-            '3.2 Niveau de risque dominant',
-            'Les non-conformités de niveaux Critique et Majeur concentrent $pctCritMajStr % de l\'ensemble des écarts constatés sur l\'établissement.',
-          ),
-          _buildTextBulletPoint(
-            '3.3 Signal de gravité global',
-            'Cette distribution réclame une mobilisation prioritaire des ressources correctives sur les équipements à criticité élevée.',
-          ),
+          pw.SizedBox(height: 10),
+          _buildTextBulletPoint('3.1 Ratio de sévérité', textRatioSeverite),
+          _buildTextBulletPoint('3.2 Niveau de risque dominant', textNiveauRisqueDominant),
+          _buildTextBulletPoint('3.3 Signal de gravité global', textSignalGraviteGlobal),
         ],
       ),
     ));
