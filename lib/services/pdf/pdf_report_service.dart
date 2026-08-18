@@ -846,6 +846,9 @@ class PdfReportService {
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques du stabilisateur", key: 'desc_stabilisateur', level: 1));
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques des onduleurs", key: 'desc_onduleurs', level: 1));
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Régime de neutre", key: 'desc_regime_neutre', level: 1));
+    if (desc?.regimeNeutre == 'IT') {
+      entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques du Contrôleur Permanent d'Isolement (CPI)", key: 'desc_cpi', level: 1));
+    }
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Eclairage de sécurité", key: 'desc_eclairage', level: 1));
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Modifications apportées aux installations", key: 'desc_modifications', level: 1));
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Note de calcul des installations électriques", key: 'desc_note_calcul', level: 1));
@@ -4113,6 +4116,19 @@ class PdfReportService {
     
     widgets.add(_bodyText('- $regimeAffichage'));
     widgets.add(pw.SizedBox(height: 5));
+
+    if (safeDesc.regimeNeutre == 'IT') {
+      widgets.add(pw.NewPage());
+      widgets.add(PageTracker(
+        key: 'desc_cpi',
+        registry: trackedPages,
+        offset: offset,
+        child: _subTitle('${descBodyIdx++}. Caractéristiques du Contrôleur Permanent d\'Isolement (CPI)'),
+      ));
+      widgets.add(pw.SizedBox(height: 4));
+      widgets.add(_buildCpiTable(safeDesc.cpi));
+      widgets.add(pw.SizedBox(height: 8));
+    }
 
 
 
