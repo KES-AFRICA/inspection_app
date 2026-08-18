@@ -4116,11 +4116,7 @@ class PdfReportService {
         offset: offset,
         child: _subTitle('${descBodyIdx++}. Caractéristiques du Contrôleur Permanent d\'Isolement (CPI)'),
       ));
-      if (safeDesc.cpi.isNotEmpty) {
-        widgets.add(_buildCpiTable(safeDesc.cpi));
-      } else {
-        widgets.add(_bodyText('- Information non renseignée (Régime IT)'));
-      }
+      widgets.add(_buildCpiTable(safeDesc.cpi));
       widgets.add(pw.SizedBox(height: 8));
     }
 

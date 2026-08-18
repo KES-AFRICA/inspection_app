@@ -2,6 +2,7 @@
 import 'package:hive/hive.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/models/mission.dart';
+import 'package:inspec_app/services/hive_service.dart';
 
 abstract class DescriptionInstallationsLocalDataSource {
   Future<DescriptionInstallations> getOrCreateDescriptionInstallations(String missionId);
@@ -35,32 +36,17 @@ class DescriptionInstallationsLocalDataSourceImpl implements DescriptionInstalla
 
   @override
   Future<DescriptionInstallations> getOrCreateDescriptionInstallations(String missionId) async {
-    final box = Hive.box<DescriptionInstallations>(_descriptionBox);
     try {
-      DescriptionInstallations? existing = box.get(missionId);
-      existing ??= box.values.firstWhere((desc) => desc.missionId == missionId);
-      return existing;
-    } catch (e) {
-      final newDesc = DescriptionInstallations.create(missionId);
-      await box.put(missionId, newDesc);
+      final existing = HiveService.getDescriptionInstallationsByMissionId(missionId);
+      if (existing != null) return existing;
+    } catch (_) {}
 
-      // Mettre à jour la référence dans la mission
-      final missionBox = Hive.box<Mission>(_missionBox);
-      final mission = missionBox.get(missionId);
-      if (mission != null) {
-        mission.descriptionInstallationsId = missionId;
-        await mission.save();
-      }
-
-      return newDesc;
-    }
+    return await HiveService.getOrCreateDescriptionInstallations(missionId);
   }
 
   @override
   Future<void> saveDescriptionInstallations(DescriptionInstallations desc) async {
-    final box = Hive.box<DescriptionInstallations>(_descriptionBox);
-    desc.updatedAt = DateTime.now();
-    await box.put(desc.missionId, desc);
+    await HiveService.saveDescriptionInstallations(desc);
   }
 
   @override

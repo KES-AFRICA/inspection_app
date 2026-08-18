@@ -215,8 +215,9 @@ class _RadioSequenceScreenState extends ConsumerState<RadioSequenceScreen> {
             final standard = {'TT', 'TN-C', 'TN-S', 'IT'};
             if (value != null && value.isNotEmpty) {
               if (value == 'TN') {
-                if (detail == 'C') _selectedRegimes.add('TN-C');
-                else if (detail == 'S') _selectedRegimes.add('TN-S');
+                if (detail == 'C') {
+                  _selectedRegimes.add('TN-C');
+                } else if (detail == 'S') _selectedRegimes.add('TN-S');
                 else _selectedRegimes.add('TN-C');
               } else {
                 final parts = value.split(',').map((e) => e.trim()).where((e) => e.isNotEmpty).toList();

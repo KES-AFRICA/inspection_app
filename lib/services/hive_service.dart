@@ -805,50 +805,51 @@ static Future<bool> resetAllDocuments(String missionId) async {
   // ============================================================
 
   /// Créer ou récupérer les données de description des installations pour une mission
-static Future<DescriptionInstallations> getOrCreateDescriptionInstallations(String missionId) async {
-  final box = await Hive.openBox<DescriptionInstallations>('description_installations'); // OUVERTURE EXPLICITE
-  
-  try {
-    // Chercher par missionId
-    for (var desc in box.values) {
-      if (desc.missionId == missionId) {
-        return desc;
-      }
+  static Future<DescriptionInstallations> getOrCreateDescriptionInstallations(String missionId) async {
+    final box = await Hive.openBox<DescriptionInstallations>(_descriptionBox);
+    try {
+      final existing = getDescriptionInstallationsByMissionId(missionId);
+      if (existing != null) return existing;
+    } catch (e) {
+      if (kDebugMode) print('❌ Erreur lors de la recherche: $e');
     }
-  } catch (e) {
-    if (kDebugMode) print('❌ Erreur lors de la recherche: $e');
+    
+    final newDesc = DescriptionInstallations.create(missionId);
+    await box.put(missionId, newDesc);
+    
+    final missionBox = Hive.box<Mission>(_missionBox);
+    final mission = missionBox.get(missionId);
+    if (mission != null) {
+      mission.descriptionInstallationsId = missionId;
+      await mission.save();
+    }
+    
+    return newDesc;
   }
-  
-  // Créer une nouvelle instance si non trouvée
-  final newDesc = DescriptionInstallations.create(missionId);
-  await box.add(newDesc);
-  
-  // Mettre à jour la référence dans la mission
-  final missionBox = Hive.box<Mission>(_missionBox);
-  final mission = missionBox.get(missionId);
-  if (mission != null) {
-    mission.descriptionInstallationsId = newDesc.key.toString();
-    await mission.save();
-  }
-  
-  return newDesc;
-}
-  /// Sauvegarder les données de description des installations
-static Future<void> saveDescriptionInstallations(DescriptionInstallations desc) async {
-  try {
-    final box = await Hive.openBox<DescriptionInstallations>('description_installations');
-    desc.updatedAt = DateTime.now();
-    await box.put(desc.key, desc);
-  } catch (e) {
-    if (kDebugMode) print('❌ Erreur saveDescriptionInstallations: $e');
-  }
-}
 
-  /// Récupérer les données de description des installations par missionId
+  /// Sauvegarder les données de description des installations
+  static Future<void> saveDescriptionInstallations(DescriptionInstallations desc) async {
+    try {
+      final box = Hive.box<DescriptionInstallations>(_descriptionBox);
+      desc.updatedAt = DateTime.now();
+      if (desc.isInBox && desc.key != null) {
+        await desc.save();
+      }
+      await box.put(desc.missionId, desc);
+    } catch (e) {
+      if (kDebugMode) print('❌ Erreur saveDescriptionInstallations: $e');
+    }
+  }
+
+  /// Récupérer les données de description des installations par missionId (les plus récentes en premier)
   static DescriptionInstallations? getDescriptionInstallationsByMissionId(String missionId) {
     final box = Hive.box<DescriptionInstallations>(_descriptionBox);
     try {
-      return box.values.firstWhere((desc) => desc.missionId == missionId);
+      final matches = box.values.where((d) => d.missionId == missionId).toList();
+      if (matches.isEmpty) return box.get(missionId);
+
+      matches.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
+      return matches.first;
     } catch (e) {
       return null;
     }
