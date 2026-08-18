@@ -75,10 +75,14 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
     });
 
     try {
-      final cpiData = {
-        'RÉGIME DE NEUTRE SURVEILLÉ': 'IT',
-        'RESULTAT_TEST': status,
-      };
+      final desc = await ref
+          .read(descriptionInstallationsProvider(widget.mission.id).notifier)
+          .load();
+      final existingData = desc.cpi.isNotEmpty ? desc.cpi.last.data : <String, String>{};
+
+      final cpiData = Map<String, String>.from(existingData);
+      cpiData['RÉGIME DE NEUTRE SURVEILLÉ'] = 'IT';
+      cpiData['RESULTAT_TEST'] = status;
 
       final cpiItem = InstallationItem(data: cpiData);
       final notifier = ref.read(

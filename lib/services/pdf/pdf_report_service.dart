@@ -851,7 +851,7 @@ class PdfReportService {
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques des onduleurs", key: 'desc_onduleurs', level: 1));
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Régime de neutre", key: 'desc_regime_neutre', level: 1));
     if (showCpiInSommaire) {
-      entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques du Contrôleur Permanent d'Isolement (CPI)", key: 'desc_cpi', level: 1));
+      entries.add(_SommaireEntry(titre: "${descSubIdx++}. Test du Contrôleur Permanent d'Isolement (CPI)", key: 'desc_cpi', level: 1));
     }
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Eclairage de sécurité", key: 'desc_eclairage', level: 1));
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Modifications apportées aux installations", key: 'desc_modifications', level: 1));
@@ -4125,7 +4125,7 @@ class PdfReportService {
         key: 'desc_cpi',
         registry: trackedPages,
         offset: offset,
-        child: _subTitle('${descBodyIdx++}. Caractéristiques du Contrôleur Permanent d\'Isolement (CPI)'),
+        child: _subTitle('${descBodyIdx++}. Test du Contrôleur Permanent d\'Isolement (CPI)'),
       ));
       widgets.add(_buildCpiTable(safeDesc.cpi));
       widgets.add(pw.SizedBox(height: 8));
