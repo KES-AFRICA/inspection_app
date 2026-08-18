@@ -846,7 +846,11 @@ class PdfReportService {
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques du stabilisateur", key: 'desc_stabilisateur', level: 1));
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques des onduleurs", key: 'desc_onduleurs', level: 1));
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Régime de neutre", key: 'desc_regime_neutre', level: 1));
-    if (desc?.regimeNeutre == 'IT') {
+    final bool hasItRegimeInSommaire = desc?.regimeNeutre != null &&
+        (desc!.regimeNeutre == 'IT' || desc.regimeNeutre!.split(',').map((e) => e.trim()).contains('IT'));
+    final bool showCpiInSommaire = hasItRegimeInSommaire || (desc != null && desc.cpi.isNotEmpty);
+
+    if (showCpiInSommaire) {
       entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques du Contrôleur Permanent d'Isolement (CPI)", key: 'desc_cpi', level: 1));
     }
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Eclairage de sécurité", key: 'desc_eclairage', level: 1));
@@ -4117,7 +4121,11 @@ class PdfReportService {
     widgets.add(_bodyText('- $regimeAffichage'));
     widgets.add(pw.SizedBox(height: 5));
 
-    if (safeDesc.regimeNeutre == 'IT') {
+    final bool hasItRegimeInBody = safeDesc.regimeNeutre != null &&
+        (safeDesc.regimeNeutre == 'IT' || safeDesc.regimeNeutre!.split(',').map((e) => e.trim()).contains('IT'));
+    final bool showCpiInBody = hasItRegimeInBody || safeDesc.cpi.isNotEmpty;
+
+    if (showCpiInBody) {
       widgets.add(pw.NewPage());
       widgets.add(PageTracker(
         key: 'desc_cpi',
