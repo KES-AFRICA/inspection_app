@@ -225,7 +225,8 @@ class MissionDomainInventory {
   TopNonConformityCategoriesResult getTopTwoNonConformityCategories() {
     final crossList = getCrossCategoryAnalysis();
     final totalNC = pertinentFindings.length;
-    final totalEq = instances.length;
+    final totalEqSummary = getEquipmentInventorySummary().fold<int>(0, (sum, e) => sum + e.count);
+    final totalEq = totalEqSummary > 0 ? totalEqSummary : instances.length;
 
     if (crossList.isEmpty || totalNC == 0) {
       return TopNonConformityCategoriesResult(
