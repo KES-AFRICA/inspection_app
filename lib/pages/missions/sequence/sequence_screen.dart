@@ -1124,7 +1124,103 @@ class _SequenceScreenState extends State<SequenceScreen>
     );
   }
 
+  List<_Sub> _getDescSubs(_Item item) {
+    if (item.stepIndex != 2) return item.subs;
+
+    final hasIt = _descProgress.containsKey('test_cpi');
+
+    final subs = <_Sub>[
+      const _Sub(
+        key: 'alimentation_moyenne_tension',
+        label: 'Alimentation MT',
+        icon: Icons.electric_meter_outlined,
+        descSectionIndex: 0,
+      ),
+      const _Sub(
+        key: 'alimentation_basse_tension',
+        label: 'Alimentation BT',
+        icon: Icons.power_outlined,
+        descSectionIndex: 1,
+      ),
+      const _Sub(
+        key: 'groupe_electrogene',
+        label: 'Groupe électrogène',
+        icon: Icons.power_input_outlined,
+        descSectionIndex: 2,
+      ),
+      const _Sub(
+        key: 'alimentation_carburant',
+        label: 'Alimentation carburant',
+        icon: Icons.local_gas_station_outlined,
+        descSectionIndex: 3,
+      ),
+      const _Sub(
+        key: 'inverseur',
+        label: 'Inverseur',
+        icon: Icons.swap_horiz_outlined,
+        descSectionIndex: 4,
+      ),
+      const _Sub(
+        key: 'stabilisateur',
+        label: 'Stabilisateur',
+        icon: Icons.tune_outlined,
+        descSectionIndex: 5,
+      ),
+      const _Sub(
+        key: 'onduleurs',
+        label: 'Onduleurs',
+        icon: Icons.battery_charging_full_outlined,
+        descSectionIndex: 6,
+      ),
+      const _Sub(
+        key: 'regime_neutre',
+        label: 'Régime du neutre',
+        icon: Icons.settings_ethernet_outlined,
+        descSectionIndex: 7,
+      ),
+      const _Sub(
+        key: 'test_cpi',
+        label: 'Test du CPI',
+        icon: Icons.verified_user_outlined,
+        descSectionIndex: 8,
+      ),
+      const _Sub(
+        key: 'eclairage_securite',
+        label: 'Éclairage de sécurité',
+        icon: Icons.lightbulb_outline,
+        descSectionIndex: 9,
+      ),
+      const _Sub(
+        key: 'modifications_installations',
+        label: 'Modifications',
+        icon: Icons.build_outlined,
+        descSectionIndex: 10,
+      ),
+      const _Sub(
+        key: 'note_calcul',
+        label: 'Notes de calcul',
+        icon: Icons.calculate_outlined,
+        descSectionIndex: 11,
+      ),
+      const _Sub(
+        key: 'paratonnerre',
+        label: 'Paratonnerre',
+        icon: Icons.thunderstorm_outlined,
+        descSectionIndex: 12,
+      ),
+      const _Sub(
+        key: 'registre_securite',
+        label: 'Registre de sécurité',
+        icon: Icons.menu_book_outlined,
+        descSectionIndex: 13,
+      ),
+    ];
+
+    return subs;
+  }
+
   Widget _buildSubs(_Item item) {
+    final subs = _getDescSubs(item);
     return Container(
       margin: const EdgeInsets.only(left: 38, right: 12, bottom: 6, top: 2),
       decoration: BoxDecoration(
@@ -1137,7 +1233,7 @@ class _SequenceScreenState extends State<SequenceScreen>
       ),
       padding: const EdgeInsets.only(left: 14),
       child: Column(
-        children: item.subs.map((sub) {
+        children: subs.map((sub) {
           bool subComplete = false;
           if (sub.descSectionIndex != null) {
             subComplete = _descProgress[sub.key] ?? false;

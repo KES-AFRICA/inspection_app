@@ -11,6 +11,7 @@ import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/services/installation_description_sync_service.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/core/providers/description_installations_providers.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/cpi_sequence_screen.dart';
 
 class DescriptionInstallationsSequenceScreen extends ConsumerStatefulWidget {
   final Mission mission;
@@ -40,9 +41,9 @@ class DescriptionInstallationsSequenceScreenState
   bool _isLoading = true;
   bool _isFirstLoad = true;
 
-  late final PageController _pageController = PageController();
+  late PageController _pageController;
 
-  final List<Map<String, dynamic>> _sections = [
+  List<Map<String, dynamic>> get _sections => [
     {
       'key': 'alimentation_moyenne_tension',
       'title': 'Caractéristiques de l\'alimentation moyenne tension',
@@ -180,6 +181,14 @@ class DescriptionInstallationsSequenceScreenState
       'isRadio': true,
     },
     {
+      'key': 'test_cpi',
+      'title': 'Test du Contrôleur Permanent d\'Isolement (CPI)',
+      'shortTitle': 'Test CPI',
+      'icon': Icons.verified_user_outlined,
+      'color': const Color(0xFF16A085),
+      'isTestCpi': true,
+    },
+    {
       'key': 'eclairage_securite',
       'title': 'Éclairage de sécurité',
       'shortTitle': 'Éclairage sécurité',
@@ -270,44 +279,37 @@ class DescriptionInstallationsSequenceScreenState
     setState(() => _isLoading = true);
 
     try {
-      final progress = await HiveService.getMissionProgress(widget.mission.id);
+      final getDescUseCase = ref.read(getDescriptionInstallationsUseCaseProvider);
+      final descEntity = await getDescUseCase(widget.mission.id);
+      final progress = descEntity.getProgress();
+      final savedPosition = await _getSavedPosition();
+
+      int targetStep = widget.initialSectionIndex ?? savedPosition;
+
+      if (widget.initialSectionIndex == null && _isFirstLoad && savedPosition == 0) {
+        for (int i = 0; i < _sections.length; i++) {
+          final section = _sections[i];
+          final key = section['key'] as String;
+          if (!progress.containsKey(key) || !progress[key]!) {
+            targetStep = i;
+            break;
+          }
+        }
+      }
+      _isFirstLoad = false;
 
       if (!mounted) return;
 
+      _pageController = PageController(initialPage: targetStep);
+
       setState(() {
         _progress = progress;
+        _currentStep = targetStep;
         _isLoading = false;
-      });
-
-      final savedPosition = await _getSavedPosition();
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted && _pageController.hasClients) {
-          int targetStep = widget.initialSectionIndex ?? savedPosition;
-
-          if (widget.initialSectionIndex == null &&
-              _isFirstLoad &&
-              savedPosition == 0) {
-            for (int i = 0; i < _sections.length; i++) {
-              final section = _sections[i];
-              final key = section['key'] as String;
-              if (!_progress.containsKey(key) || !_progress[key]!) {
-                targetStep = i;
-                break;
-              }
-            }
-          }
-
-          _isFirstLoad = false;
-
-          _pageController.jumpToPage(targetStep);
-          setState(() {
-            _currentStep = targetStep;
-          });
-        }
       });
     } catch (e) {
       if (mounted) {
+        _pageController = PageController(initialPage: 0);
         setState(() => _isLoading = false);
       }
     }
@@ -381,7 +383,6 @@ class DescriptionInstallationsSequenceScreenState
   }
 
   void _onSectionComplete(String sectionKey) async {
-    if (_progress[sectionKey] == true) return;
     setState(() {
       _progress[sectionKey] = true;
     });
@@ -584,6 +585,13 @@ class DescriptionInstallationsSequenceScreenState
         title: section['title'],
         field: section['key'],
         options: List<String>.from(section['options']),
+        onComplete: _onSectionComplete,
+        isComplete: isComplete,
+      );
+    } else if (section['isTestCpi'] == true) {
+      return CpiSequenceScreen(
+        key: ValueKey('section_${section['key']}'),
+        mission: widget.mission,
         onComplete: _onSectionComplete,
         isComplete: isComplete,
       );

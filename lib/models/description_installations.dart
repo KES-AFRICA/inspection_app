@@ -165,6 +165,7 @@ class DescriptionInstallations extends HiveObject {
       case 'onduleurs':
         return onduleurs.isNotEmpty;
       case 'cpi':
+      case 'test_cpi':
         return cpi.isNotEmpty;
       case 'regime_neutre':
         return regimeNeutre?.isNotEmpty == true;
@@ -197,8 +198,8 @@ class DescriptionInstallations extends HiveObject {
       'inverseur': isSectionComplete('inverseur'),
       'stabilisateur': isSectionComplete('stabilisateur'),
       'onduleurs': isSectionComplete('onduleurs'),
-      if (hasIt) 'cpi': isSectionComplete('cpi'),
       'regime_neutre': isSectionComplete('regime_neutre'),
+      if (hasIt) 'test_cpi': isSectionComplete('test_cpi'),
       'eclairage_securite': isSectionComplete('eclairage_securite'),
       'modifications_installations': isSectionComplete('modifications_installations'),
       'note_calcul': isSectionComplete('note_calcul'),

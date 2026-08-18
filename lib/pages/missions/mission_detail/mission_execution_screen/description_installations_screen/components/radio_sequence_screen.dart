@@ -103,21 +103,6 @@ class _RadioSequenceScreenState extends ConsumerState<RadioSequenceScreen> {
 
       final resultString = listToSave.join(', ');
 
-      if (_selectedRegimes.contains('IT')) {
-        final cpiData = {
-          'MARQUE': _cpiMarqueController.text.trim(),
-          'TYPE': _cpiTypeController.text.trim(),
-          'N° SÉRIE': _cpiNumeroSerieController.text.trim(),
-          'RÉGIME DE NEUTRE SURVEILLÉ': 'IT',
-          'SEUIL DE RÉGLAGE (kΩ)': _cpiSeuilController.text.trim(),
-          'REPORT D\'ALARME': _cpiReportAlarme,
-          'ANNÉE DE FABRICATION': _cpiAnneeFabrication,
-        };
-        final cpiItem = InstallationItem(data: cpiData);
-        await notifier.updateInstallationItem('cpi', 0, cpiItem);
-        _hasExistingCpi = true;
-      }
-
       final success = await notifier.updateDescriptionSelection('regime_neutre', resultString);
 
       if (success && !widget.isComplete && resultString.isNotEmpty) {

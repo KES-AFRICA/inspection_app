@@ -4129,6 +4129,12 @@ class PdfReportService {
       ));
       widgets.add(_buildCpiTable(safeDesc.cpi));
       widgets.add(pw.SizedBox(height: 8));
+
+      final cpiTestResult = safeDesc.cpi.isNotEmpty
+          ? (safeDesc.cpi.last.data['RESULTAT_TEST'] ?? 'Sans objet')
+          : 'Sans objet';
+      widgets.add(_buildCpiTestContent(cpiTestResult));
+      widgets.add(pw.SizedBox(height: 8));
     }
 
     widgets.add(PageTracker(
@@ -6606,6 +6612,90 @@ class PdfReportService {
             ],
           );
         }),
+      ],
+    );
+  }
+
+  static pw.Widget _buildCpiTestContent(String testResult) {
+    PdfColor badgeBgColor;
+    PdfColor badgeBorderColor;
+    PdfColor badgeTextColor;
+
+    switch (testResult) {
+      case 'Satisfaisant':
+        badgeBgColor = PdfColor.fromHex('E8F5E9');
+        badgeBorderColor = PdfColor.fromHex('A5D6A7');
+        badgeTextColor = PdfColor.fromHex('2E7D32');
+        break;
+      case 'Non satisfaisant':
+        badgeBgColor = PdfColor.fromHex('FFEBEE');
+        badgeBorderColor = PdfColor.fromHex('EF9A9A');
+        badgeTextColor = PdfColor.fromHex('C62828');
+        break;
+      case 'Sans objet':
+      default:
+        badgeBgColor = PdfColor.fromHex('F5F5F5');
+        badgeBorderColor = PdfColor.fromHex('E0E0E0');
+        badgeTextColor = PdfColor.fromHex('616161');
+        break;
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.SizedBox(height: 6),
+        pw.Text(
+          'ESSAI DE DÉCLENCHEMENT DU CPI',
+          style: pw.TextStyle(
+            font: _fontBold,
+            fontSize: fsSmall,
+            color: PdfColor.fromHex('1B365D'),
+          ),
+        ),
+        pw.SizedBox(height: 3),
+        pw.Text(
+          'L\'essai consiste à simuler, au moyen d\'une résistance calibrée, un défaut d\'isolement sur le réseau IT surveillé, et à vérifier que le Contrôleur Permanent d\'Isolement détecte ce défaut et déclenche l\'alarme (locale et/ou à distance) au seuil de réglage configuré, sans provoquer de coupure de l\'installation. L\'essai est satisfaisant si l\'alarme se déclenche au seuil attendu et si son report (local et/ou à distance) est correctement transmis.',
+          style: pw.TextStyle(
+            font: _fontRegular,
+            fontSize: fsSmall - 0.5,
+            color: PdfColors.black,
+          ),
+        ),
+        pw.SizedBox(height: 6),
+        pw.Text(
+          'VÉRIFICATION DU REPORT D\'ALARME',
+          style: pw.TextStyle(
+            font: _fontBold,
+            fontSize: fsSmall,
+            color: PdfColor.fromHex('1B365D'),
+          ),
+        ),
+        pw.SizedBox(height: 3),
+        pw.Text(
+          'Le report d\'alarme (voyant local, report GTB/GTC, ou tout autre dispositif de signalisation à distance) est contrôlé conjointement afin de s\'assurer que le personnel d\'exploitation est effectivement informé en cas de premier défaut d\'isolement, condition indispensable à la sécurité en régime IT (absence de coupure automatique au premier défaut).',
+          style: pw.TextStyle(
+            font: _fontRegular,
+            fontSize: fsSmall - 0.5,
+            color: PdfColors.black,
+          ),
+        ),
+        pw.SizedBox(height: 10),
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: pw.BoxDecoration(
+            color: badgeBgColor,
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+            border: pw.Border.all(color: badgeBorderColor, width: 0.8),
+          ),
+          child: pw.Text(
+            testResult,
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: fsSmall + 1,
+              color: badgeTextColor,
+            ),
+          ),
+        ),
       ],
     );
   }
