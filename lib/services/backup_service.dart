@@ -849,6 +849,7 @@ class BackupService {
         'stabilisateur':
             d.stabilisateur.map(_serializeInstallationItem).toList(),
         'onduleurs': d.onduleurs.map(_serializeInstallationItem).toList(),
+        'cpi': d.cpi.map(_serializeInstallationItem).toList(),
         'regimeNeutre': d.regimeNeutre,
         'regimeNeutreDetail': d.regimeNeutreDetail,
         'eclairageSecurite': d.eclairageSecurite,
@@ -2413,6 +2414,7 @@ class BackupService {
       inverseur: _parseItems(d['inverseur']),
       stabilisateur: _parseItems(d['stabilisateur']),
       onduleurs: _parseItems(d['onduleurs']),
+      cpi: _parseItems(d['cpi']),
       regimeNeutre: d['regimeNeutre'] as String?,
       regimeNeutreDetail: d['regimeNeutreDetail'] as String?,
       eclairageSecurite: d['eclairageSecurite'] as String?,

@@ -125,6 +125,11 @@ class DescriptionInstallationsLocalDataSourceImpl implements DescriptionInstalla
             desc.onduleurs[index] = item;
           }
           break;
+        case 'cpi':
+          if (index < desc.cpi.length) {
+            desc.cpi[index] = item;
+          }
+          break;
         default:
           return false;
       }
@@ -179,6 +184,11 @@ class DescriptionInstallationsLocalDataSourceImpl implements DescriptionInstalla
         case 'onduleurs':
           if (index < desc.onduleurs.length) {
             desc.onduleurs.removeAt(index);
+          }
+          break;
+        case 'cpi':
+          if (index < desc.cpi.length) {
+            desc.cpi.removeAt(index);
           }
           break;
         default:

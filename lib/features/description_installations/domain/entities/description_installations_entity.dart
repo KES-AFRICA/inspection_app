@@ -10,6 +10,7 @@ class DescriptionInstallationsEntity {
   final List<InstallationItemEntity> inverseur;
   final List<InstallationItemEntity> stabilisateur;
   final List<InstallationItemEntity> onduleurs;
+  final List<InstallationItemEntity> cpi;
   final String? regimeNeutre;
   final String? regimeNeutreDetail;
   final String? eclairageSecurite;
@@ -30,6 +31,7 @@ class DescriptionInstallationsEntity {
     this.inverseur = const [],
     this.stabilisateur = const [],
     this.onduleurs = const [],
+    this.cpi = const [],
     this.regimeNeutre,
     this.regimeNeutreDetail,
     this.eclairageSecurite,
@@ -58,6 +60,8 @@ class DescriptionInstallationsEntity {
         return stabilisateur.isNotEmpty;
       case 'onduleurs':
         return onduleurs.isNotEmpty;
+      case 'cpi':
+        return cpi.isNotEmpty;
       case 'regime_neutre':
         return regimeNeutre?.isNotEmpty == true;
       case 'eclairage_securite':
@@ -78,6 +82,8 @@ class DescriptionInstallationsEntity {
   }
 
   Map<String, bool> getProgress() {
+    final hasIt = regimeNeutre != null &&
+        regimeNeutre!.split(',').map((e) => e.trim()).contains('IT');
     return {
       'alimentation_moyenne_tension': isSectionComplete('alimentation_moyenne_tension'),
       'alimentation_basse_tension': isSectionComplete('alimentation_basse_tension'),
@@ -86,6 +92,7 @@ class DescriptionInstallationsEntity {
       'inverseur': isSectionComplete('inverseur'),
       'stabilisateur': isSectionComplete('stabilisateur'),
       'onduleurs': isSectionComplete('onduleurs'),
+      if (hasIt) 'cpi': isSectionComplete('cpi'),
       'regime_neutre': isSectionComplete('regime_neutre'),
       'eclairage_securite': isSectionComplete('eclairage_securite'),
       'modifications_installations': isSectionComplete('modifications_installations'),

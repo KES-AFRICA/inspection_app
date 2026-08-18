@@ -64,6 +64,9 @@ class _InstallationDetailScreenState
       case 'onduleurs':
         items = desc.onduleurs;
         break;
+      case 'cpi':
+        items = desc.cpi;
+        break;
     }
 
     setState(() {

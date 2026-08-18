@@ -104,8 +104,12 @@ class _AjouterCarteScreenState extends State<AjouterCarteScreen> {
         _selectedMiseALaTerre = widget.carte![champ];
       }
       
+      final initialText = (champ == 'RÉGIME DE NEUTRE SURVEILLÉ' && (widget.carte == null || widget.carte![champ] == null || widget.carte![champ]!.isEmpty))
+          ? 'IT'
+          : (widget.carte?[champ] ?? '');
+
       _controllers[champ] = TextEditingController(
-        text: widget.carte?[champ] ?? '',
+        text: initialText,
       );
     }
   }
@@ -299,6 +303,8 @@ class _AjouterCarteScreenState extends State<AjouterCarteScreen> {
           return 'Stabilisateur';
         case 'onduleurs':
           return 'Onduleurs';
+        case 'cpi':
+          return 'Contrôleur Permanent d\'Isolement (CPI)';
         default:
           return widget.sectionKey!.replaceAll('_', ' ').split(' ').map((word) => 
             word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : ''
@@ -309,15 +315,48 @@ class _AjouterCarteScreenState extends State<AjouterCarteScreen> {
     return 'Nouvelle carte';
   }
 
+  bool _isAnneeFabricationField(String champ) {
+    final upper = champ.toUpperCase();
+    return upper.contains('ANNÉE DE FABRICATION') || upper.contains('ANNEE DE FABRICATION');
+  }
+
+  Widget _buildAnneeFabricationField(String champ) {
+    final currentYear = DateTime.now().year;
+    final years = List<String>.generate(currentYear - 1969, (index) => (currentYear - index).toString());
+    final selectedVal = _controllers[champ]?.text.isNotEmpty == true ? _controllers[champ]!.text : null;
+
+    return _buildModernDropdown<String>(
+      label: champ,
+      value: (selectedVal != null && years.contains(selectedVal)) ? selectedVal : null,
+      hintText: 'Sélectionnez l\'année',
+      items: years.map((year) {
+        return DropdownMenuItem<String>(
+          value: year,
+          child: Text(year),
+        );
+      }).toList(),
+      onChanged: (value) {
+        if (value != null) {
+          setState(() {
+            _controllers[champ]!.text = value;
+          });
+        }
+      },
+    );
+  }
+
   Widget _buildModernTextField({
     required String champ,
     required TextEditingController controller,
     bool isMultiline = false,
   }) {
+    final isNumeric = champ.toUpperCase().contains('SEUIL');
+    final isReadOnly = champ == 'RÉGIME DE NEUTRE SURVEILLÉ';
+
     return Container(
       margin: EdgeInsets.only(bottom: context.spacing(16)),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: isReadOnly ? Colors.grey.shade100 : Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -363,6 +402,8 @@ class _AjouterCarteScreenState extends State<AjouterCarteScreen> {
           ),
           TextFormField(
             controller: controller,
+            readOnly: isReadOnly,
+            keyboardType: isNumeric ? const TextInputType.numberWithOptions(decimal: true) : null,
             maxLines: isMultiline ? 4 : 1,
             minLines: isMultiline ? 3 : 1,
             style: TextStyle(fontSize: context.fontSize(14)),
@@ -848,6 +889,11 @@ class _AjouterCarteScreenState extends State<AjouterCarteScreen> {
                   // Champs Oui/Non (Cuve de rétention, Indicateur de niveau, Mise à la terre)
                   if (_isOuiNonField(champ)) {
                     return _buildOuiNonDropdown(champ);
+                  }
+                  
+                  // Année de fabrication (Dropdown)
+                  if (_isAnneeFabricationField(champ)) {
+                    return _buildAnneeFabricationField(champ);
                   }
                   
                   // Champs texte standard

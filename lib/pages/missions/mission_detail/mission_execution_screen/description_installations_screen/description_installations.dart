@@ -43,7 +43,10 @@ class _DescriptionInstallationsScreenState extends ConsumerState<DescriptionInst
     setState(() => _isLoading = true);
     
     try {
-      // 1. Vérifier les sections de cartes (listes)
+      // Récupérer la description via le provider
+      ref.invalidate(descriptionInstallationsProvider(widget.mission.id));
+      final desc = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).load();
+
       final sectionsWithCards = [
         'alimentation_moyenne_tension',
         'alimentation_basse_tension',
@@ -55,11 +58,6 @@ class _DescriptionInstallationsScreenState extends ConsumerState<DescriptionInst
       ];
       
       final tempStatus = <String, bool>{};
-      
-      // Récupérer la description via le provider
-      ref.invalidate(descriptionInstallationsProvider(widget.mission.id));
-      final desc = await ref.read(descriptionInstallationsProvider(widget.mission.id).notifier).load();
-      
       for (var section in sectionsWithCards) {
         tempStatus[section] = desc.isSectionComplete(section);
       }
@@ -197,7 +195,7 @@ class _DescriptionInstallationsScreenState extends ConsumerState<DescriptionInst
               'onduleurs',
               ['MARQUE', 'TYPE', 'N° SERIE', 'PUISSANCE (KVA)', 'INTENSITE (A)', 'NOMBRE DE PHASE'],
             ),
-            
+
             _buildRadioTile(
               context,
               'Régime de neutre',

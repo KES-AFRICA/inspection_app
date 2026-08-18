@@ -826,21 +826,29 @@ class PdfReportService {
     entries.add(_SommaireEntry(titre: "3. Habilitation électrique du personnel d'intervention", key: 'renseignements_habilitation', level: 1));
 
     // 8. Description des installations
+    final bool hasItRegime = desc?.regimeNeutre != null &&
+        desc!.regimeNeutre!.split(',').map((e) => e.trim()).contains('IT');
+    final bool showCpiInSommaire = hasItRegime && (desc?.cpi.isNotEmpty == true);
+
+    int descSubIdx = 1;
     entries.add(_SommaireEntry(titre: "DESCRIPTION DES INSTALLATIONS", key: 'description', level: 0, isBold: true, isUppercase: true));
-    entries.add(_SommaireEntry(titre: "1. Caractéristiques de l'alimentation moyenne tension", key: 'desc_mt', level: 1));
-    entries.add(_SommaireEntry(titre: "2. Caractéristiques de l'alimentation basse tension sortie transformateur", key: 'desc_bt', level: 1));
-    entries.add(_SommaireEntry(titre: "3. Caractéristiques du groupe électrogène", key: 'desc_ge', level: 1));
-    entries.add(_SommaireEntry(titre: "4. Alimentation du groupe électrogène en carburant", key: 'desc_carburant', level: 1));
-    entries.add(_SommaireEntry(titre: "5. Caractéristiques de l'inverseur", key: 'desc_inverseur', level: 1));
-    entries.add(_SommaireEntry(titre: "6. Caractéristiques du stabilisateur", key: 'desc_stabilisateur', level: 1));
-    entries.add(_SommaireEntry(titre: "7. Caractéristiques des onduleurs", key: 'desc_onduleurs', level: 1));
-    entries.add(_SommaireEntry(titre: "8. Régime de neutre", key: 'desc_regime_neutre', level: 1));
-    entries.add(_SommaireEntry(titre: "9. Eclairage de sécurité", key: 'desc_eclairage', level: 1));
-    entries.add(_SommaireEntry(titre: "10. Modifications apportées aux installations", key: 'desc_modifications', level: 1));
-    entries.add(_SommaireEntry(titre: "11. Note de calcul des installations électriques", key: 'desc_note_calcul', level: 1));
-    entries.add(_SommaireEntry(titre: "12. Présence de paratonnerre", key: 'desc_paratonnerre', level: 1));
-    entries.add(_SommaireEntry(titre: "13. Registre de sécurité", key: 'desc_registre', level: 1));
-    entries.add(_SommaireEntry(titre: "14. Zones et Locaux à risque", key: 'desc_locaux_risques', level: 1));
+    entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques de l'alimentation moyenne tension", key: 'desc_mt', level: 1));
+    entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques de l'alimentation basse tension sortie transformateur", key: 'desc_bt', level: 1));
+    entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques du groupe électrogène", key: 'desc_ge', level: 1));
+    entries.add(_SommaireEntry(titre: "${descSubIdx++}. Alimentation du groupe électrogène en carburant", key: 'desc_carburant', level: 1));
+    entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques de l'inverseur", key: 'desc_inverseur', level: 1));
+    entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques du stabilisateur", key: 'desc_stabilisateur', level: 1));
+    entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques des onduleurs", key: 'desc_onduleurs', level: 1));
+    entries.add(_SommaireEntry(titre: "${descSubIdx++}. Régime de neutre", key: 'desc_regime_neutre', level: 1));
+    if (showCpiInSommaire) {
+      entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques du Contrôleur Permanent d'Isolement (CPI)", key: 'desc_cpi', level: 1));
+    }
+    entries.add(_SommaireEntry(titre: "${descSubIdx++}. Eclairage de sécurité", key: 'desc_eclairage', level: 1));
+    entries.add(_SommaireEntry(titre: "${descSubIdx++}. Modifications apportées aux installations", key: 'desc_modifications', level: 1));
+    entries.add(_SommaireEntry(titre: "${descSubIdx++}. Note de calcul des installations électriques", key: 'desc_note_calcul', level: 1));
+    entries.add(_SommaireEntry(titre: "${descSubIdx++}. Présence de paratonnerre", key: 'desc_paratonnerre', level: 1));
+    entries.add(_SommaireEntry(titre: "${descSubIdx++}. Registre de sécurité", key: 'desc_registre', level: 1));
+    entries.add(_SommaireEntry(titre: "${descSubIdx++}. Zones et Locaux à risque", key: 'desc_locaux_risques', level: 1));
 
     // 9. Liste récapitulative (si audit)
     if (audit != null) {
@@ -3991,11 +3999,13 @@ class PdfReportService {
     final pdfData = InstallationDescriptionPdfData.fromDescription(desc: desc, audit: audit);
     final safeDesc = desc ?? DescriptionInstallations.create('');
 
+    int descBodyIdx = 1;
+
     widgets.add(PageTracker(
       key: 'desc_mt',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('1. Caractéristiques de l\'alimentation moyenne tension'),
+      child: _subTitle('${descBodyIdx++}. Caractéristiques de l\'alimentation moyenne tension'),
     ));
     if (pdfData.mtRows.isNotEmpty) {
       widgets.add(_buildInstallationTableFromRows(pdfData.mtRows, sectionKey: 'MT'));
@@ -4007,7 +4017,7 @@ class PdfReportService {
       key: 'desc_bt',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('2. Caractéristiques de l\'alimentation basse tension sortie transformateur'),
+      child: _subTitle('${descBodyIdx++}. Caractéristiques de l\'alimentation basse tension sortie transformateur'),
     ));
     if (pdfData.btRows.isNotEmpty) {
       widgets.add(_buildInstallationTableFromRows(pdfData.btRows, sectionKey: 'BT'));
@@ -4019,7 +4029,7 @@ class PdfReportService {
       key: 'desc_ge',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('3. Caractéristiques du groupe électrogène'),
+      child: _subTitle('${descBodyIdx++}. Caractéristiques du groupe électrogène'),
     ));
     if (safeDesc.groupeElectrogene.isNotEmpty) {
       widgets.add(_buildInstallationTable(safeDesc.groupeElectrogene, sectionKey: 'GROUPE'));
@@ -4032,7 +4042,7 @@ class PdfReportService {
       key: 'desc_carburant',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('4. Alimentation du groupe électrogène en carburant'),
+      child: _subTitle('${descBodyIdx++}. Alimentation du groupe électrogène en carburant'),
     ));
     if (safeDesc.alimentationCarburant.isNotEmpty) {
       widgets.add(_buildInstallationTable(safeDesc.alimentationCarburant, sectionKey: 'CARBURANT'));
@@ -4045,7 +4055,7 @@ class PdfReportService {
       key: 'desc_inverseur',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('5. Caractéristiques de l\'inverseur'),
+      child: _subTitle('${descBodyIdx++}. Caractéristiques de l\'inverseur'),
     ));
     if (safeDesc.inverseur.isNotEmpty) {
       widgets.add(_buildInstallationTable(safeDesc.inverseur, sectionKey: 'INVERSEUR'));
@@ -4058,7 +4068,7 @@ class PdfReportService {
       key: 'desc_stabilisateur',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('6. Caractéristiques du stabilisateur'),
+      child: _subTitle('${descBodyIdx++}. Caractéristiques du stabilisateur'),
     ));
     if (safeDesc.stabilisateur.isNotEmpty) {
       widgets.add(_buildInstallationTable(safeDesc.stabilisateur, sectionKey: 'STABILISATEUR'));
@@ -4071,7 +4081,7 @@ class PdfReportService {
       key: 'desc_onduleurs',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('7. Caractéristiques des onduleurs'),
+      child: _subTitle('${descBodyIdx++}. Caractéristiques des onduleurs'),
     ));
     if (safeDesc.onduleurs.isNotEmpty) {
       widgets.add(_buildInstallationTable(safeDesc.onduleurs, sectionKey: 'ONDULEUR'));
@@ -4084,7 +4094,7 @@ class PdfReportService {
       key: 'desc_regime_neutre',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('8. Régime de neutre'),
+      child: _subTitle('${descBodyIdx++}. Régime de neutre'),
     ));
   
     String regimeAffichage = safeDesc.regimeNeutre ?? 'Non renseigné';
@@ -4095,11 +4105,24 @@ class PdfReportService {
     widgets.add(_bodyText('- $regimeAffichage'));
     widgets.add(pw.SizedBox(height: 5));
 
+    final bool hasItRegime = safeDesc.regimeNeutre != null &&
+        safeDesc.regimeNeutre!.split(',').map((e) => e.trim()).contains('IT');
+    if (hasItRegime && safeDesc.cpi.isNotEmpty) {
+      widgets.add(PageTracker(
+        key: 'desc_cpi',
+        registry: trackedPages,
+        offset: offset,
+        child: _subTitle('${descBodyIdx++}. Caractéristiques du Contrôleur Permanent d\'Isolement (CPI)'),
+      ));
+      widgets.add(_buildCpiTable(safeDesc.cpi));
+      widgets.add(pw.SizedBox(height: 8));
+    }
+
     widgets.add(PageTracker(
       key: 'desc_eclairage',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('9. Eclairage de sécurité'),
+      child: _subTitle('${descBodyIdx++}. Eclairage de sécurité'),
     ));
     widgets.add(_bodyText('- ${safeDesc.eclairageSecurite ?? 'Non renseigné'}'));
     widgets.add(pw.SizedBox(height: 5));
@@ -4108,7 +4131,7 @@ class PdfReportService {
       key: 'desc_modifications',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('10. Modifications apportées aux installations'),
+      child: _subTitle('${descBodyIdx++}. Modifications apportées aux installations'),
     ));
     widgets.add(_bodyText(safeDesc.modificationsInstallations ?? 'Sans objet'));
     widgets.add(pw.SizedBox(height: 5));
@@ -4117,7 +4140,7 @@ class PdfReportService {
       key: 'desc_note_calcul',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('11. Note de calcul des installations électriques'),
+      child: _subTitle('${descBodyIdx++}. Note de calcul des installations électriques'),
     ));
     widgets.add(_bodyText('- ${safeDesc.noteCalcul ?? 'Non transmis'}'));
     widgets.add(pw.SizedBox(height: 5));
@@ -4126,7 +4149,7 @@ class PdfReportService {
       key: 'desc_paratonnerre',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('12. Présence de paratonnerre'),
+      child: _subTitle('${descBodyIdx++}. Présence de paratonnerre'),
     ));
     widgets.add(_bodyText('Présence : ${safeDesc.presenceParatonnerre ?? 'NON'}'));
     if (safeDesc.analyseRisqueFoudre != null && safeDesc.analyseRisqueFoudre!.isNotEmpty) {
@@ -4141,7 +4164,7 @@ class PdfReportService {
       key: 'desc_registre',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('13. Registre de sécurité'),
+      child: _subTitle('${descBodyIdx++}. Registre de sécurité'),
     ));
     widgets.add(_bodyText('- ${safeDesc.registreSecurite ?? 'Non transmis'}'));
     widgets.add(pw.SizedBox(height: 5));
@@ -4150,7 +4173,7 @@ class PdfReportService {
       key: 'desc_locaux_risques',
       registry: trackedPages,
       offset: offset,
-      child: _subTitle('14. Zones et Locaux à risque'),
+      child: _subTitle('${descBodyIdx++}. Zones et Locaux à risque'),
     ));
 
     final riskItems = _collectRiskZonesAndLocaux(audit);
@@ -6512,6 +6535,70 @@ class PdfReportService {
     ];
   }
 
+  static pw.Widget _buildCpiTable(List<InstallationItem> cpiItems) {
+    if (cpiItems.isEmpty) return pw.SizedBox();
+
+    pw.TableRow rowInfo(String label, String value, {bool alt = false}) {
+      return pw.TableRow(
+        decoration: alt ? pw.BoxDecoration(color: tableRowAlt) : null,
+        children: [
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            child: pw.Text(label,
+                style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
+          ),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+            alignment: pw.Alignment.center,
+            child: pw.Text(value,
+                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                textAlign: pw.TextAlign.center),
+          ),
+        ],
+      );
+    }
+
+    final tables = <pw.Widget>[];
+    for (int i = 0; i < cpiItems.length; i++) {
+      final item = cpiItems[i];
+      final data = item.data;
+
+      String safeVal(String key) {
+        final val = data[key]?.trim();
+        return (val != null && val.isNotEmpty) ? val : 'Non renseigné';
+      }
+
+      final rows = <pw.TableRow>[
+        rowInfo('MARQUE', safeVal('MARQUE')),
+        rowInfo('TYPE', safeVal('TYPE')),
+        rowInfo('N° SÉRIE', safeVal('N° SÉRIE')),
+        rowInfo('RÉGIME DE NEUTRE SURVEILLÉ', 'IT'),
+        rowInfo('SEUIL DE RÉGLAGE (kΩ)', safeVal('SEUIL DE RÉGLAGE (kΩ)')),
+        rowInfo('REPORT D\'ALARME', safeVal('REPORT D\'ALARME')),
+        rowInfo('ANNÉE DE FABRICATION', safeVal('ANNÉE DE FABRICATION')),
+      ];
+
+      final tableWidget = pw.Table(
+        defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+        border: pw.TableBorder.all(color: borderColor, width: 0.4),
+        columnWidths: const {
+          0: pw.FlexColumnWidth(4.5),
+          1: pw.FlexColumnWidth(5.5),
+        },
+        children: rows,
+      );
+
+      tables.add(tableWidget);
+      if (i < cpiItems.length - 1) {
+        tables.add(pw.SizedBox(height: 6));
+      }
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: tables,
+    );
+  }
 
   static List<pw.Widget> _buildCoffret(
     CoffretArmoire coffret,
@@ -6521,8 +6608,6 @@ class PdfReportService {
   }) {
     final widgets = <pw.Widget>[pw.SizedBox(height: 6)];
     String safe(String v) => v.trim().isEmpty ? 'Non renseigné' : v;
-
-    // ── Photo interne (déduite du cache préchargé optimisé à 20 Ko) ─────────
     pw.MemoryImage? photoInterne = photoCache?[coffret];
     if (photoInterne == null && photoCache == null) {
       for (final src in [...coffret.photosInternes, ...coffret.photos, ...coffret.photosExternes]) {

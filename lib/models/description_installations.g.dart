@@ -27,6 +27,7 @@ class DescriptionInstallationsAdapter
       inverseur: (fields[5] as List?)?.cast<InstallationItem>(),
       stabilisateur: (fields[6] as List?)?.cast<InstallationItem>(),
       onduleurs: (fields[7] as List?)?.cast<InstallationItem>(),
+      cpi: (fields[18] as List?)?.cast<InstallationItem>(),
       regimeNeutre: fields[8] as String?,
       regimeNeutreDetail: fields[17] as String?,
       eclairageSecurite: fields[9] as String?,
@@ -43,7 +44,7 @@ class DescriptionInstallationsAdapter
   @override
   void write(BinaryWriter writer, DescriptionInstallations obj) {
     writer
-      ..writeByte(18)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)
@@ -60,6 +61,8 @@ class DescriptionInstallationsAdapter
       ..write(obj.stabilisateur)
       ..writeByte(7)
       ..write(obj.onduleurs)
+      ..writeByte(18)
+      ..write(obj.cpi)
       ..writeByte(8)
       ..write(obj.regimeNeutre)
       ..writeByte(17)

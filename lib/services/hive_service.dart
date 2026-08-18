@@ -892,6 +892,9 @@ static Future<bool> addInstallationItemToSection({
       case 'onduleurs':
         desc.onduleurs.add(item);
         break;
+      case 'cpi':
+        desc.cpi.add(item);
+        break;
       default:
         if (kDebugMode) print('❌ Section inconnue: $section');
         return false;
@@ -953,6 +956,11 @@ static Future<bool> updateInstallationItemInSection({
           desc.onduleurs[index] = item;
         }
         break;
+      case 'cpi':
+        if (index < desc.cpi.length) {
+          desc.cpi[index] = item;
+        }
+        break;
       default:
         if (kDebugMode) print('❌ Section inconnue: $section');
         return false;
@@ -990,6 +998,8 @@ static Future<List<InstallationItem>> getInstallationItemsFromSection({
         return desc.stabilisateur;
       case 'onduleurs':
         return desc.onduleurs;
+      case 'cpi':
+        return desc.cpi;
       default:
         if (kDebugMode) print('❌ Section inconnue: $section');
         return [];
@@ -1043,6 +1053,11 @@ static Future<bool> removeInstallationItemFromSection({
       case 'onduleurs':
         if (index < desc.onduleurs.length) {
           desc.onduleurs.removeAt(index);
+        }
+        break;
+      case 'cpi':
+        if (index < desc.cpi.length) {
+          desc.cpi.removeAt(index);
         }
         break;
       default:

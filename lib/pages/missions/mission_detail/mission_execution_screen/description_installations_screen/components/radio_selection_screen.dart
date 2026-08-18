@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/models/mission.dart';
+import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 
@@ -31,6 +32,15 @@ class _RadioSelectionScreenState extends ConsumerState<RadioSelectionScreen> {
   final TextEditingController _autreController = TextEditingController();
   bool _showAutreField = false;
 
+  // Contrôleurs et états CPI
+  final TextEditingController _cpiMarqueController = TextEditingController();
+  final TextEditingController _cpiTypeController = TextEditingController();
+  final TextEditingController _cpiNumeroSerieController = TextEditingController();
+  final TextEditingController _cpiSeuilController = TextEditingController();
+  String _cpiReportAlarme = 'NON RENSEIGNÉ';
+  String _cpiAnneeFabrication = 'NON RENSEIGNÉE';
+  bool _hasExistingCpi = false;
+
   @override
   void initState() {
     super.initState();
@@ -40,6 +50,10 @@ class _RadioSelectionScreenState extends ConsumerState<RadioSelectionScreen> {
   @override
   void dispose() {
     _autreController.dispose();
+    _cpiMarqueController.dispose();
+    _cpiTypeController.dispose();
+    _cpiNumeroSerieController.dispose();
+    _cpiSeuilController.dispose();
     super.dispose();
   }
 
@@ -74,6 +88,18 @@ class _RadioSelectionScreenState extends ConsumerState<RadioSelectionScreen> {
               _autreController.text = autres.join(', ');
             }
           }
+        }
+
+        // Chargement des données CPI existantes
+        if (desc.cpi.isNotEmpty) {
+          _hasExistingCpi = true;
+          final cpiData = desc.cpi.first.data;
+          _cpiMarqueController.text = cpiData['MARQUE'] ?? '';
+          _cpiTypeController.text = cpiData['TYPE'] ?? '';
+          _cpiNumeroSerieController.text = cpiData['N° SÉRIE'] ?? '';
+          _cpiSeuilController.text = cpiData['SEUIL DE RÉGLAGE (kΩ)'] ?? '';
+          _cpiReportAlarme = cpiData['REPORT D\'ALARME'] ?? 'NON RENSEIGNÉ';
+          _cpiAnneeFabrication = cpiData['ANNÉE DE FABRICATION'] ?? 'NON RENSEIGNÉE';
         }
       } else {
         switch (widget.field) {
@@ -111,6 +137,24 @@ class _RadioSelectionScreenState extends ConsumerState<RadioSelectionScreen> {
 
       final resultString = listToSave.join(', ');
       final success = await notifier.updateDescriptionSelection('regime_neutre', resultString);
+
+      if (_selectedRegimes.contains('IT')) {
+        final cpiData = {
+          'MARQUE': _cpiMarqueController.text.trim(),
+          'TYPE': _cpiTypeController.text.trim(),
+          'N° SÉRIE': _cpiNumeroSerieController.text.trim(),
+          'RÉGIME DE NEUTRE SURVEILLÉ': 'IT',
+          'SEUIL DE RÉGLAGE (kΩ)': _cpiSeuilController.text.trim(),
+          'REPORT D\'ALARME': _cpiReportAlarme,
+          'ANNÉE DE FABRICATION': _cpiAnneeFabrication,
+        };
+        final cpiItem = InstallationItem(data: cpiData);
+        if (!_hasExistingCpi) {
+          await notifier.addInstallationItem('cpi', cpiItem);
+        } else {
+          await notifier.updateInstallationItem('cpi', 0, cpiItem);
+        }
+      }
 
       if (success) {
         if (mounted) {
@@ -189,6 +233,9 @@ class _RadioSelectionScreenState extends ConsumerState<RadioSelectionScreen> {
       {'key': 'Autre', 'title': 'Autre régime / Spécifique'},
     ];
 
+    final currentYear = DateTime.now().year;
+    final yearList = ['NON RENSEIGNÉE', ...List.generate(currentYear - 1950 + 1, (i) => '${currentYear - i}')];
+
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
@@ -202,41 +249,170 @@ class _RadioSelectionScreenState extends ConsumerState<RadioSelectionScreen> {
           final title = opt['title']!;
           final isChecked = _selectedRegimes.contains(key);
 
-          return Card(
-            elevation: 0,
-            margin: const EdgeInsets.only(bottom: 10),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-              side: BorderSide(
-                color: isChecked ? AppTheme.primaryBlue : Colors.grey.shade300,
-                width: isChecked ? 2 : 1,
-              ),
-            ),
-            color: isChecked ? AppTheme.primaryBlue.withValues(alpha: 0.05) : Colors.white,
-            child: CheckboxListTile(
-              value: isChecked,
-              onChanged: (val) {
-                setState(() {
-                  if (val == true) {
-                    _selectedRegimes.add(key);
-                    if (key == 'Autre') _showAutreField = true;
-                  } else {
-                    _selectedRegimes.remove(key);
-                    if (key == 'Autre') _showAutreField = false;
-                  }
-                });
-              },
-              title: Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: isChecked ? FontWeight.bold : FontWeight.w500,
-                  color: isChecked ? AppTheme.primaryBlue : Colors.black87,
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Card(
+                elevation: 0,
+                margin: const EdgeInsets.only(bottom: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                  side: BorderSide(
+                    color: isChecked ? AppTheme.primaryBlue : Colors.grey.shade300,
+                    width: isChecked ? 2 : 1,
+                  ),
+                ),
+                color: isChecked ? AppTheme.primaryBlue.withValues(alpha: 0.05) : Colors.white,
+                child: CheckboxListTile(
+                  value: isChecked,
+                  onChanged: (val) {
+                    setState(() {
+                      if (val == true) {
+                        _selectedRegimes.add(key);
+                        if (key == 'Autre') _showAutreField = true;
+                      } else {
+                        _selectedRegimes.remove(key);
+                        if (key == 'Autre') _showAutreField = false;
+                      }
+                    });
+                  },
+                  title: Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: isChecked ? FontWeight.bold : FontWeight.w500,
+                      color: isChecked ? AppTheme.primaryBlue : Colors.black87,
+                    ),
+                  ),
+                  activeColor: AppTheme.primaryBlue,
+                  controlAffinity: ListTileControlAffinity.leading,
                 ),
               ),
-              activeColor: AppTheme.primaryBlue,
-              controlAffinity: ListTileControlAffinity.leading,
-            ),
+
+              // Formulaire CPI intégré directement sous le Régime IT
+              if (key == 'IT' && isChecked)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16, left: 8, right: 8),
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade50.withValues(alpha: 0.5),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.primaryBlue.withValues(alpha: 0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.sensors_outlined, color: AppTheme.primaryBlue, size: 20),
+                          const SizedBox(width: 8),
+                          const Expanded(
+                            child: Text(
+                              'Caractéristiques du CPI (Contrôleur Permanent d\'Isolement)',
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryBlue,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _cpiMarqueController,
+                        decoration: InputDecoration(
+                          labelText: 'MARQUE',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _cpiTypeController,
+                        decoration: InputDecoration(
+                          labelText: 'TYPE',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _cpiNumeroSerieController,
+                        decoration: InputDecoration(
+                          labelText: 'N° SÉRIE',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextFormField(
+                        initialValue: 'IT',
+                        enabled: false,
+                        decoration: InputDecoration(
+                          labelText: 'RÉGIME DE NEUTRE SURVEILLÉ',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          filled: true,
+                          fillColor: Colors.grey.shade100,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      TextField(
+                        controller: _cpiSeuilController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          labelText: 'SEUIL DE RÉGLAGE (kΩ)',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        value: _cpiReportAlarme,
+                        decoration: InputDecoration(
+                          labelText: 'REPORT D\'ALARME',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                        items: const [
+                          DropdownMenuItem(value: 'NON RENSEIGNÉ', child: Text('NON RENSEIGNÉ')),
+                          DropdownMenuItem(value: 'OUI', child: Text('OUI')),
+                          DropdownMenuItem(value: 'NON', child: Text('NON')),
+                        ],
+                        onChanged: (v) {
+                          if (v != null) setState(() => _cpiReportAlarme = v);
+                        },
+                      ),
+                      const SizedBox(height: 10),
+                      DropdownButtonFormField<String>(
+                        value: _cpiAnneeFabrication,
+                        decoration: InputDecoration(
+                          labelText: 'ANNÉE DE FABRICATION',
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                          filled: true,
+                          fillColor: Colors.white,
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        ),
+                        items: yearList.map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
+                        onChanged: (v) {
+                          if (v != null) setState(() => _cpiAnneeFabrication = v);
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+            ],
           );
         }),
 

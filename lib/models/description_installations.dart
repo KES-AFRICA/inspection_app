@@ -35,6 +35,10 @@ class DescriptionInstallations extends HiveObject {
   @HiveField(7)
   List<InstallationItem> onduleurs;
 
+  // Caractéristiques du Contrôleur Permanent d'Isolement (CPI)
+  @HiveField(18)
+  List<InstallationItem> cpi;
+
   // Sélections radio
   @HiveField(8)
   String? regimeNeutre;
@@ -76,6 +80,7 @@ class DescriptionInstallations extends HiveObject {
     List<InstallationItem>? inverseur,
     List<InstallationItem>? stabilisateur,
     List<InstallationItem>? onduleurs,
+    List<InstallationItem>? cpi,
     this.regimeNeutre,
     this.regimeNeutreDetail,
     this.eclairageSecurite,
@@ -92,7 +97,8 @@ class DescriptionInstallations extends HiveObject {
         alimentationCarburant = alimentationCarburant ?? [],
         inverseur = inverseur ?? [],
         stabilisateur = stabilisateur ?? [],
-        onduleurs = onduleurs ?? [];
+        onduleurs = onduleurs ?? [],
+        cpi = cpi ?? [];
 
   factory DescriptionInstallations.create(String missionId) {
     return DescriptionInstallations(
@@ -105,6 +111,7 @@ class DescriptionInstallations extends HiveObject {
       inverseur: [],
       stabilisateur: [],
       onduleurs: [],
+      cpi: [],
     );
   }
 
@@ -132,6 +139,9 @@ class DescriptionInstallations extends HiveObject {
       case 'onduleurs':
         onduleurs.add(item);
         break;
+      case 'cpi':
+        cpi.add(item);
+        break;
       default:
         throw Exception('Section inconnue: $sectionKey');
     }
@@ -154,6 +164,8 @@ class DescriptionInstallations extends HiveObject {
         return stabilisateur.isNotEmpty;
       case 'onduleurs':
         return onduleurs.isNotEmpty;
+      case 'cpi':
+        return cpi.isNotEmpty;
       case 'regime_neutre':
         return regimeNeutre?.isNotEmpty == true;
       case 'eclairage_securite':
@@ -175,7 +187,9 @@ class DescriptionInstallations extends HiveObject {
 
   // Progression
   Map<String, bool> getProgress() {
-    return {
+    final hasIt = regimeNeutre != null &&
+        regimeNeutre!.split(',').map((e) => e.trim()).contains('IT');
+    final progress = <String, bool>{
       'alimentation_moyenne_tension': isSectionComplete('alimentation_moyenne_tension'),
       'alimentation_basse_tension': isSectionComplete('alimentation_basse_tension'),
       'groupe_electrogene': isSectionComplete('groupe_electrogene'),
@@ -183,6 +197,7 @@ class DescriptionInstallations extends HiveObject {
       'inverseur': isSectionComplete('inverseur'),
       'stabilisateur': isSectionComplete('stabilisateur'),
       'onduleurs': isSectionComplete('onduleurs'),
+      if (hasIt) 'cpi': isSectionComplete('cpi'),
       'regime_neutre': isSectionComplete('regime_neutre'),
       'eclairage_securite': isSectionComplete('eclairage_securite'),
       'modifications_installations': isSectionComplete('modifications_installations'),
@@ -190,6 +205,7 @@ class DescriptionInstallations extends HiveObject {
       'registre_securite': isSectionComplete('registre_securite'),
       'paratonnerre': isSectionComplete('paratonnerre'),
     };
+    return progress;
   }
 
   int getCompletionPercentage() {
