@@ -179,6 +179,16 @@ class PdfReportService {
       'INTENSITE (A)',
       'NOMBRE DE PHASE',
     ],
+    'CPI': [
+      'N\u00B0',
+      'MARQUE',
+      'TYPE',
+      'N\u00B0 SÉRIE',
+      'RÉGIME DE NEUTRE SURVEILLÉ',
+      'SEUIL DE RÉGLAGE (kΩ)',
+      'REPORT D\'ALARME',
+      'ANNÉE DE FABRICATION',
+    ],
   };
 
   /// Charge toutes les images necessaires avec compression adaptative des assets statiques
@@ -6538,67 +6548,64 @@ class PdfReportService {
   }
 
   static pw.Widget _buildCpiTable(List<InstallationItem> cpiItems) {
-    pw.TableRow rowInfo(String label, String value, {bool alt = false}) {
-      return pw.TableRow(
-        decoration: alt ? pw.BoxDecoration(color: tableRowAlt) : null,
-        children: [
-          pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-            child: pw.Text(label,
-                style: pw.TextStyle(font: _fontBold, fontSize: fsSmall)),
-          ),
-          pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-            alignment: pw.Alignment.center,
-            child: pw.Text(value,
-                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
-                textAlign: pw.TextAlign.center),
-          ),
-        ],
-      );
-    }
+    final columns = _columnOrderBySection['CPI'] ?? [
+      'N\u00B0',
+      'MARQUE',
+      'TYPE',
+      'N\u00B0 SÉRIE',
+      'RÉGIME DE NEUTRE SURVEILLÉ',
+      'SEUIL DE RÉGLAGE (kΩ)',
+      'REPORT D\'ALARME',
+      'ANNÉE DE FABRICATION',
+    ];
 
+    final dataCols = columns.where((c) => c != 'N\u00B0' && c != 'N°').toList();
     final itemsToRender = cpiItems.isNotEmpty ? cpiItems : [InstallationItem(data: {})];
-    final tables = <pw.Widget>[];
 
-    for (int i = 0; i < itemsToRender.length; i++) {
-      final item = itemsToRender[i];
-      final data = item.data;
+    return pw.Table(
+      border: pw.TableBorder.all(color: borderColor, width: 0.4),
+      columnWidths: {
+        0: const pw.FixedColumnWidth(18),
+        ...{for (var i = 1; i <= dataCols.length; i++) i: const pw.FlexColumnWidth(1)},
+      },
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: accentColor),
+          children: [
+            _cell('N\u00B0', isHeader: true, centered: true),
+            ...dataCols.map((c) => _cell(c, isHeader: true, centered: true)),
+          ],
+        ),
+        ...itemsToRender.asMap().entries.map((e) {
+          final idx = e.key;
+          final item = e.value;
+          final data = item.data;
 
-      String safeVal(String key) {
-        final val = data[key]?.trim();
-        return (val != null && val.isNotEmpty) ? val : 'Non renseigné';
-      }
-
-      final rows = <pw.TableRow>[
-        rowInfo('MARQUE', safeVal('MARQUE')),
-        rowInfo('TYPE', safeVal('TYPE')),
-        rowInfo('N° SÉRIE', safeVal('N° SÉRIE')),
-        rowInfo('RÉGIME DE NEUTRE SURVEILLÉ', 'IT'),
-        rowInfo('SEUIL DE RÉGLAGE (kΩ)', safeVal('SEUIL DE RÉGLAGE (kΩ)')),
-        rowInfo('REPORT D\'ALARME', safeVal('REPORT D\'ALARME')),
-        rowInfo('ANNÉE DE FABRICATION', safeVal('ANNÉE DE FABRICATION')),
-      ];
-
-      final tableWidget = pw.Table(
-        defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
-        border: pw.TableBorder.all(color: borderColor, width: 0.4),
-        columnWidths: const {
-          0: pw.FlexColumnWidth(4.5),
-          1: pw.FlexColumnWidth(5.5),
-        },
-        children: rows,
-      );
-
-      tables.add(tableWidget);
-      if (i < itemsToRender.length - 1) {
-        tables.add(pw.SizedBox(height: 6));
-      }
-    }
-
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: tables,
+          return pw.TableRow(
+            decoration: pw.BoxDecoration(color: idx.isOdd ? tableRowAlt : PdfColors.white),
+            children: [
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  '${idx + 1}',
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                ),
+              ),
+              ...dataCols.map((key) {
+                String val;
+                if (key == 'RÉGIME DE NEUTRE SURVEILLÉ') {
+                  val = 'IT';
+                } else {
+                  final raw = data[key]?.trim();
+                  val = (raw != null && raw.isNotEmpty) ? raw : 'Non renseigné';
+                }
+                return _cell(val, isHeader: false, centered: true);
+              }),
+            ],
+          );
+        }),
+      ],
     );
   }
 

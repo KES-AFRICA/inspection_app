@@ -57,7 +57,11 @@ class DescriptionInstallationsLocalDataSourceImpl implements DescriptionInstalla
   }) async {
     try {
       final desc = await getOrCreateDescriptionInstallations(missionId);
-      desc.addInstallationItem(section, item);
+      if (section == 'cpi') {
+        desc.cpi = [item];
+      } else {
+        desc.addInstallationItem(section, item);
+      }
       await saveDescriptionInstallations(desc);
       return true;
     } catch (e) {
@@ -112,9 +116,7 @@ class DescriptionInstallationsLocalDataSourceImpl implements DescriptionInstalla
           }
           break;
         case 'cpi':
-          if (index < desc.cpi.length) {
-            desc.cpi[index] = item;
-          }
+          desc.cpi = [item];
           break;
         default:
           return false;
