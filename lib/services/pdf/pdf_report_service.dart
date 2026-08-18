@@ -1983,79 +1983,84 @@ class PdfReportService {
           offset: offset,
           child: _subSectionHeader('7. Appréciation globale'),
         ),
-        pw.SizedBox(height: 4),
+        pw.SizedBox(height: 6),
         if (data.appreciationGlobale.assessmentParagraph1.isNotEmpty)
-          pw.Text(
-            data.appreciationGlobale.assessmentParagraph1,
-            style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-            textAlign: pw.TextAlign.justify,
-          ),
+          _buildFormattedText(data.appreciationGlobale.assessmentParagraph1),
       ],
     ));
-    widgets.add(pw.SizedBox(height: 4));
+    widgets.add(pw.SizedBox(height: 6));
     if (data.appreciationGlobale.assessmentParagraph2.isNotEmpty) {
-      widgets.add(pw.Text(
-        data.appreciationGlobale.assessmentParagraph2,
-        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        textAlign: pw.TextAlign.justify,
-      ));
-      widgets.add(pw.SizedBox(height: 4));
+      widgets.add(_buildFormattedText(data.appreciationGlobale.assessmentParagraph2));
+      widgets.add(pw.SizedBox(height: 6));
     }
     if (data.appreciationGlobale.assessmentParagraph3.isNotEmpty) {
-      widgets.add(pw.Text(
-        data.appreciationGlobale.assessmentParagraph3,
-        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        textAlign: pw.TextAlign.justify,
-      ));
+      widgets.add(_buildFormattedText(data.appreciationGlobale.assessmentParagraph3));
       widgets.add(pw.SizedBox(height: 8));
     }
 
     if (data.appreciationGlobale.actionPlanHeader.isNotEmpty) {
-      widgets.add(pw.Text(
-        data.appreciationGlobale.actionPlanHeader,
-        style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        textAlign: pw.TextAlign.justify,
-      ));
-      widgets.add(pw.SizedBox(height: 4));
+      widgets.add(_buildFormattedText(data.appreciationGlobale.actionPlanHeader));
+      widgets.add(pw.SizedBox(height: 6));
     }
 
     if (data.appreciationGlobale.actionPlanSteps.isNotEmpty) {
       for (int i = 0; i < data.appreciationGlobale.actionPlanSteps.length; i++) {
         final step = data.appreciationGlobale.actionPlanSteps[i];
         widgets.add(pw.Padding(
-          padding: const pw.EdgeInsets.only(left: 10, bottom: 3),
+          padding: const pw.EdgeInsets.only(left: 12, bottom: 4),
           child: pw.Row(
             crossAxisAlignment: pw.CrossAxisAlignment.start,
             children: [
               pw.Container(
-                width: 3.5,
-                height: 3.5,
-                margin: const pw.EdgeInsets.only(top: 4, right: 6),
+                width: 4,
+                height: 4,
+                margin: const pw.EdgeInsets.only(top: 4, right: 8),
                 decoration: pw.BoxDecoration(color: accentColor, shape: pw.BoxShape.circle),
               ),
               pw.Expanded(
-                child: pw.Text(
-                  step,
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-                  textAlign: pw.TextAlign.justify,
-                ),
+                child: _buildFormattedText(step),
               ),
             ],
           ),
         ));
       }
-      widgets.add(pw.SizedBox(height: 6));
+      widgets.add(pw.SizedBox(height: 8));
     }
 
     if (data.appreciationGlobale.counterVisitParagraph.isNotEmpty) {
-      widgets.add(pw.Text(
-        data.appreciationGlobale.counterVisitParagraph,
-        style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
-        textAlign: pw.TextAlign.justify,
-      ));
+      widgets.add(_buildFormattedText(data.appreciationGlobale.counterVisitParagraph));
     }
 
     return widgets;
+  }
+
+  static pw.Widget _buildFormattedText(
+    String text, {
+    pw.TextStyle? defaultStyle,
+    pw.TextAlign textAlign = pw.TextAlign.justify,
+  }) {
+    final style = defaultStyle ?? pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5);
+    final boldStyle = style.copyWith(font: _fontBold);
+
+    final parts = text.split('**');
+    if (parts.length == 1) {
+      return pw.Text(text, style: style, textAlign: textAlign);
+    }
+
+    final spans = <pw.TextSpan>[];
+    for (int i = 0; i < parts.length; i++) {
+      if (parts[i].isEmpty) continue;
+      final isBold = i % 2 == 1;
+      spans.add(pw.TextSpan(
+        text: parts[i],
+        style: isBold ? boldStyle : style,
+      ));
+    }
+
+    return pw.RichText(
+      textAlign: textAlign,
+      text: pw.TextSpan(children: spans),
+    );
   }
 
   static pw.Widget _subSectionHeader(String title) {
@@ -6622,7 +6627,7 @@ class PdfReportService {
           'ESSAI DE DÉCLENCHEMENT DU CPI',
           style: pw.TextStyle(
             font: _fontBold,
-            fontSize: fsSmall,
+            fontSize: fsSmall + 0.5,
             color: PdfColor.fromHex('1B365D'),
           ),
         ),
@@ -6631,7 +6636,7 @@ class PdfReportService {
           'L\'essai consiste à simuler, au moyen d\'une résistance calibrée, un défaut d\'isolement sur le réseau IT surveillé, et à vérifier que le Contrôleur Permanent d\'Isolement détecte ce défaut et déclenche l\'alarme (locale et/ou à distance) au seuil de réglage configuré, sans provoquer de coupure de l\'installation. L\'essai est satisfaisant si l\'alarme se déclenche au seuil attendu et si son report (local et/ou à distance) est correctement transmis.',
           style: pw.TextStyle(
             font: _fontRegular,
-            fontSize: fsSmall - 0.5,
+            fontSize: fsSmall ,
             color: PdfColors.black,
           ),
         ),
@@ -6640,7 +6645,7 @@ class PdfReportService {
           'VÉRIFICATION DU REPORT D\'ALARME',
           style: pw.TextStyle(
             font: _fontBold,
-            fontSize: fsSmall,
+            fontSize: fsSmall + 0.5,
             color: PdfColor.fromHex('1B365D'),
           ),
         ),
@@ -6649,7 +6654,7 @@ class PdfReportService {
           'Le report d\'alarme (voyant local, report GTB/GTC, ou tout autre dispositif de signalisation à distance) est contrôlé conjointement afin de s\'assurer que le personnel d\'exploitation est effectivement informé en cas de premier défaut d\'isolement, condition indispensable à la sécurité en régime IT (absence de coupure automatique au premier défaut).',
           style: pw.TextStyle(
             font: _fontRegular,
-            fontSize: fsSmall - 0.5,
+            fontSize: fsSmall ,
             color: PdfColors.black,
           ),
         ),

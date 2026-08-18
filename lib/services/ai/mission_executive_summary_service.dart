@@ -697,13 +697,33 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
         'Priorité 3 — Moyen terme : finaliser l\'identification complète des circuits, le repérage et la conformité des répartiteurs, afin de sécuriser durablement l\'exploitation et la maintenance du site.';
 
     final assessment1 = total == 0
-        ? 'La vérification périodique des installations électriques du site ${snapshot.siteName} met en évidence un bon niveau de maîtrise du risque électrique.'
-        : 'La vérification périodique des installations électriques du site ${snapshot.siteName} met en évidence un niveau de maîtrise du risque électrique insuffisant, nécessitant une vigilance renforcée et des actions correctives structurées. Avec une densité de $globalDensityStr NC/équipement et $pctSumStrText % des écarts classés critiques ou majeurs, le site présente un profil de risque nécessitant un plan de remise à niveau structuré, hiérarchisé selon les priorités de la sous-section 6.';
+        ? 'La vérification périodique des installations électriques du site **${snapshot.siteName.toUpperCase()}** met en évidence un bon niveau de maîtrise du risque électrique.'
+        : 'La vérification périodique des installations électriques du site **${snapshot.siteName.toUpperCase()}** met en évidence un niveau de maîtrise du risque électrique nécessitant **une vigilance renforcée et des actions correctives structurées.**';
 
-    final assessment2 = '';
-    final assessment3 = '';
-    final actionSteps = <String>[];
-    final counterVisit = '';
+    final assessment2 = total == 0
+        ? ''
+        : 'L\'inspection a permis d\'identifier **$total non-conformités**, dont **$critique critiques** et **$majeure majeures**, avec une densité moyenne de **$globalDensityStr non-conformités par équipement contrôlé**.';
+
+    final topCategoryName = top1Name.isNotEmpty ? top1Name : 'Armoires et Coffrets';
+
+    final assessment3 = total == 0
+        ? ''
+        : 'L\'analyse des résultats met en évidence une concentration des anomalies sur la catégorie **$topCategoryName**, qui constituent les équipements les plus sensibles au regard de la sécurité et de la continuité d\'exploitation.';
+
+    final actionHeader = '**Au regard de ces constats, il est recommandé de mettre en œuvre sans délai un plan d\'actions correctives structuré, fondé sur une hiérarchisation des risques, selon les priorités suivantes :**';
+
+    final actionSteps = <String>[
+      '**Supprimer immédiatement** toutes les situations présentant un danger grave et imminent pour les personnes ou les installations.',
+      '**Remettre en conformité** les dispositifs de protection électrique (protection contre les contacts directs et indirects, surintensités et courts-circuits).',
+      '**Réhabiliter** les armoires électriques, coffrets de distribution et tableaux généraux en traitant les défauts de câblage, raccordement et repérage.',
+      '**Reprendre** l\'identification, le repérage et la documentation des circuits électriques afin de sécuriser l\'exploitation.',
+      '**Renforcer** le programme de maintenance préventive et de contrôle périodique en intégrant des vérifications systématiques.',
+      '**Mettre en place** un plan de suivi des non-conformités avec définition des responsabilités, échéances de traitement et indicateurs de performance.',
+    ];
+
+    final counterVisit = total == 0
+        ? ''
+        : 'Une **contre-visite de vérification réglementaire** devra être programmée à l\'issue des travaux afin de confirmer la levée des non-conformités, d\'évaluer l\'efficacité des actions mises en œuvre et d\'attester du rétablissement d\'un niveau de sécurité compatible avec les exigences réglementaires et les bonnes pratiques d\'exploitation.';
 
     return ExecutiveSummaryData(
       contexte: SectionContexte(paragraph: contextText),
@@ -738,7 +758,7 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
         assessmentParagraph1: assessment1,
         assessmentParagraph2: assessment2,
         assessmentParagraph3: assessment3,
-        actionPlanHeader: 'Au regard de ces constats, il est recommandé de mettre en œuvre sans délai un plan d\'actions correctives structuré, fondé sur une hiérarchisation des risques, selon les priorités suivantes :',
+        actionPlanHeader: actionHeader,
         actionPlanSteps: actionSteps,
         counterVisitParagraph: counterVisit,
       ),
