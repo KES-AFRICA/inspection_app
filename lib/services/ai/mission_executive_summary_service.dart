@@ -542,9 +542,9 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
       final pctCritStrText = pctCritVal.toStringAsFixed(1).replaceAll('.', ',');
       final pctMajStrText = pctMajVal.toStringAsFixed(1).replaceAll('.', ',');
       commentarySynthese =
-          'Avec $pctCritStrText % de non-conformités classées critiques et $pctMajStrText % classées majeures '
-          '— soit $pctSumStrText % des écarts relevant des deux niveaux de gravité les plus élevés —, '
-          'la situation dépasse très largement les seuils habituellement considérés comme acceptables '
+          'Avec $pctCritStrText % de non-conformités classées critiques et $pctMajStrText % classées majeures, '
+          'soit $pctSumStrText % des écarts relevant des deux niveaux de gravité les plus élevés. '
+          'La situation dépasse très largement les seuils habituellement considérés comme acceptables '
           '(de l\'ordre de 10 à 15 % en exploitation maîtrisée) et caractérise un site en risque avéré nécessitant une intervention corrective immédiate.';
     }
 
@@ -617,7 +617,7 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
       }
     } catch (_) {}
 
-    final topRiskFamilies = snapshot.riskFamilies.take(4).toList();
+    final topRiskFamilies = snapshot.riskFamilies.take(5).toList();
     final riskRows = <RiskFactorRowData>[];
     for (int i = 0; i < topRiskFamilies.length; i++) {
       final r = topRiskFamilies[i];
@@ -657,9 +657,12 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
 
     final int topRiskCount = topRiskFamilies.fold<int>(0, (sum, r) => sum + ((r['count'] as int?) ?? 0));
     final String pctSumRiskStr = total > 0 ? ((topRiskCount / total) * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
+    final String countWord = topRiskFamilies.length == 4
+        ? 'quatre'
+        : (topRiskFamilies.length == 5 ? 'cinq' : '${topRiskFamilies.length}');
     final riskCommentary = total == 0
         ? 'Aucun facteur de risque prépondérant décelé.'
-        : 'Ces ${riskRows.length} facteurs représentent ensemble $pctSumRiskStr % des occurrences répertoriées '
+        : 'Ces $countWord facteurs représentent ensemble $pctSumRiskStr % des occurrences répertoriées '
             '(sur la base des $total occurrences de la statistique par nature de défaut), ce qui en fait la priorité du plan d\'actions correctives.';
 
     final top5Defects = snapshot.topDefects.take(5).toList();
@@ -679,7 +682,7 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
     final summaryObs = total == 0
         ? ''
         : 'Ces ${top5Defects.length} premières catégories concentrent à elles seules $top5PctStr % de l\'ensemble des occurrences relevées '
-            '— voir l\'analyse de Pareto complète dans la section ANALYSE STATISTIQUE.';
+            ', voir l\'analyse de Pareto complète dans la section ANALYSE STATISTIQUE.';
 
     final top1CritCount = top1 != null ? (top1['critiqueCount'] as int? ?? 0) : 0;
     final priority1 = critique > 0
@@ -697,23 +700,10 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
         ? 'La vérification périodique des installations électriques du site ${snapshot.siteName} met en évidence un bon niveau de maîtrise du risque électrique.'
         : 'La vérification périodique des installations électriques du site ${snapshot.siteName} met en évidence un niveau de maîtrise du risque électrique insuffisant, nécessitant une vigilance renforcée et des actions correctives structurées. Avec une densité de $globalDensityStr NC/équipement et $pctSumStrText % des écarts classés critiques ou majeurs, le site présente un profil de risque nécessitant un plan de remise à niveau structuré, hiérarchisé selon les priorités de la sous-section 6.';
 
-    final assessment2 =
-        'L\'inspection a permis d\'identifier $total non-conformités, dont $critique critiques et $majeure majeures, avec une densité moyenne de $globalDensityStr non-conformité${total > 1 ? 's' : ''} par équipement contrôlé.';
-
-    final assessment3 =
-        'L\'analyse des résultats met en évidence une concentration des anomalies sur la catégorie $top1Name${top2Name.isNotEmpty ? ' et $top2Name' : ''}, qui constituent les équipements les plus sensibles au regard de la sécurité et de la continuité d\'exploitation.';
-
-    final actionSteps = <String>[
-      'Supprimer immédiatement toutes les situations présentant un danger grave et imminent pour les personnes ou les installations.',
-      'Remettre en conformité les dispositifs de protection électrique (protection contre les contacts directs et indirects, surintensités et courts-circuits).',
-      'Réhabiliter les armoires électriques, coffrets de distribution et tableaux généraux en traitant les défauts de câblage, raccordement et repérage.',
-      'Reprendre l\'identification, le repérage et la documentation des circuits électriques afin de sécuriser l\'exploitation.',
-      'Renforcer le programme de maintenance préventive et de contrôle périodique en intégrant des vérifications systématiques.',
-      'Mettre en place un plan de suivi des non-conformités avec définition des responsabilités, échéances de traitement et indicateurs de performance.',
-    ];
-
-    final counterVisit =
-        'Une contre-visite de vérification réglementaire devra être programmée à l\'issue des travaux afin de confirmer la levée des non-conformités, d\'évaluer l\'efficacité des actions mises en œuvre et d\'attester du rétablissement d\'un niveau de sécurité compatible avec les exigences réglementaires et les bonnes pratiques d\'exploitation.';
+    final assessment2 = '';
+    final assessment3 = '';
+    final actionSteps = <String>[];
+    final counterVisit = '';
 
     return ExecutiveSummaryData(
       contexte: SectionContexte(paragraph: contextText),

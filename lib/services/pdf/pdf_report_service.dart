@@ -1781,7 +1781,16 @@ class PdfReportService {
           ),
         if (data.concentrationRisque.qualitativeRiskCallout.isNotEmpty) ...[
           pw.SizedBox(height: 6),
-          _buildCalloutBox('Point de risque qualitatif :', data.concentrationRisque.qualitativeRiskCallout),
+          pw.Text(
+            'Point de risque qualitatif :',
+            style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: darkGrey),
+          ),
+          pw.SizedBox(height: 2),
+          pw.Text(
+            data.concentrationRisque.qualitativeRiskCallout,
+            style: pw.TextStyle(font: _fontRegular, fontSize: fsBody, color: darkGrey, lineSpacing: 2.5),
+            textAlign: pw.TextAlign.justify,
+          ),
         ],
       ],
     ));
