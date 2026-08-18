@@ -377,19 +377,24 @@ class EssaiIsolementAdapter extends TypeAdapter<EssaiIsolement> {
     };
     return EssaiIsolement(
       syncId: fields[0] as String,
-      equipmentSyncId: fields[1] as String,
-      pointControle: fields[2] as String,
-      isolement: fields[3] as double,
+      equipmentSyncId: fields[1] as String?,
+      pointControle: fields[2] as String?,
+      isolement: (fields[3] as num).toDouble(),
       appreciation: fields[4] as String,
       localisation: fields[5] as String?,
       designation: fields[6] as String?,
+      reperePointOrigine: fields[7] as String?,
+      pointA: fields[8] as String?,
+      pointB: fields[9] as String?,
+      sectionCable: fields[10] as String?,
+      nombreCablesTestes: fields[11] as int?,
     );
   }
 
   @override
   void write(BinaryWriter writer, EssaiIsolement obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.syncId)
       ..writeByte(1)
@@ -403,7 +408,17 @@ class EssaiIsolementAdapter extends TypeAdapter<EssaiIsolement> {
       ..writeByte(5)
       ..write(obj.localisation)
       ..writeByte(6)
-      ..write(obj.designation);
+      ..write(obj.designation)
+      ..writeByte(7)
+      ..write(obj.reperePointOrigine)
+      ..writeByte(8)
+      ..write(obj.pointA)
+      ..writeByte(9)
+      ..write(obj.pointB)
+      ..writeByte(10)
+      ..write(obj.sectionCable)
+      ..writeByte(11)
+      ..write(obj.nombreCablesTestes);
   }
 
   @override

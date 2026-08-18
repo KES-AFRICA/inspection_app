@@ -7,6 +7,7 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/continuite_resistance_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/demarrage_auto_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_isolement_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/prises_terre_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
@@ -51,6 +52,7 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
         'prises_terre': (mesures.prisesTerre.isNotEmpty),
         'avis_mesures': _stats['avis_mesures_renseigne'] ?? false,
         'essais_declenchement': (mesures.essaisDeclenchement.isNotEmpty),
+        'essais_isolement': (mesures.essaisIsolement.isNotEmpty),
         'continuite_resistance': (mesures.continuiteResistances.isNotEmpty),
       };
     } catch (e) {
@@ -178,6 +180,16 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
     ).then((_) => _loadData());
   }
 
+  void _navigateToEssaisIsolement() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            EssaisIsolementScreen(mission: widget.mission),
+      ),
+    ).then((_) => _loadData());
+  }
+
   void _navigateToContinuiteResistance() {
     Navigator.push(
       context,
@@ -256,6 +268,15 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
                       'Dispositifs différentiels',
                       _navigateToEssaisDeclenchement,
                       'essais_declenchement',
+                    ),
+                    const Divider(height: 0, thickness: 0.5),
+
+                    _buildSectionTile(
+                      'Essais de mesure d\'isolement',
+                      Icons.speed_outlined,
+                      'Tronçons de câble',
+                      _navigateToEssaisIsolement,
+                      'essais_isolement',
                     ),
                     const Divider(height: 0, thickness: 0.5),
 

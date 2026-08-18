@@ -55,6 +55,11 @@ class MesuresEssaisMapper {
           appreciation: ei.appreciation,
           localisation: ei.localisation,
           designation: ei.designation,
+          reperePointOrigine: ei.reperePointOrigine,
+          pointA: ei.pointA,
+          pointB: ei.pointB,
+          sectionCable: ei.sectionCable,
+          nombreCablesTestes: ei.nombreCablesTestes,
         );
       }).toList(),
       continuiteResistances: model.continuiteResistances.map((cr) {
@@ -119,6 +124,11 @@ class MesuresEssaisMapper {
           appreciation: ei.appreciation,
           localisation: ei.localisation,
           designation: ei.designation,
+          reperePointOrigine: ei.reperePointOrigine,
+          pointA: ei.pointA,
+          pointB: ei.pointB,
+          sectionCable: ei.sectionCable,
+          nombreCablesTestes: ei.nombreCablesTestes,
         );
       }).toList(),
       continuiteResistances: entity.continuiteResistances.map((cr) {

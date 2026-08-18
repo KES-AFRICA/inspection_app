@@ -325,10 +325,10 @@ class EssaiIsolement {
   String syncId;
 
   @HiveField(1)
-  String equipmentSyncId;
+  String? equipmentSyncId;
 
   @HiveField(2)
-  String pointControle; // Ex: "Alimentation 1", "Alimentation 2", "Origine de la source"
+  String? pointControle; // Ex: "Alimentation 1", "Alimentation 2", "Origine de la source"
 
   @HiveField(3)
   double isolement; // En MΩ
@@ -342,34 +342,64 @@ class EssaiIsolement {
   @HiveField(6)
   String? designation; // Nom de l'équipement
 
+  @HiveField(7)
+  String? reperePointOrigine; // Repère du point d'origine (Zone / Local)
+
+  @HiveField(8)
+  String? pointA; // Point A (origine)
+
+  @HiveField(9)
+  String? pointB; // Point B (extrémité)
+
+  @HiveField(10)
+  String? sectionCable; // Section du câble (mm²)
+
+  @HiveField(11)
+  int? nombreCablesTestes; // Nombre de câbles testés
+
   EssaiIsolement({
     required this.syncId,
-    required this.equipmentSyncId,
-    required this.pointControle,
+    this.equipmentSyncId,
+    this.pointControle,
     required this.isolement,
     required this.appreciation,
     this.localisation,
     this.designation,
+    this.reperePointOrigine,
+    this.pointA,
+    this.pointB,
+    this.sectionCable,
+    this.nombreCablesTestes,
   });
 
   factory EssaiIsolement.create({
-    required String equipmentSyncId,
-    required String pointControle,
+    required String reperePointOrigine,
+    required String pointA,
+    required String pointB,
+    required String sectionCable,
+    required int nombreCablesTestes,
     required double isolement,
     required String appreciation,
-    String? localisation,
-    String? designation,
   }) {
     return EssaiIsolement(
       syncId: 'iso_${DateTime.now().microsecondsSinceEpoch}',
-      equipmentSyncId: equipmentSyncId,
-      pointControle: pointControle,
+      reperePointOrigine: reperePointOrigine,
+      pointA: pointA,
+      pointB: pointB,
+      sectionCable: sectionCable,
+      nombreCablesTestes: nombreCablesTestes,
       isolement: isolement,
       appreciation: appreciation,
-      localisation: localisation,
-      designation: designation,
+      localisation: reperePointOrigine,
+      designation: pointA,
     );
   }
+
+  String get displayRepereOrigine => reperePointOrigine ?? localisation ?? '-';
+  String get displayPointA => pointA ?? designation ?? pointControle ?? '-';
+  String get displayPointB => pointB ?? '-';
+  String get displaySection => sectionCable ?? '-';
+  String get displayNombreCables => nombreCablesTestes != null ? nombreCablesTestes.toString() : '-';
 
   bool get isComplete => isolement > 0 && appreciation.isNotEmpty;
 }

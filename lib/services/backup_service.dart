@@ -912,6 +912,22 @@ class BackupService {
                   'observation': c.observation,
                 })
             .toList(),
+        'essaisIsolement': m.essaisIsolement
+            .map((ei) => {
+                  'syncId': ei.syncId,
+                  'equipmentSyncId': ei.equipmentSyncId,
+                  'pointControle': ei.pointControle,
+                  'isolement': ei.isolement,
+                  'appreciation': ei.appreciation,
+                  'localisation': ei.localisation,
+                  'designation': ei.designation,
+                  'reperePointOrigine': ei.reperePointOrigine,
+                  'pointA': ei.pointA,
+                  'pointB': ei.pointB,
+                  'sectionCable': ei.sectionCable,
+                  'nombreCablesTestes': ei.nombreCablesTestes,
+                })
+            .toList(),
       };
 
   // ── JSA ──
@@ -2517,6 +2533,26 @@ class BackupService {
                     designationTableau: m['designationTableau'] as String? ?? '',
                     origineMesure: m['origineMesure'] as String? ?? '',
                     observation: m['observation'] as String?,
+                  );
+                })
+                .toList() ??
+            [],
+        essaisIsolement: (d['essaisIsolement'] as List<dynamic>?)
+                ?.map((i) {
+                  final m = i as Map<String, dynamic>;
+                  return EssaiIsolement(
+                    syncId: m['syncId'] as String? ?? '',
+                    equipmentSyncId: m['equipmentSyncId'] as String?,
+                    pointControle: m['pointControle'] as String? ?? '',
+                    isolement: (m['isolement'] as num?)?.toDouble() ?? 0.0,
+                    appreciation: m['appreciation'] as String? ?? 'Satisfaisant',
+                    localisation: m['localisation'] as String?,
+                    designation: m['designation'] as String?,
+                    reperePointOrigine: m['reperePointOrigine'] as String?,
+                    pointA: m['pointA'] as String?,
+                    pointB: m['pointB'] as String?,
+                    sectionCable: m['sectionCable'] as String?,
+                    nombreCablesTestes: m['nombreCablesTestes'] as int?,
                   );
                 })
                 .toList() ??

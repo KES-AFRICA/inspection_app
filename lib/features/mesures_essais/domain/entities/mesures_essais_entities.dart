@@ -90,21 +90,31 @@ class ContinuiteResistanceEntity {
 
 class EssaiIsolementEntity {
   final String syncId;
-  final String equipmentSyncId;
-  final String pointControle;
+  final String? equipmentSyncId;
+  final String? pointControle;
   final double isolement;
   final String appreciation;
   final String? localisation;
   final String? designation;
+  final String? reperePointOrigine;
+  final String? pointA;
+  final String? pointB;
+  final String? sectionCable;
+  final int? nombreCablesTestes;
 
   const EssaiIsolementEntity({
     required this.syncId,
-    required this.equipmentSyncId,
-    required this.pointControle,
+    this.equipmentSyncId,
+    this.pointControle,
     required this.isolement,
     required this.appreciation,
     this.localisation,
     this.designation,
+    this.reperePointOrigine,
+    this.pointA,
+    this.pointB,
+    this.sectionCable,
+    this.nombreCablesTestes,
   });
 }
 

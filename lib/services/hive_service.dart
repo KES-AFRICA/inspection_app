@@ -4570,6 +4570,62 @@ static List<String> getCoffretsForLocalisation(String missionId, String localisa
   return coffrets;
 }
 
+/// Récupérer les équipements (Armoire, Coffret, TGBT, Inverseur) pour une localisation spécifique avec typage
+static List<String> getEquipementsForLocalisation(String missionId, String localisation) {
+  final audit = getAuditInstallationsByMissionId(missionId);
+  if (audit == null) return [];
+
+  final equipements = <String>[];
+
+  void addCoffret(dynamic coffret) {
+    final type = coffret.type?.toString() ?? '';
+    final nom = coffret.nom?.toString() ?? '';
+    if (nom.isEmpty) return;
+    String formatted;
+    if (type.isNotEmpty && !nom.toUpperCase().contains(type.toUpperCase())) {
+      formatted = '$type - $nom';
+    } else {
+      formatted = nom;
+    }
+    if (!equipements.contains(formatted)) {
+      equipements.add(formatted);
+    }
+  }
+
+  for (var local in audit.moyenneTensionLocaux) {
+    if (local.nom == localisation || localisation.contains(local.nom)) {
+      for (var coffret in local.coffrets) {
+        addCoffret(coffret);
+      }
+    }
+  }
+
+  for (var zone in audit.moyenneTensionZones) {
+    if (zone.nom == localisation || localisation.contains(zone.nom)) {
+      for (var coffret in zone.coffrets) {
+        addCoffret(coffret);
+      }
+    }
+  }
+
+  for (var zone in audit.basseTensionZones) {
+    if (zone.nom == localisation || localisation.contains(zone.nom)) {
+      for (var coffret in zone.coffretsDirects) {
+        addCoffret(coffret);
+      }
+      for (var local in zone.locaux) {
+        if (localisation.contains(local.nom)) {
+          for (var coffret in local.coffrets) {
+            addCoffret(coffret);
+          }
+        }
+      }
+    }
+  }
+
+  return equipements;
+}
+
 // ============================================================
 //          SECTION 7: CONTINUITÉ ET RÉSISTANCE
 // ============================================================

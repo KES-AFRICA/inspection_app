@@ -880,7 +880,7 @@ class PdfReportService {
       entries.add(_SommaireEntry(titre: "3. Test de fonctionnement de l'arrêt d'urgence", key: 'mesures_arret', level: 1));
       entries.add(_SommaireEntry(titre: "4. Prise de terre", key: 'mesures_terre', level: 1));
       entries.add(_SommaireEntry(titre: "5. Essais de déclenchement des dispositifs différentiels", key: 'mesures_ddr', level: 1));
-      entries.add(_SommaireEntry(titre: "6. Essais de mesure d'isolement", key: 'mesures_isolement', level: 1));
+      entries.add(_SommaireEntry(titre: "6. Essais de mesure d'isolement entre deux points d'un tronçon de câble", key: 'mesures_isolement', level: 1));
       entries.add(_SommaireEntry(titre: "7. Test du Contrôleur Permanent d'Isolement (CPI)", key: 'mesures_cpi', level: 1));
       entries.add(_SommaireEntry(titre: "8. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles", key: 'mesures_continuite', level: 1));
     }
@@ -8399,29 +8399,35 @@ class PdfReportService {
           key: 'mesures_isolement',
           registry: trackedPages,
           offset: pageOffset,
-          child: _subSectionBar("6. Essais de mesure d'isolement"),
+          child: _subSectionBar("6. Essais de mesure d'isolement entre deux points d'un tronçon de câble"),
         ),
         pw.SizedBox(height: 8),
         pw.Table(
           defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
           border: pw.TableBorder.all(color: borderColor, width: 0.4),
           columnWidths: const {
-            0: pw.FlexColumnWidth(2.2), // Localisation
-            1: pw.FlexColumnWidth(2.6), // Désignation
-            2: pw.FlexColumnWidth(1.8), // Isolement
-            3: pw.FlexColumnWidth(2.4), // Appréciation
+            0: pw.FlexColumnWidth(2.0), // Repère du point d'origine
+            1: pw.FlexColumnWidth(2.2), // Point A (origine)
+            2: pw.FlexColumnWidth(2.2), // Point B (extrémité)
+            3: pw.FlexColumnWidth(1.6), // Section du câble (mm²)
+            4: pw.FlexColumnWidth(1.6), // Nombre de câbles testés
+            5: pw.FlexColumnWidth(1.6), // Isolement (MΩ)
+            6: pw.FlexColumnWidth(1.8), // Appréciation
           },
           children: [
             _tableHeaderRow([
-              'Localisation',
-              'Désignation',
-              'Isolement',
+              'Repère du point d\'origine',
+              'Point A (origine)',
+              'Point B (extrémité)',
+              'Section du câble (mm²)',
+              'Nombre de câble testée',
+              'Isolement(MΩ)',
               'Appréciation',
             ]),
             if (mesures.essaisIsolement.isEmpty)
               pw.TableRow(
                 decoration: const pw.BoxDecoration(color: PdfColors.white),
-                children: List.generate(4, (_) => _cell('', isHeader: false, centered: true)),
+                children: List.generate(7, (_) => _cell('', isHeader: false, centered: true)),
               )
             else
               ...mesures.essaisIsolement.asMap().entries.map((e) {
@@ -8433,31 +8439,42 @@ class PdfReportService {
                     ? conformeColor
                     : (isNonSat ? nonConformeColor : PdfColor.fromInt(0xFFEEEEEE));
 
-                final desigText = (ei.designation != null && ei.designation!.isNotEmpty)
-                    ? '${ei.designation!} (${ei.pointControle})'
-                    : ei.pointControle;
-
                 return pw.TableRow(
                   decoration: pw.BoxDecoration(color: e.key.isOdd ? tableRowAlt : PdfColors.white),
                   children: [
                     pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                       alignment: pw.Alignment.center,
-                      child: pw.Text(ei.localisation ?? '-', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
+                      child: pw.Text(ei.displayRepereOrigine, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
                     ),
                     pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                       alignment: pw.Alignment.center,
-                      child: pw.Text(desigText, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
+                      child: pw.Text(ei.displayPointA, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
                     ),
                     pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                       alignment: pw.Alignment.center,
-                      child: pw.Text('${ei.isolement} M\u2126', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
+                      child: pw.Text(ei.displayPointB, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
+                    ),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(ei.displaySection, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
+                    ),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(ei.displayNombreCables, style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
+                    ),
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text('${ei.isolement}', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
                     ),
                     pw.Container(
                       color: appBgColor,
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                       alignment: pw.Alignment.center,
                       child: pw.Text(
                         app,
