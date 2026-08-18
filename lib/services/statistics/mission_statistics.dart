@@ -184,8 +184,10 @@ class MissionStatisticsSummary {
     if (densest.nonCompliantPointsCount == 0) {
       return 'Toutes catégories conformes (0,0 NC/équipement)';
     }
-    final critPct = (densest.critiqueCount / densest.equipmentCount) * 100;
-    return '${densest.categoryName} : ${densest.density.toStringAsFixed(1).replaceAll('.', ',')} NC/équipement (dont ${densest.critiqueCount} critique(s) sur ${densest.equipmentCount}, soit ${critPct.toStringAsFixed(1).replaceAll('.', ',')} %)';
+    final critPct = densest.nonCompliantPointsCount > 0
+        ? (densest.critiqueCount / densest.nonCompliantPointsCount) * 100
+        : 0.0;
+    return '${densest.categoryName} : ${densest.density.toStringAsFixed(1).replaceAll('.', ',')} NC/équipement (dont ${densest.critiqueCount} critique(s) sur ${densest.nonCompliantPointsCount} NC, soit ${critPct.toStringAsFixed(1).replaceAll('.', ',')} %)';
   }
 
   factory MissionStatisticsSummary.fromInventory(AuditFindingInventory inventory) {
