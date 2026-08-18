@@ -846,10 +846,22 @@ static Future<bool> resetAllDocuments(String missionId) async {
     final box = Hive.box<DescriptionInstallations>(_descriptionBox);
     try {
       final matches = box.values.where((d) => d.missionId == missionId).toList();
-      if (matches.isEmpty) return box.get(missionId);
+      if (matches.isEmpty) {
+        final res = box.get(missionId);
+        if (res != null && res.cpi.length > 1) {
+          res.cpi = [res.cpi.last];
+          box.put(res.key, res);
+        }
+        return res;
+      }
 
       matches.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-      return matches.first;
+      final res = matches.first;
+      if (res.cpi.length > 1) {
+        res.cpi = [res.cpi.last];
+        box.put(res.key, res);
+      }
+      return res;
     } catch (e) {
       return null;
     }
@@ -894,7 +906,7 @@ static Future<bool> addInstallationItemToSection({
         desc.onduleurs.add(item);
         break;
       case 'cpi':
-        desc.cpi.add(item);
+        desc.cpi = [item];
         break;
       default:
         if (kDebugMode) print('❌ Section inconnue: $section');
@@ -958,9 +970,7 @@ static Future<bool> updateInstallationItemInSection({
         }
         break;
       case 'cpi':
-        if (index < desc.cpi.length) {
-          desc.cpi[index] = item;
-        }
+        desc.cpi = [item];
         break;
       default:
         if (kDebugMode) print('❌ Section inconnue: $section');

@@ -4120,6 +4120,7 @@ class PdfReportService {
     final bool showCpiSection = hasItRegime || safeDesc.cpi.isNotEmpty;
 
     if (showCpiSection) {
+      widgets.add(pw.NewPage());
       widgets.add(PageTracker(
         key: 'desc_cpi',
         registry: trackedPages,
@@ -6560,7 +6561,7 @@ class PdfReportService {
     ];
 
     final dataCols = columns.where((c) => c != 'N\u00B0' && c != 'N°').toList();
-    final itemsToRender = cpiItems.isNotEmpty ? cpiItems : [InstallationItem(data: {})];
+    final itemsToRender = cpiItems.isNotEmpty ? [cpiItems.last] : [InstallationItem(data: {})];
 
     return pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.4),

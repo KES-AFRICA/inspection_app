@@ -140,7 +140,7 @@ class DescriptionInstallations extends HiveObject {
         onduleurs.add(item);
         break;
       case 'cpi':
-        cpi.add(item);
+        cpi = [item];
         break;
       default:
         throw Exception('Section inconnue: $sectionKey');

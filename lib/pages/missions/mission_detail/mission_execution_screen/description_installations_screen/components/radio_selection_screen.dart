@@ -148,13 +148,8 @@ class _RadioSelectionScreenState extends ConsumerState<RadioSelectionScreen> {
           'ANNÉE DE FABRICATION': _cpiAnneeFabrication,
         };
         final cpiItem = InstallationItem(data: cpiData);
-        final freshDesc = await notifier.load();
-        if (freshDesc.cpi.isNotEmpty) {
-          await notifier.updateInstallationItem('cpi', 0, cpiItem);
-        } else {
-          final res = await notifier.addInstallationItem('cpi', cpiItem);
-          if (res) _hasExistingCpi = true;
-        }
+        await notifier.updateInstallationItem('cpi', 0, cpiItem);
+        _hasExistingCpi = true;
       }
 
       final success = await notifier.updateDescriptionSelection('regime_neutre', resultString);
