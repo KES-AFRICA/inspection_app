@@ -52,7 +52,7 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
         'prises_terre': (mesures.prisesTerre.isNotEmpty),
         'avis_mesures': _stats['avis_mesures_renseigne'] ?? false,
         'essais_declenchement': (mesures.essaisDeclenchement.isNotEmpty),
-        'essais_isolement': (mesures.essaisIsolement.isNotEmpty),
+        'essais_isolement': _stats['essais_isolement_renseigne'] ?? (mesures.essaisIsolement.isNotEmpty),
         'continuite_resistance': (mesures.continuiteResistances.isNotEmpty),
       };
     } catch (e) {
@@ -274,7 +274,9 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
                     _buildSectionTile(
                       'Essais de mesure d\'isolement',
                       Icons.speed_outlined,
-                      'Tronçons de câble',
+                      _isSectionComplete('essais_isolement')
+                          ? '${_stats['total_essais_isolement'] ?? 0} essai(s) enregistré(s)'
+                          : 'Tronçons de câble',
                       _navigateToEssaisIsolement,
                       'essais_isolement',
                     ),

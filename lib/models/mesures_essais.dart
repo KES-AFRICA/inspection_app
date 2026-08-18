@@ -83,6 +83,8 @@ class MesuresEssais extends HiveObject {
       'essais_reussis': essaisReussis,
       'essais_non_reussis': essaisNonReussis,
       'essais_non_essayes': essaisNonEssayes,
+      'total_essais_isolement': essaisIsolement.length,
+      'essais_isolement_renseigne': essaisIsolement.isNotEmpty,
       'total_continuites': continuiteResistances.length,
       'condition_mesure_renseignee': conditionMesure.observation != null && conditionMesure.observation!.isNotEmpty,
       'demarrage_auto_renseigne': essaiDemarrageAuto.observation != null && essaiDemarrageAuto.observation!.isNotEmpty,

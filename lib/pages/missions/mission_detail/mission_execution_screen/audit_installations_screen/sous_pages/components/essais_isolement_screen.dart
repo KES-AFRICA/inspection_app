@@ -173,37 +173,46 @@ class _EssaisIsolementScreenState extends ConsumerState<EssaisIsolementScreen> {
 
     switch (essai.appreciation) {
       case 'Satisfaisant':
-        statutText = 'SATISFAISANT';
+        statutText = 'Satisfaisant';
         statutIcon = Icons.check_circle;
-        statutColor = Colors.green;
+        statutColor = Colors.green.shade700;
         break;
       case 'Non satisfaisant':
-        statutText = 'NON SATISFAISANT';
-        statutIcon = Icons.warning_rounded;
-        statutColor = Colors.red;
+        statutText = 'Non satisfaisant';
+        statutIcon = Icons.cancel;
+        statutColor = Colors.red.shade700;
         break;
       case 'Sans objet':
-        statutText = 'SANS OBJET';
+        statutText = 'Sans objet';
         statutIcon = Icons.remove_circle_outline;
-        statutColor = Colors.grey;
+        statutColor = Colors.grey.shade700;
         break;
       default:
-        statutText = 'NON DÉFINI';
+        statutText = 'Non défini';
         statutIcon = Icons.help_outline;
-        statutColor = Colors.orange;
+        statutColor = Colors.orange.shade700;
     }
 
+    final isSatisfaisant = essai.appreciation == 'Satisfaisant';
+    final isNonSatisfaisant = essai.appreciation == 'Non satisfaisant';
+    final badgeBg = isSatisfaisant
+        ? Colors.green.shade50
+        : (isNonSatisfaisant ? Colors.red.shade50 : Colors.grey.shade100);
+
     return Container(
-      margin: EdgeInsets.symmetric(horizontal: _spacingL(context), vertical: _spacingS(context)),
+      margin: EdgeInsets.symmetric(
+        horizontal: _spacingL(context),
+        vertical: _spacingS(context),
+      ),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: statutColor.withOpacity(0.2), width: 1),
+        border: Border.all(color: Colors.grey.shade200, width: 1),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -211,39 +220,36 @@ class _EssaisIsolementScreenState extends ConsumerState<EssaisIsolementScreen> {
         onTap: () => _editerEssai(essai, index),
         borderRadius: BorderRadius.circular(16),
         child: Padding(
-          padding: EdgeInsets.all(_spacingL(context)),
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // En-tête avec statut & Menu ⋮
+              // Ligne 1 : Statut en Haut à Gauche & Menu 3 points en Haut à Droite
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    padding: EdgeInsets.symmetric(
-                      horizontal: _spacingM(context),
-                      vertical: _spacingS(context) * 0.5,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: statutColor.withOpacity(0.1),
+                      color: badgeBg,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(statutIcon, size: _iconSizeS(context), color: statutColor),
-                        SizedBox(width: _spacingS(context)),
+                        Icon(statutIcon, size: 14, color: statutColor),
+                        const SizedBox(width: 4),
                         Text(
                           statutText,
                           style: TextStyle(
-                            fontSize: _fontSizeXS(context),
-                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
                             color: statutColor,
                           ),
                         ),
                       ],
                     ),
                   ),
-                  const Spacer(),
                   PopupMenuButton<String>(
                     onSelected: (value) {
                       if (value == 'edit') {
@@ -252,16 +258,18 @@ class _EssaisIsolementScreenState extends ConsumerState<EssaisIsolementScreen> {
                         _supprimerEssai(index);
                       }
                     },
-                    icon: Icon(Icons.more_vert, size: _iconSizeM(context), color: Colors.grey.shade600),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    icon: Icon(Icons.more_vert, size: 20, color: Colors.grey.shade500),
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                     itemBuilder: (context) => [
                       PopupMenuItem(
                         value: 'edit',
                         child: Row(
                           children: [
-                            Icon(Icons.edit_outlined, size: _iconSizeS(context), color: AppTheme.primaryBlue),
-                            SizedBox(width: _spacingS(context)),
-                            Text('Modifier', style: TextStyle(fontSize: _fontSizeM(context))),
+                            Icon(Icons.edit_outlined, size: 18, color: AppTheme.primaryBlue),
+                            const SizedBox(width: 8),
+                            const Text('Modifier'),
                           ],
                         ),
                       ),
@@ -269,9 +277,9 @@ class _EssaisIsolementScreenState extends ConsumerState<EssaisIsolementScreen> {
                         value: 'delete',
                         child: Row(
                           children: [
-                            Icon(Icons.delete_outline, size: _iconSizeS(context), color: Colors.red),
-                            SizedBox(width: _spacingS(context)),
-                            Text('Supprimer', style: TextStyle(fontSize: _fontSizeM(context))),
+                            const Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                            const SizedBox(width: 8),
+                            const Text('Supprimer'),
                           ],
                         ),
                       ),
@@ -280,93 +288,110 @@ class _EssaisIsolementScreenState extends ConsumerState<EssaisIsolementScreen> {
                 ],
               ),
 
-              SizedBox(height: _spacingM(context)),
+              const SizedBox(height: 12),
 
-              // Repère d'origine
-              Row(
-                children: [
-                  Icon(Icons.location_on_outlined, size: _iconSizeS(context) * 0.9, color: Colors.grey.shade600),
-                  SizedBox(width: _spacingS(context) * 0.5),
-                  Expanded(
-                    child: Text(
-                      'Origine : ${essai.displayRepereOrigine}',
-                      style: TextStyle(
-                        fontSize: _fontSizeL(context),
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ),
-                ],
+              // Ligne 2 : Nom du repère/local sur sa propre ligne (pour gérer les noms longs)
+              Text(
+                essai.displayRepereOrigine,
+                style: TextStyle(
+                  fontSize: _fontSizeL(context),
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.darkBlue,
+                ),
               ),
 
-              SizedBox(height: _spacingS(context)),
+              const SizedBox(height: 10),
 
-              // Tronçon : Point A -> Point B
-              Row(
-                children: [
-                  Icon(Icons.compare_arrows, size: _iconSizeS(context) * 0.9, color: AppTheme.primaryBlue),
-                  SizedBox(width: _spacingS(context) * 0.5),
-                  Expanded(
-                    child: Text(
-                      '${essai.displayPointA} ➔ ${essai.displayPointB}',
-                      style: TextStyle(
-                        fontSize: _fontSizeM(context),
-                        fontWeight: FontWeight.w500,
-                        color: AppTheme.primaryBlue,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                      maxLines: 1,
-                    ),
-                  ),
-                ],
-              ),
-
-              SizedBox(height: _spacingM(context)),
-
-              // Grille de paramètres techniques
+              // Ligne 3 : Point A puis en bas Point B (empilés)
               Container(
-                padding: EdgeInsets.all(_spacingM(context)),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 decoration: BoxDecoration(
                   color: Colors.grey.shade50,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.grey.shade200),
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Expanded(
-                          child: _buildInfoChip(
-                            context,
-                            label: 'Section',
-                            value: essai.displaySection,
-                            icon: Icons.line_weight,
+                        Text(
+                          'Origine : ',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade600,
                           ),
                         ),
-                        SizedBox(width: _spacingM(context)),
                         Expanded(
-                          child: _buildInfoChip(
-                            context,
-                            label: 'Nb câbles',
-                            value: essai.displayNombreCables,
-                            icon: Icons.tag,
+                          child: Text(
+                            essai.displayPointA,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.darkBlue,
+                            ),
                           ),
                         ),
-                        SizedBox(width: _spacingM(context)),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Extrémité : ',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade600,
+                          ),
+                        ),
                         Expanded(
-                          child: _buildInfoChip(
-                            context,
-                            label: 'Isolement',
-                            value: '${essai.isolement} MΩ',
-                            icon: Icons.speed,
+                          child: Text(
+                            essai.displayPointB,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.darkBlue,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ],
                 ),
+              ),
+
+              const SizedBox(height: 14),
+
+              // Ligne 4 : Métriques clés (SECTION, CÂBLES, ISOLEMENT)
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildMetricItem(
+                      label: 'SECTION',
+                      value: essai.displaySection,
+                    ),
+                  ),
+                  Container(height: 24, width: 1, color: Colors.grey.shade300),
+                  Expanded(
+                    child: _buildMetricItem(
+                      label: 'CÂBLES',
+                      value: essai.displayNombreCables,
+                    ),
+                  ),
+                  Container(height: 24, width: 1, color: Colors.grey.shade300),
+                  Expanded(
+                    child: _buildMetricItem(
+                      label: 'ISOLEMENT',
+                      value: '${essai.isolement} MΩ',
+                      isHighlight: true,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -375,47 +400,33 @@ class _EssaisIsolementScreenState extends ConsumerState<EssaisIsolementScreen> {
     );
   }
 
-  Widget _buildInfoChip(
-    BuildContext context, {
+  Widget _buildMetricItem({
     required String label,
     required String value,
-    required IconData icon,
+    bool isHighlight = false,
   }) {
-    return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: _spacingS(context),
-        vertical: _spacingS(context) * 0.5,
-      ),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          Icon(icon, size: _iconSizeS(context) * 0.8, color: AppTheme.primaryBlue.withOpacity(0.7)),
-          SizedBox(width: _spacingS(context) * 0.5),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: TextStyle(fontSize: _fontSizeXS(context), color: Colors.grey.shade500),
-                ),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontSize: _fontSizeS(context),
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black87,
-                  ),
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
-            ),
+    return Column(
+      children: [
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            fontWeight: FontWeight.w600,
+            color: Colors.grey.shade500,
+            letterSpacing: 0.5,
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: 3),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: isHighlight ? FontWeight.bold : FontWeight.w600,
+            color: isHighlight ? Colors.blue.shade800 : Colors.grey.shade800,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
     );
   }
 
@@ -737,6 +748,7 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
             ),
           ),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, size: 22, color: isSelected ? color : Colors.grey.shade600),
               const SizedBox(height: 6),
@@ -760,121 +772,163 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.grey.shade50,
-      appBar: AppBar(
-        title: Text(
-          widget.isEdition ? 'Modifier l\'essai d\'isolement' : 'Ajouter un essai d\'isolement',
-          style: TextStyle(fontSize: _fontSizeL, fontWeight: FontWeight.w600),
+    final bool hasEnoughEquipments = _equipementsOriginals.length >= 2;
+
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      child: Scaffold(
+        backgroundColor: Colors.grey.shade50,
+        appBar: AppBar(
+          title: Text(
+            widget.isEdition ? 'Modifier l\'essai d\'isolement' : 'Ajouter un essai d\'isolement',
+            style: TextStyle(fontSize: _fontSizeL, fontWeight: FontWeight.w600),
+          ),
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+          elevation: 0,
         ),
-        backgroundColor: Colors.blue,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(_spacingL),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Card de sélection de la localisation & des points A/B
-              Container(
-                padding: EdgeInsets.all(_spacingL),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
-                  ],
+        body: SingleChildScrollView(
+          padding: EdgeInsets.all(_spacingL),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Card de sélection de la localisation & des points A/B
+                Container(
+                  padding: EdgeInsets.all(_spacingL),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '1. Repère & Tronçon',
+                        style: TextStyle(fontSize: _fontSizeL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                      ),
+                      const Divider(height: 20),
+
+                      // Repère du point d'origine (Select)
+                      Text('Repère du point d\'origine *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<String>(
+                        value: _selectedRepereOrigine,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          hintText: 'Sélectionner le local ou la zone',
+                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500, overflow: TextOverflow.ellipsis),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          prefixIcon: const Icon(Icons.location_on_outlined, size: 20, color: Colors.blue),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        items: _localisations.map((loc) {
+                          return DropdownMenuItem<String>(
+                            value: loc,
+                            child: Text(loc, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
+                          );
+                        }).toList(),
+                        onChanged: _onRepereOrigineChanged,
+                      ),
+
+                      if (_selectedRepereOrigine != null && !hasEnoughEquipments) ...[
+                        const SizedBox(height: 8),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.amber.shade50,
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(color: Colors.amber.shade300),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.warning_amber_rounded, size: 18, color: Colors.amber.shade800),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  _equipementsOriginals.isEmpty
+                                      ? 'Aucun équipement disponible dans ce local. Sélection des points A et B impossible.'
+                                      : 'Ce local ne contient qu\'un seul équipement. Au moins 2 équipements sont requis pour sélectionner les points A et B.',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.amber.shade900,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+
+                      SizedBox(height: _spacingM),
+
+                      // Point A (origine)
+                      Text('Point A (origine) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<String>(
+                        value: _selectedPointA,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          hintText: _selectedRepereOrigine == null
+                              ? 'Veuillez d\'abord choisir l\'origine'
+                              : (!hasEnoughEquipments
+                                  ? 'Impossible : moins de 2 équipements dans ce local'
+                                  : 'Sélectionner l\'équipement d\'origine'),
+                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500, overflow: TextOverflow.ellipsis),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        items: _equipementsOriginals.map((eq) {
+                          return DropdownMenuItem<String>(
+                            value: eq,
+                            child: Text(eq, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
+                          );
+                        }).toList(),
+                        onChanged: (_selectedRepereOrigine != null && hasEnoughEquipments) ? _onPointAChanged : null,
+                      ),
+
+                      SizedBox(height: _spacingM),
+
+                      // Point B (extrémité) - exclut Point A
+                      Text('Point B (extrémité) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<String>(
+                        value: _selectedPointB,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          hintText: !hasEnoughEquipments
+                              ? 'Impossible : moins de 2 équipements dans ce local'
+                              : (_selectedPointA == null
+                                  ? 'Veuillez d\'abord choisir le Point A'
+                                  : 'Sélectionner l\'équipement d\'extrémité'),
+                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500, overflow: TextOverflow.ellipsis),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        items: _equipementsPointB.map((eq) {
+                          return DropdownMenuItem<String>(
+                            value: eq,
+                            child: Text(eq, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
+                          );
+                        }).toList(),
+                        onChanged: (_selectedPointA != null && hasEnoughEquipments)
+                            ? (v) => setState(() => _selectedPointB = v)
+                            : null,
+                      ),
+                    ],
+                  ),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '1. Repère & Tronçon',
-                      style: TextStyle(fontSize: _fontSizeL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
-                    ),
-                    const Divider(height: 20),
-
-                    // Repère du point d'origine (Select)
-                    Text('Repère du point d\'origine *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<String>(
-                      value: _selectedRepereOrigine,
-                      isExpanded: true,
-                      decoration: InputDecoration(
-                        hintText: 'Sélectionner le local ou la zone',
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        prefixIcon: const Icon(Icons.location_on_outlined, size: 20, color: Colors.blue),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      items: _localisations.map((loc) {
-                        return DropdownMenuItem<String>(
-                          value: loc,
-                          child: Text(loc, overflow: TextOverflow.ellipsis),
-                        );
-                      }).toList(),
-                      onChanged: _onRepereOrigineChanged,
-                    ),
-
-                    SizedBox(height: _spacingM),
-
-                    // Point A (origine)
-                    Text('Point A (origine) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<String>(
-                      value: _selectedPointA,
-                      isExpanded: true,
-                      decoration: InputDecoration(
-                        hintText: _selectedRepereOrigine == null
-                            ? 'Veuillez d\'abord choisir l\'origine'
-                            : 'Sélectionner l\'équipement d\'origine',
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        prefixIcon: const Icon(Icons.flash_on, size: 20, color: Colors.blue),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      items: _equipementsOriginals.map((eq) {
-                        return DropdownMenuItem<String>(
-                          value: eq,
-                          child: Text(eq, overflow: TextOverflow.ellipsis),
-                        );
-                      }).toList(),
-                      onChanged: _selectedRepereOrigine != null ? _onPointAChanged : null,
-                    ),
-
-                    SizedBox(height: _spacingM),
-
-                    // Point B (extrémité) - exclut Point A
-                    Text('Point B (extrémité) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<String>(
-                      value: _selectedPointB,
-                      isExpanded: true,
-                      decoration: InputDecoration(
-                        hintText: _selectedPointA == null
-                            ? 'Veuillez d\'abord choisir le Point A'
-                            : 'Sélectionner l\'équipement d\'extrémité',
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        prefixIcon: const Icon(Icons.double_arrow, size: 20, color: Colors.blue),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      items: _equipementsPointB.map((eq) {
-                        return DropdownMenuItem<String>(
-                          value: eq,
-                          child: Text(eq, overflow: TextOverflow.ellipsis),
-                        );
-                      }).toList(),
-                      onChanged: _selectedPointA != null
-                          ? (v) => setState(() => _selectedPointB = v)
-                          : null,
-                    ),
-                  ],
-                ),
-              ),
 
               SizedBox(height: _spacingL),
 
@@ -905,15 +959,16 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                       isExpanded: true,
                       decoration: InputDecoration(
                         hintText: 'Choisir la section du câble',
+                        hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500, overflow: TextOverflow.ellipsis),
                         filled: true,
                         fillColor: Colors.grey.shade50,
-                        prefixIcon: const Icon(Icons.line_weight, size: 20, color: Colors.blue),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                       ),
                       items: kSectionCableOptions.map((sec) {
                         return DropdownMenuItem<String>(
                           value: sec,
-                          child: Text(sec),
+                          child: Text(sec, style: const TextStyle(fontSize: 13)),
                         );
                       }).toList(),
                       onChanged: (v) => setState(() => _selectedSectionCable = v),
@@ -928,10 +983,10 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                       controller: _nombreCablesController,
                       keyboardType: TextInputType.number,
                       decoration: InputDecoration(
-                        hintText: 'Ex: 1, 3, 4',
+                        hintText: 'Ex: 1',
+                        hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                         filled: true,
                         fillColor: Colors.grey.shade50,
-                        prefixIcon: const Icon(Icons.tag, size: 20, color: Colors.blue),
                         border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                       ),
                       validator: (val) {
@@ -951,7 +1006,8 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                       controller: _isolementController,
                       keyboardType: const TextInputType.numberWithOptions(decimal: true),
                       decoration: InputDecoration(
-                        hintText: 'Ex: 250.0 ou 500',
+                        hintText: 'Ex: 250.0',
+                        hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                         suffixText: 'MΩ',
                         suffixStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
                         filled: true,
@@ -990,26 +1046,29 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                       style: TextStyle(fontSize: _fontSizeL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
                     ),
                     const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        _buildAppreciationButton(
-                          label: 'Satisfaisant',
-                          icon: Icons.check_circle_outline,
-                          color: Colors.green,
-                        ),
-                        SizedBox(width: _spacingS),
-                        _buildAppreciationButton(
-                          label: 'Non satisfaisant',
-                          icon: Icons.warning_rounded,
-                          color: Colors.red,
-                        ),
-                        SizedBox(width: _spacingS),
-                        _buildAppreciationButton(
-                          label: 'Sans objet',
-                          icon: Icons.remove_circle_outline,
-                          color: Colors.grey,
-                        ),
-                      ],
+                    IntrinsicHeight(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _buildAppreciationButton(
+                            label: 'Satisfaisant',
+                            icon: Icons.check_circle_outline,
+                            color: Colors.green,
+                          ),
+                          SizedBox(width: _spacingS),
+                          _buildAppreciationButton(
+                            label: 'Non satisfaisant',
+                            icon: Icons.cancel,
+                            color: Colors.red,
+                          ),
+                          SizedBox(width: _spacingS),
+                          _buildAppreciationButton(
+                            label: 'Sans objet',
+                            icon: Icons.remove_circle_outline,
+                            color: Colors.grey,
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -1045,6 +1104,7 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 }

@@ -4784,6 +4784,7 @@ static Map<String, bool> checkMesuresEssaisCompletion(String missionId) {
       'prises_terre': false,
       'avis_mesures': false,
       'essais_differ': false,
+      'essais_isolement': false,
       'continuites': false,
     };
   }
@@ -4797,6 +4798,7 @@ static Map<String, bool> checkMesuresEssaisCompletion(String missionId) {
     'prises_terre': (mesures.prisesTerre.isNotEmpty),
     'avis_mesures': stats['avis_mesures_renseigne'] as bool,
     'essais_differ': (mesures.essaisDeclenchement.isNotEmpty),
+    'essais_isolement': (mesures.essaisIsolement.isNotEmpty),
     'continuites': (mesures.continuiteResistances.isNotEmpty),
   };
 }
