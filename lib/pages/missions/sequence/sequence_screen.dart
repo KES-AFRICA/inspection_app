@@ -1127,8 +1127,6 @@ class _SequenceScreenState extends State<SequenceScreen>
   List<_Sub> _getDescSubs(_Item item) {
     if (item.stepIndex != 2) return item.subs;
 
-    final hasIt = _descProgress.containsKey('test_cpi');
-
     final subs = <_Sub>[
       const _Sub(
         key: 'alimentation_moyenne_tension',

@@ -836,10 +836,6 @@ class PdfReportService {
     entries.add(_SommaireEntry(titre: "3. Habilitation électrique du personnel d'intervention", key: 'renseignements_habilitation', level: 1));
 
     // 8. Description des installations
-    final bool hasItRegime = desc?.regimeNeutre != null &&
-        desc!.regimeNeutre!.split(',').map((e) => e.trim()).contains('IT');
-    final bool showCpiInSommaire = hasItRegime || (desc?.cpi.isNotEmpty == true);
-
     int descSubIdx = 1;
     entries.add(_SommaireEntry(titre: "DESCRIPTION DES INSTALLATIONS", key: 'description', level: 0, isBold: true, isUppercase: true));
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques de l'alimentation moyenne tension", key: 'desc_mt', level: 1));
@@ -850,9 +846,6 @@ class PdfReportService {
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques du stabilisateur", key: 'desc_stabilisateur', level: 1));
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Caractéristiques des onduleurs", key: 'desc_onduleurs', level: 1));
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Régime de neutre", key: 'desc_regime_neutre', level: 1));
-    if (showCpiInSommaire) {
-      entries.add(_SommaireEntry(titre: "${descSubIdx++}. Test du Contrôleur Permanent d'Isolement (CPI)", key: 'desc_cpi', level: 1));
-    }
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Eclairage de sécurité", key: 'desc_eclairage', level: 1));
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Modifications apportées aux installations", key: 'desc_modifications', level: 1));
     entries.add(_SommaireEntry(titre: "${descSubIdx++}. Note de calcul des installations électriques", key: 'desc_note_calcul', level: 1));
@@ -888,7 +881,8 @@ class PdfReportService {
       entries.add(_SommaireEntry(titre: "4. Prise de terre", key: 'mesures_terre', level: 1));
       entries.add(_SommaireEntry(titre: "5. Essais de déclenchement des dispositifs différentiels", key: 'mesures_ddr', level: 1));
       entries.add(_SommaireEntry(titre: "6. Essais de mesure d'isolement", key: 'mesures_isolement', level: 1));
-      entries.add(_SommaireEntry(titre: "7. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles", key: 'mesures_continuite', level: 1));
+      entries.add(_SommaireEntry(titre: "7. Test du Contrôleur Permanent d'Isolement (CPI)", key: 'mesures_cpi', level: 1));
+      entries.add(_SommaireEntry(titre: "8. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles", key: 'mesures_continuite', level: 1));
     }
 
     // Signature du rapport
@@ -4115,27 +4109,7 @@ class PdfReportService {
     widgets.add(_bodyText('- $regimeAffichage'));
     widgets.add(pw.SizedBox(height: 5));
 
-    final bool hasItRegime = safeDesc.regimeNeutre != null &&
-        safeDesc.regimeNeutre!.split(',').map((e) => e.trim()).contains('IT');
-    final bool showCpiSection = hasItRegime || safeDesc.cpi.isNotEmpty;
 
-    if (showCpiSection) {
-      widgets.add(pw.NewPage());
-      widgets.add(PageTracker(
-        key: 'desc_cpi',
-        registry: trackedPages,
-        offset: offset,
-        child: _subTitle('${descBodyIdx++}. Test du Contrôleur Permanent d\'Isolement (CPI)'),
-      ));
-      widgets.add(_buildCpiTable(safeDesc.cpi));
-      widgets.add(pw.SizedBox(height: 8));
-
-      final cpiTestResult = safeDesc.cpi.isNotEmpty
-          ? (safeDesc.cpi.last.data['RESULTAT_TEST'] ?? 'Sans objet')
-          : 'Sans objet';
-      widgets.add(_buildCpiTestContent(cpiTestResult));
-      widgets.add(pw.SizedBox(height: 8));
-    }
 
     widgets.add(PageTracker(
       key: 'desc_eclairage',
@@ -8001,6 +7975,7 @@ class PdfReportService {
     Map<String, int> trackedPages, {
     int pageOffset = 0,
     int? overrideTotalPages,
+    DescriptionInstallations? desc,
   }) {
     // Page intro avec conditions ET les deux essais
     pdf.addPage(pw.MultiPage(
@@ -8502,7 +8477,28 @@ class PdfReportService {
       ],
     ));
     
-    // Continuite (nouvelle page)
+    // 7. Test du CPI (nouvelle page)
+    final cpiTestResult = desc != null && desc.cpi.isNotEmpty
+        ? (desc.cpi.last.data['RESULTAT_TEST'] ?? 'Sans objet')
+        : 'Sans objet';
+
+    pdf.addPage(pw.MultiPage(
+      maxPages: 10000,
+      pageTheme: _buildInnerPageTheme(pageOffset: pageOffset, overrideTotalPages: overrideTotalPages),
+      header: (ctx) => _buildPageHeaderWidget(),
+      build: (ctx) => [
+        PageTracker(
+          key: 'mesures_cpi',
+          registry: trackedPages,
+          offset: pageOffset,
+          child: _subSectionBar("7. Test du Contrôleur Permanent d'Isolement (CPI)"),
+        ),
+        pw.SizedBox(height: 8),
+        _buildCpiTestContent(cpiTestResult),
+      ],
+    ));
+
+    // 8. Continuite (nouvelle page)
     pdf.addPage(pw.MultiPage(
       maxPages: 10000,
       pageTheme: _buildInnerPageTheme(pageOffset: pageOffset, overrideTotalPages: overrideTotalPages),
@@ -8512,7 +8508,7 @@ class PdfReportService {
           key: 'mesures_continuite',
           registry: trackedPages,
           offset: pageOffset,
-          child: _subSectionBar('7. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles'),
+          child: _subSectionBar('8. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles'),
         ),
         pw.SizedBox(height: 8),
         pw.Table(
@@ -11077,7 +11073,7 @@ class PdfReportService {
     ));
 
     if (mesures != null) {
-      _addMesuresEssaisPages(pdfP2_1, mesures, trackedPages, pageOffset: currentOffset, overrideTotalPages: overrideTotalPages);
+      _addMesuresEssaisPages(pdfP2_1, mesures, trackedPages, pageOffset: currentOffset, overrideTotalPages: overrideTotalPages, desc: description);
     }
     pdfP2_1.addPage(pw.Page(
       pageTheme: _buildInnerPageTheme(pageOffset: currentOffset, overrideTotalPages: overrideTotalPages),

@@ -24,62 +24,18 @@ class CpiSequenceScreen extends ConsumerStatefulWidget {
 }
 
 class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
-  // Statut du test (3 choix : 'Satisfaisant', 'Non satisfaisant', 'Sans objet')
-  String _selectedStatus = 'Sans objet';
+  String? _locallySelectedStatus;
   bool _isSaving = false;
-  bool _isLoaded = false;
-  String? _regimeNeutre;
-  bool _hasItRegime = true;
 
-  @override
-  void initState() {
-    super.initState();
-    _loadExistingCpiData();
-  }
-
-  Future<void> _loadExistingCpiData() async {
-    try {
-      final desc = await ref
-          .read(descriptionInstallationsProvider(widget.mission.id).notifier)
-          .load();
-
-      final regime = desc.regimeNeutre;
-      final hasIt = regime?.split(',').map((e) => e.trim()).contains('IT') ?? false;
-
-      if (desc.cpi.isNotEmpty) {
-        final cpiData = desc.cpi.last.data;
-        setState(() {
-          _regimeNeutre = regime;
-          _hasItRegime = hasIt;
-          _selectedStatus = cpiData['RESULTAT_TEST'] ?? 'Sans objet';
-          _isLoaded = true;
-        });
-      } else {
-        setState(() {
-          _regimeNeutre = regime;
-          _hasItRegime = hasIt;
-          _isLoaded = true;
-        });
-      }
-    } catch (_) {
-      setState(() => _isLoaded = true);
-    }
-  }
-
-  Future<void> _selectAndSaveStatus(String status) async {
+  Future<void> _selectAndSaveStatus(String status, Map<String, String> existingData) async {
     if (_isSaving) return;
 
     setState(() {
-      _selectedStatus = status;
+      _locallySelectedStatus = status;
       _isSaving = true;
     });
 
     try {
-      final desc = await ref
-          .read(descriptionInstallationsProvider(widget.mission.id).notifier)
-          .load();
-      final existingData = desc.cpi.isNotEmpty ? desc.cpi.last.data : <String, String>{};
-
       final cpiData = Map<String, String>.from(existingData);
       cpiData['RÉGIME DE NEUTRE SURVEILLÉ'] = 'IT';
       cpiData['RESULTAT_TEST'] = status;
@@ -154,76 +110,95 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (!_isLoaded) {
-      return const Center(child: CircularProgressIndicator());
-    }
+    final asyncData = ref.watch(descriptionInstallationsProvider(widget.mission.id));
 
-    if (!_hasItRegime) {
-      return SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade50,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.blue.shade200),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.info_outline, color: Colors.blue.shade800, size: 24),
-                      const SizedBox(width: 10),
-                      const Expanded(
-                        child: Text(
-                          'Test CPI (Réservé au Régime IT)',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryBlue,
-                          ),
+    return asyncData.when(
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (err, stack) => Center(child: Text('Erreur: $err')),
+      data: (desc) {
+        final regime = desc.regimeNeutre;
+        final hasItRegime = regime?.split(',').map((e) => e.trim()).contains('IT') ?? false;
+
+        final existingCpiData = desc.cpi.isNotEmpty ? desc.cpi.last.data : <String, String>{};
+        final savedStatus = existingCpiData['RESULTAT_TEST'] ?? 'Sans objet';
+        final activeStatus = _locallySelectedStatus ?? savedStatus;
+
+        if (!hasItRegime) {
+          return _buildNonItNotice(regime);
+        }
+
+        return _buildCpiContent(activeStatus, existingCpiData);
+      },
+    );
+  }
+
+  Widget _buildNonItNotice(String? regimeNeutre) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue.shade200),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade800, size: 24),
+                    const SizedBox(width: 10),
+                    const Expanded(
+                      child: Text(
+                        'Test CPI (Réservé au Régime IT)',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryBlue,
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Le test du Contrôleur Permanent d\'Isolement (CPI) s\'applique uniquement aux installations électriques fonctionnant en Régime IT (NF C 15-100).\n\n'
-                    'Régime actuellement sélectionné : ${_regimeNeutre != null && _regimeNeutre!.isNotEmpty ? _regimeNeutre : 'Aucun'}.\n\n'
-                    'Le statut de ce test est donc automatiquement fixé à "Sans objet".',
-                    style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
-                  ),
-                ],
-              ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Le test du Contrôleur Permanent d\'Isolement (CPI) s\'applique uniquement aux installations électriques fonctionnant en Régime IT (NF C 15-100).\n\n'
+                  'Régime actuellement sélectionné : ${regimeNeutre != null && regimeNeutre.isNotEmpty ? regimeNeutre : 'Aucun'}.\n\n'
+                  'Le statut de ce test est donc automatiquement fixé à "Sans objet".',
+                  style: const TextStyle(fontSize: 13, color: Colors.black87, height: 1.4),
+                ),
+              ],
             ),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Row(
-                children: const [
-                  Icon(Icons.check_circle_outline, color: Colors.grey, size: 20),
-                  SizedBox(width: 10),
-                  Text(
-                    'Statut retenu : Sans objet',
-                    style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
-                  ),
-                ],
-              ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.grey.shade300),
             ),
-          ],
-        ),
-      );
-    }
+            child: Row(
+              children: const [
+                Icon(Icons.check_circle_outline, color: Colors.grey, size: 20),
+                SizedBox(width: 10),
+                Text(
+                  'Statut retenu : Sans objet',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
+  Widget _buildCpiContent(String activeStatus, Map<String, String> existingCpiData) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -287,11 +262,11 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildStatusOption('Satisfaisant'),
+                _buildStatusOption('Satisfaisant', activeStatus, existingCpiData),
                 const SizedBox(width: 8),
-                _buildStatusOption('Non satisfaisant'),
+                _buildStatusOption('Non satisfaisant', activeStatus, existingCpiData),
                 const SizedBox(width: 8),
-                _buildStatusOption('Sans objet'),
+                _buildStatusOption('Sans objet', activeStatus, existingCpiData),
               ],
             ),
           ),
@@ -359,15 +334,19 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
     );
   }
 
-  Widget _buildStatusOption(String status) {
-    final isSelected = _selectedStatus == status;
+  Widget _buildStatusOption(
+    String status,
+    String activeStatus,
+    Map<String, String> existingCpiData,
+  ) {
+    final isSelected = activeStatus == status;
     final color = _getStatusColor(status);
     final bgColor = _getStatusBgColor(status);
     final icon = _getStatusIcon(status);
 
     return Expanded(
       child: InkWell(
-        onTap: () => _selectAndSaveStatus(status),
+        onTap: () => _selectAndSaveStatus(status, existingCpiData),
         borderRadius: BorderRadius.circular(10),
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
