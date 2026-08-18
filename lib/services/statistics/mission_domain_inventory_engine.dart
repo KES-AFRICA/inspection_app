@@ -50,12 +50,12 @@ class MissionDomainInventory {
       totalPoints += inst.totalCheckpoints;
       compliant += inst.compliantCheckpoints;
       final instPertinentFindings = inst.findings.where((f) => f.hasValidNormativeReference).toList();
-      final ncCount = instPertinentFindings.isNotEmpty ? instPertinentFindings.length : inst.nonCompliantCheckpoints;
+      final ncCount = instPertinentFindings.length;
       nonCompliant += ncCount;
       na += inst.naCheckpoints;
-      critique += (instPertinentFindings.isNotEmpty ? instPertinentFindings : inst.findings).where((f) => f.criticality == 'Critique').length;
-      majeure += (instPertinentFindings.isNotEmpty ? instPertinentFindings : inst.findings).where((f) => f.criticality == 'Majeure').length;
-      mineure += (instPertinentFindings.isNotEmpty ? instPertinentFindings : inst.findings).where((f) => f.criticality == 'Mineure').length;
+      critique += instPertinentFindings.where((f) => f.criticality == 'Critique').length;
+      majeure += instPertinentFindings.where((f) => f.criticality == 'Majeure').length;
+      mineure += instPertinentFindings.where((f) => f.criticality == 'Mineure').length;
     }
 
     final evaluated = compliant + nonCompliant;
