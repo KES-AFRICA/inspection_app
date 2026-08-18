@@ -149,10 +149,14 @@ class _RadioSelectionScreenState extends ConsumerState<RadioSelectionScreen> {
           'ANNÉE DE FABRICATION': _cpiAnneeFabrication,
         };
         final cpiItem = InstallationItem(data: cpiData);
-        if (!_hasExistingCpi) {
-          await notifier.addInstallationItem('cpi', cpiItem);
-        } else {
+        final currentDesc = ref.read(descriptionInstallationsProvider(widget.mission.id)).value;
+        final bool cpiExists = (currentDesc != null && currentDesc.cpi.isNotEmpty) || _hasExistingCpi;
+
+        if (cpiExists) {
           await notifier.updateInstallationItem('cpi', 0, cpiItem);
+        } else {
+          final res = await notifier.addInstallationItem('cpi', cpiItem);
+          if (res) _hasExistingCpi = true;
         }
       }
 

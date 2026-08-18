@@ -828,7 +828,7 @@ class PdfReportService {
     // 8. Description des installations
     final bool hasItRegime = desc?.regimeNeutre != null &&
         desc!.regimeNeutre!.split(',').map((e) => e.trim()).contains('IT');
-    final bool showCpiInSommaire = hasItRegime && (desc?.cpi.isNotEmpty == true);
+    final bool showCpiInSommaire = hasItRegime || (desc?.cpi.isNotEmpty == true);
 
     int descSubIdx = 1;
     entries.add(_SommaireEntry(titre: "DESCRIPTION DES INSTALLATIONS", key: 'description', level: 0, isBold: true, isUppercase: true));
@@ -4107,14 +4107,20 @@ class PdfReportService {
 
     final bool hasItRegime = safeDesc.regimeNeutre != null &&
         safeDesc.regimeNeutre!.split(',').map((e) => e.trim()).contains('IT');
-    if (hasItRegime && safeDesc.cpi.isNotEmpty) {
+    final bool showCpiSection = hasItRegime || safeDesc.cpi.isNotEmpty;
+
+    if (showCpiSection) {
       widgets.add(PageTracker(
         key: 'desc_cpi',
         registry: trackedPages,
         offset: offset,
         child: _subTitle('${descBodyIdx++}. Caractéristiques du Contrôleur Permanent d\'Isolement (CPI)'),
       ));
-      widgets.add(_buildCpiTable(safeDesc.cpi));
+      if (safeDesc.cpi.isNotEmpty) {
+        widgets.add(_buildCpiTable(safeDesc.cpi));
+      } else {
+        widgets.add(_bodyText('- Information non renseignée (Régime IT)'));
+      }
       widgets.add(pw.SizedBox(height: 8));
     }
 
