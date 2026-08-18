@@ -317,7 +317,10 @@ class _RadioSequenceScreenState extends ConsumerState<RadioSequenceScreen> {
             },
           ];
 
-          return SingleChildScrollView(
+          return GestureDetector(
+            onTap: () => FocusScope.of(context).unfocus(),
+            behavior: HitTestBehavior.opaque,
+            child: SingleChildScrollView(
             padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -606,13 +609,17 @@ class _RadioSequenceScreenState extends ConsumerState<RadioSequenceScreen> {
                 ),
               ],
             ),
-          );
-        }
+          ),
+        );
+      }
 
-        // ── RENDU PAR DÉFAUT (SELECTION UNIQUE POUR AUTRES CHAMPS) ───────────
-        final displayOptions = widget.options;
+      // ── RENDU PAR DÉFAUT (SELECTION UNIQUE POUR AUTRES CHAMPS) ───────────
+      final displayOptions = widget.options;
 
-        return SingleChildScrollView(
+      return GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.opaque,
+        child: SingleChildScrollView(
           padding: EdgeInsets.all(isSmallScreen ? 16 : 20),
           child: Column(
             children: [
@@ -657,8 +664,9 @@ class _RadioSequenceScreenState extends ConsumerState<RadioSequenceScreen> {
               }),
             ],
           ),
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 }

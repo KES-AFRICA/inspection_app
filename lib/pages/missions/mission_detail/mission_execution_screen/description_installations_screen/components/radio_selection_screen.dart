@@ -189,35 +189,39 @@ class _RadioSelectionScreenState extends ConsumerState<RadioSelectionScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(widget.title),
-        backgroundColor: AppTheme.primaryBlue,
-        foregroundColor: Colors.white,
-        elevation: 0,
-      ),
-      body: widget.field == 'regime_neutre'
-          ? _buildMultiSelectRegimeBody()
-          : _buildSingleSelectBody(),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
-        child: ElevatedButton(
-          onPressed: _sauvegarder,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.primaryBlue,
-            foregroundColor: Colors.white,
-            minimumSize: const Size(double.infinity, 50),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: () => FocusScope.of(context).unfocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(widget.title),
+          backgroundColor: AppTheme.primaryBlue,
+          foregroundColor: Colors.white,
+          elevation: 0,
+        ),
+        body: widget.field == 'regime_neutre'
+            ? _buildMultiSelectRegimeBody()
+            : _buildSingleSelectBody(),
+        bottomNavigationBar: Container(
+          padding: const EdgeInsets.all(16),
+          child: ElevatedButton(
+            onPressed: _sauvegarder,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppTheme.primaryBlue,
+              foregroundColor: Colors.white,
+              minimumSize: const Size(double.infinity, 50),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 2,
             ),
-            elevation: 2,
-          ),
-          child: const Text(
-            'ENREGISTRER',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 0.5,
+            child: const Text(
+              'ENREGISTRER',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 0.5,
+              ),
             ),
           ),
         ),
