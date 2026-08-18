@@ -45,9 +45,6 @@ class DescriptionInstallationsNotifier
     String sectionKey,
     InstallationItem item,
   ) async {
-    final current = state.value;
-    if (current == null) return false;
-
     try {
       final addUseCase = ref.read(addInstallationItemUseCaseProvider);
       final itemEntity = DescriptionInstallationsMapper.toItemEntity(item);
@@ -71,9 +68,6 @@ class DescriptionInstallationsNotifier
     int index,
     InstallationItem item,
   ) async {
-    final current = state.value;
-    if (current == null) return false;
-
     try {
       final updateUseCase = ref.read(updateInstallationItemUseCaseProvider);
       final itemEntity = DescriptionInstallationsMapper.toItemEntity(item);
@@ -94,9 +88,6 @@ class DescriptionInstallationsNotifier
   }
 
   Future<bool> removeInstallationItem(String sectionKey, int index) async {
-    final current = state.value;
-    if (current == null) return false;
-
     try {
       final removeUseCase = ref.read(removeInstallationItemUseCaseProvider);
       final success = await removeUseCase(
@@ -115,9 +106,6 @@ class DescriptionInstallationsNotifier
   }
 
   Future<bool> updateDescriptionSelection(String field, String value) async {
-    final current = state.value;
-    if (current == null) return false;
-
     try {
       final updateSelectionUseCase = ref.read(
         updateDescriptionSelectionUseCaseProvider,

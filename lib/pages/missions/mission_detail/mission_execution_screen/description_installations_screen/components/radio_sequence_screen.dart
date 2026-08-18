@@ -102,7 +102,6 @@ class _RadioSequenceScreenState extends ConsumerState<RadioSequenceScreen> {
       }
 
       final resultString = listToSave.join(', ');
-      final success = await notifier.updateDescriptionSelection('regime_neutre', resultString);
 
       if (_selectedRegimes.contains('IT')) {
         final cpiData = {
@@ -115,16 +114,16 @@ class _RadioSequenceScreenState extends ConsumerState<RadioSequenceScreen> {
           'ANNÉE DE FABRICATION': _cpiAnneeFabrication,
         };
         final cpiItem = InstallationItem(data: cpiData);
-        final currentDesc = ref.read(descriptionInstallationsProvider(widget.mission.id)).value;
-        final bool cpiExists = (currentDesc != null && currentDesc.cpi.isNotEmpty) || _hasExistingCpi;
-
-        if (cpiExists) {
+        final freshDesc = await notifier.load();
+        if (freshDesc.cpi.isNotEmpty) {
           await notifier.updateInstallationItem('cpi', 0, cpiItem);
         } else {
           final res = await notifier.addInstallationItem('cpi', cpiItem);
           if (res) _hasExistingCpi = true;
         }
       }
+
+      final success = await notifier.updateDescriptionSelection('regime_neutre', resultString);
 
       if (success && !widget.isComplete && resultString.isNotEmpty) {
         widget.onComplete('regime_neutre');

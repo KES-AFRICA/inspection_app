@@ -6542,8 +6542,6 @@ class PdfReportService {
   }
 
   static pw.Widget _buildCpiTable(List<InstallationItem> cpiItems) {
-    if (cpiItems.isEmpty) return pw.SizedBox();
-
     pw.TableRow rowInfo(String label, String value, {bool alt = false}) {
       return pw.TableRow(
         decoration: alt ? pw.BoxDecoration(color: tableRowAlt) : null,
@@ -6564,9 +6562,11 @@ class PdfReportService {
       );
     }
 
+    final itemsToRender = cpiItems.isNotEmpty ? cpiItems : [InstallationItem(data: {})];
     final tables = <pw.Widget>[];
-    for (int i = 0; i < cpiItems.length; i++) {
-      final item = cpiItems[i];
+
+    for (int i = 0; i < itemsToRender.length; i++) {
+      final item = itemsToRender[i];
       final data = item.data;
 
       String safeVal(String key) {
@@ -6595,7 +6595,7 @@ class PdfReportService {
       );
 
       tables.add(tableWidget);
-      if (i < cpiItems.length - 1) {
+      if (i < itemsToRender.length - 1) {
         tables.add(pw.SizedBox(height: 6));
       }
     }
