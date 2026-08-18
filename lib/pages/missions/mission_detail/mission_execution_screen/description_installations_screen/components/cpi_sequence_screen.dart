@@ -268,6 +268,31 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
           ),
           const SizedBox(height: 18),
 
+          // Sélection du Statut du Test (Positionné au-dessus des essais)
+          const Text(
+            'Résultat de l\'essai du CPI',
+            style: TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildStatusOption('Satisfaisant'),
+                const SizedBox(width: 8),
+                _buildStatusOption('Non satisfaisant'),
+                const SizedBox(width: 8),
+                _buildStatusOption('Sans objet'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 22),
+
           // Cartes explicatives des essais
           _buildInfoCard(
             title: 'ESSAI DE DÉCLENCHEMENT DU CPI',
@@ -282,28 +307,6 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
             icon: Icons.notifications_active_outlined,
             description:
                 'Le report d\'alarme (voyant local, report GTB/GTC, ou tout autre dispositif de signalisation à distance) est contrôlé conjointement afin de s\'assurer que le personnel d\'exploitation est effectivement informé en cas de premier défaut d\'isolement.',
-          ),
-          const SizedBox(height: 20),
-
-          // Sélection du Statut du Test
-          const Text(
-            'Résultat de l\'essai du CPI',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          Row(
-            children: [
-              _buildStatusOption('Satisfaisant'),
-              const SizedBox(width: 8),
-              _buildStatusOption('Non satisfaisant'),
-              const SizedBox(width: 8),
-              _buildStatusOption('Sans objet'),
-            ],
           ),
           const SizedBox(height: 20),
         ],
@@ -363,7 +366,7 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
         onTap: () => _selectAndSaveStatus(status),
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           decoration: BoxDecoration(
             color: isSelected ? bgColor : Colors.white,
             borderRadius: BorderRadius.circular(10),
@@ -373,6 +376,7 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
             ),
           ),
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(icon, color: isSelected ? color : Colors.grey, size: 24),
               const SizedBox(height: 6),
@@ -380,7 +384,7 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
                 status,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 12,
+                  fontSize: 11.5,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   color: isSelected ? color : Colors.black87,
                 ),
