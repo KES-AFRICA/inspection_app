@@ -3,7 +3,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:inspec_app/core/providers/description_installations_providers.dart';
 import 'package:inspec_app/features/description_installations/presentation/providers/description_installations_provider.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/models/mission.dart';
@@ -27,30 +26,8 @@ class CpiSequenceScreen extends ConsumerStatefulWidget {
 class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
   // Statut du test (3 choix : 'Satisfaisant', 'Non satisfaisant', 'Sans objet')
   String _selectedStatus = 'Sans objet';
-
-  // Contrôleurs des caractéristiques CPI
-  final TextEditingController _marqueController = TextEditingController();
-  final TextEditingController _typeController = TextEditingController();
-  final TextEditingController _serieController = TextEditingController();
-  final TextEditingController _seuilController = TextEditingController();
-  final TextEditingController _obsController = TextEditingController();
-
-  String _reportAlarme = 'NON RENSEIGNÉ';
-  String _anneeFabrication = 'NON RENSEIGNÉE';
   bool _isSaving = false;
   bool _isLoaded = false;
-
-  final List<String> _reportAlarmeOptions = [
-    'OUI',
-    'NON',
-    'NON RENSEIGNÉ',
-  ];
-
-  final List<String> _anneeOptions = [
-    'NON RENSEIGNÉE',
-    for (int y = DateTime.now().year; y >= 1970; y--) y.toString(),
-  ];
-
   String? _regimeNeutre;
   bool _hasItRegime = true;
 
@@ -58,16 +35,6 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
   void initState() {
     super.initState();
     _loadExistingCpiData();
-  }
-
-  @override
-  void dispose() {
-    _marqueController.dispose();
-    _typeController.dispose();
-    _serieController.dispose();
-    _seuilController.dispose();
-    _obsController.dispose();
-    super.dispose();
   }
 
   Future<void> _loadExistingCpiData() async {
@@ -85,13 +52,6 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
           _regimeNeutre = regime;
           _hasItRegime = hasIt;
           _selectedStatus = cpiData['RESULTAT_TEST'] ?? 'Sans objet';
-          _marqueController.text = cpiData['MARQUE'] ?? '';
-          _typeController.text = cpiData['TYPE'] ?? '';
-          _serieController.text = cpiData['N° SÉRIE'] ?? '';
-          _seuilController.text = cpiData['SEUIL DE RÉGLAGE (kΩ)'] ?? '';
-          _reportAlarme = cpiData['REPORT D\'ALARME'] ?? 'NON RENSEIGNÉ';
-          _anneeFabrication = cpiData['ANNÉE DE FABRICATION'] ?? 'NON RENSEIGNÉE';
-          _obsController.text = cpiData['OBSERVATIONS_TEST'] ?? '';
           _isLoaded = true;
         });
       } else {
@@ -106,20 +66,18 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
     }
   }
 
-  Future<void> _saveCpiTest() async {
-    setState(() => _isSaving = true);
+  Future<void> _selectAndSaveStatus(String status) async {
+    if (_isSaving) return;
+
+    setState(() {
+      _selectedStatus = status;
+      _isSaving = true;
+    });
 
     try {
       final cpiData = {
-        'MARQUE': _marqueController.text.trim(),
-        'TYPE': _typeController.text.trim(),
-        'N° SÉRIE': _serieController.text.trim(),
         'RÉGIME DE NEUTRE SURVEILLÉ': 'IT',
-        'SEUIL DE RÉGLAGE (kΩ)': _seuilController.text.trim(),
-        'REPORT D\'ALARME': _reportAlarme,
-        'ANNÉE DE FABRICATION': _anneeFabrication,
-        'RESULTAT_TEST': _selectedStatus,
-        'OBSERVATIONS_TEST': _obsController.text.trim(),
+        'RESULTAT_TEST': status,
       };
 
       final cpiItem = InstallationItem(data: cpiData);
@@ -136,9 +94,9 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
           ScaffoldMessenger.of(context).hideCurrentSnackBar();
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Test CPI enregistré : $_selectedStatus'),
+              content: Text('Enregistré : $status'),
               backgroundColor: Colors.green,
-              duration: const Duration(milliseconds: 700),
+              duration: const Duration(milliseconds: 500),
             ),
           );
         }
@@ -336,7 +294,7 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
               color: Colors.black87,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
           Row(
             children: [
@@ -346,96 +304,6 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
               const SizedBox(width: 8),
               _buildStatusOption('Sans objet'),
             ],
-          ),
-          const SizedBox(height: 24),
-
-          // Formulaire Caractéristiques du CPI
-          const Text(
-            'Caractéristiques du matériel CPI (Optionnel)',
-            style: TextStyle(
-              fontSize: 15,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-          const SizedBox(height: 12),
-
-          _buildTextField('Marque', _marqueController, Icons.business),
-          const SizedBox(height: 10),
-          _buildTextField('Type / Modèle', _typeController, Icons.category),
-          const SizedBox(height: 10),
-          _buildTextField(
-            'N° de Série',
-            _serieController,
-            Icons.confirmation_number,
-          ),
-          const SizedBox(height: 10),
-          _buildTextField(
-            'Seuil de réglage (kΩ)',
-            _seuilController,
-            Icons.tune,
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 10),
-
-          // Dropdown Report d'Alarme
-          _buildDropdownTile(
-            label: 'Report d\'alarme',
-            value: _reportAlarme,
-            options: _reportAlarmeOptions,
-            onChanged: (val) => setState(() => _reportAlarme = val!),
-          ),
-          const SizedBox(height: 10),
-
-          // Dropdown Année de fabrication
-          _buildDropdownTile(
-            label: 'Année de fabrication',
-            value: _anneeFabrication,
-            options: _anneeOptions,
-            onChanged: (val) => setState(() => _anneeFabrication = val!),
-          ),
-          const SizedBox(height: 10),
-
-          _buildTextField(
-            'Observations sur le test',
-            _obsController,
-            Icons.comment,
-            maxLines: 2,
-          ),
-
-          const SizedBox(height: 24),
-
-          // Bouton Sauvegarder
-          SizedBox(
-            width: double.infinity,
-            height: 48,
-            child: ElevatedButton.icon(
-              onPressed: _isSaving ? null : _saveCpiTest,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlue,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                ),
-              ),
-              icon: _isSaving
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Colors.white,
-                      ),
-                    )
-                  : const Icon(Icons.save),
-              label: Text(
-                _isSaving ? 'Enregistrement...' : 'Valider & Enregistrer',
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
           ),
           const SizedBox(height: 20),
         ],
@@ -492,15 +360,10 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
 
     return Expanded(
       child: InkWell(
-        onTap: () {
-          setState(() {
-            _selectedStatus = status;
-          });
-          _saveCpiTest();
-        },
+        onTap: () => _selectAndSaveStatus(status),
         borderRadius: BorderRadius.circular(10),
         child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 6),
+          padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 6),
           decoration: BoxDecoration(
             color: isSelected ? bgColor : Colors.white,
             borderRadius: BorderRadius.circular(10),
@@ -511,13 +374,13 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
           ),
           child: Column(
             children: [
-              Icon(icon, color: isSelected ? color : Colors.grey, size: 22),
-              const SizedBox(height: 4),
+              Icon(icon, color: isSelected ? color : Colors.grey, size: 24),
+              const SizedBox(height: 6),
               Text(
                 status,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  fontSize: 11,
+                  fontSize: 12,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   color: isSelected ? color : Colors.black87,
                 ),
@@ -526,50 +389,6 @@ class _CpiSequenceScreenState extends ConsumerState<CpiSequenceScreen> {
           ),
         ),
       ),
-    );
-  }
-
-  Widget _buildTextField(
-    String label,
-    TextEditingController controller,
-    IconData icon, {
-    TextInputType keyboardType = TextInputType.text,
-    int maxLines = 1,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: keyboardType,
-      maxLines: maxLines,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: Icon(icon, size: 20),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      ),
-    );
-  }
-
-  Widget _buildDropdownTile({
-    required String label,
-    required String value,
-    required List<String> options,
-    required ValueChanged<String?> onChanged,
-  }) {
-    return DropdownButtonFormField<String>(
-      value: options.contains(value) ? value : options.first,
-      decoration: InputDecoration(
-        labelText: label,
-        prefixIcon: const Icon(Icons.list_alt, size: 20),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-      ),
-      items: options.map((opt) {
-        return DropdownMenuItem(
-          value: opt,
-          child: Text(opt, style: const TextStyle(fontSize: 13)),
-        );
-      }).toList(),
-      onChanged: onChanged,
     );
   }
 }
