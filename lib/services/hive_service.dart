@@ -6138,6 +6138,7 @@ static Future<void> saveJSA(JSA jsa) async {
 }
 
 static JSA? getJSAByMissionId(String missionId) {
+  if (!Hive.isBoxOpen(_jsaBox)) return null;
   final box = Hive.box<JSA>(_jsaBox);
   try {
     return box.values.firstWhere((jsa) => jsa.missionId == missionId);
