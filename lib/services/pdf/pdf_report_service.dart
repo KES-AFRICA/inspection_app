@@ -3324,7 +3324,7 @@ class PdfReportService {
                         mainAxisAlignment: pw.MainAxisAlignment.end,
                         children: [
                           pw.Text(
-                            'MT : ${stats.mtCount} ($mtPctStr %)',
+                            '${stats.mtCount} ($mtPctStr %)',
                             style: pw.TextStyle(font: _fontBold, fontSize: 8.5, color: accentColor),
                           ),
                           pw.SizedBox(height: 2),
@@ -3344,7 +3344,7 @@ class PdfReportService {
                         mainAxisAlignment: pw.MainAxisAlignment.end,
                         children: [
                           pw.Text(
-                            'BT : ${stats.btCount} ($btPctStr %)',
+                            '${stats.btCount} ($btPctStr %)',
                             style: pw.TextStyle(font: _fontBold, fontSize: 8.5, color: accentColor),
                           ),
                           pw.SizedBox(height: 2),
@@ -3376,8 +3376,6 @@ class PdfReportService {
   }
 
   static pw.Widget _buildCrossCategorySection(List<CategoryCrossItem> items, String crossText, [int? index]) {
-    if (items.isEmpty) return pw.SizedBox();
-
     final totalNC = items.fold<int>(0, (sum, e) => sum + e.nonConformitiesCount);
     final totalCritique = items.fold<int>(0, (sum, e) => sum + e.critiqueCount);
     final totalMajeure = items.fold<int>(0, (sum, e) => sum + e.majeureCount);
@@ -3387,170 +3385,292 @@ class PdfReportService {
 
     final colorCritique = PdfColor.fromHex('#DC2626');
     final colorMajeure = PdfColor.fromHex('#EA580C');
-    final colorMineure = PdfColor.fromHex('#16A34A');
+    final colorMineure = PdfColor.fromHex('#D97706');
 
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _subTitle('${index != null ? "$index. " : ""}Non-conformit\u00e9s crois\u00e9es par cat\u00e9gorie d\'installation / d\'\u00e9quipement'),
-        pw.SizedBox(height: 5),
-        _bodyText('En crois\u00e0nt chaque cat\u00e9gorie ci-dessus avec les non-conformit\u00e9s relev\u00e9es, la r\u00e9partition et la densit\u00e9 moyenne par \u00e9quipement se pr\u00e9sentent comme suit :'),
-        pw.SizedBox(height: 8),
-        pw.Container(
-          height: 135,
-          padding: const pw.EdgeInsets.all(8),
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: borderColor, width: 0.5),
-            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-            color: PdfColors.white,
-          ),
-          child: pw.Column(
-            children: [
-              pw.Row(
-                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                children: [
-                  pw.Text(
-                    'Non-conformit\u00e9s par cat\u00e9gorie d\'installation / d\'\u00e9quipement',
-                    style: pw.TextStyle(font: _fontBold, fontSize: 9, color: accentColor),
+    final bgCritiqueHeader = PdfColor.fromHex('#DC2626');
+    final bgMajeureHeader = PdfColor.fromHex('#EA580C');
+    final bgMineureHeader = PdfColor.fromHex('#D97706');
+
+    final bgCritiqueCell = PdfColor.fromHex('#FEF2F2');
+    final bgMajeureCell = PdfColor.fromHex('#FFF7ED');
+    final bgMineureCell = PdfColor.fromHex('#FEF3C7');
+
+    final textCritique = PdfColor.fromHex('#B71C1C');
+    final textMajeure = PdfColor.fromHex('#C2410C');
+    final textMineure = PdfColor.fromHex('#B45309');
+
+    final comments = crossText
+        .split(RegExp(r'\.(?=\s|[A-Z]|$)'))
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .map((s) => s.endsWith('.') ? s : '$s.')
+        .toList();
+
+    return pw.Inseparable(
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _subTitle('${index != null ? "$index. " : ""}Non-conformités croisées par catégorie d\'installation / d\'équipement'),
+          pw.SizedBox(height: 5),
+          _bodyText('En croisant chaque catégorie ci-dessus avec les non-conformités relevées, la répartition et la densité moyenne par équipement se présentent comme suit :'),
+          pw.SizedBox(height: 8),
+          pw.Container(
+            height: 135,
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: borderColor, width: 0.5),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+              color: PdfColors.white,
+            ),
+            child: pw.Column(
+              children: [
+                pw.Row(
+                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                  children: [
+                    pw.Text(
+                      'Non-conformités par catégorie d\'installation / d\'équipement',
+                      style: pw.TextStyle(font: _fontBold, fontSize: 9, color: accentColor),
+                    ),
+                    pw.Row(
+                      children: [
+                        pw.Container(width: 8, height: 8, color: colorCritique),
+                        pw.SizedBox(width: 3),
+                        pw.Text('Critique', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5)),
+                        pw.SizedBox(width: 6),
+                        pw.Container(width: 8, height: 8, color: colorMajeure),
+                        pw.SizedBox(width: 3),
+                        pw.Text('Majeure', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5)),
+                        pw.SizedBox(width: 6),
+                        pw.Container(width: 8, height: 8, color: colorMineure),
+                        pw.SizedBox(width: 3),
+                        pw.Text('Mineure', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5)),
+                      ],
+                    ),
+                  ],
+                ),
+                pw.SizedBox(height: 8),
+                pw.Container(
+                  height: 100,
+                  child: pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: items.map((item) {
+                      final hCrit = maxVal > 0 ? (item.critiqueCount / maxVal) * 65 : 0.0;
+                      final hMaj = maxVal > 0 ? (item.majeureCount / maxVal) * 65 : 0.0;
+                      final hMin = maxVal > 0 ? (item.mineureCount / maxVal) * 65 : 0.0;
+
+                      return pw.Column(
+                        mainAxisAlignment: pw.MainAxisAlignment.end,
+                        children: [
+                          pw.Text('${item.nonConformitiesCount}', style: pw.TextStyle(font: _fontBold, fontSize: 7, color: accentColor)),
+                          pw.SizedBox(height: 2),
+                          pw.Container(
+                            width: 22,
+                            child: pw.Column(
+                              children: [
+                                if (hCrit > 0) pw.Container(height: hCrit < 2 ? 2 : hCrit, color: colorCritique),
+                                if (hMaj > 0) pw.Container(height: hMaj < 2 ? 2 : hMaj, color: colorMajeure),
+                                if (hMin > 0) pw.Container(height: hMin < 2 ? 2 : hMin, color: colorMineure),
+                                if (item.nonConformitiesCount == 0) pw.Container(height: 2, color: PdfColors.grey300),
+                              ],
+                            ),
+                          ),
+                          pw.SizedBox(height: 4),
+                          pw.SizedBox(
+                            width: 44,
+                            height: 22,
+                            child: pw.Align(
+                              alignment: pw.Alignment.topCenter,
+                              child: pw.Text(
+                                _shortCatName(item.categoryName),
+                                style: pw.TextStyle(font: _fontRegular, fontSize: 6, color: PdfColors.grey800),
+                                textAlign: pw.TextAlign.center,
+                                maxLines: 2,
+                              ),
+                            ),
+                          ),
+                        ],
+                      );
+                    }).toList(),
                   ),
-                  pw.Row(
-                    children: [
-                      pw.Container(width: 8, height: 8, color: colorCritique),
-                      pw.SizedBox(width: 3),
-                      pw.Text('Critique', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5)),
-                      pw.SizedBox(width: 6),
-                      pw.Container(width: 8, height: 8, color: colorMajeure),
-                      pw.SizedBox(width: 3),
-                      pw.Text('Majeure', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5)),
-                      pw.SizedBox(width: 6),
-                      pw.Container(width: 8, height: 8, color: colorMineure),
-                      pw.SizedBox(width: 3),
-                      pw.Text('Mineure', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5)),
-                    ],
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 8),
+          pw.Table(
+            border: pw.TableBorder.all(color: borderColor, width: 0.5),
+            columnWidths: const {
+              0: pw.FlexColumnWidth(2.6),
+              1: pw.FlexColumnWidth(0.8),
+              2: pw.FlexColumnWidth(0.8),
+              3: pw.FlexColumnWidth(0.8),
+              4: pw.FlexColumnWidth(0.8),
+              5: pw.FlexColumnWidth(0.8),
+              6: pw.FlexColumnWidth(1.2),
+              7: pw.FlexColumnWidth(1.3),
+              8: pw.FlexColumnWidth(1.2),
+            },
+            children: [
+              pw.TableRow(
+                children: [
+                  pw.Container(
+                    color: accentColor,
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                    child: pw.Text('Catégorie', style: pw.TextStyle(font: _fontBold, fontSize: 7, color: PdfColors.white)),
+                  ),
+                  pw.Container(
+                    color: accentColor,
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                    child: pw.Text('Équip.', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center),
+                  ),
+                  pw.Container(
+                    color: accentColor,
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                    child: pw.Text('NC', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center),
+                  ),
+                  pw.Container(
+                    color: bgCritiqueHeader,
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                    child: pw.Text('Crit.', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center),
+                  ),
+                  pw.Container(
+                    color: bgMajeureHeader,
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                    child: pw.Text('Maj.', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center),
+                  ),
+                  pw.Container(
+                    color: bgMineureHeader,
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                    child: pw.Text('Min.', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center),
+                  ),
+                  pw.Container(
+                    color: accentColor,
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                    child: pw.Text('% du total NC', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center),
+                  ),
+                  pw.Container(
+                    color: accentColor,
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                    child: pw.Text('Taux crit. / NC', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center),
+                  ),
+                  pw.Container(
+                    color: accentColor,
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                    child: pw.Text('Densité NC/équip.', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center),
                   ),
                 ],
               ),
-              pw.SizedBox(height: 8),
-              pw.Container(
-                height: 100,
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
-                  crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: items.map((item) {
-                    final hCrit = maxVal > 0 ? (item.critiqueCount / maxVal) * 70 : 0.0;
-                    final hMaj = maxVal > 0 ? (item.majeureCount / maxVal) * 70 : 0.0;
-                    final hMin = maxVal > 0 ? (item.mineureCount / maxVal) * 70 : 0.0;
+              for (int i = 0; i < items.length; i++) ...[
+                () {
+                  final item = items[i];
+                  final pctTotalNC = totalNC > 0 ? (item.nonConformitiesCount / totalNC * 100) : 0.0;
+                  final tauxCrit = item.nonConformitiesCount > 0 ? (item.critiqueCount / item.nonConformitiesCount * 100) : 0.0;
+                  final densite = item.equipmentCount > 0 ? (item.nonConformitiesCount / item.equipmentCount) : 0.0;
 
-                    return pw.Column(
-                      mainAxisAlignment: pw.MainAxisAlignment.end,
-                      children: [
-                        pw.Text('${item.nonConformitiesCount}', style: pw.TextStyle(font: _fontBold, fontSize: 7, color: accentColor)),
-                        pw.SizedBox(height: 2),
-                        pw.Container(
-                          width: 22,
-                          child: pw.Column(
-                            children: [
-                              if (hCrit > 0) pw.Container(height: hCrit < 2 ? 2 : hCrit, color: colorCritique),
-                              if (hMaj > 0) pw.Container(height: hMaj < 2 ? 2 : hMaj, color: colorMajeure),
-                              if (hMin > 0) pw.Container(height: hMin < 2 ? 2 : hMin, color: colorMineure),
-                              if (item.nonConformitiesCount == 0) pw.Container(height: 2, color: PdfColors.grey300),
-                            ],
-                          ),
-                        ),
-                        pw.SizedBox(height: 4),
-                        pw.SizedBox(
-                          width: 42,
-                          child: pw.Text(
-                            _shortCatName(item.categoryName),
-                            style: pw.TextStyle(font: _fontRegular, fontSize: 6, color: PdfColors.grey800),
-                            textAlign: pw.TextAlign.center,
-                            maxLines: 2,
-                          ),
-                        ),
-                      ],
-                    );
-                  }).toList(),
-                ),
+                  final rowBg = i % 2 == 1 ? tableRowAlt : PdfColors.white;
+
+                  return pw.TableRow(
+                    children: [
+                      pw.Container(color: rowBg, padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3), child: pw.Text(item.categoryName, style: pw.TextStyle(font: _fontBold, fontSize: 6.5, color: PdfColors.black))),
+                      pw.Container(color: rowBg, padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3), child: pw.Text('${item.equipmentCount}', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5), textAlign: pw.TextAlign.center)),
+                      pw.Container(color: rowBg, padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3), child: pw.Text('${item.nonConformitiesCount}', style: pw.TextStyle(font: _fontBold, fontSize: 6.5), textAlign: pw.TextAlign.center)),
+
+                      pw.Container(
+                        color: item.critiqueCount > 0 ? bgCritiqueCell : rowBg,
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+                        child: pw.Text('${item.critiqueCount}', style: pw.TextStyle(font: item.critiqueCount > 0 ? _fontBold : _fontRegular, fontSize: 6.5, color: item.critiqueCount > 0 ? textCritique : PdfColors.grey700), textAlign: pw.TextAlign.center),
+                      ),
+
+                      pw.Container(
+                        color: item.majeureCount > 0 ? bgMajeureCell : rowBg,
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+                        child: pw.Text('${item.majeureCount}', style: pw.TextStyle(font: item.majeureCount > 0 ? _fontBold : _fontRegular, fontSize: 6.5, color: item.majeureCount > 0 ? textMajeure : PdfColors.grey700), textAlign: pw.TextAlign.center),
+                      ),
+
+                      pw.Container(
+                        color: item.mineureCount > 0 ? bgMineureCell : rowBg,
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3),
+                        child: pw.Text('${item.mineureCount}', style: pw.TextStyle(font: item.mineureCount > 0 ? _fontBold : _fontRegular, fontSize: 6.5, color: item.mineureCount > 0 ? textMineure : PdfColors.grey700), textAlign: pw.TextAlign.center),
+                      ),
+
+                      pw.Container(color: rowBg, padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3), child: pw.Text('${pctTotalNC.toStringAsFixed(1).replaceAll('.', ',')} %', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5), textAlign: pw.TextAlign.center)),
+                      pw.Container(color: rowBg, padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3), child: pw.Text(item.nonConformitiesCount > 0 ? '${tauxCrit.toStringAsFixed(1).replaceAll('.', ',')} %' : '—', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5), textAlign: pw.TextAlign.center)),
+                      pw.Container(color: rowBg, padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3), child: pw.Text(item.equipmentCount > 0 ? densite.toStringAsFixed(1).replaceAll('.', ',') : '0,0', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5), textAlign: pw.TextAlign.center)),
+                    ],
+                  );
+                }(),
+              ],
+              pw.TableRow(
+                children: [
+                  pw.Container(color: lightBlue, padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4), child: pw.Text('TOTAL', style: pw.TextStyle(font: _fontBold, fontSize: 7, color: accentColor))),
+                  pw.Container(color: lightBlue, padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('$totalEquipements', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: accentColor), textAlign: pw.TextAlign.center)),
+                  pw.Container(color: lightBlue, padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('$totalNC', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: accentColor), textAlign: pw.TextAlign.center)),
+                  pw.Container(color: PdfColor.fromHex('#FEE2E2'), padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('$totalCritique', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: textCritique), textAlign: pw.TextAlign.center)),
+                  pw.Container(color: PdfColor.fromHex('#FFEDD5'), padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('$totalMajeure', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: textMajeure), textAlign: pw.TextAlign.center)),
+                  pw.Container(color: PdfColor.fromHex('#FEF3C7'), padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('$totalMineure', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: textMineure), textAlign: pw.TextAlign.center)),
+                  pw.Container(color: lightBlue, padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('100 %', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: accentColor), textAlign: pw.TextAlign.center)),
+                  pw.Container(color: lightBlue, padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text(totalNC > 0 ? '${(totalCritique / totalNC * 100).toStringAsFixed(1).replaceAll('.', ',')} %' : '—', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: accentColor), textAlign: pw.TextAlign.center)),
+                  pw.Container(color: lightBlue, padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text(totalEquipements > 0 ? (totalNC / totalEquipements).toStringAsFixed(1).replaceAll('.', ',') : '0,0', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: accentColor), textAlign: pw.TextAlign.center)),
+                ],
               ),
             ],
           ),
-        ),
-        pw.SizedBox(height: 8),
-        pw.Table(
-          border: pw.TableBorder.all(color: borderColor, width: 0.5),
-          columnWidths: const {
-            0: pw.FlexColumnWidth(2.6),
-            1: pw.FlexColumnWidth(0.8),
-            2: pw.FlexColumnWidth(0.8),
-            3: pw.FlexColumnWidth(0.8),
-            4: pw.FlexColumnWidth(0.8),
-            5: pw.FlexColumnWidth(0.8),
-            6: pw.FlexColumnWidth(1.2),
-            7: pw.FlexColumnWidth(1.3),
-            8: pw.FlexColumnWidth(1.2),
-          },
-          children: [
-            pw.TableRow(
-              decoration: pw.BoxDecoration(color: accentColor),
+          pw.SizedBox(height: 6),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+            decoration: pw.BoxDecoration(
+              color: tableRowAlt,
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+              border: pw.Border.all(color: borderColor, width: 0.5),
+            ),
+            child: pw.Row(
               children: [
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4), child: pw.Text('Catégorie', style: pw.TextStyle(font: _fontBold, fontSize: 7, color: PdfColors.white))),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('Équip.', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('NC', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('Crit.', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('Maj.', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('Min.', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('% du total NC', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('Taux crit. / NC', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('Densité NC/équip.', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
+                pw.Text('Glossaire : ', style: pw.TextStyle(font: _fontBold, fontSize: 6.5, color: darkGrey)),
+                pw.Expanded(
+                  child: pw.Text(
+                    'Équip. = Nombre d\'équipements · NC = Non-conformités · Crit. = Critique (rouge) · Maj. = Majeure (orange) · Min. = Mineure (jaune) · Taux crit. = Ratio NC Critiques / NC Totales · Densité = Ratio NC / Équipement',
+                    style: pw.TextStyle(font: _fontRegular, fontSize: 6.5, color: PdfColors.grey800),
+                  ),
+                ),
               ],
             ),
-            for (int i = 0; i < items.length; i++) ...[
-              () {
-                final item = items[i];
-                final pctTotalNC = totalNC > 0 ? (item.nonConformitiesCount / totalNC * 100) : 0.0;
-                final tauxCrit = item.nonConformitiesCount > 0 ? (item.critiqueCount / item.nonConformitiesCount * 100) : 0.0;
-                final densite = item.equipmentCount > 0 ? (item.nonConformitiesCount / item.equipmentCount) : 0.0;
-
-                final isCritiqueHighlight = item.critiqueCount > 0;
-                final critStyle = isCritiqueHighlight
-                    ? pw.TextStyle(font: _fontBold, fontSize: 6.5, color: PdfColor.fromHex('#B71C1C'))
-                    : pw.TextStyle(font: _fontRegular, fontSize: 6.5, color: PdfColors.grey700);
-
-                return pw.TableRow(
-                  decoration: pw.BoxDecoration(color: i % 2 == 1 ? tableRowAlt : PdfColors.white),
-                  children: [
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3), child: pw.Text(item.categoryName, style: pw.TextStyle(font: _fontBold, fontSize: 6.5, color: PdfColors.black))),
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3), child: pw.Text('${item.equipmentCount}', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5), textAlign: pw.TextAlign.center)),
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3), child: pw.Text('${item.nonConformitiesCount}', style: pw.TextStyle(font: _fontBold, fontSize: 6.5), textAlign: pw.TextAlign.center)),
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3), child: pw.Text('${item.critiqueCount}', style: critStyle, textAlign: pw.TextAlign.center)),
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3), child: pw.Text('${item.majeureCount}', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5), textAlign: pw.TextAlign.center)),
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3), child: pw.Text('${item.mineureCount}', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5), textAlign: pw.TextAlign.center)),
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3), child: pw.Text('${pctTotalNC.toStringAsFixed(1).replaceAll('.', ',')} %', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5), textAlign: pw.TextAlign.center)),
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3), child: pw.Text(item.nonConformitiesCount > 0 ? '${tauxCrit.toStringAsFixed(1).replaceAll('.', ',')} %' : '\u2014', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5), textAlign: pw.TextAlign.center)),
-                    pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 3), child: pw.Text(item.equipmentCount > 0 ? densite.toStringAsFixed(1).replaceAll('.', ',') : '0,0', style: pw.TextStyle(font: _fontRegular, fontSize: 6.5), textAlign: pw.TextAlign.center)),
-                  ],
+          ),
+          pw.SizedBox(height: 8),
+          pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text('Constatations et commentaires d\'analyse :', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: accentColor)),
+              pw.SizedBox(height: 4),
+              ...comments.map((comment) {
+                return pw.Padding(
+                  padding: const pw.EdgeInsets.only(bottom: 3),
+                  child: pw.Row(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Container(
+                        width: 3,
+                        height: 3,
+                        margin: const pw.EdgeInsets.only(top: 3, right: 5),
+                        decoration: pw.BoxDecoration(
+                          color: accentColor,
+                          shape: pw.BoxShape.circle,
+                        ),
+                      ),
+                      pw.Expanded(
+                        child: pw.Text(
+                          comment,
+                          style: pw.TextStyle(font: _fontRegular, fontSize: 7, color: PdfColors.grey900),
+                        ),
+                      ),
+                    ],
+                  ),
                 );
-              }(),
+              }).toList(),
             ],
-            pw.TableRow(
-              decoration: pw.BoxDecoration(color: lightBlue),
-              children: [
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4), child: pw.Text('TOTAL', style: pw.TextStyle(font: _fontBold, fontSize: 7, color: accentColor))),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('$totalEquipements', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: accentColor), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('$totalNC', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: accentColor), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('$totalCritique', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: PdfColor.fromHex('#B71C1C')), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('$totalMajeure', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: accentColor), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('$totalMineure', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: accentColor), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text('100 %', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: accentColor), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text(totalNC > 0 ? '${(totalCritique / totalNC * 100).toStringAsFixed(1).replaceAll('.', ',')} %' : '\u2014', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: accentColor), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4), child: pw.Text(totalEquipements > 0 ? (totalNC / totalEquipements).toStringAsFixed(1).replaceAll('.', ',') : '0,0', style: pw.TextStyle(font: _fontBold, fontSize: 6.8, color: accentColor), textAlign: pw.TextAlign.center)),
-              ],
-            ),
-          ],
-        ),
-        pw.SizedBox(height: 6),
-        _bodyText('Lecture crois\u00e9e : $crossText'),
-      ],
+          ),
+        ],
+      ),
     );
   }
 
