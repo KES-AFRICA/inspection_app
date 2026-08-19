@@ -312,7 +312,7 @@ class PdfReportService {
         left:   kLeftMargin,
         top:    kTopMargin,
         right:  kRightMargin,
-        bottom: kBottomMargin + 40,
+        bottom: kBottomMargin + 4,
       ),
       buildBackground: (ctx) => showWatermark ? _buildWatermarkBackground() : pw.SizedBox(),
       buildForeground: (ctx) => _buildFooterAbsolute(
@@ -343,7 +343,7 @@ class PdfReportService {
     int? overrideTotalPages,
   }) {
     final double footerHeight = isFirstPage ? 72.0 : 40.0;
-    const double descente = kBottomMargin + 40;
+    final double descente = isFirstPage ? (kBottomMargin + 40) : (kBottomMargin + 12);
 
     final widget = isFirstPage
         ? PdfFooterBuilder.buildFirstPageFooter(
@@ -605,7 +605,7 @@ class PdfReportService {
           width: double.infinity,
           padding: const pw.EdgeInsets.symmetric(vertical: 14, horizontal: 14),
           decoration: pw.BoxDecoration(
-            color: headerColor,
+            color: accentColor,
             borderRadius: const pw.BorderRadius.all(pw.Radius.circular(6)),
           ),
           child: pw.Text(
@@ -806,7 +806,9 @@ class PdfReportService {
     // 4. Mesures de sécurité autour des installations
     entries.add(_SommaireEntry(titre: "MESURES DE SÉCURITÉ AUTOUR DES INSTALLATIONS", key: 'mesures_securite', level: 0, isBold: true, isUppercase: true));
     entries.add(_SommaireEntry(titre: "1. Technicien en maintenance des installations", key: 'mesures_technicien', level: 1));
-    entries.add(_SommaireEntry(titre: "2. Engagement de KES INSPECTIONS AND PROJECTS", key: 'mesures_engagement', level: 1));
+
+    // 5. Engagement de KES INSPECTIONS AND PROJECTS
+    entries.add(_SommaireEntry(titre: "ENGAGEMENT DE KES INSPECTIONS AND PROJECTS", key: 'mesures_engagement', level: 0, isBold: true, isUppercase: true));
 
     // 5. Résumé Exécutif
     entries.add(_SommaireEntry(titre: "RESUME EXECUTIF", key: 'resume_executif', level: 0, isBold: true, isUppercase: true));
@@ -2562,7 +2564,6 @@ class PdfReportService {
     final tableBorder = border ?? pw.TableBorder.all(color: borderColor, width: 0.5);
 
     final block1Children = <pw.Widget>[
-      pw.NewPage(freeSpace: minFreeSpace),
       headerWidget,
       if (introWidget != null) ...[pw.SizedBox(height: 4), introWidget],
       pw.SizedBox(height: 4),
@@ -2579,6 +2580,7 @@ class PdfReportService {
 
     if (dataRows.length == 1) {
       return [
+        pw.NewPage(freeSpace: minFreeSpace),
         pw.Column(
           crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: block1Children,
@@ -2594,6 +2596,7 @@ class PdfReportService {
     );
 
     return [
+      pw.NewPage(freeSpace: minFreeSpace),
       pw.Column(
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: block1Children,
@@ -3746,240 +3749,251 @@ class PdfReportService {
 
         pw.SizedBox(height: 8),
 
-        PageTracker(
-          key: 'renseignements_principaux',
-          registry: trackedPages,
-          offset: offset,
-          child: _subTitle('1. Renseignements principaux'),
-        ),
-
-        pw.SizedBox(height: 5),
-
-        pw.Table(
-          border: pw.TableBorder.all(
-            color: borderColor,
-            width: 0.4,
-          ),
-          columnWidths: {
-            0: const pw.FlexColumnWidth(2),
-            1: const pw.FlexColumnWidth(3),
-          },
+        pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
           children: [
-            _tableDataRow(
-              ['Etablissement vérifié', mission.nomClient],
-              alt: false,
+            PageTracker(
+              key: 'renseignements_principaux',
+              registry: trackedPages,
+              offset: offset,
+              child: _subTitle('1. Renseignements principaux'),
             ),
-            _tableDataRow(
-              [
-                'Installation vérifié',
-                rg?.installation.isNotEmpty == true
-                    ? rg!.installation
-                    : (mission.installation ?? 'Toutes les installations électriques'),
+            pw.SizedBox(height: 5),
+            pw.Table(
+              border: pw.TableBorder.all(
+                color: borderColor,
+                width: 0.4,
+              ),
+              columnWidths: {
+                0: const pw.FlexColumnWidth(2),
+                1: const pw.FlexColumnWidth(3),
+              },
+              children: [
+                _tableDataRow(
+                  ['Etablissement vérifié', mission.nomClient],
+                  alt: false,
+                ),
+                _tableDataRow(
+                  [
+                    'Installation vérifié',
+                    rg?.installation.isNotEmpty == true
+                        ? rg!.installation
+                        : (mission.installation ?? 'Toutes les installations électriques'),
+                  ],
+                  alt: true,
+                ),
+                _tableDataRow(
+                  [
+                    'Activité principale',
+                    rg?.activite.isNotEmpty == true
+                        ? rg!.activite
+                        : (mission.activiteClient ?? '—'),
+                  ],
+                  alt: false,
+                ),
+                _tableDataRow(
+                  ['Adresse', mission.adresseClient ?? '—'],
+                  alt: true,
+                ),
+                _tableDataRow(
+                  [
+                    'Nom du site',
+                    rg?.nomSite.isNotEmpty == true
+                        ? rg!.nomSite
+                        : (mission.nomSite ?? '—'),
+                  ],
+                  alt: false,
+                ),
+                _tableDataRow(
+                  [
+                    'Activité sur le site',
+                    (rg?.activiteSurSite?.isNotEmpty == true)
+                        ? rg!.activiteSurSite!
+                        : (mission.activiteSurSite ?? '—'),
+                  ],
+                  alt: true,
+                ),
+                _tableDataRow(
+                  [
+                    'Registre de contrôle',
+                    rg?.registreControle.isNotEmpty == true
+                        ? rg!.registreControle
+                        : 'Non présenté',
+                  ],
+                  alt: false,
+                ),
+                _tableDataRow(
+                  ['Classement règlementaire', ''],
+                  alt: true,
+                ),
+                _tableDataRow(
+                  [
+                    '                                     Type',
+                    (rg?.classementReglementaireType?.isNotEmpty == true)
+                        ? rg!.classementReglementaireType!
+                        : (mission.classementReglementaireType ?? '—'),
+                  ],
+                  alt: false,
+                ),
+                _tableDataRow(
+                  [
+                    '                                     Catégorie',
+                    (rg?.classementReglementaireCategorie?.isNotEmpty == true)
+                        ? rg!.classementReglementaireCategorie!
+                        : (mission.classementReglementaireCategorie ?? '—'),
+                  ],
+                  alt: true,
+                ),
               ],
-              alt: true,
-            ),
-            _tableDataRow(
-              [
-                'Activité principale',
-                rg?.activite.isNotEmpty == true
-                    ? rg!.activite
-                    : (mission.activiteClient ?? '—'),
-              ],
-              alt: false,
-            ),
-            _tableDataRow(
-              ['Adresse', mission.adresseClient ?? '—'],
-              alt: true,
-            ),
-            _tableDataRow(
-              [
-                'Nom du site',
-                rg?.nomSite.isNotEmpty == true
-                    ? rg!.nomSite
-                    : (mission.nomSite ?? '—'),
-              ],
-              alt: false,
-            ),
-            _tableDataRow(
-              [
-                'Activité sur le site',
-                (rg?.activiteSurSite?.isNotEmpty == true)
-                    ? rg!.activiteSurSite!
-                    : (mission.activiteSurSite ?? '—'),
-              ],
-              alt: true,
-            ),
-            _tableDataRow(
-              [
-                'Registre de contrôle',
-                rg?.registreControle.isNotEmpty == true
-                    ? rg!.registreControle
-                    : 'Non présenté',
-              ],
-              alt: false,
-            ),
-            _tableDataRow(
-              ['Classement règlementaire', ''],
-              alt: true,
-            ),
-            _tableDataRow(
-              [
-                '                                     Type',
-                (rg?.classementReglementaireType?.isNotEmpty == true)
-                    ? rg!.classementReglementaireType!
-                    : (mission.classementReglementaireType ?? '—'),
-              ],
-              alt: false,
-            ),
-            _tableDataRow(
-              [
-                '                                     Catégorie',
-                (rg?.classementReglementaireCategorie?.isNotEmpty == true)
-                    ? rg!.classementReglementaireCategorie!
-                    : (mission.classementReglementaireCategorie ?? '—'),
-              ],
-              alt: true,
             ),
           ],
         ),
 
   pw.SizedBox(height: 16),
 
-  PageTracker(
-    key: 'renseignements_documents',
-    registry: trackedPages,
-    offset: offset,
-    child: _subTitle('2. Documents nécessaires à la vérification'),
-  ),
-
-  pw.SizedBox(height: 5),
-
-  pw.Table(
-    border: pw.TableBorder.all(color: borderColor, width: 0.4),
-    columnWidths: {
-      0: const pw.FlexColumnWidth(4),
-      1: const pw.FlexColumnWidth(2),
-    },
+  pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
     children: [
-      _tableHeaderRow(['LISTE DES DOCUMENTS', 'OBSERVATIONS']),
-      ...docsStandards.asMap().entries.map((e) {
-        final doc = docsStandards[e.key];
-        final label = doc['label'] as String;
-        final isPresent = doc['value'] as bool;
-        final observation = _docStatus(isPresent);
-        final isNonPresente = observation == 'Non presente';
-        return pw.TableRow(
-          decoration: e.key.isOdd ? pw.BoxDecoration(color: tableRowAlt) : null,
-          children: [
-            _cell(label, isHeader: false),
-            pw.Container(
-              alignment: pw.Alignment.center,
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-              child: pw.Text(
-                observation,
-                style: pw.TextStyle(
-                  font: _fontRegular,
-                  fontSize: fsSmall,
-                  color: isNonPresente ? PdfColors.red : darkGrey,
+      PageTracker(
+        key: 'renseignements_documents',
+        registry: trackedPages,
+        offset: offset,
+        child: _subTitle('2. Documents nécessaires à la vérification'),
+      ),
+      pw.SizedBox(height: 5),
+      pw.Table(
+        border: pw.TableBorder.all(color: borderColor, width: 0.4),
+        columnWidths: {
+          0: const pw.FlexColumnWidth(4),
+          1: const pw.FlexColumnWidth(2),
+        },
+        children: [
+          _tableHeaderRow(['LISTE DES DOCUMENTS', 'OBSERVATIONS']),
+          ...docsStandards.asMap().entries.map((e) {
+            final doc = docsStandards[e.key];
+            final label = doc['label'] as String;
+            final isPresent = doc['value'] as bool;
+            final observation = _docStatus(isPresent);
+            final isNonPresente = observation == 'Non presente';
+            return pw.TableRow(
+              decoration: e.key.isOdd ? pw.BoxDecoration(color: tableRowAlt) : null,
+              children: [
+                _cell(label, isHeader: false),
+                pw.Container(
+                  alignment: pw.Alignment.center,
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                  child: pw.Text(
+                    observation,
+                    style: pw.TextStyle(
+                      font: _fontRegular,
+                      fontSize: fsSmall,
+                      color: isNonPresente ? PdfColors.red : darkGrey,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
                 ),
-                textAlign: pw.TextAlign.center,
-              ),
+              ],
+            );
+          }),
+          ...autresDocs.asMap().entries.map((e) {
+            final doc = autresDocs[e.key];
+            final rowIndex = docsStandards.length + e.key;
+            return pw.TableRow(
+              decoration: rowIndex.isOdd ? pw.BoxDecoration(color: tableRowAlt) : null,
+              children: [
+                _cell(doc, isHeader: false),
+                pw.Container(
+                  alignment: pw.Alignment.center,
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                  child: pw.Text(
+                    'Présent',
+                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall, color: darkGrey),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+              ],
+            );
+          }),
+          if (mission.docAutre && !autresDocs.contains('Autre document pertinent'))
+            pw.TableRow(
+              decoration: (docsStandards.length + autresDocs.length).isOdd ? pw.BoxDecoration(color: tableRowAlt) : null,
+              children: [
+                _cell('Autre document pertinent', isHeader: false),
+                pw.Container(
+                  alignment: pw.Alignment.center,
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                  child: pw.Text(
+                    'Présent',
+                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall, color: darkGrey),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+              ],
             ),
-          ],
-        );
-      }),
-      ...autresDocs.asMap().entries.map((e) {
-        final doc = autresDocs[e.key];
-        final rowIndex = docsStandards.length + e.key;
-        return pw.TableRow(
-          decoration: rowIndex.isOdd ? pw.BoxDecoration(color: tableRowAlt) : null,
-          children: [
-            _cell(doc, isHeader: false),
-            pw.Container(
-              alignment: pw.Alignment.center,
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-              child: pw.Text(
-                'Présent',
-                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall, color: darkGrey),
-                textAlign: pw.TextAlign.center,
-              ),
-            ),
-          ],
-        );
-      }),
-      if (mission.docAutre && !autresDocs.contains('Autre document pertinent'))
-        pw.TableRow(
-          decoration: (docsStandards.length + autresDocs.length).isOdd ? pw.BoxDecoration(color: tableRowAlt) : null,
-          children: [
-            _cell('Autre document pertinent', isHeader: false),
-            pw.Container(
-              alignment: pw.Alignment.center,
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-              child: pw.Text(
-                'Présent',
-                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall, color: darkGrey),
-                textAlign: pw.TextAlign.center,
-              ),
-            ),
-          ],
-        ),
+        ],
+      ),
     ],
   ),
   pw.SizedBox(height: 16),
-  PageTracker(
-    key: 'renseignements_habilitation',
-    registry: trackedPages,
-    offset: offset,
-    child: _subTitle('3. Habilitation électrique du personnel d\'intervention'),
-  ),
-  pw.SizedBox(height: 6),
-  () {
-    final habVal = rg?.habilitationElectriqueEffective ?? 'Inconnu';
-    PdfColor habColor;
-    if (habVal == 'Oui') {
-      habColor = PdfColor.fromInt(0xFF2E7D32); // Vert
-    } else if (habVal == 'Non') {
-      habColor = PdfColor.fromInt(0xFFC62828); // Rouge
-    } else {
-      habColor = PdfColors.black; // Noir (Inconnu)
-    }
+  pw.Column(
+    crossAxisAlignment: pw.CrossAxisAlignment.start,
+    children: [
+      PageTracker(
+        key: 'renseignements_habilitation',
+        registry: trackedPages,
+        offset: offset,
+        child: _subTitle('3. Habilitation électrique du personnel d\'intervention'),
+      ),
+      pw.SizedBox(height: 6),
+      () {
+        final habVal = rg?.habilitationElectriqueEffective ?? 'Inconnu';
+        PdfColor habColor;
+        if (habVal == 'Oui') {
+          habColor = PdfColor.fromInt(0xFF2E7D32); // Vert
+        } else if (habVal == 'Non') {
+          habColor = PdfColor.fromInt(0xFFC62828); // Rouge
+        } else {
+          habColor = PdfColors.black; // Noir (Inconnu)
+        }
 
-    return pw.Container(
-      width: double.infinity,
-      padding: const pw.EdgeInsets.all(8),
-      decoration: pw.BoxDecoration(
-        border: pw.Border.all(color: borderColor, width: 0.4),
-        color: tableRowAlt,
-      ),
-      child: pw.Row(
-        mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: pw.CrossAxisAlignment.center,
-        children: [
-          pw.Expanded(
-            flex: 7,
-            child: pw.Text(
-              'Les techniciens disposent-ils d\'une formation en habilitation électrique ?',
-              style: pw.TextStyle(
-                font: _fontRegular,
-                fontSize: fsBody,
-                color: darkGrey,
+        return pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.all(8),
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: borderColor, width: 0.4),
+            color: tableRowAlt,
+          ),
+          child: pw.Row(
+            mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: pw.CrossAxisAlignment.center,
+            children: [
+              pw.Expanded(
+                flex: 7,
+                child: pw.Text(
+                  'Les techniciens disposent-ils d\'une formation en habilitation électrique ?',
+                  style: pw.TextStyle(
+                    font: _fontRegular,
+                    fontSize: fsBody,
+                    color: darkGrey,
+                  ),
+                ),
               ),
-            ),
+              pw.SizedBox(width: 8),
+              pw.Text(
+                habVal,
+                style: pw.TextStyle(
+                  font: _fontBold,
+                  fontSize: fsBody,
+                  fontWeight: pw.FontWeight.bold,
+                  color: habColor,
+                ),
+              ),
+            ],
           ),
-          pw.SizedBox(width: 8),
-          pw.Text(
-            habVal,
-            style: pw.TextStyle(
-              font: _fontBold,
-              fontSize: fsBody,
-              fontWeight: pw.FontWeight.bold,
-              color: habColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }(),
+        );
+      }(),
+    ],
+  ),
       ],
     );
   }
@@ -4054,93 +4068,130 @@ class PdfReportService {
 
     int descBodyIdx = 1;
 
-    widgets.add(PageTracker(
-      key: 'desc_mt',
-      registry: trackedPages,
-      offset: offset,
-      child: _subTitle('${descBodyIdx++}. Caractéristiques de l\'alimentation moyenne tension'),
+    widgets.add(pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PageTracker(
+          key: 'desc_mt',
+          registry: trackedPages,
+          offset: offset,
+          child: _subTitle('${descBodyIdx++}. Caractéristiques de l\'alimentation moyenne tension'),
+        ),
+        pw.SizedBox(height: 4),
+        if (pdfData.mtRows.isNotEmpty)
+          _buildInstallationTableFromRows(pdfData.mtRows, sectionKey: 'MT')
+        else
+          _bodyText('- Non renseignee'),
+      ],
     ));
-    if (pdfData.mtRows.isNotEmpty) {
-      widgets.add(_buildInstallationTableFromRows(pdfData.mtRows, sectionKey: 'MT'));
-    } else {
-      widgets.add(_bodyText('- Non renseignee'));
-    }
-    
-    widgets.add(PageTracker(
-      key: 'desc_bt',
-      registry: trackedPages,
-      offset: offset,
-      child: _subTitle('${descBodyIdx++}. Caractéristiques de l\'alimentation basse tension sortie transformateur'),
-    ));
-    if (pdfData.btRows.isNotEmpty) {
-      widgets.add(_buildInstallationTableFromRows(pdfData.btRows, sectionKey: 'BT'));
-    } else {
-      widgets.add(_bodyText('- Non renseignee'));
-    }
-    
-    widgets.add(PageTracker(
-      key: 'desc_ge',
-      registry: trackedPages,
-      offset: offset,
-      child: _subTitle('${descBodyIdx++}. Caractéristiques du groupe électrogène'),
-    ));
-    if (safeDesc.groupeElectrogene.isNotEmpty) {
-      widgets.add(_buildInstallationTable(safeDesc.groupeElectrogene, sectionKey: 'GROUPE'));
-    } else {
-      widgets.add(_bodyText('- Absent'));
-    }
     widgets.add(pw.SizedBox(height: 8));
 
-    widgets.add(PageTracker(
-      key: 'desc_carburant',
-      registry: trackedPages,
-      offset: offset,
-      child: _subTitle('${descBodyIdx++}. Alimentation du groupe électrogène en carburant'),
+    widgets.add(pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PageTracker(
+          key: 'desc_bt',
+          registry: trackedPages,
+          offset: offset,
+          child: _subTitle('${descBodyIdx++}. Caractéristiques de l\'alimentation basse tension sortie transformateur'),
+        ),
+        pw.SizedBox(height: 4),
+        if (pdfData.btRows.isNotEmpty)
+          _buildInstallationTableFromRows(pdfData.btRows, sectionKey: 'BT')
+        else
+          _bodyText('- Non renseignee'),
+      ],
     ));
-    if (safeDesc.alimentationCarburant.isNotEmpty) {
-      widgets.add(_buildInstallationTable(safeDesc.alimentationCarburant, sectionKey: 'CARBURANT'));
-    } else {
-      widgets.add(_bodyText('- Non applicable'));
-    }
     widgets.add(pw.SizedBox(height: 8));
 
-    widgets.add(PageTracker(
-      key: 'desc_inverseur',
-      registry: trackedPages,
-      offset: offset,
-      child: _subTitle('${descBodyIdx++}. Caractéristiques de l\'inverseur'),
+    widgets.add(pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PageTracker(
+          key: 'desc_ge',
+          registry: trackedPages,
+          offset: offset,
+          child: _subTitle('${descBodyIdx++}. Caractéristiques du groupe électrogène'),
+        ),
+        pw.SizedBox(height: 4),
+        if (safeDesc.groupeElectrogene.isNotEmpty)
+          _buildInstallationTable(safeDesc.groupeElectrogene, sectionKey: 'GROUPE')
+        else
+          _bodyText('- Absent'),
+      ],
     ));
-    if (safeDesc.inverseur.isNotEmpty) {
-      widgets.add(_buildInstallationTable(safeDesc.inverseur, sectionKey: 'INVERSEUR'));
-    } else {
-      widgets.add(_bodyText('- Absent'));
-    }
     widgets.add(pw.SizedBox(height: 8));
 
-    widgets.add(PageTracker(
-      key: 'desc_stabilisateur',
-      registry: trackedPages,
-      offset: offset,
-      child: _subTitle('${descBodyIdx++}. Caractéristiques du stabilisateur'),
+    widgets.add(pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PageTracker(
+          key: 'desc_carburant',
+          registry: trackedPages,
+          offset: offset,
+          child: _subTitle('${descBodyIdx++}. Alimentation du groupe électrogène en carburant'),
+        ),
+        pw.SizedBox(height: 4),
+        if (safeDesc.alimentationCarburant.isNotEmpty)
+          _buildInstallationTable(safeDesc.alimentationCarburant, sectionKey: 'CARBURANT')
+        else
+          _bodyText('- Non applicable'),
+      ],
     ));
-    if (safeDesc.stabilisateur.isNotEmpty) {
-      widgets.add(_buildInstallationTable(safeDesc.stabilisateur, sectionKey: 'STABILISATEUR'));
-    } else {
-      widgets.add(_bodyText('- Absent'));
-    }
     widgets.add(pw.SizedBox(height: 8));
 
-    widgets.add(PageTracker(
-      key: 'desc_onduleurs',
-      registry: trackedPages,
-      offset: offset,
-      child: _subTitle('${descBodyIdx++}. Caractéristiques des onduleurs'),
+    widgets.add(pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PageTracker(
+          key: 'desc_inverseur',
+          registry: trackedPages,
+          offset: offset,
+          child: _subTitle('${descBodyIdx++}. Caractéristiques de l\'inverseur'),
+        ),
+        pw.SizedBox(height: 4),
+        if (safeDesc.inverseur.isNotEmpty)
+          _buildInstallationTable(safeDesc.inverseur, sectionKey: 'INVERSEUR')
+        else
+          _bodyText('- Absent'),
+      ],
     ));
-    if (safeDesc.onduleurs.isNotEmpty) {
-      widgets.add(_buildInstallationTable(safeDesc.onduleurs, sectionKey: 'ONDULEUR'));
-    } else {
-      widgets.add(_bodyText('- Absent'));
-    }
+    widgets.add(pw.SizedBox(height: 8));
+
+    widgets.add(pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PageTracker(
+          key: 'desc_stabilisateur',
+          registry: trackedPages,
+          offset: offset,
+          child: _subTitle('${descBodyIdx++}. Caractéristiques du stabilisateur'),
+        ),
+        pw.SizedBox(height: 4),
+        if (safeDesc.stabilisateur.isNotEmpty)
+          _buildInstallationTable(safeDesc.stabilisateur, sectionKey: 'STABILISATEUR')
+        else
+          _bodyText('- Absent'),
+      ],
+    ));
+    widgets.add(pw.SizedBox(height: 8));
+
+    widgets.add(pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        PageTracker(
+          key: 'desc_onduleurs',
+          registry: trackedPages,
+          offset: offset,
+          child: _subTitle('${descBodyIdx++}. Caractéristiques des onduleurs'),
+        ),
+        pw.SizedBox(height: 4),
+        if (safeDesc.onduleurs.isNotEmpty)
+          _buildInstallationTable(safeDesc.onduleurs, sectionKey: 'ONDULEUR')
+        else
+          _bodyText('- Absent'),
+      ],
+    ));
     widgets.add(pw.SizedBox(height: 8));
 
     widgets.add(PageTracker(
@@ -10817,13 +10868,13 @@ class PdfReportService {
           offset: currentOffset,
           child: _sectionBox('RAPPEL DES RESPONSABILITÉS DE L\'EMPLOYEUR'),
         ),
-        pw.SizedBox(height: 14),
+        pw.SizedBox(height: 8),
         _bodyText(
           'KES INSPECTIONS AND PROJECTS a le plaisir de vous transmettre le présent rapport de vérification de vos installations électriques, établi à la suite des constats réalisés sur site.\n'
           'Ce document présente les observations effectuées par le vérificateur à partir des éléments et moyens mis à sa disposition.\n'
           'Il identifie les points de non-conformité constatés au regard des exigences réglementaires, et formule, le cas échéant, les recommandations techniques nécessaires à leur mise en conformité.',
         ),
-        pw.SizedBox(height: 7),
+        pw.SizedBox(height: 5),
         PageTracker(
           key: 'rappel_accompagnement',
           registry: trackedPages,
@@ -10836,7 +10887,7 @@ class PdfReportService {
           'L\'employeur reste responsable du bon fonctionnement, de la sécurité et de la disponibilité des installations tout au long de la vérification.\n'
           'Les informations et documents techniques fournis sous sa responsabilité doivent permettre la réalisation des contrôles dans de bonnes conditions.',
         ),
-        pw.SizedBox(height: 7),
+        pw.SizedBox(height: 5),
         PageTracker(
           key: 'rappel_conditions',
           registry: trackedPages,
@@ -10847,13 +10898,13 @@ class PdfReportService {
         _bulletItem('Veiller à ce que la vérification soit réalisée dans des conditions de sécurité optimales, en particulier lors des accès en zone électrique\u00a0;'),
         _bulletItem('Mettre en œuvre les procédures nécessaires aux mises hors tension permettant d\'effectuer les mesures et essais en toute sécurité\u00a0;'),
         _bulletItem('Garantir au vérificateur l\'accès à l\'ensemble des équipements à contrôler, sans risque de chute ou d\'incident.'),
-        pw.SizedBox(height: 8),
+        pw.SizedBox(height: 5),
         _bodyText(
           'Si certaines vérifications n\'ont pu être effectuées (impossibilité d\'accès, absence d\'agents habilités, contraintes d\'exploitation, documentation manquante, etc.), '
           'KES INSPECTIONS AND PROJECTS en mentionnera la cause dans le rapport.\n\n'
           'Dans le cas des installations de moyenne ou haute tension, la mise hors tension et les manœuvres associées relèvent exclusivement de la responsabilité de l\'employeur ou de son représentant habilité.',
         ),
-        pw.SizedBox(height: 7),
+        pw.SizedBox(height: 5),
         PageTracker(
           key: 'rappel_complementaires',
           registry: trackedPages,
@@ -10864,7 +10915,7 @@ class PdfReportService {
           'Lorsque des éléments du poste ou de l\'installation n\'ont pu être contrôlés lors de la visite initiale, une intervention complémentaire pourra être programmée à la demande de l\'employeur.\n'
           'Cette mission additionnelle fera alors l\'objet d\'une planification et d\'un rapport spécifique.',
         ),
-        pw.SizedBox(height: 7),
+        pw.SizedBox(height: 5),
         PageTracker(
           key: 'rappel_maintenance',
           registry: trackedPages,
@@ -10876,7 +10927,7 @@ class PdfReportService {
           'le chef d\'établissement doit mettre en place une organisation pour les opérations de surveillance et la maintenance des installations électriques. '
           'C\'est dans le cadre de ces opérations que les dispositions doivent être prises afin de remédier aux défectuosités constatées pendant la vérification ou celles qui peuvent se manifester après la vérification.',
         ),
-        pw.NewPage(),
+        pw.SizedBox(height: 5),
         PageTracker(
           key: 'rappel_formation',
           registry: trackedPages,
@@ -10887,7 +10938,7 @@ class PdfReportService {
           'Conformément aux dispositions réglementaires en vigueur, l\'employeur doit s\'assurer que le personnel appelé à intervenir sur ou à proximité des installations électriques dispose d\'une habilitation électrique adaptée au domaine de tension concerné '
           'et à la nature des opérations à réaliser.',
         ),
-        pw.SizedBox(height: 15),
+        pw.NewPage(),
         PageTracker(
           key: 'mesures_securite',
           registry: trackedPages,
@@ -10953,23 +11004,17 @@ class PdfReportService {
             _bulletItem('Maintenance des installations électriques.'),
           ],
         ),
-        pw.SizedBox(height: 7),
-        pw.NewPage(freeSpace: 110),
-        pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            PageTracker(
-              key: 'mesures_engagement',
-              registry: trackedPages,
-              offset: currentOffset,
-              child: _subTitle('2. Engagement de KES INSPECTIONS AND PROJECTS'),
-            ),
-            pw.SizedBox(height: 5),
-            _bodyText(
-              'KES INSPECTIONS AND PROJECTS s\'engage à réaliser ses vérifications dans le strict respect des normes et règlements applicables, '
-              'avec le souci constant de la sécurité, de la fiabilité technique et de l\'impartialité des constats.',
-            ),
-          ],
+        pw.NewPage(),
+        PageTracker(
+          key: 'mesures_engagement',
+          registry: trackedPages,
+          offset: currentOffset,
+          child: _sectionBox('ENGAGEMENT DE KES INSPECTIONS AND PROJECTS'),
+        ),
+        pw.SizedBox(height: 8),
+        _bodyText(
+          'KES INSPECTIONS AND PROJECTS s\'engage à réaliser ses vérifications dans le strict respect des normes et règlements applicables, '
+          'avec le souci constant de la sécurité, de la fiabilité technique et de l\'impartialité des constats.',
         ),
       ],
     ));
