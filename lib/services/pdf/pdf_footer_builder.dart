@@ -220,16 +220,19 @@ class PdfFooterBuilder {
                   top: 0,
                   bottom: 0,
                   child: pw.Container(
-                    width: 175,
+                    width: 190,
+                    height: totalHeight,
                     alignment: pw.Alignment.center,
-                    child: pw.Text(
-                      pageDisplay,
-                      style: pw.TextStyle(
-                        font: fontBold,
-                        fontSize: 8.0,
-                        color: PdfColors.white,
+                    child: pw.Center(
+                      child: pw.Text(
+                        pageDisplay,
+                        style: pw.TextStyle(
+                          font: fontBold,
+                          fontSize: 8.0,
+                          color: PdfColors.white,
+                        ),
+                        textAlign: pw.TextAlign.center,
                       ),
-                      textAlign: pw.TextAlign.center,
                     ),
                   ),
                 ),
