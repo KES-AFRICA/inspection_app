@@ -5442,7 +5442,7 @@ class PdfReportService {
     ));
     widgets.add(pw.SizedBox(height: 5));
 
-    // Photo du local (si présente, alignée à droite)
+    // Photo du local (si présente, centrée horizontalement)
     pw.MemoryImage? localPhotoImg;
     if (photoCache != null && photoCache.containsKey(local)) {
       localPhotoImg = photoCache[local];
@@ -5603,7 +5603,7 @@ class PdfReportService {
     ));
     widgets.add(pw.SizedBox(height: 5));
 
-    // Photo du local (si présente, alignée à droite)
+    // Photo du local (si présente, centrée horizontalement)
     pw.MemoryImage? localPhotoImg;
     if (photoCache != null && photoCache.containsKey(local)) {
       localPhotoImg = photoCache[local];
@@ -6657,29 +6657,6 @@ class PdfReportService {
   }
 
   static pw.Widget _buildCpiTestContent(String testResult) {
-    PdfColor badgeBgColor;
-    PdfColor badgeBorderColor;
-    PdfColor badgeTextColor;
-
-    switch (testResult) {
-      case 'Satisfaisant':
-        badgeBgColor = PdfColor.fromHex('E8F5E9');
-        badgeBorderColor = PdfColor.fromHex('A5D6A7');
-        badgeTextColor = PdfColor.fromHex('2E7D32');
-        break;
-      case 'Non satisfaisant':
-        badgeBgColor = PdfColor.fromHex('FFEBEE');
-        badgeBorderColor = PdfColor.fromHex('EF9A9A');
-        badgeTextColor = PdfColor.fromHex('C62828');
-        break;
-      case 'Sans objet':
-      default:
-        badgeBgColor = PdfColor.fromHex('F5F5F5');
-        badgeBorderColor = PdfColor.fromHex('E0E0E0');
-        badgeTextColor = PdfColor.fromHex('616161');
-        break;
-    }
-
     return pw.Column(
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: [
@@ -6720,22 +6697,7 @@ class PdfReportService {
           ),
         ),
         pw.SizedBox(height: 10),
-        pw.Container(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          decoration: pw.BoxDecoration(
-            color: badgeBgColor,
-            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-            border: pw.Border.all(color: badgeBorderColor, width: 0.8),
-          ),
-          child: pw.Text(
-            testResult,
-            style: pw.TextStyle(
-              font: _fontBold,
-              fontSize: fsSmall + 1,
-              color: badgeTextColor,
-            ),
-          ),
-        ),
+        _resultBox(testResult),
       ],
     );
   }
@@ -8860,10 +8822,13 @@ class PdfReportService {
   }
 
   static pw.Widget _resultBox(String text) {
-    final isOk = text.toLowerCase().contains('satisfaisant') && !text.toLowerCase().contains('non');
+    final lower = text.toLowerCase();
+    final isOk = lower.contains('satisfaisant') && !lower.contains('non');
+    final isSansObjet = lower.contains('sans objet');
+    final bg = isSansObjet ? sansObjetColor : (isOk ? conformeColor : nonConformeColor);
     return pw.Container(
       decoration: pw.BoxDecoration(
-        color: isOk ? conformeColor : nonConformeColor,
+        color: bg,
         border: pw.Border.all(color: borderColor, width: 0.4),
       ),
       padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -8934,13 +8899,6 @@ class PdfReportService {
         1: pw.FlexColumnWidth(3.0),
       },
       children: [
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: lightBlue),
-          children: [
-            _cell("Abréviation", isHeader: true, centered: true, color: headerColor),
-            _cell("Signification", isHeader: true, centered: true, color: headerColor),
-          ],
-        ),
         _tableDataRow(["DDR", "Disjoncteur Différentiel"], alt: false, centered: true),
         _tableDataRow(["RD", "Relais Différentiel"], alt: true, centered: true),
         _tableDataRow(["B", "Bon fonctionnement"], alt: false, centered: true),
