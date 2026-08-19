@@ -2313,7 +2313,7 @@ class PdfReportService {
     ));
     widgets.add(pw.SizedBox(height: 12));
 
-    // 3. Répartition par criticité
+    // 3. Répartition par criticité — Protection Anti-Titre Orphelin avec pw.KeepTogether
     final pctCritStr = pctCritique.toStringAsFixed(1).replaceAll('.', ',');
     final pctMajStr = pctMajeure.toStringAsFixed(1).replaceAll('.', ',');
     final pctMinStr = pctMineure.toStringAsFixed(1).replaceAll('.', ',');
@@ -2347,19 +2347,21 @@ class PdfReportService {
       key: 'stat_criticite',
       registry: trackedPages,
       offset: offset,
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          _subTitle('3. Répartition par criticité'),
-          pw.SizedBox(height: 5),
-          _bodyText('Distribution des non-conformités selon les 3 niveaux de gravité réglementaires KES :'),
-          pw.SizedBox(height: 8),
-          _buildBarChart(critique, majeure, mineure),
-          pw.SizedBox(height: 10),
-          _buildTextBulletPoint('3.1 Ratio de sévérité', textRatioSeverite),
-          _buildTextBulletPoint('3.2 Niveau de risque dominant', textNiveauRisqueDominant),
-          _buildTextBulletPoint('3.3 Signal de gravité global', textSignalGraviteGlobal),
-        ],
+      child: pw.Inseparable(
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            _subTitle('3. Répartition par criticité'),
+            pw.SizedBox(height: 5),
+            _bodyText('Distribution des non-conformités selon les 3 niveaux de gravité réglementaires KES :'),
+            pw.SizedBox(height: 8),
+            _buildBarChart(critique, majeure, mineure),
+            pw.SizedBox(height: 10),
+            _buildTextBulletPoint('3.1 Ratio de sévérité', textRatioSeverite),
+            _buildTextBulletPoint('3.2 Niveau de risque dominant', textNiveauRisqueDominant),
+            _buildTextBulletPoint('3.3 Signal de gravité global', textSignalGraviteGlobal),
+          ],
+        ),
       ),
     ));
     widgets.add(pw.SizedBox(height: 12));
@@ -2369,20 +2371,22 @@ class PdfReportService {
       key: 'stat_annee_passee',
       registry: trackedPages,
       offset: offset,
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          _subTitle('4. Non-conformités de l\'année passée et taux de mise en conformité'),
-          pw.SizedBox(height: 5),
-          _bodyText(
-            'Donnée non disponible — Le présent rapport porte sur la première visite de vérification périodique disposant d\'une check-list numérique structurée pour ce site (Rapport n° $numeroRapportDoc). Aucun rapport antérieur exploitable au même format n\'a été fourni pour extraire le nombre de non-conformités de l\'année passée. Si un rapport antérieur existe, merci de le transmettre : cette section et la comparaison ci-dessous seront complétées automatiquement.',
-          ),
-        ],
+      child: pw.Inseparable(
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            _subTitle('4. Non-conformités de l\'année passée et taux de mise en conformité'),
+            pw.SizedBox(height: 5),
+            _bodyText(
+              'Donnée non disponible — Le présent rapport porte sur la première visite de vérification périodique disposant d\'une check-list numérique structurée pour ce site (Rapport n° $numeroRapportDoc). Aucun rapport antérieur exploitable au même format n\'a été fourni pour extraire le nombre de non-conformités de l\'année passée. Si un rapport antérieur existe, merci de le transmettre : cette section et la comparaison ci-dessous seront complétées automatiquement.',
+            ),
+          ],
+        ),
       ),
     ));
     widgets.add(pw.SizedBox(height: 12));
 
-    // 5. Statistique par type de défaut — analyse de Pareto (sur les points de vérification)
+    // 5. Statistique par type de défaut — analyse de Pareto (normalisée & explicite)
     final totalOccur = summary.paretoResult.totalOccurrences > 0
         ? summary.paretoResult.totalOccurrences
         : summary.criticalityStats.total;
@@ -2390,41 +2394,40 @@ class PdfReportService {
     final topSumCount = summary.paretoResult.items.fold<int>(0, (sum, e) => sum + e.count);
     final topSumPct = totalOccur > 0 ? (topSumCount / totalOccur * 100) : 0.0;
     final pareto80K = summary.paretoResult.paretoCategoryCount;
-    final pareto80Name = (pareto80K > 0 && pareto80K <= summary.paretoResult.items.length)
-        ? summary.paretoResult.items[pareto80K - 1].title.trim().toLowerCase()
-        : '';
 
-    final paretoIntroSummary =
-        'Les $totalOccur occurrences de non-conformités par nature de défaut ont été classées par fréquence décroissante. L\'analyse de Pareto ci-dessous met en évidence que les $topItemsCount catégories principales concentrent $topSumCount occurrences, soit ${topSumPct.toStringAsFixed(1).replaceAll('.', ',')} % du total, et que les $pareto80K premières catégories à elles seules atteignent le seuil de 80 % cumulé${pareto80Name.isNotEmpty ? " dès la ${pareto80K}e catégorie ($pareto80Name)" : ""}.';
-
-    final topThreeVerificationPoints = summary.paretoResult.items
+    final topThreeNames = summary.paretoResult.items
         .take(3)
-        .map((e) => e.title.trim().toLowerCase())
+        .map((e) => e.title.trim())
         .where((t) => t.isNotEmpty)
         .toList();
 
-    final dynamicCausesText = topThreeVerificationPoints.isNotEmpty
-        ? topThreeVerificationPoints.join(', ')
-        : 'protection contre les contacts indirects, câblage, identification des circuits';
+    final topThreeText = topThreeNames.isNotEmpty
+        ? topThreeNames.join(', ')
+        : 'Interconnexion à la terre, Protections contre les surintensités, Répartition des circuits';
+
+    final paretoIntroSummary =
+        'L\'analyse porte sur la totalité des $totalOccur occurrences de non-conformités répertoriées sur le site, classées selon les catégories de défauts normalisées. Les $topItemsCount catégories les plus récurrentes totalisent $topSumCount constats (${topSumPct.toStringAsFixed(1).replaceAll('.', ',')} % des défaillances), et les $pareto80K premières catégories permettent d\'atteindre ou dépasser le seuil critique de 80 % du volume global des anomalies.';
 
     final pareto8020DynamicText =
-        'Cette lecture confirme la règle courante des « 80/20 » : une action corrective concentrée sur un nombre restreint de causes racines ($dynamicCausesText) permettrait de traiter la grande majorité des écarts constatés, avec un effet de levier maximal sur la réduction du risque global.';
+        'Interprétation statistique : Cette distribution confirme l\'application stricte du principe de Pareto (règle des 80/20). La prise en charge prioritaire des $pareto80K premières catégories de défauts ($topThreeText) permettra d\'éliminer plus de 80 % des risques électriques identifiés, optimisant ainsi l\'efficacité opérationnelle du plan d\'actions correctives.';
 
     widgets.add(PageTracker(
       key: 'stat_pareto',
       registry: trackedPages,
       offset: offset,
-      child: pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          _subTitle('5. Statistique par type de défaut — analyse de Pareto'),
-          pw.SizedBox(height: 5),
-          _bodyText(paretoIntroSummary),
-          pw.SizedBox(height: 8),
-          _buildParetoChartWidget(summary.paretoResult),
-          pw.SizedBox(height: 6),
-          _bodyText(pareto8020DynamicText),
-        ],
+      child: pw.Inseparable(
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            _subTitle('5. Statistique par type de défaut — analyse de Pareto'),
+            pw.SizedBox(height: 5),
+            _bodyText(paretoIntroSummary),
+            pw.SizedBox(height: 8),
+            _buildParetoChartWidget(summary.paretoResult),
+            pw.SizedBox(height: 6),
+            _bodyText(pareto8020DynamicText),
+          ],
+        ),
       ),
     ));
     widgets.add(pw.SizedBox(height: 12));
@@ -3112,58 +3115,75 @@ class PdfReportService {
         .where((e) => e.label == 'TGBT' || e.label == 'Armoires' || e.label == 'Coffrets')
         .fold(0, (sum, e) => sum + e.count);
 
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _subTitle('${index != null ? "$index. " : ""}Inventaire chiffr\u00e9 des installations et \u00e9quipements'),
-        pw.SizedBox(height: 5),
-        _bodyText(
-          'Les effectifs ci-dessous sont \u00e9tablis \u00e0 partir du d\u00e9tail point par point du chapitre \u00ab Audit des installations \u00e9lectriques \u00bb (comptage des fiches de v\u00e9rification effectivement renseign\u00e9es pour chaque \u00e9quipement).',
-        ),
-        pw.SizedBox(height: 8),
-        pw.Table(
-          border: pw.TableBorder.all(color: borderColor, width: 0.5),
-          columnWidths: const {
-            0: pw.FlexColumnWidth(3.5),
-            1: pw.FlexColumnWidth(1.2),
-          },
-          children: [
-            pw.TableRow(
-              decoration: pw.BoxDecoration(color: accentColor),
-              children: [
-                pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text('\u00c9L\u00c9MENT', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white)),
-                ),
-                pw.Padding(
-                  padding: const pw.EdgeInsets.all(5),
-                  child: pw.Text('NOMBRE', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center),
-                ),
-              ],
-            ),
-            ...items.map((item) {
-              return pw.TableRow(
+    final totalInventaireGeneral = items.fold<int>(0, (sum, e) => sum + e.count);
+
+    return pw.Inseparable(
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _subTitle('${index != null ? "$index. " : ""}Inventaire chiffré des installations et équipements'),
+          pw.SizedBox(height: 5),
+          _bodyText(
+            'Les effectifs ci-dessous sont établis à partir du détail point par point du chapitre « Audit des installations électriques » (comptage des fiches de vérification effectivement renseignées pour chaque équipement).',
+          ),
+          pw.SizedBox(height: 8),
+          pw.Table(
+            border: pw.TableBorder.all(color: borderColor, width: 0.5),
+            columnWidths: const {
+              0: pw.FlexColumnWidth(3.5),
+              1: pw.FlexColumnWidth(1.2),
+            },
+            children: [
+              pw.TableRow(
+                decoration: pw.BoxDecoration(color: accentColor),
                 children: [
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(5),
-                    child: pw.Text(item.label, style: pw.TextStyle(font: _fontRegular, fontSize: 8)),
+                    child: pw.Text('ÉLÉMENT', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white)),
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(5),
-                    child: pw.Text('${item.count}', style: pw.TextStyle(font: _fontRegular, fontSize: 8), textAlign: pw.TextAlign.center),
+                    child: pw.Text('NOMBRE', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center),
                   ),
                 ],
-              );
-            }).toList(),
-          ],
-        ),
-        pw.SizedBox(height: 10),
-        _buildBulletItem('Nombre de nouveaux coffret / armoire / TGBT : Donnée non disponible. Le nombre d\'équipements nouvellement installés depuis la dernière visite ne peut être établi qu\'en comparant l\'inventaire de la présente visite ($totalEquipementsBT équipements BT) à l\'inventaire du rapport précédent.'),
-        pw.SizedBox(height: 4),
-        _buildBulletItem('Nombre de coffret / armoire / TGBT supprimé : Donnée non disponible. Le nombre d\'équipements retirés de l\'installation depuis la dernière visite nécessite une comparaison avec l\'inventaire du rapport précédent, non disponible à ce jour.'),
-        pw.SizedBox(height: 4),
-        _buildBulletItem('Pour compléter entièrement cette analyse : Merci de transmettre le rapport de vérification périodique de l\'année précédente pour ce site (ou son export de check-list). Dès réception, les sections « Non-conformités de l\'année passée », « Comparaison », « Taux de mise en conformité », « Nouveaux équipements » et « Équipements supprimés » seront calculées et complétées.'),
-      ],
+              ),
+              ...items.map((item) {
+                return pw.TableRow(
+                  children: [
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(5),
+                      child: pw.Text(item.label, style: pw.TextStyle(font: _fontRegular, fontSize: 8)),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(5),
+                      child: pw.Text('${item.count}', style: pw.TextStyle(font: _fontRegular, fontSize: 8), textAlign: pw.TextAlign.center),
+                    ),
+                  ],
+                );
+              }).toList(),
+              pw.TableRow(
+                decoration: pw.BoxDecoration(color: tableRowAlt),
+                children: [
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(5),
+                    child: pw.Text('TOTAL', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: darkGrey)),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(5),
+                    child: pw.Text('$totalInventaireGeneral', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: darkGrey), textAlign: pw.TextAlign.center),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          pw.SizedBox(height: 10),
+          _buildBulletItem('Nombre de nouveaux coffret / armoire / TGBT : Donnée non disponible. Le nombre d\'équipements nouvellement installés depuis la dernière visite ne peut être établi qu\'en comparant l\'inventaire de la présente visite ($totalEquipementsBT équipements BT) à l\'inventaire du rapport précédent.'),
+          pw.SizedBox(height: 4),
+          _buildBulletItem('Nombre de coffret / armoire / TGBT supprimé : Donnée non disponible. Le nombre d\'équipements retirés de l\'installation depuis la dernière visite nécessite une comparaison avec l\'inventaire du rapport précédent, non disponible à ce jour.'),
+          pw.SizedBox(height: 4),
+          _buildBulletItem('Pour compléter entièrement cette analyse : Merci de transmettre le rapport de vérification périodique de l\'année précédente pour ce site (ou son export de check-list). Dès réception, les sections « Non-conformités de l\'année passée », « Comparaison », « Taux de mise en conformité », « Nouveaux équipements » et « Équipements supprimés » seront calculées et complétées.'),
+        ],
+      ),
     );
   }
 
@@ -3271,117 +3291,87 @@ class PdfReportService {
   }
 
   static pw.Widget _buildTensionDomainSection(TensionDomainStats stats, [int? index]) {
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _subTitle('${index != null ? "$index. " : ""}R\u00e9partition des non-conformit\u00e9s par domaine de tension'),
-        pw.SizedBox(height: 6),
-        pw.Container(
-          height: 130,
-          padding: const pw.EdgeInsets.all(8),
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
-            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-            color: PdfColors.white,
-          ),
-          child: pw.Column(
-            children: [
-              pw.Text(
-                'Répartition des non-conformités par domaine de tension',
-                style: pw.TextStyle(font: _fontBold, fontSize: 9, color: accentColor),
-              ),
-              pw.SizedBox(height: 6),
-              pw.Expanded(
-                child: pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
-                  crossAxisAlignment: pw.CrossAxisAlignment.end,
-                  children: [
-                    pw.Column(
-                      mainAxisAlignment: pw.MainAxisAlignment.end,
-                      children: [
-                        pw.Text('${stats.mtCount}', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: accentColor)),
-                        pw.SizedBox(height: 2),
-                        pw.Container(
-                          width: 45,
-                          height: stats.totalCount > 0 ? (stats.mtCount / stats.totalCount) * 45 + 4 : 4,
-                          decoration: pw.BoxDecoration(
-                            color: accentColor,
-                            borderRadius: const pw.BorderRadius.vertical(top: pw.Radius.circular(3)),
-                          ),
-                        ),
-                        pw.SizedBox(height: 4),
-                        pw.Text('Moyenne Tension\n(MT/HTA)', style: pw.TextStyle(font: _fontRegular, fontSize: 7, color: PdfColors.grey800), textAlign: pw.TextAlign.center),
-                      ],
-                    ),
-                    pw.Column(
-                      mainAxisAlignment: pw.MainAxisAlignment.end,
-                      children: [
-                        pw.Text('${stats.btCount}', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: accentColor)),
-                        pw.SizedBox(height: 2),
-                        pw.Container(
-                          width: 45,
-                          height: stats.totalCount > 0 ? (stats.btCount / stats.totalCount) * 45 + 4 : 4,
-                          decoration: pw.BoxDecoration(
-                            color: accentColor,
-                            borderRadius: const pw.BorderRadius.vertical(top: pw.Radius.circular(3)),
-                          ),
-                        ),
-                        pw.SizedBox(height: 4),
-                        pw.Text('Basse Tension\n(BT)', style: pw.TextStyle(font: _fontRegular, fontSize: 7, color: PdfColors.grey800), textAlign: pw.TextAlign.center),
-                      ],
-                    ),
-                  ],
+    final mtPctStr = stats.mtPct.toStringAsFixed(1).replaceAll('.', ',');
+    final btPctStr = stats.btPct.toStringAsFixed(1).replaceAll('.', ',');
+
+    return pw.Inseparable(
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          _subTitle('${index != null ? "$index. " : ""}Répartition des non-conformités par domaine de tension'),
+          pw.SizedBox(height: 6),
+          pw.Container(
+            height: 135,
+            padding: const pw.EdgeInsets.all(8),
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: PdfColors.grey300, width: 0.5),
+              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+              color: PdfColors.white,
+            ),
+            child: pw.Column(
+              children: [
+                pw.Text(
+                  'Répartition des non-conformités par domaine de tension (Total : ${stats.totalCount} NC)',
+                  style: pw.TextStyle(font: _fontBold, fontSize: 9, color: accentColor),
                 ),
-              ),
-            ],
+                pw.SizedBox(height: 6),
+                pw.Expanded(
+                  child: pw.Row(
+                    mainAxisAlignment: pw.MainAxisAlignment.spaceAround,
+                    crossAxisAlignment: pw.CrossAxisAlignment.end,
+                    children: [
+                      pw.Column(
+                        mainAxisAlignment: pw.MainAxisAlignment.end,
+                        children: [
+                          pw.Text(
+                            'MT : ${stats.mtCount} ($mtPctStr %)',
+                            style: pw.TextStyle(font: _fontBold, fontSize: 8.5, color: accentColor),
+                          ),
+                          pw.SizedBox(height: 2),
+                          pw.Container(
+                            width: 55,
+                            height: stats.totalCount > 0 ? (stats.mtCount / stats.totalCount) * 45 + 4 : 4,
+                            decoration: pw.BoxDecoration(
+                              color: accentColor,
+                              borderRadius: const pw.BorderRadius.vertical(top: pw.Radius.circular(3)),
+                            ),
+                          ),
+                          pw.SizedBox(height: 4),
+                          pw.Text('Moyenne Tension\n(MT/HTA)', style: pw.TextStyle(font: _fontRegular, fontSize: 7, color: PdfColors.grey800), textAlign: pw.TextAlign.center),
+                        ],
+                      ),
+                      pw.Column(
+                        mainAxisAlignment: pw.MainAxisAlignment.end,
+                        children: [
+                          pw.Text(
+                            'BT : ${stats.btCount} ($btPctStr %)',
+                            style: pw.TextStyle(font: _fontBold, fontSize: 8.5, color: accentColor),
+                          ),
+                          pw.SizedBox(height: 2),
+                          pw.Container(
+                            width: 55,
+                            height: stats.totalCount > 0 ? (stats.btCount / stats.totalCount) * 45 + 4 : 4,
+                            decoration: pw.BoxDecoration(
+                              color: accentColor,
+                              borderRadius: const pw.BorderRadius.vertical(top: pw.Radius.circular(3)),
+                            ),
+                          ),
+                          pw.SizedBox(height: 4),
+                          pw.Text('Basse Tension\n(BT)', style: pw.TextStyle(font: _fontRegular, fontSize: 7, color: PdfColors.grey800), textAlign: pw.TextAlign.center),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
-        ),
-        pw.SizedBox(height: 8),
-        pw.Table(
-          border: pw.TableBorder.all(color: borderColor, width: 0.5),
-          columnWidths: const {
-            0: pw.FlexColumnWidth(3),
-            1: pw.FlexColumnWidth(1),
-            2: pw.FlexColumnWidth(1),
-          },
-          children: [
-            pw.TableRow(
-              decoration: pw.BoxDecoration(color: accentColor),
-              children: [
-                pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('DOMAINE', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
-                pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('NON-CONFORMITÉS', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('PART DU TOTAL', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
-              ],
-            ),
-            pw.TableRow(
-              children: [
-                pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Moyenne tension (MT/HTA) — poste de livraison, cellules, transformateur', style: pw.TextStyle(font: _fontRegular, fontSize: 7.5))),
-                pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('${stats.mtCount}', style: pw.TextStyle(font: _fontRegular, fontSize: 7.5), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('${stats.mtPct.toStringAsFixed(1).replaceAll('.', ',')} %', style: pw.TextStyle(font: _fontRegular, fontSize: 7.5), textAlign: pw.TextAlign.center)),
-              ],
-            ),
-            pw.TableRow(
-              children: [
-                pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Basse tension (BT) — groupe électrogène, inverseur, TGBT, armoires, coffrets', style: pw.TextStyle(font: _fontRegular, fontSize: 7.5))),
-                pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('${stats.btCount}', style: pw.TextStyle(font: _fontRegular, fontSize: 7.5), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('${stats.btPct.toStringAsFixed(1).replaceAll('.', ',')} %', style: pw.TextStyle(font: _fontRegular, fontSize: 7.5), textAlign: pw.TextAlign.center)),
-              ],
-            ),
-            pw.TableRow(
-              decoration: pw.BoxDecoration(color: lightBlue),
-              children: [
-                pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('TOTAL', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: accentColor))),
-                pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('${stats.totalCount}', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: accentColor), textAlign: pw.TextAlign.center)),
-                pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('100 %', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: accentColor), textAlign: pw.TextAlign.center)),
-              ],
-            ),
-          ],
-        ),
-        pw.SizedBox(height: 6),
-        _bodyText(
-          'L\'analyse par domaine de tension permet d\'isoler les risques spécifiques aux installations Moyenne Tension (MT/HTA) et Basse Tension (BT). Le domaine Basse Tension regroupe généralement la majorité des équipements de distribution finale (armoires, coffrets, TGBT), tandis que la Moyenne Tension concentre les équipements d\'alimentation principale à forts enjeux de sécurité électrique.',
-        ),
-      ],
+          pw.SizedBox(height: 6),
+          _bodyText(
+            'L\'analyse par domaine de tension permet d\'isoler les risques spécifiques aux installations Moyenne Tension (MT/HTA) et Basse Tension (BT). Le domaine Basse Tension regroupe généralement la majorité des équipements de distribution finale (armoires, coffrets, TGBT), tandis que la Moyenne Tension concentre les équipements d\'alimentation principale à forts enjeux de sécurité électrique.',
+          ),
+        ],
+      ),
     );
   }
 

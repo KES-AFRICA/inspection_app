@@ -5,6 +5,7 @@ import '../../models/mesures_essais.dart';
 import '../dispositions_constructives_registry.dart';
 import '../hive_service.dart';
 import 'audit_finding.dart';
+import 'canonical_defect_category_registry.dart';
 import 'domain_entity_instance.dart';
 
 /// Registre certifié de l'inventaire métier unifié d'une mission (`MissionDomainInventory`).
@@ -175,7 +176,10 @@ class MissionDomainInventory {
   ParetoAnalysisResult getParetoAnalysis({int limit = 10}) {
     final counts = <String, int>{};
     for (final f in pertinentFindings) {
-      final key = f.verificationPoint.trim();
+      final key = CanonicalDefectCategoryRegistry.mapToCanonical(
+        f.verificationPoint,
+        riskFamily: f.riskFamily,
+      );
       if (key.isNotEmpty) {
         counts[key] = (counts[key] ?? 0) + 1;
       }
@@ -213,8 +217,9 @@ class MissionDomainInventory {
       paretoCumulPct = runningCumul;
     }
 
+    final totalDistinctCategories = counts.length;
     final summary = total > 0
-        ? 'Les $total occurrences de non-conformités par nature de défaut ont été classées par fréquence décroissante. L\'analyse de Pareto ci-dessous met en évidence que les $paretoK principales catégories concentrent ${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % du total.'
+        ? 'L\'analyse porte sur l\'intégralité des $total non-conformités relevées sur le site, regroupées sous $totalDistinctCategories catégories de défauts normalisées. Les $paretoK premières catégories concentrent à elles seules ${paretoCumulPct.toStringAsFixed(1).replaceAll('.', ',')} % du total des défaillances (seuil de 80 %).'
         : 'Aucune non-conformité recensée pour l\'analyse de Pareto.';
 
     return ParetoAnalysisResult(

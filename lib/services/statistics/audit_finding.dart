@@ -1,6 +1,7 @@
 // lib/services/statistics/audit_finding.dart
 
 import '../hive_service.dart';
+import 'canonical_defect_category_registry.dart';
 import 'canonical_risk_family_registry.dart';
 import 'mission_domain_inventory_engine.dart';
 
@@ -347,7 +348,10 @@ class AuditFindingInventory {
 
     final counts = <String, int>{};
     for (final f in pertinentFindings) {
-      final point = f.verificationPoint.trim();
+      final point = CanonicalDefectCategoryRegistry.mapToCanonical(
+        f.verificationPoint,
+        riskFamily: f.riskFamily,
+      );
       if (point.isNotEmpty) {
         counts[point] = (counts[point] ?? 0) + 1;
       }
