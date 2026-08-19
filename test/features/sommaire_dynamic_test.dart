@@ -26,10 +26,8 @@ void main() {
       expect(titles, contains("PHOTOS"));
 
       // Sous-sections d'Analyse Statistique
-      expect(titles, contains("Non-conformités de l'année passée"));
-      expect(titles, contains("Comparaison avec celles de cette année"));
-      expect(titles, contains("Taux de mise en conformité"));
-      expect(titles, contains("Inventaire chiffré des installations et équipements"));
+      expect(titles, contains("4. Non-conformités de l'année passée et taux de mise en conformité"));
+      expect(titles, contains("2. Inventaire chiffré des installations et équipements"));
 
       // Vérification que l'intitulé fictif/obsolète n'existe plus
       expect(titles, isNot(contains("Principales non-conformités et répartition")));

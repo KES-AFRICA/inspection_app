@@ -882,14 +882,15 @@ class PdfReportService {
     // 13. Mesures et essais (si mesures)
     if (mesures != null) {
       entries.add(_SommaireEntry(titre: "RESULTATS DES MESURES ET ESSAIS", key: 'mesures', level: 0, isBold: true, isUppercase: true));
-      entries.add(_SommaireEntry(titre: "1. Conditions de mesure", key: 'mesures_conditions', level: 1));
-      entries.add(_SommaireEntry(titre: "2. Essais de démarrage automatique du groupe électrogène", key: 'mesures_demarrage', level: 1));
-      entries.add(_SommaireEntry(titre: "3. Test de fonctionnement de l'arrêt d'urgence", key: 'mesures_arret', level: 1));
-      entries.add(_SommaireEntry(titre: "4. Prise de terre", key: 'mesures_terre', level: 1));
-      entries.add(_SommaireEntry(titre: "5. Essais de déclenchement des dispositifs différentiels", key: 'mesures_ddr', level: 1));
-      entries.add(_SommaireEntry(titre: "6. Essais de mesure d'isolement entre deux points d'un tronçon de câble", key: 'mesures_isolement', level: 1));
-      entries.add(_SommaireEntry(titre: "7. Test du Contrôleur Permanent d'Isolement (CPI)", key: 'mesures_cpi', level: 1));
-      entries.add(_SommaireEntry(titre: "8. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles", key: 'mesures_continuite', level: 1));
+      entries.add(_SommaireEntry(titre: "I. CONDITIONS DE MESURE", key: 'mesures_conditions', level: 1, isBold: true));
+      entries.add(_SommaireEntry(titre: "II. RÉSULTATS DES ESSAIS", key: 'mesures_resultats', level: 1, isBold: true));
+      entries.add(_SommaireEntry(titre: "1. Prise de terre", key: 'mesures_terre', level: 2));
+      entries.add(_SommaireEntry(titre: "2. Essais de déclenchement des dispositifs différentiels", key: 'mesures_ddr', level: 2));
+      entries.add(_SommaireEntry(titre: "3. Essais de mesure d'isolement entre deux points d'un tronçon de câble", key: 'mesures_isolement', level: 2));
+      entries.add(_SommaireEntry(titre: "4. Test du Contrôleur Permanent d'Isolement (CPI)", key: 'mesures_cpi', level: 2));
+      entries.add(_SommaireEntry(titre: "5. Essais de démarrage automatique du groupe électrogène", key: 'mesures_demarrage', level: 2));
+      entries.add(_SommaireEntry(titre: "6. Test de fonctionnement de l'arrêt d'urgence", key: 'mesures_arret', level: 2));
+      entries.add(_SommaireEntry(titre: "7. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles", key: 'mesures_continuite', level: 2));
     }
 
     // Signature du rapport
@@ -5463,7 +5464,7 @@ class PdfReportService {
     if (localPhotoImg != null) {
       widgets.add(
         pw.Container(
-          alignment: pw.Alignment.centerRight,
+          alignment: pw.Alignment.center,
           margin: const pw.EdgeInsets.only(top: 2, bottom: 6),
           child: pw.Container(
             decoration: pw.BoxDecoration(
@@ -5624,7 +5625,7 @@ class PdfReportService {
     if (localPhotoImg != null) {
       widgets.add(
         pw.Container(
-          alignment: pw.Alignment.centerRight,
+          alignment: pw.Alignment.center,
           margin: const pw.EdgeInsets.only(top: 2, bottom: 6),
           child: pw.Container(
             decoration: pw.BoxDecoration(
@@ -8060,7 +8061,7 @@ class PdfReportService {
             key: 'mesures_conditions',
             registry: trackedPages,
             offset: pageOffset,
-            child: _subSectionBar("1. Conditions de mesure"),
+            child: _subSectionBar("I. CONDITIONS DE MESURE"),
           ),
           pw.SizedBox(height: 6),
           
@@ -8070,38 +8071,24 @@ class PdfReportService {
           // 1. Mesure de la résistance d'isolement
           _buildBlueBoxBanner("Mesure de la résistance d’isolement"),
           _para([
-            const pw.TextSpan(text: "Les mesures de résistance d’isolement par rapport à la terre sont réalisées sous une "),
-            pw.TextSpan(text: "tension continue de 500 V", style: pw.TextStyle(font: _fontBold)),
-            const pw.TextSpan(text: "."),
+            const pw.TextSpan(text: "Les mesures de résistance d’isolement par rapport à la terre sont réalisées sous une tension continue de 500 V."),
           ]),
           _para([
-            const pw.TextSpan(text: "La valeur mesurée est considérée comme "),
-            pw.TextSpan(text: "satisfaisante lorsqu’elle est supérieure à 0,5 MΩ", style: pw.TextStyle(font: _fontBold)),
-            const pw.TextSpan(text: "."),
+            const pw.TextSpan(text: "La valeur mesurée est considérée comme satisfaisante lorsqu’elle est supérieure à 0,5 M ohms."),
           ]),
 
           // 2. Vérification de la continuité et de la résistance des conducteurs de protection
           _buildBlueBoxBanner("Vérification de la continuité et de la résistance des conducteurs de protection"),
           _bodyText("La continuité et la résistance des conducteurs de protection (PE) sont vérifiées afin de s’assurer de leur capacité à assurer efficacement la protection des personnes en cas de défaut d’isolement."),
           _para([
-            const pw.TextSpan(text: "Le résultat est considéré comme "),
-            pw.TextSpan(
-              text: "conforme lorsque les valeurs mesurées satisfont aux prescriptions du guide UTE C 15-105, notamment celles relatives à la continuité des conducteurs de protection",
-              style: pw.TextStyle(font: _fontBold),
-            ),
-            const pw.TextSpan(text: "."),
+            const pw.TextSpan(text: "Le résultat est considéré comme conforme lorsque les valeurs mesurées satisfont aux prescriptions du guide UTE C 15-105, notamment celles relatives à la continuité des conducteurs de protection."),
           ]),
 
           // 3. Essai de déclenchement des dispositifs différentiels résiduels (DDR)
           _buildBlueBoxBanner("Essai de déclenchement des dispositifs différentiels résiduels (DDR)"),
           _bodyText("Les essais de déclenchement permettent de vérifier le bon fonctionnement des dispositifs différentiels résiduels ainsi que leur seuil effectif de déclenchement."),
           _para([
-            const pw.TextSpan(text: "Le seuil de déclenchement est considéré comme "),
-            pw.TextSpan(
-              text: "satisfaisant lorsque la valeur mesurée est comprise entre 0,5 IΔn et IΔn, où IΔn",
-              style: pw.TextStyle(font: _fontBold),
-            ),
-            const pw.TextSpan(text: " représente le courant différentiel résiduel assigné du dispositif."),
+            const pw.TextSpan(text: "Le seuil de déclenchement est considéré comme satisfaisant lorsque la valeur mesurée est comprise entre 0,5 IΔn et IΔn, où IΔn représente le courant différentiel résiduel assigné du dispositif."),
           ]),
           _bodyText("Les essais permettent également de vérifier le comportement du dispositif dans les conditions prévues de fonctionnement."),
 
@@ -8110,33 +8097,21 @@ class PdfReportService {
           _bodyText("La mesure de l’impédance de boucle permet de vérifier l’efficacité du dispositif de protection contre les contacts indirects."),
           _bodyText("Elle permet notamment de déterminer le courant de défaut susceptible de circuler en cas de défaut d’isolement et de vérifier que le dispositif de protection est susceptible de provoquer la coupure du circuit dans le temps requis."),
           _para([
-            const pw.TextSpan(text: "Le résultat est considéré comme "),
-            pw.TextSpan(
-              text: "conforme lorsque les conditions de coupure correspondant au courant de défaut déterminé satisfont aux prescriptions du référentiel applicable, notamment celles du guide UTE C 15-105 lorsque celui-ci est retenu comme référentiel de vérification",
-              style: pw.TextStyle(font: _fontBold),
-            ),
-            const pw.TextSpan(text: "."),
+            const pw.TextSpan(text: "Le résultat est considéré comme conforme lorsque les conditions de coupure correspondant au courant de défaut déterminé satisfont aux prescriptions du référentiel applicable, notamment celles du guide UTE C 15-105 lorsque celui-ci est retenu comme référentiel de vérification."),
           ]),
 
           // 5. Mesure de la résistance des prises de terre
           _buildBlueBoxBanner("Mesure de la résistance des prises de terre"),
           _bodyText("La mesure de la résistance des prises de terre est réalisée afin de vérifier l’efficacité du système de mise à la terre et son aptitude à contribuer à la protection des personnes et au fonctionnement des dispositifs de protection."),
           _para([
-            const pw.TextSpan(text: "Avant toute mesure, "),
-            pw.TextSpan(
-              text: "la position de la barrette principale de terre ou de la barrette de coupure est vérifiée et mentionnée dans le rapport",
-              style: pw.TextStyle(font: _fontBold),
-            ),
-            const pw.TextSpan(text: "."),
+            const pw.TextSpan(text: "Avant toute mesure, la position de la barrette principale de terre ou de la barrette de coupure est vérifiée et mentionnée dans le rapport."),
           ]),
           _bodyText("La mesure peut être réalisée selon deux méthodes principales :"),
           pw.SizedBox(height: 2),
 
           _subMethodHeader("Méthode des trois piquets – Barrette ouverte"),
           _para([
-            const pw.TextSpan(text: "La méthode des trois piquets est réalisée avec la "),
-            pw.TextSpan(text: "barrette de terre ouverte", style: pw.TextStyle(font: _fontBold)),
-            const pw.TextSpan(text: ", lorsque la configuration de l'installation permet d'isoler la prise de terre à meuser."),
+            const pw.TextSpan(text: "La méthode des trois piquets est réalisée avec la barrette de terre ouverte, lorsque la configuration de l'installation permet d'isoler la prise de terre à meuser."),
           ]),
           _bodyText("Elle utilise :"),
           _bulletPoint("La prise de terre à mesurer ;"),
@@ -8163,48 +8138,33 @@ class PdfReportService {
           _bulletPoint("Où l'interruption du réseau de terre n'est pas souhaitable."),
           pw.SizedBox(height: 3),
           _para([
-            const pw.TextSpan(text: "Dans ce cas, la mesure est généralement réalisée "),
-            pw.TextSpan(text: "barrette fermée", style: pw.TextStyle(font: _fontBold)),
-            const pw.TextSpan(text: ", afin de conserver le réseau de terre dans sa configuration normale de fonctionnement."),
+            const pw.TextSpan(text: "Dans ce cas, la mesure est généralement réalisée barrette fermée, afin de conserver le réseau de terre dans sa configuration normale de fonctionnement."),
           ]),
-          
-          pw.SizedBox(height: 16),
-          
-          // Essais de démarrage automatique (sur la même page)
-          PageTracker(
-            key: 'mesures_demarrage',
-            registry: trackedPages,
-            offset: pageOffset,
-            child: _subSectionBar('2. Essais de démarrage automatique du groupe électrogène'),
-          ),
-          pw.SizedBox(height: 5),
-          _resultBox(mesures.essaiDemarrageAuto.observation ?? 'Non satisfaisant'),
-          
-          pw.SizedBox(height: 16),
-          
-          // Test de l'arret d'urgence (sur la même page)
-          PageTracker(
-            key: 'mesures_arret',
-            registry: trackedPages,
-            offset: pageOffset,
-            child: _subSectionBar("3. Test de fonctionnement de l'arrêt d'urgence"),
-          ),
-          pw.SizedBox(height: 5),
-          _resultBox(mesures.testArretUrgence.observation ?? 'Satisfaisant'),
-      ],
+       ],
     ));
     
-    // Prise de terre (nouvelle page)
+    // II. RÉSULTATS DES ESSAIS (nouvelle page)
     pdf.addPage(pw.MultiPage(
       maxPages: 10000,
       pageTheme: _buildInnerPageTheme(pageOffset: pageOffset, overrideTotalPages: overrideTotalPages),
       header: (ctx) => _buildPageHeaderWidget(),
       build: (ctx) => [
         PageTracker(
+          key: 'mesures_resultats',
+          registry: trackedPages,
+          offset: pageOffset,
+          child: _subSectionBar("II. RÉSULTATS DES ESSAIS"),
+        ),
+        pw.SizedBox(height: 6),
+        _bodyText("Les résultats des mesures et essais réalisés sont présentés ci-après par type de vérification."),
+        pw.SizedBox(height: 12),
+
+        // 1. Prise de terre
+        PageTracker(
           key: 'mesures_terre',
           registry: trackedPages,
           offset: pageOffset,
-          child: _subSectionBar('4. Prise de terre'),
+          child: _subSectionBar('1. Prise de terre'),
         ),
         pw.SizedBox(height: 8),
         pw.Table(
@@ -8267,7 +8227,7 @@ class PdfReportService {
               crossAxisAlignment: pw.CrossAxisAlignment.start,
               children: [
                 pw.Text(
-                  '4.1. Avis sur les mesures',
+                  '1.1. Avis sur les mesures',
                   style: pw.TextStyle(font: _fontBold, fontSize: fsSmall + 0.5, color: headerColor),
                 ),
                 pw.SizedBox(height: 6),
@@ -8301,8 +8261,7 @@ class PdfReportService {
       ],
     ));
 
-    
-    // Essais de declenchement des DDR (nouvelle page)
+    // 2. Essais de declenchement des DDR (nouvelle page)
     pdf.addPage(pw.MultiPage(
       maxPages: 10000,
       pageTheme: _buildInnerPageTheme(pageOffset: pageOffset, overrideTotalPages: overrideTotalPages),
@@ -8314,7 +8273,7 @@ class PdfReportService {
           key: 'mesures_ddr',
           registry: trackedPages,
           offset: pageOffset,
-          child: _subSectionBar("5. Essais de déclenchement des dispositifs différentiels"),
+          child: _subSectionBar("2. Essais de déclenchement des dispositifs différentiels"),
         ));
         widgets.add(pw.SizedBox(height: 8));
 
@@ -8454,7 +8413,7 @@ class PdfReportService {
       },
     ));
 
-    // 6. Essais de mesure d'isolement (nouvelle page)
+    // 3. Essais de mesure d'isolement (nouvelle page)
     pdf.addPage(pw.MultiPage(
       maxPages: 10000,
       pageTheme: _buildInnerPageTheme(pageOffset: pageOffset, overrideTotalPages: overrideTotalPages),
@@ -8464,7 +8423,7 @@ class PdfReportService {
           key: 'mesures_isolement',
           registry: trackedPages,
           offset: pageOffset,
-          child: _subSectionBar("6. Essais de mesure d'isolement entre deux points d'un tronçon de câble"),
+          child: _subSectionBar("3. Essais de mesure d'isolement entre deux points d'un tronçon de câble"),
         ),
         pw.SizedBox(height: 8),
         pw.Table(
@@ -8476,7 +8435,7 @@ class PdfReportService {
             2: pw.FlexColumnWidth(2.2), // Point B (extrémité)
             3: pw.FlexColumnWidth(1.6), // Section du câble (mm²)
             4: pw.FlexColumnWidth(1.6), // Nombre de câbles testés
-            5: pw.FlexColumnWidth(1.6), // Isolement (MΩ)
+            5: pw.FlexColumnWidth(1.6), // Isolement
             6: pw.FlexColumnWidth(1.8), // Appréciation
           },
           children: [
@@ -8486,7 +8445,7 @@ class PdfReportService {
               'Point B (extrémité)',
               'Section du câble (mm²)',
               'Nombre de câble testée',
-              'Isolement(MΩ)',
+              'Isolement',
               'Appréciation',
             ]),
             if (mesures.essaisIsolement.isEmpty)
@@ -8535,7 +8494,7 @@ class PdfReportService {
                     pw.Container(
                       padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                       alignment: pw.Alignment.center,
-                      child: pw.Text('${ei.isolement}', style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
+                      child: pw.Text(_formatIsolement(ei.isolement), style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall), textAlign: pw.TextAlign.center),
                     ),
                     pw.Container(
                       color: appBgColor,
@@ -8559,7 +8518,7 @@ class PdfReportService {
       ],
     ));
     
-    // 7. Test du CPI (nouvelle page)
+    // 4, 5, 6. CPI, GE et Arrêt d'urgence (regroupés sur une seule page)
     final cpiTestResult = desc != null && desc.cpi.isNotEmpty
         ? (desc.cpi.last.data['RESULTAT_TEST'] ?? 'Sans objet')
         : 'Sans objet';
@@ -8573,14 +8532,36 @@ class PdfReportService {
           key: 'mesures_cpi',
           registry: trackedPages,
           offset: pageOffset,
-          child: _subSectionBar("7. Test du Contrôleur Permanent d'Isolement (CPI)"),
+          child: _subSectionBar("4. Test du Contrôleur Permanent d'Isolement (CPI)"),
         ),
         pw.SizedBox(height: 8),
         _buildCpiTestContent(cpiTestResult),
+
+        pw.SizedBox(height: 16),
+
+        PageTracker(
+          key: 'mesures_demarrage',
+          registry: trackedPages,
+          offset: pageOffset,
+          child: _subSectionBar('5. Essais de démarrage automatique du groupe électrogène'),
+        ),
+        pw.SizedBox(height: 5),
+        _resultBox(mesures.essaiDemarrageAuto.observation ?? 'Non satisfaisant'),
+
+        pw.SizedBox(height: 16),
+
+        PageTracker(
+          key: 'mesures_arret',
+          registry: trackedPages,
+          offset: pageOffset,
+          child: _subSectionBar("6. Test de fonctionnement de l'arrêt d'urgence"),
+        ),
+        pw.SizedBox(height: 5),
+        _resultBox(mesures.testArretUrgence.observation ?? 'Satisfaisant'),
       ],
     ));
 
-    // 8. Continuite (nouvelle page)
+    // 7. Continuité (nouvelle page)
     pdf.addPage(pw.MultiPage(
       maxPages: 10000,
       pageTheme: _buildInnerPageTheme(pageOffset: pageOffset, overrideTotalPages: overrideTotalPages),
@@ -8590,7 +8571,7 @@ class PdfReportService {
           key: 'mesures_continuite',
           registry: trackedPages,
           offset: pageOffset,
-          child: _subSectionBar('8. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles'),
+          child: _subSectionBar('7. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles'),
         ),
         pw.SizedBox(height: 8),
         pw.Table(
@@ -8890,13 +8871,33 @@ class PdfReportService {
     );
   }
 
+  static String _formatIsolement(dynamic val) {
+    if (val == null) return '-';
+    if (val is num) {
+      if (val % 1 == 0) {
+        return val.toInt().toString();
+      }
+      return val.toString().replaceAll('.', ',');
+    }
+    final str = val.toString().trim();
+    if (str.isEmpty) return '-';
+    final parsed = double.tryParse(str.replaceAll(',', '.'));
+    if (parsed != null) {
+      if (parsed % 1 == 0) {
+        return parsed.toInt().toString();
+      }
+      return parsed.toString().replaceAll('.', ',');
+    }
+    return str;
+  }
+
   static pw.Widget _buildAbreviationsTable() {
     final titleTable = pw.Table(
       border: pw.TableBorder(
         top: pw.BorderSide(color: borderColor, width: 0.4),
         left: pw.BorderSide(color: borderColor, width: 0.4),
         right: pw.BorderSide(color: borderColor, width: 0.4),
-        bottom: pw.BorderSide(color: borderColor, width: 0.4),
+        bottom: pw.BorderSide.none,
       ),
       columnWidths: const {
         0: pw.FlexColumnWidth(4.0),
