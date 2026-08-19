@@ -1897,9 +1897,9 @@ class PdfReportService {
       decoration: pw.BoxDecoration(color: accentColor),
       children: [
         pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('N°', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
-        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('OBSERVATION', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
+        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('OBSERVATION', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
         pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('STATS', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
-        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('CONSTAT MAJEUR', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
+        pw.Padding(padding: const pw.EdgeInsets.all(4), child: pw.Text('CONSTAT MAJEUR', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
       ],
     );
 
@@ -1941,7 +1941,8 @@ class PdfReportService {
         verticalAlignment: pw.TableCellVerticalAlignment.middle,
         decoration: pw.BoxDecoration(color: PdfColor.fromHex('#FEF2F2')),
         children: [
-          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Priorité 1 — Action Immédiate', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColor.fromHex('#B71C1C')))),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Critique', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColor.fromHex('#B71C1C')), textAlign: pw.TextAlign.center)),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Priorité 1 — Action Immédiate', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColor.fromHex('#B71C1C')), textAlign: pw.TextAlign.center)),
           pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(_cleanRecommendationText(data.recommandationsPrioritaires.priority1Immediate), style: pw.TextStyle(font: _fontRegular, fontSize: 7.5))),
         ],
       ));
@@ -1951,7 +1952,8 @@ class PdfReportService {
         verticalAlignment: pw.TableCellVerticalAlignment.middle,
         decoration: pw.BoxDecoration(color: PdfColor.fromHex('#FFF7ED')),
         children: [
-          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Priorité 2 — Court Terme', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColor.fromHex('#C2410C')))),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Majeure', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColor.fromHex('#C2410C')), textAlign: pw.TextAlign.center)),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Priorité 2 — Court Terme', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColor.fromHex('#C2410C')), textAlign: pw.TextAlign.center)),
           pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(_cleanRecommendationText(data.recommandationsPrioritaires.priority2ShortTerm), style: pw.TextStyle(font: _fontRegular, fontSize: 7.5))),
         ],
       ));
@@ -1960,7 +1962,8 @@ class PdfReportService {
       recoRows.add(pw.TableRow(
         verticalAlignment: pw.TableCellVerticalAlignment.middle,
         children: [
-          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Priorité 3 — Moyen Terme', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColors.grey800))),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Mineure', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColors.grey800), textAlign: pw.TextAlign.center)),
+          pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('Priorité 3 — Moyen Terme', style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColors.grey800), textAlign: pw.TextAlign.center)),
           pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text(_cleanRecommendationText(data.recommandationsPrioritaires.priority3MediumTerm), style: pw.TextStyle(font: _fontRegular, fontSize: 7.5))),
         ],
       ));
@@ -1970,8 +1973,9 @@ class PdfReportService {
       verticalAlignment: pw.TableCellVerticalAlignment.middle,
       decoration: pw.BoxDecoration(color: accentColor),
       children: [
-        pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('NIVEAU DE PRIORITÉ', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
-        pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('ACTION CORRECTIVE RECOMMANDÉE', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white))),
+        pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('CRITICITÉ', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
+        pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('NIVEAU DE PRIORITÉ', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
+        pw.Padding(padding: const pw.EdgeInsets.all(5), child: pw.Text('ACTION CORRECTIVE RECOMMANDÉE', style: pw.TextStyle(font: _fontBold, fontSize: 8, color: PdfColors.white), textAlign: pw.TextAlign.center)),
       ],
     );
 
@@ -1996,8 +2000,9 @@ class PdfReportService {
       headerRow: recoHeaderRow,
       dataRows: recoRows,
       columnWidths: const {
-        0: pw.FlexColumnWidth(3.5),
-        1: pw.FlexColumnWidth(6.5),
+        0: pw.FlexColumnWidth(1.8),
+        1: pw.FlexColumnWidth(2.7),
+        2: pw.FlexColumnWidth(5.5),
       },
     );
 

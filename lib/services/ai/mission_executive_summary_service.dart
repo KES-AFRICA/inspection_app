@@ -617,84 +617,119 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
       }
     } catch (_) {}
 
-    final topRiskFamilies = snapshot.riskFamilies.take(5).toList();
+    // 1. Facteurs de risque prépondérants — Regroupement Canonique Strict Sans Doublon
+    final riskFamiliesMap = <String, int>{};
+    for (final r in snapshot.riskFamilies) {
+      final rawName = r['name'] as String? ?? '';
+      final c = (r['count'] as int?) ?? 0;
+      if (c > 0) {
+        final canonical = CanonicalRiskFamilyRegistry.mapToCanonical(rawName);
+        riskFamiliesMap[canonical] = (riskFamiliesMap[canonical] ?? 0) + c;
+      }
+    }
+
+    final totalOccur = total;
+    final sortedRiskEntries = riskFamiliesMap.entries.toList()
+      ..sort((a, b) => b.value.compareTo(a.value));
+
     final riskRows = <RiskFactorRowData>[];
-    for (int i = 0; i < topRiskFamilies.length; i++) {
-      final r = topRiskFamilies[i];
-      final name = r['name'] as String? ?? 'Famille de risque';
-      final nameLower = name.toLowerCase();
+    for (int i = 0; i < sortedRiskEntries.length; i++) {
+      final name = sortedRiskEntries[i].key;
+      final c = sortedRiskEntries[i].value;
+      final partPct = totalOccur > 0 ? ((c / totalOccur) * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
 
       String obs;
       if (i == 0) {
-        obs = '1er facteur de risque identifié';
-      } else if (nameLower.contains('électrisation') || nameLower.contains('électrocution')) {
-        obs = 'Risque direct pour les personnes';
-      } else if (nameLower.contains('dégradation') || nameLower.contains('canalisations') || nameLower.contains('échauffement')) {
-        obs = 'Risque de dégradation matérielle';
-      } else if (nameLower.contains('surintensité') || nameLower.contains('incendie') || nameLower.contains('court-circuit')) {
-        obs = 'Risque incendie d\'origine électrique';
+        obs = '1er axe de risque prépondérant identifié sur le site';
+      } else if (name == CanonicalRiskFamilyRegistry.electrissationElectrocution) {
+        obs = 'Risque direct pour la sécurité des personnes';
+      } else if (name == CanonicalRiskFamilyRegistry.degradationCanalisations) {
+        obs = 'Risque de dégradation matérielle et des cheminements';
+      } else if (name == CanonicalRiskFamilyRegistry.surintensiteCourtCircuit) {
+        obs = 'Risque d\'avarie électrique et de déclenchement intempestif';
+      } else if (name == CanonicalRiskFamilyRegistry.echauffementSurcharge) {
+        obs = 'Risque de surcharge thermique et départ d\'incendie';
       } else {
         obs = CanonicalRiskFamilyRegistry.defaultObservations[name] ??
-            'Facteur de risque identifié lors du contrôle';
+            'Axe de risque identifié lors du contrôle';
       }
 
       riskRows.add(RiskFactorRowData(
         natureRisque: name,
-        constats: r['count']?.toString() ?? '0',
-        partPct: '${r['percentage'] ?? '0,0'} %',
+        constats: '$c',
+        partPct: '$partPct %',
         observation: obs,
       ));
     }
 
     if (riskRows.isEmpty) {
       riskRows.add(RiskFactorRowData(
-        natureRisque: 'Risques généraux d\'exploitation',
+        natureRisque: CanonicalRiskFamilyRegistry.erreurExploitation,
         constats: '0',
         partPct: '0,0 %',
         observation: 'Aucun facteur de risque prépondérant identifié',
       ));
     }
 
-    final int topRiskCount = topRiskFamilies.fold<int>(0, (sum, r) => sum + ((r['count'] as int?) ?? 0));
-    final String pctSumRiskStr = total > 0 ? ((topRiskCount / total) * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
-    final String countWord = topRiskFamilies.length == 4
+    final int topRiskCount = sortedRiskEntries.fold<int>(0, (sum, e) => sum + e.value);
+    final String pctSumRiskStr = totalOccur > 0 ? ((topRiskCount / totalOccur) * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
+    final String countWord = sortedRiskEntries.length == 4
         ? 'quatre'
-        : (topRiskFamilies.length == 5 ? 'cinq' : '${topRiskFamilies.length}');
-    final riskCommentary = total == 0
+        : (sortedRiskEntries.length == 5 ? 'cinq' : '${sortedRiskEntries.length}');
+    final riskCommentary = totalOccur == 0
         ? 'Aucun facteur de risque prépondérant décelé.'
-        : 'Ces $countWord facteurs représentent ensemble $pctSumRiskStr % des occurrences répertoriées '
-            '(sur la base des $total occurrences de la statistique par nature de défaut), ce qui en fait la priorité du plan d\'actions correctives.';
+        : 'Ces $countWord axes de risques concentrent $pctSumRiskStr % des occurrences répertoriées sur l\'établissement, constituant l\'axe d\'effort prioritaire du plan d\'action.';
 
+    // 2. Observations et constats majeurs — Analyse synthétique par point de contrôle
     final top5Defects = snapshot.topDefects.take(5).toList();
-    final bulletPoints = top5Defects.map((d) {
+    final bulletPoints = <String>[];
+    final top1Category = top1Name.isNotEmpty ? top1Name : 'Armoires et Coffrets';
+
+    for (final d in top5Defects) {
       final title = d['title'] as String? ?? 'Défaut constaté';
       final count = d['count'] as int? ?? 0;
       final pct = d['percentage'] as String? ?? '0,0';
-      return '$title ($count constat${count > 1 ? 's' : ''}, $pct %) ;';
-    }).toList();
+
+      String syntheticConstat;
+      final titleLower = title.toLowerCase();
+      if (titleLower.contains('terre') || titleLower.contains('différentiel') || titleLower.contains('isolement')) {
+        syntheticConstat = 'Récurrence de $count anomalie(s) sur les $top1Category, compromettant la chaîne de protection contre les contacts indirects et l\'évacuation des courants de fuite.';
+      } else if (titleLower.contains('surintensité') || titleLower.contains('calibre') || titleLower.contains('coupe-circuit') || titleLower.contains('disjoncteur')) {
+        syntheticConstat = 'Concentration de $count défaut(s) d\'appareillage de coupure/protection, générant un risque de non-déclenchement en cas de surintensité ou court-circuit.';
+      } else if (titleLower.contains('repérage') || titleLower.contains('schéma') || titleLower.contains('identification')) {
+        syntheticConstat = 'Défaut d\'identification et de documentation sur $count point(s) de contrôle, augmentant le risque d\'erreur humaine lors des manœuvres et de la maintenance.';
+      } else if (titleLower.contains('câblage') || titleLower.contains('canalisation') || titleLower.contains('gaine') || titleLower.contains('serrage')) {
+        syntheticConstat = 'Dégradation physique ou mécanique sur $count liaison(s) et raccordement(s), exposant les conducteurs aux échauffements et agressions mécaniques.';
+      } else {
+        syntheticConstat = 'Constat récurrent de $count non-conformité(s) ($pct %) sur le parc d\'équipements, nécessitant une remise en état opérationnelle.';
+      }
+
+      bulletPoints.add('$title ($count constats, $pct %) : $syntheticConstat ;');
+    }
 
     if (bulletPoints.isEmpty) {
       bulletPoints.add('Examen conforme de l\'ensemble des organes de protection et de câblage.');
     }
 
     final int top5DefectCount = top5Defects.fold<int>(0, (sum, d) => sum + ((d['count'] as int?) ?? 0));
-    final String top5PctStr = total > 0 ? ((top5DefectCount / total) * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
-    final summaryObs = total == 0
+    final String top5PctStr = totalOccur > 0 ? ((top5DefectCount / totalOccur) * 100).toStringAsFixed(1).replaceAll('.', ',') : '0,0';
+    final summaryObs = totalOccur == 0
         ? ''
-        : 'Ces ${top5Defects.length} premières catégories concentrent à elles seules $top5PctStr % de l\'ensemble des occurrences relevées '
-            ', voir l\'analyse de Pareto complète dans la section ANALYSE STATISTIQUE.';
+        : 'Ces ${top5Defects.length} premières catégories d\'anomalies concentrent à elles seules $top5PctStr % de l\'ensemble des défaillances relevées sur le site.';
 
+    // 3. Recommandations prioritaires hiérarchisées (Intégration explicite du nombre de NC mineures)
     final top1CritCount = top1 != null ? (top1['critiqueCount'] as int? ?? 0) : 0;
     final priority1 = critique > 0
-        ? 'Priorité 1 — Immédiat : lever les $critique non-conformités critiques, en particulier sur les $top1Name${top1CritCount > 0 ? ' ($top1CritCount critiques)' : ''}, pour neutraliser les risques directs d\'électrisation et d\'électrocution ;'
-        : 'Priorité 1 — Immédiat : maintenir l\'intégrité des équipements et organes de protection existants ;';
+        ? 'Priorité 1 — Action Immédiate : lever immédiatement les $critique non-conformité(s) critique(s), en priorité sur la catégorie $top1Category${top1CritCount > 0 ? ' ($top1CritCount critique(s))' : ''}, afin de neutraliser les risques directs d\'électrisation et d\'électrocution pour les personnes ;'
+        : 'Priorité 1 — Action Immédiate : maintenir l\'intégrité des équipements et organes de protection existants ;';
 
     final priority2 = majeure > 0
-        ? 'Priorité 2 — Court terme : remettre en état les $majeure non-conformités majeures, notamment les systèmes de protection contre les contacts indirects, le câblage et les disjoncteurs ;'
-        : 'Priorité 2 — Court terme : planifier la maintenance préventive régulière ;';
+        ? 'Priorité 2 — Court Terme : remettre en état sous court terme les $majeure non-conformité(s) majeure(s) décelée(s) (principalement sur $top1Category), concernant la protection contre les surintensités, le câblage et l\'isolement des matériels ;'
+        : 'Priorité 2 — Court Terme : planifier la maintenance préventive régulière des installations ;';
 
-    final priority3 =
-        'Priorité 3 — Moyen terme : finaliser l\'identification complète des circuits, le repérage et la conformité des répartiteurs, afin de sécuriser durablement l\'exploitation et la maintenance du site.';
+    final priority3 = mineure > 0
+        ? 'Priorité 3 — Moyen Terme : traiter dans le cadre des opérations de maintenance courante les $mineure non-conformité(s) mineure(s) relevée(s) ($mineure constats d\'exploitation), en finalisant le repérage des circuits, la mise à jour des étiquetages et la conformité des répartiteurs.'
+        : 'Priorité 3 — Moyen Terme : finaliser le repérage complet des circuits et mettre à jour les schémas unifilaires de l\'établissement.';
 
     final assessment1 = total == 0
         ? 'La vérification périodique des installations électriques du site **${snapshot.siteName.toUpperCase()}** met en évidence un bon niveau de maîtrise du risque électrique.'

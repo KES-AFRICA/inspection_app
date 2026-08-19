@@ -2,9 +2,9 @@
 class CanonicalRiskFamilyRegistry {
   static const String erreurExploitation = 'Erreur d\'exploitation / maintenance';
   static const String electrissationElectrocution = 'Électrisation / électrocution';
-  static const String degradationCanalisations = 'Dégradation des canalisations / échauffement / court-circuit';
-  static const String surintensiteCourtCircuit = 'Surintensité / court-circuit / incendie';
-  static const String echauffementSurcharge = 'Échauffement / surcharge / incendie';
+  static const String degradationCanalisations = 'Dégradation des canalisations et matériels';
+  static const String surintensiteCourtCircuit = 'Surintensité / court-circuit';
+  static const String echauffementSurcharge = 'Échauffement / surcharge / risque d\'incendie';
 
   static const List<String> canonicalFamilies = [
     erreurExploitation,
