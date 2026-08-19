@@ -222,17 +222,16 @@ class PdfFooterBuilder {
                   child: pw.Container(
                     width: 190,
                     height: totalHeight,
+                    padding: const pw.EdgeInsets.only(bottom: 4.0),
                     alignment: pw.Alignment.center,
-                    child: pw.Center(
-                      child: pw.Text(
-                        pageDisplay,
-                        style: pw.TextStyle(
-                          font: fontBold,
-                          fontSize: 8.0,
-                          color: PdfColors.white,
-                        ),
-                        textAlign: pw.TextAlign.center,
+                    child: pw.Text(
+                      pageDisplay,
+                      style: pw.TextStyle(
+                        font: fontBold,
+                        fontSize: 8.0,
+                        color: PdfColors.white,
                       ),
+                      textAlign: pw.TextAlign.center,
                     ),
                   ),
                 ),
