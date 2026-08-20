@@ -22,6 +22,8 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:flutter/services.dart';
 import 'observation_enrichie_widget.dart';
 import 'package:inspec_app/services/dispositions_constructives_registry.dart';
+import 'package:inspec_app/services/normative_search_service.dart';
+import 'package:inspec_app/components/normative_search_suggestions_widget.dart';
 import 'package:inspec_app/components/safe_file_image.dart';
 
 // Extension pour obtenir la taille de l'écran facilement
@@ -76,7 +78,7 @@ class _EtapeInformationsGenerales extends StatefulWidget {
   final List<String> observationPhotos;
   final Function() onPrendrePhotoObservation;
   final Function() onChoisirPhotoObservation;
-  final Function() onAjouterObservation;
+  final Function([String?, String?, String?, String?]) onAjouterObservation;
   final Function(int) onSupprimerObservationExistante;
   final bool nomValid;
   final bool typeValid;
@@ -118,6 +120,11 @@ class _EtapeInformationsGenerales extends StatefulWidget {
 class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales> {
   final PageController _photosController = PageController();
   int _currentPhotoIndex = 0;
+
+  String? _pendingPointVerificationKey;
+  String? _pendingReferenceNormative;
+  String? _pendingFamilleRisque;
+  String? _pendingCriticite;
 
   @override
   Widget build(BuildContext context) {
@@ -833,6 +840,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
                     child: TextFormField(
                       controller: widget.observationController,
                       style: TextStyle(fontSize: context.fontSizeS),
+                      onChanged: (val) => setState(() {}),
                       decoration: InputDecoration(
                         hintText: 'Saisissez votre observation...',
                         hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: context.fontSizeS),
@@ -841,6 +849,28 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
                       ),
                       maxLines: 3,
                     ),
+                  ),
+                  NormativeSearchSuggestionsWidget(
+                    queryText: widget.observationController.text,
+                    selectedReferenceNormative: _pendingReferenceNormative,
+                    selectedFamilleRisque: _pendingFamilleRisque,
+                    selectedCriticite: _pendingCriticite,
+                    onSelect: (res) {
+                      setState(() {
+                        _pendingPointVerificationKey = res.key;
+                        _pendingReferenceNormative = res.referenceNormative;
+                        _pendingFamilleRisque = res.familleRisque;
+                        _pendingCriticite = res.criticite;
+                      });
+                    },
+                    onUnlink: () {
+                      setState(() {
+                        _pendingPointVerificationKey = null;
+                        _pendingReferenceNormative = null;
+                        _pendingFamilleRisque = null;
+                        _pendingCriticite = null;
+                      });
+                    },
                   ),
                   SizedBox(height: context.spacingM),
                   Row(
@@ -889,7 +919,20 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: widget.onAjouterObservation,
+                      onPressed: () {
+                        widget.onAjouterObservation(
+                          _pendingPointVerificationKey,
+                          _pendingReferenceNormative,
+                          _pendingFamilleRisque,
+                          _pendingCriticite,
+                        );
+                        setState(() {
+                          _pendingPointVerificationKey = null;
+                          _pendingReferenceNormative = null;
+                          _pendingFamilleRisque = null;
+                          _pendingCriticite = null;
+                        });
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppTheme.primaryBlue,
                         foregroundColor: Colors.white,
@@ -952,9 +995,53 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
           Row(
             children: [
               Expanded(
-                child: Text(
-                  observation.texte,
-                  style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade800),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      observation.texte,
+                      style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade800),
+                    ),
+                    if (observation.hasNormativeReference) ...[
+                      SizedBox(height: context.spacingXS),
+                      Container(
+                        padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.shade50,
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(color: Colors.blue.shade200),
+                        ),
+                        child: Text(
+                          'Réf : ${observation.referenceNormative}',
+                          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue.shade900),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    widget.observationController.text = observation.texte;
+                    widget.observationPhotos.clear();
+                    widget.observationPhotos.addAll(observation.photos);
+                    _pendingPointVerificationKey = observation.pointVerificationKey;
+                    _pendingReferenceNormative = observation.referenceNormative;
+                    _pendingFamilleRisque = observation.familleRisque;
+                    _pendingCriticite = observation.criticite;
+                    widget.observationsExistantes.removeAt(index);
+                    widget.onAddObservationChanged(true);
+                  });
+                },
+                child: Container(
+                  padding: EdgeInsets.all(context.spacingXS),
+                  margin: EdgeInsets.only(right: context.spacingS),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(Icons.edit_outlined, size: context.iconSizeS, color: Colors.blue),
                 ),
               ),
               GestureDetector(
@@ -962,7 +1049,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
                 child: Container(
                   padding: EdgeInsets.all(context.spacingXS),
                   decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.1),
+                    color: Colors.red.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: Icon(Icons.delete_outline, size: context.iconSizeS, color: Colors.red),
@@ -2087,7 +2174,7 @@ class _EtapeElementsControleState extends State<_EtapeElementsControle> {
             maxLines: 2,
           ),
         ),
-        
+
         if (suggestions.isNotEmpty)
           Container(
             margin: EdgeInsets.only(top: context.spacingS),
@@ -3701,6 +3788,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
                         onSavePhoto: widget.onSavePhoto,
                         showPriority: false,
                         sectionType: 'cellule',
+                        enableNormativeSearch: true,
                       ),
                     ],
                   ),
@@ -4393,6 +4481,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
                         onSavePhoto: widget.onSavePhoto,
                         showPriority: false,
                         sectionType: 'transformateur',
+                        enableNormativeSearch: true,
                       ),
                     ],
                   ),
@@ -5837,14 +5926,26 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     );
   }
 
-  void _ajouterObservation() {
+  void _ajouterObservation([
+    String? pointKey,
+    String? refNormative,
+    String? famille,
+    String? crit,
+  ]) {
     final texte = _observationController.text.trim();
     if (texte.isEmpty) {
       _showError('Veuillez saisir une observation');
       return;
     }
     setState(() {
-      _observationsExistantes.add(ObservationLibre(texte: texte, photos: List.from(_observationPhotos)));
+      _observationsExistantes.add(ObservationLibre(
+        texte: texte,
+        photos: List.from(_observationPhotos),
+        pointVerificationKey: pointKey,
+        referenceNormative: refNormative,
+        familleRisque: famille,
+        criticite: crit,
+      ));
       _observationController.clear();
       _observationPhotos.clear();
       _addObservation = false;
@@ -6647,7 +6748,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                     observationPhotos: _observationPhotos,
                     onPrendrePhotoObservation: _prendrePhotoObservation,
                     onChoisirPhotoObservation: _choisirPhotoObservationDepuisGalerie,
-                    onAjouterObservation: _ajouterObservation,
+                    onAjouterObservation: ([key, ref, fam, crit]) => _ajouterObservation(key, ref, fam, crit),
                     onSupprimerObservationExistante: _supprimerObservationExistante,
                     nomValid: _nomValid,
                     typeValid: _typeValid,

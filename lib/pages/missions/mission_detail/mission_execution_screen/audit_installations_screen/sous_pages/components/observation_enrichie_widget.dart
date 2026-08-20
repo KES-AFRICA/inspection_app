@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
-import 'package:inspec_app/services/normative_search_service.dart';
+import 'package:inspec_app/components/normative_search_suggestions_widget.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_coffret_screen.dart';
 import 'package:inspec_app/components/safe_file_image.dart';
 
@@ -14,6 +14,7 @@ class ObservationEnrichieWidget extends StatefulWidget {
   final List<String> suggestions;
   final bool showPriority;
   final String sectionType;
+  final bool enableNormativeSearch;
 
   const ObservationEnrichieWidget({
     super.key,
@@ -24,6 +25,7 @@ class ObservationEnrichieWidget extends StatefulWidget {
     this.suggestions = const [],
     this.showPriority = true,
     required this.sectionType,
+    this.enableNormativeSearch = false,
   });
 
   @override
@@ -180,9 +182,6 @@ class _ObservationEnrichieWidgetState extends State<ObservationEnrichieWidget> {
   Widget _buildModernObservationField(BuildContext context) {
     final hasNoObservation = widget.element.observation == null || widget.element.observation!.trim().isEmpty;
     final showRequiredBorder = widget.showPriority && hasNoObservation;
-    final normResults = (widget.element.observation != null && widget.element.observation!.trim().length >= 3)
-        ? NormativeSearchService.search(widget.element.observation!.trim())
-        : <NormativeSearchResult>[];
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -217,116 +216,28 @@ class _ObservationEnrichieWidgetState extends State<ObservationEnrichieWidget> {
             maxLines: 2,
           ),
         ),
-        if (widget.element.referenceNormative != null && widget.element.referenceNormative!.isNotEmpty)
-          Container(
-            margin: EdgeInsets.only(top: context.spacingS),
-            padding: EdgeInsets.symmetric(horizontal: context.spacingS, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade50,
-              borderRadius: BorderRadius.circular(context.spacingS),
-              border: Border.all(color: Colors.blue.shade300),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.verified, color: Colors.blue.shade700, size: 16),
-                SizedBox(width: context.spacingXS),
-                Expanded(
-                  child: Text(
-                    'Réf : ${widget.element.referenceNormative}',
-                    style: TextStyle(
-                      fontSize: context.fontSizeXS,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.blue.shade900,
-                    ),
-                  ),
-                ),
-                GestureDetector(
-                  onTap: () {
-                    setState(() {
-                      widget.element.referenceNormative = null;
-                      widget.element.familleRisque = null;
-                      widget.element.criticite = null;
-                    });
-                    widget.onChanged();
-                  },
-                  child: Icon(Icons.close, color: Colors.red.shade600, size: 16),
-                ),
-              ],
-            ),
-          ),
-        if (normResults.isNotEmpty)
-          Container(
-            margin: EdgeInsets.only(top: context.spacingS),
-            padding: EdgeInsets.all(context.spacingS),
-            decoration: BoxDecoration(
-              color: Colors.amber.shade50,
-              borderRadius: BorderRadius.circular(context.spacingS),
-              border: Border.all(color: Colors.amber.shade300),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Suggestions normatives',
-                  style: TextStyle(
-                    fontSize: context.fontSizeXS,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.amber.shade900,
-                  ),
-                ),
-                SizedBox(height: context.spacingXS),
-                ...normResults.take(4).map(
-                  (res) => GestureDetector(
-                    onTap: () {
-                      setState(() {
-                        widget.element.referenceNormative = res.referenceNormative;
-                        widget.element.familleRisque = res.familleRisque;
-                        widget.element.criticite = res.criticite;
-                      });
-                      widget.onChanged();
-                    },
-                    child: Padding(
-                      padding: EdgeInsets.symmetric(
-                        vertical: context.spacingXS,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.lightbulb_outline,
-                            size: context.iconSizeXS,
-                            color: Colors.amber.shade800,
-                          ),
-                          SizedBox(width: context.spacingS),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  res.pointVerification,
-                                  style: TextStyle(
-                                    fontSize: context.fontSizeXS,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.grey.shade900,
-                                  ),
-                                ),
-                                Text(
-                                  res.referenceNormative,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.blue.shade800,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+        if (widget.enableNormativeSearch)
+          NormativeSearchSuggestionsWidget(
+            queryText: widget.element.observation ?? '',
+            selectedReferenceNormative: widget.element.referenceNormative,
+            selectedFamilleRisque: widget.element.familleRisque,
+            selectedCriticite: widget.element.criticite,
+            onSelect: (res) {
+              setState(() {
+                widget.element.referenceNormative = res.referenceNormative;
+                widget.element.familleRisque = res.familleRisque;
+                widget.element.criticite = res.criticite;
+              });
+              widget.onChanged();
+            },
+            onUnlink: () {
+              setState(() {
+                widget.element.referenceNormative = null;
+                widget.element.familleRisque = null;
+                widget.element.criticite = null;
+              });
+              widget.onChanged();
+            },
           ),
         if (widget.suggestions.isNotEmpty)
           Container(

@@ -6,6 +6,8 @@ import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/features/foudre/presentation/providers/foudre_provider.dart';
+import 'package:inspec_app/components/normative_search_suggestions_widget.dart';
+import 'package:inspec_app/services/normative_search_service.dart';
 
 class AjouterFoudreScreen extends ConsumerStatefulWidget {
   final Mission mission;
@@ -27,6 +29,10 @@ class _AjouterFoudreScreenState extends ConsumerState<AjouterFoudreScreen> {
   final _formKey = GlobalKey<FormState>();
   final _observationController = TextEditingController();
   int _niveauPriorite = 2; // Par défaut priorité moyenne
+
+  String? _selectedRefNormative;
+  String? _selectedFamilleRisque;
+  String? _selectedCriticite;
 
   @override
   void initState() {
@@ -207,6 +213,7 @@ class _AjouterFoudreScreenState extends ConsumerState<AjouterFoudreScreen> {
               // Champ observation
               TextFormField(
                 controller: _observationController,
+                onChanged: (val) => setState(() {}),
                 decoration: InputDecoration(
                   hintText: 'Décrivez l\'observation...',
                   border: OutlineInputBorder(),
@@ -222,6 +229,26 @@ class _AjouterFoudreScreenState extends ConsumerState<AjouterFoudreScreen> {
                     return 'L\'observation doit contenir au moins 10 caractères';
                   }
                   return null;
+                },
+              ),
+              NormativeSearchSuggestionsWidget(
+                queryText: _observationController.text,
+                selectedReferenceNormative: _selectedRefNormative,
+                selectedFamilleRisque: _selectedFamilleRisque,
+                selectedCriticite: _selectedCriticite,
+                onSelect: (res) {
+                  setState(() {
+                    _selectedRefNormative = res.referenceNormative;
+                    _selectedFamilleRisque = res.familleRisque;
+                    _selectedCriticite = res.criticite;
+                  });
+                },
+                onUnlink: () {
+                  setState(() {
+                    _selectedRefNormative = null;
+                    _selectedFamilleRisque = null;
+                    _selectedCriticite = null;
+                  });
                 },
               ),
               

@@ -20,6 +20,8 @@ import 'dart:convert';
 import 'dart:async';
 import 'observation_enrichie_widget.dart';
 import 'package:inspec_app/components/safe_file_image.dart';
+import 'package:inspec_app/components/normative_search_suggestions_widget.dart';
+import 'package:inspec_app/services/normative_search_service.dart';
 
 // ================================================================
 // EXTENSION RESPONSIVE
@@ -87,7 +89,7 @@ class _EtapeInformationsBase extends StatefulWidget {
   final List<ObservationLibre> observationsExistantes;
   final VoidCallback onPrendrePhotoObservation;
   final VoidCallback onChoisirPhotoObservation;
-  final VoidCallback onAjouterObservation;
+  final Function([String?, String?, String?, String?]) onAjouterObservation;
   final Function(int) onSupprimerObservation;
 
   const _EtapeInformationsBase({
@@ -134,6 +136,11 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
   final PageController _photosInterneController = PageController();
   int _currentExterneIndex = 0;
   int _currentInterneIndex = 0;
+
+  String? _pendingPointVerificationKey;
+  String? _pendingReferenceNormative;
+  String? _pendingFamilleRisque;
+  String? _pendingCriticite;
 
   @override
   Widget build(BuildContext context) {
@@ -785,6 +792,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
                   child: TextFormField(
                     controller: widget.observationController,
                     style: TextStyle(fontSize: context.fontSizeS),
+                    onChanged: (val) => setState(() {}),
                     decoration: InputDecoration(
                       hintText: 'Saisissez votre observation...',
                       hintStyle: TextStyle(color: Colors.grey.shade400, fontSize: context.fontSizeS),
@@ -793,6 +801,28 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
                     ),
                     maxLines: 3,
                   ),
+                ),
+                NormativeSearchSuggestionsWidget(
+                  queryText: widget.observationController.text,
+                  selectedReferenceNormative: _pendingReferenceNormative,
+                  selectedFamilleRisque: _pendingFamilleRisque,
+                  selectedCriticite: _pendingCriticite,
+                  onSelect: (res) {
+                    setState(() {
+                      _pendingPointVerificationKey = res.key;
+                      _pendingReferenceNormative = res.referenceNormative;
+                      _pendingFamilleRisque = res.familleRisque;
+                      _pendingCriticite = res.criticite;
+                    });
+                  },
+                  onUnlink: () {
+                    setState(() {
+                      _pendingPointVerificationKey = null;
+                      _pendingReferenceNormative = null;
+                      _pendingFamilleRisque = null;
+                      _pendingCriticite = null;
+                    });
+                  },
                 ),
                 SizedBox(height: context.spacingM),
                 Row(children: [
@@ -822,7 +852,20 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: widget.onAjouterObservation,
+                    onPressed: () {
+                      widget.onAjouterObservation(
+                        _pendingPointVerificationKey,
+                        _pendingReferenceNormative,
+                        _pendingFamilleRisque,
+                        _pendingCriticite,
+                      );
+                      setState(() {
+                        _pendingPointVerificationKey = null;
+                        _pendingReferenceNormative = null;
+                        _pendingFamilleRisque = null;
+                        _pendingCriticite = null;
+                      });
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppTheme.primaryBlue,
                       foregroundColor: Colors.white,
@@ -864,10 +907,49 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
       decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(context.spacingS), border: Border.all(color: Colors.grey.shade200)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
         Row(children: [
-          Expanded(child: Text(obs.texte, style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade800))),
-          GestureDetector(
-            onTap: () => widget.onSupprimerObservation(index),
-            child: Icon(Icons.delete_outline, color: Colors.red.shade400, size: context.iconSizeS),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(obs.texte, style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade800)),
+                if (obs.hasNormativeReference) ...[
+                  SizedBox(height: context.spacingXS),
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(color: Colors.blue.shade50, borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.blue.shade200)),
+                    child: Text('Réf : ${obs.referenceNormative}', style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.blue.shade900)),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    widget.observationController.text = obs.texte;
+                    widget.observationPhotos.clear();
+                    widget.observationPhotos.addAll(obs.photos);
+                    _pendingPointVerificationKey = obs.pointVerificationKey;
+                    _pendingReferenceNormative = obs.referenceNormative;
+                    _pendingFamilleRisque = obs.familleRisque;
+                    _pendingCriticite = obs.criticite;
+                    widget.observationsExistantes.removeAt(index);
+                    widget.onAddObservationChanged(true);
+                  });
+                },
+                child: Padding(
+                  padding: EdgeInsets.only(right: context.spacingS),
+                  child: Icon(Icons.edit_outlined, color: AppTheme.primaryBlue, size: context.iconSizeS),
+                ),
+              ),
+              GestureDetector(
+                onTap: () => widget.onSupprimerObservation(index),
+                child: Icon(Icons.delete_outline, color: Colors.red.shade400, size: context.iconSizeS),
+              ),
+            ],
           ),
         ]),
         if (obs.photos.isNotEmpty) ...[
@@ -2844,11 +2926,23 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     }
   }
 
-  void _ajouterObservation() {
+  void _ajouterObservation([
+    String? pointKey,
+    String? refNormative,
+    String? famille,
+    String? crit,
+  ]) {
     final texte = _observationController.text.trim();
     if (texte.isEmpty) return;
     setState(() {
-      _observationsLibresCoffret.add(ObservationLibre(texte: texte, photos: List.from(_observationPhotos)));
+      _observationsLibresCoffret.add(ObservationLibre(
+        texte: texte,
+        photos: List.from(_observationPhotos),
+        pointVerificationKey: pointKey,
+        referenceNormative: refNormative,
+        familleRisque: famille,
+        criticite: crit,
+      ));
       _observationController.clear();
       _observationPhotos.clear();
       _addObservation = false;

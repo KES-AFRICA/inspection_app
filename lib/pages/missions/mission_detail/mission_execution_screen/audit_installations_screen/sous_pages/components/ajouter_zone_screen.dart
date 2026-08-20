@@ -10,6 +10,7 @@ import 'dart:io';
 
 import 'package:path_provider/path_provider.dart';
 import 'package:inspec_app/components/safe_file_image.dart';
+import 'package:inspec_app/components/normative_search_suggestions_widget.dart';
 
 class AjouterZoneScreen extends StatefulWidget {
   final Mission mission;
@@ -49,6 +50,11 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
   final _observationController = TextEditingController();
   List<String> _observationPhotos = [];
   final List<ObservationLibre> _observationsExistantes = [];
+
+  String? _pendingPointVerificationKey;
+  String? _pendingReferenceNormative;
+  String? _pendingFamilleRisque;
+  String? _pendingCriticite;
 
   @override
   void initState() {
@@ -493,23 +499,72 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                   children: [
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Expanded(
-                          child: Text(
-                            observation.texte,
-                            style: TextStyle(
-                              fontWeight: FontWeight.w500,
-                              fontSize: isSmallScreen ? 13 : 14,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                observation.texte,
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  fontSize: isSmallScreen ? 13 : 14,
+                                ),
+                              ),
+                              if (observation.hasNormativeReference) ...[
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFEFF6FF),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: const Color(0xFFBFDBFE)),
+                                  ),
+                                  child: Text(
+                                    'Réf : ${observation.referenceNormative}',
+                                    style: const TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF1E40AF),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ],
                           ),
                         ),
-                        IconButton(
-                          icon: Icon(Icons.delete_outline, color: Colors.red, size: isSmallScreen ? 18 : 20),
-                          onPressed: () => _supprimerObservationExistante(index),
-                          constraints: BoxConstraints(
-                            minWidth: isSmallScreen ? 32 : 40,
-                            minHeight: isSmallScreen ? 32 : 40,
-                          ),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            IconButton(
+                              icon: Icon(Icons.edit_outlined, color: AppTheme.primaryBlue, size: isSmallScreen ? 18 : 20),
+                              onPressed: () {
+                                setState(() {
+                                  _observationController.text = observation.texte;
+                                  _observationPhotos = List.from(observation.photos);
+                                  _pendingPointVerificationKey = observation.pointVerificationKey;
+                                  _pendingReferenceNormative = observation.referenceNormative;
+                                  _pendingFamilleRisque = observation.familleRisque;
+                                  _pendingCriticite = observation.criticite;
+                                  _observationsExistantes.removeAt(index);
+                                  _addObservation = true;
+                                });
+                              },
+                              constraints: BoxConstraints(
+                                minWidth: isSmallScreen ? 32 : 40,
+                                minHeight: isSmallScreen ? 32 : 40,
+                              ),
+                            ),
+                            IconButton(
+                              icon: Icon(Icons.delete_outline, color: Colors.red, size: isSmallScreen ? 18 : 20),
+                              onPressed: () => _supprimerObservationExistante(index),
+                              constraints: BoxConstraints(
+                                minWidth: isSmallScreen ? 32 : 40,
+                                minHeight: isSmallScreen ? 32 : 40,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -674,6 +729,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                     ),
                     child: TextFormField(
                       controller: _observationController,
+                      onChanged: (val) => setState(() {}),
                       decoration: InputDecoration(
                         labelText: 'Observation',
                         labelStyle: TextStyle(
@@ -709,6 +765,29 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
                         color: const Color(0xFF1E293B),
                       ),
                     ),
+                  ),
+
+                  NormativeSearchSuggestionsWidget(
+                    queryText: _observationController.text,
+                    selectedReferenceNormative: _pendingReferenceNormative,
+                    selectedFamilleRisque: _pendingFamilleRisque,
+                    selectedCriticite: _pendingCriticite,
+                    onSelect: (res) {
+                      setState(() {
+                        _pendingPointVerificationKey = res.key;
+                        _pendingReferenceNormative = res.referenceNormative;
+                        _pendingFamilleRisque = res.familleRisque;
+                        _pendingCriticite = res.criticite;
+                      });
+                    },
+                    onUnlink: () {
+                      setState(() {
+                        _pendingPointVerificationKey = null;
+                        _pendingReferenceNormative = null;
+                        _pendingFamilleRisque = null;
+                        _pendingCriticite = null;
+                      });
+                    },
                   ),
  
                   SizedBox(height: isSmallScreen ? 16 : 20),
@@ -762,9 +841,17 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
       _observationsExistantes.add(ObservationLibre(
         texte: texte,
         photos: List.from(_observationPhotos),
+        pointVerificationKey: _pendingPointVerificationKey,
+        referenceNormative: _pendingReferenceNormative,
+        familleRisque: _pendingFamilleRisque,
+        criticite: _pendingCriticite,
       ));
       _observationController.clear();
       _observationPhotos.clear();
+      _pendingPointVerificationKey = null;
+      _pendingReferenceNormative = null;
+      _pendingFamilleRisque = null;
+      _pendingCriticite = null;
       _addObservation = false; // Réinitialiser le toggle à Non après ajout
     });
     

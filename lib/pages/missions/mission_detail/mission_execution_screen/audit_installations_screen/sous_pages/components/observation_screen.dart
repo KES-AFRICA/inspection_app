@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/utils/image_compress_helper.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/services/normative_search_service.dart';
+import 'package:inspec_app/components/normative_search_suggestions_widget.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'dart:io';
 
@@ -289,166 +290,7 @@ class _ObservationScreenState extends State<ObservationScreen> {
     );
   }
 
-  Widget _buildNormativeLinkBadge() {
-    if (_referenceNormative == null || _referenceNormative!.isEmpty) {
-      return SizedBox.shrink();
-    }
-    return Container(
-      margin: EdgeInsets.only(top: 8, bottom: 8),
-      padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: Colors.blue.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.blue.shade300),
-      ),
-      child: Row(
-        children: [
-          Icon(Icons.verified, color: Colors.blue.shade700, size: 20),
-          SizedBox(width: 8),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Référence normative associée',
-                  style: TextStyle(
-                    fontSize: 11,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade900,
-                  ),
-                ),
-                Text(
-                  _referenceNormative!,
-                  style: TextStyle(
-                    fontSize: 13,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.blue.shade800,
-                  ),
-                ),
-                if (_familleRisque != null && _familleRisque!.isNotEmpty)
-                  Text(
-                    'Risque : $_familleRisque (${_criticite ?? ""})',
-                    style: TextStyle(fontSize: 11, color: Colors.blue.shade700),
-                  ),
-              ],
-            ),
-          ),
-          IconButton(
-            icon: Icon(Icons.close, color: Colors.red.shade600, size: 20),
-            tooltip: 'Supprimer le rattachement normatif',
-            onPressed: () {
-              setState(() {
-                _pointVerificationKey = null;
-                _referenceNormative = null;
-                _familleRisque = null;
-                _criticite = null;
-              });
-            },
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _buildNormativeSuggestions() {
-    if (_searchResults.isEmpty) return SizedBox.shrink();
-
-    return Container(
-      margin: EdgeInsets.only(top: 8),
-      padding: EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.amber.shade50,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.amber.shade400),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.lightbulb, color: Colors.amber.shade800, size: 18),
-              SizedBox(width: 6),
-              Text(
-                'Suggestions de points de vérification normatifs (${_searchResults.length})',
-                style: TextStyle(
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.amber.shade900,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: 6),
-          ..._searchResults.map((res) {
-            final isSelected = _pointVerificationKey == res.key;
-            return InkWell(
-              onTap: () {
-                setState(() {
-                  _pointVerificationKey = res.key;
-                  _referenceNormative = res.referenceNormative;
-                  _familleRisque = res.familleRisque;
-                  _criticite = res.criticite;
-                  _searchResults = [];
-                });
-              },
-              child: Container(
-                padding: EdgeInsets.symmetric(vertical: 6, horizontal: 8),
-                margin: EdgeInsets.only(bottom: 4),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.amber.shade200 : Colors.white,
-                  borderRadius: BorderRadius.circular(6),
-                  border: Border.all(
-                    color: isSelected ? Colors.amber.shade700 : Colors.grey.shade300,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      res.pointVerification,
-                      style: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    SizedBox(height: 2),
-                    Row(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: Colors.blue.shade100,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Text(
-                            res.referenceNormative,
-                            style: TextStyle(
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.blue.shade900,
-                            ),
-                          ),
-                        ),
-                        SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            '${res.familleRisque} (${res.criticite})',
-                            style: TextStyle(fontSize: 10, color: Colors.grey.shade700),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          }),
-        ],
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -499,14 +341,35 @@ class _ObservationScreenState extends State<ObservationScreen> {
               SizedBox(height: 8),
               TextField(
                 controller: _texteController,
+                onChanged: (val) => setState(() {}),
                 decoration: InputDecoration(
                   hintText: 'Saisissez votre observation...',
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 4,
               ),
-              _buildNormativeLinkBadge(),
-              _buildNormativeSuggestions(),
+              NormativeSearchSuggestionsWidget(
+                queryText: _texteController.text,
+                selectedReferenceNormative: _referenceNormative,
+                selectedFamilleRisque: _familleRisque,
+                selectedCriticite: _criticite,
+                onSelect: (res) {
+                  setState(() {
+                    _pointVerificationKey = res.key;
+                    _referenceNormative = res.referenceNormative;
+                    _familleRisque = res.familleRisque;
+                    _criticite = res.criticite;
+                  });
+                },
+                onUnlink: () {
+                  setState(() {
+                    _pointVerificationKey = null;
+                    _referenceNormative = null;
+                    _familleRisque = null;
+                    _criticite = null;
+                  });
+                },
+              ),
               SizedBox(height: 24),
               _buildPhotosSection(),
               SizedBox(height: 16),
