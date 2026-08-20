@@ -81,5 +81,19 @@ void main() {
       expect(audit.basseTensionZones.length, equals(1));
       expect(desc.missionId, equals('M-100'));
     });
+
+    test('2. Préservation des références normatives sur ObservationLibre', () {
+      final obs = ObservationLibre(
+        texte: 'Présence d\'une porte pleine munie d\'anti-panique',
+        referenceNormative: 'NF C 15-100-1:2024 art 462',
+        criticite: 'Haute',
+        isAutoLinked: true,
+      );
+
+      expect(obs.hasNormativeReference, isTrue);
+      expect(obs.referenceNormative, equals('NF C 15-100-1:2024 art 462'));
+      expect(obs.criticite, equals('Haute'));
+      expect(obs.isAutoLinked, isTrue);
+    });
   });
 }
