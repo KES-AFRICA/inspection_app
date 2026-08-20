@@ -830,39 +830,139 @@ static Future<bool> resetAllDocuments(String missionId) async {
   /// Sauvegarder les données de description des installations
   static Future<void> saveDescriptionInstallations(DescriptionInstallations desc) async {
     try {
-      final box = Hive.box<DescriptionInstallations>(_descriptionBox);
+      final box = await Hive.openBox<DescriptionInstallations>(_descriptionBox);
       desc.updatedAt = DateTime.now();
-      if (desc.isInBox && desc.key != null) {
-        await desc.save();
-      }
       await box.put(desc.missionId, desc);
     } catch (e) {
       if (kDebugMode) print('❌ Erreur saveDescriptionInstallations: $e');
     }
   }
 
-  /// Récupérer les données de description des installations par missionId (les plus récentes en premier)
+  /// Consolide et fusionne tous les enregistrements DescriptionInstallations pour une missionId donnée.
+  /// Récupère toutes les données renseignées (clés entières ou String), fusionne les listes
+  /// et les champs texte, et enregistre un objet unique sous la clé String `missionId`.
+  static DescriptionInstallations _mergeAndConsolidateDescriptions(
+    Box<DescriptionInstallations> box,
+    String missionId,
+    List<DescriptionInstallations> matches,
+  ) {
+    if (matches.length == 1 && matches.first.key == missionId) {
+      final res = matches.first;
+      if (res.cpi.length > 1) {
+        res.cpi = [res.cpi.last];
+        box.put(missionId, res);
+      }
+      return res;
+    }
+
+    DescriptionInstallations primary = box.get(missionId) ?? DescriptionInstallations.create(missionId);
+
+    for (final desc in matches) {
+      void mergeItems(List<InstallationItem> target, List<InstallationItem> source) {
+        for (final srcItem in source) {
+          final exists = target.any((t) {
+            if (t.createdAt == srcItem.createdAt) return true;
+            if (t.data.length == srcItem.data.length) {
+              bool identical = true;
+              for (final entry in srcItem.data.entries) {
+                if (t.data[entry.key] != entry.value) {
+                  identical = false;
+                  break;
+                }
+              }
+              if (identical) return true;
+            }
+            return false;
+          });
+          if (!exists) {
+            target.add(srcItem);
+          }
+        }
+      }
+
+      mergeItems(primary.alimentationMoyenneTension, desc.alimentationMoyenneTension);
+      mergeItems(primary.alimentationBasseTension, desc.alimentationBasseTension);
+      mergeItems(primary.groupeElectrogene, desc.groupeElectrogene);
+      mergeItems(primary.alimentationCarburant, desc.alimentationCarburant);
+      mergeItems(primary.inverseur, desc.inverseur);
+      mergeItems(primary.stabilisateur, desc.stabilisateur);
+      mergeItems(primary.onduleurs, desc.onduleurs);
+      mergeItems(primary.cpi, desc.cpi);
+
+      if ((primary.regimeNeutre == null || primary.regimeNeutre!.isEmpty) && desc.regimeNeutre != null && desc.regimeNeutre!.isNotEmpty) {
+        primary.regimeNeutre = desc.regimeNeutre;
+      }
+      if ((primary.regimeNeutreDetail == null || primary.regimeNeutreDetail!.isEmpty) && desc.regimeNeutreDetail != null && desc.regimeNeutreDetail!.isNotEmpty) {
+        primary.regimeNeutreDetail = desc.regimeNeutreDetail;
+      }
+      if ((primary.eclairageSecurite == null || primary.eclairageSecurite!.isEmpty) && desc.eclairageSecurite != null && desc.eclairageSecurite!.isNotEmpty) {
+        primary.eclairageSecurite = desc.eclairageSecurite;
+      }
+      if ((primary.modificationsInstallations == null || primary.modificationsInstallations!.isEmpty) && desc.modificationsInstallations != null && desc.modificationsInstallations!.isNotEmpty) {
+        primary.modificationsInstallations = desc.modificationsInstallations;
+      }
+      if ((primary.noteCalcul == null || primary.noteCalcul!.isEmpty) && desc.noteCalcul != null && desc.noteCalcul!.isNotEmpty) {
+        primary.noteCalcul = desc.noteCalcul;
+      }
+      if ((primary.registreSecurite == null || primary.registreSecurite!.isEmpty) && desc.registreSecurite != null && desc.registreSecurite!.isNotEmpty) {
+        primary.registreSecurite = desc.registreSecurite;
+      }
+      if ((primary.presenceParatonnerre == null || primary.presenceParatonnerre!.isEmpty) && desc.presenceParatonnerre != null && desc.presenceParatonnerre!.isNotEmpty) {
+        primary.presenceParatonnerre = desc.presenceParatonnerre;
+      }
+      if ((primary.analyseRisqueFoudre == null || primary.analyseRisqueFoudre!.isEmpty) && desc.analyseRisqueFoudre != null && desc.analyseRisqueFoudre!.isNotEmpty) {
+        primary.analyseRisqueFoudre = desc.analyseRisqueFoudre;
+      }
+      if ((primary.etudeTechniqueFoudre == null || primary.etudeTechniqueFoudre!.isEmpty) && desc.etudeTechniqueFoudre != null && desc.etudeTechniqueFoudre!.isNotEmpty) {
+        primary.etudeTechniqueFoudre = desc.etudeTechniqueFoudre;
+      }
+
+      if (desc.updatedAt.isAfter(primary.updatedAt)) {
+        primary.updatedAt = desc.updatedAt;
+      }
+    }
+
+    if (primary.cpi.length > 1) {
+      primary.cpi = [primary.cpi.last];
+    }
+
+    primary.updatedAt = DateTime.now();
+    box.put(missionId, primary);
+
+    for (final desc in matches) {
+      if (desc.key != null && desc.key != missionId) {
+        try {
+          box.delete(desc.key);
+        } catch (_) {}
+      }
+    }
+
+    return primary;
+  }
+
+  /// Récupérer les données de description des installations par missionId (avec consolidation automatique)
   static DescriptionInstallations? getDescriptionInstallationsByMissionId(String missionId) {
+    if (!Hive.isBoxOpen(_descriptionBox)) {
+      return null;
+    }
     final box = Hive.box<DescriptionInstallations>(_descriptionBox);
     try {
       final matches = box.values.where((d) => d.missionId == missionId).toList();
       if (matches.isEmpty) {
         final res = box.get(missionId);
-        if (res != null && res.cpi.length > 1) {
-          res.cpi = [res.cpi.last];
-          box.put(res.key, res);
+        if (res != null) {
+          if (res.cpi.length > 1) {
+            res.cpi = [res.cpi.last];
+            box.put(missionId, res);
+          }
+          return res;
         }
-        return res;
+        return null;
       }
 
-      matches.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
-      final res = matches.first;
-      if (res.cpi.length > 1) {
-        res.cpi = [res.cpi.last];
-        box.put(res.key, res);
-      }
-      return res;
+      return _mergeAndConsolidateDescriptions(box, missionId, matches);
     } catch (e) {
+      if (kDebugMode) print('❌ Erreur getDescriptionInstallationsByMissionId: $e');
       return null;
     }
   }
