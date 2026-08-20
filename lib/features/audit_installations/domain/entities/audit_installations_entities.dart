@@ -221,6 +221,7 @@ class ObservationLibreEntity {
   final String? referenceNormative;
   final String? familleRisque;
   final String? criticite;
+  final bool isAutoLinked;
 
   const ObservationLibreEntity({
     required this.texte,
@@ -231,6 +232,7 @@ class ObservationLibreEntity {
     this.referenceNormative,
     this.familleRisque,
     this.criticite,
+    this.isAutoLinked = false,
   });
 }
 

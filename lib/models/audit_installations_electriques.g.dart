@@ -807,13 +807,14 @@ class ObservationLibreAdapter extends TypeAdapter<ObservationLibre> {
       referenceNormative: fields[5] as String?,
       familleRisque: fields[6] as String?,
       criticite: fields[7] as String?,
+      isAutoLinked: fields[8] as bool? ?? false,
     );
   }
 
   @override
   void write(BinaryWriter writer, ObservationLibre obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.texte)
       ..writeByte(1)
@@ -829,7 +830,9 @@ class ObservationLibreAdapter extends TypeAdapter<ObservationLibre> {
       ..writeByte(6)
       ..write(obj.familleRisque)
       ..writeByte(7)
-      ..write(obj.criticite);
+      ..write(obj.criticite)
+      ..writeByte(8)
+      ..write(obj.isAutoLinked);
   }
 
   @override

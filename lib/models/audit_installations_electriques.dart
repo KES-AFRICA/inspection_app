@@ -1009,6 +1009,9 @@ class ObservationLibre {
   @HiveField(7)
   String? criticite;
 
+  @HiveField(8)
+  bool isAutoLinked;
+
   ObservationLibre({
     required this.texte,
     List<String>? photos,
@@ -1018,6 +1021,7 @@ class ObservationLibre {
     this.referenceNormative,
     this.familleRisque,
     this.criticite,
+    this.isAutoLinked = false,
   })  : photos = photos ?? [],
         dateCreation = dateCreation ?? DateTime.now(),
         dateModification = dateModification ?? DateTime.now();
@@ -1030,11 +1034,13 @@ class ObservationLibre {
     required String refNormative,
     required String famille,
     required String crit,
+    bool auto = false,
   }) {
     pointVerificationKey = key;
     referenceNormative = refNormative;
     familleRisque = famille;
     criticite = crit;
+    isAutoLinked = auto;
     dateModification = DateTime.now();
   }
 
@@ -1043,6 +1049,7 @@ class ObservationLibre {
     referenceNormative = null;
     familleRisque = null;
     criticite = null;
+    isAutoLinked = false;
     dateModification = DateTime.now();
   }
 
@@ -1055,6 +1062,7 @@ class ObservationLibre {
     String? referenceNormative,
     String? familleRisque,
     String? criticite,
+    bool? isAutoLinked,
   }) {
     return ObservationLibre(
       texte: texte ?? this.texte,
@@ -1065,6 +1073,7 @@ class ObservationLibre {
       referenceNormative: referenceNormative ?? this.referenceNormative,
       familleRisque: familleRisque ?? this.familleRisque,
       criticite: criticite ?? this.criticite,
+      isAutoLinked: isAutoLinked ?? this.isAutoLinked,
     );
   }
 

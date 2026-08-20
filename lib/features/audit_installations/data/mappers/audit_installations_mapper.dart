@@ -206,6 +206,7 @@ class AuditInstallationsMapper {
       referenceNormative: model.referenceNormative,
       familleRisque: model.familleRisque,
       criticite: model.criticite,
+      isAutoLinked: model.isAutoLinked,
     );
   }
 
@@ -219,6 +220,7 @@ class AuditInstallationsMapper {
       referenceNormative: entity.referenceNormative,
       familleRisque: entity.familleRisque,
       criticite: entity.criticite,
+      isAutoLinked: entity.isAutoLinked,
     );
   }
 

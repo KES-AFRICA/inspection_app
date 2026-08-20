@@ -7,6 +7,7 @@ class NormativeSearchSuggestionsWidget extends StatelessWidget {
   final String? selectedReferenceNormative;
   final String? selectedFamilleRisque;
   final String? selectedCriticite;
+  final bool isAutoLinked;
   final ValueChanged<NormativeSearchResult> onSelect;
   final VoidCallback onUnlink;
 
@@ -16,6 +17,7 @@ class NormativeSearchSuggestionsWidget extends StatelessWidget {
     this.selectedReferenceNormative,
     this.selectedFamilleRisque,
     this.selectedCriticite,
+    this.isAutoLinked = false,
     required this.onSelect,
     required this.onUnlink,
   });
@@ -39,9 +41,12 @@ class NormativeSearchSuggestionsWidget extends StatelessWidget {
             margin: const EdgeInsets.only(top: 8, bottom: 6),
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
-              color: const Color(0xFFF0F9FF),
+              color: isAutoLinked ? const Color(0xFFF0FDF4) : const Color(0xFFF0F9FF),
               borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: const Color(0xFFBAE6FD), width: 1.2),
+              border: Border.all(
+                color: isAutoLinked ? const Color(0xFFBBF7D0) : const Color(0xFFBAE6FD),
+                width: 1.2,
+              ),
             ),
             child: Row(
               children: [
@@ -49,14 +54,43 @@ class NormativeSearchSuggestionsWidget extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'NORME RATTACHÉE',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.8,
-                          color: Color(0xFF0369A1),
-                        ),
+                      Row(
+                        children: [
+                          Text(
+                            'NORME RATTACHÉE',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.8,
+                              color: isAutoLinked ? const Color(0xFF15803D) : const Color(0xFF0369A1),
+                            ),
+                          ),
+                          if (isAutoLinked) ...[
+                            const SizedBox(width: 6),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDCFCE7),
+                                borderRadius: BorderRadius.circular(4),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.auto_awesome_rounded, size: 11, color: Color(0xFF166534)),
+                                  SizedBox(width: 3),
+                                  Text(
+                                    'Auto-rattaché',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF166534),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       const SizedBox(height: 2),
                       Text(

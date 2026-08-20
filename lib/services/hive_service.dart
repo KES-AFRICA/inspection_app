@@ -19,6 +19,7 @@ import 'package:inspec_app/models/trash_item.dart';
 import 'package:inspec_app/services/trash_service.dart';
 import 'dispositions_constructives_registry.dart';
 import 'installation_description_sync_service.dart';
+import 'normative_matching/mission_normative_batch_service.dart';
 
 class HiveService {
   static const String _verificateurBox = 'verificateurs';
@@ -1714,7 +1715,8 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
     }
   }
 
-  if (changed) {
+  final batchReport = MissionNormativeBatchService.processAudit(audit);
+  if (changed || batchReport.autoLinkedCount > 0) {
     audit.save();
   }
 }
