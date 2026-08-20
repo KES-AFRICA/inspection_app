@@ -1,4 +1,6 @@
 /// Source de vérité unique pour les métadonnées des Dispositions Constructives et Conditions d'Exploitation du Local
+library;
+
 import '../models/audit_installations_electriques.dart';
 class DispositionMetadata {
   final String referenceNormative;
@@ -1077,6 +1079,7 @@ class DispositionsConstructivesRegistry {
   }) {
     // --- 1. MIGRATION DES DISPOSITIONS CONSTRUCTIVES GE ---
     final existingDispMap = <String, ElementControle>{};
+    final usedDispKeys = <String>{};
     for (final el in dispositionsConstructives) {
       final normKey = _normalizeKey(el.elementControle);
       String targetTitle = el.elementControle;
@@ -1095,10 +1098,15 @@ class DispositionsConstructivesRegistry {
       el.elementControle = targetTitle;
       final targetKey = _normalizeKey(targetTitle);
 
-      if (!existingDispMap.containsKey(targetKey) ||
-          (el.conforme != null && existingDispMap[targetKey]?.conforme == null) ||
-          (el.observation?.isNotEmpty == true && existingDispMap[targetKey]?.observation?.isEmpty == true)) {
+      final current = existingDispMap[targetKey];
+      if (current == null) {
         existingDispMap[targetKey] = el;
+      } else {
+        if (current.conforme == null && el.conforme != null) {
+          existingDispMap[targetKey] = el;
+        } else if ((el.observation?.isNotEmpty == true) && (current.observation == null || current.observation!.isEmpty)) {
+          existingDispMap[targetKey] = el;
+        }
       }
     }
 
@@ -1107,6 +1115,7 @@ class DispositionsConstructivesRegistry {
       final targetKey = _normalizeKey(refTitle);
       if (existingDispMap.containsKey(targetKey)) {
         final el = existingDispMap[targetKey]!;
+        usedDispKeys.add(targetKey);
         el.elementControle = refTitle;
         dispositionsConstructives.add(el);
       } else {
@@ -1120,9 +1129,18 @@ class DispositionsConstructivesRegistry {
         );
       }
     }
+    for (final entry in existingDispMap.entries) {
+      if (!usedDispKeys.contains(entry.key)) {
+        final el = entry.value;
+        if (el.conforme != null || !el.estNA || (el.observation != null && el.observation!.isNotEmpty)) {
+          dispositionsConstructives.add(el);
+        }
+      }
+    }
 
     // --- 2. MIGRATION DES CONDITIONS D'EXPLOITATION GE ---
     final existingCondMap = <String, ElementControle>{};
+    final usedCondKeys = <String>{};
     for (final el in conditionsExploitation) {
       final normKey = _normalizeKey(el.elementControle);
       String targetTitle = el.elementControle;
@@ -1141,10 +1159,15 @@ class DispositionsConstructivesRegistry {
       el.elementControle = targetTitle;
       final targetKey = _normalizeKey(targetTitle);
 
-      if (!existingCondMap.containsKey(targetKey) ||
-          (el.conforme != null && existingCondMap[targetKey]?.conforme == null) ||
-          (el.observation?.isNotEmpty == true && existingCondMap[targetKey]?.observation?.isEmpty == true)) {
+      final current = existingCondMap[targetKey];
+      if (current == null) {
         existingCondMap[targetKey] = el;
+      } else {
+        if (current.conforme == null && el.conforme != null) {
+          existingCondMap[targetKey] = el;
+        } else if ((el.observation?.isNotEmpty == true) && (current.observation == null || current.observation!.isEmpty)) {
+          existingCondMap[targetKey] = el;
+        }
       }
     }
 
@@ -1153,6 +1176,7 @@ class DispositionsConstructivesRegistry {
       final targetKey = _normalizeKey(refTitle);
       if (existingCondMap.containsKey(targetKey)) {
         final el = existingCondMap[targetKey]!;
+        usedCondKeys.add(targetKey);
         el.elementControle = refTitle;
         conditionsExploitation.add(el);
       } else {
@@ -1166,6 +1190,14 @@ class DispositionsConstructivesRegistry {
         );
       }
     }
+    for (final entry in existingCondMap.entries) {
+      if (!usedCondKeys.contains(entry.key)) {
+        final el = entry.value;
+        if (el.conforme != null || !el.estNA || (el.observation != null && el.observation!.isNotEmpty)) {
+          conditionsExploitation.add(el);
+        }
+      }
+    }
   }
 
   /// Assure l'exhaustivité et l'ordonnancement exact des points de contrôle pour un local Basse Tension (BT).
@@ -1175,6 +1207,7 @@ class DispositionsConstructivesRegistry {
   }) {
     // --- 1. MIGRATION DES DISPOSITIONS CONSTRUCTIVES BT ---
     final existingDispMap = <String, ElementControle>{};
+    final usedDispKeys = <String>{};
     for (final el in dispositionsConstructives) {
       final normKey = _normalizeKey(el.elementControle);
       String targetTitle = el.elementControle;
@@ -1193,10 +1226,15 @@ class DispositionsConstructivesRegistry {
       el.elementControle = targetTitle;
       final targetKey = _normalizeKey(targetTitle);
 
-      if (!existingDispMap.containsKey(targetKey) ||
-          (el.conforme != null && existingDispMap[targetKey]?.conforme == null) ||
-          (el.observation?.isNotEmpty == true && existingDispMap[targetKey]?.observation?.isEmpty == true)) {
+      final current = existingDispMap[targetKey];
+      if (current == null) {
         existingDispMap[targetKey] = el;
+      } else {
+        if (current.conforme == null && el.conforme != null) {
+          existingDispMap[targetKey] = el;
+        } else if ((el.observation?.isNotEmpty == true) && (current.observation == null || current.observation!.isEmpty)) {
+          existingDispMap[targetKey] = el;
+        }
       }
     }
 
@@ -1206,11 +1244,12 @@ class DispositionsConstructivesRegistry {
       final meta = getMetadata(refTitle, localType: 'LOCAL_BT');
       if (existingDispMap.containsKey(targetKey)) {
         final el = existingDispMap[targetKey]!;
+        usedDispKeys.add(targetKey);
         el.elementControle = refTitle;
         if (meta != null) {
-          el.referenceNormative = meta.referenceNormative;
-          el.familleRisque = meta.familleRisque;
-          el.criticite = meta.criticite;
+          el.referenceNormative ??= meta.referenceNormative;
+          el.familleRisque ??= meta.familleRisque;
+          el.criticite ??= meta.criticite;
         }
         dispositionsConstructives.add(el);
       } else {
@@ -1227,9 +1266,18 @@ class DispositionsConstructivesRegistry {
         );
       }
     }
+    for (final entry in existingDispMap.entries) {
+      if (!usedDispKeys.contains(entry.key)) {
+        final el = entry.value;
+        if (el.conforme != null || !el.estNA || (el.observation != null && el.observation!.isNotEmpty)) {
+          dispositionsConstructives.add(el);
+        }
+      }
+    }
 
     // --- 2. MIGRATION DES CONDITIONS D'EXPLOITATION BT ---
     final existingCondMap = <String, ElementControle>{};
+    final usedCondKeys = <String>{};
     for (final el in conditionsExploitation) {
       final normKey = _normalizeKey(el.elementControle);
       String targetTitle = el.elementControle;
@@ -1248,10 +1296,15 @@ class DispositionsConstructivesRegistry {
       el.elementControle = targetTitle;
       final targetKey = _normalizeKey(targetTitle);
 
-      if (!existingCondMap.containsKey(targetKey) ||
-          (el.conforme != null && existingCondMap[targetKey]?.conforme == null) ||
-          (el.observation?.isNotEmpty == true && existingCondMap[targetKey]?.observation?.isEmpty == true)) {
+      final current = existingCondMap[targetKey];
+      if (current == null) {
         existingCondMap[targetKey] = el;
+      } else {
+        if (current.conforme == null && el.conforme != null) {
+          existingCondMap[targetKey] = el;
+        } else if ((el.observation?.isNotEmpty == true) && (current.observation == null || current.observation!.isEmpty)) {
+          existingCondMap[targetKey] = el;
+        }
       }
     }
 
@@ -1261,11 +1314,12 @@ class DispositionsConstructivesRegistry {
       final meta = getMetadata(refTitle, localType: 'LOCAL_BT');
       if (existingCondMap.containsKey(targetKey)) {
         final el = existingCondMap[targetKey]!;
+        usedCondKeys.add(targetKey);
         el.elementControle = refTitle;
         if (meta != null) {
-          el.referenceNormative = meta.referenceNormative;
-          el.familleRisque = meta.familleRisque;
-          el.criticite = meta.criticite;
+          el.referenceNormative ??= meta.referenceNormative;
+          el.familleRisque ??= meta.familleRisque;
+          el.criticite ??= meta.criticite;
         }
         conditionsExploitation.add(el);
       } else {
@@ -1280,6 +1334,14 @@ class DispositionsConstructivesRegistry {
             priorite: 3,
           ),
         );
+      }
+    }
+    for (final entry in existingCondMap.entries) {
+      if (!usedCondKeys.contains(entry.key)) {
+        final el = entry.value;
+        if (el.conforme != null || !el.estNA || (el.observation != null && el.observation!.isNotEmpty)) {
+          conditionsExploitation.add(el);
+        }
       }
     }
   }
@@ -1775,15 +1837,17 @@ class DispositionsConstructivesRegistry {
   /// Assure l'exhaustivité, la migration et l'ordonnancement exact (1 à 31) pour l'Inverseur de Source
   static void ensureCompleteInverseurChecklist(List<PointVerification> points) {
     final existingMap = <String, PointVerification>{};
+    final usedKeys = <String>{};
+
     for (final pt in points) {
-      final normKey = _normalizeKey(pt.pointVerification);
+      final rawKey = _normalizeKey(pt.pointVerification);
       String targetTitle = pt.pointVerification;
 
-      if (_inverseurTitleAliases.containsKey(normKey)) {
-        targetTitle = _inverseurTitleAliases[normKey]!;
+      if (_inverseurTitleAliases.containsKey(rawKey)) {
+        targetTitle = _inverseurTitleAliases[rawKey]!;
       } else {
         for (final refTitle in allInverseurPoints) {
-          if (_normalizeKey(refTitle) == normKey) {
+          if (_normalizeKey(refTitle) == rawKey) {
             targetTitle = refTitle;
             break;
           }
@@ -1794,13 +1858,20 @@ class DispositionsConstructivesRegistry {
       final targetKey = _normalizeKey(targetTitle);
 
       final confNorm = pt.conformite.toLowerCase().trim();
-      final isExistingNA = confNorm == 'na' || confNorm == 'non_applicable' || confNorm == 'sans_objet' || confNorm == 'n/a' || confNorm == 'sans objet';
+      final isExistingNA = confNorm == 'na' || confNorm == 'non_applicable' || confNorm == 'sans_objet' || confNorm == 'n/a' || confNorm == 'sans objet' || confNorm.isEmpty;
 
-      if (!existingMap.containsKey(targetKey) ||
-          (!isExistingNA && (existingMap[targetKey]?.conformite == 'Sans objet' || existingMap[targetKey]?.conformite == 'non_applicable')) ||
-          ((pt.observation?.isNotEmpty == true || pt.observations?.isNotEmpty == true) &&
-              existingMap[targetKey]?.observation?.isEmpty == true)) {
+      final current = existingMap[targetKey];
+      if (current == null) {
         existingMap[targetKey] = pt;
+      } else {
+        final currentConfNorm = current.conformite.toLowerCase().trim();
+        final currentIsNA = currentConfNorm == 'na' || currentConfNorm == 'non_applicable' || currentConfNorm == 'sans_objet' || currentConfNorm == 'n/a' || currentConfNorm == 'sans objet' || currentConfNorm.isEmpty;
+        if (currentIsNA && !isExistingNA) {
+          existingMap[targetKey] = pt;
+        } else if ((pt.observation?.isNotEmpty == true || (pt.observations != null && pt.observations!.isNotEmpty)) &&
+            (current.observation == null || current.observation!.isEmpty)) {
+          existingMap[targetKey] = pt;
+        }
       }
     }
 
@@ -1810,11 +1881,12 @@ class DispositionsConstructivesRegistry {
       final meta = getCoffretMetadata(refTitle, coffretType: 'INVERSEUR');
       if (existingMap.containsKey(targetKey)) {
         final pt = existingMap[targetKey]!;
+        usedKeys.add(targetKey);
         pt.pointVerification = refTitle;
         if (meta != null) {
-          pt.referenceNormative = meta.referenceNormative;
-          pt.familleRisque = meta.familleRisque;
-          pt.criticite = meta.criticite;
+          pt.referenceNormative ??= meta.referenceNormative;
+          pt.familleRisque ??= meta.familleRisque;
+          pt.criticite ??= meta.criticite;
         }
         points.add(pt);
       } else {
@@ -1829,20 +1901,34 @@ class DispositionsConstructivesRegistry {
         );
       }
     }
+
+    // Conservation garantie de tous les points utilisateur orphelins
+    for (final entry in existingMap.entries) {
+      if (!usedKeys.contains(entry.key)) {
+        final pt = entry.value;
+        final confNorm = pt.conformite.toLowerCase().trim();
+        final isNA = confNorm == 'na' || confNorm == 'non_applicable' || confNorm == 'sans_objet' || confNorm == 'n/a' || confNorm == 'sans objet' || confNorm.isEmpty;
+        if (!isNA || (pt.observation != null && pt.observation!.isNotEmpty) || (pt.observations != null && pt.observations!.isNotEmpty)) {
+          points.add(pt);
+        }
+      }
+    }
   }
 
   /// Assure l'exhaustivité, la migration et l'ordonnancement exact (1 à 29) des points de vérification d'un coffret / armoire / TGBT
   static void ensureCompleteCoffretChecklist(List<PointVerification> points) {
     final existingMap = <String, PointVerification>{};
+    final usedKeys = <String>{};
+
     for (final pt in points) {
-      final normKey = _normalizeKey(pt.pointVerification);
+      final rawKey = _normalizeKey(pt.pointVerification);
       String targetTitle = pt.pointVerification;
 
-      if (_coffretTitleAliases.containsKey(normKey)) {
-        targetTitle = _coffretTitleAliases[normKey]!;
+      if (_coffretTitleAliases.containsKey(rawKey)) {
+        targetTitle = _coffretTitleAliases[rawKey]!;
       } else {
         for (final refTitle in allCoffretPoints) {
-          if (_normalizeKey(refTitle) == normKey) {
+          if (_normalizeKey(refTitle) == rawKey) {
             targetTitle = refTitle;
             break;
           }
@@ -1853,13 +1939,20 @@ class DispositionsConstructivesRegistry {
       final targetKey = _normalizeKey(targetTitle);
 
       final confNorm = pt.conformite.toLowerCase().trim();
-      final isExistingNA = confNorm == 'na' || confNorm == 'non_applicable' || confNorm == 'sans_objet' || confNorm == 'n/a' || confNorm == 'sans objet';
+      final isExistingNA = confNorm == 'na' || confNorm == 'non_applicable' || confNorm == 'sans_objet' || confNorm == 'n/a' || confNorm == 'sans objet' || confNorm.isEmpty;
 
-      if (!existingMap.containsKey(targetKey) ||
-          (!isExistingNA && (existingMap[targetKey]?.conformite == 'Sans objet' || existingMap[targetKey]?.conformite == 'non_applicable')) ||
-          ((pt.observation?.isNotEmpty == true || pt.observations?.isNotEmpty == true) &&
-              existingMap[targetKey]?.observation?.isEmpty == true)) {
+      final current = existingMap[targetKey];
+      if (current == null) {
         existingMap[targetKey] = pt;
+      } else {
+        final currentConfNorm = current.conformite.toLowerCase().trim();
+        final currentIsNA = currentConfNorm == 'na' || currentConfNorm == 'non_applicable' || currentConfNorm == 'sans_objet' || currentConfNorm == 'n/a' || currentConfNorm == 'sans objet' || currentConfNorm.isEmpty;
+        if (currentIsNA && !isExistingNA) {
+          existingMap[targetKey] = pt;
+        } else if ((pt.observation?.isNotEmpty == true || (pt.observations != null && pt.observations!.isNotEmpty)) &&
+            (current.observation == null || current.observation!.isEmpty)) {
+          existingMap[targetKey] = pt;
+        }
       }
     }
 
@@ -1869,11 +1962,12 @@ class DispositionsConstructivesRegistry {
       final meta = getCoffretMetadata(refTitle);
       if (existingMap.containsKey(targetKey)) {
         final pt = existingMap[targetKey]!;
+        usedKeys.add(targetKey);
         pt.pointVerification = refTitle;
         if (meta != null) {
-          pt.referenceNormative = meta.referenceNormative;
-          pt.familleRisque = meta.familleRisque;
-          pt.criticite = meta.criticite;
+          pt.referenceNormative ??= meta.referenceNormative;
+          pt.familleRisque ??= meta.familleRisque;
+          pt.criticite ??= meta.criticite;
         }
         points.add(pt);
       } else {
@@ -1886,6 +1980,18 @@ class DispositionsConstructivesRegistry {
             conformite: 'Sans objet',
           ),
         );
+      }
+    }
+
+    // Conservation garantie de tous les points utilisateur orphelins
+    for (final entry in existingMap.entries) {
+      if (!usedKeys.contains(entry.key)) {
+        final pt = entry.value;
+        final confNorm = pt.conformite.toLowerCase().trim();
+        final isNA = confNorm == 'na' || confNorm == 'non_applicable' || confNorm == 'sans_objet' || confNorm == 'n/a' || confNorm == 'sans objet' || confNorm.isEmpty;
+        if (!isNA || (pt.observation != null && pt.observation!.isNotEmpty) || (pt.observations != null && pt.observations!.isNotEmpty)) {
+          points.add(pt);
+        }
       }
     }
   }
@@ -2002,9 +2108,19 @@ class DispositionsConstructivesRegistry {
   }) {
     // 1. Dispositions Constructives MT
     final existingDispMap = <String, ElementControle>{};
+    final usedDispKeys = <String>{};
     for (final el in dispositionsConstructives) {
       final normKey = _normalizeKey(el.elementControle);
-      existingDispMap[normKey] = el;
+      final current = existingDispMap[normKey];
+      if (current == null) {
+        existingDispMap[normKey] = el;
+      } else {
+        if (current.conforme == null && el.conforme != null) {
+          existingDispMap[normKey] = el;
+        } else if ((el.observation?.isNotEmpty == true) && (current.observation == null || current.observation!.isEmpty)) {
+          existingDispMap[normKey] = el;
+        }
+      }
     }
 
     dispositionsConstructives.clear();
@@ -2013,11 +2129,12 @@ class DispositionsConstructivesRegistry {
       final meta = getMetadata(refTitle, localType: 'LOCAL_POSTE_HTA');
       if (existingDispMap.containsKey(targetKey)) {
         final el = existingDispMap[targetKey]!;
+        usedDispKeys.add(targetKey);
         el.elementControle = refTitle;
         if (meta != null) {
-          el.referenceNormative = meta.referenceNormative;
-          el.familleRisque = meta.familleRisque;
-          el.criticite = meta.criticite;
+          el.referenceNormative ??= meta.referenceNormative;
+          el.familleRisque ??= meta.familleRisque;
+          el.criticite ??= meta.criticite;
         }
         dispositionsConstructives.add(el);
       } else {
@@ -2034,12 +2151,30 @@ class DispositionsConstructivesRegistry {
         );
       }
     }
+    for (final entry in existingDispMap.entries) {
+      if (!usedDispKeys.contains(entry.key)) {
+        final el = entry.value;
+        if (el.conforme != null || !el.estNA || (el.observation != null && el.observation!.isNotEmpty)) {
+          dispositionsConstructives.add(el);
+        }
+      }
+    }
 
     // 2. Conditions d'Exploitation MT
     final existingCondMap = <String, ElementControle>{};
+    final usedCondKeys = <String>{};
     for (final el in conditionsExploitation) {
       final normKey = _normalizeKey(el.elementControle);
-      existingCondMap[normKey] = el;
+      final current = existingCondMap[normKey];
+      if (current == null) {
+        existingCondMap[normKey] = el;
+      } else {
+        if (current.conforme == null && el.conforme != null) {
+          existingCondMap[normKey] = el;
+        } else if ((el.observation?.isNotEmpty == true) && (current.observation == null || current.observation!.isEmpty)) {
+          existingCondMap[normKey] = el;
+        }
+      }
     }
 
     conditionsExploitation.clear();
@@ -2048,11 +2183,12 @@ class DispositionsConstructivesRegistry {
       final meta = getMetadata(refTitle, localType: 'LOCAL_POSTE_HTA');
       if (existingCondMap.containsKey(targetKey)) {
         final el = existingCondMap[targetKey]!;
+        usedCondKeys.add(targetKey);
         el.elementControle = refTitle;
         if (meta != null) {
-          el.referenceNormative = meta.referenceNormative;
-          el.familleRisque = meta.familleRisque;
-          el.criticite = meta.criticite;
+          el.referenceNormative ??= meta.referenceNormative;
+          el.familleRisque ??= meta.familleRisque;
+          el.criticite ??= meta.criticite;
         }
         conditionsExploitation.add(el);
       } else {
@@ -2069,14 +2205,32 @@ class DispositionsConstructivesRegistry {
         );
       }
     }
+    for (final entry in existingCondMap.entries) {
+      if (!usedCondKeys.contains(entry.key)) {
+        final el = entry.value;
+        if (el.conforme != null || !el.estNA || (el.observation != null && el.observation!.isNotEmpty)) {
+          conditionsExploitation.add(el);
+        }
+      }
+    }
   }
 
   /// Assure l'exhaustivité des points de contrôle pour une cellule (auto-migration silencieuse).
   static void ensureCompleteCelluleChecklist(List<ElementControle> elementsVerifies) {
     final existingMap = <String, ElementControle>{};
+    final usedKeys = <String>{};
     for (final el in elementsVerifies) {
       final normKey = _normalizeKey(el.elementControle);
-      existingMap[normKey] = el;
+      final current = existingMap[normKey];
+      if (current == null) {
+        existingMap[normKey] = el;
+      } else {
+        if (current.conforme == null && el.conforme != null) {
+          existingMap[normKey] = el;
+        } else if ((el.observation?.isNotEmpty == true) && (current.observation == null || current.observation!.isEmpty)) {
+          existingMap[normKey] = el;
+        }
+      }
     }
 
     elementsVerifies.clear();
@@ -2085,11 +2239,12 @@ class DispositionsConstructivesRegistry {
       final meta = getMetadata(refTitle, localType: 'LOCAL_POSTE_HTA');
       if (existingMap.containsKey(targetKey)) {
         final el = existingMap[targetKey]!;
+        usedKeys.add(targetKey);
         el.elementControle = refTitle;
         if (meta != null) {
-          el.referenceNormative = meta.referenceNormative;
-          el.familleRisque = meta.familleRisque;
-          el.criticite = meta.criticite;
+          el.referenceNormative ??= meta.referenceNormative;
+          el.familleRisque ??= meta.familleRisque;
+          el.criticite ??= meta.criticite;
         }
         elementsVerifies.add(el);
       } else {
@@ -2106,14 +2261,32 @@ class DispositionsConstructivesRegistry {
         );
       }
     }
+    for (final entry in existingMap.entries) {
+      if (!usedKeys.contains(entry.key)) {
+        final el = entry.value;
+        if (el.conforme != null || !el.estNA || (el.observation != null && el.observation!.isNotEmpty)) {
+          elementsVerifies.add(el);
+        }
+      }
+    }
   }
 
   /// Assure l'exhaustivité des points de contrôle pour un transformateur (auto-migration silencieuse).
   static void ensureCompleteTransformateurChecklist(List<ElementControle> elementsVerifies) {
     final existingMap = <String, ElementControle>{};
+    final usedKeys = <String>{};
     for (final el in elementsVerifies) {
       final normKey = _normalizeKey(el.elementControle);
-      existingMap[normKey] = el;
+      final current = existingMap[normKey];
+      if (current == null) {
+        existingMap[normKey] = el;
+      } else {
+        if (current.conforme == null && el.conforme != null) {
+          existingMap[normKey] = el;
+        } else if ((el.observation?.isNotEmpty == true) && (current.observation == null || current.observation!.isEmpty)) {
+          existingMap[normKey] = el;
+        }
+      }
     }
 
     elementsVerifies.clear();
@@ -2122,11 +2295,12 @@ class DispositionsConstructivesRegistry {
       final meta = getMetadata(refTitle, localType: 'LOCAL_POSTE_HTA');
       if (existingMap.containsKey(targetKey)) {
         final el = existingMap[targetKey]!;
+        usedKeys.add(targetKey);
         el.elementControle = refTitle;
         if (meta != null) {
-          el.referenceNormative = meta.referenceNormative;
-          el.familleRisque = meta.familleRisque;
-          el.criticite = meta.criticite;
+          el.referenceNormative ??= meta.referenceNormative;
+          el.familleRisque ??= meta.familleRisque;
+          el.criticite ??= meta.criticite;
         }
         elementsVerifies.add(el);
       } else {
@@ -2141,6 +2315,14 @@ class DispositionsConstructivesRegistry {
             priorite: 3,
           ),
         );
+      }
+    }
+    for (final entry in existingMap.entries) {
+      if (!usedKeys.contains(entry.key)) {
+        final el = entry.value;
+        if (el.conforme != null || !el.estNA || (el.observation != null && el.observation!.isNotEmpty)) {
+          elementsVerifies.add(el);
+        }
       }
     }
   }

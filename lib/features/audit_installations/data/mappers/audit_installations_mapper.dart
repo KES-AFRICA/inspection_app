@@ -161,6 +161,9 @@ class AuditInstallationsMapper {
       referenceNormative: _normRef(model.referenceNormative),
       priorite: model.priorite,
       photos: List<String>.from(model.photos),
+      observations: model.observations?.map(toElementEntity).toList(),
+      criticite: model.criticite,
+      familleRisque: model.familleRisque,
     );
   }
 
@@ -172,6 +175,9 @@ class AuditInstallationsMapper {
       referenceNormative: _normRef(entity.referenceNormative),
       priorite: entity.priorite,
       photos: List<String>.from(entity.photos),
+      observations: entity.observations?.map(toElementModel).toList(),
+      criticite: entity.criticite,
+      familleRisque: entity.familleRisque,
     );
   }
 

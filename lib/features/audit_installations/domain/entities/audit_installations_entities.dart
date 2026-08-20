@@ -173,6 +173,9 @@ class PointVerificationEntity {
   final String? referenceNormative;
   final int? priorite;
   final List<String> photos;
+  final List<ElementControleEntity>? observations;
+  final String? criticite;
+  final String? familleRisque;
 
   const PointVerificationEntity({
     required this.pointVerification,
@@ -181,6 +184,9 @@ class PointVerificationEntity {
     this.referenceNormative,
     this.priorite,
     this.photos = const [],
+    this.observations,
+    this.criticite,
+    this.familleRisque,
   });
 }
 
