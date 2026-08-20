@@ -2341,6 +2341,15 @@ class DispositionsConstructivesRegistry {
         (!['LOCAL_TRANSFORMATEUR', 'LOCAL_MTBT', 'LOCAL_GROUPE_ELECTROGENE'].contains(localType));
   }
 
+  /// Retourne l'ensemble des points de vérification et leurs métadonnées normatives.
+  static Map<String, DispositionMetadata> getAllEntries() {
+    final Map<String, DispositionMetadata> combined = {};
+    combined.addAll(_registry);
+    combined.addAll(_btRegistry);
+    combined.addAll(_geRegistry);
+    return combined;
+  }
+
   /// Récupère la métadonnée par le libellé de l'élément de contrôle (avec recherche insensible aux majuscules/espaces)
   static DispositionMetadata? getMetadata(String elementControle, {String? localType}) {
     if (localType == 'LOCAL_GROUPE_ELECTROGENE') {

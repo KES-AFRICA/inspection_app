@@ -828,6 +828,10 @@ class BackupService {
         'photos': o.photos,
         'dateCreation': o.dateCreation.toIso8601String(),
         'dateModification': o.dateModification.toIso8601String(),
+        'pointVerificationKey': o.pointVerificationKey,
+        'referenceNormative': o.referenceNormative,
+        'familleRisque': o.familleRisque,
+        'criticite': o.criticite,
       };
 
   // ── Description des installations ──
@@ -2413,6 +2417,10 @@ class BackupService {
         photos: _strList(m['photos']),
         dateCreation: _dt(m['dateCreation']),
         dateModification: _dt(m['dateModification']),
+        pointVerificationKey: m['pointVerificationKey'] as String?,
+        referenceNormative: m['referenceNormative'] as String?,
+        familleRisque: m['familleRisque'] as String?,
+        criticite: m['criticite'] as String?,
       );
     }).toList();
   }

@@ -217,12 +217,20 @@ class ObservationLibreEntity {
   final List<String> photos;
   final DateTime dateCreation;
   final DateTime dateModification;
+  final String? pointVerificationKey;
+  final String? referenceNormative;
+  final String? familleRisque;
+  final String? criticite;
 
   const ObservationLibreEntity({
     required this.texte,
     this.photos = const [],
     required this.dateCreation,
     required this.dateModification,
+    this.pointVerificationKey,
+    this.referenceNormative,
+    this.familleRisque,
+    this.criticite,
   });
 }
 

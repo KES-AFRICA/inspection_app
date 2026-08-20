@@ -202,6 +202,10 @@ class AuditInstallationsMapper {
       photos: List<String>.from(model.photos),
       dateCreation: model.dateCreation,
       dateModification: model.dateModification,
+      pointVerificationKey: model.pointVerificationKey,
+      referenceNormative: model.referenceNormative,
+      familleRisque: model.familleRisque,
+      criticite: model.criticite,
     );
   }
 
@@ -211,6 +215,10 @@ class AuditInstallationsMapper {
       photos: List<String>.from(entity.photos),
       dateCreation: entity.dateCreation,
       dateModification: entity.dateModification,
+      pointVerificationKey: entity.pointVerificationKey,
+      referenceNormative: entity.referenceNormative,
+      familleRisque: entity.familleRisque,
+      criticite: entity.criticite,
     );
   }
 

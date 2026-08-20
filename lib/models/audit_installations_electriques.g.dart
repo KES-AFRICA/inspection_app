@@ -803,13 +803,17 @@ class ObservationLibreAdapter extends TypeAdapter<ObservationLibre> {
       photos: (fields[1] as List?)?.cast<String>(),
       dateCreation: fields[2] as DateTime?,
       dateModification: fields[3] as DateTime?,
+      pointVerificationKey: fields[4] as String?,
+      referenceNormative: fields[5] as String?,
+      familleRisque: fields[6] as String?,
+      criticite: fields[7] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ObservationLibre obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.texte)
       ..writeByte(1)
@@ -817,7 +821,15 @@ class ObservationLibreAdapter extends TypeAdapter<ObservationLibre> {
       ..writeByte(2)
       ..write(obj.dateCreation)
       ..writeByte(3)
-      ..write(obj.dateModification);
+      ..write(obj.dateModification)
+      ..writeByte(4)
+      ..write(obj.pointVerificationKey)
+      ..writeByte(5)
+      ..write(obj.referenceNormative)
+      ..writeByte(6)
+      ..write(obj.familleRisque)
+      ..writeByte(7)
+      ..write(obj.criticite);
   }
 
   @override

@@ -996,28 +996,90 @@ class ObservationLibre {
   
   @HiveField(3)
   DateTime dateModification;
-  
+
+  @HiveField(4)
+  String? pointVerificationKey;
+
+  @HiveField(5)
+  String? referenceNormative;
+
+  @HiveField(6)
+  String? familleRisque;
+
+  @HiveField(7)
+  String? criticite;
+
   ObservationLibre({
     required this.texte,
     List<String>? photos,
     DateTime? dateCreation,
     DateTime? dateModification,
+    this.pointVerificationKey,
+    this.referenceNormative,
+    this.familleRisque,
+    this.criticite,
   })  : photos = photos ?? [],
         dateCreation = dateCreation ?? DateTime.now(),
         dateModification = dateModification ?? DateTime.now();
-  
+
+  bool get hasNormativeReference =>
+      referenceNormative != null && referenceNormative!.trim().isNotEmpty;
+
+  void linkToNormativePoint({
+    required String key,
+    required String refNormative,
+    required String famille,
+    required String crit,
+  }) {
+    pointVerificationKey = key;
+    referenceNormative = refNormative;
+    familleRisque = famille;
+    criticite = crit;
+    dateModification = DateTime.now();
+  }
+
+  void unlinkNormativePoint() {
+    pointVerificationKey = null;
+    referenceNormative = null;
+    familleRisque = null;
+    criticite = null;
+    dateModification = DateTime.now();
+  }
+
+  ObservationLibre copyWith({
+    String? texte,
+    List<String>? photos,
+    DateTime? dateCreation,
+    DateTime? dateModification,
+    String? pointVerificationKey,
+    String? referenceNormative,
+    String? familleRisque,
+    String? criticite,
+  }) {
+    return ObservationLibre(
+      texte: texte ?? this.texte,
+      photos: photos ?? this.photos,
+      dateCreation: dateCreation ?? this.dateCreation,
+      dateModification: dateModification ?? this.dateModification,
+      pointVerificationKey: pointVerificationKey ?? this.pointVerificationKey,
+      referenceNormative: referenceNormative ?? this.referenceNormative,
+      familleRisque: familleRisque ?? this.familleRisque,
+      criticite: criticite ?? this.criticite,
+    );
+  }
+
   // Méthode pour ajouter une photo
   void addPhoto(String cheminPhoto) {
     photos.add(cheminPhoto);
     dateModification = DateTime.now();
   }
-  
+
   // Méthode pour supprimer une photo
   void removePhoto(String cheminPhoto) {
     photos.remove(cheminPhoto);
     dateModification = DateTime.now();
   }
-  
+
   // Méthode pour mettre à jour le texte
   void updateTexte(String nouveauTexte) {
     texte = nouveauTexte;

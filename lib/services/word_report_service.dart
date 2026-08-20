@@ -1301,10 +1301,13 @@ class WordReportService {
 
   static void _addObservationsTable(Document doc, List<ObservationLibre> observations) {
     if (observations.isEmpty) return;
+    final hasAnyNormRef = observations.any((o) => o.hasNormativeReference);
     final rows = <TableRow>[
-      _headerRow(['N°', 'Observation']),
+      _headerRow(hasAnyNormRef ? ['N°', 'Observation', 'Réf. normative'] : ['N°', 'Observation']),
       for (int i = 0; i < observations.length; i++)
-        _dataRow(['${i + 1}', observations[i].texte]),
+        _dataRow(hasAnyNormRef
+            ? ['${i + 1}', observations[i].texte, observations[i].referenceNormative ?? '-']
+            : ['${i + 1}', observations[i].texte]),
     ];
     doc.addTable(Table(rows: rows, borders: TableBorders.all()));
   }

@@ -11217,6 +11217,40 @@ class PdfReportService {
     List<ObservationLibre> obs,
     String titre,
   ) {
+    final hasAnyNormRef = obs.any((o) => o.hasNormativeReference);
+    if (hasAnyNormRef) {
+      return pw.Table(
+        border: pw.TableBorder.all(color: borderColor, width: 0.4),
+        columnWidths: {
+          0: const pw.FlexColumnWidth(0.5),
+          1: const pw.FlexColumnWidth(3.5),
+          2: const pw.FlexColumnWidth(2),
+        },
+        children: [
+          pw.TableRow(
+            decoration: pw.BoxDecoration(color: lightBlue),
+            children: [
+              _cell('N°', isHeader: true),
+              _cell(titre, isHeader: true),
+              _cell('Réf. Normative', isHeader: true),
+            ],
+          ),
+          ...obs.asMap().entries.map(
+            (e) => pw.TableRow(
+              decoration: pw.BoxDecoration(
+                color: e.key.isEven ? PdfColors.white : tableRowAlt,
+              ),
+              children: [
+                _cell('${e.key + 1}', isHeader: false),
+                _cell(e.value.texte, isHeader: false),
+                _cell(e.value.referenceNormative ?? '-', isHeader: false),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
     return pw.Table(
       border: pw.TableBorder.all(color: borderColor, width: 0.4),
       columnWidths: {

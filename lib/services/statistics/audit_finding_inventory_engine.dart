@@ -362,6 +362,30 @@ class AuditFindingInventoryEngine {
       }
     }
 
+    // Observations libres rattachées normativement
+    for (var i = 0; i < local.observationsLibres.length; i++) {
+      final obs = local.observationsLibres[i];
+      if (obs.hasNormativeReference) {
+        addFinding(AuditFinding(
+          id: 'mt_local_${localHash}_obslib_$i',
+          missionId: missionId,
+          tensionDomain: TensionDomain.mt,
+          origin: originNom,
+          objectType: 'Local MT',
+          objectName: local.nom,
+          tableName: 'Observations libres',
+          verificationPoint: obs.pointVerificationKey ?? 'Observation libre',
+          observationText: obs.texte,
+          conformity: 'non',
+          criticality: obs.criticite ?? 'Majeure',
+          priority: 3,
+          normativeReference: obs.referenceNormative,
+          riskFamily: obs.familleRisque,
+          photos: obs.photos,
+        ));
+      }
+    }
+
     // Cellules MT
     for (var i = 0; i < local.cellules.length; i++) {
       final cellule = local.cellules[i];

@@ -5196,12 +5196,20 @@ static Future<bool> updateObservationLibre({
   required ObservationLibre observation,
   required String newTexte,
   List<String>? newPhotos,
+  String? pointVerificationKey,
+  String? referenceNormative,
+  String? familleRisque,
+  String? criticite,
 }) async {
   try {
     observation.updateTexte(newTexte);
     if (newPhotos != null) {
       observation.photos = newPhotos;
     }
+    if (pointVerificationKey != null) observation.pointVerificationKey = pointVerificationKey;
+    if (referenceNormative != null) observation.referenceNormative = referenceNormative;
+    if (familleRisque != null) observation.familleRisque = familleRisque;
+    if (criticite != null) observation.criticite = criticite;
     
     // Sauvegarder l'audit
     final audit = await getOrCreateAuditInstallations(missionId);
