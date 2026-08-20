@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/description_installations.dart';
+import 'package:inspec_app/services/cellule_types_registry.dart';
 
 void main() {
   group('PDF Equipement Synthesis Tests', () {
@@ -94,6 +95,31 @@ void main() {
       expect(obs.referenceNormative, equals('NF C 15-100-1:2024 art 462'));
       expect(obs.criticite, equals('Haute'));
       expect(obs.isAutoLinked, isTrue);
+    });
+
+    test('3. Registre autonome des types de cellule & proprietes de cellule', () {
+      final typesOfficiels = CelluleTypesRegistry.typesOfficiels;
+      expect(typesOfficiels.length, equals(14));
+      expect(typesOfficiels.contains('DM1 : Disjoncteur + protection'), isTrue);
+
+      final legacyTypes = CelluleTypesRegistry.getAvailableTypes('AncienTypeRM6');
+      expect(legacyTypes.contains('AncienTypeRM6'), isTrue);
+
+      final cellule = Cellule(
+        fonction: 'Arrivée HTA',
+        type: 'DM1 : Disjoncteur + protection',
+        marqueModeleAnnee: 'Schneider 2024',
+        tensionAssignee: '24',
+        pouvoirCoupure: '16',
+        numerotation: 'CEL-01',
+        parafoudres: 'Non',
+        tensionService: '20',
+        calibreDisjoncteur: '630',
+        elementsVerifies: [],
+      );
+
+      expect(cellule.tensionService, equals('20'));
+      expect(cellule.calibreDisjoncteur, equals('630'));
     });
   });
 }

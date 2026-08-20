@@ -11,6 +11,7 @@ import 'package:inspec_app/features/description_installations/presentation/provi
 import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/services/installation_description_sync_service.dart';
 import 'package:inspec_app/services/installation_fields_registry.dart';
+import 'package:inspec_app/services/cellule_types_registry.dart';
 
 // ============================================================
 // GAMMES DE CELLULES → TYPES ASSOCIÉS
@@ -1750,83 +1751,32 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
                   final readOnly = _isFieldReadOnly(champ);
                   
                   Widget champWidget;
-                  // Gamme → contrôle le type de cellule
+                  // Gamme → masqué dans l'UI (donnée conservée en historique)
                   if (_isGammeField(champ)) {
-                    champWidget = _buildModernDropdown(
-                      context,
-                      champ,
-                      currentValue: _selectedGamme,
-                      options: CelluleGammes.gammes,
-                      onChanged: (v) => setState(() {
-                        _selectedGamme = v;
-                        final curType = _selectedValues['Type De Cellule'];
-                        if (curType != null &&
-                            !CelluleGammes.getTypesForGamme(
-                              v,
-                            ).contains(curType)) {
-                          _selectedValues['Type De Cellule'] = null;
-                        }
-                      }),
-                    );
+                    champWidget = const SizedBox.shrink();
                   }
-                  // Type de cellule → dépend de la gamme
+                  // Type de cellule → indépendant (liste officielle des 14 types + types legacy)
                   else if (_isTypeCelluleField(champ)) {
-                    final types = CelluleGammes.getTypesForGamme(
-                      _selectedGamme,
-                    );
-                    final locked =
-                        _selectedGamme == null || _selectedGamme!.isEmpty;
-                    champWidget = Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (locked)
-                          Container(
-                            margin: const EdgeInsets.only(bottom: 8),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 12,
-                              vertical: 8,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.orange.shade50,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: Colors.orange.shade200,
-                              ),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.info_outline,
-                                  size: 14,
-                                  color: Colors.orange.shade700,
-                                ),
-                                const SizedBox(width: 8),
-                                Text(
-                                  "Sélectionnez d'abord une gamme de cellule",
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.orange.shade700,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        IgnorePointer(
-                          ignoring: locked || readOnly,
-                          child: Opacity(
-                            opacity: (locked || readOnly) ? 0.4 : 1.0,
-                            child: _buildModernDropdown(
-                              context,
-                              champ,
-                              currentValue: _selectedValues[champ],
-                              options: types,
-                              onChanged: (v) => setState(
-                                () => _selectedValues[champ] = v,
-                              ),
-                            ),
+                    final currentVal = _selectedValues[champ];
+                    final types = CelluleGammes.getTypesForGamme(_selectedGamme);
+                    final availableOptions = (types.isNotEmpty && types.contains(currentVal))
+                        ? types
+                        : CelluleTypesRegistry.getAvailableTypes(currentVal);
+
+                    champWidget = IgnorePointer(
+                      ignoring: readOnly,
+                      child: Opacity(
+                        opacity: readOnly ? 0.4 : 1.0,
+                        child: _buildModernDropdown(
+                          context,
+                          champ,
+                          currentValue: currentVal,
+                          options: availableOptions,
+                          onChanged: (v) => setState(
+                            () => _selectedValues[champ] = v,
                           ),
                         ),
-                      ],
+                      ),
                     );
                   }
                   // Section de câble avec unité à gauche (préfixe)

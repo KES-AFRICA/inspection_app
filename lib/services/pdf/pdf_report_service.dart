@@ -8148,11 +8148,16 @@ class PdfReportService {
         final label = 'Cellule ${i + 1} — ${cellule.fonction}';
         for (var el in cellule.elementsVerifies) {
           if (el.conforme == false || el.estNA) {
+            final obsStr = (el.observation != null && el.observation!.trim().isNotEmpty)
+                ? el.observation!.trim()
+                : ((el.elementControle.trim().isNotEmpty && !el.elementControle.trim().toLowerCase().startsWith('observation '))
+                    ? el.elementControle.trim()
+                    : '');
             list.add(
               _ObsRecap(
                 localisation: local.nom,
                 coffret: label,
-                observation: el.observation ?? el.elementControle,
+                observation: obsStr,
                 refNorm: el.referenceNormative ?? '',
                 priorite: el.conforme == false
                     ? (el.priorite?.toString() ?? '')
@@ -8168,11 +8173,16 @@ class PdfReportService {
         final label = 'Transformateur ${i + 1}';
         for (var el in transfo.elementsVerifies) {
           if (el.conforme == false || el.estNA) {
+            final obsStr = (el.observation != null && el.observation!.trim().isNotEmpty)
+                ? el.observation!.trim()
+                : ((el.elementControle.trim().isNotEmpty && !el.elementControle.trim().toLowerCase().startsWith('observation '))
+                    ? el.elementControle.trim()
+                    : '');
             list.add(
               _ObsRecap(
                 localisation: local.nom,
                 coffret: label,
-                observation: el.observation ?? el.elementControle,
+                observation: obsStr,
                 refNorm: el.referenceNormative ?? '',
                 priorite: el.conforme == false
                     ? (el.priorite?.toString() ?? '')
@@ -9623,11 +9633,6 @@ class PdfReportService {
         ),
         tableDataRowInfo('Type de cellule', safe(cellule.type), alt: false),
         tableDataRowInfo(
-          'Gamme de la cellule',
-          safe(cellule.gamme ?? ''),
-          alt: false,
-        ),
-        tableDataRowInfo(
           'Marque',
           safe(cellule.effectiveMarque),
           alt: false,
@@ -9643,6 +9648,11 @@ class PdfReportService {
           alt: false,
         ),
         tableDataRowInfo(
+          'Tension service (kV)',
+          safe(cellule.tensionService ?? ''),
+          alt: false,
+        ),
+        tableDataRowInfo(
           'Tension assignée (kV)',
           safe(cellule.tensionAssignee),
           alt: false,
@@ -9653,7 +9663,7 @@ class PdfReportService {
           alt: false,
         ),
         tableDataRowInfo(
-          'Intensité du disjoncteur (A)',
+          'Intensité (A)',
           safe(cellule.calibreDisjoncteur ?? ''),
           alt: false,
         ),
@@ -9682,21 +9692,31 @@ class PdfReportService {
           safe(cellule.parafoudres),
           alt: false,
         ),
-        if (cellule.observations != null && cellule.observations!.isNotEmpty)
-          tableDataRowInfo(
-            'Observations',
-            safe(
-              cellule.observations!
-                  .map(
-                    (o) => (o.observation != null && o.observation!.isNotEmpty)
-                        ? o.observation!
-                        : o.elementControle,
-                  )
-                  .where((s) => s.isNotEmpty)
-                  .join(', '),
-            ),
-            alt: false,
-          ),
+        if (cellule.observations != null && cellule.observations!.isNotEmpty) ...[
+          () {
+            final realObsText = cellule.observations!
+                .map((o) {
+                  if (o.observation != null && o.observation!.trim().isNotEmpty) {
+                    return o.observation!.trim();
+                  }
+                  final ec = o.elementControle.trim();
+                  if (ec.isNotEmpty && !ec.toLowerCase().startsWith('observation ')) {
+                    return ec;
+                  }
+                  return '';
+                })
+                .where((s) => s.isNotEmpty)
+                .join(', ');
+            if (realObsText.isNotEmpty) {
+              return tableDataRowInfo(
+                'Observations',
+                realObsText,
+                alt: false,
+              );
+            }
+            return pw.TableRow(children: [pw.SizedBox(), pw.SizedBox()]);
+          }(),
+        ],
       ],
     );
 

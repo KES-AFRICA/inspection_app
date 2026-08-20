@@ -22,6 +22,7 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:flutter/services.dart';
 import 'observation_enrichie_widget.dart';
 import 'package:inspec_app/services/dispositions_constructives_registry.dart';
+import 'package:inspec_app/services/cellule_types_registry.dart';
 import 'package:inspec_app/services/normative_search_service.dart';
 import 'package:inspec_app/components/normative_search_suggestions_widget.dart';
 import 'package:inspec_app/components/safe_file_image.dart';
@@ -3602,55 +3603,19 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           // Section 2 : Caractéristiques techniques HTA
           _buildFormSectionHeader('CARACTÉRISTIQUES ALIMENTATION MT', isSmallScreen),
           SizedBox(height: isSmallScreen ? 8 : 10),
+          // Type de cellule (indépendant)
           _buildDropdownVal(
-            _celluleGamme,
-            'Gamme de cellule',
-            CelluleGammes.gammes,
+            _celluleTypeController.text.isNotEmpty ? _celluleTypeController.text : null,
+            'Type de cellule',
+            CelluleTypesRegistry.getAvailableTypes(_celluleTypeController.text),
             isSmallScreen,
             (value) {
               setState(() {
-                _celluleGamme = value;
-                // Si la nouvelle gamme n'inclut pas le type actuel, vider le type
-                final types = CelluleGammes.getTypesForGamme(value);
-                if (!types.contains(_celluleTypeController.text)) {
-                  _celluleTypeController.clear();
-                }
+                _celluleTypeController.text = value ?? '';
               });
             },
             optional: true,
           ),
-          SizedBox(height: isSmallScreen ? 12 : 16),
-          
-          // Type de cellule dépendant de la gamme
-          if (_celluleGamme == null || _celluleGamme!.isEmpty)
-            Container(
-              width: double.infinity,
-              padding: EdgeInsets.all(isSmallScreen ? 12 : 14),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Text(
-                'Sélectionnez d\'abord une gamme pour choisir le type de cellule',
-                style: TextStyle(fontSize: isSmallScreen ? 12 : 13, color: Colors.grey.shade600, fontStyle: FontStyle.italic),
-              ),
-            )
-          else
-            _buildDropdownVal(
-              _celluleTypeController.text.isNotEmpty && typesGamme.contains(_celluleTypeController.text)
-                  ? _celluleTypeController.text
-                  : null,
-              'Type de cellule',
-              typesGamme,
-              isSmallScreen,
-              (value) {
-                setState(() {
-                  _celluleTypeController.text = value ?? '';
-                });
-              },
-              optional: true,
-            ),
           
           SizedBox(height: isSmallScreen ? 12 : 16),
           _buildDropdownVal(
@@ -3802,7 +3767,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
               onPressed: () {
                 setState(() {
                   _celluleObservations.add(ElementControle(
-                    elementControle: 'Observation cellule n°${_celluleObservations.length + 1}',
+                    elementControle: '',
                     conforme: null,
                     priorite: 1,
                   ));
@@ -4495,7 +4460,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
               onPressed: () {
                 setState(() {
                   _transfoObservations.add(ElementControle(
-                    elementControle: 'Observation transformateur n°${_transfoObservations.length + 1}',
+                    elementControle: '',
                     conforme: null,
                     priorite: 3,
                   ));
