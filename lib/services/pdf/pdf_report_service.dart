@@ -7290,6 +7290,7 @@ class PdfReportService {
 
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
       columnWidths: const {
         0: pw.FlexColumnWidth(2.0),
         1: pw.FlexColumnWidth(3.5),
@@ -7332,14 +7333,16 @@ class PdfReportService {
                 child: pw.Text(
                   eq.repere.isNotEmpty ? eq.repere : '-',
                   style: pw.TextStyle(font: _fontBold, fontSize: 9),
+                  textAlign: pw.TextAlign.center,
                 ),
               ),
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                alignment: pw.Alignment.centerLeft,
+                alignment: pw.Alignment.center,
                 child: pw.Text(
                   eq.nom.isNotEmpty ? eq.nom : '-',
                   style: pw.TextStyle(font: _fontRegular, fontSize: 9),
+                  textAlign: pw.TextAlign.center,
                 ),
               ),
               pw.Container(
@@ -7348,26 +7351,21 @@ class PdfReportService {
                 child: pw.Text(
                   eq.type.isNotEmpty ? eq.type : 'Équipement',
                   style: pw.TextStyle(font: _fontRegular, fontSize: 9),
+                  textAlign: pw.TextAlign.center,
                 ),
               ),
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                color: PdfColor.fromHex('16A34A'),
                 alignment: pw.Alignment.center,
-                child: pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: pw.BoxDecoration(
-                    color: PdfColor.fromHex('DCFCE7'),
-                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-                    border: pw.Border.all(color: PdfColor.fromHex('86EFAC'), width: 0.5),
+                child: pw.Text(
+                  'Oui',
+                  style: pw.TextStyle(
+                    font: _fontBold,
+                    fontSize: 9,
+                    color: PdfColors.white,
                   ),
-                  child: pw.Text(
-                    'Oui',
-                    style: pw.TextStyle(
-                      font: _fontBold,
-                      fontSize: 8.5,
-                      color: PdfColor.fromHex('166534'),
-                    ),
-                  ),
+                  textAlign: pw.TextAlign.center,
                 ),
               ),
             ],
@@ -8082,6 +8080,36 @@ class PdfReportService {
   //  COLLECTE DES OBSERVATIONS
   // ──────────────────────────────────────────────────────────────
 
+  static String _getNormativeReferenceForFreeObs(ObservationLibre obs) {
+    if (obs.referenceNormative != null && obs.referenceNormative!.trim().isNotEmpty) {
+      return obs.referenceNormative!.trim();
+    }
+    if (obs.pointVerificationKey != null && obs.pointVerificationKey!.trim().isNotEmpty) {
+      final key = obs.pointVerificationKey!.trim();
+      final item = DispositionsConstructivesRegistry.getMetadata(key) ??
+          DispositionsConstructivesRegistry.getCoffretMetadata(key);
+      if (item != null && item.referenceNormative.isNotEmpty) {
+        return item.referenceNormative;
+      }
+    }
+    return '';
+  }
+
+  static String _getCriticiteForFreeObs(ObservationLibre obs) {
+    if (obs.criticite != null && obs.criticite!.trim().isNotEmpty) {
+      return obs.criticite!.trim();
+    }
+    if (obs.pointVerificationKey != null && obs.pointVerificationKey!.trim().isNotEmpty) {
+      final key = obs.pointVerificationKey!.trim();
+      final item = DispositionsConstructivesRegistry.getMetadata(key) ??
+          DispositionsConstructivesRegistry.getCoffretMetadata(key);
+      if (item != null && item.criticite.isNotEmpty) {
+        return item.criticite;
+      }
+    }
+    return '';
+  }
+
   static List<_ObsRecap> _collectObservationsMT(
     AuditInstallationsElectriques audit,
   ) {
@@ -8197,8 +8225,8 @@ class PdfReportService {
               localisation: local.nom,
               coffret: coffret.nom,
               observation: obs.texte,
-              refNorm: '',
-              priorite: '',
+              refNorm: _getNormativeReferenceForFreeObs(obs),
+              priorite: _getCriticiteForFreeObs(obs),
               repere: coffretRepere,
             ),
           );
@@ -8210,8 +8238,8 @@ class PdfReportService {
             localisation: local.nom,
             coffret: '',
             observation: obs.texte,
-            refNorm: '',
-            priorite: '',
+            refNorm: _getNormativeReferenceForFreeObs(obs),
+            priorite: _getCriticiteForFreeObs(obs),
           ),
         );
       }
@@ -8256,8 +8284,8 @@ class PdfReportService {
               localisation: zone.nom,
               coffret: coffret.nom,
               observation: obs.texte,
-              refNorm: '',
-              priorite: '',
+              refNorm: _getNormativeReferenceForFreeObs(obs),
+              priorite: _getCriticiteForFreeObs(obs),
             ),
           );
         }
@@ -8315,8 +8343,8 @@ class PdfReportService {
                 localisation: '${zone.nom} / ${local.nom}',
                 coffret: coffret.nom,
                 observation: obs.texte,
-                refNorm: '',
-                priorite: '',
+                refNorm: _getNormativeReferenceForFreeObs(obs),
+                priorite: _getCriticiteForFreeObs(obs),
               ),
             );
           }
@@ -8327,8 +8355,8 @@ class PdfReportService {
               localisation: '${zone.nom} / ${local.nom}',
               coffret: '',
               observation: obs.texte,
-              refNorm: '',
-              priorite: '',
+              refNorm: _getNormativeReferenceForFreeObs(obs),
+              priorite: _getCriticiteForFreeObs(obs),
             ),
           );
         }
@@ -8339,8 +8367,8 @@ class PdfReportService {
             localisation: zone.nom,
             coffret: '',
             observation: obs.texte,
-            refNorm: '',
-            priorite: '',
+            refNorm: _getNormativeReferenceForFreeObs(obs),
+            priorite: _getCriticiteForFreeObs(obs),
           ),
         );
       }
@@ -8399,8 +8427,8 @@ class PdfReportService {
               localisation: zone.nom,
               coffret: coffret.nom,
               observation: obs.texte,
-              refNorm: '',
-              priorite: '',
+              refNorm: _getNormativeReferenceForFreeObs(obs),
+              priorite: _getCriticiteForFreeObs(obs),
               repere: coffretRepere,
             ),
           );
@@ -8483,8 +8511,8 @@ class PdfReportService {
                 localisation: '${zone.nom} / ${local.nom}',
                 coffret: coffret.nom,
                 observation: obs.texte,
-                refNorm: '',
-                priorite: '',
+                refNorm: _getNormativeReferenceForFreeObs(obs),
+                priorite: _getCriticiteForFreeObs(obs),
                 repere: coffretRepere,
               ),
             );
@@ -8496,8 +8524,8 @@ class PdfReportService {
               localisation: '${zone.nom} / ${local.nom}',
               coffret: '',
               observation: obs.texte,
-              refNorm: '',
-              priorite: '',
+              refNorm: _getNormativeReferenceForFreeObs(obs),
+              priorite: _getCriticiteForFreeObs(obs),
             ),
           );
         }
@@ -8508,8 +8536,8 @@ class PdfReportService {
             localisation: zone.nom,
             coffret: '',
             observation: obs.texte,
-            refNorm: '',
-            priorite: '',
+            refNorm: _getNormativeReferenceForFreeObs(obs),
+            priorite: _getCriticiteForFreeObs(obs),
           ),
         );
       }
@@ -15325,15 +15353,49 @@ class PdfReportService {
           showWatermark: false,
         ),
         header: (ctx) => _buildPageHeaderWidget(
+          nomClient: mission.nomClient,
           nomSite: nomSite,
           numeroRapport: numeroRapport,
         ),
         build: (ctx) => [
-          PageTracker(
-            key: 'liste_recap_equipements',
-            registry: trackedPages,
-            offset: currentOffset,
-            child: _sectionBox('SYNTHÈSE RÉCAPITULATIVE DES ÉQUIPEMENTS'),
+          pw.SizedBox(height: 220),
+          pw.Center(
+            child: pw.Column(
+              mainAxisAlignment: pw.MainAxisAlignment.center,
+              crossAxisAlignment: pw.CrossAxisAlignment.center,
+              children: [
+                pw.Container(width: 350, height: 2, color: accentColor),
+                pw.SizedBox(height: 24),
+                PageTracker(
+                  key: 'liste_recap_equipements',
+                  registry: trackedPages,
+                  offset: currentOffset,
+                  child: pw.Text(
+                    'SYNTHÈSE RÉCAPITULATIVE DES ÉQUIPEMENTS',
+                    style: pw.TextStyle(
+                      font: _fontBold,
+                      fontSize: 20,
+                      fontWeight: pw.FontWeight.bold,
+                      color: headerColor,
+                      letterSpacing: 1.0,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+                pw.SizedBox(height: 12),
+                pw.Text(
+                  mission.nomClient.toUpperCase(),
+                  style: pw.TextStyle(
+                    font: _fontRegular,
+                    fontSize: 13,
+                    color: accentColor,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+                pw.SizedBox(height: 24),
+                pw.Container(width: 350, height: 2, color: accentColor),
+              ],
+            ),
           ),
         ],
       ),
