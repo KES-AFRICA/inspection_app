@@ -692,19 +692,37 @@ INSTRUCTIONS ET CONTRAT RÉDACTIONNEL STRICT :
 
       String syntheticConstat;
       final titleLower = title.toLowerCase();
-      if (titleLower.contains('terre') || titleLower.contains('différentiel') || titleLower.contains('isolement')) {
-        syntheticConstat = 'Récurrence de $count anomalie(s) sur les $top1Category, compromettant la chaîne de protection contre les contacts indirects et l\'évacuation des courants de fuite.';
-      } else if (titleLower.contains('surintensité') || titleLower.contains('calibre') || titleLower.contains('coupe-circuit') || titleLower.contains('disjoncteur')) {
-        syntheticConstat = 'Concentration de $count défaut(s) d\'appareillage de coupure/protection, générant un risque de non-déclenchement en cas de surintensité ou court-circuit.';
-      } else if (titleLower.contains('repérage') || titleLower.contains('schéma') || titleLower.contains('identification')) {
-        syntheticConstat = 'Défaut d\'identification et de documentation sur $count point(s) de contrôle, augmentant le risque d\'erreur humaine lors des manœuvres et de la maintenance.';
-      } else if (titleLower.contains('câblage') || titleLower.contains('canalisation') || titleLower.contains('gaine') || titleLower.contains('serrage')) {
-        syntheticConstat = 'Dégradation physique ou mécanique sur $count liaison(s) et raccordement(s), exposant les conducteurs aux échauffements et agressions mécaniques.';
+      if (titleLower.contains('surintensité') ||
+          titleLower.contains('calibre') ||
+          titleLower.contains('coupe-circuit') ||
+          titleLower.contains('disjoncteur')) {
+        syntheticConstat =
+            'Concentration de $count défaut(s) d\'appareillage de coupure/protection, générant un risque de non-déclenchement en cas de surintensité ou court-circuit.';
+      } else if (titleLower.contains('terre') ||
+          titleLower.contains('différentiel') ||
+          titleLower.contains('isolement') ||
+          titleLower.contains('indirect')) {
+        syntheticConstat =
+            'Constat récurrent de $count non-conformité(s) ($pct %) sur le parc d\'équipements, compromettant la chaîne de protection contre les contacts indirects.';
+      } else if (titleLower.contains('repérage') ||
+          titleLower.contains('schéma') ||
+          titleLower.contains('identification') ||
+          titleLower.contains('documentation')) {
+        syntheticConstat =
+            'Défaut d\'identification et de documentation sur $count point(s) de contrôle, augmentant le risque d\'erreur humaine lors des manœuvres et de la maintenance.';
+      } else if (titleLower.contains('câblage') ||
+          titleLower.contains('canalisation') ||
+          titleLower.contains('gaine') ||
+          titleLower.contains('serrage') ||
+          titleLower.contains('raccordement')) {
+        syntheticConstat =
+            'Dégradation physique ou mécanique sur $count liaison(s) et raccordement(s), exposant les conducteurs aux échauffements et agressions mécaniques.';
       } else {
-        syntheticConstat = 'Constat récurrent de $count non-conformité(s) ($pct %) sur le parc d\'équipements, nécessitant une remise en état opérationnelle.';
+        syntheticConstat =
+            'Constat récurrent de $count non-conformité(s) ($pct %) sur le parc d\'équipements, nécessitant une remise en état opérationnelle.';
       }
 
-      bulletPoints.add('$title ($count constats, $pct %) : $syntheticConstat ;');
+      bulletPoints.add('$title ($count constats, $pct %) : $syntheticConstat');
     }
 
     if (bulletPoints.isEmpty) {

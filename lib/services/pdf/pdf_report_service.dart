@@ -3810,6 +3810,35 @@ class PdfReportService {
       stats = leftPart.substring(openParen + 1, closeParen).trim();
     }
 
+    if (stats.isEmpty && constatMajeur.isNotEmpty) {
+      final statsMatch = RegExp(
+        r'^(\d+\s*constats?(?:\s*\([^)]+\)|[,\s]*[\d,\s%.]+))\s*(?:,\s*|;\s*|:\s*|-\s*)?(.*)$',
+        caseSensitive: false,
+      ).firstMatch(constatMajeur);
+
+      if (statsMatch != null) {
+        stats = statsMatch.group(1)?.trim() ?? '';
+        var remainingConstat = statsMatch.group(2)?.trim() ?? '';
+        if (remainingConstat.isNotEmpty) {
+          remainingConstat =
+              '${remainingConstat[0].toUpperCase()}${remainingConstat.substring(1)}';
+          constatMajeur = remainingConstat;
+        }
+      }
+    }
+
+    if (stats.isEmpty) {
+      final statsMatchObs = RegExp(
+        r'(\d+\s*constats?(?:\s*\([^)]+\)|[,\s]*[\d,\s%.]+))',
+        caseSensitive: false,
+      ).firstMatch(observation);
+
+      if (statsMatchObs != null) {
+        stats = statsMatchObs.group(1)?.trim() ?? '';
+        observation = observation.replaceAll(statsMatchObs.group(0)!, '').trim();
+      }
+    }
+
     observation = observation
         .replaceAll(
           RegExp(
@@ -3822,8 +3851,26 @@ class PdfReportService {
         .replaceAll(RegExp(r'^\d+[\.\)]\s*'), '')
         .trim();
 
-    if (constatMajeur.isEmpty) {
-      constatMajeur = observation;
+    // Qualification professionnelle et formulation complète de constatMajeur
+    if (constatMajeur.isNotEmpty) {
+      final lower = constatMajeur.trim();
+      final lowerStart = lower.toLowerCase();
+      if (lowerStart.startsWith('incluant') ||
+          lowerStart.startsWith('caractéris') ||
+          lowerStart.startsWith('se traduisant') ||
+          lowerStart.startsWith('signalant') ||
+          lowerStart.startsWith('avec')) {
+        final countMatch = RegExp(r'\d+').firstMatch(stats);
+        final countStr = countMatch != null ? countMatch.group(0) : '';
+        final countText = countStr != null && countStr.isNotEmpty ? '$countStr ' : '';
+        constatMajeur =
+            'Constat récurrent de ${countText}non-conformité(s) sur le parc d\'équipements, $lower';
+      } else {
+        constatMajeur = '${lower[0].toUpperCase()}${lower.substring(1)}';
+      }
+    } else {
+      constatMajeur =
+          'Constat récurrent de non-conformité(s) sur le parc d\'équipements, nécessitant une remise en état opérationnelle.';
     }
 
     return _ParsedObservationRow(
@@ -6623,7 +6670,6 @@ class PdfReportService {
     final bool showCpiInBody = hasItRegimeInBody || safeDesc.cpi.isNotEmpty;
 
     if (showCpiInBody) {
-      widgets.add(pw.NewPage());
       widgets.add(
         PageTracker(
           key: 'desc_cpi',
@@ -12587,11 +12633,24 @@ class PdfReportService {
             for (final es in mesures.essaisDeclenchement) {
               altIdx++;
               final rowBg = altIdx.isOdd ? tableRowAlt : PdfColors.white;
-              final essaiColor = es.essai == "B" || es.essai == "OK"
-                  ? conformeColor
-                  : (es.essai == "M" || es.essai == "NON OK"
-                        ? nonConformeColor
-                        : null);
+              String displayText;
+              PdfColor? essaiColor;
+              final raw = es.essai.trim().toUpperCase();
+
+              if (raw == 'OK' || raw == 'B' || raw == 'SATISFAISANT') {
+                displayText = 'Satisfaisant';
+                essaiColor = conformeColor;
+              } else if (raw == 'NON OK' || raw == 'M' || raw == 'NON SATISFAISANT') {
+                displayText = 'Non Satisfaisant';
+                essaiColor = nonConformeColor;
+              } else if (raw == 'NE' || raw == 'SO' || raw == 'SANS OBJET') {
+                displayText = 'Sans Objet';
+                essaiColor = null;
+              } else {
+                displayText = es.essai;
+                essaiColor = null;
+              }
+
               final circuitText =
                   (es.designationCircuit != null &&
                       es.designationCircuit!.isNotEmpty)
@@ -12626,7 +12685,7 @@ class PdfReportService {
                       ),
                       alignment: pw.Alignment.center,
                       child: pw.Text(
-                        es.essai,
+                        displayText,
                         style: pw.TextStyle(
                           font: _fontRegular,
                           fontSize: fsSmall,
@@ -15270,7 +15329,7 @@ class PdfReportService {
     );
     coverDoc.addPage(
       pw.MultiPage(
-        maxPages: 200,
+        maxPages: 10000,
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
@@ -15392,7 +15451,7 @@ class PdfReportService {
       }
       mtDoc.addPage(
         pw.MultiPage(
-          maxPages: 200,
+          maxPages: 10000,
           pageTheme: _buildInnerPageTheme(
             pageOffset: currentOffset,
             overrideTotalPages: overrideTotalPages,
@@ -15461,7 +15520,7 @@ class PdfReportService {
       }
       zoneDoc.addPage(
         pw.MultiPage(
-          maxPages: 200,
+          maxPages: 10000,
           pageTheme: _buildInnerPageTheme(
             pageOffset: currentOffset,
             overrideTotalPages: overrideTotalPages,
@@ -15529,7 +15588,7 @@ class PdfReportService {
       }
       zoneDoc.addPage(
         pw.MultiPage(
-          maxPages: 200,
+          maxPages: 10000,
           pageTheme: _buildInnerPageTheme(
             pageOffset: currentOffset,
             overrideTotalPages: overrideTotalPages,
@@ -15661,7 +15720,7 @@ class PdfReportService {
     );
     pdfP1_2.addPage(
       pw.MultiPage(
-        maxPages: 200,
+        maxPages: 10000,
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
@@ -15956,7 +16015,7 @@ class PdfReportService {
     );
     pdfP1_3.addPage(
       pw.MultiPage(
-        maxPages: 200,
+        maxPages: 10000,
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
@@ -16007,7 +16066,7 @@ class PdfReportService {
     );
     pdfP1_4.addPage(
       pw.MultiPage(
-        maxPages: 200,
+        maxPages: 10000,
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
@@ -16024,7 +16083,7 @@ class PdfReportService {
     );
     pdfP1_4.addPage(
       pw.MultiPage(
-        maxPages: 200,
+        maxPages: 10000,
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
@@ -16102,7 +16161,7 @@ class PdfReportService {
     );
     pdfP2_1.addPage(
       pw.MultiPage(
-        maxPages: 200,
+        maxPages: 10000,
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
@@ -16122,7 +16181,7 @@ class PdfReportService {
     );
     pdfP2_1.addPage(
       pw.MultiPage(
-        maxPages: 200,
+        maxPages: 10000,
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
@@ -16184,7 +16243,7 @@ class PdfReportService {
     );
     pdfP2_2.addPage(
       pw.MultiPage(
-        maxPages: 200,
+        maxPages: 10000,
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
