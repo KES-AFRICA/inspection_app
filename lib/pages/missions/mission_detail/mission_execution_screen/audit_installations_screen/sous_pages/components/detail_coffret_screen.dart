@@ -1941,6 +1941,28 @@ Future<void> _supprimerEssai(EssaiDeclenchementDifferentiel essai) async {
       ),
       body: Column(
         children: [
+          if (_coffret.accessible == false)
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+              color: Colors.red.shade50,
+              child: Row(
+                children: [
+                  Icon(Icons.lock_outline, color: Colors.red.shade700, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Équipement inaccessible lors de l\'inspection',
+                      style: TextStyle(
+                        color: Colors.red.shade900,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           _buildCoffretStats(),
           Expanded(
             child: DefaultTabController(

@@ -10922,24 +10922,18 @@ class PdfReportService {
       ],
     );
 
-    widgets.add(
-      pw.Column(
-        crossAxisAlignment: pw.CrossAxisAlignment.start,
-        children: [
-          PageTracker(
-            key: 'audit_coffret_${parentName}_${coffret.nom}',
-            registry: trackedPages,
-            child: titleTable,
-          ),
-          topSectionTable,
-        ],
-      ),
-    );
-
     if ((coffret as dynamic).accessible == false) {
+      widgets.add(
+        PageTracker(
+          key: 'audit_coffret_${parentName}_${coffret.nom}',
+          registry: trackedPages,
+          child: titleTable,
+        ),
+      );
       widgets.add(pw.SizedBox(height: 4));
       widgets.add(
         pw.Container(
+          width: double.infinity,
           padding: const pw.EdgeInsets.all(8),
           decoration: pw.BoxDecoration(
             color: PdfColors.red50,
@@ -10983,8 +10977,44 @@ class PdfReportService {
           ),
         ),
       );
+
+      if (photoInterne != null) {
+        widgets.add(pw.SizedBox(height: 6));
+        widgets.add(
+          pw.Center(
+            child: pw.Container(
+              padding: const pw.EdgeInsets.all(4),
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: borderColor, width: 0.5),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+              ),
+              child: pw.Image(
+                photoInterne,
+                width: 160,
+                height: 120,
+                fit: pw.BoxFit.contain,
+              ),
+            ),
+          ),
+        );
+      }
+
       return widgets;
     }
+
+    widgets.add(
+      pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          PageTracker(
+            key: 'audit_coffret_${parentName}_${coffret.nom}',
+            registry: trackedPages,
+            child: titleTable,
+          ),
+          topSectionTable,
+        ],
+      ),
+    );
 
     // ══════════════════════════════════════════════════════════════════════
     // OBSERVATIONS PARAFOUDRE

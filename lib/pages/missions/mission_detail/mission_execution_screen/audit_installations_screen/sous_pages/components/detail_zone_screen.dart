@@ -1681,21 +1681,30 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     final pourcentage = totalPoints > 0
         ? (pointsConformes / totalPoints * 100).round()
         : 0;
+    final isInaccessible = coffret.accessible == false;
     final isComplet = coffret.statut == 'complet' || _isCoffretComplet(coffret);
-    final isDraft = coffret.statut != 'complet';
+    final isDraft = coffret.statut != 'complet' && !isInaccessible;
     final totalPhotos =
         coffret.photos.length +
         coffret.photosExternes.length +
         coffret.photosInternes.length;
 
     // Couleurs selon état
-    final Color accentColor = isDraft
+    final Color accentColor = isInaccessible
+        ? Colors.red
+        : isDraft
         ? Colors.amber
         : isComplet
         ? Colors.green
         : Colors.red;
-    final Color cardBg = isDraft ? Colors.amber.shade50 : Colors.white;
-    final Color borderColor = isDraft
+    final Color cardBg = isInaccessible
+        ? Colors.red.shade50
+        : isDraft
+        ? Colors.amber.shade50
+        : Colors.white;
+    final Color borderColor = isInaccessible
+        ? Colors.red.shade200
+        : isDraft
         ? Colors.amber.shade300
         : isComplet
         ? Colors.green.shade200
@@ -1719,7 +1728,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: borderColor, width: isDraft ? 1.5 : 1),
+        border: Border.all(color: borderColor, width: (isDraft || isInaccessible) ? 1.5 : 1),
         boxShadow: [
           BoxShadow(
             color: accentColor.withOpacity(0.08),
@@ -1755,7 +1764,9 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                     height: 44,
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
-                        colors: isDraft
+                        colors: isInaccessible
+                            ? [Colors.red, Colors.red.shade700]
+                            : isDraft
                             ? [Colors.amber, Colors.amber.shade600]
                             : [accentColor, accentColor.withOpacity(0.7)],
                         begin: Alignment.topLeft,
@@ -1764,7 +1775,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                       borderRadius: BorderRadius.circular(10),
                     ),
                     child: Icon(
-                      isDraft ? Icons.edit_note : typeIcon,
+                      isInaccessible ? Icons.lock_outline : (isDraft ? Icons.edit_note : typeIcon),
                       color: Colors.white,
                       size: 22,
                     ),
@@ -1799,7 +1810,9 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.end,
                     children: [
-                      if (isDraft)
+                      if (isInaccessible)
+                        _buildCoffretBadge('Inaccessible', Colors.red)
+                      else if (isDraft)
                         _buildCoffretBadge('Brouillon', Colors.amber)
                       else if (isComplet)
                         _buildCoffretBadge('Complet', Colors.green)
@@ -1818,70 +1831,92 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                 ],
               ),
 
-              const SizedBox(height: 10),
-              const Divider(height: 1),
-              const SizedBox(height: 10),
-
-              // ── Stats ──
-              Row(
-                children: [
-                  _buildCoffretStat(
-                    Icons.photo_outlined,
-                    '$totalPhotos',
-                    'photo(s)',
-                  ),
-                  const SizedBox(width: 14),
-                  _buildCoffretStat(
-                    Icons.comment_outlined,
-                    '${coffret.observationsLibres.length}',
-                    'obs.',
-                  ),
-                  const SizedBox(width: 14),
-                  _buildCoffretStat(
-                    Icons.power_input_outlined,
-                    '${coffret.alimentations.length}',
-                    'alim.',
-                  ),
-                  if (coffret.presenceParafoudre) ...[
-                    const SizedBox(width: 14),
-                    _buildCoffretStat(Icons.bolt, '', 'paraf.'),
-                  ],
-                ],
-              ),
-
-              // ── Barre de conformité ──
-              if (totalPoints > 0) ...[
+              if (isInaccessible) ...[
                 const SizedBox(height: 10),
+                const Divider(height: 1),
+                const SizedBox(height: 8),
                 Row(
                   children: [
+                    Icon(Icons.info_outline, size: 14, color: Colors.red.shade700),
+                    const SizedBox(width: 6),
                     Expanded(
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(4),
-                        child: LinearProgressIndicator(
-                          value: totalPoints > 0
-                              ? pointsConformes / totalPoints
-                              : 0,
-                          backgroundColor: Colors.grey.shade200,
-                          color: _getProgressColor(pourcentage),
-                          minHeight: 6,
+                      child: Text(
+                        'Équipement inaccessible lors de l\'inspection',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.red.shade700,
                         ),
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Text(
-                      '$pourcentage%',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.bold,
-                        color: _getProgressColor(pourcentage),
-                      ),
+                  ],
+                ),
+              ] else ...[
+                const SizedBox(height: 10),
+                const Divider(height: 1),
+                const SizedBox(height: 10),
+
+                // ── Stats ──
+                Row(
+                  children: [
+                    _buildCoffretStat(
+                      Icons.photo_outlined,
+                      '$totalPhotos',
+                      'photo(s)',
                     ),
-                    if (pointsNon > 0) ...[
-                      const SizedBox(width: 8),
-                      _buildCoffretBadge('$pointsNon NC', Colors.red),
+                    const SizedBox(width: 14),
+                    _buildCoffretStat(
+                      Icons.comment_outlined,
+                      '${coffret.observationsLibres.length}',
+                      'obs.',
+                    ),
+                    const SizedBox(width: 14),
+                    _buildCoffretStat(
+                      Icons.power_input_outlined,
+                      '${coffret.alimentations.length}',
+                      'alim.',
+                    ),
+                    if (coffret.presenceParafoudre) ...[
+                      const SizedBox(width: 14),
+                      _buildCoffretStat(Icons.bolt, '', 'paraf.'),
                     ],
                   ],
                 ),
+
+                // ── Barre de conformité ──
+                if (totalPoints > 0) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(4),
+                          child: LinearProgressIndicator(
+                            value: totalPoints > 0
+                                ? pointsConformes / totalPoints
+                                : 0,
+                            backgroundColor: Colors.grey.shade200,
+                            color: _getProgressColor(pourcentage),
+                            minHeight: 6,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        '$pourcentage%',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold,
+                          color: _getProgressColor(pourcentage),
+                        ),
+                      ),
+                      if (pointsNon > 0) ...[
+                        const SizedBox(width: 8),
+                        _buildCoffretBadge('$pointsNon NC', Colors.red),
+                      ],
+                    ],
+                  ),
+                ],
               ],
 
               // ── Actions ──
