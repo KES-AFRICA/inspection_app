@@ -58,6 +58,20 @@ enum PdfPhotoContext {
   });
 }
 
+class _PdfEquipementItem {
+  final String repere;
+  final String nom;
+  final String type;
+  final bool isMT;
+
+  const _PdfEquipementItem({
+    required this.repere,
+    required this.nom,
+    required this.type,
+    required this.isMT,
+  });
+}
+
 // ================================================================
 //  PdfReportService
 // ================================================================
@@ -1355,7 +1369,34 @@ class PdfReportService {
       ),
     );
 
-    // 9. Liste récapitulative (si audit)
+    // 8.bis Synthèse récapitulative des équipements (si audit)
+    if (audit != null) {
+      entries.add(
+        _SommaireEntry(
+          titre: "SYNTHÈSE RÉCAPITULATIVE DES ÉQUIPEMENTS",
+          key: 'liste_recap_equipements',
+          level: 0,
+          isBold: true,
+          isUppercase: true,
+        ),
+      );
+      entries.add(
+        _SommaireEntry(
+          titre: "1. Équipements moyenne tension",
+          key: 'liste_recap_equipements_mt',
+          level: 1,
+        ),
+      );
+      entries.add(
+        _SommaireEntry(
+          titre: "2. Équipements basse tension",
+          key: 'liste_recap_equipements_bt',
+          level: 1,
+        ),
+      );
+    }
+
+    // 9. Liste récapitulative des observations (si audit)
     if (audit != null) {
       entries.add(
         _SommaireEntry(
@@ -7076,6 +7117,264 @@ class PdfReportService {
       }
     }
     return '';
+  }
+
+  static String? _normalizeEquipementType(String rawType, String rawNom) {
+    final combined = '${rawType.toLowerCase()} ${rawNom.toLowerCase()}';
+
+    if (combined.contains('tgbt')) return 'TGBT';
+    if (combined.contains('inverseur')) return 'Inverseur';
+    if (combined.contains('armoire')) return 'Armoire';
+    if (combined.contains('coffret') || combined.contains('tur')) return 'Coffret';
+
+    final typeLower = rawType.trim().toLowerCase();
+    if (typeLower == 'tgbt') return 'TGBT';
+    if (typeLower == 'inverseur') return 'Inverseur';
+    if (typeLower == 'armoire') return 'Armoire';
+    if (typeLower == 'coffret') return 'Coffret';
+
+    return null;
+  }
+
+  static List<_PdfEquipementItem> _collectEquipementsMT(
+    AuditInstallationsElectriques? audit,
+  ) {
+    final list = <_PdfEquipementItem>[];
+    if (audit == null) return list;
+
+    final seenHashes = <int>{};
+
+    void addEquipement({
+      required Object refObj,
+      required String repere,
+      required String nom,
+      required String type,
+    }) {
+      final hash = identityHashCode(refObj);
+      if (!seenHashes.contains(hash)) {
+        seenHashes.add(hash);
+        list.add(
+          _PdfEquipementItem(
+            repere: repere.trim().isNotEmpty ? repere.trim() : '-',
+            nom: nom.trim().isNotEmpty ? nom.trim() : '-',
+            type: type,
+            isMT: true,
+          ),
+        );
+      }
+    }
+
+    void processLocal(dynamic local) {
+      if (local.coffrets != null) {
+        for (final coffret in local.coffrets) {
+          final normType = _normalizeEquipementType(coffret.type, coffret.nom);
+          if (normType != null) {
+            final rep = (coffret.repere != null && coffret.repere!.trim().isNotEmpty)
+                ? coffret.repere!.trim()
+                : '-';
+            final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : normType;
+
+            addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType);
+          }
+        }
+      }
+    }
+
+    for (final local in audit.moyenneTensionLocaux) {
+      processLocal(local);
+    }
+
+    for (final zone in audit.moyenneTensionZones) {
+      for (final coffret in zone.coffrets) {
+        final normType = _normalizeEquipementType(coffret.type, coffret.nom);
+        if (normType != null) {
+          final rep = (coffret.repere != null && coffret.repere!.trim().isNotEmpty)
+              ? coffret.repere!.trim()
+              : '-';
+          final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : normType;
+
+          addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType);
+        }
+      }
+      for (final local in zone.locaux) {
+        processLocal(local);
+      }
+    }
+
+    return list;
+  }
+
+  static List<_PdfEquipementItem> _collectEquipementsBT(
+    AuditInstallationsElectriques? audit,
+    DescriptionInstallations? desc,
+  ) {
+    final list = <_PdfEquipementItem>[];
+    final seenHashes = <int>{};
+
+    void addEquipement({
+      required Object refObj,
+      required String repere,
+      required String nom,
+      required String type,
+    }) {
+      final hash = identityHashCode(refObj);
+      if (!seenHashes.contains(hash)) {
+        seenHashes.add(hash);
+        list.add(
+          _PdfEquipementItem(
+            repere: repere.trim().isNotEmpty ? repere.trim() : '-',
+            nom: nom.trim().isNotEmpty ? nom.trim() : '-',
+            type: type,
+            isMT: false,
+          ),
+        );
+      }
+    }
+
+    if (audit != null) {
+      for (final zone in audit.basseTensionZones) {
+        for (final coffret in zone.coffretsDirects) {
+          final normType = _normalizeEquipementType(coffret.type, coffret.nom);
+          if (normType != null) {
+            final rep = (coffret.repere != null && coffret.repere!.trim().isNotEmpty)
+                ? coffret.repere!.trim()
+                : '-';
+            final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : normType;
+
+            addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType);
+          }
+        }
+
+        for (final local in zone.locaux) {
+          for (final coffret in local.coffrets) {
+            final normType = _normalizeEquipementType(coffret.type, coffret.nom);
+            if (normType != null) {
+              final rep = (coffret.repere != null && coffret.repere!.trim().isNotEmpty)
+                  ? coffret.repere!.trim()
+                  : '-';
+              final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : normType;
+
+              addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType);
+            }
+          }
+        }
+      }
+    }
+
+    if (desc != null) {
+      if (desc.inverseur.isNotEmpty) {
+        addEquipement(
+          refObj: desc.inverseur,
+          repere: 'INV-1',
+          nom: 'Inverseur de Source',
+          type: 'Inverseur',
+        );
+      }
+    }
+
+    return list;
+  }
+
+  static pw.Widget _buildEquipementsTable(List<_PdfEquipementItem> items) {
+    if (items.isEmpty) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.all(8),
+        child: pw.Text(
+          'Aucun équipement recensé.',
+          style: pw.TextStyle(font: _fontRegular, fontSize: 9, color: PdfColors.grey700),
+        ),
+      );
+    }
+
+    final headers = ['Repère', 'Nom', 'Type', 'Vérifié'];
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(2.0),
+        1: pw.FlexColumnWidth(3.5),
+        2: pw.FlexColumnWidth(2.5),
+        3: pw.FlexColumnWidth(1.5),
+      },
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: accentColor),
+          children: headers
+              .map(
+                (h) => pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    h,
+                    style: pw.TextStyle(
+                      font: _fontBold,
+                      fontSize: 9,
+                      color: PdfColors.white,
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+
+        ...items.asMap().entries.map((entry) {
+          final idx = entry.key;
+          final eq = entry.value;
+          final isEven = idx % 2 == 0;
+          final bg = isEven ? PdfColors.white : PdfColors.grey100;
+
+          return pw.TableRow(
+            decoration: pw.BoxDecoration(color: bg),
+            children: [
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  eq.repere.isNotEmpty ? eq.repere : '-',
+                  style: pw.TextStyle(font: _fontBold, fontSize: 9),
+                ),
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                alignment: pw.Alignment.centerLeft,
+                child: pw.Text(
+                  eq.nom.isNotEmpty ? eq.nom : '-',
+                  style: pw.TextStyle(font: _fontRegular, fontSize: 9),
+                ),
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  eq.type.isNotEmpty ? eq.type : 'Équipement',
+                  style: pw.TextStyle(font: _fontRegular, fontSize: 9),
+                ),
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColor.fromHex('DCFCE7'),
+                    borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+                    border: pw.Border.all(color: PdfColor.fromHex('86EFAC'), width: 0.5),
+                  ),
+                  child: pw.Text(
+                    'Oui',
+                    style: pw.TextStyle(
+                      font: _fontBold,
+                      fontSize: 8.5,
+                      color: PdfColor.fromHex('166534'),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          );
+        }),
+      ],
+    );
   }
 
   static List<pw.Widget> _buildListeRecapitulativeMulti(
@@ -14996,6 +15295,145 @@ class PdfReportService {
     );
   }
 
+  static Future<_ChunkSectionResult> _addSyntheseEquipementsSectionChunked(
+    Mission mission,
+    AuditInstallationsElectriques audit,
+    DescriptionInstallations? desc,
+    Map<String, int> trackedPages, {
+    required String nomSite,
+    required String numeroRapport,
+    int pageOffset = 0,
+    int? overrideTotalPages,
+    bool saveFilesToDisk = true,
+  }) async {
+    final chunkFiles = <File>[];
+    final tempDir = await getTemporaryDirectory();
+    int currentOffset = pageOffset;
+
+    // 1. Couverture Section Synthèse Récapitulative des Équipements
+    final coverDoc = pw.Document(
+      title: 'Synthese Equipements Cover - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: saveFilesToDisk,
+    );
+    coverDoc.addPage(
+      pw.MultiPage(
+        maxPages: 10000,
+        pageTheme: _buildInnerPageTheme(
+          pageOffset: currentOffset,
+          overrideTotalPages: overrideTotalPages,
+          showWatermark: false,
+        ),
+        header: (ctx) => _buildPageHeaderWidget(
+          nomSite: nomSite,
+          numeroRapport: numeroRapport,
+        ),
+        build: (ctx) => [
+          PageTracker(
+            key: 'liste_recap_equipements',
+            registry: trackedPages,
+            offset: currentOffset,
+            child: _sectionBox('SYNTHÈSE RÉCAPITULATIVE DES ÉQUIPEMENTS'),
+          ),
+        ],
+      ),
+    );
+    final coverBytes = await coverDoc.save();
+    if (saveFilesToDisk) {
+      final coverFile = File(
+        '${tempDir.path}/pdf_chunk_equipements_cover_${mission.id}.pdf',
+      );
+      await coverFile.writeAsBytes(coverBytes);
+      chunkFiles.add(coverFile);
+    }
+    currentOffset += coverDoc.document.pdfPageList.pages.length;
+
+    // 2. Équipements MT
+    final equipementsMT = _collectEquipementsMT(audit);
+    final mtDoc = pw.Document(
+      title: 'Equipements MT - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: saveFilesToDisk,
+    );
+    mtDoc.addPage(
+      pw.MultiPage(
+        maxPages: 10000,
+        pageTheme: _buildInnerPageTheme(
+          pageOffset: currentOffset,
+          overrideTotalPages: overrideTotalPages,
+        ),
+        header: (ctx) => _buildPageHeaderWidget(
+          nomSite: nomSite,
+          numeroRapport: numeroRapport,
+        ),
+        build: (ctx) => [
+          PageTracker(
+            key: 'liste_recap_equipements_mt',
+            registry: trackedPages,
+            offset: currentOffset,
+            child: _subSectionBar('1. Équipements moyenne tension'),
+          ),
+          pw.SizedBox(height: 5),
+          _buildEquipementsTable(equipementsMT),
+        ],
+      ),
+    );
+    final mtBytes = await mtDoc.save();
+    if (saveFilesToDisk) {
+      final mtFile = File(
+        '${tempDir.path}/pdf_chunk_equipements_mt_${mission.id}.pdf',
+      );
+      await mtFile.writeAsBytes(mtBytes);
+      chunkFiles.add(mtFile);
+    }
+    currentOffset += mtDoc.document.pdfPageList.pages.length;
+
+    // 3. Équipements BT
+    final equipementsBT = _collectEquipementsBT(audit, desc);
+    final btDoc = pw.Document(
+      title: 'Equipements BT - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: saveFilesToDisk,
+    );
+    btDoc.addPage(
+      pw.MultiPage(
+        maxPages: 10000,
+        pageTheme: _buildInnerPageTheme(
+          pageOffset: currentOffset,
+          overrideTotalPages: overrideTotalPages,
+        ),
+        header: (ctx) => _buildPageHeaderWidget(
+          nomSite: nomSite,
+          numeroRapport: numeroRapport,
+        ),
+        build: (ctx) => [
+          PageTracker(
+            key: 'liste_recap_equipements_bt',
+            registry: trackedPages,
+            offset: currentOffset,
+            child: _subSectionBar('2. Équipements basse tension'),
+          ),
+          pw.SizedBox(height: 5),
+          _buildEquipementsTable(equipementsBT),
+        ],
+      ),
+    );
+    final btBytes = await btDoc.save();
+    if (saveFilesToDisk) {
+      final btFile = File(
+        '${tempDir.path}/pdf_chunk_equipements_bt_${mission.id}.pdf',
+      );
+      await btFile.writeAsBytes(btBytes);
+      chunkFiles.add(btFile);
+    }
+    currentOffset += btDoc.document.pdfPageList.pages.length;
+
+    return _ChunkSectionResult(
+      files: chunkFiles,
+      totalPages: currentOffset - pageOffset,
+    );
+  }
+
   static Future<_ChunkSectionResult> _addListeRecapitulativeSectionChunked(
     Mission mission,
     AuditInstallationsElectriques audit,
@@ -16172,10 +16610,28 @@ class PdfReportService {
     }
     currentOffset += pdfP1_4.document.pdfPageList.pages.length;
 
-    // ── Section 6 & 7 : Synthèse Récapitulative et Audit par zone ──
+    // ── Section 6, 7 & 8 : Synthèse des Équipements, Synthèse des Observations et Audit par zone ──
     if (audit != null) {
       if (saveFilesToDisk) {
-        onProgress?.call(0.48, 'Génération de la synthèse récapitulative...');
+        onProgress?.call(0.45, 'Génération de la synthèse des équipements...');
+        await Future.delayed(Duration.zero);
+      }
+      final equipementsResult = await _addSyntheseEquipementsSectionChunked(
+        mission,
+        audit,
+        description,
+        trackedPages,
+        nomSite: nomSiteHeader,
+        numeroRapport: numeroRapportDoc,
+        pageOffset: currentOffset,
+        overrideTotalPages: overrideTotalPages,
+        saveFilesToDisk: saveFilesToDisk,
+      );
+      if (saveFilesToDisk) allChunkFiles.addAll(equipementsResult.files);
+      currentOffset += equipementsResult.totalPages;
+
+      if (saveFilesToDisk) {
+        onProgress?.call(0.48, 'Génération de la synthèse récapitulative des observations...');
         await Future.delayed(Duration.zero);
       }
       final recapResult = await _addListeRecapitulativeSectionChunked(
