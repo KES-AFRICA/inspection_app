@@ -101,7 +101,7 @@ class NormativeSearchSuggestionsWidget extends StatelessWidget {
         // ─────────────────────────────────────────────────────────────
         // ZONE DE SUGGESTIONS SCROLLABLE (Type Select / Dropdown)
         // ─────────────────────────────────────────────────────────────
-        if (results.isNotEmpty)
+        if (!hasRef && results.isNotEmpty)
           Container(
             margin: const EdgeInsets.only(top: 6, bottom: 4),
             padding: const EdgeInsets.all(10),
