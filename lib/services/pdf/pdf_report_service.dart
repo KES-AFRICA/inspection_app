@@ -7356,14 +7356,14 @@ class PdfReportService {
               ),
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                color: PdfColor.fromHex('16A34A'),
+                color: conformeColor,
                 alignment: pw.Alignment.center,
                 child: pw.Text(
                   'Oui',
                   style: pw.TextStyle(
                     font: _fontBold,
                     fontSize: 9,
-                    color: PdfColors.white,
+                    color: PdfColors.black,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
@@ -9502,7 +9502,7 @@ class PdfReportService {
     DispositionsConstructivesRegistry.ensureCompleteCelluleChecklist(
       cellule.elementsVerifies,
     );
-    String safe(String v) => v.trim().isEmpty ? 'Non renseigné' : v;
+    String safe(String v) => v.trim().isEmpty ? '-' : v;
 
     final hasNom = cellule.nom != null && cellule.nom!.trim().isNotEmpty;
     final rawPhotoPath =
@@ -10020,7 +10020,7 @@ class PdfReportService {
     DispositionsConstructivesRegistry.ensureCompleteTransformateurChecklist(
       transfo.elementsVerifies,
     );
-    String safe(String v) => v.trim().isEmpty ? 'Non renseigné' : v;
+    String safe(String v) => v.trim().isEmpty ? '-' : v;
 
     final rawPhotoPath =
         (transfo.photo != null && transfo.photo!.trim().isNotEmpty)
