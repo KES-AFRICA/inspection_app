@@ -2556,6 +2556,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
             ),
             SizedBox(height: 8),
           ],
+          _buildInfoRow('Repère', cellule.getEffectiveRepere(_local.nom)),
           if (cellule.fonction.isNotEmpty)
             _buildInfoRow('Fonction', cellule.fonction),
           if (cellule.marqueModeleAnnee.isNotEmpty)
@@ -2652,6 +2653,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
             ],
           ),
           SizedBox(height: 12),
+          _buildInfoRow('Repère', transfo.getEffectiveRepere(_local.nom)),
           if (transfo.nom != null && transfo.nom!.trim().isNotEmpty)
             _buildInfoRow('Nom du transformateur', transfo.nom!.trim()),
           if (transfo.photo != null && transfo.photo!.trim().isNotEmpty) ...[

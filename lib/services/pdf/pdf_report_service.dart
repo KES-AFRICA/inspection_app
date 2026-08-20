@@ -8606,6 +8606,7 @@ class PdfReportService {
       widgets.addAll(
         _buildCelluleSection(
           local.cellules[i],
+          localName: local.nom,
           photoCache: photoCache,
           saveFilesToDisk: saveFilesToDisk,
         ),
@@ -8616,6 +8617,7 @@ class PdfReportService {
       widgets.addAll(
         _buildTransformateurSection(
           local.transformateurs[i],
+          localName: local.nom,
           photoCache: photoCache,
           saveFilesToDisk: saveFilesToDisk,
         ),
@@ -9156,6 +9158,7 @@ class PdfReportService {
 
   static List<pw.Widget> _buildCelluleSection(
     Cellule cellule, {
+    String? localName,
     Map<dynamic, pw.MemoryImage?>? photoCache,
     bool saveFilesToDisk = true,
   }) {
@@ -9281,6 +9284,11 @@ class PdfReportService {
         1: pw.FlexColumnWidth(2.8),
       },
       children: [
+        tableDataRowInfo(
+          'Repère',
+          safe(cellule.getEffectiveRepere(localName)),
+          alt: false,
+        ),
         tableDataRowInfo(
           'Fonction de la cellule',
           safe(cellule.fonction),
@@ -9648,6 +9656,7 @@ class PdfReportService {
 
   static List<pw.Widget> _buildTransformateurSection(
     TransformateurMTBT transfo, {
+    String? localName,
     Map<dynamic, pw.MemoryImage?>? photoCache,
     bool saveFilesToDisk = true,
   }) {
@@ -9774,6 +9783,11 @@ class PdfReportService {
         1: pw.FlexColumnWidth(2.8),
       },
       children: [
+        tableDataRowInfo(
+          'Repère',
+          safe(transfo.getEffectiveRepere(localName)),
+          alt: false,
+        ),
         tableDataRowInfo(
           'Type de transformateur',
           safe(transfo.typeTransformateur),

@@ -394,13 +394,14 @@ class CelluleAdapter extends TypeAdapter<Cellule> {
       tensionService: fields[16] as String?,
       nom: fields[17] as String?,
       photo: fields[18] as String?,
+      repere: fields[19] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Cellule obj) {
     writer
-      ..writeByte(19)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.fonction)
       ..writeByte(1)
@@ -438,7 +439,9 @@ class CelluleAdapter extends TypeAdapter<Cellule> {
       ..writeByte(17)
       ..write(obj.nom)
       ..writeByte(18)
-      ..write(obj.photo);
+      ..write(obj.photo)
+      ..writeByte(19)
+      ..write(obj.repere);
   }
 
   @override
@@ -484,13 +487,14 @@ class TransformateurMTBTAdapter extends TypeAdapter<TransformateurMTBT> {
       ik3Max: fields[18] as String?,
       nom: fields[19] as String?,
       photo: fields[20] as String?,
+      repere: fields[21] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TransformateurMTBT obj) {
     writer
-      ..writeByte(21)
+      ..writeByte(22)
       ..writeByte(0)
       ..write(obj.typeTransformateur)
       ..writeByte(1)
@@ -532,7 +536,9 @@ class TransformateurMTBTAdapter extends TypeAdapter<TransformateurMTBT> {
       ..writeByte(19)
       ..write(obj.nom)
       ..writeByte(20)
-      ..write(obj.photo);
+      ..write(obj.photo)
+      ..writeByte(21)
+      ..write(obj.repere);
   }
 
   @override

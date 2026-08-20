@@ -43,6 +43,7 @@ class CelluleEntity {
   final List<ElementControleEntity>? observations;
   final String? nom;
   final String? photo;
+  final String? repere;
 
   const CelluleEntity({
     required this.fonction,
@@ -63,6 +64,7 @@ class CelluleEntity {
     this.observations,
     this.nom,
     this.photo,
+    this.repere,
   });
 
   CelluleEntity copyWith({
@@ -84,6 +86,7 @@ class CelluleEntity {
     List<ElementControleEntity>? observations,
     String? nom,
     String? photo,
+    String? repere,
   }) {
     return CelluleEntity(
       fonction: fonction ?? this.fonction,
@@ -104,6 +107,7 @@ class CelluleEntity {
       observations: observations ?? this.observations,
       nom: nom ?? this.nom,
       photo: photo ?? this.photo,
+      repere: repere ?? this.repere,
     );
   }
 }
@@ -124,6 +128,7 @@ class TransformateurMTBTEntity {
   final List<ElementControleEntity>? observations;
   final String? nom;
   final String? photo;
+  final String? repere;
 
   const TransformateurMTBTEntity({
     required this.typeTransformateur,
@@ -141,6 +146,7 @@ class TransformateurMTBTEntity {
     this.observations,
     this.nom,
     this.photo,
+    this.repere,
   });
 }
 

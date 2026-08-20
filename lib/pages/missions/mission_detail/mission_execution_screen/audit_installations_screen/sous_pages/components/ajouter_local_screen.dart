@@ -2271,6 +2271,7 @@ class _EtapeCelluleTransformateurMulti extends StatefulWidget {
   final VoidCallback onDataChanged;
   final VoidCallback? onFormStateChanged;
   final Future<String?> Function(File, String) onSavePhoto;
+  final String? localNom;
 
   const _EtapeCelluleTransformateurMulti({
     super.key,
@@ -2281,6 +2282,7 @@ class _EtapeCelluleTransformateurMulti extends StatefulWidget {
     required this.onDataChanged,
     this.onFormStateChanged,
     required this.onSavePhoto,
+    this.localNom,
   });
 
   @override
@@ -2687,6 +2689,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       photos: _cellulePhotos,
       syncId: newSyncId,
       nom: _celluleNomController.text.trim().isNotEmpty ? _celluleNomController.text.trim() : null,
+      repere: (widget.localNom != null && widget.localNom!.trim().isNotEmpty) ? widget.localNom!.trim() : null,
       photo: _cellulePhoto,
     );
     
@@ -2859,6 +2862,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       puissanceUcc: _transfoPuissanceUcc,
       ik3Max: _transfoIk3MaxController.text.trim(),
       nom: _transfoNomController.text.trim().isNotEmpty ? _transfoNomController.text.trim() : null,
+      repere: (widget.localNom != null && widget.localNom!.trim().isNotEmpty) ? widget.localNom!.trim() : null,
       photo: _transfoPhoto,
       photos: _transfoPhotos,
     );
@@ -3469,9 +3473,11 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           // Section 1 : Identification
           _buildFormSectionHeader('IDENTIFICATION', isSmallScreen),
           SizedBox(height: isSmallScreen ? 8 : 10),
+          _buildReadOnlyInfoField('Repère', (widget.localNom != null && widget.localNom!.trim().isNotEmpty) ? widget.localNom!.trim() : 'Nom du local non défini', isSmallScreen),
+          SizedBox(height: isSmallScreen ? 12 : 16),
           _buildTextField(_celluleNomController, 'Nom de la cellule (ex: Cellule Arrivée 1)', isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(_celluleFonctionController, 'Fonction de la cellule', isSmallScreen, optional: true),
+          _buildDropdown(_celluleFonctionController, 'Fonction de la cellule', InstallationFieldsRegistry.fonctionCelluleOptions, isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
           _buildTextField(_celluleMarqueController, 'Marque / modèle / année', isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
@@ -4148,7 +4154,9 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
       child: Column(
         children: [
-          // 0. Nom du transformateur
+          // 0. Repère & Nom du transformateur
+          _buildReadOnlyInfoField('Repère', (widget.localNom != null && widget.localNom!.trim().isNotEmpty) ? widget.localNom!.trim() : 'Nom du local non défini', isSmallScreen),
+          SizedBox(height: isSmallScreen ? 12 : 16),
           _buildTextField(_transfoNomController, 'Nom du transformateur (ex: Transfo T1)', isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
 
@@ -4622,6 +4630,24 @@ Widget _buildPrioriteButton({
     );
   }
   
+  Widget _buildReadOnlyInfoField(String label, String value, bool isSmallScreen, {IconData? icon}) {
+    return TextFormField(
+      initialValue: value.isNotEmpty ? value : 'Calculé automatiquement depuis le local',
+      enabled: false,
+      style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.w600, color: Colors.grey.shade800),
+      decoration: InputDecoration(
+        labelText: '$label (Automatique)',
+        labelStyle: const TextStyle(fontSize: 12, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold),
+        prefixIcon: icon != null ? Icon(icon, size: isSmallScreen ? 18 : 20, color: AppTheme.primaryBlue) : const Icon(Icons.link, size: 18, color: AppTheme.primaryBlue),
+        filled: true,
+        fillColor: Colors.blue.shade50.withOpacity(0.5),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10), borderSide: BorderSide(color: Colors.blue.shade200)),
+        disabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10), borderSide: BorderSide(color: Colors.blue.shade200)),
+        contentPadding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16, vertical: isSmallScreen ? 12 : 14),
+      ),
+    );
+  }
+
   Widget _buildTextField(
     TextEditingController controller,
     String label,
@@ -6632,6 +6658,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
                   if (_selectedType == 'LOCAL_TRANSFORMATEUR' || _selectedType == 'LOCAL_MTBT')
                   _EtapeCelluleTransformateurMulti(
                     key: _etapeCelluleTransfoKey,
+                    localNom: _nomController.text,
                     cellules: _cellules,
                     transformateurs: _transformateurs,
                     onCellulesChanged: (nouvellesCellules) async {

@@ -435,6 +435,9 @@ class Cellule {
   @HiveField(18)
   String? photo;
 
+  @HiveField(19)
+  String? repere;
+
   Cellule({
     required this.fonction,
     required this.type,
@@ -455,12 +458,24 @@ class Cellule {
     this.tensionService,
     this.nom,
     this.photo,
+    this.repere,
   })  : elementsVerifies = elementsVerifies ?? [],
         photos = photos ?? [],
         observations = observations ?? [],
         syncId = (syncId != null && syncId.isNotEmpty)
             ? syncId
             : 'cellule_${DateTime.now().microsecondsSinceEpoch}';
+
+  /// Résout le repère effectif de la cellule (nom du local parent s'il est connu, sinon repere stocké)
+  String getEffectiveRepere(String? parentLocalNom) {
+    if (parentLocalNom != null && parentLocalNom.trim().isNotEmpty) {
+      return parentLocalNom.trim();
+    }
+    if (repere != null && repere!.trim().isNotEmpty) {
+      return repere!.trim();
+    }
+    return '';
+  }
 
   Cellule copyWith({
     String? fonction,
@@ -482,6 +497,7 @@ class Cellule {
     String? tensionService,
     String? nom,
     String? photo,
+    String? repere,
   }) {
     return Cellule(
       fonction: fonction ?? this.fonction,
@@ -503,6 +519,7 @@ class Cellule {
       tensionService: tensionService ?? this.tensionService,
       nom: nom ?? this.nom,
       photo: photo ?? this.photo,
+      repere: repere ?? this.repere,
     );
   }
 }
@@ -573,6 +590,9 @@ class TransformateurMTBT {
   @HiveField(20)
   String? photo;
 
+  @HiveField(21)
+  String? repere;
+
   TransformateurMTBT({
     required this.typeTransformateur,
     required this.marqueAnnee,
@@ -595,12 +615,24 @@ class TransformateurMTBT {
     this.ik3Max,
     this.nom,
     this.photo,
+    this.repere,
   })  : elementsVerifies = elementsVerifies ?? [],
         photos = photos ?? [],
         observations = observations ?? [],
         syncId = (syncId != null && syncId.isNotEmpty)
             ? syncId
             : 'transfo_${DateTime.now().microsecondsSinceEpoch}';
+
+  /// Résout le repère effectif du transformateur (nom du local parent s'il est connu, sinon repere stocké)
+  String getEffectiveRepere(String? parentLocalNom) {
+    if (parentLocalNom != null && parentLocalNom.trim().isNotEmpty) {
+      return parentLocalNom.trim();
+    }
+    if (repere != null && repere!.trim().isNotEmpty) {
+      return repere!.trim();
+    }
+    return '';
+  }
 
   TransformateurMTBT copyWith({
     String? typeTransformateur,

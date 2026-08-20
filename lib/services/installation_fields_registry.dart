@@ -47,6 +47,19 @@ class InstallationFieldsRegistry {
   // REFERENTIELS D'OPTIONS DE SÉLECTION (SINGLE SOURCE OF TRUTH)
   // ══════════════════════════════════════════════════════════════════════
   static const List<String> natureReseauOptions = ['Aérien', 'Souterrain'];
+  static const List<String> fonctionCelluleOptions = [
+    'Cellule arrivée câble',
+    'Cellule départ câble',
+    'Cellule protection transformateur',
+    'Cellule disjoncteur',
+    'Cellule comptage',
+    'Cellule couplage de barres',
+    'Cellule remontée de barres',
+    'Cellule mise à la terre',
+    'Cellule protection par fusibles',
+    'Cellule transformateur de tension/courant',
+  ];
+
   static const List<String> presenceIacmOptions = ['Présent', 'Absent'];
   static const List<String> relaisBuchholzOptions = ['Présent', 'Absent'];
   static const List<String> typeTransformateurOptions = [
