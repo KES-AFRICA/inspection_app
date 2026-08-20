@@ -8795,6 +8795,166 @@ class PdfReportService {
     );
   }
 
+  static List<pw.MemoryImage> _resolveLocalPhotos(
+    dynamic local, {
+    Map<dynamic, pw.MemoryImage?>? photoCache,
+  }) {
+    final images = <pw.MemoryImage>[];
+
+    if (photoCache != null && photoCache.containsKey(local)) {
+      final cached = photoCache[local];
+      if (cached != null) {
+        images.add(cached);
+        return images;
+      }
+    }
+
+    final rawPhotos = (local.photos as List?)?.cast<String>() ?? [];
+    for (final src in rawPhotos) {
+      final trimmed = src.trim();
+      if (trimmed.isEmpty) continue;
+      try {
+        final resolved = AppImageUtils.resolvePathSync(trimmed);
+        if (resolved != null) {
+          final f = File(resolved);
+          if (f.existsSync() && f.lengthSync() < 500000) {
+            final bytes = f.readAsBytesSync();
+            if (bytes.isNotEmpty) {
+              images.add(pw.MemoryImage(bytes));
+            }
+          }
+        }
+      } catch (_) {}
+    }
+
+    return images;
+  }
+
+  static pw.Widget _buildLocalPhotosZone(
+    List<pw.MemoryImage> images, {
+    String placeholderText = 'Aucune photo du local',
+  }) {
+    // ── Cas 0 photo : Zone réservée préservée avec placeholder ──
+    if (images.isEmpty) {
+      return pw.Container(
+        alignment: pw.Alignment.center,
+        margin: const pw.EdgeInsets.only(top: 4, bottom: 6),
+        child: pw.Container(
+          width: 170,
+          height: 95,
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromInt(0xFFF9F9F9),
+            border: pw.Border.all(color: borderColor, width: 0.4),
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+          ),
+          alignment: pw.Alignment.center,
+          child: pw.Column(
+            mainAxisAlignment: pw.MainAxisAlignment.center,
+            children: [
+              pw.Text(
+                placeholderText,
+                style: pw.TextStyle(
+                  font: _fontRegular,
+                  fontSize: fsSmall,
+                  color: PdfColors.grey600,
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    pw.Widget buildPhotoBox(pw.MemoryImage img, double width, double height) {
+      return pw.Container(
+        decoration: pw.BoxDecoration(
+          border: pw.Border.all(color: borderColor, width: 0.4),
+          borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+        ),
+        padding: const pw.EdgeInsets.all(3),
+        child: pw.Image(
+          img,
+          width: width,
+          height: height,
+          fit: pw.BoxFit.contain,
+        ),
+      );
+    }
+
+    // ── Cas 1 photo ──
+    if (images.length == 1) {
+      return pw.Container(
+        alignment: pw.Alignment.center,
+        margin: const pw.EdgeInsets.only(top: 4, bottom: 6),
+        child: buildPhotoBox(images[0], 160, 120),
+      );
+    }
+
+    // ── Cas 2 photos ──
+    if (images.length == 2) {
+      return pw.Container(
+        alignment: pw.Alignment.center,
+        margin: const pw.EdgeInsets.only(top: 4, bottom: 6),
+        child: pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.center,
+          children: [
+            buildPhotoBox(images[0], 140, 105),
+            pw.SizedBox(width: 10),
+            buildPhotoBox(images[1], 140, 105),
+          ],
+        ),
+      );
+    }
+
+    // ── Cas 3 photos ──
+    if (images.length == 3) {
+      return pw.Container(
+        alignment: pw.Alignment.center,
+        margin: const pw.EdgeInsets.only(top: 4, bottom: 6),
+        child: pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.center,
+          children: [
+            buildPhotoBox(images[0], 110, 85),
+            pw.SizedBox(width: 8),
+            buildPhotoBox(images[1], 110, 85),
+            pw.SizedBox(width: 8),
+            buildPhotoBox(images[2], 110, 85),
+          ],
+        ),
+      );
+    }
+
+    // ── Cas N photos (>= 4) ──
+    final rows = <pw.Widget>[];
+    for (int i = 0; i < images.length; i += 2) {
+      final chunk = images.sublist(i, (i + 2).clamp(0, images.length));
+      rows.add(
+        pw.Row(
+          mainAxisAlignment: pw.MainAxisAlignment.center,
+          children: [
+            buildPhotoBox(chunk[0], 135, 100),
+            if (chunk.length > 1) ...[
+              pw.SizedBox(width: 10),
+              buildPhotoBox(chunk[1], 135, 100),
+            ],
+          ],
+        ),
+      );
+      if (i + 2 < images.length) {
+        rows.add(pw.SizedBox(height: 8));
+      }
+    }
+
+    return pw.Container(
+      alignment: pw.Alignment.center,
+      margin: const pw.EdgeInsets.only(top: 4, bottom: 6),
+      child: pw.Column(
+        children: rows,
+      ),
+    );
+  }
+
   static List<pw.Widget> _buildLocalMT(
     MoyenneTensionLocal local,
     Map<String, int> trackedPages, {
@@ -8826,46 +8986,9 @@ class PdfReportService {
     );
     widgets.add(pw.SizedBox(height: 5));
 
-    // Photo du local (si présente, centrée horizontalement)
-    pw.MemoryImage? localPhotoImg;
-    if (photoCache != null && photoCache.containsKey(local)) {
-      localPhotoImg = photoCache[local];
-    } else if (local.photos.isNotEmpty) {
-      final rawPath = local.photos.first.trim();
-      if (rawPath.isNotEmpty && File(rawPath).existsSync()) {
-        try {
-          final f = File(rawPath);
-          if (f.lengthSync() < 500000) {
-            final bytes = f.readAsBytesSync();
-            if (bytes.isNotEmpty) {
-              localPhotoImg = pw.MemoryImage(bytes);
-            }
-          }
-        } catch (_) {}
-      }
-    }
-
-    if (localPhotoImg != null) {
-      widgets.add(
-        pw.Container(
-          alignment: pw.Alignment.center,
-          margin: const pw.EdgeInsets.only(top: 2, bottom: 6),
-          child: pw.Container(
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: borderColor, width: 0.4),
-              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-            ),
-            padding: const pw.EdgeInsets.all(3),
-            child: pw.Image(
-              localPhotoImg,
-              height: 120,
-              width: 160,
-              fit: pw.BoxFit.contain,
-            ),
-          ),
-        ),
-      );
-    }
+    // Zone photo du local (toujours affichée : photos ou zone réservée 0 photo)
+    final localImages = _resolveLocalPhotos(local, photoCache: photoCache);
+    widgets.add(_buildLocalPhotosZone(localImages, placeholderText: 'Aucune photo du local'));
 
     // Local inaccessible : mention claire dans le rapport
     if (local.accessible == false) {
@@ -8915,7 +9038,7 @@ class PdfReportService {
           ),
         ),
       );
-      return widgets; // Pas d'éléments à afficher
+      return widgets;
     }
 
     DispositionsConstructivesRegistry.ensureCompleteLocalChecklists(
@@ -9012,46 +9135,9 @@ class PdfReportService {
     );
     widgets.add(pw.SizedBox(height: 5));
 
-    // Photo du local (si présente, centrée horizontalement)
-    pw.MemoryImage? localPhotoImg;
-    if (photoCache != null && photoCache.containsKey(local)) {
-      localPhotoImg = photoCache[local];
-    } else if (local.photos.isNotEmpty) {
-      final rawPath = local.photos.first.trim();
-      if (rawPath.isNotEmpty && File(rawPath).existsSync()) {
-        try {
-          final f = File(rawPath);
-          if (f.lengthSync() < 500000) {
-            final bytes = f.readAsBytesSync();
-            if (bytes.isNotEmpty) {
-              localPhotoImg = pw.MemoryImage(bytes);
-            }
-          }
-        } catch (_) {}
-      }
-    }
-
-    if (localPhotoImg != null) {
-      widgets.add(
-        pw.Container(
-          alignment: pw.Alignment.center,
-          margin: const pw.EdgeInsets.only(top: 2, bottom: 6),
-          child: pw.Container(
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: borderColor, width: 0.4),
-              borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
-            ),
-            padding: const pw.EdgeInsets.all(3),
-            child: pw.Image(
-              localPhotoImg,
-              height: 120,
-              width: 160,
-              fit: pw.BoxFit.contain,
-            ),
-          ),
-        ),
-      );
-    }
+    // Zone photo du local (toujours affichée : photos ou zone réservée 0 photo)
+    final localImages = _resolveLocalPhotos(local, photoCache: photoCache);
+    widgets.add(_buildLocalPhotosZone(localImages, placeholderText: 'Aucune photo du local'));
 
     // Local inaccessible : mention claire dans le rapport
     if (local.accessible == false) {
@@ -9101,7 +9187,7 @@ class PdfReportService {
           ),
         ),
       );
-      return widgets; // Pas d'éléments à afficher
+      return widgets;
     }
 
     final isGE = local.type == 'LOCAL_GROUPE_ELECTROGENE';
@@ -10978,8 +11064,8 @@ class PdfReportService {
         ),
       );
 
+      widgets.add(pw.SizedBox(height: 6));
       if (photoInterne != null) {
-        widgets.add(pw.SizedBox(height: 6));
         widgets.add(
           pw.Center(
             child: pw.Container(
@@ -10993,6 +11079,30 @@ class PdfReportService {
                 width: 160,
                 height: 120,
                 fit: pw.BoxFit.contain,
+              ),
+            ),
+          ),
+        );
+      } else {
+        widgets.add(
+          pw.Center(
+            child: pw.Container(
+              width: 170,
+              height: 95,
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromInt(0xFFF9F9F9),
+                border: pw.Border.all(color: borderColor, width: 0.4),
+                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+              ),
+              alignment: pw.Alignment.center,
+              child: pw.Text(
+                "Aucune photo de l'équipement",
+                style: pw.TextStyle(
+                  font: _fontRegular,
+                  fontSize: fsSmall,
+                  color: PdfColors.grey600,
+                ),
+                textAlign: pw.TextAlign.center,
               ),
             ),
           ),
