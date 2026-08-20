@@ -10822,7 +10822,7 @@ class PdfReportService {
               ),
               alignment: pw.Alignment.centerLeft,
               child: pw.Text(
-                coffret.nom,
+                _formatEquipmentTitle(coffret.nom, coffret.type),
                 style: pw.TextStyle(
                   font: _fontBold,
                   fontSize: fsH3,
@@ -17265,6 +17265,21 @@ class PdfReportService {
   static pw.MemoryImage? get logoKesImage => _logoKesImage;
   static pw.MemoryImage? get firstPageFooterImage => _firstPageFooterImage;
   static String formatDate(DateTime d) => _formatDate(d);
+
+  static String _formatEquipmentTitle(String name, String type) {
+    final trimmedName = name.trim();
+    final trimmedType = type.trim();
+    if (trimmedName.isEmpty && trimmedType.isEmpty) return 'Équipement';
+    if (trimmedType.isEmpty) return trimmedName;
+    if (trimmedName.isEmpty) return trimmedType.toUpperCase();
+
+    final pattern = RegExp('^${RegExp.escape(trimmedType)}\\s*:\\s*', caseSensitive: false);
+    if (pattern.hasMatch(trimmedName)) {
+      return trimmedName;
+    }
+
+    return '${trimmedType.toUpperCase()} : $trimmedName';
+  }
 }
 
 // ================================================================
