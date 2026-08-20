@@ -605,13 +605,14 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       observationsParafoudreEnrichies:
           (fields[23] as List?)?.cast<ElementControle>(),
       presenceDefautThermo: fields[24] as String?,
+      accessible: fields[25] == null ? true : fields[25] as bool,
     );
   }
 
   @override
   void write(BinaryWriter writer, CoffretArmoire obj) {
     writer
-      ..writeByte(25)
+      ..writeByte(26)
       ..writeByte(0)
       ..write(obj.qrCode)
       ..writeByte(1)
@@ -661,7 +662,9 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       ..writeByte(23)
       ..write(obj.observationsParafoudreEnrichies)
       ..writeByte(24)
-      ..write(obj.presenceDefautThermo);
+      ..write(obj.presenceDefautThermo)
+      ..writeByte(25)
+      ..write(obj.accessible);
   }
 
   @override

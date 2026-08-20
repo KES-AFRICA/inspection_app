@@ -261,6 +261,7 @@ class CoffretArmoireEntity {
   final List<String> photosExternes;
   final List<String> photosInternes;
   final List<ObservationLibreEntity> observationsParafoudre;
+  final bool accessible;
 
   String? get effectivePresenceDefautThermo {
     if (!verificationThermographie) return null;
@@ -284,6 +285,7 @@ class CoffretArmoireEntity {
     this.presenceParafoudre = false,
     this.verificationThermographie = false,
     this.presenceDefautThermo,
+    this.accessible = true,
     this.alimentations = const [],
     this.protectionTete,
     this.pointsVerification = const [],

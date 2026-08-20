@@ -2464,6 +2464,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   bool _alimentationsValid = true;
   bool _pointsValid = false;
   bool _domaineTensionValid = false;
+  bool _accessible = true;
 
   bool _photosExterneValid = false;
   bool _photosInterneValid = false;
@@ -2517,6 +2518,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         _repereController.text = draft.repere ?? '';
         if (_numeroEquipementController.text.trim().isEmpty) _autoFillNumeroEquipement();
         _selectedType = draft.type;
+        _accessible = draft.accessible;
         _zoneAtex = draft.zoneAtex;
         _domaineTension = draft.domaineTension;
         _identificationArmoire = draft.identificationArmoire;
@@ -2702,6 +2704,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       qrCode: qrCode,
       nom: _nomController.text.trim(),
       type: _selectedType ?? '',
+      accessible: _accessible,
       numeroEquipement: _numeroEquipementController.text.trim().isEmpty ? null : _numeroEquipementController.text.trim(),
       repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
       zoneAtex: _zoneAtex,
@@ -2803,12 +2806,18 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     if (_nomController.text.trim().isEmpty) { _nomValid = false; allValid = false; }
     if (_selectedType == null || _selectedType!.isEmpty) { _typeValid = false; allValid = false; }
     if (_repereController.text.trim().isEmpty) { _repereValid = false; allValid = false; }
-    _alimentationsValid = true;
-    _validatePoints();
-    if (!_pointsValid) allValid = false;
-    if (_domaineTension.isEmpty) { _domaineTensionValid = false; allValid = false; }
-    if (_coffretPhotosExterne.isEmpty) { _photosExterneValid = false; allValid = false; _showError('La photo EXTERNE est obligatoire'); } else { _photosExterneValid = true; }
-    if (_coffretPhotosInterne.isEmpty) { _photosInterneValid = false; allValid = false; _showError('La photo INTERNE est obligatoire'); } else { _photosInterneValid = true; }
+    if (_accessible) {
+      _alimentationsValid = true;
+      _validatePoints();
+      if (!_pointsValid) allValid = false;
+      if (_domaineTension.isEmpty) { _domaineTensionValid = false; allValid = false; }
+      if (_coffretPhotosExterne.isEmpty) { _photosExterneValid = false; allValid = false; _showError('La photo EXTERNE est obligatoire'); } else { _photosExterneValid = true; }
+      if (_coffretPhotosInterne.isEmpty) { _photosInterneValid = false; allValid = false; _showError('La photo INTERNE est obligatoire'); } else { _photosInterneValid = true; }
+    } else {
+      _alimentationsValid = true;
+      _pointsValid = true;
+      _domaineTensionValid = true;
+    }
     setState(() {});
     _scheduleAutoSave();
     return allValid;
@@ -2828,6 +2837,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _nomController.text = coffret.nom;
     _numeroEquipementController.text = coffret.numeroEquipement ?? '';
     _selectedType = coffret.type;
+    _accessible = coffret.accessible;
     _repereController.text = coffret.repere ?? '';
     _zoneAtex = coffret.zoneAtex;
     _domaineTension = coffret.domaineTension.isNotEmpty ? coffret.domaineTension : '230/400';
@@ -3157,6 +3167,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         qrCode: _qrCodeController.text.trim(),
         nom: _nomController.text.trim(),
         type: _selectedType!,
+        accessible: _accessible,
         numeroEquipement: _numeroEquipementController.text.trim().isEmpty ? null : _numeroEquipementController.text.trim(),
         repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
         zoneAtex: _zoneAtex,
@@ -3272,6 +3283,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         target.qrCode = newCoffret.qrCode;
         target.nom = newCoffret.nom;
         target.type = newCoffret.type;
+        target.accessible = newCoffret.accessible;
         target.description = newCoffret.description;
         target.repere = newCoffret.repere;
         target.zoneAtex = newCoffret.zoneAtex;
@@ -3309,32 +3321,40 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       if (!_photosInterneValid) { _showError('La photo INTERNE est obligatoire'); return; }
       _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
     } else if (_currentStep == 1) {
-      _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      if (_accessible == false) {
+        _sauvegarder();
+      } else {
+        _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+      }
     } else if (_currentStep == 2) {
+      _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    } else if (_currentStep == 3) {
       final alimState = _etapeAlimentationsKey?.currentState;
       if (alimState != null && alimState.nextSubSlide()) {
         setState(() {});
       } else {
         _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       }
-    } else if (_currentStep == 3) {
+    } else if (_currentStep == 4) {
       final pointsState = _etapePointsKey?.currentState;
       if (pointsState != null) {
         if (pointsState.canGoNext()) _sauvegarder();
         else pointsState.nextSlide();
+      } else {
+        _sauvegarder();
       }
     }
   }
 
   void _handlePrevious() {
-    if (_currentStep == 2) {
+    if (_currentStep == 3) {
       final alimState = _etapeAlimentationsKey?.currentState;
       if (alimState != null && alimState.previousSubSlide()) {
         setState(() {});
       } else {
         _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       }
-    } else if (_currentStep == 3) {
+    } else if (_currentStep == 4) {
       final pointsState = _etapePointsKey?.currentState;
       if (pointsState != null && pointsState._currentSlide > 0) pointsState.previousSlide();
       else _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
@@ -3344,12 +3364,15 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   }
 
   String _getNextButtonText() {
-    if (_currentStep == 3) {
+    if (_currentStep == 1 && _accessible == false) {
+      return 'Enregistrer';
+    }
+    if (_currentStep == 4) {
       final pointsState = _etapePointsKey?.currentState;
       if (pointsState != null && pointsState.canGoNext()) return 'Terminer';
       return 'Suivant';
     }
-    return _currentStep == 3 ? 'Terminer' : 'Suivant';
+    return _currentStep == 4 ? 'Terminer' : 'Suivant';
   }
 
   void _onPresenceParafoudreChanged(bool? value) {
@@ -3357,7 +3380,132 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _saveDraft();
   }
 
-  int _getTotalSteps() => 4;
+  int _getTotalSteps() => _accessible ? 5 : 2;
+
+  Widget _buildSlideAccessibiliteEquipement() {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Accessibilité de l\'équipement',
+            style: TextStyle(
+              fontSize: context.fontSizeXL,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.primaryBlue,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Cette information est requise avant de poursuivre l\'inspection.',
+            style: TextStyle(color: Colors.grey.shade600),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            'Cet équipement est-il accessible ?',
+            style: TextStyle(fontSize: context.fontSizeL, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 20),
+          Row(
+            children: [
+              Expanded(
+                child: _buildAccessibiliteEquipementOption(
+                  label: 'Oui',
+                  icon: Icons.check_circle_outline,
+                  selected: _accessible == true,
+                  color: Colors.green,
+                  onTap: () {
+                    setState(() {
+                      _accessible = true;
+                    });
+                    _saveDraft();
+                  },
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: _buildAccessibiliteEquipementOption(
+                  label: 'Non',
+                  icon: Icons.cancel_outlined,
+                  selected: _accessible == false,
+                  color: Colors.red,
+                  onTap: () {
+                    setState(() {
+                      _accessible = false;
+                    });
+                    _saveDraft();
+                  },
+                ),
+              ),
+            ],
+          ),
+          if (_accessible == false) ...[
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.red.shade200),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.red.shade700),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'L\'équipement sera enregistré comme inaccessible et marqué "À revérifier". '
+                      'Aucun point de vérification ne sera requis.',
+                      style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAccessibiliteEquipementOption({
+    required String label,
+    required IconData icon,
+    required bool selected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 24),
+        decoration: BoxDecoration(
+          color: selected ? color.withOpacity(0.1) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: selected ? color : Colors.grey.shade300,
+            width: selected ? 2 : 1,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, color: selected ? color : Colors.grey.shade400, size: 36),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: selected ? color : Colors.grey.shade600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _navigateToStep(int targetStep) {
     if (_isSaving) return;
@@ -3537,7 +3685,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                     onAjouterObservation: _ajouterObservation,
                     onSupprimerObservation: (i) => setState(() => _observationsLibresCoffret.removeAt(i)),
                   ),
-                  if (_selectedType != null)
+                  _buildSlideAccessibiliteEquipement(),
+                  if (_selectedType != null && _accessible)
                     _EtapeInformationsGenerales(
                       zoneAtex: _zoneAtex,
                       onZoneAtexChanged: (v) => setState(() => _zoneAtex = v ?? false),
@@ -3573,7 +3722,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                         return await _savePhotoToAppDirectory(file, section);
                       },
                     ),
-                  if (_selectedType != null)
+                  if (_selectedType != null && _accessible)
                     _EtapeAlimentations(
                       key: _etapeAlimentationsKey,
                       selectedType: _selectedType,
@@ -3584,7 +3733,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                       onAddSortie: _addSortieInverseur,
                       onDeleteSortie: _deleteSortieInverseur,
                     ),
-                  if (_selectedType != null && _pointsVerification.isNotEmpty)
+                  if (_selectedType != null && _pointsVerification.isNotEmpty && _accessible)
                     _EtapePointsVerification(
                       key: _etapePointsKey,
                       pointsVerification: _pointsVerification,

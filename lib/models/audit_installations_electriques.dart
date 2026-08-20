@@ -841,6 +841,9 @@ class CoffretArmoire {
   @HiveField(24)
   String? presenceDefautThermo;
 
+  @HiveField(25, defaultValue: true)
+  bool accessible;
+
   /// Getter rétrocompatible pour interpréter l'état de la présence de défaut thermo.
   /// Rends 'Sans objet' pour les anciens équipements ayant la thermographie activée mais sans valeur enregistrée.
   String? get effectivePresenceDefautThermo {
@@ -865,6 +868,7 @@ class CoffretArmoire {
     this.presenceParafoudre = false,
     this.verificationThermographie = false,
     this.presenceDefautThermo,
+    bool? accessible,
     List<Alimentation>? alimentations,
     this.protectionTete,
     List<PointVerification>? pointsVerification,
@@ -877,7 +881,8 @@ class CoffretArmoire {
     List<String>? photosInternes,
     List<ObservationLibre>? observationsParafoudre,
     List<ElementControle>? observationsParafoudreEnrichies,
-  })  : alimentations = alimentations ?? [],
+  })  : accessible = accessible ?? true,
+        alimentations = alimentations ?? [],
         pointsVerification = pointsVerification ?? [],
         observationsLibres = observationsLibres ?? [],
         photos = photos ?? [],

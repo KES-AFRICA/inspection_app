@@ -782,6 +782,7 @@ class BackupService {
         'statut': c.statut,
         'currentStep': c.currentStep,
         'zoneAtex': c.zoneAtex,
+        'accessible': c.accessible,
         'domaineTension': c.domaineTension,
         'identificationArmoire': c.identificationArmoire,
         'signalisationDanger': c.signalisationDanger,
@@ -2361,6 +2362,7 @@ class BackupService {
         verificationThermographie:
             d['verificationThermographie'] as bool? ?? false,
         presenceDefautThermo: d['presenceDefautThermo'] as String?,
+        accessible: d['accessible'] as bool? ?? true,
         photos: _strList(d['photos']),
         photosExternes: _strList(d['photosExternes']),
         photosInternes: _strList(d['photosInternes']),

@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/services/cellule_types_registry.dart';
+import 'package:inspec_app/features/audit_installations/data/mappers/audit_installations_mapper.dart';
 
 void main() {
   group('PDF Equipement Synthesis Tests', () {
@@ -120,6 +121,29 @@ void main() {
 
       expect(cellule.tensionService, equals('20'));
       expect(cellule.calibreDisjoncteur, equals('630'));
+    });
+
+    test('4. Propriété d\'accessibilité sur CoffretArmoire', () {
+      final coffretAccess = CoffretArmoire(
+        qrCode: 'QR01',
+        nom: 'TGBT Entrée',
+        type: 'TGBT',
+      );
+      expect(coffretAccess.accessible, isTrue);
+
+      final coffretInaccess = CoffretArmoire(
+        qrCode: 'QR02',
+        nom: 'Armoire Climatisation',
+        type: 'Armoire',
+        accessible: false,
+      );
+      expect(coffretInaccess.accessible, isFalse);
+
+      final entity = AuditInstallationsMapper.toCoffretEntity(coffretInaccess);
+      expect(entity.accessible, isFalse);
+
+      final restored = AuditInstallationsMapper.toCoffretModel(entity);
+      expect(restored.accessible, isFalse);
     });
   });
 }

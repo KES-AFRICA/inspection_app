@@ -63,12 +63,14 @@ class _PdfEquipementItem {
   final String nom;
   final String type;
   final bool isMT;
+  final bool accessible;
 
   const _PdfEquipementItem({
     required this.repere,
     required this.nom,
     required this.type,
     required this.isMT,
+    this.accessible = true,
   });
 }
 
@@ -7149,6 +7151,7 @@ class PdfReportService {
       required String repere,
       required String nom,
       required String type,
+      bool accessible = true,
     }) {
       final hash = identityHashCode(refObj);
       if (!seenHashes.contains(hash)) {
@@ -7159,6 +7162,7 @@ class PdfReportService {
             nom: nom.trim().isNotEmpty ? nom.trim() : '-',
             type: type,
             isMT: true,
+            accessible: accessible,
           ),
         );
       }
@@ -7174,7 +7178,7 @@ class PdfReportService {
                 : '-';
             final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : normType;
 
-            addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType);
+            addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType, accessible: coffret.accessible);
           }
         }
       }
@@ -7193,7 +7197,7 @@ class PdfReportService {
               : '-';
           final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : normType;
 
-          addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType);
+          addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType, accessible: coffret.accessible);
         }
       }
       for (final local in zone.locaux) {
@@ -7216,6 +7220,7 @@ class PdfReportService {
       required String repere,
       required String nom,
       required String type,
+      bool accessible = true,
     }) {
       final hash = identityHashCode(refObj);
       if (!seenHashes.contains(hash)) {
@@ -7226,6 +7231,7 @@ class PdfReportService {
             nom: nom.trim().isNotEmpty ? nom.trim() : '-',
             type: type,
             isMT: false,
+            accessible: accessible,
           ),
         );
       }
@@ -7241,7 +7247,7 @@ class PdfReportService {
                 : '-';
             final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : normType;
 
-            addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType);
+            addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType, accessible: coffret.accessible);
           }
         }
 
@@ -7254,7 +7260,7 @@ class PdfReportService {
                   : '-';
               final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : normType;
 
-              addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType);
+              addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType, accessible: coffret.accessible);
             }
           }
         }
@@ -7356,10 +7362,10 @@ class PdfReportService {
               ),
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
-                color: conformeColor,
+                color: eq.accessible ? conformeColor : nonConformeColor,
                 alignment: pw.Alignment.center,
                 child: pw.Text(
-                  'Oui',
+                  eq.accessible ? 'Oui' : 'Non',
                   style: pw.TextStyle(
                     font: _fontBold,
                     fontSize: 9,
@@ -10929,6 +10935,56 @@ class PdfReportService {
         ],
       ),
     );
+
+    if (coffret.accessible == false) {
+      widgets.add(pw.SizedBox(height: 4));
+      widgets.add(
+        pw.Container(
+          padding: const pw.EdgeInsets.all(8),
+          decoration: pw.BoxDecoration(
+            color: PdfColors.red50,
+            border: pw.Border.all(color: PdfColors.red200),
+            borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(
+                children: [
+                  pw.Container(
+                    width: 10,
+                    height: 10,
+                    decoration: const pw.BoxDecoration(
+                      color: PdfColors.red,
+                      shape: pw.BoxShape.circle,
+                    ),
+                  ),
+                  pw.SizedBox(width: 6),
+                  pw.Text(
+                    '[!] ÉQUIPEMENT INACCESSIBLE — NON INSPECTÉ',
+                    style: pw.TextStyle(
+                      color: PdfColors.red,
+                      fontWeight: pw.FontWeight.bold,
+                      fontSize: 10,
+                    ),
+                  ),
+                ],
+              ),
+              pw.SizedBox(height: 4),
+              pw.Text(
+                "Cet équipement n'a pas pu être inspecté lors de la visite. "
+                "Aucun point de contrôle n'a pu être vérifié.",
+                style: pw.TextStyle(
+                  color: PdfColors.red900,
+                  fontSize: 9,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+      return widgets;
+    }
 
     // ══════════════════════════════════════════════════════════════════════
     // OBSERVATIONS PARAFOUDRE

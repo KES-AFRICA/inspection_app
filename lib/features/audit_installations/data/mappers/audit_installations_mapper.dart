@@ -251,6 +251,7 @@ class AuditInstallationsMapper {
       photosExternes: List<String>.from(model.photosExternes),
       photosInternes: List<String>.from(model.photosInternes),
       observationsParafoudre: model.observationsParafoudre.map(toObservationLibreEntity).toList(),
+      accessible: model.accessible,
     );
   }
 
@@ -269,6 +270,7 @@ class AuditInstallationsMapper {
       presenceParafoudre: entity.presenceParafoudre,
       verificationThermographie: entity.verificationThermographie,
       presenceDefautThermo: entity.presenceDefautThermo,
+      accessible: entity.accessible,
       alimentations: entity.alimentations.map(toAlimentationModel).toList(),
       protectionTete: entity.protectionTete != null ? toAlimentationModel(entity.protectionTete!) : null,
       pointsVerification: entity.pointsVerification.map(toPointVerificationModel).toList(),
