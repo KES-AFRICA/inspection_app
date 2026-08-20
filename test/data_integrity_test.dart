@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/services/dispositions_constructives_registry.dart';
+import 'package:inspec_app/services/installation_fields_registry.dart';
 import 'package:inspec_app/features/audit_installations/data/mappers/audit_installations_mapper.dart';
 
 void main() {
@@ -167,6 +168,95 @@ void main() {
       expect(rebuiltModel.observations, isNotNull);
       expect(rebuiltModel.observations!.length, equals(1));
       expect(rebuiltModel.observations!.first.observation, equals('Cassé'));
+    });
+
+    test('Test 7 — Rétrocompatibilité Cellule & Transformateur (anciennes missions)', () {
+      final ancienneCellule = Cellule(
+        fonction: 'Cellule Arrivée 1',
+        type: 'IM',
+        marqueModeleAnnee: 'Schneider SM6-24 2018',
+        tensionAssignee: '24 kV',
+        pouvoirCoupure: '12.5 kA',
+        numerotation: 'C01',
+        parafoudres: 'Oui',
+      );
+
+      expect(ancienneCellule.effectiveMarque, equals('Schneider SM6-24 2018'));
+      expect(ancienneCellule.effectiveModele, isEmpty);
+      expect(ancienneCellule.effectiveAnnee, isEmpty);
+      expect(ancienneCellule.formattedMarqueModeleAnnee, equals('Schneider SM6-24 2018'));
+
+      final ancienTransfo = TransformateurMTBT(
+        typeTransformateur: 'Transformateur HTA/BT',
+        marqueAnnee: 'France Transfo 2015',
+        puissanceAssignee: '630 kVA',
+        tensionPrimaireSecondaire: '20kV / 400V',
+        relaisBuchholz: 'Oui',
+        typeRefroidissement: 'ONAN',
+        regimeNeutre: 'TN-S',
+      );
+
+      expect(ancienTransfo.effectiveMarque, equals('France Transfo 2015'));
+      expect(ancienTransfo.effectiveAnneeFabrication, isEmpty);
+      expect(ancienTransfo.formattedMarqueAnnee, equals('France Transfo 2015'));
+    });
+
+    test('Test 8 — Séparation des champs constructeur & mapping Clean Architecture', () {
+      final nouvelleCellule = Cellule(
+        fonction: 'Cellule Arrivée 1',
+        type: 'IM',
+        marqueModeleAnnee: 'Schneider / SM6-24 / 2024',
+        marque: 'Schneider',
+        modele: 'SM6-24',
+        annee: '2024',
+        tensionAssignee: '24 kV',
+        pouvoirCoupure: '12.5 kA',
+        numerotation: 'C01',
+        parafoudres: 'Oui',
+      );
+
+      expect(nouvelleCellule.effectiveMarque, equals('Schneider'));
+      expect(nouvelleCellule.effectiveModele, equals('SM6-24'));
+      expect(nouvelleCellule.effectiveAnnee, equals('2024'));
+      expect(nouvelleCellule.formattedMarqueModeleAnnee, equals('Schneider / SM6-24 / 2024'));
+
+      final entityCellule = AuditInstallationsMapper.toCelluleEntity(nouvelleCellule);
+      final rebuiltCellule = AuditInstallationsMapper.toCelluleModel(entityCellule);
+      expect(rebuiltCellule.effectiveMarque, equals('Schneider'));
+      expect(rebuiltCellule.effectiveModele, equals('SM6-24'));
+      expect(rebuiltCellule.effectiveAnnee, equals('2024'));
+
+      final nouveauTransfo = TransformateurMTBT(
+        typeTransformateur: 'Transformateur HTA/BT',
+        marqueAnnee: 'ABB / 2023',
+        marque: 'ABB',
+        anneeFabrication: '2023',
+        puissanceAssignee: '1000 kVA',
+        tensionPrimaireSecondaire: '20kV / 400V',
+        relaisBuchholz: 'Oui',
+        typeRefroidissement: 'ONAN',
+        regimeNeutre: 'IT',
+      );
+
+      expect(nouveauTransfo.effectiveMarque, equals('ABB'));
+      expect(nouveauTransfo.effectiveAnneeFabrication, equals('2023'));
+      expect(nouveauTransfo.formattedMarqueAnnee, equals('ABB / 2023'));
+
+      final entityTransfo = AuditInstallationsMapper.toTransformateurEntity(nouveauTransfo);
+      final rebuiltTransfo = AuditInstallationsMapper.toTransformateurModel(entityTransfo);
+      expect(rebuiltTransfo.effectiveMarque, equals('ABB'));
+      expect(rebuiltTransfo.effectiveAnneeFabrication, equals('2023'));
+    });
+
+    test('Test 9 — Générateur dynamique d\'années (présence année courante et pas d\'années futures)', () {
+      final years = InstallationFieldsRegistry.generateYearsList();
+      final currentYearStr = DateTime.now().year.toString();
+      final futureYearStr = (DateTime.now().year + 1).toString();
+
+      expect(years, isNotEmpty);
+      expect(years.first, equals(currentYearStr));
+      expect(years.contains(futureYearStr), isFalse);
+      expect(years.contains('1950'), isTrue);
     });
   });
 }

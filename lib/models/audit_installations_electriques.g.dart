@@ -395,13 +395,16 @@ class CelluleAdapter extends TypeAdapter<Cellule> {
       nom: fields[17] as String?,
       photo: fields[18] as String?,
       repere: fields[19] as String?,
+      marque: fields[20] as String?,
+      modele: fields[21] as String?,
+      annee: fields[22] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Cellule obj) {
     writer
-      ..writeByte(20)
+      ..writeByte(23)
       ..writeByte(0)
       ..write(obj.fonction)
       ..writeByte(1)
@@ -441,7 +444,13 @@ class CelluleAdapter extends TypeAdapter<Cellule> {
       ..writeByte(18)
       ..write(obj.photo)
       ..writeByte(19)
-      ..write(obj.repere);
+      ..write(obj.repere)
+      ..writeByte(20)
+      ..write(obj.marque)
+      ..writeByte(21)
+      ..write(obj.modele)
+      ..writeByte(22)
+      ..write(obj.annee);
   }
 
   @override
@@ -488,13 +497,15 @@ class TransformateurMTBTAdapter extends TypeAdapter<TransformateurMTBT> {
       nom: fields[19] as String?,
       photo: fields[20] as String?,
       repere: fields[21] as String?,
+      marque: fields[22] as String?,
+      anneeFabrication: fields[23] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TransformateurMTBT obj) {
     writer
-      ..writeByte(22)
+      ..writeByte(24)
       ..writeByte(0)
       ..write(obj.typeTransformateur)
       ..writeByte(1)
@@ -538,7 +549,11 @@ class TransformateurMTBTAdapter extends TypeAdapter<TransformateurMTBT> {
       ..writeByte(20)
       ..write(obj.photo)
       ..writeByte(21)
-      ..write(obj.repere);
+      ..write(obj.repere)
+      ..writeByte(22)
+      ..write(obj.marque)
+      ..writeByte(23)
+      ..write(obj.anneeFabrication);
   }
 
   @override

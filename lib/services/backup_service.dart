@@ -2306,6 +2306,9 @@ class BackupService {
         fonction: d['fonction'] as String? ?? '',
         type: d['type'] as String? ?? '',
         marqueModeleAnnee: d['marqueModeleAnnee'] as String? ?? '',
+        marque: d['marque'] as String?,
+        modele: d['modele'] as String?,
+        annee: d['annee'] as String?,
         tensionAssignee: d['tensionAssignee'] as String? ?? '',
         pouvoirCoupure: d['pouvoirCoupure'] as String? ?? '',
         numerotation: d['numerotation'] as String? ?? '',
@@ -2318,6 +2321,8 @@ class BackupService {
       TransformateurMTBT(
         typeTransformateur: d['typeTransformateur'] as String? ?? '',
         marqueAnnee: d['marqueAnnee'] as String? ?? '',
+        marque: d['marque'] as String?,
+        anneeFabrication: d['anneeFabrication'] as String?,
         puissanceAssignee: d['puissanceAssignee'] as String? ?? '',
         tensionPrimaireSecondaire:
             d['tensionPrimaireSecondaire'] as String? ?? '',

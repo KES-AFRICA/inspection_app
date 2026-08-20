@@ -9301,8 +9301,18 @@ class PdfReportService {
           alt: false,
         ),
         tableDataRowInfo(
-          'Marque / modèle / année',
-          safe(cellule.marqueModeleAnnee),
+          'Marque',
+          safe(cellule.effectiveMarque),
+          alt: false,
+        ),
+        tableDataRowInfo(
+          'Modèle',
+          safe(cellule.effectiveModele),
+          alt: false,
+        ),
+        tableDataRowInfo(
+          'Année de fabrication',
+          safe(cellule.effectiveAnnee),
           alt: false,
         ),
         tableDataRowInfo(
@@ -9794,8 +9804,13 @@ class PdfReportService {
           alt: false,
         ),
         tableDataRowInfo(
-          'Marque / Année de fabrication',
-          safe(transfo.marqueAnnee),
+          'Marque',
+          safe(transfo.effectiveMarque),
+          alt: false,
+        ),
+        tableDataRowInfo(
+          'Année de fabrication',
+          safe(transfo.effectiveAnneeFabrication),
           alt: false,
         ),
         tableDataRowInfo(

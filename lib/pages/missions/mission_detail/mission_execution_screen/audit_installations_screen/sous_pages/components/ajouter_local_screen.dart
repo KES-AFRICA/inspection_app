@@ -2329,6 +2329,8 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   final _celluleFonctionController = TextEditingController();
   final _celluleTypeController = TextEditingController();
   final _celluleMarqueController = TextEditingController();
+  final _celluleModeleController = TextEditingController();
+  final _celluleAnneeController = TextEditingController();
   final _celluleTensionController = TextEditingController();
   final _cellulePouvoirController = TextEditingController();
   final _celluleNumerotationController = TextEditingController();
@@ -2350,6 +2352,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   final _transfoNomController = TextEditingController();
   final _transfoTypeController = TextEditingController();
   final _transfoMarqueController = TextEditingController();
+  final _transfoAnneeController = TextEditingController();
   final _transfoPuissanceController = TextEditingController();
   final _transfoTensionController = TextEditingController();
   final _transfoBuchholzController = TextEditingController();
@@ -2458,6 +2461,8 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _celluleFonctionController.clear();
     _celluleTypeController.clear();
     _celluleMarqueController.clear();
+    _celluleModeleController.clear();
+    _celluleAnneeController.clear();
     _celluleTensionController.clear();
     _cellulePouvoirController.clear();
     _celluleNumerotationController.text = '';
@@ -2483,6 +2488,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoNomController.clear();
     _transfoTypeController.clear();
     _transfoMarqueController.clear();
+    _transfoAnneeController.clear();
     _transfoPuissanceController.clear();
     _transfoTensionController.clear();
     _transfoBuchholzController.text = '';
@@ -2511,7 +2517,9 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _celluleNomController.text = cellule.nom ?? '';
     _celluleFonctionController.text = cellule.fonction;
     _celluleTypeController.text = cellule.type;
-    _celluleMarqueController.text = cellule.marqueModeleAnnee;
+    _celluleMarqueController.text = cellule.effectiveMarque;
+    _celluleModeleController.text = cellule.effectiveModele;
+    _celluleAnneeController.text = cellule.effectiveAnnee;
     _celluleTensionController.text = cellule.tensionAssignee;
     _cellulePouvoirController.text = cellule.pouvoirCoupure;
     _celluleNumerotationController.text = cellule.numerotation;
@@ -2544,7 +2552,8 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   void _chargerTransformateurPourEdition(TransformateurMTBT transfo) {
     _transfoNomController.text = transfo.nom ?? '';
     _transfoTypeController.text = transfo.typeTransformateur;
-    _transfoMarqueController.text = transfo.marqueAnnee;
+    _transfoMarqueController.text = transfo.effectiveMarque;
+    _transfoAnneeController.text = transfo.effectiveAnneeFabrication;
     _transfoPuissanceController.text = transfo.puissanceAssignee;
     _transfoTensionController.text = transfo.tensionPrimaireSecondaire;
     _transfoBuchholzController.text = transfo.relaisBuchholz;
@@ -2669,11 +2678,19 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   }
   
   void _sauvegarderCellule() {
+    final marque = _celluleMarqueController.text.trim();
+    final modele = _celluleModeleController.text.trim();
+    final annee = _celluleAnneeController.text.trim();
+    final formattedMarqueModeleAnnee = [marque, modele, annee].where((s) => s.isNotEmpty).join(' / ');
+
     final newSyncId = _celluleSyncId ?? 'cellule_${DateTime.now().microsecondsSinceEpoch}';
     final nouvelleCellule = Cellule(
       fonction: _celluleFonctionController.text.trim(),
       type: _celluleTypeController.text.trim(),
-      marqueModeleAnnee: _celluleMarqueController.text.trim(),
+      marqueModeleAnnee: formattedMarqueModeleAnnee,
+      marque: marque,
+      modele: modele,
+      annee: annee,
       tensionAssignee: _celluleTensionController.text.trim(),
       pouvoirCoupure: _cellulePouvoirController.text.trim(),
       numerotation: _celluleNumerotationController.text,
@@ -2841,10 +2858,16 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   }
   
   void _sauvegarderTransformateur() {
+    final marque = _transfoMarqueController.text.trim();
+    final annee = _transfoAnneeController.text.trim();
+    final formattedMarqueAnnee = [marque, annee].where((s) => s.isNotEmpty).join(' / ');
+
     final finalSyncId = _transfoSyncId ?? 'transfo_${DateTime.now().microsecondsSinceEpoch}';
     final nouveauTransformateur = TransformateurMTBT(
       typeTransformateur: _transfoTypeController.text.trim(),
-      marqueAnnee: _transfoMarqueController.text.trim(),
+      marqueAnnee: formattedMarqueAnnee,
+      marque: marque,
+      anneeFabrication: annee,
       puissanceAssignee: _transfoPuissanceController.text.trim(),
       tensionPrimaireSecondaire: _transfoTensionController.text.trim(),
       relaisBuchholz: _transfoBuchholzController.text,
@@ -3479,7 +3502,11 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           SizedBox(height: isSmallScreen ? 12 : 16),
           _buildDropdown(_celluleFonctionController, 'Fonction de la cellule', InstallationFieldsRegistry.fonctionCelluleOptions, isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
-          _buildTextField(_celluleMarqueController, 'Marque / modèle / année', isSmallScreen, optional: true),
+          _buildTextField(_celluleMarqueController, 'Marque', isSmallScreen, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildTextField(_celluleModeleController, 'Modèle', isSmallScreen, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildDropdown(_celluleAnneeController, 'Année de fabrication', InstallationFieldsRegistry.generateYearsList(), isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
           _buildCellulePhotoPicker(isSmallScreen),
           
@@ -4164,8 +4191,10 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           _buildDropdown(_transfoTypeController, 'Type de transformateur', InstallationFieldsRegistry.typeTransformateurOptions, isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
 
-          // 2. Marque / Année de fabrication
-          _buildTextField(_transfoMarqueController, 'Marque / Année de fabrication', isSmallScreen, optional: true),
+          // 2. Marque & Année de fabrication
+          _buildTextField(_transfoMarqueController, 'Marque', isSmallScreen, optional: true),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          _buildDropdown(_transfoAnneeController, 'Année de fabrication', InstallationFieldsRegistry.generateYearsList(), isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
 
           // 3. Puissance assignée (kVA)
@@ -4636,9 +4665,9 @@ Widget _buildPrioriteButton({
       enabled: false,
       style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.w600, color: Colors.grey.shade800),
       decoration: InputDecoration(
-        labelText: '$label (Automatique)',
+        labelText: '$label',
         labelStyle: const TextStyle(fontSize: 12, color: AppTheme.primaryBlue, fontWeight: FontWeight.bold),
-        prefixIcon: icon != null ? Icon(icon, size: isSmallScreen ? 18 : 20, color: AppTheme.primaryBlue) : const Icon(Icons.link, size: 18, color: AppTheme.primaryBlue),
+        prefixIcon: icon != null ? Icon(icon, size: isSmallScreen ? 18 : 20, color: AppTheme.primaryBlue) : const Icon(Icons.location_on , size: 18, color: AppTheme.primaryBlue),
         filled: true,
         fillColor: Colors.blue.shade50.withOpacity(0.5),
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 8 : 10), borderSide: BorderSide(color: Colors.blue.shade200)),
@@ -4832,6 +4861,8 @@ Widget _buildPrioriteButton({
     _celluleFonctionController.dispose();
     _celluleTypeController.dispose();
     _celluleMarqueController.dispose();
+    _celluleModeleController.dispose();
+    _celluleAnneeController.dispose();
     _celluleTensionController.dispose();
     _cellulePouvoirController.dispose();
     _celluleNumerotationController.dispose();
@@ -4840,6 +4871,7 @@ Widget _buildPrioriteButton({
     _transfoNomController.dispose();
     _transfoTypeController.dispose();
     _transfoMarqueController.dispose();
+    _transfoAnneeController.dispose();
     _transfoPuissanceController.dispose();
     _transfoTensionController.dispose();
     _transfoBuchholzController.dispose();

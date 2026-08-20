@@ -438,6 +438,15 @@ class Cellule {
   @HiveField(19)
   String? repere;
 
+  @HiveField(20)
+  String? marque;
+
+  @HiveField(21)
+  String? modele;
+
+  @HiveField(22)
+  String? annee;
+
   Cellule({
     required this.fonction,
     required this.type,
@@ -459,6 +468,9 @@ class Cellule {
     this.nom,
     this.photo,
     this.repere,
+    this.marque,
+    this.modele,
+    this.annee,
   })  : elementsVerifies = elementsVerifies ?? [],
         photos = photos ?? [],
         observations = observations ?? [],
@@ -475,6 +487,30 @@ class Cellule {
       return repere!.trim();
     }
     return '';
+  }
+
+  /// Résout la marque effective avec fallback rétrocompatible
+  String get effectiveMarque {
+    if (marque != null && marque!.trim().isNotEmpty) {
+      return marque!.trim();
+    }
+    return marqueModeleAnnee.trim();
+  }
+
+  /// Résout le modèle effectif avec fallback
+  String get effectiveModele => modele?.trim() ?? '';
+
+  /// Résout l'année effective avec fallback
+  String get effectiveAnnee => annee?.trim() ?? '';
+
+  /// Formate l'ensemble des informations constructeur
+  String get formattedMarqueModeleAnnee {
+    final m = effectiveMarque;
+    final mod = effectiveModele;
+    final a = effectiveAnnee;
+    final parts = [m, mod, a].where((s) => s.isNotEmpty).toList();
+    if (parts.isNotEmpty) return parts.join(' / ');
+    return marqueModeleAnnee;
   }
 
   Cellule copyWith({
@@ -498,6 +534,9 @@ class Cellule {
     String? nom,
     String? photo,
     String? repere,
+    String? marque,
+    String? modele,
+    String? annee,
   }) {
     return Cellule(
       fonction: fonction ?? this.fonction,
@@ -520,10 +559,14 @@ class Cellule {
       nom: nom ?? this.nom,
       photo: photo ?? this.photo,
       repere: repere ?? this.repere,
+      marque: marque ?? this.marque,
+      modele: modele ?? this.modele,
+      annee: annee ?? this.annee,
     );
   }
 }
 
+// TRANSFORMATEUR MT/BT
 @HiveType(typeId: 10)
 class TransformateurMTBT {
   @HiveField(0)
@@ -593,6 +636,12 @@ class TransformateurMTBT {
   @HiveField(21)
   String? repere;
 
+  @HiveField(22)
+  String? marque;
+
+  @HiveField(23)
+  String? anneeFabrication;
+
   TransformateurMTBT({
     required this.typeTransformateur,
     required this.marqueAnnee,
@@ -616,6 +665,8 @@ class TransformateurMTBT {
     this.nom,
     this.photo,
     this.repere,
+    this.marque,
+    this.anneeFabrication,
   })  : elementsVerifies = elementsVerifies ?? [],
         photos = photos ?? [],
         observations = observations ?? [],
@@ -632,6 +683,26 @@ class TransformateurMTBT {
       return repere!.trim();
     }
     return '';
+  }
+
+  /// Résout la marque effective avec fallback rétrocompatible
+  String get effectiveMarque {
+    if (marque != null && marque!.trim().isNotEmpty) {
+      return marque!.trim();
+    }
+    return marqueAnnee.trim();
+  }
+
+  /// Résout l'année de fabrication effective avec fallback
+  String get effectiveAnneeFabrication => anneeFabrication?.trim() ?? '';
+
+  /// Formate l'ensemble des informations constructeur
+  String get formattedMarqueAnnee {
+    final m = effectiveMarque;
+    final a = effectiveAnneeFabrication;
+    final parts = [m, a].where((s) => s.isNotEmpty).toList();
+    if (parts.isNotEmpty) return parts.join(' / ');
+    return marqueAnnee;
   }
 
   TransformateurMTBT copyWith({
@@ -656,6 +727,9 @@ class TransformateurMTBT {
     String? ik3Max,
     String? nom,
     String? photo,
+    String? repere,
+    String? marque,
+    String? anneeFabrication,
   }) {
     return TransformateurMTBT(
       typeTransformateur: typeTransformateur ?? this.typeTransformateur,

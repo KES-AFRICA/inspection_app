@@ -44,6 +44,9 @@ class CelluleEntity {
   final String? nom;
   final String? photo;
   final String? repere;
+  final String? marque;
+  final String? modele;
+  final String? annee;
 
   const CelluleEntity({
     required this.fonction,
@@ -65,6 +68,9 @@ class CelluleEntity {
     this.nom,
     this.photo,
     this.repere,
+    this.marque,
+    this.modele,
+    this.annee,
   });
 
   CelluleEntity copyWith({
@@ -87,6 +93,9 @@ class CelluleEntity {
     String? nom,
     String? photo,
     String? repere,
+    String? marque,
+    String? modele,
+    String? annee,
   }) {
     return CelluleEntity(
       fonction: fonction ?? this.fonction,
@@ -108,6 +117,9 @@ class CelluleEntity {
       nom: nom ?? this.nom,
       photo: photo ?? this.photo,
       repere: repere ?? this.repere,
+      marque: marque ?? this.marque,
+      modele: modele ?? this.modele,
+      annee: annee ?? this.annee,
     );
   }
 }
@@ -129,6 +141,8 @@ class TransformateurMTBTEntity {
   final String? nom;
   final String? photo;
   final String? repere;
+  final String? marque;
+  final String? anneeFabrication;
 
   const TransformateurMTBTEntity({
     required this.typeTransformateur,
@@ -147,6 +161,8 @@ class TransformateurMTBTEntity {
     this.nom,
     this.photo,
     this.repere,
+    this.marque,
+    this.anneeFabrication,
   });
 }
 

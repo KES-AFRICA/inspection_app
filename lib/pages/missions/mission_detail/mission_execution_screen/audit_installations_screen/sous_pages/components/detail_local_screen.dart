@@ -2559,8 +2559,12 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
           _buildInfoRow('Repère', cellule.getEffectiveRepere(_local.nom)),
           if (cellule.fonction.isNotEmpty)
             _buildInfoRow('Fonction', cellule.fonction),
-          if (cellule.marqueModeleAnnee.isNotEmpty)
-            _buildInfoRow('Marque/Modèle', cellule.marqueModeleAnnee),
+          if (cellule.effectiveMarque.isNotEmpty)
+            _buildInfoRow('Marque', cellule.effectiveMarque),
+          if (cellule.effectiveModele.isNotEmpty)
+            _buildInfoRow('Modèle', cellule.effectiveModele),
+          if (cellule.effectiveAnnee.isNotEmpty)
+            _buildInfoRow('Année de fabrication', cellule.effectiveAnnee),
           if (cellule.tensionAssignee.isNotEmpty)
             _buildInfoRow('Tension assignée', cellule.tensionAssignee),
           if (cellule.pouvoirCoupure.isNotEmpty)
@@ -2669,8 +2673,10 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
             ),
             SizedBox(height: 8),
           ],
-          if (transfo.marqueAnnee.isNotEmpty)
-            _buildInfoRow('Marque/Année', transfo.marqueAnnee),
+          if (transfo.effectiveMarque.isNotEmpty)
+            _buildInfoRow('Marque', transfo.effectiveMarque),
+          if (transfo.effectiveAnneeFabrication.isNotEmpty)
+            _buildInfoRow('Année de fabrication', transfo.effectiveAnneeFabrication),
           if (transfo.puissanceAssignee.isNotEmpty)
             _buildInfoRow('Puissance', transfo.puissanceAssignee),
           if (transfo.tensionPrimaireSecondaire.isNotEmpty)

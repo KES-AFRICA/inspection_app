@@ -59,6 +59,9 @@ class AuditInstallationsMapper {
       nom: model.nom,
       photo: model.photo,
       repere: model.repere,
+      marque: model.marque,
+      modele: model.modele,
+      annee: model.annee,
     );
   }
 
@@ -83,6 +86,9 @@ class AuditInstallationsMapper {
       nom: entity.nom,
       photo: entity.photo,
       repere: entity.repere,
+      marque: entity.marque,
+      modele: entity.modele,
+      annee: entity.annee,
     );
   }
 
@@ -105,6 +111,8 @@ class AuditInstallationsMapper {
       nom: model.nom,
       photo: model.photo,
       repere: model.repere,
+      marque: model.marque,
+      anneeFabrication: model.anneeFabrication,
     );
   }
 
@@ -126,6 +134,8 @@ class AuditInstallationsMapper {
       nom: entity.nom,
       photo: entity.photo,
       repere: entity.repere,
+      marque: entity.marque,
+      anneeFabrication: entity.anneeFabrication,
     );
   }
 

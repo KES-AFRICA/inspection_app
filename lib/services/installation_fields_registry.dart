@@ -43,9 +43,16 @@ class InstallationFieldsRegistry {
   static const String keyPuissanceUcc = 'Puissance UCC';
   static const String keyIk3Max = 'IK3 MAX';
 
-  // ══════════════════════════════════════════════════════════════════════
-  // REFERENTIELS D'OPTIONS DE SÉLECTION (SINGLE SOURCE OF TRUTH)
-  // ══════════════════════════════════════════════════════════════════════
+  /// Génère dynamiquement la liste des années valides à partir de l'année actuelle jusqu'à [startYear].
+  static List<String> generateYearsList({int startYear = 1950}) {
+    final currentYear = DateTime.now().year;
+    final List<String> years = [];
+    for (int y = currentYear; y >= startYear; y--) {
+      years.add(y.toString());
+    }
+    return years;
+  }
+
   static const List<String> natureReseauOptions = ['Aérien', 'Souterrain'];
   static const List<String> fonctionCelluleOptions = [
     'Cellule arrivée câble',
