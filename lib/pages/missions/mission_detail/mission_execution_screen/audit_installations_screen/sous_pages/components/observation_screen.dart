@@ -409,7 +409,7 @@ class _ObservationScreenState extends State<ObservationScreen> {
                       style: TextStyle(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
-                        color: Colors.black80,
+                        color: Colors.black87,
                       ),
                     ),
                     SizedBox(height: 2),

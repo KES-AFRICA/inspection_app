@@ -175,7 +175,9 @@ class _ObservationEnrichieWidgetState extends State<ObservationEnrichieWidget> {
         ],
       ),
     );
-    Widget _buildModernObservationField(BuildContext context) {
+  }
+
+  Widget _buildModernObservationField(BuildContext context) {
     final hasNoObservation = widget.element.observation == null || widget.element.observation!.trim().isEmpty;
     final showRequiredBorder = widget.showPriority && hasNoObservation;
     final normResults = (widget.element.observation != null && widget.element.observation!.trim().length >= 3)
@@ -383,7 +385,7 @@ class _ObservationEnrichieWidgetState extends State<ObservationEnrichieWidget> {
                 ),
               ],
             ),
-          );  ),
+          ),
       ],
     );
   }
