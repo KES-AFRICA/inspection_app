@@ -605,7 +605,7 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       observationsParafoudreEnrichies:
           (fields[23] as List?)?.cast<ElementControle>(),
       presenceDefautThermo: fields[24] as String?,
-      accessible: fields[25] == null ? true : fields[25] as bool,
+      accessible: fields[25] == null ? true : (fields[25] as bool? ?? true),
     );
   }
 

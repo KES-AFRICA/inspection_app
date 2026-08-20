@@ -7178,7 +7178,7 @@ class PdfReportService {
                 : '-';
             final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : normType;
 
-            addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType, accessible: coffret.accessible);
+            addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType, accessible: (coffret as dynamic).accessible != false);
           }
         }
       }
@@ -7197,7 +7197,7 @@ class PdfReportService {
               : '-';
           final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : normType;
 
-          addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType, accessible: coffret.accessible);
+          addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType, accessible: (coffret as dynamic).accessible != false);
         }
       }
       for (final local in zone.locaux) {
@@ -7247,7 +7247,7 @@ class PdfReportService {
                 : '-';
             final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : normType;
 
-            addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType, accessible: coffret.accessible);
+            addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType, accessible: (coffret as dynamic).accessible != false);
           }
         }
 
@@ -7260,7 +7260,7 @@ class PdfReportService {
                   : '-';
               final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : normType;
 
-              addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType, accessible: coffret.accessible);
+              addEquipement(refObj: coffret, repere: rep, nom: nom, type: normType, accessible: (coffret as dynamic).accessible != false);
             }
           }
         }
@@ -10936,7 +10936,7 @@ class PdfReportService {
       ),
     );
 
-    if (coffret.accessible == false) {
+    if ((coffret as dynamic).accessible == false) {
       widgets.add(pw.SizedBox(height: 4));
       widgets.add(
         pw.Container(
