@@ -23,9 +23,9 @@ class NormativeSearchSuggestionsWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasRef = selectedReferenceNormative != null && selectedReferenceNormative!.trim().isNotEmpty;
-    final results = (queryText.trim().length >= 3)
-        ? NormativeSearchService.search(queryText.trim())
-        : <NormativeSearchResult>[];
+    final isQueryValid = queryText.trim().length >= 3;
+    final results = isQueryValid ? NormativeSearchService.search(queryText.trim()) : <NormativeSearchResult>[];
+    final showSuggestionsZone = !hasRef && isQueryValid;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -99,9 +99,9 @@ class NormativeSearchSuggestionsWidget extends StatelessWidget {
           ),
 
         // ─────────────────────────────────────────────────────────────
-        // ZONE DE SUGGESTIONS SCROLLABLE (Type Select / Dropdown)
+        // ZONE DE SUGGESTIONS SCROLLABLE (Affichée si pas de norme rattachée et au moins 3 caractères)
         // ─────────────────────────────────────────────────────────────
-        if (!hasRef && results.isNotEmpty)
+        if (showSuggestionsZone)
           Container(
             margin: const EdgeInsets.only(top: 6, bottom: 4),
             padding: const EdgeInsets.all(10),
@@ -121,7 +121,7 @@ class NormativeSearchSuggestionsWidget extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                // En-tête sans icône et sans risque d'overflow
+                // En-tête sans risque d'overflow
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -142,15 +142,17 @@ class NormativeSearchSuggestionsWidget extends StatelessWidget {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFE0E7FF),
+                        color: results.isNotEmpty ? const Color(0xFFE0E7FF) : const Color(0xFFF1F5F9),
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: Text(
-                        '${results.length} correspondance${results.length > 1 ? "s" : ""}',
-                        style: const TextStyle(
+                        results.isNotEmpty
+                            ? '${results.length} correspondance${results.length > 1 ? "s" : ""}'
+                            : 'Aucun résultat',
+                        style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF3730A3),
+                          color: results.isNotEmpty ? const Color(0xFF3730A3) : const Color(0xFF64748B),
                         ),
                       ),
                     ),
@@ -158,66 +160,86 @@ class NormativeSearchSuggestionsWidget extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
 
-                // Liste scrollable limitée en hauteur (Select Dropdown style)
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 180),
-                  child: ListView.separated(
-                    shrinkWrap: true,
-                    padding: EdgeInsets.zero,
-                    itemCount: results.length,
-                    separatorBuilder: (context, index) => const SizedBox(height: 6),
-                    itemBuilder: (context, index) {
-                      final res = results[index];
-                      return InkWell(
-                        onTap: () => onSelect(res),
-                        borderRadius: BorderRadius.circular(8),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: const Color(0xFFCBD5E1)),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      res.pointVerification,
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                        color: Color(0xFF0F172A),
-                                        height: 1.25,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      res.referenceNormative,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.bold,
-                                        color: Color(0xFF1E40AF),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              const Icon(
-                                Icons.add_circle_outline_rounded,
-                                color: Color(0xFF2563EB),
-                                size: 18,
-                              ),
-                            ],
+                // Contenu : Résultats ou message d'absence de correspondance
+                if (results.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.info_outline_rounded, size: 16, color: Color(0xFF94A3B8)),
+                        const SizedBox(width: 8),
+                        const Expanded(
+                          child: Text(
+                            'Aucune correspondance normative trouvée pour cette saisie.',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF64748B),
+                            ),
                           ),
                         ),
-                      );
-                    },
+                      ],
+                    ),
+                  )
+                else
+                  ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 180),
+                    child: ListView.separated(
+                      shrinkWrap: true,
+                      padding: EdgeInsets.zero,
+                      itemCount: results.length,
+                      separatorBuilder: (context, index) => const SizedBox(height: 6),
+                      itemBuilder: (context, index) {
+                        final res = results[index];
+                        return InkWell(
+                          onTap: () => onSelect(res),
+                          borderRadius: BorderRadius.circular(8),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: const Color(0xFFCBD5E1)),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        res.pointVerification,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                          color: Color(0xFF0F172A),
+                                          height: 1.25,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        res.referenceNormative,
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.bold,
+                                          color: Color(0xFF1E40AF),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                const Icon(
+                                  Icons.add_circle_outline_rounded,
+                                  color: Color(0xFF2563EB),
+                                  size: 18,
+                                ),
+                              ],
+                            ),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                ),
               ],
             ),
           ),
