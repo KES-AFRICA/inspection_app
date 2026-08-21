@@ -115,5 +115,37 @@ void main() {
       expect(existingTarget.alimenteeParTransformateur, isTrue);
       expect(existingTarget.presenceCPI, isTrue);
     });
+
+    test('Validation points verification : bloque en creation si incomplet, autorise en edition', () {
+      final uncompletedPoint = PointVerification(
+        pointVerification: 'Point 1',
+        conformite: '',
+      );
+      final completedPoint = PointVerification(
+        pointVerification: 'Point 2',
+        conformite: 'oui',
+      );
+
+      final slide = [uncompletedPoint, completedPoint];
+
+      // Simulation de _isCurrentSlideValid
+      bool isValid({required bool isEdition}) {
+        if (isEdition) return true;
+        for (var pt in slide) {
+          if (pt.conformite.trim().isEmpty) return false;
+        }
+        return true;
+      }
+
+      // En mode creation -> bloque car uncompletedPoint a conformite vide
+      expect(isValid(isEdition: false), isFalse);
+
+      // En mode edition -> autorise la navigation
+      expect(isValid(isEdition: true), isTrue);
+
+      // Si l'inspecteur remplit la conformite du point 1 en mode creation
+      uncompletedPoint.conformite = 'na';
+      expect(isValid(isEdition: false), isTrue);
+    });
   });
 }

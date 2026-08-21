@@ -2003,6 +2003,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
 // ÉTAPE 4 : POINTS DE VÉRIFICATION (avec photos)
 // ================================================================
 class _EtapePointsVerification extends StatefulWidget {
+  final bool isEdition;
   final List<PointVerification> pointsVerification;
   final Map<int, List<String>> pointSuggestions;
   final Map<int, bool> pointLoading;
@@ -2014,6 +2015,7 @@ class _EtapePointsVerification extends StatefulWidget {
 
   const _EtapePointsVerification({
     super.key,
+    required this.isEdition,
     required this.pointsVerification,
     required this.pointSuggestions,
     required this.pointLoading,
@@ -2066,10 +2068,11 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
   bool get _isLastSlide => _currentSlide == _totalSlides - 1;
 
   bool _isCurrentSlideValid() {
+    if (widget.isEdition) return true;
     if (_pointsSlides.isEmpty) return true;
     final currentPoints = _pointsSlides[_currentSlide];
     for (var point in currentPoints) {
-      if (point.conformite.isEmpty) return false;
+      if (point.conformite.trim().isEmpty) return false;
       if (point.conformite == 'non' || point.conformite == 'na') {
         point.priorite ??= 3;
         if (point.conformite == 'non') {
@@ -2086,10 +2089,10 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
   int _getPointIndex(PointVerification point) => widget.pointsVerification.indexOf(point);
 
   void nextSlide() {
-    if (!_isCurrentSlideValid()) {
+    if (!widget.isEdition && !_isCurrentSlideValid()) {
       for (var point in _pointsSlides[_currentSlide]) {
-        if (point.conformite.isEmpty) {
-          _showError('Veuillez sélectionner Oui ou Non pour tous les points');
+        if (point.conformite.trim().isEmpty) {
+          _showError('Veuillez renseigner la conformité pour tous les points du slide avant de continuer');
           return;
         }
         if (point.conformite == 'non') {
@@ -2125,7 +2128,7 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
   }
 
   bool canGoNext() {
-    if (!_isCurrentSlideValid()) return false;
+    if (!widget.isEdition && !_isCurrentSlideValid()) return false;
     return _isLastSlide;
   }
 
@@ -3228,7 +3231,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         final meta = DispositionsConstructivesRegistry.getCoffretMetadata(point, coffretType: type);
         return PointVerification(
           pointVerification: point,
-          conformite: 'Sans objet',
+          conformite: '',
           observation: null,
           referenceNormative: meta?.referenceNormative,
           priorite: null,
@@ -3239,6 +3242,10 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         DispositionsConstructivesRegistry.ensureCompleteInverseurChecklist(_pointsVerification);
       } else {
         DispositionsConstructivesRegistry.ensureCompleteCoffretChecklist(_pointsVerification);
+      }
+
+      for (var p in _pointsVerification) {
+        p.conformite = '';
       }
 
       _hasObservation.clear();
@@ -3897,6 +3904,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                   if (_selectedType != null && _pointsVerification.isNotEmpty && _accessible)
                     _EtapePointsVerification(
                       key: _etapePointsKey,
+                      isEdition: widget.isEdition,
                       pointsVerification: _pointsVerification,
                       pointSuggestions: _pointSuggestions,
                       pointLoading: _pointLoading,
