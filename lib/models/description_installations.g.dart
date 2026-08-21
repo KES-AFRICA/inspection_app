@@ -42,7 +42,7 @@ class DescriptionInstallationsAdapter
       nombreAlimentationSite: fields[21] as String?,
       presenceIacmAlimentationSite: fields[22] as String?,
       foudreObservations: (fields[23] as List?)?.cast<ObservationLibre>(),
-      updatedAt: fields[16] as DateTime,
+      updatedAt: (fields[16] as DateTime?) ?? DateTime.now(),
     );
   }
 

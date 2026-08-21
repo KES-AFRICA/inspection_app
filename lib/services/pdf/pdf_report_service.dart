@@ -12813,23 +12813,7 @@ class PdfReportService {
                     ),
                     pw.Padding(
                       padding: const pw.EdgeInsets.all(6),
-                      child: pw.Column(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          _bodyText(obs.texte),
-                          if (obs.hasNormativeReference) ...[
-                            pw.SizedBox(height: 3),
-                            pw.Text(
-                              'Réf. normativ : ${obs.referenceNormative}',
-                              style: pw.TextStyle(
-                                font: _fontBold,
-                                fontSize: fsSmall,
-                                color: headerColor,
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                      child: _bodyText(obs.texte),
                     ),
                   ],
                 );
