@@ -13156,15 +13156,15 @@ class PdfReportService {
             defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
             border: pw.TableBorder.all(color: borderColor, width: 0.4),
             columnWidths: const {
-              0: pw.FlexColumnWidth(1.4), // Localisation
-              1: pw.FlexColumnWidth(1.2), // Identification de la prise de terre
-              2: pw.FlexColumnWidth(1.2), // Condition de mesure
-              3: pw.FlexColumnWidth(1.4), // Nature de la prise de terre
-              4: pw.FlexColumnWidth(1.1), // Méthode de mesure
-              5: pw.FlexColumnWidth(0.8), // Valeur de la mesure
-              6: pw.FlexColumnWidth(1.2), // Interconnecté à d'autre prise
-              7: pw.FlexColumnWidth(1.3), // Observation
-              8: pw.FlexColumnWidth(1.4), // Photo
+              0: pw.FlexColumnWidth(1.1), // Localisation
+              1: pw.FlexColumnWidth(1.1), // Identification
+              2: pw.FlexColumnWidth(1.0), // Condition
+              3: pw.FlexColumnWidth(1.1), // Nature
+              4: pw.FlexColumnWidth(1.0), // Méthode
+              5: pw.FlexColumnWidth(0.8), // Valeur
+              6: pw.FlexColumnWidth(0.9), // Interconnecté
+              7: pw.FlexColumnWidth(1.2), // Observation
+              8: pw.FlexColumnWidth(2.4), // Photo (Largeur propice pour lisibilité)
             },
             children: [
               _tableHeaderRow([
@@ -13249,12 +13249,11 @@ class PdfReportService {
                       ),
                       photoImg != null
                           ? pw.Container(
+                              height: 65,
                               padding: const pw.EdgeInsets.all(3),
                               alignment: pw.Alignment.center,
                               child: pw.Image(
                                 photoImg,
-                                width: 40,
-                                height: 40,
                                 fit: pw.BoxFit.contain,
                               ),
                             )
