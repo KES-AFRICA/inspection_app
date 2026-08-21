@@ -902,6 +902,7 @@ class BackupService {
                   'valeurMesure': p.valeurMesure,
                   'observation': p.observation,
                   'interconnecteAutrePrise': p.interconnecteAutrePrise,
+                  'photo': p.photo,
                 })
             .toList(),
         'essaisDeclenchement': m.essaisDeclenchement
@@ -925,6 +926,7 @@ class BackupService {
                   'designationTableau': c.designationTableau,
                   'origineMesure': c.origineMesure,
                   'observation': c.observation,
+                  'essai': c.essai,
                 })
             .toList(),
         'essaisIsolement': m.essaisIsolement
@@ -2544,6 +2546,7 @@ class BackupService {
                     observation: m['observation'] as String?,
                     interconnecteAutrePrise:
                         m['interconnecteAutrePrise'] as String?,
+                    photo: m['photo'] as String?,
                   );
                 })
                 .toList() ??
@@ -2575,6 +2578,7 @@ class BackupService {
                     designationTableau: m['designationTableau'] as String? ?? '',
                     origineMesure: m['origineMesure'] as String? ?? '',
                     observation: m['observation'] as String?,
+                    essai: m['essai'] as String?,
                   );
                 })
                 .toList() ??

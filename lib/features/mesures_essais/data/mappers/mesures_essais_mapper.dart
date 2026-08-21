@@ -27,6 +27,7 @@ class MesuresEssaisMapper {
           valeurMesure: pt.valeurMesure,
           observation: pt.observation,
           interconnecteAutrePrise: pt.interconnecteAutrePrise,
+          photo: pt.photo,
         );
       }).toList(),
       avisMesuresTerre: AvisMesuresTerreEntity(
@@ -77,6 +78,7 @@ class MesuresEssaisMapper {
           designationTableau: cr.designationTableau,
           origineMesure: cr.origineMesure,
           observation: cr.observation,
+          essai: cr.essai,
         );
       }).toList(),
     );
@@ -105,6 +107,7 @@ class MesuresEssaisMapper {
           valeurMesure: pt.valeurMesure,
           observation: pt.observation,
           interconnecteAutrePrise: pt.interconnecteAutrePrise,
+          photo: pt.photo,
         );
       }).toList(),
       avisMesuresTerre: AvisMesuresTerre(
@@ -155,6 +158,7 @@ class MesuresEssaisMapper {
           designationTableau: cr.designationTableau,
           origineMesure: cr.origineMesure,
           observation: cr.observation,
+          essai: cr.essai,
         );
       }).toList(),
     );

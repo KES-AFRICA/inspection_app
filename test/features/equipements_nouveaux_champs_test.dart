@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
-import 'package:inspec_app/features/audit_installations/domain/entities/audit_installations_entities.dart';
+import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/features/audit_installations/data/mappers/audit_installations_mapper.dart';
 import 'package:inspec_app/services/dispositions_constructives_registry.dart';
 
@@ -199,19 +199,60 @@ void main() {
         presenceParafoudre: false,
       );
 
-      final audit = AuditInstallationsElectriques(
-        missionId: 'm1',
-        updatedAt: DateTime.now(),
-        basseTensionZones: [
-          BasseTensionZone(
-            nom: 'Zone 1',
-            coffretsDirects: [coffretAvecPF, coffretSansPF],
-          ),
-        ],
-      );
-
       expect(coffretAvecPF.presenceParafoudre, isTrue);
       expect(coffretSansPF.presenceParafoudre, isFalse);
+    });
+
+    test('PriseTerre conserve et restaure le champ photo, avec retrocompatibilite null', () {
+      final ptAvecPhoto = PriseTerre(
+        localisation: 'Extérieur',
+        identification: 'PT 1',
+        conditionPriseTerre: 'Barette fermée',
+        naturePriseTerre: 'Piquet de terre',
+        methodeMesure: 'Méthode des 62%',
+        valeurMesure: 12.5,
+        photo: '/path/to/photo.jpg',
+      );
+
+      expect(ptAvecPhoto.photo, equals('/path/to/photo.jpg'));
+
+      final ptLegacy = PriseTerre(
+        localisation: 'Local technique',
+        identification: 'PT 2',
+        conditionPriseTerre: 'Barette ouverte',
+        naturePriseTerre: 'Autre',
+        methodeMesure: 'Impédance de boucle',
+      );
+
+      expect(ptLegacy.photo, isNull);
+    });
+
+    test('ContinuiteResistance conserve et restaure le champ essai (Satisfaisant / Non satisfaisant / Sans objet / null)', () {
+      final continuiteSat = ContinuiteResistance(
+        localisation: 'TGBT',
+        designationTableau: 'Tableau Principal',
+        origineMesure: 'PE Principal',
+        essai: 'Satisfaisant',
+      );
+
+      expect(continuiteSat.essai, equals('Satisfaisant'));
+
+      final continuiteNonSat = ContinuiteResistance(
+        localisation: 'Poste HTA',
+        designationTableau: 'Cellule Arrivée',
+        origineMesure: 'Terre masse',
+        essai: 'Non satisfaisant',
+      );
+
+      expect(continuiteNonSat.essai, equals('Non satisfaisant'));
+
+      final continuiteLegacy = ContinuiteResistance(
+        localisation: 'Local Technique',
+        designationTableau: 'TD1',
+        origineMesure: 'PE TD1',
+      );
+
+      expect(continuiteLegacy.essai, isNull);
     });
   });
 }

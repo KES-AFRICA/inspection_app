@@ -27,6 +27,7 @@ class PriseTerreEntity {
   final double? valeurMesure;
   final String? observation;
   final String? interconnecteAutrePrise;
+  final String? photo;
 
   const PriseTerreEntity({
     required this.localisation,
@@ -37,6 +38,7 @@ class PriseTerreEntity {
     this.valeurMesure,
     this.observation,
     this.interconnecteAutrePrise,
+    this.photo,
   });
 }
 
@@ -85,12 +87,14 @@ class ContinuiteResistanceEntity {
   final String designationTableau;
   final String origineMesure;
   final String? observation;
+  final String? essai;
 
   const ContinuiteResistanceEntity({
     required this.localisation,
     required this.designationTableau,
     required this.origineMesure,
     this.observation,
+    this.essai,
   });
 }
 

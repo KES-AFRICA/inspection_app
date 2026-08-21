@@ -1,11 +1,15 @@
 // lib/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/prises_terre_screen.dart
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/utils/image_compress_helper.dart';
 
 class PrisesTerreScreen extends ConsumerStatefulWidget {
   final Mission mission;
@@ -64,6 +68,7 @@ class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
         valeurMesure: double.tryParse(result['valeurMesure']?.toString() ?? ''),
         observation: result['observation'],
         interconnecteAutrePrise: result['interconnecteAutrePrise'],
+        photo: result['photo'],
       );
       
       final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
@@ -99,6 +104,7 @@ class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
             'valeurMesure': prise.valeurMesure?.toString() ?? '',
             'observation': prise.observation ?? '',
             'interconnecteAutrePrise': prise.interconnecteAutrePrise ?? '',
+            'photo': prise.photo ?? '',
           },
           conditionOptions: _conditionOptions,
         ),
@@ -115,6 +121,7 @@ class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
         valeurMesure: double.tryParse(result['valeurMesure']?.toString() ?? ''),
         observation: result['observation'],
         interconnecteAutrePrise: result['interconnecteAutrePrise'],
+        photo: result['photo'],
       );
       
       final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
@@ -225,6 +232,8 @@ class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
                 itemCount: _prisesTerre.length,
                 itemBuilder: (context, index) {
                   final prise = _prisesTerre[index];
+                  final hasPhoto = prise.photo != null && prise.photo!.trim().isNotEmpty && File(prise.photo!).existsSync();
+
                   return Card(
                     margin: const EdgeInsets.only(bottom: 12),
                     elevation: 2,
@@ -262,6 +271,21 @@ class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
                             ],
                           ),
                           const Divider(),
+                          if (hasPhoto) ...[
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Container(
+                                height: 120,
+                                width: double.infinity,
+                                color: Colors.grey.shade100,
+                                child: Image.file(
+                                  File(prise.photo!),
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                          ],
                           _buildInfoRow('Localisation', prise.localisation, isSmallScreen),
                           _buildInfoRow('Condition prise de terre', prise.conditionPriseTerre, isSmallScreen),
                           _buildInfoRow('Nature prise de terre', prise.naturePriseTerre, isSmallScreen),
@@ -318,11 +342,11 @@ class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
 }
 
 // ============================================================
-// ÉCRAN D'AJOUT/MODIFICATION D'UNE PRISE DE TERRE
+// Formulaire Ajouter / Modifier Prise de terre
 // ============================================================
 class _AjouterPriseTerreScreen extends StatefulWidget {
   final Mission mission;
-  final Map<String, String>? initialData;
+  final Map<String, dynamic>? initialData;
   final List<String> conditionOptions;
 
   const _AjouterPriseTerreScreen({
@@ -337,13 +361,16 @@ class _AjouterPriseTerreScreen extends StatefulWidget {
 
 class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
   final _identificationController = TextEditingController();
+  final _valeurMesureController = TextEditingController();
+  final _observationController = TextEditingController();
+  final ImagePicker _picker = ImagePicker();
+
   String? _selectedLocalisation;
   String? _conditionMesure;
   String? _naturePriseTerre;
   String? _methodeMesure;
   String? _interconnecteAutrePrise;
-  final _valeurMesureController = TextEditingController();
-  final _observationController = TextEditingController();
+  String? _photoPath;
 
   List<String> _localisationsOptions = [];
 
@@ -376,6 +403,8 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
       _observationController.text = widget.initialData!['observation'] ?? '';
       final interconnecte = widget.initialData!['interconnecteAutrePrise'];
       _interconnecteAutrePrise = (interconnecte != null && interconnecte.isNotEmpty) ? interconnecte : null;
+      final photo = widget.initialData!['photo'];
+      _photoPath = (photo != null && photo.toString().trim().isNotEmpty) ? photo.toString().trim() : null;
 
       if (_selectedLocalisation != null &&
           _selectedLocalisation!.isNotEmpty &&
@@ -409,6 +438,77 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
     super.dispose();
   }
 
+  Future<void> _pickPhoto(ImageSource source) async {
+    try {
+      final XFile? photo = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1024,
+        maxHeight: 1024,
+      );
+
+      if (photo != null) {
+        final appDir = await getApplicationDocumentsDirectory();
+        final photosDir = Directory('${appDir.path}/audit_photos/prises_terre');
+        if (!await photosDir.exists()) {
+          await photosDir.create(recursive: true);
+        }
+        final fileName = 'pt_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        final targetPath = '${photosDir.path}/$fileName';
+
+        final savedFile = await ImageCompressHelper.compressImage(File(photo.path), targetPath);
+        setState(() {
+          _photoPath = savedFile.path;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur sélection photo: $e'), backgroundColor: Colors.red),
+        );
+      }
+    }
+  }
+
+  void _showPhotoOptions() {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: AppTheme.primaryBlue),
+              title: const Text('Prendre une photo'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickPhoto(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: AppTheme.primaryBlue),
+              title: const Text('Choisir depuis la galerie'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickPhoto(ImageSource.gallery);
+              },
+            ),
+            if (_photoPath != null)
+              ListTile(
+                leading: const Icon(Icons.delete, color: Colors.red),
+                title: const Text('Supprimer la photo'),
+                onTap: () {
+                  Navigator.pop(context);
+                  setState(() {
+                    _photoPath = null;
+                  });
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   bool _isFormValid() {
     return _selectedLocalisation != null &&
            _selectedLocalisation!.trim().isNotEmpty &&
@@ -435,6 +535,7 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
       'valeurMesure': _valeurMesureController.text.trim(),
       'observation': _observationController.text.trim(),
       'interconnecteAutrePrise': _interconnecteAutrePrise,
+      'photo': _photoPath,
     };
 
     Navigator.pop(context, result);
@@ -443,6 +544,7 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
   @override
   Widget build(BuildContext context) {
     final isSmallScreen = MediaQuery.of(context).size.width < 360;
+    final hasPhoto = _photoPath != null && _photoPath!.trim().isNotEmpty && File(_photoPath!).existsSync();
 
     return Scaffold(
       appBar: AppBar(
@@ -543,6 +645,76 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
               // Valeur mesurée (optionnel)
               _buildTextField(_valeurMesureController, 'Valeur mesurée (Ω)', isSmallScreen,
                   keyboardType: TextInputType.number),
+              const SizedBox(height: 14),
+              
+              // Photo (Optionnel)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Photo d\'illustration',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 13 : 14,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.grey.shade700,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  if (hasPhoto)
+                    Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(10),
+                          child: Image.file(
+                            File(_photoPath!),
+                            height: 160,
+                            width: double.infinity,
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                        Positioned(
+                          top: 8,
+                          right: 8,
+                          child: CircleAvatar(
+                            backgroundColor: Colors.black.withOpacity(0.6),
+                            child: IconButton(
+                              icon: const Icon(Icons.edit, color: Colors.white, size: 20),
+                              onPressed: _showPhotoOptions,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  else
+                    InkWell(
+                      onTap: _showPhotoOptions,
+                      child: Container(
+                        height: 100,
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.add_a_photo_outlined, color: AppTheme.primaryBlue, size: 32),
+                            const SizedBox(height: 6),
+                            Text(
+                              'Ajouter une photo',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: AppTheme.primaryBlue,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
               const SizedBox(height: 14),
               
               // Observation (optionnel)

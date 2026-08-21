@@ -151,6 +151,9 @@ class PriseTerre {
   @HiveField(7)
   String? interconnecteAutrePrise; // "Oui" ou "Non"
 
+  @HiveField(8)
+  String? photo; // Chemin de la photo d'illustration
+
   PriseTerre({
     required this.localisation,
     required this.identification,
@@ -160,6 +163,7 @@ class PriseTerre {
     this.valeurMesure,
     this.observation,
     this.interconnecteAutrePrise,
+    this.photo,
   });
 
   factory PriseTerre.create({
@@ -325,11 +329,15 @@ class ContinuiteResistance {
   @HiveField(3)
   String? observation;
 
+  @HiveField(4)
+  String? essai; // "Satisfaisant", "Non satisfaisant", "Sans objet"
+
   ContinuiteResistance({
     required this.localisation,
     required this.designationTableau,
     required this.origineMesure,
     this.observation,
+    this.essai,
   });
 
   factory ContinuiteResistance.create({

@@ -190,13 +190,14 @@ class PriseTerreAdapter extends TypeAdapter<PriseTerre> {
       valeurMesure: fields[5] as double?,
       observation: fields[6] as String?,
       interconnecteAutrePrise: fields[7] as String?,
+      photo: fields[8] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, PriseTerre obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.localisation)
       ..writeByte(1)
@@ -212,7 +213,9 @@ class PriseTerreAdapter extends TypeAdapter<PriseTerre> {
       ..writeByte(6)
       ..write(obj.observation)
       ..writeByte(7)
-      ..write(obj.interconnecteAutrePrise);
+      ..write(obj.interconnecteAutrePrise)
+      ..writeByte(8)
+      ..write(obj.photo);
   }
 
   @override
@@ -346,13 +349,14 @@ class ContinuiteResistanceAdapter extends TypeAdapter<ContinuiteResistance> {
       designationTableau: fields[1] as String,
       origineMesure: fields[2] as String,
       observation: fields[3] as String?,
+      essai: fields[4] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ContinuiteResistance obj) {
     writer
-      ..writeByte(4)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.localisation)
       ..writeByte(1)
@@ -360,7 +364,9 @@ class ContinuiteResistanceAdapter extends TypeAdapter<ContinuiteResistance> {
       ..writeByte(2)
       ..write(obj.origineMesure)
       ..writeByte(3)
-      ..write(obj.observation);
+      ..write(obj.observation)
+      ..writeByte(4)
+      ..write(obj.essai);
   }
 
   @override

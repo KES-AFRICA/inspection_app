@@ -157,19 +157,21 @@ class _ContinuiteResistanceScreenState extends ConsumerState<ContinuiteResistanc
   }
 
   Widget _buildMesureCard(ContinuiteResistance mesure, int index) {
-    
-    Color cardColor;
-      cardColor = Colors.grey;
-    
+    Color cardColor = Colors.grey;
+    if (mesure.essai == 'Satisfaisant') {
+      cardColor = Colors.green;
+    } else if (mesure.essai == 'Non satisfaisant') {
+      cardColor = Colors.red;
+    } else if (mesure.essai == 'Sans objet') {
+      cardColor = Colors.grey.shade700;
+    }
 
-    return  Container(
+    return Container(
       margin: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.grey.shade50,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(
-          color: Colors.grey
-        ),
+        border: Border.all(color: Colors.grey.shade300),
       ),
       child: InkWell(
         onTap: () => _editerMesure(index),
@@ -182,23 +184,47 @@ class _ContinuiteResistanceScreenState extends ConsumerState<ContinuiteResistanc
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Container(
-                    padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: cardColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: cardColor),
-                    ),
+                  Expanded(
                     child: Row(
                       children: [
-                        Text(
-                          mesure.designationTableau,
-                          style: TextStyle(
-                            fontSize: 14,
-                            fontWeight: FontWeight.bold,
-                            color: cardColor,
+                        Flexible(
+                          child: Container(
+                            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primaryBlue.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: AppTheme.primaryBlue),
+                            ),
+                            child: Text(
+                              mesure.designationTableau,
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: AppTheme.primaryBlue,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ),
+                        if (mesure.essai != null && mesure.essai!.isNotEmpty) ...[
+                          SizedBox(width: 8),
+                          Container(
+                            padding: EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: cardColor.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: cardColor),
+                            ),
+                            child: Text(
+                              mesure.essai!,
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: cardColor,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -418,15 +444,15 @@ class AjouterContinuiteResistanceScreen extends ConsumerStatefulWidget {
 
 class _AjouterContinuiteResistanceScreenState extends ConsumerState<AjouterContinuiteResistanceScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _localisationController = TextEditingController();
   final _tableauController = TextEditingController();
   final _origineController = TextEditingController();
-  final _resistanceController = TextEditingController();
   final _observationController = TextEditingController();
   
-  String? _selectedStatut;
+  String? _selectedLocalisation;
+  String? _selectedEssai;
   
   List<String> _localisations = [];
+  final List<String> _essaiOptions = ['Satisfaisant', 'Non satisfaisant', 'Sans objet'];
 
   @override
   void initState() {
@@ -434,6 +460,8 @@ class _AjouterContinuiteResistanceScreenState extends ConsumerState<AjouterConti
     _chargerLocalisations();
     if (widget.isEdition) {
       _chargerDonneesExistantes();
+    } else if (_localisations.isNotEmpty) {
+      _selectedLocalisation = _localisations.first;
     }
   }
 
@@ -446,23 +474,37 @@ class _AjouterContinuiteResistanceScreenState extends ConsumerState<AjouterConti
 
   void _chargerDonneesExistantes() {
     final mesure = widget.mesure!;
-    _localisationController.text = mesure.localisation;
+    _selectedLocalisation = mesure.localisation;
+    if (_selectedLocalisation != null &&
+        _selectedLocalisation!.isNotEmpty &&
+        !_localisations.contains(_selectedLocalisation)) {
+      _localisations.insert(0, _selectedLocalisation!);
+    }
+
     _tableauController.text = mesure.designationTableau;
     _origineController.text = mesure.origineMesure;
+    _selectedEssai = mesure.essai;
 
     if (mesure.observation != null) {
       _observationController.text = mesure.observation!;
-    }}
+    }
+  }
 
   Future<void> _sauvegarder() async {
     if (_formKey.currentState!.validate()) {
+      if (_selectedLocalisation == null || _selectedLocalisation!.trim().isEmpty) {
+        _showError('Veuillez sélectionner une localisation');
+        return;
+      }
+
       final mesure = ContinuiteResistance(
-        localisation: _localisationController.text.trim(),
+        localisation: _selectedLocalisation!.trim(),
         designationTableau: _tableauController.text.trim(),
         origineMesure: _origineController.text.trim(),
         observation: _observationController.text.trim().isNotEmpty
             ? _observationController.text.trim()
             : null,
+        essai: _selectedEssai,
       );
 
       final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
@@ -515,7 +557,7 @@ class _AjouterContinuiteResistanceScreenState extends ConsumerState<AjouterConti
             controller: controller,
             decoration: InputDecoration(
               labelText: '$label${isRequired ? '*' : ''}',
-              border: OutlineInputBorder(),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
               filled: true,
               fillColor: Colors.grey.shade50,
             ),
@@ -547,26 +589,108 @@ class _AjouterContinuiteResistanceScreenState extends ConsumerState<AjouterConti
             ),
           ),
           SizedBox(height: 4),
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 12),
-            decoration: BoxDecoration(
-              color: Colors.grey.shade50,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: Colors.grey.shade300),
+          DropdownButtonFormField<String>(
+            value: value,
+            isExpanded: true,
+            decoration: InputDecoration(
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              filled: true,
+              fillColor: Colors.grey.shade50,
+              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
-            child: DropdownButton<String>(
-              value: value,
-              isExpanded: true,
-              underline: SizedBox(),
-              hint: Text('Sélectionnez...'),
-              items: options.map((option) {
-                return DropdownMenuItem<String>(
-                  value: option,
-                  child: Text(option),
-                );
-              }).toList(),
-              onChanged: onChanged,
+            hint: Text('Sélectionnez...'),
+            items: options.map((option) {
+              return DropdownMenuItem<String>(
+                value: option,
+                child: Text(option, overflow: TextOverflow.ellipsis),
+              );
+            }).toList(),
+            onChanged: onChanged,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEssaiSelector() {
+    return Container(
+      margin: EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Essai',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w500,
+              color: Colors.grey.shade700,
             ),
+          ),
+          SizedBox(height: 8),
+          Row(
+            children: _essaiOptions.map((option) {
+              final isSelected = _selectedEssai == option;
+              Color color;
+              if (option == 'Satisfaisant') {
+                color = Colors.green;
+              } else if (option == 'Non satisfaisant') {
+                color = Colors.red;
+              } else {
+                color = Colors.grey.shade700;
+              }
+
+              return Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  child: InkWell(
+                    onTap: () {
+                      setState(() {
+                        if (_selectedEssai == option) {
+                          _selectedEssai = null;
+                        } else {
+                          _selectedEssai = option;
+                        }
+                      });
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(vertical: 10),
+                      decoration: BoxDecoration(
+                        color: isSelected ? color.withOpacity(0.15) : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: isSelected ? color : Colors.grey.shade300,
+                          width: isSelected ? 2 : 1,
+                        ),
+                      ),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            option == 'Satisfaisant'
+                                ? Icons.check_circle_outline
+                                : (option == 'Non satisfaisant'
+                                    ? Icons.cancel_outlined
+                                    : Icons.block_outlined),
+                            color: isSelected ? color : Colors.grey.shade600,
+                            size: 20,
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            option,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              color: isSelected ? color : Colors.grey.shade700,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
           ),
         ],
       ),
@@ -578,7 +702,7 @@ class _AjouterContinuiteResistanceScreenState extends ConsumerState<AjouterConti
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isEdition ? 'Modifier mesure' : 'Ajouter mesure'),
-        backgroundColor: Colors.blue,
+        backgroundColor: AppTheme.primaryBlue,
         foregroundColor: Colors.white,
         leading: IconButton(
           icon: Icon(Icons.arrow_back),
@@ -610,22 +734,24 @@ class _AjouterContinuiteResistanceScreenState extends ConsumerState<AjouterConti
                 child: Column(
                   children: [
                     _buildDropdown(
-                      'Localisation*',
+                      'Localisation',
                       _localisations,
-                      _localisationController.text.isNotEmpty ? _localisationController.text : _localisations.first,
+                      _selectedLocalisation,
                       (value) {
                         if (value != null) {
-                          setState(() => _localisationController.text = value);
+                          setState(() => _selectedLocalisation = value);
                         }
                       },
+                      isRequired: true,
                     ),
                     
-                    _buildTextField('Désignation du tableau*', _tableauController),
+                    _buildTextField('Désignation du tableau', _tableauController),
                     
-                    _buildTextField('Origine de mesure*', _origineController,
+                    _buildTextField('Origine de mesure', _origineController,
                       maxLines: 2,
                     ),
                     
+                    _buildEssaiSelector(),
                     
                     _buildTextField('Observation', _observationController, isRequired: false, maxLines: 3),
                   ],
@@ -643,7 +769,7 @@ class _AjouterContinuiteResistanceScreenState extends ConsumerState<AjouterConti
                     child: ElevatedButton(
                       onPressed: _sauvegarder,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
+                        backgroundColor: AppTheme.primaryBlue,
                         foregroundColor: Colors.white,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
@@ -689,10 +815,8 @@ class _AjouterContinuiteResistanceScreenState extends ConsumerState<AjouterConti
 
   @override
   void dispose() {
-    _localisationController.dispose();
     _tableauController.dispose();
     _origineController.dispose();
-    _resistanceController.dispose();
     _observationController.dispose();
     super.dispose();
   }

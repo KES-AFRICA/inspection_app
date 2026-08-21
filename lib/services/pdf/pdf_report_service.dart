@@ -12756,186 +12756,27 @@ class PdfReportService {
 
               // Ligne Principale (Contenu principal d'analyse & étude)
               pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.white),
-                children: [
-                  pw.Container(
-                    alignment: pw.Alignment.center,
-                    padding: const pw.EdgeInsets.all(6),
-                    child: pw.Text(
-                      '1',
-                      style: pw.TextStyle(
-                        font: _fontBold,
-                        fontSize: fsBody,
-                        color: headerColor,
-                      ),
-                    ),
-                  ),
-                  pw.Container(
-                    alignment: pw.Alignment.center,
-                    padding: const pw.EdgeInsets.all(6),
-                    child: pw.Text(
-                      'Majeure',
-                      style: pw.TextStyle(
-                        font: _fontBold,
-                        fontSize: fsSmall,
-                        color: PdfColor.fromInt(0xFFE65100),
-                      ),
-                    ),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(6),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        _bodyText(
-                          "Une installation de paratonnerre conforme et efficace, doit répondre dans un premier temps aux principes de base d'installation d'un paratonnerre.",
-                        ),
-                        pw.SizedBox(height: 3),
-                        _bodyText("Il est indispensable de réaliser :"),
-                        itemBulletBold("- Une analyse risque foudre"),
-                        _bodyText(
-                          "L'ARF a pour objectif de définir précisément les biens à protéger ainsi que les niveaux de protection nécessaires aux installations et à l'étude technique.",
-                        ),
-                        pw.SizedBox(height: 3),
-                        _bodyText(
-                          "Analyse du Risque Foudre, selon la norme NF EN 62305-2,",
-                        ),
-                        _bodyText(
-                          "Elle intégrera les différents points suivants :",
-                        ),
-                        itemSubBullet(
-                          "•  Estimation des risques selon la norme EN 62305-2/FD 17018",
-                        ),
-                        itemSubBullet(
-                          "•  Définition des niveaux de protection exigés sur l'installation",
-                        ),
-                        itemSubBullet(
-                          "•  Identification des événements redoutés dus aux effets de la foudre",
-                        ),
-                        itemSubBullet(
-                          "•  La rédaction d'un rapport ARF (En langue Française) précisant le niveau de protection éventuelle à atteindre pour les structures et services à protéger",
-                        ),
-                        pw.SizedBox(height: 4),
-                        itemBulletBold("- Une étude technique foudre"),
-                        _bodyText(
-                          "L'Etude Technique définit de façon détaillée les Installations Extérieures de Protection Foudre (IEPF) et les Installations Intérieures de Protection Foudre (IIPF) selon les normes en vigueur NF C 17 102, NF EN 62305-3 et NF EN 62305-4.",
-                        ),
-                        pw.SizedBox(height: 3),
-                        _bodyText(
-                          "Elle intégrera les différents points suivants :",
-                        ),
-                        itemSubBullet("•  Les mesures de prévention"),
-                        itemSubBullet(
-                          "•  Le descriptif des équipements à installés (caractéristiques techniques)",
-                        ),
-                        itemSubBullet(
-                          "•  Le lieu d'implantation des équipements de protection",
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              // Lignes Dynamiques d'observations structurées (Ligne 2, Ligne 3...)
-              ...foudreObsList.asMap().entries.map((entry) {
-                final itemIndex = entry.key + 2;
-                final obs = entry.value;
-                final crit = obs.criticite?.trim().isNotEmpty == true ? obs.criticite! : 'Majeure';
-
-                return pw.TableRow(
-                  decoration: pw.BoxDecoration(
-                    color: entry.key.isOdd ? tableRowAlt : PdfColors.white,
-                  ),
-                  children: [
-                    pw.Container(
-                      alignment: pw.Alignment.center,
-                      padding: const pw.EdgeInsets.all(6),
-                      child: pw.Text(
-                        '$itemIndex',
-                        style: pw.TextStyle(
-                          font: _fontBold,
-                          fontSize: fsBody,
-                          color: headerColor,
-                        ),
-                      ),
-                    ),
-                    pw.Container(
-                      alignment: pw.Alignment.center,
-                      padding: const pw.EdgeInsets.all(6),
-                      child: pw.Text(
-                        crit,
-                        style: pw.TextStyle(
-                          font: _fontBold,
-                          fontSize: fsSmall,
-                          color: PdfColor.fromInt(0xFFE65100),
-                        ),
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.all(6),
-                      child: _bodyText(obs.texte),
-                    ),
-                  ],
-                );
-              }),
-            ],
-          ),
-          pw.SizedBox(height: 14),
-
-          // Sous-section : Observations par équipement
-          PageTracker(
-            key: 'foudre_equipements',
-            registry: trackedPages,
-            offset: offset,
-            child: _subSectionBar("1. Observations par équipement"),
-          ),
-          pw.SizedBox(height: 6),
-
-          if (equipRows.isEmpty)
-            _bodyText('Aucune observation parafoudre par équipement disponible.')
-          else
-            pw.Table(
-              border: pw.TableBorder.all(color: borderColor, width: 0.4),
-              columnWidths: const {
-                0: pw.FlexColumnWidth(0.6),
-                1: pw.FlexColumnWidth(3.4),
-                2: pw.FlexColumnWidth(2.0),
-              },
-              children: [
-                _tableHeaderRow(['Item', 'Observation', 'Localisation']),
-                ...equipRows.asMap().entries.map((e) {
-                  final idx = e.key + 1;
-                  final row = e.value;
-                  final bg = e.key.isOdd ? tableRowAlt : PdfColors.white;
-                  return pw.TableRow(
-                    decoration: pw.BoxDecoration(color: bg),
-                    children: [
-                      _cell('$idx', isHeader: false, centered: true),
-                      _cell(row.observation, isHeader: false),
-                      _cell(row.localisation, isHeader: false),
-                    ],
-                  );
-                }),
-              ],
-            ),
-        ],
-      ],
-    );
+    return cache;
   }
 
   // ──────────────────────────────────────────────────────────────
   //  RESULTATS DES MESURES ET ESSAIS
   // ──────────────────────────────────────────────────────────────
 
-  static void _addMesuresEssaisPages(
+  static Future<void> _addMesuresEssaisPages(
     pw.Document pdf,
     MesuresEssais mesures,
     Map<String, int> trackedPages, {
     int pageOffset = 0,
     int? overrideTotalPages,
     DescriptionInstallations? desc,
-  }) {
+    bool saveFilesToDisk = true,
+  }) async {
+    final ptPhotosCache = await _preloadPrisesTerrePhotos(
+      mesures.prisesTerre,
+      loadImages: saveFilesToDisk,
+    );
+
     // Page intro avec conditions ET les deux essais
     pdf.addPage(
       pw.MultiPage(
@@ -13131,14 +12972,15 @@ class PdfReportService {
             defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
             border: pw.TableBorder.all(color: borderColor, width: 0.4),
             columnWidths: const {
-              0: pw.FlexColumnWidth(1.6), // Localisation
-              1: pw.FlexColumnWidth(1.4), // Identification de la prise de terre
-              2: pw.FlexColumnWidth(1.4), // Condition de mesure
-              3: pw.FlexColumnWidth(1.6), // Nature de la prise de terre
-              4: pw.FlexColumnWidth(1.3), // Méthode de mesure
-              5: pw.FlexColumnWidth(0.9), // Valeur de la mesure
-              6: pw.FlexColumnWidth(1.4), // Interconnecté à d'autre prise
-              7: pw.FlexColumnWidth(1.5), // Observation
+              0: pw.FlexColumnWidth(1.4), // Localisation
+              1: pw.FlexColumnWidth(1.2), // Identification de la prise de terre
+              2: pw.FlexColumnWidth(1.2), // Condition de mesure
+              3: pw.FlexColumnWidth(1.4), // Nature de la prise de terre
+              4: pw.FlexColumnWidth(1.1), // Méthode de mesure
+              5: pw.FlexColumnWidth(0.8), // Valeur de la mesure
+              6: pw.FlexColumnWidth(1.2), // Interconnecté à d'autre prise
+              7: pw.FlexColumnWidth(1.3), // Observation
+              8: pw.FlexColumnWidth(1.4), // Photo
             },
             children: [
               _tableHeaderRow([
@@ -13150,12 +12992,13 @@ class PdfReportService {
                 'Valeur de la mesure',
                 'Interconnecté à d\'autre prise',
                 'Observation',
+                'Photo',
               ]),
               if (mesures.prisesTerre.isEmpty)
                 pw.TableRow(
                   decoration: const pw.BoxDecoration(color: PdfColors.white),
                   children: List.generate(
-                    8,
+                    9,
                     (_) => _cell('', isHeader: false, centered: true),
                   ),
                 )
@@ -13173,6 +13016,8 @@ class PdfReportService {
                     cellBg = nonConformeColor;
                     textVal = 'Non';
                   }
+
+                  final photoImg = ptPhotosCache[pt];
 
                   return pw.TableRow(
                     decoration: pw.BoxDecoration(
@@ -13218,6 +13063,18 @@ class PdfReportService {
                         isHeader: false,
                         centered: true,
                       ),
+                      photoImg != null
+                          ? pw.Container(
+                              padding: const pw.EdgeInsets.all(3),
+                              alignment: pw.Alignment.center,
+                              child: pw.Image(
+                                photoImg,
+                                width: 40,
+                                height: 40,
+                                fit: pw.BoxFit.contain,
+                              ),
+                            )
+                          : _cell('-', isHeader: false, centered: true),
                     ],
                   );
                 }),
@@ -13814,32 +13671,76 @@ class PdfReportService {
             defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
             border: pw.TableBorder.all(color: borderColor, width: 0.4),
             columnWidths: const {
-              0: pw.FlexColumnWidth(2),
-              1: pw.FlexColumnWidth(2.5),
+              0: pw.FlexColumnWidth(1.8),
+              1: pw.FlexColumnWidth(2.4),
               2: pw.FlexColumnWidth(1.5),
-              3: pw.FlexColumnWidth(2),
+              3: pw.FlexColumnWidth(1.5),
+              4: pw.FlexColumnWidth(1.8),
             },
             children: [
               _tableHeaderRow([
                 'Localisation',
                 'Désignation Tableau / Equipement',
-                'Origine Mésure',
+                'Origine Mesure',
+                'Essai',
                 'Observation',
               ]),
               if (mesures.continuiteResistances.isEmpty)
-                _tableDataRow(['', '', '', ''], alt: false, centered: true)
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.white),
+                  children: List.generate(
+                    5,
+                    (_) => _cell('', isHeader: false, centered: true),
+                  ),
+                )
               else
                 ...mesures.continuiteResistances.asMap().entries.map((e) {
                   final c = e.value;
-                  return _tableDataRow(
-                    [
-                      c.localisation,
-                      c.designationTableau,
-                      c.origineMesure,
-                      c.observation ?? '',
+                  final essaiVal = c.essai?.trim();
+                  PdfColor? essaiBg;
+                  String textEssai = '-';
+                  if (essaiVal == 'Satisfaisant') {
+                    essaiBg = conformeColor;
+                    textEssai = 'Satisfaisant';
+                  } else if (essaiVal == 'Non satisfaisant') {
+                    essaiBg = nonConformeColor;
+                    textEssai = 'Non satisfaisant';
+                  } else if (essaiVal == 'Sans objet') {
+                    essaiBg = sansObjetColor;
+                    textEssai = 'Sans objet';
+                  }
+
+                  return pw.TableRow(
+                    decoration: pw.BoxDecoration(
+                      color: e.key.isOdd ? tableRowAlt : PdfColors.white,
+                    ),
+                    children: [
+                      _cell(c.localisation, isHeader: false, centered: true),
+                      _cell(c.designationTableau, isHeader: false, centered: true),
+                      _cell(c.origineMesure, isHeader: false, centered: true),
+                      pw.Container(
+                        color: essaiBg,
+                        alignment: pw.Alignment.center,
+                        padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 2,
+                          vertical: 4,
+                        ),
+                        child: pw.Text(
+                          textEssai,
+                          style: pw.TextStyle(
+                            font: (essaiVal != null && essaiVal.isNotEmpty) ? _fontBold : _fontRegular,
+                            fontSize: fsSmall,
+                            color: PdfColors.black,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ),
+                      _cell(
+                        c.observation?.isNotEmpty == true ? c.observation! : '-',
+                        isHeader: false,
+                        centered: true,
+                      ),
                     ],
-                    alt: e.key.isOdd,
-                    centered: true,
                   );
                 }),
             ],
@@ -17267,13 +17168,14 @@ class PdfReportService {
     );
 
     if (mesures != null) {
-      _addMesuresEssaisPages(
+      await _addMesuresEssaisPages(
         pdfP2_1,
         mesures,
         trackedPages,
         pageOffset: currentOffset,
         overrideTotalPages: overrideTotalPages,
         desc: description,
+        saveFilesToDisk: saveFilesToDisk,
       );
     }
     pdfP2_1.addPage(
