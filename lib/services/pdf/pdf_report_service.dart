@@ -10369,7 +10369,7 @@ class PdfReportService {
           alt: false,
         ),
         tableDataRowInfo(
-          'Puissance UCC (%)',
+          'Puissance',
           safe(transfo.puissanceUcc ?? ''),
           alt: false,
         ),
@@ -11022,6 +11022,16 @@ class PdfReportService {
           'Repère',
           coffret.repere?.isNotEmpty == true ? coffret.repere! : '-',
         ),
+        if (coffret.alimenteeParTransformateur != null)
+          tableRowCharBool(
+            'Installation alimentée par le transformateur',
+            coffret.alimenteeParTransformateur!,
+          ),
+        if (coffret.presenceCPI != null && coffret.type != 'INVERSEUR')
+          tableRowCharBool(
+            'Présence CPI',
+            coffret.presenceCPI!,
+          ),
         tableRowCharBool('Zone ATEX', coffret.zoneAtex),
         tableRowChar('Domaine de tension', safe(coffret.domaineTension)),
         tableRowCharBool(

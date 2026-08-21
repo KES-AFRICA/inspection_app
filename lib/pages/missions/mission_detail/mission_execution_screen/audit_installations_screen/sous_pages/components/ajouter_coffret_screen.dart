@@ -990,6 +990,11 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
 // ÉTAPE 2 : INFORMATIONS GÉNÉRALES (inchangée)
 // ================================================================
 class _EtapeInformationsGenerales extends StatefulWidget {
+  final String? equipmentType;
+  final bool? alimenteeParTransformateur;
+  final Function(bool?) onAlimenteeParTransformateurChanged;
+  final bool? presenceCPI;
+  final Function(bool?) onPresenceCPIChanged;
   final bool zoneAtex;
   final Function(bool?) onZoneAtexChanged;
   final bool identificationArmoire;
@@ -1014,6 +1019,11 @@ class _EtapeInformationsGenerales extends StatefulWidget {
   final Future<String?> Function(File, String) onSavePhoto;
 
   const _EtapeInformationsGenerales({
+    this.equipmentType,
+    required this.alimenteeParTransformateur,
+    required this.onAlimenteeParTransformateurChanged,
+    required this.presenceCPI,
+    required this.onPresenceCPIChanged,
     required this.zoneAtex,
     required this.onZoneAtexChanged,
     required this.identificationArmoire,
@@ -1067,6 +1077,110 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
               child: IconButton(
                 icon: const Icon(Icons.close, color: Colors.white),
                 onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildOuiNonChoiceTile(
+    BuildContext context, {
+    required String label,
+    required bool? value,
+    required Function(bool?) onChanged,
+  }) {
+    return Container(
+      margin: EdgeInsets.only(bottom: context.spacingS),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingM),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: context.spacingS,
+            offset: const Offset(0, 2),
+          )
+        ],
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: context.fontSizeM,
+                fontWeight: FontWeight.w500,
+                color: AppTheme.darkBlue,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _buildChoiceBtn(
+                context,
+                label: 'Oui',
+                isSelected: value == true,
+                color: Colors.green,
+                onTap: () => onChanged(value == true ? null : true),
+              ),
+              const SizedBox(width: 6),
+              _buildChoiceBtn(
+                context,
+                label: 'Non',
+                isSelected: value == false,
+                color: Colors.red,
+                onTap: () => onChanged(value == false ? null : false),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildChoiceBtn(
+    BuildContext context, {
+    required String label,
+    required bool isSelected,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: isSelected ? color.withOpacity(0.15) : Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+            color: isSelected ? color : Colors.grey.shade300,
+            width: isSelected ? 1.5 : 1,
+          ),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              isSelected
+                  ? (label == 'Oui' ? Icons.check_circle : Icons.cancel)
+                  : (label == 'Oui' ? Icons.check_circle_outline : Icons.cancel_outlined),
+              size: 16,
+              color: isSelected ? color : Colors.grey.shade500,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color: isSelected ? color : Colors.grey.shade700,
               ),
             ),
           ],
@@ -1170,6 +1284,20 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
         _buildModernHeader(context, 'Informations générales', 2, 4),
         SizedBox(height: context.spacingXL),
         
+        _buildOuiNonChoiceTile(
+          context,
+          label: 'Installation alimentée par le transformateur',
+          value: widget.alimenteeParTransformateur,
+          onChanged: widget.onAlimenteeParTransformateurChanged,
+        ),
+        if (widget.equipmentType != 'INVERSEUR')
+          _buildOuiNonChoiceTile(
+            context,
+            label: 'Présence CPI',
+            value: widget.presenceCPI,
+            onChanged: widget.onPresenceCPIChanged,
+          ),
+
         _buildModernCheckbox(context, 'Zone ATEX', widget.zoneAtex, widget.onZoneAtexChanged),
         _buildModernCheckbox(context, 'Identification de l\'armoire', widget.identificationArmoire, widget.onIdentificationArmoireChanged),
         _buildModernCheckbox(context, 'Signalisation de danger électrique', widget.signalisationDanger, widget.onSignalisationDangerChanged),
@@ -2429,6 +2557,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   final _qrCodeController = TextEditingController();
   bool _isQrCodeValid = false;
 
+  bool? _alimenteeParTransformateur;
+  bool? _presenceCPI;
   bool _zoneAtex = false;
   String _domaineTension = '';
   bool _identificationArmoire = false;
@@ -2707,6 +2837,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       accessible: _accessible,
       numeroEquipement: _numeroEquipementController.text.trim().isEmpty ? null : _numeroEquipementController.text.trim(),
       repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
+      alimenteeParTransformateur: _alimenteeParTransformateur,
+      presenceCPI: _presenceCPI,
       zoneAtex: _zoneAtex,
       domaineTension: _domaineTension,
       identificationArmoire: _identificationArmoire,
@@ -2839,6 +2971,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _selectedType = coffret.type;
     _accessible = coffret.accessible;
     _repereController.text = coffret.repere ?? '';
+    _alimenteeParTransformateur = coffret.alimenteeParTransformateur;
+    _presenceCPI = coffret.presenceCPI;
     _zoneAtex = coffret.zoneAtex;
     _domaineTension = coffret.domaineTension.isNotEmpty ? coffret.domaineTension : '230/400';
     _domaineTensionValid = _domaineTension.isNotEmpty;
@@ -3170,6 +3304,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         accessible: _accessible,
         numeroEquipement: _numeroEquipementController.text.trim().isEmpty ? null : _numeroEquipementController.text.trim(),
         repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
+        alimenteeParTransformateur: _alimenteeParTransformateur,
+        presenceCPI: _presenceCPI,
         zoneAtex: _zoneAtex,
         domaineTension: _domaineTension,
         identificationArmoire: _identificationArmoire,
@@ -3688,6 +3824,11 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                   _buildSlideAccessibiliteEquipement(),
                   if (_selectedType != null && _accessible)
                     _EtapeInformationsGenerales(
+                      equipmentType: _selectedType,
+                      alimenteeParTransformateur: _alimenteeParTransformateur,
+                      onAlimenteeParTransformateurChanged: (v) => setState(() => _alimenteeParTransformateur = v),
+                      presenceCPI: _presenceCPI,
+                      onPresenceCPIChanged: (v) => setState(() => _presenceCPI = v),
                       zoneAtex: _zoneAtex,
                       onZoneAtexChanged: (v) => setState(() => _zoneAtex = v ?? false),
                       identificationArmoire: _identificationArmoire,

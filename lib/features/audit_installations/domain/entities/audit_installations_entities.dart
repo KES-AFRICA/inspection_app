@@ -250,6 +250,8 @@ class CoffretArmoireEntity {
   final bool presenceParafoudre;
   final bool verificationThermographie;
   final String? presenceDefautThermo;
+  final bool? alimenteeParTransformateur;
+  final bool? presenceCPI;
   final List<AlimentationEntity> alimentations;
   final AlimentationEntity? protectionTete;
   final List<PointVerificationEntity> pointsVerification;
@@ -285,6 +287,8 @@ class CoffretArmoireEntity {
     this.presenceParafoudre = false,
     this.verificationThermographie = false,
     this.presenceDefautThermo,
+    this.alimenteeParTransformateur,
+    this.presenceCPI,
     this.accessible = true,
     this.alimentations = const [],
     this.protectionTete,

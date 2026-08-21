@@ -844,6 +844,12 @@ class CoffretArmoire {
   @HiveField(25, defaultValue: true)
   bool? _accessible;
 
+  @HiveField(26)
+  bool? alimenteeParTransformateur;
+
+  @HiveField(27)
+  bool? presenceCPI;
+
   bool get accessible => _accessible ?? true;
   set accessible(bool value) => _accessible = value;
 
@@ -871,6 +877,8 @@ class CoffretArmoire {
     this.presenceParafoudre = false,
     this.verificationThermographie = false,
     this.presenceDefautThermo,
+    this.alimenteeParTransformateur,
+    this.presenceCPI,
     bool? accessible,
     List<Alimentation>? alimentations,
     this.protectionTete,
