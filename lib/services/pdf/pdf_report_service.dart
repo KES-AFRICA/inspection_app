@@ -12634,7 +12634,6 @@ class PdfReportService {
     final equipRows = _collectParafoudreRows(audit);
     final presenceParatonnerre = desc?.presenceParatonnerre?.trim();
     final isParatonnerreNon = presenceParatonnerre == 'Non';
-    final isParatonnerreOui = presenceParatonnerre == 'Oui';
     final foudreObsList = desc?.foudreObservations ?? [];
 
     pw.Widget itemBulletBold(String text) {
@@ -12756,12 +12755,196 @@ class PdfReportService {
 
               // Ligne Principale (Contenu principal d'analyse & étude)
               pw.TableRow(
-    return cache;
+                decoration: const pw.BoxDecoration(color: PdfColors.white),
+                children: [
+                  pw.Container(
+                    alignment: pw.Alignment.center,
+                    padding: const pw.EdgeInsets.all(6),
+                    child: pw.Text(
+                      '1',
+                      style: pw.TextStyle(
+                        font: _fontBold,
+                        fontSize: fsBody,
+                        color: headerColor,
+                      ),
+                    ),
+                  ),
+                  pw.Container(
+                    alignment: pw.Alignment.center,
+                    padding: const pw.EdgeInsets.all(6),
+                    child: pw.Text(
+                      'Majeure',
+                      style: pw.TextStyle(
+                        font: _fontBold,
+                        fontSize: fsSmall,
+                        color: PdfColor.fromInt(0xFFE65100),
+                      ),
+                    ),
+                  ),
+                  pw.Padding(
+                    padding: const pw.EdgeInsets.all(6),
+                    child: pw.Column(
+                      crossAxisAlignment: pw.CrossAxisAlignment.start,
+                      children: [
+                        _bodyText(
+                          "Une installation de paratonnerre conforme et efficace, doit répondre dans un premier temps aux principes de base d'installation d'un paratonnerre.",
+                        ),
+                        pw.SizedBox(height: 3),
+                        _bodyText("Il est indispensable de réaliser :"),
+                        itemBulletBold("- Une analyse risque foudre"),
+                        _bodyText(
+                          "L'ARF a pour objectif de définir précisément les biens à protéger ainsi que les niveaux de protection nécessaires aux installations et à l'étude technique.",
+                        ),
+                        pw.SizedBox(height: 3),
+                        _bodyText(
+                          "Analyse du Risque Foudre, selon la norme NF EN 62305-2,",
+                        ),
+                        _bodyText(
+                          "Elle intégrera les différents points suivants :",
+                        ),
+                        itemSubBullet(
+                          "•  Estimation des risques selon la norme EN 62305-2/FD 17018",
+                        ),
+                        itemSubBullet(
+                          "•  Définition des niveaux de protection exigés sur l'installation",
+                        ),
+                        itemSubBullet(
+                          "•  Identification des événements redoutés dus aux effets de la foudre",
+                        ),
+                        itemSubBullet(
+                          "•  La rédaction d'un rapport ARF (En langue Française) précisant le niveau de protection éventuelle à atteindre pour les structures et services à protéger",
+                        ),
+                        pw.SizedBox(height: 4),
+                        itemBulletBold("- Une étude technique foudre"),
+                        _bodyText(
+                          "L'Etude Technique définit de façon détaillée les Installations Extérieures de Protection Foudre (IEPF) et les Installations Intérieures de Protection Foudre (IIPF) selon les normes en vigueur NF C 17 102, NF EN 62305-3 et NF EN 62305-4.",
+                        ),
+                        pw.SizedBox(height: 3),
+                        _bodyText(
+                          "Elle intégrera les différents points suivants :",
+                        ),
+                        itemSubBullet("•  Les mesures de prévention"),
+                        itemSubBullet(
+                          "•  Le descriptif des équipements à installés (caractéristiques techniques)",
+                        ),
+                        itemSubBullet(
+                          "•  Le lieu d'implantation des équipements de protection",
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+
+              // Lignes Dynamiques d'observations structurées (Ligne 2, Ligne 3...)
+              ...foudreObsList.asMap().entries.map((entry) {
+                final itemIndex = entry.key + 2;
+                final obs = entry.value;
+                final crit = obs.criticite?.trim().isNotEmpty == true ? obs.criticite! : 'Majeure';
+
+                return pw.TableRow(
+                  decoration: pw.BoxDecoration(
+                    color: entry.key.isOdd ? tableRowAlt : PdfColors.white,
+                  ),
+                  children: [
+                    pw.Container(
+                      alignment: pw.Alignment.center,
+                      padding: const pw.EdgeInsets.all(6),
+                      child: pw.Text(
+                        '$itemIndex',
+                        style: pw.TextStyle(
+                          font: _fontBold,
+                          fontSize: fsBody,
+                          color: headerColor,
+                        ),
+                      ),
+                    ),
+                    pw.Container(
+                      alignment: pw.Alignment.center,
+                      padding: const pw.EdgeInsets.all(6),
+                      child: pw.Text(
+                        crit,
+                        style: pw.TextStyle(
+                          font: _fontBold,
+                          fontSize: fsSmall,
+                          color: PdfColor.fromInt(0xFFE65100),
+                        ),
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(6),
+                      child: _bodyText(obs.texte),
+                    ),
+                  ],
+                );
+              }),
+            ],
+          ),
+          pw.SizedBox(height: 14),
+
+          // Sous-section : Observations par équipement
+          PageTracker(
+            key: 'foudre_equipements',
+            registry: trackedPages,
+            offset: offset,
+            child: _subSectionBar("1. Observations par équipement"),
+          ),
+          pw.SizedBox(height: 6),
+
+          if (equipRows.isEmpty)
+            _bodyText('Aucune observation parafoudre par équipement disponible.')
+          else
+            pw.Table(
+              border: pw.TableBorder.all(color: borderColor, width: 0.4),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(0.6),
+                1: pw.FlexColumnWidth(3.4),
+                2: pw.FlexColumnWidth(2.0),
+              },
+              children: [
+                _tableHeaderRow(['Item', 'Observation', 'Localisation']),
+                ...equipRows.asMap().entries.map((e) {
+                  final idx = e.key + 1;
+                  final row = e.value;
+                  final bg = e.key.isOdd ? tableRowAlt : PdfColors.white;
+                  return pw.TableRow(
+                    decoration: pw.BoxDecoration(color: bg),
+                    children: [
+                      _cell('$idx', isHeader: false, centered: true),
+                      _cell(row.observation, isHeader: false),
+                      _cell(row.localisation, isHeader: false),
+                    ],
+                  );
+                }),
+              ],
+            ),
+        ],
+      ],
+    );
   }
 
-  // ──────────────────────────────────────────────────────────────
-  //  RESULTATS DES MESURES ET ESSAIS
-  // ──────────────────────────────────────────────────────────────
+  static Future<Map<PriseTerre, pw.MemoryImage?>> _preloadPrisesTerrePhotos(
+    List<PriseTerre> prises, {
+    bool loadImages = true,
+  }) async {
+    final cache = <PriseTerre, pw.MemoryImage?>{};
+    if (!loadImages) return cache;
+
+    for (final pt in prises) {
+      final path = pt.photo?.trim();
+      if (path != null && path.isNotEmpty) {
+        final img = await _loadAndOptimizeImage(
+          path,
+          photoContext: PdfPhotoContext.equipmentObs,
+          saveFilesToDisk: loadImages,
+        );
+        if (img != null) {
+          cache[pt] = img;
+        }
+      }
+    }
+    return cache;
+  }
 
   static Future<void> _addMesuresEssaisPages(
     pw.Document pdf,
@@ -12903,6 +13086,7 @@ class PdfReportService {
           ),
           pw.SizedBox(height: 3),
 
+          pw.NewPage(),
           _bodyBold("Position de la barrette lors de la mesure :"),
           pw.SizedBox(height: 3),
           _checkboxRow("Barrette ouverte"),

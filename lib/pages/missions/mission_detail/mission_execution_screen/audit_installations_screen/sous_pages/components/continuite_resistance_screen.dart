@@ -474,16 +474,16 @@ class _AjouterContinuiteResistanceScreenState extends ConsumerState<AjouterConti
 
   void _chargerDonneesExistantes() {
     final mesure = widget.mesure!;
-    _selectedLocalisation = mesure.localisation;
-    if (_selectedLocalisation != null &&
-        _selectedLocalisation!.isNotEmpty &&
-        !_localisations.contains(_selectedLocalisation)) {
+    final loc = mesure.localisation.trim();
+    _selectedLocalisation = loc.isNotEmpty ? loc : null;
+    if (_selectedLocalisation != null && !_localisations.contains(_selectedLocalisation)) {
       _localisations.insert(0, _selectedLocalisation!);
     }
 
     _tableauController.text = mesure.designationTableau;
     _origineController.text = mesure.origineMesure;
-    _selectedEssai = mesure.essai;
+    final essaiVal = mesure.essai?.trim();
+    _selectedEssai = (essaiVal != null && essaiVal.isNotEmpty) ? essaiVal : null;
 
     if (mesure.observation != null) {
       _observationController.text = mesure.observation!;
@@ -575,6 +575,21 @@ class _AjouterContinuiteResistanceScreenState extends ConsumerState<AjouterConti
   }
 
   Widget _buildDropdown(String label, List<String> options, String? value, Function(String?) onChanged, {bool isRequired = false}) {
+    final List<String> effectiveOptions = [];
+    for (final opt in options) {
+      final trimmed = opt.trim();
+      if (trimmed.isNotEmpty && !effectiveOptions.contains(trimmed)) {
+        effectiveOptions.add(trimmed);
+      }
+    }
+
+    String? effectiveValue = value?.trim();
+    if (effectiveValue == null || effectiveValue.isEmpty) {
+      effectiveValue = null;
+    } else if (!effectiveOptions.contains(effectiveValue)) {
+      effectiveOptions.insert(0, effectiveValue);
+    }
+
     return Container(
       margin: EdgeInsets.only(bottom: 16),
       child: Column(
@@ -590,7 +605,7 @@ class _AjouterContinuiteResistanceScreenState extends ConsumerState<AjouterConti
           ),
           SizedBox(height: 4),
           DropdownButtonFormField<String>(
-            value: value,
+            value: effectiveValue,
             isExpanded: true,
             decoration: InputDecoration(
               border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
@@ -599,7 +614,7 @@ class _AjouterContinuiteResistanceScreenState extends ConsumerState<AjouterConti
               contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             ),
             hint: Text('Sélectionnez...'),
-            items: options.map((option) {
+            items: effectiveOptions.map((option) {
               return DropdownMenuItem<String>(
                 value: option,
                 child: Text(option, overflow: TextOverflow.ellipsis),

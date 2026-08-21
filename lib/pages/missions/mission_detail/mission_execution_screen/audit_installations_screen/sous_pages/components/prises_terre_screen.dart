@@ -394,22 +394,30 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
     _loadLocalisations();
 
     if (widget.initialData != null) {
-      _selectedLocalisation = widget.initialData!['localisation'];
+      final loc = widget.initialData!['localisation']?.toString().trim();
+      _selectedLocalisation = (loc != null && loc.isNotEmpty) ? loc : null;
       _identificationController.text = widget.initialData!['identification'] ?? '';
-      _conditionMesure = widget.initialData!['conditionMesure'] ?? 'Barette fermée';
-      _naturePriseTerre = widget.initialData!['naturePriseTerre'];
-      _methodeMesure = widget.initialData!['methodeMesure'];
+
+      final cond = widget.initialData!['conditionMesure']?.toString().trim();
+      _conditionMesure = (cond != null && cond.isNotEmpty) ? cond : 'Barette fermée';
+
+      final nat = widget.initialData!['naturePriseTerre']?.toString().trim();
+      _naturePriseTerre = (nat != null && nat.isNotEmpty) ? nat : null;
+
+      final meth = widget.initialData!['methodeMesure']?.toString().trim();
+      _methodeMesure = (meth != null && meth.isNotEmpty) ? meth : null;
+
       _valeurMesureController.text = widget.initialData!['valeurMesure'] ?? '';
       _observationController.text = widget.initialData!['observation'] ?? '';
-      final interconnecte = widget.initialData!['interconnecteAutrePrise'];
+
+      final interconnecte = widget.initialData!['interconnecteAutrePrise']?.toString().trim();
       _interconnecteAutrePrise = (interconnecte != null && interconnecte.isNotEmpty) ? interconnecte : null;
+
       final photo = widget.initialData!['photo'];
       _photoPath = (photo != null && photo.toString().trim().isNotEmpty) ? photo.toString().trim() : null;
 
-      if (_selectedLocalisation != null &&
-          _selectedLocalisation!.isNotEmpty &&
-          !_localisationsOptions.contains(_selectedLocalisation)) {
-        _localisationsOptions.add(_selectedLocalisation!);
+      if (_selectedLocalisation != null && !_localisationsOptions.contains(_selectedLocalisation)) {
+        _localisationsOptions.insert(0, _selectedLocalisation!);
       }
     } else {
       _conditionMesure = 'Barette fermée';
@@ -746,8 +754,23 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
     required Function(String?) onChanged,
     required bool isSmallScreen,
   }) {
+    final List<String> effectiveOptions = [];
+    for (final opt in options) {
+      final trimmed = opt.trim();
+      if (trimmed.isNotEmpty && !effectiveOptions.contains(trimmed)) {
+        effectiveOptions.add(trimmed);
+      }
+    }
+
+    String? effectiveValue = value?.trim();
+    if (effectiveValue == null || effectiveValue.isEmpty) {
+      effectiveValue = null;
+    } else if (!effectiveOptions.contains(effectiveValue)) {
+      effectiveOptions.insert(0, effectiveValue);
+    }
+
     return DropdownButtonFormField<String>(
-      value: value,
+      value: effectiveValue,
       isExpanded: true,
       hint: Text('Sélectionnez...', style: TextStyle(color: Colors.grey.shade500)),
       decoration: InputDecoration(
@@ -755,8 +778,8 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       ),
-      items: options.map((option) {
-        return DropdownMenuItem(
+      items: effectiveOptions.map((option) {
+        return DropdownMenuItem<String>(
           value: option,
           child: Text(option, overflow: TextOverflow.ellipsis),
         );
