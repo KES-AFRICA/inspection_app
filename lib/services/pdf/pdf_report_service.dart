@@ -64,6 +64,7 @@ class _PdfEquipementItem {
   final String type;
   final bool isMT;
   final bool accessible;
+  final String? presenceParafoudre;
 
   const _PdfEquipementItem({
     required this.repere,
@@ -71,6 +72,7 @@ class _PdfEquipementItem {
     required this.type,
     required this.isMT,
     this.accessible = true,
+    this.presenceParafoudre,
   });
 }
 
@@ -7157,6 +7159,35 @@ class PdfReportService {
     return null;
   }
 
+  static String? _extractPresenceParafoudre(Object refObj) {
+    if (refObj is CoffretArmoire) {
+      return refObj.presenceParafoudre ? 'Oui' : 'Non';
+    }
+    try {
+      final dynamic val = (refObj as dynamic).presenceParafoudre;
+      if (val is bool) {
+        return val ? 'Oui' : 'Non';
+      } else if (val is String && val.trim().isNotEmpty) {
+        final norm = val.trim().toLowerCase();
+        if (norm == 'oui' || norm == 'true' || norm == '1') return 'Oui';
+        if (norm == 'non' || norm == 'false' || norm == '0') return 'Non';
+      }
+    } catch (_) {}
+
+    try {
+      final dynamic val = (refObj as dynamic).parafoudres;
+      if (val is bool) {
+        return val ? 'Oui' : 'Non';
+      } else if (val is String && val.trim().isNotEmpty) {
+        final norm = val.trim().toLowerCase();
+        if (norm == 'oui' || norm == 'true' || norm == '1' || norm.contains('présent') || norm.contains('present')) return 'Oui';
+        if (norm == 'non' || norm == 'false' || norm == '0' || norm.contains('absent')) return 'Non';
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
   static List<_PdfEquipementItem> _collectEquipementsMT(
     AuditInstallationsElectriques? audit,
   ) {
@@ -7182,6 +7213,7 @@ class PdfReportService {
             type: type,
             isMT: true,
             accessible: accessible,
+            presenceParafoudre: _extractPresenceParafoudre(refObj),
           ),
         );
       }
@@ -7251,6 +7283,7 @@ class PdfReportService {
             type: type,
             isMT: false,
             accessible: accessible,
+            presenceParafoudre: _extractPresenceParafoudre(refObj),
           ),
         );
       }
@@ -7311,16 +7344,17 @@ class PdfReportService {
       );
     }
 
-    final headers = ['Repère', 'Nom', 'Type', 'Vérifié'];
+    final headers = ['Repère', 'Nom', 'Type', 'Vérifié', 'Présence du parafoudre'];
 
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
       defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
       columnWidths: const {
-        0: pw.FlexColumnWidth(2.0),
-        1: pw.FlexColumnWidth(3.5),
-        2: pw.FlexColumnWidth(2.5),
-        3: pw.FlexColumnWidth(1.5),
+        0: pw.FlexColumnWidth(1.8),
+        1: pw.FlexColumnWidth(3.0),
+        2: pw.FlexColumnWidth(2.0),
+        3: pw.FlexColumnWidth(1.2),
+        4: pw.FlexColumnWidth(2.2),
       },
       children: [
         pw.TableRow(
@@ -7337,6 +7371,7 @@ class PdfReportService {
                       fontSize: 9,
                       color: PdfColors.white,
                     ),
+                    textAlign: pw.TextAlign.center,
                   ),
                 ),
               )
@@ -7387,6 +7422,22 @@ class PdfReportService {
                   eq.accessible ? 'Oui' : 'Non',
                   style: pw.TextStyle(
                     font: _fontBold,
+                    fontSize: 9,
+                    color: PdfColors.black,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                color: eq.presenceParafoudre == 'Oui'
+                    ? conformeColor
+                    : (eq.presenceParafoudre == 'Non' ? nonConformeColor : bg),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  eq.presenceParafoudre ?? '-',
+                  style: pw.TextStyle(
+                    font: eq.presenceParafoudre != null ? _fontBold : _fontRegular,
                     fontSize: 9,
                     color: PdfColors.black,
                   ),

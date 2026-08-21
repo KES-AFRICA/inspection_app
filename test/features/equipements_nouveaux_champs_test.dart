@@ -183,5 +183,35 @@ void main() {
       expect(updatedPoint.conformite, equals('non'));
       expect(updatedPoint.observation, equals('Cable sous-dimensionne'));
     });
+
+    test('Synthese recapitulative : Presence de parafoudre Oui/Non/null', () {
+      final coffretAvecPF = CoffretArmoire(
+        qrCode: 'QR_PF1',
+        nom: 'TGBT 1',
+        type: 'TGBT',
+        presenceParafoudre: true,
+      );
+
+      final coffretSansPF = CoffretArmoire(
+        qrCode: 'QR_PF2',
+        nom: 'TGBT 2',
+        type: 'TGBT',
+        presenceParafoudre: false,
+      );
+
+      final audit = AuditInstallationsElectriques(
+        missionId: 'm1',
+        updatedAt: DateTime.now(),
+        basseTensionZones: [
+          BasseTensionZone(
+            nom: 'Zone 1',
+            coffretsDirects: [coffretAvecPF, coffretSansPF],
+          ),
+        ],
+      );
+
+      expect(coffretAvecPF.presenceParafoudre, isTrue);
+      expect(coffretSansPF.presenceParafoudre, isFalse);
+    });
   });
 }
