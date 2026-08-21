@@ -12617,7 +12617,7 @@ class PdfReportService {
         ),
         pw.SizedBox(height: 10),
 
-        // CAS 1 : Paratonnerre = "Non" -> Bloc Recommandation Protection contre la foudre
+        // CAS 1 : Paratonnerre = "Non" -> Bloc Recommandation Protection contre la foudre EXCLUSIF
         if (isParatonnerreNon) ...[
           pw.Container(
             width: double.infinity,
@@ -12681,7 +12681,7 @@ class PdfReportService {
         ]
 
         // CAS 2 : Paratonnerre = "Oui" (ou afficherTableauFoudre activé)
-        else if (isParatonnerreOui || afficherTableauFoudre) ...[
+        else ...[
           pw.Table(
             defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
             border: pw.TableBorder.all(color: borderColor, width: 0.4),
@@ -12837,78 +12837,44 @@ class PdfReportService {
             ],
           ),
           pw.SizedBox(height: 14),
-        ],
 
-        // Espace Observations Libres (Placé juste SOUS le tableau principal)
-        if (foudres.isNotEmpty) ...[
-          pw.Container(
-            width: double.infinity,
-            padding: const pw.EdgeInsets.all(10),
-            decoration: pw.BoxDecoration(
-              color: tableRowAlt,
-              borderRadius: pw.BorderRadius.circular(4),
-              border: pw.Border.all(color: borderColor, width: 0.4),
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+          // Sous-section : Observations par équipement
+          PageTracker(
+            key: 'foudre_equipements',
+            registry: trackedPages,
+            offset: offset,
+            child: _subSectionBar("1. Observations par équipement"),
+          ),
+          pw.SizedBox(height: 6),
+
+          if (equipRows.isEmpty)
+            _bodyText('Aucune observation parafoudre par équipement disponible.')
+          else
+            pw.Table(
+              border: pw.TableBorder.all(color: borderColor, width: 0.4),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(0.6),
+                1: pw.FlexColumnWidth(3.4),
+                2: pw.FlexColumnWidth(2.0),
+              },
               children: [
-                pw.Text(
-                  'Observations libres :',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: fsBody,
-                    color: headerColor,
-                  ),
-                ),
-                pw.SizedBox(height: 6),
-                ...foudres.map((f) {
-                  return pw.Padding(
-                    padding: const pw.EdgeInsets.only(bottom: 4),
-                    child: _bodyText('• ${f.observation}'),
+                _tableHeaderRow(['Item', 'Observation', 'Localisation']),
+                ...equipRows.asMap().entries.map((e) {
+                  final idx = e.key + 1;
+                  final row = e.value;
+                  final bg = e.key.isOdd ? tableRowAlt : PdfColors.white;
+                  return pw.TableRow(
+                    decoration: pw.BoxDecoration(color: bg),
+                    children: [
+                      _cell('$idx', isHeader: false, centered: true),
+                      _cell(row.observation, isHeader: false),
+                      _cell(row.localisation, isHeader: false),
+                    ],
                   );
                 }),
               ],
             ),
-          ),
-          pw.SizedBox(height: 14),
         ],
-
-        // Sous-section : Observations par équipement
-        PageTracker(
-          key: 'foudre_equipements',
-          registry: trackedPages,
-          offset: offset,
-          child: _subSectionBar("1. Observations par équipement"),
-        ),
-        pw.SizedBox(height: 6),
-
-        if (equipRows.isEmpty)
-          _bodyText('Aucune observation parafoudre par équipement disponible.')
-        else
-          pw.Table(
-            border: pw.TableBorder.all(color: borderColor, width: 0.4),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(0.6),
-              1: pw.FlexColumnWidth(3.4),
-              2: pw.FlexColumnWidth(2.0),
-            },
-            children: [
-              _tableHeaderRow(['Item', 'Observation', 'Localisation']),
-              ...equipRows.asMap().entries.map((e) {
-                final idx = e.key + 1;
-                final row = e.value;
-                final bg = e.key.isOdd ? tableRowAlt : PdfColors.white;
-                return pw.TableRow(
-                  decoration: pw.BoxDecoration(color: bg),
-                  children: [
-                    _cell('$idx', isHeader: false, centered: true),
-                    _cell(row.observation, isHeader: false),
-                    _cell(row.localisation, isHeader: false),
-                  ],
-                );
-              }),
-            ],
-          ),
       ],
     );
   }
