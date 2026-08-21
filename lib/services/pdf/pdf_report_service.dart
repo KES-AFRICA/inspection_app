@@ -9613,75 +9613,59 @@ class PdfReportService {
     final natureReseau = safeVal(desc.natureReseauAlimentationSite);
     final tensionRaw = desc.tensionAlimentationSite?.trim();
     final tension = (tensionRaw != null && tensionRaw.isNotEmpty)
-        ? '$tensionRaw kV'
+        ? (tensionRaw.toLowerCase().contains('kv') ? tensionRaw : '$tensionRaw kV')
         : '-';
     final nombre = safeVal(desc.nombreAlimentationSite);
     final presenceIacm = safeVal(desc.presenceIacmAlimentationSite);
 
-    pw.TableRow buildRow(String label, String value, bool alt) {
-      return pw.TableRow(
-        decoration: alt ? pw.BoxDecoration(color: tableRowAlt) : null,
-        children: [
-          pw.Padding(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            child: pw.Text(
-              label,
-              style: pw.TextStyle(font: _fontBold, fontSize: fsSmall),
-            ),
-          ),
-          pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            alignment: pw.Alignment.center,
-            child: pw.Text(
-              value,
-              style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
-              textAlign: pw.TextAlign.center,
-            ),
-          ),
-        ],
-      );
-    }
+    final headers = [
+      'N°',
+      'Nature du réseau',
+      'Tension d\'alimentation',
+      'Nombre d\'alimentation',
+      'Présence de l\'IACM',
+    ];
 
     return pw.Table(
-      border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+      border: pw.TableBorder.all(color: borderColor, width: 0.4),
       columnWidths: const {
-        0: pw.FlexColumnWidth(3),
-        1: pw.FlexColumnWidth(2),
+        0: pw.FixedColumnWidth(18),
+        1: pw.FlexColumnWidth(1),
+        2: pw.FlexColumnWidth(1),
+        3: pw.FlexColumnWidth(1),
+        4: pw.FlexColumnWidth(1),
       },
       children: [
         pw.TableRow(
           decoration: pw.BoxDecoration(color: accentColor),
+          children: headers
+              .map((h) => _cell(h, isHeader: true, centered: true))
+              .toList(),
+        ),
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(color: PdfColors.white),
           children: [
-            pw.Padding(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-              child: pw.Text(
-                'Champ',
-                style: pw.TextStyle(
-                  font: _fontBold,
-                  fontSize: fsSmall,
-                  color: PdfColors.white,
-                ),
-              ),
-            ),
             pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 3,
+                vertical: 3,
+              ),
               alignment: pw.Alignment.center,
               child: pw.Text(
-                'Valeur',
+                '1',
                 style: pw.TextStyle(
                   font: _fontBold,
                   fontSize: fsSmall,
-                  color: PdfColors.white,
+                  color: headerColor,
                 ),
-                textAlign: pw.TextAlign.center,
               ),
             ),
+            _cell(natureReseau, isHeader: false, centered: true),
+            _cell(tension, isHeader: false, centered: true),
+            _cell(nombre, isHeader: false, centered: true),
+            _cell(presenceIacm, isHeader: false, centered: true),
           ],
         ),
-        buildRow('Nature du réseau', natureReseau, false),
-        buildRow('Tension alimentation', tension, true),
-        buildRow('Nombre d\'alimentation', nombre, false),
-        buildRow('Présence de l\'IACM à l\'entrée de l\'alimentation sur site', presenceIacm, true),
       ],
     );
   }
