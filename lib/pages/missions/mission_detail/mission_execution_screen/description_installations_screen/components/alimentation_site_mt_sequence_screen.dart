@@ -109,183 +109,151 @@ class _AlimentationSiteMtSequenceScreenState
           _isFirstLoad = false;
         }
 
-        return SingleChildScrollView(
-          padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-
-              // 1. Nature du réseau
-              _buildSectionCard(
-                title: 'Nature du réseau',
-                child: Column(
-                  children: _natureOptions.map((opt) {
-                    final isSelected = _natureReseau == opt;
-                    return RadioListTile<String>(
-                      title: Text(
-                        opt,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                      value: opt,
-                      groupValue: _natureReseau,
-                      activeColor: AppTheme.primaryBlue,
-                      onChanged: _isSaving
-                          ? null
-                          : (val) {
-                              if (val != null) {
-                                setState(() => _natureReseau = val);
-                                _saveField('nature_reseau_alim_site', val);
-                              }
-                            },
-                    );
-                  }).toList(),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // 2. Tension alimentation (kV)
-              _buildSectionCard(
-                title: 'Tension alimentation',
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: TextField(
-                    controller: _tensionController,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.\,]?\d*')),
-                    ],
-                    decoration: InputDecoration(
-                      labelText: 'Tension d\'alimentation',
-                      hintText: 'Ex: 15 ou 20',
-                      suffixText: 'kV',
-                      suffixStyle: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryBlue,
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onSubmitted: (val) {
-                      final cleanVal = val.trim();
-                      _saveField('tension_alim_site', cleanVal);
-                    },
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // 3. Nombre d'alimentation
-              _buildSectionCard(
-                title: 'Nombre d\'alimentation',
-                child: Padding(
-                  padding: const EdgeInsets.all(12),
-                  child: TextField(
-                    controller: _nombreController,
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [
-                      FilteringTextInputFormatter.digitsOnly,
-                    ],
-                    decoration: InputDecoration(
-                      labelText: 'Nombre d\'alimentation',
-                      hintText: 'Ex: 1 ou 2',
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                      ),
-                    ),
-                    onSubmitted: (val) {
-                      final cleanVal = val.trim();
-                      _saveField('nombre_alim_site', cleanVal);
-                    },
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // 4. Présence de l'IACM à l'entrée de l'alimentation sur site
-              _buildSectionCard(
-                title: 'Présence de l\'IACM à l\'entrée de l\'alimentation sur site',
-                child: Column(
-                  children: _iacmOptions.map((opt) {
-                    final isSelected = _presenceIacm == opt;
-                    return RadioListTile<String>(
-                      title: Text(
-                        opt,
-                        style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                      value: opt,
-                      groupValue: _presenceIacm,
-                      activeColor: AppTheme.primaryBlue,
-                      onChanged: _isSaving
-                          ? null
-                          : (val) {
-                              if (val != null) {
-                                setState(() => _presenceIacm = val);
-                                _saveField('presence_iacm_alim_site', val);
-                              }
-                            },
-                    );
-                  }).toList(),
-                ),
-              ),
-
-              const SizedBox(height: 24),
-
-              // Bouton Enregistrer global
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _isSaving
-                      ? null
-                      : () async {
-                          final tensionVal = _tensionController.text.trim();
-                          final nombreVal = _nombreController.text.trim();
-
-                          if (_natureReseau != null) {
-                            await _saveField('nature_reseau_alim_site', _natureReseau!);
-                          }
-                          if (tensionVal.isNotEmpty) {
-                            await _saveField('tension_alim_site', tensionVal);
-                          }
-                          if (nombreVal.isNotEmpty) {
-                            await _saveField('nombre_alim_site', nombreVal);
-                          }
-                          if (_presenceIacm != null) {
-                            await _saveField('presence_iacm_alim_site', _presenceIacm!);
-                          }
-                        },
-                  icon: _isSaving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
+        return GestureDetector(
+          onTap: () => FocusScope.of(context).unfocus(),
+          behavior: HitTestBehavior.opaque,
+          child: SingleChildScrollView(
+            padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Nature du réseau
+                _buildSectionCard(
+                  title: 'Nature du réseau',
+                  child: Column(
+                    children: _natureOptions.map((opt) {
+                      final isSelected = _natureReseau == opt;
+                      return RadioListTile<String>(
+                        title: Text(
+                          opt,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                           ),
-                        )
-                      : const Icon(Icons.check_circle_outline),
-                  label: const Text('Valider et sauvegarder'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryBlue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                        ),
+                        value: opt,
+                        groupValue: _natureReseau,
+                        activeColor: AppTheme.primaryBlue,
+                        onChanged: _isSaving
+                            ? null
+                            : (val) {
+                                if (val != null) {
+                                  setState(() => _natureReseau = val);
+                                  _saveField('nature_reseau_alim_site', val);
+                                }
+                              },
+                      );
+                    }).toList(),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // 2. Tension alimentation (kV)
+                _buildSectionCard(
+                  title: 'Tension alimentation',
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: TextField(
+                      controller: _tensionController,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.\,]?\d*')),
+                      ],
+                      decoration: InputDecoration(
+                        hintText: 'Ex: 15 ou 20',
+                        hintStyle: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 14,
+                        ),
+                        suffixText: 'kV',
+                        suffixStyle: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryBlue,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onChanged: (val) {
+                        _saveField('tension_alim_site', val.trim());
+                      },
+                      onSubmitted: (val) {
+                        FocusScope.of(context).unfocus();
+                        _saveField('tension_alim_site', val.trim());
+                      },
                     ),
                   ),
                 ),
-              ),
-              const SizedBox(height: 30),
-            ],
+
+                const SizedBox(height: 16),
+
+                // 3. Nombre d'alimentation
+                _buildSectionCard(
+                  title: 'Nombre d\'alimentation',
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: TextField(
+                      controller: _nombreController,
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                      ],
+                      decoration: InputDecoration(
+                        hintText: 'Ex: 1 ou 2',
+                        hintStyle: TextStyle(
+                          color: Colors.grey.shade400,
+                          fontSize: 14,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      onChanged: (val) {
+                        _saveField('nombre_alim_site', val.trim());
+                      },
+                      onSubmitted: (val) {
+                        FocusScope.of(context).unfocus();
+                        _saveField('nombre_alim_site', val.trim());
+                      },
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // 4. Présence de l'IACM à l'entrée de l'alimentation sur site
+                _buildSectionCard(
+                  title: 'Présence de l\'IACM à l\'entrée de l\'alimentation sur site',
+                  child: Column(
+                    children: _iacmOptions.map((opt) {
+                      final isSelected = _presenceIacm == opt;
+                      return RadioListTile<String>(
+                        title: Text(
+                          opt,
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          ),
+                        ),
+                        value: opt,
+                        groupValue: _presenceIacm,
+                        activeColor: AppTheme.primaryBlue,
+                        onChanged: _isSaving
+                            ? null
+                            : (val) {
+                                if (val != null) {
+                                  setState(() => _presenceIacm = val);
+                                  _saveField('presence_iacm_alim_site', val);
+                                }
+                              },
+                      );
+                    }).toList(),
+                  ),
+                ),
+                const SizedBox(height: 30),
+              ],
+            ),
           ),
         );
       },
