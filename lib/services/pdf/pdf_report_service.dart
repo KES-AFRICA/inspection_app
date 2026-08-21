@@ -13498,21 +13498,23 @@ class PdfReportService {
             defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
             border: pw.TableBorder.all(color: borderColor, width: 0.4),
             columnWidths: const {
-              0: pw.FlexColumnWidth(2.0), // Repère du point d'origine
-              1: pw.FlexColumnWidth(2.2), // Point A (origine)
-              2: pw.FlexColumnWidth(2.2), // Point B (extrémité)
-              3: pw.FlexColumnWidth(1.6), // Section du câble (mm²)
-              4: pw.FlexColumnWidth(1.6), // Nombre de câbles testés
-              5: pw.FlexColumnWidth(1.6), // Isolement
-              6: pw.FlexColumnWidth(1.8), // Appréciation
+              0: pw.FlexColumnWidth(1.8), // Repère du point d'origine
+              1: pw.FlexColumnWidth(2.0), // Point A (origine)
+              2: pw.FlexColumnWidth(2.0), // Point B (extrémité)
+              3: pw.FlexColumnWidth(1.4), // Section Point A
+              4: pw.FlexColumnWidth(1.4), // Section Point B
+              5: pw.FlexColumnWidth(1.2), // Nombre de câbles testés
+              6: pw.FlexColumnWidth(1.3), // Isolement
+              7: pw.FlexColumnWidth(1.7), // Appréciation
             },
             children: [
               _tableHeaderRow([
                 'Repère du point d\'origine',
                 'Point A (origine)',
                 'Point B (extrémité)',
-                'Section du câble (mm²)',
-                'Nombre de câble testée',
+                'Section câble Point A',
+                'Section câble Point B',
+                'Nb. câbles',
                 'Isolement',
                 'Appréciation',
               ]),
@@ -13520,7 +13522,7 @@ class PdfReportService {
                 pw.TableRow(
                   decoration: const pw.BoxDecoration(color: PdfColors.white),
                   children: List.generate(
-                    7,
+                    8,
                     (_) => _cell('', isHeader: false, centered: true),
                   ),
                 )
@@ -13593,7 +13595,22 @@ class PdfReportService {
                         ),
                         alignment: pw.Alignment.center,
                         child: pw.Text(
-                          ei.displaySection,
+                          ei.displaySectionPointA,
+                          style: pw.TextStyle(
+                            font: _fontRegular,
+                            fontSize: fsSmall,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 3,
+                          vertical: 4,
+                        ),
+                        alignment: pw.Alignment.center,
+                        child: pw.Text(
+                          ei.displaySectionPointB,
                           style: pw.TextStyle(
                             font: _fontRegular,
                             fontSize: fsSmall,

@@ -939,6 +939,12 @@ class BackupService {
                   'pointB': ei.pointB,
                   'sectionCable': ei.sectionCable,
                   'nombreCablesTestes': ei.nombreCablesTestes,
+                  'sectionCablePointA': ei.sectionCablePointA,
+                  'sectionCablePointB': ei.sectionCablePointB,
+                  'isSectionPointAManual': ei.isSectionPointAManual,
+                  'isSectionPointBManual': ei.isSectionPointBManual,
+                  'equipmentPointASyncId': ei.equipmentPointASyncId,
+                  'equipmentPointBSyncId': ei.equipmentPointBSyncId,
                 })
             .toList(),
       };
@@ -2585,6 +2591,12 @@ class BackupService {
                     pointB: m['pointB'] as String?,
                     sectionCable: m['sectionCable'] as String?,
                     nombreCablesTestes: m['nombreCablesTestes'] as int?,
+                    sectionCablePointA: m['sectionCablePointA'] as String?,
+                    sectionCablePointB: m['sectionCablePointB'] as String?,
+                    isSectionPointAManual: m['isSectionPointAManual'] as bool?,
+                    isSectionPointBManual: m['isSectionPointBManual'] as bool?,
+                    equipmentPointASyncId: m['equipmentPointASyncId'] as String?,
+                    equipmentPointBSyncId: m['equipmentPointBSyncId'] as String?,
                   );
                 })
                 .toList() ??

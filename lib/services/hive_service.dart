@@ -4728,6 +4728,183 @@ static List<String> getEquipementsForLocalisation(String missionId, String local
   return equipements;
 }
 
+/// Structure d'équipement typée pour les essais de mesure d'isolement
+class EquipementIsolementItem {
+  final String id;
+  final String nom;
+  final String type;
+  final String repere;
+  final String? sectionPointA;
+  final String? sectionPointB;
+
+  const EquipementIsolementItem({
+    required this.id,
+    required this.nom,
+    required this.type,
+    required this.repere,
+    this.sectionPointA,
+    this.sectionPointB,
+  });
+
+  String get displayName => '$repere - $nom';
+}
+
+/// Récupérer tous les équipements structurés de la mission pour les essais d'isolement
+static List<EquipementIsolementItem> getAllEquipementsIsolementForMission(String missionId) {
+  final audit = getAuditInstallationsByMissionId(missionId);
+  if (audit == null) return [];
+
+  final items = <EquipementIsolementItem>[];
+
+  void addCoffretItem(CoffretArmoire coffret, String repereName) {
+    final typeStr = coffret.type.trim();
+    final nomStr = coffret.nom.trim();
+    if (nomStr.isEmpty) return;
+
+    String formattedName;
+    if (typeStr.isNotEmpty && !nomStr.toUpperCase().contains(typeStr.toUpperCase())) {
+      formattedName = '$typeStr - $nomStr';
+    } else {
+      formattedName = nomStr;
+    }
+
+    final id = coffret.qrCode.isNotEmpty
+        ? coffret.qrCode
+        : (coffret.numeroEquipement != null && coffret.numeroEquipement!.isNotEmpty
+            ? coffret.numeroEquipement!
+            : '${repereName}_$formattedName');
+
+    // Section Point A : Origine de la source d'alimentation
+    String? secA;
+    for (var ali in coffret.alimentations) {
+      if (ali.sectionCable.trim().isNotEmpty) {
+        secA = ali.sectionCable.trim();
+        break;
+      }
+    }
+
+    // Section Point B : Protection de tête (Coffret/Armoire) ou Sortie inverseur (Inverseur)
+    String? secB;
+    if (typeStr.toUpperCase() == 'INVERSEUR') {
+      final sorties = coffret.sortiesInverseur;
+      if (sorties.isNotEmpty && sorties.first.sectionCable.trim().isNotEmpty) {
+        secB = sorties.first.sectionCable.trim();
+      }
+    } else {
+      if (coffret.protectionTete != null && coffret.protectionTete!.sectionCable.trim().isNotEmpty) {
+        secB = coffret.protectionTete!.sectionCable.trim();
+      }
+    }
+
+    items.add(EquipementIsolementItem(
+      id: id,
+      nom: formattedName,
+      type: typeStr.isNotEmpty ? typeStr : 'Coffret/Armoire',
+      repere: repereName,
+      sectionPointA: secA,
+      sectionPointB: secB,
+    ));
+  }
+
+  void addCelluleItem(Cellule cellule, String repereName) {
+    final nomStr = (cellule.nom != null && cellule.nom!.trim().isNotEmpty)
+        ? cellule.nom!.trim()
+        : 'Cellule ${cellule.fonction}';
+    final id = (cellule.syncId != null && cellule.syncId!.isNotEmpty)
+        ? cellule.syncId!
+        : '${repereName}_$nomStr';
+    final sec = (cellule.sectionCables != null && cellule.sectionCables!.trim().isNotEmpty)
+        ? cellule.sectionCables!.trim()
+        : null;
+
+    items.add(EquipementIsolementItem(
+      id: id,
+      nom: nomStr,
+      type: 'Cellule MT',
+      repere: repereName,
+      sectionPointA: sec,
+      sectionPointB: sec,
+    ));
+  }
+
+  void addTransfoItem(TransformateurMTBT transfo, String repereName) {
+    final nomStr = transfo.marqueAnnee.trim().isNotEmpty
+        ? 'Transfo ${transfo.marqueAnnee.trim()}'
+        : 'Transformateur MT/BT';
+    final id = (transfo.syncId != null && transfo.syncId!.isNotEmpty)
+        ? transfo.syncId!
+        : '${repereName}_$nomStr';
+    final sec = (transfo.sectionCables != null && transfo.sectionCables!.trim().isNotEmpty)
+        ? transfo.sectionCables!.trim()
+        : null;
+
+    items.add(EquipementIsolementItem(
+      id: id,
+      nom: nomStr,
+      type: 'Transformateur MT/BT',
+      repere: repereName,
+      sectionPointA: sec,
+      sectionPointB: sec,
+    ));
+  }
+
+  // Moyenne Tension Locaux
+  for (var local in audit.moyenneTensionLocaux) {
+    final rep = local.nom.trim();
+    for (var c in local.coffrets) {
+      addCoffretItem(c, rep);
+    }
+    for (var cell in local.cellules) {
+      addCelluleItem(cell, rep);
+    }
+    for (var tr in local.transformateurs) {
+      addTransfoItem(tr, rep);
+    }
+  }
+
+  // Moyenne Tension Zones
+  for (var zone in audit.moyenneTensionZones) {
+    final repZone = zone.nom.trim();
+    for (var c in zone.coffrets) {
+      addCoffretItem(c, repZone);
+    }
+    for (var local in zone.locaux) {
+      final repLocal = local.nom.trim();
+      for (var c in local.coffrets) {
+        addCoffretItem(c, repLocal);
+      }
+      for (var cell in local.cellules) {
+        addCelluleItem(cell, repLocal);
+      }
+      for (var tr in local.transformateurs) {
+        addTransfoItem(tr, repLocal);
+      }
+    }
+  }
+
+  // Basse Tension Zones & Locaux
+  for (var zone in audit.basseTensionZones) {
+    final repZone = zone.nom.trim();
+    for (var c in zone.coffretsDirects) {
+      addCoffretItem(c, repZone);
+    }
+    for (var local in zone.locaux) {
+      final repLocal = local.nom.trim();
+      for (var c in local.coffrets) {
+        addCoffretItem(c, repLocal);
+      }
+      for (var cell in local.cellules) {
+        addCelluleItem(cell, repLocal);
+      }
+      for (var tr in local.transformateurs) {
+        addTransfoItem(tr, repLocal);
+      }
+    }
+  }
+
+  return items;
+}
+
 // ============================================================
 //          SECTION 7: CONTINUITÉ ET RÉSISTANCE
 // ============================================================

@@ -397,13 +397,19 @@ class EssaiIsolementAdapter extends TypeAdapter<EssaiIsolement> {
       pointB: fields[9] as String?,
       sectionCable: fields[10] as String?,
       nombreCablesTestes: fields[11] as int?,
+      sectionCablePointA: fields[12] as String?,
+      sectionCablePointB: fields[13] as String?,
+      isSectionPointAManual: fields[14] as bool?,
+      isSectionPointBManual: fields[15] as bool?,
+      equipmentPointASyncId: fields[16] as String?,
+      equipmentPointBSyncId: fields[17] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, EssaiIsolement obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(18)
       ..writeByte(0)
       ..write(obj.syncId)
       ..writeByte(1)
@@ -427,7 +433,19 @@ class EssaiIsolementAdapter extends TypeAdapter<EssaiIsolement> {
       ..writeByte(10)
       ..write(obj.sectionCable)
       ..writeByte(11)
-      ..write(obj.nombreCablesTestes);
+      ..write(obj.nombreCablesTestes)
+      ..writeByte(12)
+      ..write(obj.sectionCablePointA)
+      ..writeByte(13)
+      ..write(obj.sectionCablePointB)
+      ..writeByte(14)
+      ..write(obj.isSectionPointAManual)
+      ..writeByte(15)
+      ..write(obj.isSectionPointBManual)
+      ..writeByte(16)
+      ..write(obj.equipmentPointASyncId)
+      ..writeByte(17)
+      ..write(obj.equipmentPointBSyncId);
   }
 
   @override

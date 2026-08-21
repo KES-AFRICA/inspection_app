@@ -367,13 +367,20 @@ class _EssaisIsolementScreenState extends ConsumerState<EssaisIsolementScreen> {
 
               const SizedBox(height: 14),
 
-              // Ligne 4 : Métriques clés (SECTION, CÂBLES, ISOLEMENT)
+              // Ligne 4 : Métriques clés (SECTION A, SECTION B, CÂBLES, ISOLEMENT)
               Row(
                 children: [
                   Expanded(
                     child: _buildMetricItem(
-                      label: 'SECTION',
-                      value: essai.displaySection,
+                      label: 'SECTION A',
+                      value: essai.displaySectionPointA,
+                    ),
+                  ),
+                  Container(height: 24, width: 1, color: Colors.grey.shade300),
+                  Expanded(
+                    child: _buildMetricItem(
+                      label: 'SECTION B',
+                      value: essai.displaySectionPointB,
                     ),
                   ),
                   Container(height: 24, width: 1, color: Colors.grey.shade300),
@@ -410,7 +417,7 @@ class _EssaisIsolementScreenState extends ConsumerState<EssaisIsolementScreen> {
         Text(
           label,
           style: TextStyle(
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: FontWeight.w600,
             color: Colors.grey.shade500,
             letterSpacing: 0.5,
@@ -420,7 +427,7 @@ class _EssaisIsolementScreenState extends ConsumerState<EssaisIsolementScreen> {
         Text(
           value,
           style: TextStyle(
-            fontSize: 13,
+            fontSize: 12,
             fontWeight: isHighlight ? FontWeight.bold : FontWeight.w600,
             color: isHighlight ? Colors.blue.shade800 : Colors.grey.shade800,
           ),
@@ -525,20 +532,19 @@ class AjouterEssaiIsolementScreen extends ConsumerStatefulWidget {
 class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolementScreen> {
   final _formKey = GlobalKey<FormState>();
 
-  String? _selectedRepereOrigine;
-  String? _selectedPointA;
-  String? _selectedPointB;
-  String? _selectedSectionCable;
+  List<EquipementIsolementItem> _allEquipements = [];
+  EquipementIsolementItem? _selectedPointAItem;
+  EquipementIsolementItem? _selectedPointBItem;
+
+  String? _selectedSectionPointA;
+  String? _selectedSectionPointB;
+  bool _isSectionPointAManual = false;
+  bool _isSectionPointBManual = false;
 
   final _nombreCablesController = TextEditingController();
   final _isolementController = TextEditingController();
 
   String? _selectedAppreciation;
-
-  List<String> _localisations = [];
-  List<String> _equipementsOriginals = [];
-  List<String> _equipementsPointB = [];
-
   bool _isSaving = false;
 
   // Helpers responsifs
@@ -554,11 +560,7 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
   @override
   void initState() {
     super.initState();
-    _chargerLocalisations();
-
-    if (widget.isEdition) {
-      _chargerDonneesExistantes();
-    }
+    _chargerEquipements();
   }
 
   @override
@@ -568,69 +570,98 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
     super.dispose();
   }
 
-  void _chargerLocalisations() {
-    _localisations = HiveService.getLocalisationsForEssais(widget.mission.id);
-    if (_localisations.isEmpty) {
-      _localisations = ['Local technique', 'TGBT', 'Tableau divisionnaire', 'Zone principale'];
+  void _chargerEquipements() {
+    _allEquipements = HiveService.getAllEquipementsIsolementForMission(widget.mission.id);
+
+    if (widget.isEdition) {
+      _chargerDonneesExistantes();
     }
-  }
-
-  void _onRepereOrigineChanged(String? newValue) {
-    setState(() {
-      _selectedRepereOrigine = newValue;
-      _selectedPointA = null;
-      _selectedPointB = null;
-
-      if (newValue != null && newValue.isNotEmpty) {
-        _equipementsOriginals = HiveService.getEquipementsForLocalisation(widget.mission.id, newValue);
-      } else {
-        _equipementsOriginals = [];
-      }
-      _equipementsPointB = [];
-    });
-  }
-
-  void _onPointAChanged(String? newValue) {
-    setState(() {
-      _selectedPointA = newValue;
-      if (newValue != null && newValue == _selectedPointB) {
-        _selectedPointB = null;
-      }
-      _equipementsPointB = _equipementsOriginals.where((eq) => eq != newValue).toList();
-    });
   }
 
   void _chargerDonneesExistantes() {
     final essai = widget.essai!;
-    _selectedRepereOrigine = essai.reperePointOrigine ?? essai.localisation;
 
-    if (_selectedRepereOrigine != null && _selectedRepereOrigine!.isNotEmpty) {
-      if (!_localisations.contains(_selectedRepereOrigine)) {
-        _localisations.add(_selectedRepereOrigine!);
-      }
-      _equipementsOriginals = HiveService.getEquipementsForLocalisation(widget.mission.id, _selectedRepereOrigine!);
+    // Résolution du Point A
+    if (essai.equipmentPointASyncId != null && essai.equipmentPointASyncId!.isNotEmpty) {
+      _selectedPointAItem = _allEquipements.cast<EquipementIsolementItem?>().firstWhere(
+            (e) => e?.id == essai.equipmentPointASyncId,
+            orElse: () => null,
+          );
+    }
+    if (_selectedPointAItem == null && essai.pointA != null && essai.pointA!.isNotEmpty) {
+      _selectedPointAItem = _allEquipements.cast<EquipementIsolementItem?>().firstWhere(
+            (e) => e?.displayName == essai.pointA || e?.nom == essai.pointA,
+            orElse: () {
+              final fallback = EquipementIsolementItem(
+                id: 'legacy_A_${DateTime.now().millisecondsSinceEpoch}',
+                nom: essai.pointA!,
+                type: 'Équipement',
+                repere: essai.reperePointOrigine ?? essai.localisation ?? 'Local',
+                sectionPointA: essai.sectionCablePointA ?? essai.sectionCable,
+              );
+              _allEquipements.add(fallback);
+              return fallback;
+            },
+          );
     }
 
-    _selectedPointA = essai.pointA ?? essai.designation ?? essai.pointControle;
-    if (_selectedPointA != null && _selectedPointA!.isNotEmpty && !_equipementsOriginals.contains(_selectedPointA)) {
-      _equipementsOriginals.add(_selectedPointA!);
+    // Résolution du Point B
+    if (essai.equipmentPointBSyncId != null && essai.equipmentPointBSyncId!.isNotEmpty) {
+      _selectedPointBItem = _allEquipements.cast<EquipementIsolementItem?>().firstWhere(
+            (e) => e?.id == essai.equipmentPointBSyncId,
+            orElse: () => null,
+          );
+    }
+    if (_selectedPointBItem == null && essai.pointB != null && essai.pointB!.isNotEmpty) {
+      _selectedPointBItem = _allEquipements.cast<EquipementIsolementItem?>().firstWhere(
+            (e) => e?.displayName == essai.pointB || e?.nom == essai.pointB,
+            orElse: () {
+              final fallback = EquipementIsolementItem(
+                id: 'legacy_B_${DateTime.now().millisecondsSinceEpoch}',
+                nom: essai.pointB!,
+                type: 'Équipement',
+                repere: essai.reperePointOrigine ?? essai.localisation ?? 'Local',
+                sectionPointB: essai.sectionCablePointB ?? essai.sectionCable,
+              );
+              _allEquipements.add(fallback);
+              return fallback;
+            },
+          );
     }
 
-    _selectedPointB = essai.pointB;
-    _equipementsPointB = _equipementsOriginals.where((eq) => eq != _selectedPointA).toList();
-    if (_selectedPointB != null && _selectedPointB!.isNotEmpty && !_equipementsPointB.contains(_selectedPointB)) {
-      _equipementsPointB.add(_selectedPointB!);
-    }
-
-    _selectedSectionCable = essai.sectionCable;
-    if (_selectedSectionCable != null && !kSectionCableOptions.contains(_selectedSectionCable)) {
-      // Intégrer la valeur custom si elle n'existait pas dans la liste
-      kSectionCableOptions.contains(_selectedSectionCable);
-    }
+    _selectedSectionPointA = essai.sectionCablePointA ?? essai.sectionCable;
+    _selectedSectionPointB = essai.sectionCablePointB ?? essai.sectionCable;
+    _isSectionPointAManual = essai.isSectionPointAManual ?? false;
+    _isSectionPointBManual = essai.isSectionPointBManual ?? false;
 
     _nombreCablesController.text = essai.nombreCablesTestes != null ? essai.nombreCablesTestes.toString() : '';
     _isolementController.text = essai.isolement > 0 ? essai.isolement.toString() : '';
     _selectedAppreciation = essai.appreciation.isNotEmpty ? essai.appreciation : null;
+  }
+
+  void _onPointAChanged(EquipementIsolementItem? newItem) {
+    setState(() {
+      _selectedPointAItem = newItem;
+      if (newItem != null && newItem.id == _selectedPointBItem?.id) {
+        _selectedPointBItem = null;
+      }
+      if (newItem != null && !_isSectionPointAManual) {
+        if (newItem.sectionPointA != null && newItem.sectionPointA!.isNotEmpty) {
+          _selectedSectionPointA = newItem.sectionPointA;
+        }
+      }
+    });
+  }
+
+  void _onPointBChanged(EquipementIsolementItem? newItem) {
+    setState(() {
+      _selectedPointBItem = newItem;
+      if (newItem != null && !_isSectionPointBManual) {
+        if (newItem.sectionPointB != null && newItem.sectionPointB!.isNotEmpty) {
+          _selectedSectionPointB = newItem.sectionPointB;
+        }
+      }
+    });
   }
 
   Future<void> _sauvegarder() async {
@@ -638,23 +669,23 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
       return;
     }
 
-    if (_selectedRepereOrigine == null || _selectedRepereOrigine!.isEmpty) {
-      _showErrorSnackBar('Veuillez sélectionner le Repère du point d\'origine.');
-      return;
-    }
-
-    if (_selectedPointA == null || _selectedPointA!.isEmpty) {
+    if (_selectedPointAItem == null) {
       _showErrorSnackBar('Veuillez sélectionner le Point A (origine).');
       return;
     }
 
-    if (_selectedPointB == null || _selectedPointB!.isEmpty) {
+    if (_selectedPointBItem == null) {
       _showErrorSnackBar('Veuillez sélectionner le Point B (extrémité).');
       return;
     }
 
-    if (_selectedSectionCable == null || _selectedSectionCable!.isEmpty) {
-      _showErrorSnackBar('Veuillez sélectionner la Section du câble.');
+    if (_selectedSectionPointA == null || _selectedSectionPointA!.isEmpty) {
+      _showErrorSnackBar('Veuillez sélectionner la Section du câble Point A.');
+      return;
+    }
+
+    if (_selectedSectionPointB == null || _selectedSectionPointB!.isEmpty) {
+      _showErrorSnackBar('Veuillez sélectionner la Section du câble Point B.');
       return;
     }
 
@@ -680,18 +711,29 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
     try {
       final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
 
+      final repereDerive = EssaiIsolement.computeRepereDerive(
+        _selectedPointAItem?.repere,
+        _selectedPointBItem?.repere,
+      );
+
       final essai = EssaiIsolement(
         syncId: widget.essai?.syncId ?? 'iso_${DateTime.now().microsecondsSinceEpoch}',
-        equipmentSyncId: _selectedPointA,
-        pointControle: 'De $_selectedPointA vers $_selectedPointB',
+        equipmentSyncId: _selectedPointAItem?.id,
+        pointControle: 'De ${_selectedPointAItem?.nom} vers ${_selectedPointBItem?.nom}',
         isolement: isoValue,
         appreciation: _selectedAppreciation!,
-        localisation: _selectedRepereOrigine,
-        designation: _selectedPointA,
-        reperePointOrigine: _selectedRepereOrigine,
-        pointA: _selectedPointA,
-        pointB: _selectedPointB,
-        sectionCable: _selectedSectionCable,
+        localisation: repereDerive,
+        designation: _selectedPointAItem?.nom,
+        reperePointOrigine: repereDerive,
+        pointA: _selectedPointAItem?.displayName ?? _selectedPointAItem?.nom,
+        pointB: _selectedPointBItem?.displayName ?? _selectedPointBItem?.nom,
+        sectionCable: _selectedSectionPointA, // Fallback legacy
+        sectionCablePointA: _selectedSectionPointA,
+        sectionCablePointB: _selectedSectionPointB,
+        isSectionPointAManual: _isSectionPointAManual,
+        isSectionPointBManual: _isSectionPointBManual,
+        equipmentPointASyncId: _selectedPointAItem?.id,
+        equipmentPointBSyncId: _selectedPointBItem?.id,
         nombreCablesTestes: nbCables,
       );
 
@@ -772,7 +814,14 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
 
   @override
   Widget build(BuildContext context) {
-    final bool hasEnoughEquipments = _equipementsOriginals.length >= 2;
+    final bool hasEnoughEquipments = _allEquipements.length >= 2;
+    final List<EquipementIsolementItem> equipementsPointBOptions =
+        _allEquipements.where((eq) => eq.id != _selectedPointAItem?.id).toList();
+
+    final String computedRepere = EssaiIsolement.computeRepereDerive(
+      _selectedPointAItem?.repere,
+      _selectedPointBItem?.repere,
+    );
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
@@ -794,7 +843,7 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Card de sélection de la localisation & des points A/B
+                // Card de sélection des équipements & repère dérivé
                 Container(
                   padding: EdgeInsets.all(_spacingL),
                   decoration: BoxDecoration(
@@ -808,37 +857,12 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '1. Repère & Tronçon',
+                        '1. Tronçon d\'isolement (Point A & Point B)',
                         style: TextStyle(fontSize: _fontSizeL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
                       ),
                       const Divider(height: 20),
 
-                      // Repère du point d'origine (Select)
-                      Text('Repère du point d\'origine *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 6),
-                      DropdownButtonFormField<String>(
-                        value: _selectedRepereOrigine,
-                        isExpanded: true,
-                        decoration: InputDecoration(
-                          hintText: 'Sélectionner le local ou la zone',
-                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500, overflow: TextOverflow.ellipsis),
-                          filled: true,
-                          fillColor: Colors.grey.shade50,
-                          prefixIcon: const Icon(Icons.location_on_outlined, size: 20, color: Colors.blue),
-                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                        ),
-                        items: _localisations.map((loc) {
-                          return DropdownMenuItem<String>(
-                            value: loc,
-                            child: Text(loc, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
-                          );
-                        }).toList(),
-                        onChanged: _onRepereOrigineChanged,
-                      ),
-
-                      if (_selectedRepereOrigine != null && !hasEnoughEquipments) ...[
-                        const SizedBox(height: 8),
+                      if (!hasEnoughEquipments) ...[
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           decoration: BoxDecoration(
@@ -852,9 +876,7 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                               const SizedBox(width: 8),
                               Expanded(
                                 child: Text(
-                                  _equipementsOriginals.isEmpty
-                                      ? 'Aucun équipement disponible dans ce local. Sélection des points A et B impossible.'
-                                      : 'Ce local ne contient qu\'un seul équipement. Au moins 2 équipements sont requis pour sélectionner les points A et B.',
+                                  'Au moins 2 équipements enregistrés dans l\'audit sont nécessaires pour mesurer l\'isolement d\'un tronçon.',
                                   style: TextStyle(
                                     fontSize: 11,
                                     color: Colors.amber.shade900,
@@ -865,35 +887,31 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                             ],
                           ),
                         ),
+                        SizedBox(height: _spacingM),
                       ],
-
-                      SizedBox(height: _spacingM),
 
                       // Point A (origine)
                       Text('Point A (origine) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
-                      DropdownButtonFormField<String>(
-                        value: _selectedPointA,
+                      DropdownButtonFormField<EquipementIsolementItem>(
+                        value: _selectedPointAItem,
                         isExpanded: true,
                         decoration: InputDecoration(
-                          hintText: _selectedRepereOrigine == null
-                              ? 'Veuillez d\'abord choisir l\'origine'
-                              : (!hasEnoughEquipments
-                                  ? 'Impossible : moins de 2 équipements dans ce local'
-                                  : 'Sélectionner l\'équipement d\'origine'),
+                          hintText: 'Sélectionner l\'équipement d\'origine (Point A)',
                           hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500, overflow: TextOverflow.ellipsis),
                           filled: true,
                           fillColor: Colors.grey.shade50,
+                          prefixIcon: const Icon(Icons.hub_outlined, size: 20, color: Colors.blue),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
-                        items: _equipementsOriginals.map((eq) {
-                          return DropdownMenuItem<String>(
+                        items: _allEquipements.map((eq) {
+                          return DropdownMenuItem<EquipementIsolementItem>(
                             value: eq,
-                            child: Text(eq, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
+                            child: Text(eq.displayName, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
                           );
                         }).toList(),
-                        onChanged: (_selectedRepereOrigine != null && hasEnoughEquipments) ? _onPointAChanged : null,
+                        onChanged: hasEnoughEquipments ? _onPointAChanged : null,
                       ),
 
                       SizedBox(height: _spacingM),
@@ -901,210 +919,277 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                       // Point B (extrémité) - exclut Point A
                       Text('Point B (extrémité) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
-                      DropdownButtonFormField<String>(
-                        value: _selectedPointB,
+                      DropdownButtonFormField<EquipementIsolementItem>(
+                        value: _selectedPointBItem,
                         isExpanded: true,
                         decoration: InputDecoration(
-                          hintText: !hasEnoughEquipments
-                              ? 'Impossible : moins de 2 équipements dans ce local'
-                              : (_selectedPointA == null
-                                  ? 'Veuillez d\'abord choisir le Point A'
-                                  : 'Sélectionner l\'équipement d\'extrémité'),
+                          hintText: _selectedPointAItem == null
+                              ? 'Veuillez d\'abord choisir le Point A'
+                              : 'Sélectionner l\'équipement d\'extrémité (Point B)',
+                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500, overflow: TextOverflow.ellipsis),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          prefixIcon: const Icon(Icons.call_split_outlined, size: 20, color: Colors.blue),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        items: equipementsPointBOptions.map((eq) {
+                          return DropdownMenuItem<EquipementIsolementItem>(
+                            value: eq,
+                            child: Text(eq.displayName, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
+                          );
+                        }).toList(),
+                        onChanged: (_selectedPointAItem != null && hasEnoughEquipments) ? _onPointBChanged : null,
+                      ),
+
+                      SizedBox(height: _spacingM),
+
+                      // Repère du point d'origine (Champ dérivé automatique non modifiable à la main)
+                      Text('Repère du point d\'origine (dérivé)', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade100,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.location_on_outlined, size: 20, color: Colors.blue),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                computedRepere,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.darkBlue,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                SizedBox(height: _spacingL),
+
+                // Card des Sections de câble & Mesure
+                Container(
+                  padding: EdgeInsets.all(_spacingL),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
+                    ],
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '2. Sections de câble & Mesures',
+                        style: TextStyle(fontSize: _fontSizeL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                      ),
+                      const Divider(height: 20),
+
+                      // Section du câble Point A
+                      Text('Section du câble Point A (mm²) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<String>(
+                        value: (_selectedSectionPointA != null && kSectionCableOptions.contains(_selectedSectionPointA))
+                            ? _selectedSectionPointA
+                            : null,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          hintText: 'Choisir la section Point A',
                           hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500, overflow: TextOverflow.ellipsis),
                           filled: true,
                           fillColor: Colors.grey.shade50,
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
-                        items: _equipementsPointB.map((eq) {
+                        items: kSectionCableOptions.map((sec) {
                           return DropdownMenuItem<String>(
-                            value: eq,
-                            child: Text(eq, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
+                            value: sec,
+                            child: Text(sec, style: const TextStyle(fontSize: 13)),
                           );
                         }).toList(),
-                        onChanged: (_selectedPointA != null && hasEnoughEquipments)
-                            ? (v) => setState(() => _selectedPointB = v)
+                        onChanged: (v) {
+                          setState(() {
+                            _selectedSectionPointA = v;
+                            _isSectionPointAManual = true;
+                          });
+                        },
+                      ),
+
+                      SizedBox(height: _spacingM),
+
+                      // Section du câble Point B
+                      Text('Section du câble Point B (mm²) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
+                      DropdownButtonFormField<String>(
+                        value: (_selectedSectionPointB != null && kSectionCableOptions.contains(_selectedSectionPointB))
+                            ? _selectedSectionPointB
                             : null,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          hintText: 'Choisir la section Point B',
+                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500, overflow: TextOverflow.ellipsis),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                        ),
+                        items: kSectionCableOptions.map((sec) {
+                          return DropdownMenuItem<String>(
+                            value: sec,
+                            child: Text(sec, style: const TextStyle(fontSize: 13)),
+                          );
+                        }).toList(),
+                        onChanged: (v) {
+                          setState(() {
+                            _selectedSectionPointB = v;
+                            _isSectionPointBManual = true;
+                          });
+                        },
+                      ),
+
+                      SizedBox(height: _spacingM),
+
+                      // Nombre de câbles testés
+                      Text('Nombre de câbles testés *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _nombreCablesController,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          hintText: 'Ex: 1',
+                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) return 'Champ obligatoire';
+                          final numVal = int.tryParse(val.trim());
+                          if (numVal == null || numVal <= 0) return 'Saisir un entier valide';
+                          return null;
+                        },
+                      ),
+
+                      SizedBox(height: _spacingM),
+
+                      // Isolement (MΩ)
+                      Text('Isolement (MΩ) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 6),
+                      TextFormField(
+                        controller: _isolementController,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        decoration: InputDecoration(
+                          hintText: 'Ex: 250.0',
+                          hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
+                          suffixText: 'MΩ',
+                          suffixStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
+                          filled: true,
+                          fillColor: Colors.grey.shade50,
+                          prefixIcon: const Icon(Icons.speed, size: 20, color: Colors.blue),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        validator: (val) {
+                          if (val == null || val.trim().isEmpty) return 'Champ obligatoire';
+                          final numVal = double.tryParse(val.trim().replaceAll(',', '.'));
+                          if (numVal == null || numVal <= 0) return 'Saisir une valeur valide (ex: 250.0)';
+                          return null;
+                        },
                       ),
                     ],
                   ),
                 ),
 
-              SizedBox(height: _spacingL),
+                SizedBox(height: _spacingL),
 
-              // Card des Caractéristiques du câble et de la mesure
-              Container(
-                padding: EdgeInsets.all(_spacingL),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '2. Câble & Mesure',
-                      style: TextStyle(fontSize: _fontSizeL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
-                    ),
-                    const Divider(height: 20),
-
-                    // Section du câble
-                    Text('Section du câble (mm²) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    DropdownButtonFormField<String>(
-                      value: _selectedSectionCable,
-                      isExpanded: true,
-                      decoration: InputDecoration(
-                        hintText: 'Choisir la section du câble',
-                        hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500, overflow: TextOverflow.ellipsis),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-                      ),
-                      items: kSectionCableOptions.map((sec) {
-                        return DropdownMenuItem<String>(
-                          value: sec,
-                          child: Text(sec, style: const TextStyle(fontSize: 13)),
-                        );
-                      }).toList(),
-                      onChanged: (v) => setState(() => _selectedSectionCable = v),
-                    ),
-
-                    SizedBox(height: _spacingM),
-
-                    // Nombre de câbles testés
-                    Text('Nombre de câbles testés *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _nombreCablesController,
-                      keyboardType: TextInputType.number,
-                      decoration: InputDecoration(
-                        hintText: 'Ex: 1',
-                        hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) return 'Champ obligatoire';
-                        final numVal = int.tryParse(val.trim());
-                        if (numVal == null || numVal <= 0) return 'Saisir un entier valide';
-                        return null;
-                      },
-                    ),
-
-                    SizedBox(height: _spacingM),
-
-                    // Isolement (MΩ)
-                    Text('Isolement (MΩ) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 6),
-                    TextFormField(
-                      controller: _isolementController,
-                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                      decoration: InputDecoration(
-                        hintText: 'Ex: 250.0',
-                        hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
-                        suffixText: 'MΩ',
-                        suffixStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
-                        filled: true,
-                        fillColor: Colors.grey.shade50,
-                        prefixIcon: const Icon(Icons.speed, size: 20, color: Colors.blue),
-                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      validator: (val) {
-                        if (val == null || val.trim().isEmpty) return 'Champ obligatoire';
-                        final numVal = double.tryParse(val.trim().replaceAll(',', '.'));
-                        if (numVal == null || numVal <= 0) return 'Saisir une valeur valide (ex: 250.0)';
-                        return null;
-                      },
-                    ),
-                  ],
-                ),
-              ),
-
-              SizedBox(height: _spacingL),
-
-              // Card de l'Appréciation
-              Container(
-                padding: EdgeInsets.all(_spacingL),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '3. Appréciation *',
-                      style: TextStyle(fontSize: _fontSizeL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
-                    ),
-                    const SizedBox(height: 12),
-                    IntrinsicHeight(
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          _buildAppreciationButton(
-                            label: 'Satisfaisant',
-                            icon: Icons.check_circle_outline,
-                            color: Colors.green,
-                          ),
-                          SizedBox(width: _spacingS),
-                          _buildAppreciationButton(
-                            label: 'Non satisfaisant',
-                            icon: Icons.cancel,
-                            color: Colors.red,
-                          ),
-                          SizedBox(width: _spacingS),
-                          _buildAppreciationButton(
-                            label: 'Sans objet',
-                            icon: Icons.remove_circle_outline,
-                            color: Colors.grey,
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              SizedBox(height: _spacingL * 1.5),
-
-              // Boutons d'action
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  onPressed: _isSaving ? null : _sauvegarder,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blue,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    elevation: 2,
+                // Card de l'Appréciation
+                Container(
+                  padding: EdgeInsets.all(_spacingL),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(16),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 8, offset: const Offset(0, 2)),
+                    ],
                   ),
-                  child: _isSaving
-                      ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                        )
-                      : Text(
-                          widget.isEdition ? 'Mettre à jour l\'essai' : 'Enregistrer l\'essai',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '3. Appréciation *',
+                        style: TextStyle(fontSize: _fontSizeL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
+                      ),
+                      const SizedBox(height: 12),
+                      IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _buildAppreciationButton(
+                              label: 'Satisfaisant',
+                              icon: Icons.check_circle_outline,
+                              color: Colors.green,
+                            ),
+                            SizedBox(width: _spacingS),
+                            _buildAppreciationButton(
+                              label: 'Non satisfaisant',
+                              icon: Icons.cancel,
+                              color: Colors.red,
+                            ),
+                            SizedBox(width: _spacingS),
+                            _buildAppreciationButton(
+                              label: 'Sans objet',
+                              icon: Icons.remove_circle_outline,
+                              color: Colors.grey,
+                            ),
+                          ],
                         ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+
+                SizedBox(height: _spacingL * 1.5),
+
+                // Boutons d'action
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: _isSaving ? null : _sauvegarder,
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 2,
+                    ),
+                    child: _isSaving
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                          )
+                        : Text(
+                            widget.isEdition ? 'Mettre à jour l\'essai' : 'Enregistrer l\'essai',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

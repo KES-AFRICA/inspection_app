@@ -63,6 +63,12 @@ class MesuresEssaisMapper {
           pointB: ei.pointB,
           sectionCable: ei.sectionCable,
           nombreCablesTestes: ei.nombreCablesTestes,
+          sectionCablePointA: ei.sectionCablePointA,
+          sectionCablePointB: ei.sectionCablePointB,
+          isSectionPointAManual: ei.isSectionPointAManual,
+          isSectionPointBManual: ei.isSectionPointBManual,
+          equipmentPointASyncId: ei.equipmentPointASyncId,
+          equipmentPointBSyncId: ei.equipmentPointBSyncId,
         );
       }).toList(),
       continuiteResistances: model.continuiteResistances.map((cr) {
@@ -135,6 +141,12 @@ class MesuresEssaisMapper {
           pointB: ei.pointB,
           sectionCable: ei.sectionCable,
           nombreCablesTestes: ei.nombreCablesTestes,
+          sectionCablePointA: ei.sectionCablePointA,
+          sectionCablePointB: ei.sectionCablePointB,
+          isSectionPointAManual: ei.isSectionPointAManual,
+          isSectionPointBManual: ei.isSectionPointBManual,
+          equipmentPointASyncId: ei.equipmentPointASyncId,
+          equipmentPointBSyncId: ei.equipmentPointBSyncId,
         );
       }).toList(),
       continuiteResistances: entity.continuiteResistances.map((cr) {

@@ -384,10 +384,28 @@ class EssaiIsolement {
   String? pointB; // Point B (extrémité)
 
   @HiveField(10)
-  String? sectionCable; // Section du câble (mm²)
+  String? sectionCable; // Section du câble (mm²) - Champ legacy
 
   @HiveField(11)
   int? nombreCablesTestes; // Nombre de câbles testés
+
+  @HiveField(12)
+  String? sectionCablePointA; // Section du câble Point A (mm²)
+
+  @HiveField(13)
+  String? sectionCablePointB; // Section du câble Point B (mm²)
+
+  @HiveField(14)
+  bool? isSectionPointAManual; // Si l'utilisateur a modifié manuellement la section Point A
+
+  @HiveField(15)
+  bool? isSectionPointBManual; // Si l'utilisateur a modifié manuellement la section Point B
+
+  @HiveField(16)
+  String? equipmentPointASyncId; // Identifiant réel de l'équipement Point A
+
+  @HiveField(17)
+  String? equipmentPointBSyncId; // Identifiant réel de l'équipement Point B
 
   EssaiIsolement({
     required this.syncId,
@@ -402,6 +420,12 @@ class EssaiIsolement {
     this.pointB,
     this.sectionCable,
     this.nombreCablesTestes,
+    this.sectionCablePointA,
+    this.sectionCablePointB,
+    this.isSectionPointAManual,
+    this.isSectionPointBManual,
+    this.equipmentPointASyncId,
+    this.equipmentPointBSyncId,
   });
 
   factory EssaiIsolement.create({
@@ -409,9 +433,13 @@ class EssaiIsolement {
     required String pointA,
     required String pointB,
     required String sectionCable,
+    String? sectionCablePointA,
+    String? sectionCablePointB,
     required int nombreCablesTestes,
     required double isolement,
     required String appreciation,
+    String? equipmentPointASyncId,
+    String? equipmentPointBSyncId,
   }) {
     return EssaiIsolement(
       syncId: 'iso_${DateTime.now().microsecondsSinceEpoch}',
@@ -419,18 +447,40 @@ class EssaiIsolement {
       pointA: pointA,
       pointB: pointB,
       sectionCable: sectionCable,
+      sectionCablePointA: sectionCablePointA ?? sectionCable,
+      sectionCablePointB: sectionCablePointB ?? sectionCable,
       nombreCablesTestes: nombreCablesTestes,
       isolement: isolement,
       appreciation: appreciation,
       localisation: reperePointOrigine,
       designation: pointA,
+      equipmentPointASyncId: equipmentPointASyncId,
+      equipmentPointBSyncId: equipmentPointBSyncId,
     );
+  }
+
+  static String computeRepereDerive(String? repereA, String? repereB) {
+    final rA = repereA?.trim() ?? '';
+    final rB = repereB?.trim() ?? '';
+    if (rA.isNotEmpty && rB.isNotEmpty) {
+      if (rA == rB) return rA;
+      return '$rA - $rB';
+    }
+    if (rA.isNotEmpty) return rA;
+    if (rB.isNotEmpty) return rB;
+    return '-';
   }
 
   String get displayRepereOrigine => reperePointOrigine ?? localisation ?? '-';
   String get displayPointA => pointA ?? designation ?? pointControle ?? '-';
   String get displayPointB => pointB ?? '-';
   String get displaySection => sectionCable ?? '-';
+  String get displaySectionPointA => (sectionCablePointA != null && sectionCablePointA!.isNotEmpty)
+      ? sectionCablePointA!
+      : (sectionCable != null && sectionCable!.isNotEmpty ? sectionCable! : '-');
+  String get displaySectionPointB => (sectionCablePointB != null && sectionCablePointB!.isNotEmpty)
+      ? sectionCablePointB!
+      : (sectionCable != null && sectionCable!.isNotEmpty ? sectionCable! : '-');
   String get displayNombreCables => nombreCablesTestes != null ? nombreCablesTestes.toString() : '-';
 
   bool get isComplete => isolement > 0 && appreciation.isNotEmpty;
