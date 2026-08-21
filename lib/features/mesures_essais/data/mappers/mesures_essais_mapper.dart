@@ -26,6 +26,7 @@ class MesuresEssaisMapper {
           methodeMesure: pt.methodeMesure,
           valeurMesure: pt.valeurMesure,
           observation: pt.observation,
+          interconnecteAutrePrise: pt.interconnecteAutrePrise,
         );
       }).toList(),
       avisMesuresTerre: AvisMesuresTerreEntity(
@@ -44,6 +45,8 @@ class MesuresEssaisMapper {
           isolement: ed.isolement,
           essai: ed.essai,
           observation: ed.observation,
+          calibre: ed.calibre,
+          tempoText: ed.tempoText,
         );
       }).toList(),
       essaisIsolement: model.essaisIsolement.map((ei) {
@@ -95,6 +98,7 @@ class MesuresEssaisMapper {
           methodeMesure: pt.methodeMesure,
           valeurMesure: pt.valeurMesure,
           observation: pt.observation,
+          interconnecteAutrePrise: pt.interconnecteAutrePrise,
         );
       }).toList(),
       avisMesuresTerre: AvisMesuresTerre(
@@ -113,6 +117,8 @@ class MesuresEssaisMapper {
           isolement: ed.isolement,
           essai: ed.essai,
           observation: ed.observation,
+          calibre: ed.calibre,
+          tempoText: ed.tempoText,
         );
       }).toList(),
       essaisIsolement: entity.essaisIsolement.map((ei) {

@@ -4806,7 +4806,7 @@ static List<ContinuiteResistance> getContinuiteResistances(String missionId) {
 
 /// Obtenir les options pour les types de dispositifs différentiels
 static List<String> getTypesDispositifDifferentiel() {
-  return ['DDR', 'RD', 'IDR'];
+  return ['Disjoncteur différentiel', 'Interrupteur différentiel'];
 }
 
 /// Obtenir les options pour les résultats d'essai

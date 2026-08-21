@@ -189,13 +189,14 @@ class PriseTerreAdapter extends TypeAdapter<PriseTerre> {
       methodeMesure: fields[4] as String,
       valeurMesure: fields[5] as double?,
       observation: fields[6] as String?,
+      interconnecteAutrePrise: fields[7] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, PriseTerre obj) {
     writer
-      ..writeByte(7)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.localisation)
       ..writeByte(1)
@@ -209,7 +210,9 @@ class PriseTerreAdapter extends TypeAdapter<PriseTerre> {
       ..writeByte(5)
       ..write(obj.valeurMesure)
       ..writeByte(6)
-      ..write(obj.observation);
+      ..write(obj.observation)
+      ..writeByte(7)
+      ..write(obj.interconnecteAutrePrise);
   }
 
   @override
@@ -284,13 +287,15 @@ class EssaiDeclenchementDifferentielAdapter
       isolement: fields[6] as double?,
       essai: fields[7] as String,
       observation: fields[8] as String?,
+      calibre: fields[9] as double?,
+      tempoText: fields[10] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, EssaiDeclenchementDifferentiel obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.localisation)
       ..writeByte(1)
@@ -308,7 +313,11 @@ class EssaiDeclenchementDifferentielAdapter
       ..writeByte(7)
       ..write(obj.essai)
       ..writeByte(8)
-      ..write(obj.observation);
+      ..write(obj.observation)
+      ..writeByte(9)
+      ..write(obj.calibre)
+      ..writeByte(10)
+      ..write(obj.tempoText);
   }
 
   @override

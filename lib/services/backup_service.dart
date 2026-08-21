@@ -899,6 +899,7 @@ class BackupService {
                   'methodeMesure': p.methodeMesure,
                   'valeurMesure': p.valeurMesure,
                   'observation': p.observation,
+                  'interconnecteAutrePrise': p.interconnecteAutrePrise,
                 })
             .toList(),
         'essaisDeclenchement': m.essaisDeclenchement
@@ -907,8 +908,10 @@ class BackupService {
                   'coffret': e.coffret,
                   'designationCircuit': e.designationCircuit,
                   'typeDispositif': e.typeDispositif,
+                  'calibre': e.calibre,
                   'reglageIAn': e.reglageIAn,
                   'tempo': e.tempo,
+                  'tempoText': e.tempoText,
                   'isolement': e.isolement,
                   'essai': e.essai,
                   'observation': e.observation,
@@ -2529,6 +2532,8 @@ class BackupService {
                     methodeMesure: m['methodeMesure'] as String? ?? '',
                     valeurMesure: (m['valeurMesure'] as num?)?.toDouble(),
                     observation: m['observation'] as String?,
+                    interconnecteAutrePrise:
+                        m['interconnecteAutrePrise'] as String?,
                   );
                 })
                 .toList() ??
@@ -2540,9 +2545,11 @@ class BackupService {
                     localisation: m['localisation'] as String? ?? '',
                     coffret: m['coffret'] as String?,
                     designationCircuit: m['designationCircuit'] as String?,
-                    typeDispositif: m['typeDispositif'] as String? ?? 'DDR',
+                    typeDispositif: m['typeDispositif'] as String? ?? 'Disjoncteur différentiel',
+                    calibre: (m['calibre'] as num?)?.toDouble(),
                     reglageIAn: (m['reglageIAn'] as num?)?.toDouble(),
                     tempo: (m['tempo'] as num?)?.toDouble(),
+                    tempoText: m['tempoText'] as String?,
                     isolement: (m['isolement'] as num?)?.toDouble(),
                     essai: m['essai'] as String? ?? 'NE',
                     observation: m['observation'] as String?,

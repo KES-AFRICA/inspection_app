@@ -13070,13 +13070,14 @@ class PdfReportService {
             defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
             border: pw.TableBorder.all(color: borderColor, width: 0.4),
             columnWidths: const {
-              0: pw.FlexColumnWidth(1.2), // Localisation
-              1: pw.FlexColumnWidth(1.6), // Identification de la prise de terre
-              2: pw.FlexColumnWidth(1.2), // Condition de mesure
-              3: pw.FlexColumnWidth(1.4), // Nature de la prise de terre
-              4: pw.FlexColumnWidth(1.2), // Méthode de mesure
-              5: pw.FlexColumnWidth(0.8), // Valeur de la mesure
-              6: pw.FlexColumnWidth(1.4), // Observation
+              0: pw.FlexColumnWidth(1.6), // Localisation
+              1: pw.FlexColumnWidth(1.4), // Identification de la prise de terre
+              2: pw.FlexColumnWidth(1.4), // Condition de mesure
+              3: pw.FlexColumnWidth(1.6), // Nature de la prise de terre
+              4: pw.FlexColumnWidth(1.3), // Méthode de mesure
+              5: pw.FlexColumnWidth(0.9), // Valeur de la mesure
+              6: pw.FlexColumnWidth(1.4), // Interconnecté à d'autre prise
+              7: pw.FlexColumnWidth(1.5), // Observation
             },
             children: [
               _tableHeaderRow([
@@ -13086,13 +13087,14 @@ class PdfReportService {
                 'Nature de la prise de terre',
                 'Méthode de mesure',
                 'Valeur de la mesure',
+                'Interconnecté à d\'autre prise',
                 'Observation',
               ]),
               if (mesures.prisesTerre.isEmpty)
                 pw.TableRow(
                   decoration: const pw.BoxDecoration(color: PdfColors.white),
                   children: List.generate(
-                    7,
+                    8,
                     (_) => _cell('', isHeader: false, centered: true),
                   ),
                 )
@@ -13100,6 +13102,17 @@ class PdfReportService {
                 ...mesures.prisesTerre.asMap().entries.map((e) {
                   final pt = e.value;
                   final obs = pt.observation ?? '';
+                  final inter = pt.interconnecteAutrePrise?.trim();
+                  PdfColor? cellBg;
+                  String textVal = '-';
+                  if (inter == 'Oui') {
+                    cellBg = conformeColor;
+                    textVal = 'Oui';
+                  } else if (inter == 'Non') {
+                    cellBg = nonConformeColor;
+                    textVal = 'Non';
+                  }
+
                   return pw.TableRow(
                     decoration: pw.BoxDecoration(
                       color: e.key.isOdd ? tableRowAlt : PdfColors.white,
@@ -13123,6 +13136,22 @@ class PdfReportService {
                         isHeader: false,
                         centered: true,
                       ),
+                      pw.Container(
+                        color: cellBg,
+                        alignment: pw.Alignment.center,
+                        padding: const pw.EdgeInsets.symmetric(
+                          horizontal: 2,
+                          vertical: 4,
+                        ),
+                        child: pw.Text(
+                          textVal,
+                          style: pw.TextStyle(
+                            font: _fontRegular,
+                            fontSize: fsSmall,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ),
                       _cell(
                         obs.isEmpty ? '-' : obs,
                         isHeader: false,
@@ -13133,65 +13162,6 @@ class PdfReportService {
                 }),
             ],
           ),
-          if (mesures.avisMesuresTerre.observation != null &&
-              mesures.avisMesuresTerre.observation!.isNotEmpty) ...[
-            pw.SizedBox(height: 12),
-            pw.Container(
-              width: double.infinity,
-              decoration: pw.BoxDecoration(
-                color: PdfColor.fromInt(0xFFF8FAFC),
-                border: pw.Border.all(color: borderColor, width: 0.4),
-                borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
-              ),
-              padding: const pw.EdgeInsets.all(8),
-              child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
-                children: [
-                  pw.Text(
-                    '1.1. Avis sur les mesures',
-                    style: pw.TextStyle(
-                      font: _fontBold,
-                      fontSize: fsSmall + 0.5,
-                      color: headerColor,
-                    ),
-                  ),
-                  pw.SizedBox(height: 6),
-                  ...mesures.avisMesuresTerre.observation!.split('\n').map((
-                    line,
-                  ) {
-                    if (line.trim().isEmpty) return pw.SizedBox();
-                    return pw.Padding(
-                      padding: const pw.EdgeInsets.only(left: 4, bottom: 4),
-                      child: pw.Row(
-                        crossAxisAlignment: pw.CrossAxisAlignment.start,
-                        children: [
-                          pw.Container(
-                            width: 4,
-                            height: 4,
-                            margin: const pw.EdgeInsets.only(top: 4, right: 6),
-                            decoration: pw.BoxDecoration(
-                              color: accentColor,
-                              shape: pw.BoxShape.circle,
-                            ),
-                          ),
-                          pw.Expanded(
-                            child: pw.Text(
-                              line.trim(),
-                              style: pw.TextStyle(
-                                font: _fontRegular,
-                                fontSize: fsSmall,
-                                color: darkGrey,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  }),
-                ],
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -13231,13 +13201,14 @@ class PdfReportService {
               verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
             ),
             columnWidths: const {
-              0: pw.FlexColumnWidth(1.8), // LOCALISATION
-              1: pw.FlexColumnWidth(2.6), // Désignation circuit
-              2: pw.FlexColumnWidth(1.4), // Type dispositif
-              3: pw.FlexColumnWidth(
-                2.2,
+              0: pw.FlexColumnWidth(1.6), // LOCALISATION
+              1: pw.FlexColumnWidth(2.2), // Désignation circuit
+              2: pw.FlexColumnWidth(1.6), // Type de dispositif
+              3: pw.FlexColumnWidth(1.3), // Calibre du dispositif (A)
+              4: pw.FlexColumnWidth(
+                2.0,
               ), // Réglage (divided into IAn and Tempo)
-              4: pw.FlexColumnWidth(1.2), // Essai
+              5: pw.FlexColumnWidth(1.1), // Essai
             },
             children: [
               pw.TableRow(
@@ -13291,6 +13262,22 @@ class PdfReportService {
                       textAlign: pw.TextAlign.center,
                     ),
                   ),
+                  pw.Container(
+                    alignment: pw.Alignment.center,
+                    padding: const pw.EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 4,
+                    ),
+                    child: pw.Text(
+                      "Calibre du dispositif (A)",
+                      style: pw.TextStyle(
+                        font: _fontBold,
+                        fontSize: fsSmall,
+                        color: PdfColors.white,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
                   // Réglage (double level with vertical inside borders)
                   pw.Column(
                     children: [
@@ -13315,8 +13302,8 @@ class PdfReportService {
                           ),
                         ),
                         columnWidths: const {
-                          0: pw.FlexColumnWidth(1.1),
-                          1: pw.FlexColumnWidth(1.1),
+                          0: pw.FlexColumnWidth(1.0),
+                          1: pw.FlexColumnWidth(1.0),
                         },
                         children: [
                           pw.TableRow(
@@ -13374,7 +13361,7 @@ class PdfReportService {
               pw.TableRow(
                 decoration: const pw.BoxDecoration(color: PdfColors.white),
                 children: List.generate(
-                  6,
+                  7,
                   (_) => _cell('', isHeader: false, centered: true),
                 ),
               ),
@@ -13411,20 +13398,27 @@ class PdfReportService {
                   ? "-"
                   : es.localisation.trim();
 
+              final calibreDisplay = es.calibre != null
+                  ? '${es.calibre! % 1 == 0 ? es.calibre!.toInt() : es.calibre} A'
+                  : '-';
+
               ddrRows.add(
                 pw.TableRow(
                   decoration: pw.BoxDecoration(color: rowBg),
                   children: [
                     _cell(localText, isHeader: false, centered: true),
                     _cell(circuitText, isHeader: false, centered: true),
-                    _cell(es.typeDispositif, isHeader: false, centered: true),
+                    _cell(es.displayTypeDispositif, isHeader: false, centered: true),
+                    _cell(calibreDisplay, isHeader: false, centered: true),
                     _cell(
-                      es.reglageIAn?.toString() ?? "-",
+                      es.reglageIAn != null
+                          ? '${es.reglageIAn! % 1 == 0 ? es.reglageIAn!.toInt() : es.reglageIAn}'
+                          : '-',
                       isHeader: false,
                       centered: true,
                     ),
                     _cell(
-                      es.tempo?.toString() ?? "-",
+                      es.displayTempo,
                       isHeader: false,
                       centered: true,
                     ),
@@ -13461,12 +13455,13 @@ class PdfReportService {
                 horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
               ),
               columnWidths: const {
-                0: pw.FlexColumnWidth(1.8), // LOCALISATION
-                1: pw.FlexColumnWidth(2.6), // Désignation circuit
-                2: pw.FlexColumnWidth(1.4), // Type dispositif
-                3: pw.FlexColumnWidth(1.1), // IAn
-                4: pw.FlexColumnWidth(1.1), // Tempo
-                5: pw.FlexColumnWidth(1.2), // Essai
+                0: pw.FlexColumnWidth(1.6), // LOCALISATION
+                1: pw.FlexColumnWidth(2.2), // Désignation circuit
+                2: pw.FlexColumnWidth(1.6), // Type de dispositif
+                3: pw.FlexColumnWidth(1.3), // Calibre du dispositif (A)
+                4: pw.FlexColumnWidth(1.0), // IAn
+                5: pw.FlexColumnWidth(1.0), // Tempo
+                6: pw.FlexColumnWidth(1.1), // Essai
               },
               children: ddrRows,
             ),
@@ -14153,30 +14148,82 @@ class PdfReportService {
         1: pw.FlexColumnWidth(3.0),
       },
       children: [
-        _tableDataRow(
-          ["DDR", "Disjoncteur Différentiel"],
-          alt: false,
-          centered: true,
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfColors.white),
+          children: [
+            _cell("DDR", isHeader: false, centered: true),
+            pw.Container(
+              alignment: pw.Alignment.centerLeft,
+              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: pw.Text(
+                "Disjoncteur Différentiel",
+                style: pw.TextStyle(
+                  font: _fontRegular,
+                  fontSize: fsSmall,
+                  color: darkGrey,
+                ),
+                textAlign: pw.TextAlign.left,
+              ),
+            ),
+          ],
         ),
-        _tableDataRow(["RD", "Relais Différentiel"], alt: true, centered: true),
-        _tableDataRow(["B", "Bon fonctionnement"], alt: false, centered: true),
-        _tableDataRow(["NE", "Non essayé"], alt: true, centered: true),
-        _tableDataRow(
-          ["IDR", "Interrupteur Différentiel"],
-          alt: false,
-          centered: true,
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: tableRowAlt),
+          children: [
+            _cell("RD", isHeader: false, centered: true),
+            pw.Container(
+              alignment: pw.Alignment.centerLeft,
+              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: pw.Text(
+                "Relais Différentiel",
+                style: pw.TextStyle(
+                  font: _fontRegular,
+                  fontSize: fsSmall,
+                  color: darkGrey,
+                ),
+                textAlign: pw.TextAlign.left,
+              ),
+            ),
+          ],
         ),
-        _tableDataRow(
-          ["I\u0394n", "Intensité différentielle"],
-          alt: true,
-          centered: true,
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: PdfColors.white),
+          children: [
+            _cell("IDR", isHeader: false, centered: true),
+            pw.Container(
+              alignment: pw.Alignment.centerLeft,
+              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: pw.Text(
+                "Interrupteur Différentiel",
+                style: pw.TextStyle(
+                  font: _fontRegular,
+                  fontSize: fsSmall,
+                  color: darkGrey,
+                ),
+                textAlign: pw.TextAlign.left,
+              ),
+            ),
+          ],
         ),
-        _tableDataRow(
-          ["M", "Fonctionnement incorrect"],
-          alt: false,
-          centered: true,
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: tableRowAlt),
+          children: [
+            _cell("I\u0394n", isHeader: false, centered: true),
+            pw.Container(
+              alignment: pw.Alignment.centerLeft,
+              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: pw.Text(
+                "Intensité différentielle",
+                style: pw.TextStyle(
+                  font: _fontRegular,
+                  fontSize: fsSmall,
+                  color: darkGrey,
+                ),
+                textAlign: pw.TextAlign.left,
+              ),
+            ),
+          ],
         ),
-        _tableDataRow(["Tempo", "Temporisation"], alt: true, centered: true),
       ],
     );
 

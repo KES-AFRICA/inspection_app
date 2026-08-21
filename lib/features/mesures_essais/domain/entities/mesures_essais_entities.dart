@@ -26,6 +26,7 @@ class PriseTerreEntity {
   final String methodeMesure;
   final double? valeurMesure;
   final String? observation;
+  final String? interconnecteAutrePrise;
 
   const PriseTerreEntity({
     required this.localisation,
@@ -35,6 +36,7 @@ class PriseTerreEntity {
     required this.methodeMesure,
     this.valeurMesure,
     this.observation,
+    this.interconnecteAutrePrise,
   });
 }
 
@@ -60,6 +62,8 @@ class EssaiDeclenchementDifferentielEntity {
   final double? isolement;
   final String essai;
   final String? observation;
+  final double? calibre;
+  final String? tempoText;
 
   const EssaiDeclenchementDifferentielEntity({
     required this.localisation,
@@ -71,6 +75,8 @@ class EssaiDeclenchementDifferentielEntity {
     this.isolement,
     required this.essai,
     this.observation,
+    this.calibre,
+    this.tempoText,
   });
 }
 

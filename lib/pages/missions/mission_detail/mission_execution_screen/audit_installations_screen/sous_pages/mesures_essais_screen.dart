@@ -254,15 +254,6 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
                     const Divider(height: 0, thickness: 0.5),
 
                     _buildSectionTile(
-                      'Avis sur les mesures',
-                      Icons.assessment_outlined,
-                      'Analyse et recommandations',
-                      _navigateToAvisMesures,
-                      'avis_mesures',
-                    ),
-                    const Divider(height: 0, thickness: 0.5),
-
-                    _buildSectionTile(
                       'Essais déclenchement',
                       Icons.flash_on_outlined,
                       'Dispositifs différentiels',

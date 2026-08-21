@@ -501,12 +501,13 @@ class _AjouterEssaiDeclenchementScreenState extends ConsumerState<AjouterEssaiDe
   final _localisationController = TextEditingController();
   final _coffretController = TextEditingController();
   final _circuitController = TextEditingController();
+  final _calibreController = TextEditingController();
   final _reglageController = TextEditingController();
   final _tempoController = TextEditingController();
   final _isolementController = TextEditingController();
   final _observationController = TextEditingController();
   
-  String _selectedType = 'DDR';
+  String _selectedType = 'Disjoncteur différentiel';
   String _selectedResultat = 'Non satisfaisant';
   
   List<String> _localisations = [];
@@ -595,15 +596,26 @@ class _AjouterEssaiDeclenchementScreenState extends ConsumerState<AjouterEssaiDe
     _circuitController.text = essai.designationCircuit ?? '';
     _circuitValid = essai.designationCircuit != null && essai.designationCircuit!.isNotEmpty;
     
-    _selectedType = essai.typeDispositif;
+    _selectedType = essai.displayTypeDispositif;
+    if (_selectedType == '-') {
+      _selectedType = 'Disjoncteur différentiel';
+    }
+
+    if (essai.calibre != null) {
+      _calibreController.text = essai.calibre! % 1 == 0
+          ? essai.calibre!.toInt().toString()
+          : essai.calibre!.toString();
+    }
     
     if (essai.reglageIAn != null) {
-      _reglageController.text = essai.reglageIAn!.toString();
+      _reglageController.text = essai.reglageIAn! % 1 == 0
+          ? essai.reglageIAn!.toInt().toString()
+          : essai.reglageIAn!.toString();
       _reglageValid = true;
     }
     
-    if (essai.tempo != null) {
-      _tempoController.text = essai.tempo!.toString();
+    if (essai.displayTempo != '-') {
+      _tempoController.text = essai.displayTempo;
       _tempoValid = true;
     }
     
@@ -748,14 +760,18 @@ class _AjouterEssaiDeclenchementScreenState extends ConsumerState<AjouterEssaiDe
     }
 
     final essaiValue = _selectedResultat == 'Satisfaisant' ? 'OK' : 'NON OK';
+    final tempoStr = _tempoController.text.trim();
+    final double? tempoValue = tempoStr == 'Réglage d\'origine' ? 0.0 : double.tryParse(tempoStr);
 
     final essai = EssaiDeclenchementDifferentiel(
       localisation: _localisationController.text.trim(),
       coffret: _coffretController.text.trim().isNotEmpty ? _coffretController.text.trim() : null,
       designationCircuit: _circuitController.text.trim(),
       typeDispositif: _selectedType,
+      calibre: double.tryParse(_calibreController.text.trim()),
       reglageIAn: double.tryParse(_reglageController.text.trim()),
-      tempo: double.tryParse(_tempoController.text.trim()),
+      tempo: tempoValue,
+      tempoText: tempoStr.isNotEmpty ? tempoStr : null,
       isolement: double.tryParse(_isolementController.text.trim()),
       essai: essaiValue,
       observation: _observationController.text.trim().isNotEmpty ? _observationController.text.trim() : null,
@@ -897,7 +913,7 @@ class _AjouterEssaiDeclenchementScreenState extends ConsumerState<AjouterEssaiDe
             children: [
               Expanded(
                 child: _buildResultatButton(
-                  label: 'S',
+                  label: 'Satisfaisant',
                   isSelected: _selectedResultat == 'Satisfaisant',
                   onTap: () => setState(() => _selectedResultat = 'Satisfaisant'),
                   color: Colors.green,
@@ -906,7 +922,7 @@ class _AjouterEssaiDeclenchementScreenState extends ConsumerState<AjouterEssaiDe
               SizedBox(width: _spacingM),
               Expanded(
                 child: _buildResultatButton(
-                  label: 'Ns',
+                  label: 'Non satisfaisant',
                   isSelected: _selectedResultat == 'Non satisfaisant',
                   onTap: () => setState(() => _selectedResultat = 'Non satisfaisant'),
                   color: Colors.red,
@@ -1013,6 +1029,7 @@ class _AjouterEssaiDeclenchementScreenState extends ConsumerState<AjouterEssaiDe
                   ],
                 ),
                 child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildDropdown(
                       'Localisation',
@@ -1025,81 +1042,65 @@ class _AjouterEssaiDeclenchementScreenState extends ConsumerState<AjouterEssaiDe
                     _buildCoffretField(),
                     _buildTextField('Désignation du circuit', _circuitController, isRequired: true, onChanged: _validateCircuit),
                     
-                    // Type et Résultat sur la même ligne si écran assez large
-                    if (!_isSmallScreen)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildDropdown(
-                              'Type de dispositif',
-                              HiveService.getTypesDispositifDifferentiel(),
-                              _selectedType,
-                              (v) => setState(() => _selectedType = v!),
-                              isRequired: true,
-                            ),
-                          ),
-                          SizedBox(width: _spacingL),
-                          Expanded(child: _buildResultatSelector()),
-                        ],
-                      )
-                    else
-                      Column(
-                        children: [
-                          _buildDropdown(
-                            'Type de dispositif',
-                            HiveService.getTypesDispositifDifferentiel(),
-                            _selectedType,
-                            (v) => setState(() => _selectedType = v!),
-                            isRequired: true,
-                          ),
-                          _buildResultatSelector(),
-                        ],
-                      ),
+                    // Type et Calibre
+                    _buildDropdown(
+                      'Type de dispositif',
+                      HiveService.getTypesDispositifDifferentiel(),
+                      _selectedType,
+                      (v) => setState(() => _selectedType = v!),
+                      isRequired: true,
+                    ),
+                    _buildTextField(
+                      'Calibre du dispositif (A)',
+                      _calibreController,
+                      isRequired: false,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    ),
+                    
+                    _buildResultatSelector(),
                     
                     // Réglage et Temporisation
-                    if (!_isSmallScreen)
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildTextField(
-                              'Réglage IΔn (mA)',
-                              _reglageController,
-                              isRequired: true,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              onChanged: _validateReglage,
+                    _buildTextField(
+                      'Réglage IΔn (mA)',
+                      _reglageController,
+                      isRequired: true,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      onChanged: _validateReglage,
+                    ),
+
+                    // Champ Temporisation avec bouton preset "Réglage d'origine"
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildTextField(
+                          'Temporisation (s)',
+                          _tempoController,
+                          isRequired: true,
+                          keyboardType: TextInputType.text,
+                          onChanged: _validateTempo,
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: OutlinedButton.icon(
+                              icon: const Icon(Icons.settings_backup_restore, size: 16),
+                              label: const Text('Réglage d\'origine', style: TextStyle(fontSize: 12)),
+                              onPressed: () {
+                                setState(() {
+                                  _tempoController.text = 'Réglage d\'origine';
+                                  _validateTempo('Réglage d\'origine');
+                                });
+                              },
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                visualDensity: VisualDensity.compact,
+                              ),
                             ),
                           ),
-                          SizedBox(width: _spacingL),
-                          Expanded(
-                            child: _buildTextField(
-                              'Temporisation (s)',
-                              _tempoController,
-                              isRequired: true,
-                              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                              onChanged: _validateTempo,
-                            ),
-                          ),
-                        ],
-                      )
-                    else
-                      Column(
-                        children: [
-                          _buildTextField(
-                            'Réglage IΔn (mA)',
-                            _reglageController,
-                            isRequired: true,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            onChanged: _validateReglage,
-                          ),
-                          _buildTextField(
-                            'Temporisation (s)',
-                            _tempoController,
-                            isRequired: true,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                            onChanged: _validateTempo,
-                          ),
-                        ],
-                      ),
+                        ),
+                      ],
+                    ),
                     
                     _buildTextField('Observation', _observationController, isRequired: false, maxLines: 3),
                   ],
@@ -1152,6 +1153,7 @@ class _AjouterEssaiDeclenchementScreenState extends ConsumerState<AjouterEssaiDe
     _localisationController.dispose();
     _coffretController.dispose();
     _circuitController.dispose();
+    _calibreController.dispose();
     _reglageController.dispose();
     _tempoController.dispose();
     _isolementController.dispose();

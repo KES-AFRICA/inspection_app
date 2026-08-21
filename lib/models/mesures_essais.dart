@@ -148,6 +148,9 @@ class PriseTerre {
   @HiveField(6)
   String? observation; // Ex: "Satisfaisant", "Non satisfaisant"
 
+  @HiveField(7)
+  String? interconnecteAutrePrise; // "Oui" ou "Non"
+
   PriseTerre({
     required this.localisation,
     required this.identification,
@@ -156,6 +159,7 @@ class PriseTerre {
     required this.methodeMesure,
     this.valeurMesure,
     this.observation,
+    this.interconnecteAutrePrise,
   });
 
   factory PriseTerre.create({
@@ -229,6 +233,12 @@ class EssaiDeclenchementDifferentiel {
   @HiveField(8)
   String? observation;
 
+  @HiveField(9)
+  double? calibre; // Calibre du dispositif en A
+
+  @HiveField(10)
+  String? tempoText; // "Réglage d'origine" ou valeur numérique en String
+
   EssaiDeclenchementDifferentiel({
     required this.localisation,
     this.coffret,
@@ -239,6 +249,8 @@ class EssaiDeclenchementDifferentiel {
     this.isolement,
     required this.essai,
     this.observation,
+    this.calibre,
+    this.tempoText,
   });
 
   factory EssaiDeclenchementDifferentiel.create({
@@ -248,19 +260,37 @@ class EssaiDeclenchementDifferentiel {
     return EssaiDeclenchementDifferentiel(
       localisation: localisation,
       designationCircuit: designationCircuit,
-      typeDispositif: 'DDR',
+      typeDispositif: 'Disjoncteur différentiel',
       essai: 'NE', // Par défaut "Non essayé"
     );
   }
 
+  // Méthode pour obtenir le texte d'affichage du type de dispositif (avec rétrocompatibilité DDR, IDR, RD)
+  String get displayTypeDispositif {
+    final t = typeDispositif.trim();
+    if (t == 'DDR') return 'Disjoncteur différentiel';
+    if (t == 'IDR') return 'Interrupteur différentiel';
+    if (t == 'RD') return '-';
+    return t;
+  }
+
   // Méthode pour obtenir le texte complet du type de dispositif
   String get typeDispositifComplet {
-    switch (typeDispositif) {
-      case 'DDR': return 'Disjoncteur Différentiel';
-      case 'RD': return 'Relais Différentiel';
-      case 'IDR': return 'Interrupteur Différentiel';
-      default: return typeDispositif;
+    final display = displayTypeDispositif;
+    if (display == '-') return '-';
+    return display;
+  }
+
+  // Méthode pour obtenir le texte d'affichage de la temporisation (Réglage d'origine ou valeur numérique)
+  String get displayTempo {
+    if (tempoText != null && tempoText!.trim().isNotEmpty) {
+      return tempoText!.trim();
     }
+    if (tempo != null) {
+      if (tempo == 0) return 'Réglage d\'origine';
+      return tempo! % 1 == 0 ? tempo!.toInt().toString() : tempo!.toString();
+    }
+    return '-';
   }
 
   // Méthode pour obtenir le texte complet de l'essai

@@ -5,6 +5,7 @@ import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
+import 'package:inspec_app/services/hive_service.dart';
 
 class PrisesTerreScreen extends ConsumerStatefulWidget {
   final Mission mission;
@@ -47,6 +48,7 @@ class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => _AjouterPriseTerreScreen(
+          mission: widget.mission,
           conditionOptions: _conditionOptions,
         ),
       ),
@@ -56,11 +58,12 @@ class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
       final nouvellePrise = PriseTerre(
         localisation: result['localisation'] ?? '',
         identification: result['identification'] ?? '',
-        conditionPriseTerre: result['conditionPriseTerre'] ?? 'Barette fermée', // ✅ Valeur par défaut
+        conditionPriseTerre: result['conditionMesure'] ?? 'Barette fermée',
         naturePriseTerre: result['naturePriseTerre'] ?? '',
         methodeMesure: result['methodeMesure'] ?? '',
         valeurMesure: double.tryParse(result['valeurMesure']?.toString() ?? ''),
         observation: result['observation'],
+        interconnecteAutrePrise: result['interconnecteAutrePrise'],
       );
       
       final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
@@ -86,14 +89,16 @@ class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => _AjouterPriseTerreScreen(
+          mission: widget.mission,
           initialData: {
             'localisation': prise.localisation,
             'identification': prise.identification,
-            'conditionPriseTerre': prise.conditionPriseTerre,
+            'conditionMesure': prise.conditionPriseTerre,
             'naturePriseTerre': prise.naturePriseTerre,
             'methodeMesure': prise.methodeMesure,
             'valeurMesure': prise.valeurMesure?.toString() ?? '',
             'observation': prise.observation ?? '',
+            'interconnecteAutrePrise': prise.interconnecteAutrePrise ?? '',
           },
           conditionOptions: _conditionOptions,
         ),
@@ -104,11 +109,12 @@ class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
       final updatedPrise = PriseTerre(
         localisation: result['localisation'] ?? '',
         identification: result['identification'] ?? '',
-        conditionPriseTerre: result['conditionPriseTerre'] ?? 'Barette fermée',
+        conditionPriseTerre: result['conditionMesure'] ?? 'Barette fermée',
         naturePriseTerre: result['naturePriseTerre'] ?? '',
         methodeMesure: result['methodeMesure'] ?? '',
         valeurMesure: double.tryParse(result['valeurMesure']?.toString() ?? ''),
         observation: result['observation'],
+        interconnecteAutrePrise: result['interconnecteAutrePrise'],
       );
       
       final mesures = await ref.read(mesuresEssaisProvider(widget.mission.id).notifier).load();
@@ -198,13 +204,18 @@ class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
                     Icon(Icons.bolt_outlined, size: isSmallScreen ? 60 : 80, color: Colors.grey.shade400),
                     const SizedBox(height: 16),
                     Text(
-                      'Aucune prise de terre',
-                      style: TextStyle(fontSize: isSmallScreen ? 16 : 18, color: Colors.grey.shade600),
+                      'Aucune prise de terre enregistrée',
+                      style: TextStyle(fontSize: isSmallScreen ? 14 : 16, color: Colors.grey.shade600),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Appuyez sur le bouton + pour ajouter',
-                      style: TextStyle(fontSize: isSmallScreen ? 12 : 14, color: Colors.grey.shade500),
+                    const SizedBox(height: 16),
+                    ElevatedButton.icon(
+                      onPressed: _ajouterPriseTerre,
+                      icon: const Icon(Icons.add),
+                      label: const Text('Ajouter une prise de terre'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.primaryBlue,
+                        foregroundColor: Colors.white,
+                      ),
                     ),
                   ],
                 ),
@@ -215,65 +226,56 @@ class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
                 itemBuilder: (context, index) {
                   final prise = _prisesTerre[index];
                   return Card(
-                    margin: EdgeInsets.only(bottom: isSmallScreen ? 10 : 12),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12)),
-                    child: InkWell(
-                      onTap: () => _editerPriseTerre(index),
-                      borderRadius: BorderRadius.circular(isSmallScreen ? 10 : 12),
-                      child: Padding(
-                        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Container(
-                                  width: isSmallScreen ? 28 : 32,
-                                  height: isSmallScreen ? 28 : 32,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primaryBlue.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(isSmallScreen ? 6 : 8),
-                                  ),
-                                  child: Center(
-                                    child: Text(
-                                      '${index + 1}',
-                                      style: TextStyle(
-                                        fontSize: isSmallScreen ? 12 : 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTheme.primaryBlue,
-                                      ),
-                                    ),
+                    margin: const EdgeInsets.only(bottom: 12),
+                    elevation: 2,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    child: Padding(
+                      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  prise.identification,
+                                  style: TextStyle(
+                                    fontSize: isSmallScreen ? 16 : 18,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppTheme.primaryBlue,
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Text(
-                                    prise.identification,
-                                    style: TextStyle(
-                                      fontSize: isSmallScreen ? 15 : 16,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                                    overflow: TextOverflow.ellipsis,
+                              ),
+                              Row(
+                                children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.edit, color: Colors.blue),
+                                    onPressed: () => _editerPriseTerre(index),
                                   ),
-                                ),
-                                IconButton(
-                                  icon: Icon(Icons.delete_outline, color: Colors.red, size: isSmallScreen ? 18 : 20),
-                                  onPressed: () => _supprimerPriseTerre(index),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 12),
-                            _buildInfoRow('Localisation', prise.localisation, isSmallScreen),
-                            _buildInfoRow('Condition prise de terre', prise.conditionPriseTerre, isSmallScreen),
-                            _buildInfoRow('Nature prise de terre', prise.naturePriseTerre, isSmallScreen),
-                            _buildInfoRow('Méthode de mesure', prise.methodeMesure, isSmallScreen),
-                            _buildInfoRow('Valeur mesurée', prise.valeurMesure?.toString() ?? '-', isSmallScreen),
-                            if (prise.observation != null && prise.observation!.isNotEmpty)
-                              _buildInfoRow('Observation', prise.observation!, isSmallScreen),
-                          ],
-                        ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete, color: Colors.red),
+                                    onPressed: () => _supprimerPriseTerre(index),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                          const Divider(),
+                          _buildInfoRow('Localisation', prise.localisation, isSmallScreen),
+                          _buildInfoRow('Condition prise de terre', prise.conditionPriseTerre, isSmallScreen),
+                          _buildInfoRow('Nature prise de terre', prise.naturePriseTerre, isSmallScreen),
+                          _buildInfoRow('Méthode de mesure', prise.methodeMesure, isSmallScreen),
+                          _buildInfoRow(
+                            'Valeur mesurée',
+                            prise.valeurMesure != null ? '${prise.valeurMesure} Ω' : 'Non mesurée',
+                            isSmallScreen,
+                          ),
+                          if (prise.interconnecteAutrePrise != null && prise.interconnecteAutrePrise!.isNotEmpty)
+                            _buildInfoRow('Interconnecté à d\'autre prise', prise.interconnecteAutrePrise!, isSmallScreen),
+                          if (prise.observation != null && prise.observation!.isNotEmpty)
+                            _buildInfoRow('Observation', prise.observation!, isSmallScreen),
+                        ],
                       ),
                     ),
                   );
@@ -285,28 +287,28 @@ class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
 
   Widget _buildInfoRow(String label, String value, bool isSmallScreen) {
     return Padding(
-      padding: EdgeInsets.only(bottom: isSmallScreen ? 6 : 8),
+      padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           SizedBox(
-            width: isSmallScreen ? 100 : 120,
+            width: isSmallScreen ? 140 : 170,
             child: Text(
               '$label:',
               style: TextStyle(
                 fontSize: isSmallScreen ? 12 : 13,
                 fontWeight: FontWeight.w500,
-                color: Colors.grey.shade600,
+                color: Colors.grey.shade700,
               ),
-              overflow: TextOverflow.ellipsis,
             ),
           ),
-          const SizedBox(width: 8),
           Expanded(
             child: Text(
               value,
-              style: TextStyle(fontSize: isSmallScreen ? 13 : 14, color: Colors.black87),
-              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: isSmallScreen ? 12 : 13,
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
         ],
@@ -319,10 +321,12 @@ class _PrisesTerreScreenState extends ConsumerState<PrisesTerreScreen> {
 // ÉCRAN D'AJOUT/MODIFICATION D'UNE PRISE DE TERRE
 // ============================================================
 class _AjouterPriseTerreScreen extends StatefulWidget {
+  final Mission mission;
   final Map<String, String>? initialData;
   final List<String> conditionOptions;
 
   const _AjouterPriseTerreScreen({
+    required this.mission,
     this.initialData,
     required this.conditionOptions,
   });
@@ -332,13 +336,16 @@ class _AjouterPriseTerreScreen extends StatefulWidget {
 }
 
 class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
-  final _localisationController = TextEditingController();
   final _identificationController = TextEditingController();
+  String? _selectedLocalisation;
   String? _conditionMesure;
   String? _naturePriseTerre;
   String? _methodeMesure;
+  String? _interconnecteAutrePrise;
   final _valeurMesureController = TextEditingController();
   final _observationController = TextEditingController();
+
+  List<String> _localisationsOptions = [];
 
   final List<String> _natureOptions = [
     'Piquet de terre',
@@ -357,23 +364,45 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
   @override
   void initState() {
     super.initState();
+    _loadLocalisations();
+
     if (widget.initialData != null) {
-      _localisationController.text = widget.initialData!['localisation'] ?? '';
+      _selectedLocalisation = widget.initialData!['localisation'];
       _identificationController.text = widget.initialData!['identification'] ?? '';
       _conditionMesure = widget.initialData!['conditionMesure'] ?? 'Barette fermée';
       _naturePriseTerre = widget.initialData!['naturePriseTerre'];
       _methodeMesure = widget.initialData!['methodeMesure'];
       _valeurMesureController.text = widget.initialData!['valeurMesure'] ?? '';
       _observationController.text = widget.initialData!['observation'] ?? '';
+      final interconnecte = widget.initialData!['interconnecteAutrePrise'];
+      _interconnecteAutrePrise = (interconnecte != null && interconnecte.isNotEmpty) ? interconnecte : null;
+
+      if (_selectedLocalisation != null &&
+          _selectedLocalisation!.isNotEmpty &&
+          !_localisationsOptions.contains(_selectedLocalisation)) {
+        _localisationsOptions.add(_selectedLocalisation!);
+      }
     } else {
-      // ✅ Valeur par défaut pour condition prise de terre
       _conditionMesure = 'Barette fermée';
+    }
+  }
+
+  void _loadLocalisations() {
+    _localisationsOptions = HiveService.getLocalisationsForEssais(widget.mission.id);
+    if (_localisationsOptions.isEmpty) {
+      _localisationsOptions = [
+        'Extérieur',
+        'Local technique',
+        'Poste HTA',
+        'Local transformateur',
+        'Local GE',
+        'TGBT',
+      ];
     }
   }
 
   @override
   void dispose() {
-    _localisationController.dispose();
     _identificationController.dispose();
     _valeurMesureController.dispose();
     _observationController.dispose();
@@ -381,7 +410,8 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
   }
 
   bool _isFormValid() {
-    return _localisationController.text.trim().isNotEmpty &&
+    return _selectedLocalisation != null &&
+           _selectedLocalisation!.trim().isNotEmpty &&
            _identificationController.text.trim().isNotEmpty &&
            _conditionMesure != null &&
            _naturePriseTerre != null &&
@@ -397,13 +427,14 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
     }
 
     final result = {
-      'localisation': _localisationController.text.trim(),
+      'localisation': _selectedLocalisation?.trim() ?? '',
       'identification': _identificationController.text.trim(),
       'conditionMesure': _conditionMesure,
       'naturePriseTerre': _naturePriseTerre,
       'methodeMesure': _methodeMesure,
       'valeurMesure': _valeurMesureController.text.trim(),
       'observation': _observationController.text.trim(),
+      'interconnecteAutrePrise': _interconnecteAutrePrise,
     };
 
     Navigator.pop(context, result);
@@ -455,15 +486,21 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
               ),
               const SizedBox(height: 20),
               
-              // Localisation *
-              _buildTextField(_localisationController, 'Localisation *', isSmallScreen),
+              // Localisation * (Select)
+              _buildDropdown(
+                label: 'Localisation *',
+                value: _selectedLocalisation,
+                options: _localisationsOptions,
+                onChanged: (value) => setState(() => _selectedLocalisation = value),
+                isSmallScreen: isSmallScreen,
+              ),
               const SizedBox(height: 14),
               
               // Identification *
               _buildTextField(_identificationController, 'Identification *', isSmallScreen),
               const SizedBox(height: 14),
               
-              // Condition prise de terre * (Dropdown avec valeur par défaut)
+              // Condition prise de terre *
               _buildDropdown(
                 label: 'Condition prise de terre *',
                 value: _conditionMesure,
@@ -493,6 +530,16 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
               ),
               const SizedBox(height: 14),
               
+              // Interconnecté à d'autre prise (Optionnel / Select)
+              _buildDropdown(
+                label: 'Interconnecté à d\'autre prise',
+                value: _interconnecteAutrePrise,
+                options: const ['Oui', 'Non'],
+                onChanged: (value) => setState(() => _interconnecteAutrePrise = value),
+                isSmallScreen: isSmallScreen,
+              ),
+              const SizedBox(height: 14),
+
               // Valeur mesurée (optionnel)
               _buildTextField(_valeurMesureController, 'Valeur mesurée (Ω)', isSmallScreen,
                   keyboardType: TextInputType.number),
@@ -509,7 +556,6 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
 
   Widget _buildTextField(TextEditingController controller, String label, bool isSmallScreen,
       {TextInputType keyboardType = TextInputType.text, int maxLines = 1}) {
-    final isRequired = label.contains('*');
     return TextFormField(
       controller: controller,
       keyboardType: keyboardType,
