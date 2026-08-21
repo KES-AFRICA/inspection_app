@@ -32,7 +32,6 @@ class _AlimentationSiteMtSequenceScreenState
   String? _natureReseau;
   String? _presenceIacm;
   bool _isFirstLoad = true;
-  bool _isSaving = false;
 
   final List<String> _natureOptions = ['Souterrain', 'Aérien'];
   final List<String> _iacmOptions = ['Oui', 'Non', 'Sans objet'];
@@ -45,8 +44,6 @@ class _AlimentationSiteMtSequenceScreenState
   }
 
   Future<void> _saveField(String field, String value) async {
-    setState(() => _isSaving = true);
-
     try {
       final notifier = ref.read(
         descriptionInstallationsProvider(widget.mission.id).notifier,
@@ -62,31 +59,8 @@ class _AlimentationSiteMtSequenceScreenState
       if (isComplete && !widget.isComplete) {
         widget.onComplete('alimentation_site_mt');
       }
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).clearSnackBars();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Enregistré : $value'),
-            backgroundColor: Colors.green,
-            duration: const Duration(milliseconds: 800),
-            behavior: SnackBarBehavior.floating,
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur : $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isSaving = false);
-      }
+    } catch (_) {
+      // Erreur silencieuse d'auto-sauvegarde
     }
   }
 
@@ -134,14 +108,12 @@ class _AlimentationSiteMtSequenceScreenState
                         value: opt,
                         groupValue: _natureReseau,
                         activeColor: AppTheme.primaryBlue,
-                        onChanged: _isSaving
-                            ? null
-                            : (val) {
-                                if (val != null) {
-                                  setState(() => _natureReseau = val);
-                                  _saveField('nature_reseau_alim_site', val);
-                                }
-                              },
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _natureReseau = val);
+                            _saveField('nature_reseau_alim_site', val);
+                          }
+                        },
                       );
                     }).toList(),
                   ),
@@ -239,14 +211,12 @@ class _AlimentationSiteMtSequenceScreenState
                         value: opt,
                         groupValue: _presenceIacm,
                         activeColor: AppTheme.primaryBlue,
-                        onChanged: _isSaving
-                            ? null
-                            : (val) {
-                                if (val != null) {
-                                  setState(() => _presenceIacm = val);
-                                  _saveField('presence_iacm_alim_site', val);
-                                }
-                              },
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _presenceIacm = val);
+                            _saveField('presence_iacm_alim_site', val);
+                          }
+                        },
                       );
                     }).toList(),
                   ),
