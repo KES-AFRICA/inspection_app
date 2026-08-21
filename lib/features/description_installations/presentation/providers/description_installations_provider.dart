@@ -5,6 +5,9 @@ import 'package:inspec_app/features/description_installations/data/mappers/descr
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/services/installation_description_sync_service.dart';
 
+import 'package:inspec_app/models/audit_installations_electriques.dart';
+import 'package:inspec_app/services/hive_service.dart';
+
 final descriptionInstallationsProvider = StateNotifierProvider.family
     .autoDispose<
       DescriptionInstallationsNotifier,
@@ -145,6 +148,49 @@ class DescriptionInstallationsNotifier
       final entity = await getUseCase(missionId);
       final model = DescriptionInstallationsMapper.toModel(entity);
       state = AsyncValue.data(model);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> addFoudreObservation(ObservationLibre observation) async {
+    try {
+      final current = state.value;
+      if (current == null) return false;
+      final updatedList = List<ObservationLibre>.from(current.foudreObservations)..add(observation);
+      current.foudreObservations = updatedList;
+      await HiveService.saveDescriptionInstallations(current);
+      await load();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> updateFoudreObservation(int index, ObservationLibre observation) async {
+    try {
+      final current = state.value;
+      if (current == null || index < 0 || index >= current.foudreObservations.length) return false;
+      final updatedList = List<ObservationLibre>.from(current.foudreObservations);
+      updatedList[index] = observation;
+      current.foudreObservations = updatedList;
+      await HiveService.saveDescriptionInstallations(current);
+      await load();
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  Future<bool> removeFoudreObservation(int index) async {
+    try {
+      final current = state.value;
+      if (current == null || index < 0 || index >= current.foudreObservations.length) return false;
+      final updatedList = List<ObservationLibre>.from(current.foudreObservations)..removeAt(index);
+      current.foudreObservations = updatedList;
+      await HiveService.saveDescriptionInstallations(current);
+      await load();
       return true;
     } catch (e) {
       return false;

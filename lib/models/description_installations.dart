@@ -1,4 +1,5 @@
 import 'package:hive/hive.dart';
+import 'audit_installations_electriques.dart';
 
 part 'description_installations.g.dart';
 
@@ -81,6 +82,10 @@ class DescriptionInstallations extends HiveObject {
   @HiveField(22)
   String? presenceIacmAlimentationSite;
 
+  // Observations structurées Foudre
+  @HiveField(23)
+  List<ObservationLibre> foudreObservations;
+
   @HiveField(16)
   DateTime updatedAt;
 
@@ -107,6 +112,7 @@ class DescriptionInstallations extends HiveObject {
     this.tensionAlimentationSite,
     this.nombreAlimentationSite,
     this.presenceIacmAlimentationSite,
+    List<ObservationLibre>? foudreObservations,
     required this.updatedAt,
   })  : alimentationMoyenneTension = alimentationMoyenneTension ?? [],
         alimentationBasseTension = alimentationBasseTension ?? [],
@@ -115,7 +121,8 @@ class DescriptionInstallations extends HiveObject {
         inverseur = inverseur ?? [],
         stabilisateur = stabilisateur ?? [],
         onduleurs = onduleurs ?? [],
-        cpi = cpi ?? [];
+        cpi = cpi ?? [],
+        foudreObservations = foudreObservations ?? [];
 
   factory DescriptionInstallations.create(String missionId) {
     return DescriptionInstallations(
@@ -200,9 +207,9 @@ class DescriptionInstallations extends HiveObject {
       case 'registre_securite':
         return registreSecurite?.isNotEmpty == true;
       case 'paratonnerre':
-        return presenceParatonnerre != null &&
-            analyseRisqueFoudre != null &&
-            etudeTechniqueFoudre != null;
+        if (presenceParatonnerre == 'Non') return true;
+        if (presenceParatonnerre == 'Oui') return true;
+        return presenceParatonnerre != null && presenceParatonnerre!.isNotEmpty;
       default:
         return false;
     }

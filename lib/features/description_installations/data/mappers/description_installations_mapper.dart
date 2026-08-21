@@ -44,6 +44,7 @@ class DescriptionInstallationsMapper {
       tensionAlimentationSite: model.tensionAlimentationSite,
       nombreAlimentationSite: model.nombreAlimentationSite,
       presenceIacmAlimentationSite: model.presenceIacmAlimentationSite,
+      foudreObservations: List.from(model.foudreObservations),
       updatedAt: model.updatedAt,
     );
   }
@@ -72,6 +73,7 @@ class DescriptionInstallationsMapper {
       tensionAlimentationSite: entity.tensionAlimentationSite,
       nombreAlimentationSite: entity.nombreAlimentationSite,
       presenceIacmAlimentationSite: entity.presenceIacmAlimentationSite,
+      foudreObservations: List.from(entity.foudreObservations),
       updatedAt: entity.updatedAt,
     );
   }

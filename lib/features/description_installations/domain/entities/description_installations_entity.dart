@@ -1,5 +1,6 @@
 // lib/features/description_installations/domain/entities/description_installations_entity.dart
 import 'installation_item_entity.dart';
+import 'package:inspec_app/models/audit_installations_electriques.dart';
 
 class DescriptionInstallationsEntity {
   final String missionId;
@@ -24,6 +25,7 @@ class DescriptionInstallationsEntity {
   final String? tensionAlimentationSite;
   final String? nombreAlimentationSite;
   final String? presenceIacmAlimentationSite;
+  final List<ObservationLibre> foudreObservations;
   final DateTime updatedAt;
 
   const DescriptionInstallationsEntity({
@@ -49,6 +51,7 @@ class DescriptionInstallationsEntity {
     this.tensionAlimentationSite,
     this.nombreAlimentationSite,
     this.presenceIacmAlimentationSite,
+    this.foudreObservations = const [],
     required this.updatedAt,
   });
 
@@ -87,9 +90,9 @@ class DescriptionInstallationsEntity {
       case 'registre_securite':
         return registreSecurite?.isNotEmpty == true;
       case 'paratonnerre':
-        return presenceParatonnerre != null &&
-            analyseRisqueFoudre != null &&
-            etudeTechniqueFoudre != null;
+        if (presenceParatonnerre == 'Non') return true;
+        if (presenceParatonnerre == 'Oui') return true;
+        return presenceParatonnerre != null && presenceParatonnerre!.isNotEmpty;
       default:
         return false;
     }

@@ -12568,8 +12568,13 @@ class PdfReportService {
     Map<String, int> trackedPages, {
     bool afficherTableauFoudre = false,
     int offset = 0,
+    DescriptionInstallations? desc,
   }) {
     final equipRows = _collectParafoudreRows(audit);
+    final presenceParatonnerre = desc?.presenceParatonnerre?.trim();
+    final isParatonnerreNon = presenceParatonnerre == 'Non';
+    final isParatonnerreOui = presenceParatonnerre == 'Oui';
+    final foudreObsList = desc?.foudreObservations ?? [];
 
     pw.Widget itemBulletBold(String text) {
       return pw.Padding(
@@ -12610,10 +12615,73 @@ class PdfReportService {
           offset: offset,
           child: _sectionBox('FOUDRE'),
         ),
-        pw.SizedBox(height: 8),
+        pw.SizedBox(height: 10),
 
-        // Tableau Statique Foudre (Affiché uniquement si le toggle est activé)
-        if (afficherTableauFoudre) ...[
+        // CAS 1 : Paratonnerre = "Non" -> Bloc Recommandation Protection contre la foudre
+        if (isParatonnerreNon) ...[
+          pw.Container(
+            width: double.infinity,
+            decoration: pw.BoxDecoration(
+              border: pw.Border.all(color: borderColor, width: 0.5),
+              color: PdfColors.white,
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Container(
+                  width: double.infinity,
+                  color: accentColor,
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  child: pw.Text(
+                    'Recommandation – Protection contre la foudre',
+                    style: pw.TextStyle(
+                      font: _fontBold,
+                      fontSize: fsBody + 1,
+                      color: PdfColors.white,
+                    ),
+                  ),
+                ),
+                pw.Padding(
+                  padding: const pw.EdgeInsets.all(10),
+                  child: pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text(
+                        'Constat :',
+                        style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: headerColor),
+                      ),
+                      pw.SizedBox(height: 4),
+                      _bodyText(
+                        'Lors de la vérification des installations électriques, il a été constaté l’absence de dispositif de protection contre la foudre de type paratonnerre sur le site.',
+                      ),
+                      pw.SizedBox(height: 8),
+                      pw.Text(
+                        'Recommandation :',
+                        style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: headerColor),
+                      ),
+                      pw.SizedBox(height: 4),
+                      _bodyText(
+                        'Au regard de l’absence de dispositif de protection contre les impacts directs de la foudre, il serait souhaitable de faire réaliser une analyse et étude technique du risque foudre, prenant notamment en compte les caractéristiques du site, la nature et la hauteur des bâtiments, leur environnement, les équipements installés ainsi que les conséquences potentielles d’un impact de foudre.',
+                      ),
+                      pw.SizedBox(height: 4),
+                      _bodyText(
+                        'Cette étude permettra de déterminer la nécessité, le niveau et le type de protection approprié, ainsi que les caractéristiques du système de protection à mettre en œuvre, notamment le dispositif de capture et les parafoudres.',
+                      ),
+                      pw.SizedBox(height: 4),
+                      _bodyText(
+                        'Il est par conséquent recommandé de programmer la réalisation de ces études afin de statuer sur la nécessité d’installer un paratonnerre et, le cas échéant, de définir une solution de protection adaptée aux caractéristiques du site.',
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 14),
+        ]
+
+        // CAS 2 : Paratonnerre = "Oui" (ou afficherTableauFoudre activé)
+        else if (isParatonnerreOui || afficherTableauFoudre) ...[
           pw.Table(
             defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
             border: pw.TableBorder.all(color: borderColor, width: 0.4),
@@ -12625,59 +12693,15 @@ class PdfReportService {
             children: [
               _tableHeaderRow(['Items', 'CRITICITÉ', 'Observations']),
 
-              // Item 1
+              // Ligne Principale (Contenu principal d'analyse & étude)
               pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.white),
                 children: [
                   pw.Container(
                     alignment: pw.Alignment.center,
                     padding: const pw.EdgeInsets.all(6),
                     child: pw.Text(
                       '1',
-                      style: pw.TextStyle(
-                        font: _fontBold,
-                        fontSize: fsBody,
-                        color: headerColor,
-                      ),
-                    ),
-                  ),
-                  pw.Container(
-                    alignment: pw.Alignment.center,
-                    padding: const pw.EdgeInsets.all(6),
-                    child: pw.Text(
-                      'Majeure',
-                      style: pw.TextStyle(
-                        font: _fontBold,
-                        fontSize: fsSmall,
-                        color: PdfColor.fromInt(0xFFE65100),
-                      ),
-                    ),
-                  ),
-                  pw.Padding(
-                    padding: const pw.EdgeInsets.all(6),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        _bodyText(
-                          "- Absence d'étude technique foudre avec caractéristiques des parafoudres",
-                        ),
-                        _bodyText(
-                          "- Mise en œuvre non conforme du conducteur de descente",
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-
-              // Item 2
-              pw.TableRow(
-                decoration: pw.BoxDecoration(color: tableRowAlt),
-                children: [
-                  pw.Container(
-                    alignment: pw.Alignment.center,
-                    padding: const pw.EdgeInsets.all(6),
-                    child: pw.Text(
-                      '2',
                       style: pw.TextStyle(
                         font: _fontBold,
                         fontSize: fsBody,
@@ -12751,12 +12775,103 @@ class PdfReportService {
                   ),
                 ],
               ),
+
+              // Lignes Dynamiques d'observations structurées (Ligne 2, Ligne 3...)
+              ...foudreObsList.asMap().entries.map((entry) {
+                final itemIndex = entry.key + 2;
+                final obs = entry.value;
+                final crit = obs.criticite?.trim().isNotEmpty == true ? obs.criticite! : 'Majeure';
+
+                return pw.TableRow(
+                  decoration: pw.BoxDecoration(
+                    color: entry.key.isOdd ? tableRowAlt : PdfColors.white,
+                  ),
+                  children: [
+                    pw.Container(
+                      alignment: pw.Alignment.center,
+                      padding: const pw.EdgeInsets.all(6),
+                      child: pw.Text(
+                        '$itemIndex',
+                        style: pw.TextStyle(
+                          font: _fontBold,
+                          fontSize: fsBody,
+                          color: headerColor,
+                        ),
+                      ),
+                    ),
+                    pw.Container(
+                      alignment: pw.Alignment.center,
+                      padding: const pw.EdgeInsets.all(6),
+                      child: pw.Text(
+                        crit,
+                        style: pw.TextStyle(
+                          font: _fontBold,
+                          fontSize: fsSmall,
+                          color: PdfColor.fromInt(0xFFE65100),
+                        ),
+                      ),
+                    ),
+                    pw.Padding(
+                      padding: const pw.EdgeInsets.all(6),
+                      child: pw.Column(
+                        crossAxisAlignment: pw.CrossAxisAlignment.start,
+                        children: [
+                          _bodyText(obs.texte),
+                          if (obs.hasNormativeReference) ...[
+                            pw.SizedBox(height: 3),
+                            pw.Text(
+                              'Réf. normativ : ${obs.referenceNormative}',
+                              style: pw.TextStyle(
+                                font: _fontBold,
+                                fontSize: fsSmall,
+                                color: headerColor,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              }),
             ],
           ),
           pw.SizedBox(height: 14),
         ],
 
-        pw.SizedBox(height: 14),
+        // Espace Observations Libres (Placé juste SOUS le tableau principal)
+        if (foudres.isNotEmpty) ...[
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.all(10),
+            decoration: pw.BoxDecoration(
+              color: tableRowAlt,
+              borderRadius: pw.BorderRadius.circular(4),
+              border: pw.Border.all(color: borderColor, width: 0.4),
+            ),
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  'Observations libres :',
+                  style: pw.TextStyle(
+                    font: _fontBold,
+                    fontSize: fsBody,
+                    color: headerColor,
+                  ),
+                ),
+                pw.SizedBox(height: 6),
+                ...foudres.map((f) {
+                  return pw.Padding(
+                    padding: const pw.EdgeInsets.only(bottom: 4),
+                    child: _bodyText('• ${f.observation}'),
+                  );
+                }),
+              ],
+            ),
+          ),
+          pw.SizedBox(height: 14),
+        ],
 
         // Sous-section : Observations par équipement
         PageTracker(
@@ -17070,6 +17185,7 @@ class PdfReportService {
             trackedPages,
             afficherTableauFoudre: mission.afficherTableauFoudre,
             offset: currentOffset,
+            desc: description,
           ),
         ],
       ),

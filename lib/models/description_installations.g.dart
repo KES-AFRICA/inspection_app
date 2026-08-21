@@ -41,6 +41,7 @@ class DescriptionInstallationsAdapter
       tensionAlimentationSite: fields[20] as String?,
       nombreAlimentationSite: fields[21] as String?,
       presenceIacmAlimentationSite: fields[22] as String?,
+      foudreObservations: (fields[23] as List?)?.cast<ObservationLibre>(),
       updatedAt: fields[16] as DateTime,
     );
   }
@@ -48,7 +49,7 @@ class DescriptionInstallationsAdapter
   @override
   void write(BinaryWriter writer, DescriptionInstallations obj) {
     writer
-      ..writeByte(23)
+      ..writeByte(21)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)
@@ -93,6 +94,8 @@ class DescriptionInstallationsAdapter
       ..write(obj.nombreAlimentationSite)
       ..writeByte(22)
       ..write(obj.presenceIacmAlimentationSite)
+      ..writeByte(23)
+      ..write(obj.foudreObservations)
       ..writeByte(16)
       ..write(obj.updatedAt);
   }

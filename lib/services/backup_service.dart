@@ -868,6 +868,7 @@ class BackupService {
         'tensionAlimentationSite': d.tensionAlimentationSite,
         'nombreAlimentationSite': d.nombreAlimentationSite,
         'presenceIacmAlimentationSite': d.presenceIacmAlimentationSite,
+        'foudreObservations': d.foudreObservations.map(_serializeObs).toList(),
         'updatedAt': d.updatedAt.toIso8601String(),
       };
 
@@ -2463,6 +2464,7 @@ class BackupService {
       tensionAlimentationSite: d['tensionAlimentationSite'] as String?,
       nombreAlimentationSite: d['nombreAlimentationSite'] as String?,
       presenceIacmAlimentationSite: d['presenceIacmAlimentationSite'] as String?,
+      foudreObservations: _parseObs(d['foudreObservations']),
       updatedAt: _dt(d['updatedAt']),
     );
 
