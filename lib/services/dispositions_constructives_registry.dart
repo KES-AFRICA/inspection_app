@@ -1369,9 +1369,9 @@ class DispositionsConstructivesRegistry {
     "Protection contre les contacts directs (capots, caches, bornes protégées)",
     "Présence et fonctionnement des dispositifs de protection",
     "Adéquation des dispositifs de protection",
-    "Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés",
-    "Coordination entre disjoncteurs et contacteurs",
-    "Coordination entre disjoncteurs",
+    "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés",
+    "Coordination entre dispositifs de protection et contacteurs",
+    "Coordination entre dispositifs de protection",
     "Protection contre les contacts indirects",
     "Sélectivité et coordination des protections (montée sélective des calibres)",
     "Présence et conformité du dispositif de protection contre les surtensions (parafoudre)",
@@ -1486,17 +1486,17 @@ class DispositionsConstructivesRegistry {
       familleRisque: "Surintensité / court-circuit / incendie",
       criticite: "Critique",
     ),
-    "Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés": const DispositionMetadata(
+    "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés": const DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 523, art 524 et art 433",
       familleRisque: "Incendie / échauffement / surcharge des conducteurs",
       criticite: "Critique",
     ),
-    "Coordination entre disjoncteurs et contacteurs": const DispositionMetadata(
+    "Coordination entre dispositifs de protection et contacteurs": const DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 536",
       familleRisque: "Défaut de coordination / perte de sélectivité",
       criticite: "Majeure",
     ),
-    "Coordination entre disjoncteurs": const DispositionMetadata(
+    "Coordination entre dispositifs de protection": const DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 536",
       familleRisque: "Défaut de coordination / perte de sélectivité",
       criticite: "Majeure",
@@ -1571,7 +1571,13 @@ class DispositionsConstructivesRegistry {
     _normalizeKey("État des connexions et échauffement visuel"):
         "Contrôle thermographique des connexions, et protections",
     _normalizeKey("Section des câbles de départs adaptée au courant nominal des disjoncteurs associés"):
-        "Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés",
+        "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés",
+    _normalizeKey("Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés"):
+        "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés",
+    _normalizeKey("Coordination entre disjoncteurs et contacteurs"):
+        "Coordination entre dispositifs de protection et contacteurs",
+    _normalizeKey("Coordination entre disjoncteurs"):
+        "Coordination entre dispositifs de protection",
     _normalizeKey("Présence d'un parafoudre et état du voyant de d'état"):
         "Présence et conformité du dispositif de protection contre les surtensions (parafoudre)",
     _normalizeKey("Présence d'un parafoudre"):
@@ -1633,11 +1639,11 @@ class DispositionsConstructivesRegistry {
     "Protection contre les contacts directs (capots, caches, bornes protégées)",
     "Présence et fonctionnement des dispositifs de protection",
     "Adéquation des dispositifs de protection",
-    "Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés",
-    "Section des câbles de départs adaptée au courant nominal des disjoncteurs associés",
-    "Calibre des disjoncteurs / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)",
-    "Coordination entre disjoncteurs et contacteurs",
-    "Coordination entre disjoncteurs",
+    "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés",
+    "Section des câbles de départs adaptée au courant nominal des dispositifs de protection associés",
+    "Calibre des dispositifs de protection / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)",
+    "Coordination entre dispositifs de protection et contacteurs",
+    "Coordination entre dispositifs de protection",
     "Protection contre les contacts indirects",
     "Sélectivité et coordination des protections (montée sélective des calibres)",
     "Pouvoir de coupure et courant assigné adaptés à l'installation",
@@ -1736,27 +1742,27 @@ class DispositionsConstructivesRegistry {
       familleRisque: "Surintensité / court-circuit / incendie",
       criticite: "Critique",
     ),
-    "Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés": const DispositionMetadata(
+    "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés": const DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 523, art 524 et art 433",
       familleRisque: "Incendie / échauffement / surcharge des conducteurs",
       criticite: "Critique",
     ),
-    "Section des câbles de départs adaptée au courant nominal des disjoncteurs associés": const DispositionMetadata(
+    "Section des câbles de départs adaptée au courant nominal des dispositifs de protection associés": const DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 523, art 524 et art 433",
       familleRisque: "Incendie / échauffement / surcharge des conducteurs",
       criticite: "Critique",
     ),
-    "Calibre des disjoncteurs / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)": const DispositionMetadata(
+    "Calibre des dispositifs de protection / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)": const DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 523, art 524 et art 433",
       familleRisque: "Incendie / échauffement / surcharge des conducteurs",
       criticite: "Critique",
     ),
-    "Coordination entre disjoncteurs et contacteurs": const DispositionMetadata(
+    "Coordination entre dispositifs de protection et contacteurs": const DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 536",
       familleRisque: "Défaut de coordination / perte de sélectivité",
       criticite: "Majeure",
     ),
-    "Coordination entre disjoncteurs": const DispositionMetadata(
+    "Coordination entre dispositifs de protection": const DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 536",
       familleRisque: "Défaut de coordination / perte de sélectivité",
       criticite: "Majeure",
@@ -1810,6 +1816,16 @@ class DispositionsConstructivesRegistry {
 
   /// Table d'alias pour l'Inverseur de Source
   static final Map<String, String> _inverseurTitleAliases = {
+    _normalizeKey("Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés"):
+        "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés",
+    _normalizeKey("Section des câbles de départs adaptée au courant nominal des disjoncteurs associés"):
+        "Section des câbles de départs adaptée au courant nominal des dispositifs de protection associés",
+    _normalizeKey("Calibre des disjoncteurs / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)"):
+        "Calibre des dispositifs de protection / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)",
+    _normalizeKey("Coordination entre disjoncteurs et contacteurs"):
+        "Coordination entre dispositifs de protection et contacteurs",
+    _normalizeKey("Coordination entre disjoncteurs"):
+        "Coordination entre dispositifs de protection",
     _normalizeKey("Protection IP/IK adaptée au local"):
         "Protection IP/IK adaptée au local d'installation",
     _normalizeKey("Compatibilité du degré IP/IK avec l'environnement d'installation"):

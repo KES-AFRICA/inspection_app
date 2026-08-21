@@ -1,5 +1,4 @@
 // lib/services/normative_reference_service.dart
-import 'package:flutter/material.dart';
 
 class NormativeReferenceService {
   // Map des références normatives par libellé de point de vérification
@@ -21,6 +20,11 @@ class NormativeReferenceService {
     'Calibre des disjoncteurs / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)': 'Norme NF C 15-100 art 531',
     'Coordination entre disjoncteurs et contacteurs': 'Norme NF C 15-100 art 435',
     'Coordination entre disjoncteurs': 'Norme NF C 15-100 art 435',
+    'Section des câbles d\'alimentation adaptée au courant nominal des dispositifs de protection associés': 'Norme NF C 15-100 art 523',
+    'Section des câbles de départs adaptée au courant nominal des dispositifs de protection associés': 'Norme NF C 15-100 art 523',
+    'Calibre des dispositifs de protection / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)': 'Norme NF C 15-100 art 531',
+    'Coordination entre dispositifs de protection et contacteurs': 'Norme NF C 15-100 art 435',
+    'Coordination entre dispositifs de protection': 'Norme NF C 15-100 art 435',
     'Protection contre les contacts indirects': 'Norme NF C 15-100 art 531',
     'Sélectivité et coordination des protections (montée sélective des calibres)': 'Norme NF C 15-100 art 435',
     'Continuité du conducteur de protection (PE)': 'Norme NF C 15-100 art 526-555',

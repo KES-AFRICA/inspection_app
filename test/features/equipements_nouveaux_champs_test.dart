@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/features/audit_installations/domain/entities/audit_installations_entities.dart';
 import 'package:inspec_app/features/audit_installations/data/mappers/audit_installations_mapper.dart';
+import 'package:inspec_app/services/dispositions_constructives_registry.dart';
 
 void main() {
   group('EquipementsNouveauxChampsTest - Persistance, Mapping & Retrocompatibilité', () {
@@ -146,6 +147,41 @@ void main() {
       // Si l'inspecteur remplit la conformite du point 1 en mode creation
       uncompletedPoint.conformite = 'na';
       expect(isValid(isEdition: false), isTrue);
+    });
+
+    test('Remplacement disjoncteur -> dispositif de protection sur Inverseurs', () {
+      // 1. Aucun point des Inverseurs ne doit contenir 'disjoncteur'
+      final hasDisjoncteur = DispositionsConstructivesRegistry.allInverseurPoints
+          .any((pt) => pt.toLowerCase().contains('disjoncteur'));
+      expect(hasDisjoncteur, isFalse);
+
+      // 2. Les 5 points mis a jour doivent bien contenir 'dispositif de protection' ou 'dispositifs de protection'
+      final newPointsCount = DispositionsConstructivesRegistry.allInverseurPoints
+          .where((pt) => pt.toLowerCase().contains('dispositifs de protection') || pt.toLowerCase().contains('dispositif de protection'))
+          .length;
+      expect(newPointsCount, greaterThanOrEqualTo(5));
+
+      // 3. Test de retrocompatibilite et d'invariance des metadonnees
+      final oldPointTitle = "Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés";
+      final legacyPoint = PointVerification(
+        pointVerification: oldPointTitle,
+        conformite: 'non',
+        observation: 'Cable sous-dimensionne',
+      );
+
+      final checklist = [legacyPoint];
+      DispositionsConstructivesRegistry.ensureCompleteInverseurChecklist(checklist);
+
+      // Le libelle affiche doit etre le nouveau libelle
+      final updatedPoint = checklist.firstWhere(
+        (p) => p.pointVerification.contains("Section des câbles d'alimentation"),
+      );
+      expect(updatedPoint.pointVerification, equals("Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés"));
+      expect(updatedPoint.referenceNormative, equals("NF C 15-100-1:2024 – art 523, art 524 et art 433"));
+      expect(updatedPoint.criticite, equals("Critique"));
+      expect(updatedPoint.familleRisque, equals("Incendie / échauffement / surcharge des conducteurs"));
+      expect(updatedPoint.conformite, equals('non'));
+      expect(updatedPoint.observation, equals('Cable sous-dimensionne'));
     });
   });
 }
