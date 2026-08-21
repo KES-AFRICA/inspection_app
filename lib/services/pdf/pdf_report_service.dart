@@ -6549,6 +6549,25 @@ class PdfReportService {
         crossAxisAlignment: pw.CrossAxisAlignment.start,
         children: [
           PageTracker(
+            key: 'desc_alim_site_mt',
+            registry: trackedPages,
+            offset: offset,
+            child: _subTitle(
+              '${descBodyIdx++}. Alimentation du site Moyen Tension',
+            ),
+          ),
+          pw.SizedBox(height: 4),
+          _buildAlimentationSiteMtTable(safeDesc),
+        ],
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 8));
+
+    widgets.add(
+      pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          PageTracker(
             key: 'desc_mt',
             registry: trackedPages,
             offset: offset,
@@ -9585,6 +9604,88 @@ class PdfReportService {
     return [titleTable, headerTable, dataTable];
   }
 
+  static pw.Widget _buildAlimentationSiteMtTable(DescriptionInstallations desc) {
+    String safeVal(String? val) {
+      if (val == null || val.trim().isEmpty) return '-';
+      return val.trim();
+    }
+
+    final natureReseau = safeVal(desc.natureReseauAlimentationSite);
+    final tensionRaw = desc.tensionAlimentationSite?.trim();
+    final tension = (tensionRaw != null && tensionRaw.isNotEmpty)
+        ? '$tensionRaw kV'
+        : '-';
+    final nombre = safeVal(desc.nombreAlimentationSite);
+    final presenceIacm = safeVal(desc.presenceIacmAlimentationSite);
+
+    pw.TableRow buildRow(String label, String value, bool alt) {
+      return pw.TableRow(
+        decoration: alt ? pw.BoxDecoration(color: tableRowAlt) : null,
+        children: [
+          pw.Padding(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: pw.Text(
+              label,
+              style: pw.TextStyle(font: _fontBold, fontSize: fsSmall),
+            ),
+          ),
+          pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            alignment: pw.Alignment.center,
+            child: pw.Text(
+              value,
+              style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+              textAlign: pw.TextAlign.center,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return pw.Table(
+      border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+      columnWidths: const {
+        0: pw.FlexColumnWidth(3),
+        1: pw.FlexColumnWidth(2),
+      },
+      children: [
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: accentColor),
+          children: [
+            pw.Padding(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              child: pw.Text(
+                'Champ',
+                style: pw.TextStyle(
+                  font: _fontBold,
+                  fontSize: fsSmall,
+                  color: PdfColors.white,
+                ),
+              ),
+            ),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+              alignment: pw.Alignment.center,
+              child: pw.Text(
+                'Valeur',
+                style: pw.TextStyle(
+                  font: _fontBold,
+                  fontSize: fsSmall,
+                  color: PdfColors.white,
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+        buildRow('Nature du réseau', natureReseau, false),
+        buildRow('Tension alimentation', tension, true),
+        buildRow('Nombre d\'alimentation', nombre, false),
+        buildRow('Présence de l\'IACM à l\'entrée de l\'alimentation sur site', presenceIacm, true),
+      ],
+    );
+  }
+
   static List<pw.Widget> _buildCelluleSection(
     Cellule cellule, {
     String? localName,
@@ -9767,11 +9868,6 @@ class PdfReportService {
         tableDataRowInfo(
           'Nature du réseau',
           safe(cellule.natureReseau ?? ''),
-          alt: false,
-        ),
-        tableDataRowInfo(
-          'Présence IACM',
-          safe(cellule.presenceIacm ?? ''),
           alt: false,
         ),
         tableDataRowInfo(

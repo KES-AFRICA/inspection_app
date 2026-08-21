@@ -227,6 +227,18 @@ class DescriptionInstallationsLocalDataSourceImpl implements DescriptionInstalla
         case 'etude_technique_foudre':
           desc.etudeTechniqueFoudre = value;
           break;
+        case 'nature_reseau_alim_site':
+          desc.natureReseauAlimentationSite = value;
+          break;
+        case 'tension_alim_site':
+          desc.tensionAlimentationSite = value;
+          break;
+        case 'nombre_alim_site':
+          desc.nombreAlimentationSite = value;
+          break;
+        case 'presence_iacm_alim_site':
+          desc.presenceIacmAlimentationSite = value;
+          break;
         default:
           return false;
       }

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/alimentation_site_mt_sequence_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/description_installations_form.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/paratonnerre_sequence_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/radio_sequence_screen.dart';
@@ -42,6 +43,14 @@ class DescriptionInstallationsSequenceScreenState
   late PageController _pageController;
 
   List<Map<String, dynamic>> get _sections => [
+    {
+      'key': 'alimentation_site_mt',
+      'title': 'Alimentation du site Moyen Tension',
+      'shortTitle': 'Alim. site MT',
+      'icon': Icons.bolt_outlined,
+      'color': const Color(0xFFE67E22),
+      'isAlimentationSiteMt': true,
+    },
     {
       'key': 'alimentation_moyenne_tension',
       'title': 'Caractéristiques de l\'alimentation moyenne tension',
@@ -588,6 +597,13 @@ class DescriptionInstallationsSequenceScreenState
       );
     } else if (section['isTestCpi'] == true) {
       return CpiSequenceScreen(
+        key: ValueKey('section_${section['key']}'),
+        mission: widget.mission,
+        onComplete: _onSectionComplete,
+        isComplete: isComplete,
+      );
+    } else if (section['isAlimentationSiteMt'] == true) {
+      return AlimentationSiteMtSequenceScreen(
         key: ValueKey('section_${section['key']}'),
         mission: widget.mission,
         onComplete: _onSectionComplete,

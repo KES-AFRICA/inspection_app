@@ -198,9 +198,6 @@ class InstallationDescriptionPdfData {
     if (c.calibreDisjoncteur != null && c.calibreDisjoncteur!.isNotEmpty) {
       addField('Calibre Du Disjoncteur', c.calibreDisjoncteur!);
     }
-    if (c.presenceIacm != null && c.presenceIacm!.isNotEmpty) {
-      addField('PRESENCE IACM', c.presenceIacm!);
-    }
 
     final observationsTxt = (c.observations ?? [])
         .map((o) => o.observation ?? '')

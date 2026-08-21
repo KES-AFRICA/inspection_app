@@ -864,6 +864,10 @@ class BackupService {
         'presenceParatonnerre': d.presenceParatonnerre,
         'analyseRisqueFoudre': d.analyseRisqueFoudre,
         'etudeTechniqueFoudre': d.etudeTechniqueFoudre,
+        'natureReseauAlimentationSite': d.natureReseauAlimentationSite,
+        'tensionAlimentationSite': d.tensionAlimentationSite,
+        'nombreAlimentationSite': d.nombreAlimentationSite,
+        'presenceIacmAlimentationSite': d.presenceIacmAlimentationSite,
         'updatedAt': d.updatedAt.toIso8601String(),
       };
 
@@ -2455,6 +2459,10 @@ class BackupService {
       presenceParatonnerre: d['presenceParatonnerre'] as String?,
       analyseRisqueFoudre: d['analyseRisqueFoudre'] as String?,
       etudeTechniqueFoudre: d['etudeTechniqueFoudre'] as String?,
+      natureReseauAlimentationSite: d['natureReseauAlimentationSite'] as String?,
+      tensionAlimentationSite: d['tensionAlimentationSite'] as String?,
+      nombreAlimentationSite: d['nombreAlimentationSite'] as String?,
+      presenceIacmAlimentationSite: d['presenceIacmAlimentationSite'] as String?,
       updatedAt: _dt(d['updatedAt']),
     );
 

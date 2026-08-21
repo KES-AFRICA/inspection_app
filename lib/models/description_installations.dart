@@ -68,6 +68,19 @@ class DescriptionInstallations extends HiveObject {
   @HiveField(15)
   String? etudeTechniqueFoudre;
 
+  // Alimentation du site Moyen Tension
+  @HiveField(19)
+  String? natureReseauAlimentationSite;
+
+  @HiveField(20)
+  String? tensionAlimentationSite;
+
+  @HiveField(21)
+  String? nombreAlimentationSite;
+
+  @HiveField(22)
+  String? presenceIacmAlimentationSite;
+
   @HiveField(16)
   DateTime updatedAt;
 
@@ -90,6 +103,10 @@ class DescriptionInstallations extends HiveObject {
     this.presenceParatonnerre,
     this.analyseRisqueFoudre,
     this.etudeTechniqueFoudre,
+    this.natureReseauAlimentationSite,
+    this.tensionAlimentationSite,
+    this.nombreAlimentationSite,
+    this.presenceIacmAlimentationSite,
     required this.updatedAt,
   })  : alimentationMoyenneTension = alimentationMoyenneTension ?? [],
         alimentationBasseTension = alimentationBasseTension ?? [],
@@ -150,6 +167,11 @@ class DescriptionInstallations extends HiveObject {
   // Vérifier si une section est complète
   bool isSectionComplete(String sectionKey) {
     switch (sectionKey) {
+      case 'alimentation_site_mt':
+        return natureReseauAlimentationSite?.isNotEmpty == true ||
+            tensionAlimentationSite?.isNotEmpty == true ||
+            nombreAlimentationSite?.isNotEmpty == true ||
+            presenceIacmAlimentationSite?.isNotEmpty == true;
       case 'alimentation_moyenne_tension':
         return alimentationMoyenneTension.isNotEmpty;
       case 'alimentation_basse_tension':
@@ -191,6 +213,7 @@ class DescriptionInstallations extends HiveObject {
     final hasIt = regimeNeutre != null &&
         regimeNeutre!.split(',').map((e) => e.trim()).contains('IT');
     final progress = <String, bool>{
+      'alimentation_site_mt': isSectionComplete('alimentation_site_mt'),
       'alimentation_moyenne_tension': isSectionComplete('alimentation_moyenne_tension'),
       'alimentation_basse_tension': isSectionComplete('alimentation_basse_tension'),
       'groupe_electrogene': isSectionComplete('groupe_electrogene'),

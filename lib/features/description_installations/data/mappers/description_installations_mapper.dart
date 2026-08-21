@@ -40,6 +40,10 @@ class DescriptionInstallationsMapper {
       presenceParatonnerre: model.presenceParatonnerre,
       analyseRisqueFoudre: model.analyseRisqueFoudre,
       etudeTechniqueFoudre: model.etudeTechniqueFoudre,
+      natureReseauAlimentationSite: model.natureReseauAlimentationSite,
+      tensionAlimentationSite: model.tensionAlimentationSite,
+      nombreAlimentationSite: model.nombreAlimentationSite,
+      presenceIacmAlimentationSite: model.presenceIacmAlimentationSite,
       updatedAt: model.updatedAt,
     );
   }
@@ -64,6 +68,10 @@ class DescriptionInstallationsMapper {
       presenceParatonnerre: entity.presenceParatonnerre,
       analyseRisqueFoudre: entity.analyseRisqueFoudre,
       etudeTechniqueFoudre: entity.etudeTechniqueFoudre,
+      natureReseauAlimentationSite: entity.natureReseauAlimentationSite,
+      tensionAlimentationSite: entity.tensionAlimentationSite,
+      nombreAlimentationSite: entity.nombreAlimentationSite,
+      presenceIacmAlimentationSite: entity.presenceIacmAlimentationSite,
       updatedAt: entity.updatedAt,
     );
   }

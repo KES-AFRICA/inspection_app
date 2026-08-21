@@ -195,34 +195,12 @@ class _AjouterCarteScreenState extends State<AjouterCarteScreen> {
     return false;
   }
 
-  bool _isIacmValid() {
-    if (_showIacmOption) {
-      return _selectedIacm != null && _selectedIacm!.isNotEmpty;
-    }
-    return true;
-  }
-
   void _sauvegarder() {
     if (!_hasAtLeastOneFieldFilled()) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             'Veuillez remplir au moins un champ',
-            style: TextStyle(fontSize: context.fontSize(14)),
-          ),
-          backgroundColor: Colors.orange,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        ),
-      );
-      return;
-    }
-    
-    if (!_isIacmValid()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Veuillez indiquer la présence d\'une IACM',
             style: TextStyle(fontSize: context.fontSize(14)),
           ),
           backgroundColor: Colors.orange,
@@ -245,9 +223,6 @@ class _AjouterCarteScreenState extends State<AjouterCarteScreen> {
       } else if (_isNatureReseauField(champ)) {
         if (_selectedNatureReseau != null && _selectedNatureReseau!.isNotEmpty) {
           nouvelleCarte[champ] = _selectedNatureReseau!;
-          if (_selectedNatureReseau == 'Aérien' && _selectedIacm != null) {
-            nouvelleCarte['PRESENCE IACM'] = _selectedIacm!;
-          }
         }
       } else if (_isOuiNonField(champ)) {
         final value = _getOuiNonFieldValue(champ);
@@ -577,80 +552,19 @@ class _AjouterCarteScreenState extends State<AjouterCarteScreen> {
   }
 
   Widget _buildNatureReseauSection() {
-    return Column(
-      children: [
-        _buildModernDropdown<String>(
-          label: 'NATURE DU RESEAU',
-          value: _selectedNatureReseau,
-          hintText: 'Sélectionnez le type de réseau',
-          items: const [
-            DropdownMenuItem(value: 'Souterrain', child: Text('Souterrain')),
-            DropdownMenuItem(value: 'Aérien', child: Text('Aérien')),
-          ],
-          onChanged: (value) {
-            setState(() {
-              _selectedNatureReseau = value;
-              _showIacmOption = (value == 'Aérien');
-              if (!_showIacmOption) {
-                _selectedIacm = null;
-              }
-            });
-          },
-        ),
-        
-        if (_showIacmOption)
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeInOut,
-            child: Column(
-              children: [
-                _buildModernDropdown<String>(
-                  label: 'Présence d\'une IACM',
-                  value: _selectedIacm,
-                  hintText: 'Sélectionnez...',
-                  items: const [
-                    DropdownMenuItem(value: 'Oui', child: Text('Oui')),
-                    DropdownMenuItem(value: 'Non', child: Text('Non')),
-                  ],
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedIacm = value;
-                    });
-                  },
-                ),
-                
-                if (_selectedIacm == null)
-                  Padding(
-                    padding: EdgeInsets.only(
-                      left: context.spacing(16),
-                      right: context.spacing(16),
-                      bottom: context.spacing(12),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.info_outline,
-                          size: context.iconSize(14),
-                          color: Colors.grey.shade500,
-                        ),
-                        SizedBox(width: context.spacing(6)),
-                        Expanded(
-                          child: Text(
-                            'Indiquez si une Installation À Courant Mesuré est présente',
-                            style: TextStyle(
-                              fontSize: context.fontSize(12),
-                              color: Colors.grey.shade600,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
-            ),
-          ),
+    return _buildModernDropdown<String>(
+      label: 'NATURE DU RESEAU',
+      value: _selectedNatureReseau,
+      hintText: 'Sélectionnez le type de réseau',
+      items: const [
+        DropdownMenuItem(value: 'Souterrain', child: Text('Souterrain')),
+        DropdownMenuItem(value: 'Aérien', child: Text('Aérien')),
       ],
+      onChanged: (value) {
+        setState(() {
+          _selectedNatureReseau = value;
+        });
+      },
     );
   }
 

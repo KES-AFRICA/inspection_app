@@ -279,13 +279,6 @@ class _InstallationDetailScreenState
               ...widget.champs.map((champ) {
                 String valeur = carte[champ] ?? '';
 
-                // Pour la section MT, afficher aussi l'IACM si présent
-                if (isMoyenneTension &&
-                    champ == 'NATURE DU RESEAU' &&
-                    carte.containsKey('PRESENCE IACM')) {
-                  valeur = '$valeur (IACM: ${carte['PRESENCE IACM']})';
-                }
-
                 final estObservations = _estChampObservations(champ);
 
                 return Padding(

@@ -20,6 +20,10 @@ class DescriptionInstallationsEntity {
   final String? presenceParatonnerre;
   final String? analyseRisqueFoudre;
   final String? etudeTechniqueFoudre;
+  final String? natureReseauAlimentationSite;
+  final String? tensionAlimentationSite;
+  final String? nombreAlimentationSite;
+  final String? presenceIacmAlimentationSite;
   final DateTime updatedAt;
 
   const DescriptionInstallationsEntity({
@@ -41,11 +45,20 @@ class DescriptionInstallationsEntity {
     this.presenceParatonnerre,
     this.analyseRisqueFoudre,
     this.etudeTechniqueFoudre,
+    this.natureReseauAlimentationSite,
+    this.tensionAlimentationSite,
+    this.nombreAlimentationSite,
+    this.presenceIacmAlimentationSite,
     required this.updatedAt,
   });
 
   bool isSectionComplete(String sectionKey) {
     switch (sectionKey) {
+      case 'alimentation_site_mt':
+        return natureReseauAlimentationSite?.isNotEmpty == true ||
+            tensionAlimentationSite?.isNotEmpty == true ||
+            nombreAlimentationSite?.isNotEmpty == true ||
+            presenceIacmAlimentationSite?.isNotEmpty == true;
       case 'alimentation_moyenne_tension':
         return alimentationMoyenneTension.isNotEmpty;
       case 'alimentation_basse_tension':
@@ -86,6 +99,7 @@ class DescriptionInstallationsEntity {
     final hasIt = regimeNeutre != null &&
         regimeNeutre!.split(',').map((e) => e.trim()).contains('IT');
     return {
+      'alimentation_site_mt': isSectionComplete('alimentation_site_mt'),
       'alimentation_moyenne_tension': isSectionComplete('alimentation_moyenne_tension'),
       'alimentation_basse_tension': isSectionComplete('alimentation_basse_tension'),
       'groupe_electrogene': isSectionComplete('groupe_electrogene'),
