@@ -4728,27 +4728,6 @@ static List<String> getEquipementsForLocalisation(String missionId, String local
   return equipements;
 }
 
-/// Structure d'équipement typée pour les essais de mesure d'isolement
-class EquipementIsolementItem {
-  final String id;
-  final String nom;
-  final String type;
-  final String repere;
-  final String? sectionPointA;
-  final String? sectionPointB;
-
-  const EquipementIsolementItem({
-    required this.id,
-    required this.nom,
-    required this.type,
-    required this.repere,
-    this.sectionPointA,
-    this.sectionPointB,
-  });
-
-  String get displayName => '$repere - $nom';
-}
-
 /// Récupérer tous les équipements structurés de la mission pour les essais d'isolement
 static List<EquipementIsolementItem> getAllEquipementsIsolementForMission(String missionId) {
   final audit = getAuditInstallationsByMissionId(missionId);
@@ -7843,6 +7822,25 @@ class SecureLoginResult {
     this.isLocked = false,
     this.remainingAttempts = 5,
   });
+}
 
-  
+/// Structure d'équipement typée pour les essais de mesure d'isolement
+class EquipementIsolementItem {
+  final String id;
+  final String nom;
+  final String type;
+  final String repere;
+  final String? sectionPointA;
+  final String? sectionPointB;
+
+  const EquipementIsolementItem({
+    required this.id,
+    required this.nom,
+    required this.type,
+    required this.repere,
+    this.sectionPointA,
+    this.sectionPointB,
+  });
+
+  String get displayName => '$repere - $nom';
 }

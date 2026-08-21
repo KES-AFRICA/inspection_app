@@ -7,6 +7,7 @@ import 'package:inspec_app/services/hive_service.dart';
 import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 
 const List<String> kSectionCableOptions = [
+  '0',
   '1.5 mm²',
   '2.5 mm²',
   '4 mm²',
@@ -575,6 +576,9 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
 
     if (widget.isEdition) {
       _chargerDonneesExistantes();
+    } else {
+      _selectedSectionPointA ??= '0';
+      _selectedSectionPointB ??= '0';
     }
   }
 
@@ -629,8 +633,12 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
           );
     }
 
-    _selectedSectionPointA = essai.sectionCablePointA ?? essai.sectionCable;
-    _selectedSectionPointB = essai.sectionCablePointB ?? essai.sectionCable;
+    final secA = essai.sectionCablePointA ?? essai.sectionCable;
+    _selectedSectionPointA = (secA != null && secA.trim().isNotEmpty) ? secA.trim() : '0';
+
+    final secB = essai.sectionCablePointB ?? essai.sectionCable;
+    _selectedSectionPointB = (secB != null && secB.trim().isNotEmpty) ? secB.trim() : '0';
+
     _isSectionPointAManual = essai.isSectionPointAManual ?? false;
     _isSectionPointBManual = essai.isSectionPointBManual ?? false;
 
@@ -642,12 +650,18 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
   void _onPointAChanged(EquipementIsolementItem? newItem) {
     setState(() {
       _selectedPointAItem = newItem;
-      if (newItem != null && newItem.id == _selectedPointBItem?.id) {
+      if (newItem == null) {
         _selectedPointBItem = null;
-      }
-      if (newItem != null && !_isSectionPointAManual) {
-        if (newItem.sectionPointA != null && newItem.sectionPointA!.isNotEmpty) {
-          _selectedSectionPointA = newItem.sectionPointA;
+        if (!_isSectionPointAManual) {
+          _selectedSectionPointA = '0';
+        }
+      } else {
+        if (newItem.id == _selectedPointBItem?.id) {
+          _selectedPointBItem = null;
+        }
+        if (!_isSectionPointAManual) {
+          final sec = newItem.sectionPointA?.trim();
+          _selectedSectionPointA = (sec != null && sec.isNotEmpty) ? sec : '0';
         }
       }
     });
@@ -656,9 +670,14 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
   void _onPointBChanged(EquipementIsolementItem? newItem) {
     setState(() {
       _selectedPointBItem = newItem;
-      if (newItem != null && !_isSectionPointBManual) {
-        if (newItem.sectionPointB != null && newItem.sectionPointB!.isNotEmpty) {
-          _selectedSectionPointB = newItem.sectionPointB;
+      if (newItem == null) {
+        if (!_isSectionPointBManual) {
+          _selectedSectionPointB = '0';
+        }
+      } else {
+        if (!_isSectionPointBManual) {
+          final sec = newItem.sectionPointB?.trim();
+          _selectedSectionPointB = (sec != null && sec.isNotEmpty) ? sec : '0';
         }
       }
     });
@@ -857,7 +876,7 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '1. Tronçon d\'isolement (Point A & Point B)',
+                        '1. Tronçon d\'isolement (Point A & B)',
                         style: TextStyle(fontSize: _fontSizeL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue),
                       ),
                       const Divider(height: 20),
@@ -893,7 +912,7 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                       // Point A (origine)
                       Text('Point A (origine) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
-                      DropdownButtonFormField<EquipementIsolementItem>(
+                      DropdownButtonFormField<EquipementIsolementItem?>(
                         value: _selectedPointAItem,
                         isExpanded: true,
                         decoration: InputDecoration(
@@ -901,16 +920,21 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                           hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500, overflow: TextOverflow.ellipsis),
                           filled: true,
                           fillColor: Colors.grey.shade50,
-                          prefixIcon: const Icon(Icons.hub_outlined, size: 20, color: Colors.blue),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
-                        items: _allEquipements.map((eq) {
-                          return DropdownMenuItem<EquipementIsolementItem>(
-                            value: eq,
-                            child: Text(eq.displayName, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
-                          );
-                        }).toList(),
+                        items: [
+                          DropdownMenuItem<EquipementIsolementItem?>(
+                            value: null,
+                            child: Text('Aucune sélection', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                          ),
+                          ..._allEquipements.map((eq) {
+                            return DropdownMenuItem<EquipementIsolementItem?>(
+                              value: eq,
+                              child: Text(eq.displayName, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
+                            );
+                          }),
+                        ],
                         onChanged: hasEnoughEquipments ? _onPointAChanged : null,
                       ),
 
@@ -919,7 +943,7 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                       // Point B (extrémité) - exclut Point A
                       Text('Point B (extrémité) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
-                      DropdownButtonFormField<EquipementIsolementItem>(
+                      DropdownButtonFormField<EquipementIsolementItem?>(
                         value: _selectedPointBItem,
                         isExpanded: true,
                         decoration: InputDecoration(
@@ -929,16 +953,21 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                           hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade500, overflow: TextOverflow.ellipsis),
                           filled: true,
                           fillColor: Colors.grey.shade50,
-                          prefixIcon: const Icon(Icons.call_split_outlined, size: 20, color: Colors.blue),
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
-                        items: equipementsPointBOptions.map((eq) {
-                          return DropdownMenuItem<EquipementIsolementItem>(
-                            value: eq,
-                            child: Text(eq.displayName, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
-                          );
-                        }).toList(),
+                        items: [
+                          DropdownMenuItem<EquipementIsolementItem?>(
+                            value: null,
+                            child: Text('Aucune sélection', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                          ),
+                          ...equipementsPointBOptions.map((eq) {
+                            return DropdownMenuItem<EquipementIsolementItem?>(
+                              value: eq,
+                              child: Text(eq.displayName, style: const TextStyle(fontSize: 13), overflow: TextOverflow.ellipsis),
+                            );
+                          }),
+                        ],
                         onChanged: (_selectedPointAItem != null && hasEnoughEquipments) ? _onPointBChanged : null,
                       ),
 
@@ -1000,7 +1029,7 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                       // Section du câble Point A
                       Text('Section du câble Point A (mm²) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
-                      DropdownButtonFormField<String>(
+                      DropdownButtonFormField<String?>(
                         value: (_selectedSectionPointA != null && kSectionCableOptions.contains(_selectedSectionPointA))
                             ? _selectedSectionPointA
                             : null,
@@ -1013,12 +1042,18 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
-                        items: kSectionCableOptions.map((sec) {
-                          return DropdownMenuItem<String>(
-                            value: sec,
-                            child: Text(sec, style: const TextStyle(fontSize: 13)),
-                          );
-                        }).toList(),
+                        items: [
+                          DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Aucune sélection', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                          ),
+                          ...kSectionCableOptions.map((sec) {
+                            return DropdownMenuItem<String?>(
+                              value: sec,
+                              child: Text(sec, style: const TextStyle(fontSize: 13)),
+                            );
+                          }),
+                        ],
                         onChanged: (v) {
                           setState(() {
                             _selectedSectionPointA = v;
@@ -1032,7 +1067,7 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                       // Section du câble Point B
                       Text('Section du câble Point B (mm²) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
                       const SizedBox(height: 6),
-                      DropdownButtonFormField<String>(
+                      DropdownButtonFormField<String?>(
                         value: (_selectedSectionPointB != null && kSectionCableOptions.contains(_selectedSectionPointB))
                             ? _selectedSectionPointB
                             : null,
@@ -1045,12 +1080,18 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
                         ),
-                        items: kSectionCableOptions.map((sec) {
-                          return DropdownMenuItem<String>(
-                            value: sec,
-                            child: Text(sec, style: const TextStyle(fontSize: 13)),
-                          );
-                        }).toList(),
+                        items: [
+                          DropdownMenuItem<String?>(
+                            value: null,
+                            child: Text('Aucune sélection', style: TextStyle(fontSize: 13, color: Colors.grey.shade600)),
+                          ),
+                          ...kSectionCableOptions.map((sec) {
+                            return DropdownMenuItem<String?>(
+                              value: sec,
+                              child: Text(sec, style: const TextStyle(fontSize: 13)),
+                            );
+                          }),
+                        ],
                         onChanged: (v) {
                           setState(() {
                             _selectedSectionPointB = v;

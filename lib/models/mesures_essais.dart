@@ -471,16 +471,21 @@ class EssaiIsolement {
     return '-';
   }
 
+  String _formatSectionValue(String? value) {
+    if (value == null) return '-';
+    final trimmed = value.trim();
+    if (trimmed.isEmpty || trimmed == '0' || trimmed == '0 mm²' || trimmed == '0mm²') {
+      return '-';
+    }
+    return trimmed;
+  }
+
   String get displayRepereOrigine => reperePointOrigine ?? localisation ?? '-';
   String get displayPointA => pointA ?? designation ?? pointControle ?? '-';
   String get displayPointB => pointB ?? '-';
-  String get displaySection => sectionCable ?? '-';
-  String get displaySectionPointA => (sectionCablePointA != null && sectionCablePointA!.isNotEmpty)
-      ? sectionCablePointA!
-      : (sectionCable != null && sectionCable!.isNotEmpty ? sectionCable! : '-');
-  String get displaySectionPointB => (sectionCablePointB != null && sectionCablePointB!.isNotEmpty)
-      ? sectionCablePointB!
-      : (sectionCable != null && sectionCable!.isNotEmpty ? sectionCable! : '-');
+  String get displaySection => _formatSectionValue(sectionCable);
+  String get displaySectionPointA => _formatSectionValue(sectionCablePointA ?? sectionCable);
+  String get displaySectionPointB => _formatSectionValue(sectionCablePointB ?? sectionCable);
   String get displayNombreCables => nombreCablesTestes != null ? nombreCablesTestes.toString() : '-';
 
   bool get isComplete => isolement > 0 && appreciation.isNotEmpty;

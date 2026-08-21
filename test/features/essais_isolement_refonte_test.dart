@@ -36,6 +36,17 @@ void main() {
 
       expect(essaiNew.displaySectionPointA, equals('25 mm²'));
       expect(essaiNew.displaySectionPointB, equals('35 mm²'));
+
+      final essaiZero = EssaiIsolement(
+        syncId: 'iso_3',
+        isolement: 300.0,
+        appreciation: 'Satisfaisant',
+        sectionCablePointA: '0',
+        sectionCablePointB: '0 mm²',
+      );
+
+      expect(essaiZero.displaySectionPointA, equals('-'));
+      expect(essaiZero.displaySectionPointB, equals('-'));
     });
 
     test('MesuresEssaisMapper effectue un round-trip complet avec les nouveaux champs isolement', () {
