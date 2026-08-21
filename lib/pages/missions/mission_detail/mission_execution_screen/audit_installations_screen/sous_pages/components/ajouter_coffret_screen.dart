@@ -1290,7 +1290,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
           value: widget.alimenteeParTransformateur,
           onChanged: widget.onAlimenteeParTransformateurChanged,
         ),
-        if (widget.equipmentType != 'INVERSEUR')
+        if (widget.equipmentType?.toUpperCase().contains('INVERSEUR') != true)
           _buildOuiNonChoiceTile(
             context,
             label: 'Présence CPI',
@@ -2649,6 +2649,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         if (_numeroEquipementController.text.trim().isEmpty) _autoFillNumeroEquipement();
         _selectedType = draft.type;
         _accessible = draft.accessible;
+        _alimenteeParTransformateur = draft.alimenteeParTransformateur;
+        _presenceCPI = (draft.type == 'INVERSEUR') ? null : draft.presenceCPI;
         _zoneAtex = draft.zoneAtex;
         _domaineTension = draft.domaineTension;
         _identificationArmoire = draft.identificationArmoire;
@@ -2732,6 +2734,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         _repereController.text = draft.repere ?? '';
         if (_numeroEquipementController.text.trim().isEmpty) _autoFillNumeroEquipement();
         _selectedType = draft.type;
+        _alimenteeParTransformateur = draft.alimenteeParTransformateur;
+        _presenceCPI = (draft.type == 'INVERSEUR') ? null : draft.presenceCPI;
         _zoneAtex = draft.zoneAtex;
         _domaineTension = draft.domaineTension;
         _identificationArmoire = draft.identificationArmoire;
@@ -3205,7 +3209,15 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   }
 
   void _onTypeChanged(String? newType) {
-    setState(() { _selectedType = newType; _validateType(newType); _initializeForCoffretType(newType); });
+    setState(() {
+      _selectedType = newType;
+      if (newType == 'INVERSEUR') {
+        _presenceCPI = null;
+      }
+      _validateType(newType);
+      _initializeForCoffretType(newType);
+    });
+    _scheduleAutoSave();
   }
 
   void _initializeForCoffretType(String? type) {
@@ -3422,6 +3434,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         target.accessible = newCoffret.accessible;
         target.description = newCoffret.description;
         target.repere = newCoffret.repere;
+        target.alimenteeParTransformateur = newCoffret.alimenteeParTransformateur;
+        target.presenceCPI = (newCoffret.type == 'INVERSEUR') ? null : newCoffret.presenceCPI;
         target.zoneAtex = newCoffret.zoneAtex;
         target.domaineTension = newCoffret.domaineTension;
         target.identificationArmoire = newCoffret.identificationArmoire;
@@ -3826,9 +3840,15 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                     _EtapeInformationsGenerales(
                       equipmentType: _selectedType,
                       alimenteeParTransformateur: _alimenteeParTransformateur,
-                      onAlimenteeParTransformateurChanged: (v) => setState(() => _alimenteeParTransformateur = v),
+                      onAlimenteeParTransformateurChanged: (v) {
+                        setState(() => _alimenteeParTransformateur = v);
+                        _scheduleAutoSave();
+                      },
                       presenceCPI: _presenceCPI,
-                      onPresenceCPIChanged: (v) => setState(() => _presenceCPI = v),
+                      onPresenceCPIChanged: (v) {
+                        setState(() => _presenceCPI = (_selectedType == 'INVERSEUR') ? null : v);
+                        _scheduleAutoSave();
+                      },
                       zoneAtex: _zoneAtex,
                       onZoneAtexChanged: (v) => setState(() => _zoneAtex = v ?? false),
                       identificationArmoire: _identificationArmoire,

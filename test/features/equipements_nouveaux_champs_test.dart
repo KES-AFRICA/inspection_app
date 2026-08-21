@@ -89,5 +89,31 @@ void main() {
       expect(inverseur.type, equals('INVERSEUR'));
       expect(inverseur.presenceCPI, isNull);
     });
+
+    test('Mise a jour d un coffret existant copie les champs alimenteeParTransformateur et presenceCPI', () {
+      final existingTarget = CoffretArmoire(
+        qrCode: 'QR_EDIT',
+        nom: 'TGBT Avant Edition',
+        type: 'TGBT',
+        alimenteeParTransformateur: false,
+        presenceCPI: false,
+      );
+
+      final newUpdatedCoffret = CoffretArmoire(
+        qrCode: 'QR_EDIT',
+        nom: 'TGBT Apres Edition',
+        type: 'TGBT',
+        alimenteeParTransformateur: true,
+        presenceCPI: true,
+      );
+
+      // Simulation de la copie dans _updateCoffret
+      existingTarget.nom = newUpdatedCoffret.nom;
+      existingTarget.alimenteeParTransformateur = newUpdatedCoffret.alimenteeParTransformateur;
+      existingTarget.presenceCPI = (newUpdatedCoffret.type == 'INVERSEUR') ? null : newUpdatedCoffret.presenceCPI;
+
+      expect(existingTarget.alimenteeParTransformateur, isTrue);
+      expect(existingTarget.presenceCPI, isTrue);
+    });
   });
 }

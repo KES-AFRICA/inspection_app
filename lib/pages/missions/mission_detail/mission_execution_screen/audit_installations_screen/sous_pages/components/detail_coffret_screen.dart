@@ -2028,7 +2028,7 @@ Future<void> _supprimerEssai(EssaiDeclenchementDifferentiel essai) async {
                             SizedBox(height: 12),
                             if (_coffret.alimenteeParTransformateur != null)
                               _buildBooleanInfo('Alimenté par le transformateur', _coffret.alimenteeParTransformateur!),
-                            if (_coffret.presenceCPI != null && _coffret.type != 'INVERSEUR')
+                            if (_coffret.presenceCPI != null && !_coffret.type.toUpperCase().contains('INVERSEUR'))
                               _buildBooleanInfo('Présence CPI', _coffret.presenceCPI!),
                             _buildBooleanInfo('Zone ATEX', _coffret.zoneAtex),
                             _buildBooleanInfo('Identification armoire', _coffret.identificationArmoire),
