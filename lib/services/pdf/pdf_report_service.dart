@@ -13102,8 +13102,8 @@ class PdfReportService {
           horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
         ),
         columnWidths: const {
-          0: pw.FlexColumnWidth(1.7), // Localisation
-          1: pw.FlexColumnWidth(0.8), // Zone
+          0: pw.FlexColumnWidth(1.2), // Zone
+          1: pw.FlexColumnWidth(1.7), // Localisation
           2: pw.FlexColumnWidth(0.9), // Origine
           3: pw.FlexColumnWidth(0.48), // AF
           4: pw.FlexColumnWidth(0.48), // BE
