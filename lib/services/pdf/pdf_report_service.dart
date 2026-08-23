@@ -13603,7 +13603,7 @@ class PdfReportService {
                 'Section câble Point A',
                 'Section câble Point B',
                 'Nb. câbles',
-                'Isolement',
+                'Isolement (MΩ)',
                 'Appréciation',
               ]),
               if (mesures.essaisIsolement.isEmpty)
