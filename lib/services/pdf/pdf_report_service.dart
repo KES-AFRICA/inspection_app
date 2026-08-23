@@ -7505,6 +7505,7 @@ class PdfReportService {
       required String nom,
       required String type,
       bool accessible = true,
+      bool isMT = false,
     }) {
       final hash = identityHashCode(refObj);
       if (!seenHashes.contains(hash)) {
@@ -7514,7 +7515,7 @@ class PdfReportService {
             repere: repere.trim().isNotEmpty ? repere.trim() : '-',
             nom: nom.trim().isNotEmpty ? nom.trim() : '-',
             type: type,
-            isMT: false,
+            isMT: isMT,
             accessible: accessible,
             presenceParafoudre: _extractPresenceParafoudre(refObj),
             verificationThermo: _extractVerificationThermo(refObj),
@@ -7580,6 +7581,7 @@ class PdfReportService {
     }
 
     final headers = [
+      'N°',
       'Repère',
       'Nom',
       'Type',
@@ -7589,17 +7591,34 @@ class PdfReportService {
       'Observation',
     ];
 
-    final columnWidths = const {
-      0: pw.FlexColumnWidth(1.4),
-      1: pw.FlexColumnWidth(2.5),
-      2: pw.FlexColumnWidth(1.6),
-      3: pw.FlexColumnWidth(1.1),
-      4: pw.FlexColumnWidth(1.8),
+    const detailTotalFlex = 10.1;
+
+    final headerColumnWidths = const {
+      0: pw.FixedColumnWidth(18),
+      1: pw.FlexColumnWidth(1.4),
+      2: pw.FlexColumnWidth(2.5),
+      3: pw.FlexColumnWidth(1.6),
+      4: pw.FlexColumnWidth(1.1),
       5: pw.FlexColumnWidth(1.8),
-      6: pw.FlexColumnWidth(1.3),
+      6: pw.FlexColumnWidth(1.8),
+      7: pw.FlexColumnWidth(1.3),
     };
 
-    // Regrouper les équipements contigus ayant le même repère (rowSpan visuel)
+    final outerColumnWidths = const {
+      0: pw.FixedColumnWidth(18),
+      1: pw.FlexColumnWidth(1.4),
+      2: pw.FlexColumnWidth(detailTotalFlex),
+    };
+
+    final innerDetailColumnWidths = const {
+      0: pw.FlexColumnWidth(2.5),
+      1: pw.FlexColumnWidth(1.6),
+      2: pw.FlexColumnWidth(1.1),
+      3: pw.FlexColumnWidth(1.8),
+      4: pw.FlexColumnWidth(1.8),
+      5: pw.FlexColumnWidth(1.3),
+    };
+
     final groups = <_PdfEquipementGroup>[];
     for (final eq in items) {
       final normRep = eq.repere.trim().isNotEmpty ? eq.repere.trim() : '-';
@@ -7611,13 +7630,13 @@ class PdfReportService {
     }
 
     int globalRowIndex = 0;
+    int repereIndex = 1;
     final groupTables = <pw.Widget>[];
 
-    // En-tête du tableau
     groupTables.add(
       pw.Table(
         border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
-        columnWidths: columnWidths,
+        columnWidths: headerColumnWidths,
         children: [
           pw.TableRow(
             decoration: pw.BoxDecoration(color: accentColor),
@@ -7643,43 +7662,21 @@ class PdfReportService {
       ),
     );
 
-    // Groupes par repère avec rowSpan visuel
     for (final group in groups) {
-      final tableRows = <pw.TableRow>[];
-      final count = group.items.length;
-      final midIndex = (count - 1) ~/ 2;
+      final currentRepereNum = repereIndex++;
+      final detailTableRows = <pw.TableRow>[];
 
-      for (int i = 0; i < count; i++) {
+      for (int i = 0; i < group.items.length; i++) {
         final eq = group.items[i];
         final idx = globalRowIndex++;
         final isEven = idx % 2 == 0;
         final bg = isEven ? PdfColors.white : PdfColors.grey100;
 
-        final detailBorder = pw.Border(
-          top: i > 0 ? pw.BorderSide(color: PdfColors.grey400, width: 0.5) : pw.BorderSide.none,
-          bottom: i < count - 1 ? pw.BorderSide(color: PdfColors.grey400, width: 0.5) : pw.BorderSide.none,
-        );
-
-        tableRows.add(
+        detailTableRows.add(
           pw.TableRow(
             decoration: pw.BoxDecoration(color: bg),
             children: [
-              // Cellule 0 : Repère (centré visuellement sur la ligne médiane du groupe)
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                alignment: pw.Alignment.center,
-                child: i == midIndex
-                    ? pw.Text(
-                        group.repere,
-                        style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                        textAlign: pw.TextAlign.center,
-                      )
-                    : pw.SizedBox(),
-              ),
-
-              // Cellule 1 : Nom
-              pw.Container(
-                decoration: pw.BoxDecoration(border: detailBorder),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
@@ -7688,10 +7685,7 @@ class PdfReportService {
                   textAlign: pw.TextAlign.center,
                 ),
               ),
-
-              // Cellule 2 : Type
               pw.Container(
-                decoration: pw.BoxDecoration(border: detailBorder),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
@@ -7700,13 +7694,8 @@ class PdfReportService {
                   textAlign: pw.TextAlign.center,
                 ),
               ),
-
-              // Cellule 3 : Vérifié
               pw.Container(
-                decoration: pw.BoxDecoration(
-                  border: detailBorder,
-                  color: eq.accessible ? conformeColor : nonConformeColor,
-                ),
+                color: eq.accessible ? conformeColor : nonConformeColor,
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
@@ -7720,14 +7709,11 @@ class PdfReportService {
                 ),
               ),
 
-              // Cellule 4 : Présence du parafoudre
+              // Cellule 3 : Présence du parafoudre
               pw.Container(
-                decoration: pw.BoxDecoration(
-                  border: detailBorder,
-                  color: eq.presenceParafoudre == 'Oui'
-                      ? conformeColor
-                      : (eq.presenceParafoudre == 'Non' ? nonConformeColor : bg),
-                ),
+                color: eq.presenceParafoudre == 'Oui'
+                    ? conformeColor
+                    : (eq.presenceParafoudre == 'Non' ? nonConformeColor : bg),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
@@ -7741,14 +7727,11 @@ class PdfReportService {
                 ),
               ),
 
-              // Cellule 5 : Vérification thermo
+              // Cellule 4 : Vérification thermo
               pw.Container(
-                decoration: pw.BoxDecoration(
-                  border: detailBorder,
-                  color: eq.verificationThermo == 'Oui'
-                      ? conformeColor
-                      : (eq.verificationThermo == 'Non' ? nonConformeColor : bg),
-                ),
+                color: eq.verificationThermo == 'Oui'
+                    ? conformeColor
+                    : (eq.verificationThermo == 'Non' ? nonConformeColor : bg),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
@@ -7762,14 +7745,11 @@ class PdfReportService {
                 ),
               ),
 
-              // Cellule 6 : Observation
+              // Cellule 5 : Observation
               pw.Container(
-                decoration: pw.BoxDecoration(
-                  border: detailBorder,
-                  color: eq.hasObservation == 'Oui'
-                      ? nonConformeColor
-                      : (eq.hasObservation == 'Non' ? conformeColor : bg),
-                ),
+                color: eq.hasObservation == 'Oui'
+                    ? nonConformeColor
+                    : (eq.hasObservation == 'Non' ? conformeColor : bg),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
@@ -7790,16 +7770,45 @@ class PdfReportService {
       groupTables.add(
         pw.Table(
           defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-          border: const pw.TableBorder(
-            left: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-            right: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-            top: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-            bottom: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-            verticalInside: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-            horizontalInside: pw.BorderSide.none,
-          ),
-          columnWidths: columnWidths,
-          children: tableRows,
+          border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+          columnWidths: outerColumnWidths,
+          children: [
+            pw.TableRow(
+              children: [
+                // Cellule 0 : N° du Repère (centré verticalement et horizontalement au milieu du groupe)
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    '$currentRepereNum',
+                    style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+
+                // Cellule 1 : Repère (centré verticalement et horizontalement au milieu du groupe)
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    group.repere,
+                    style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+
+                // Cellule 2 : Sous-tableau des détails des équipements ayant ce repère
+                pw.Table(
+                  border: const pw.TableBorder(
+                    horizontalInside: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+                    verticalInside: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+                  ),
+                  columnWidths: innerDetailColumnWidths,
+                  children: detailTableRows,
+                ),
+              ],
+            ),
+          ],
         ),
       );
     }
