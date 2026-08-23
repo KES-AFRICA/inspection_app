@@ -65,6 +65,8 @@ class _PdfEquipementItem {
   final bool isMT;
   final bool accessible;
   final String? presenceParafoudre;
+  final String? verificationThermo;
+  final String hasObservation;
 
   const _PdfEquipementItem({
     required this.repere,
@@ -73,6 +75,8 @@ class _PdfEquipementItem {
     required this.isMT,
     this.accessible = true,
     this.presenceParafoudre,
+    this.verificationThermo,
+    this.hasObservation = 'Non',
   });
 }
 
@@ -7175,6 +7179,158 @@ class PdfReportService {
     return null;
   }
 
+  static String? _extractVerificationThermo(Object refObj) {
+    if (refObj is List) {
+      for (final item in refObj) {
+        if (item is Object) {
+          final res = _extractVerificationThermo(item);
+          if (res != null) return res;
+        }
+      }
+    }
+    if (refObj is CoffretArmoire) {
+      return refObj.verificationThermographie ? 'Oui' : 'Non';
+    }
+    if (refObj is InstallationItem) {
+      for (final entry in refObj.data.entries) {
+        final keyLower = entry.key.toLowerCase();
+        if (keyLower.contains('thermo')) {
+          final norm = entry.value.trim().toLowerCase();
+          if (norm == 'oui' || norm == 'true' || norm == '1') return 'Oui';
+          if (norm == 'non' || norm == 'false' || norm == '0') return 'Non';
+        }
+      }
+    }
+    try {
+      final dynamic val = (refObj as dynamic).verificationThermographie;
+      if (val is bool) {
+        return val ? 'Oui' : 'Non';
+      } else if (val is String && val.trim().isNotEmpty) {
+        final norm = val.trim().toLowerCase();
+        if (norm == 'oui' || norm == 'true' || norm == '1') return 'Oui';
+        if (norm == 'non' || norm == 'false' || norm == '0') return 'Non';
+      }
+    } catch (_) {}
+
+    return null;
+  }
+
+  static bool _isRealUserObservation(String? text) {
+    if (text == null) return false;
+    final trimmed = text.trim();
+    if (trimmed.isEmpty) return false;
+
+    final lower = trimmed.toLowerCase();
+
+    // Filtre des placeholders générés et textes système
+    if (lower.startsWith('observation équipement') ||
+        lower.startsWith('observation equipement') ||
+        lower.startsWith('observation n°') ||
+        lower.startsWith('observation no')) {
+      return false;
+    }
+
+    // Filtre des mots neutres et réponses de conformité simples
+    if (lower == 'ras' ||
+        lower == 'r.a.s' ||
+        lower == 'r.a.s.' ||
+        lower == 'aucun' ||
+        lower == 'aucune' ||
+        lower == 'sans' ||
+        lower == 'sans objet' ||
+        lower == 's/o' ||
+        lower == 'n/a' ||
+        lower == 'none' ||
+        lower == 'oui' ||
+        lower == 'non' ||
+        lower == 'conforme' ||
+        lower == 'non conforme') {
+      return false;
+    }
+
+    return true;
+  }
+
+  static bool _extractHasObservation(Object refObj) {
+    if (refObj is List) {
+      for (final item in refObj) {
+        if (item is Object && _extractHasObservation(item)) return true;
+      }
+      return false;
+    }
+    if (refObj is CoffretArmoire) {
+      // 1. Slide 1 (Information Générale)
+      if (_isRealUserObservation(refObj.description)) return true;
+
+      // 2. Slide 2 (Alimentation & Protection Tête)
+      if (refObj.protectionTete != null) {
+        try {
+          final dynamic obs = (refObj.protectionTete as dynamic).observation;
+          if (obs is String && _isRealUserObservation(obs)) return true;
+        } catch (_) {}
+      }
+      for (final alim in refObj.alimentations) {
+        try {
+          final dynamic obs = (alim as dynamic).observation;
+          if (obs is String && _isRealUserObservation(obs)) return true;
+        } catch (_) {}
+      }
+
+      // 3. Slide 5 (Points de vérification et observations libres)
+      for (final pv in refObj.pointsVerification) {
+        if (_isRealUserObservation(pv.observation)) return true;
+        if (pv.observations != null) {
+          for (final ec in pv.observations!) {
+            if (_isRealUserObservation(ec.observation)) return true;
+          }
+        }
+      }
+
+      for (final obs in refObj.observationsLibres) {
+        if (_isRealUserObservation(obs.texte)) return true;
+      }
+
+      for (final obs in refObj.observationsParafoudre) {
+        if (_isRealUserObservation(obs.texte)) return true;
+      }
+
+      if (refObj.observationsParafoudreEnrichies != null) {
+        for (final ec in refObj.observationsParafoudreEnrichies!) {
+          if (_isRealUserObservation(ec.observation)) return true;
+        }
+      }
+    } else if (refObj is InstallationItem) {
+      for (final entry in refObj.data.entries) {
+        final kLower = entry.key.toLowerCase();
+        if (kLower.contains('obs') && _isRealUserObservation(entry.value)) {
+          return true;
+        }
+      }
+    } else {
+      try {
+        final dynamic obs = (refObj as dynamic).observation;
+        if (obs is String && _isRealUserObservation(obs)) return true;
+      } catch (_) {}
+      try {
+        final dynamic obsList = (refObj as dynamic).observationsLibres;
+        if (obsList is List) {
+          for (final o in obsList) {
+            if (o is ObservationLibre && _isRealUserObservation(o.texte)) return true;
+            if (o is String && _isRealUserObservation(o)) return true;
+          }
+        }
+      } catch (_) {}
+    }
+
+    return false;
+  }
+
+  @visibleForTesting
+  static List<_PdfEquipementItem> getEquipementsBTForTesting(
+    AuditInstallationsElectriques? audit,
+    DescriptionInstallations? desc,
+  ) => _collectEquipementsBT(audit, desc);
+
   static List<_PdfEquipementItem> _collectEquipementsMT(
     AuditInstallationsElectriques? audit,
   ) {
@@ -7201,6 +7357,8 @@ class PdfReportService {
             isMT: true,
             accessible: accessible,
             presenceParafoudre: _extractPresenceParafoudre(refObj),
+            verificationThermo: _extractVerificationThermo(refObj),
+            hasObservation: _extractHasObservation(refObj) ? 'Oui' : 'Non',
           ),
         );
       }
@@ -7271,6 +7429,8 @@ class PdfReportService {
             isMT: false,
             accessible: accessible,
             presenceParafoudre: _extractPresenceParafoudre(refObj),
+            verificationThermo: _extractVerificationThermo(refObj),
+            hasObservation: _extractHasObservation(refObj) ? 'Oui' : 'Non',
           ),
         );
       }
@@ -7331,17 +7491,27 @@ class PdfReportService {
       );
     }
 
-    final headers = ['Repère', 'Nom', 'Type', 'Vérifié', 'Présence du parafoudre'];
+    final headers = [
+      'Repère',
+      'Nom',
+      'Type',
+      'Vérifié',
+      'Présence du parafoudre',
+      'Vérification thermo',
+      'Observation',
+    ];
 
     return pw.Table(
       border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
       defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
       columnWidths: const {
-        0: pw.FlexColumnWidth(1.8),
-        1: pw.FlexColumnWidth(3.0),
-        2: pw.FlexColumnWidth(2.0),
-        3: pw.FlexColumnWidth(1.2),
-        4: pw.FlexColumnWidth(2.2),
+        0: pw.FlexColumnWidth(1.4),
+        1: pw.FlexColumnWidth(2.5),
+        2: pw.FlexColumnWidth(1.6),
+        3: pw.FlexColumnWidth(1.1),
+        4: pw.FlexColumnWidth(1.8),
+        5: pw.FlexColumnWidth(1.8),
+        6: pw.FlexColumnWidth(1.3),
       },
       children: [
         pw.TableRow(
@@ -7349,13 +7519,13 @@ class PdfReportService {
           children: headers
               .map(
                 (h) => pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
                   alignment: pw.Alignment.center,
                   child: pw.Text(
                     h,
                     style: pw.TextStyle(
                       font: _fontBold,
-                      fontSize: 9,
+                      fontSize: 8,
                       color: PdfColors.white,
                     ),
                     textAlign: pw.TextAlign.center,
@@ -7375,48 +7545,48 @@ class PdfReportService {
             decoration: pw.BoxDecoration(color: bg),
             children: [
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
                   eq.repere.isNotEmpty ? eq.repere : '-',
-                  style: pw.TextStyle(font: _fontBold, fontSize: 9),
+                  style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
                   eq.nom.isNotEmpty ? eq.nom : '-',
-                  style: pw.TextStyle(font: _fontRegular, fontSize: 9),
+                  style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
                   eq.type.isNotEmpty ? eq.type : 'Équipement',
-                  style: pw.TextStyle(font: _fontRegular, fontSize: 9),
+                  style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 color: eq.accessible ? conformeColor : nonConformeColor,
                 alignment: pw.Alignment.center,
                 child: pw.Text(
                   eq.accessible ? 'Oui' : 'Non',
                   style: pw.TextStyle(
                     font: _fontBold,
-                    fontSize: 9,
+                    fontSize: 8.5,
                     color: PdfColors.black,
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 5),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 color: eq.presenceParafoudre == 'Oui'
                     ? conformeColor
                     : (eq.presenceParafoudre == 'Non' ? nonConformeColor : bg),
@@ -7425,7 +7595,39 @@ class PdfReportService {
                   eq.presenceParafoudre ?? '-',
                   style: pw.TextStyle(
                     font: eq.presenceParafoudre != null ? _fontBold : _fontRegular,
-                    fontSize: 9,
+                    fontSize: 8.5,
+                    color: PdfColors.black,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                color: eq.verificationThermo == 'Oui'
+                    ? conformeColor
+                    : (eq.verificationThermo == 'Non' ? nonConformeColor : bg),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  eq.verificationThermo ?? '-',
+                  style: pw.TextStyle(
+                    font: eq.verificationThermo != null ? _fontBold : _fontRegular,
+                    fontSize: 8.5,
+                    color: PdfColors.black,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                color: eq.hasObservation == 'Oui'
+                    ? nonConformeColor
+                    : (eq.hasObservation == 'Non' ? conformeColor : bg),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  eq.hasObservation,
+                  style: pw.TextStyle(
+                    font: _fontBold,
+                    fontSize: 8.5,
                     color: PdfColors.black,
                   ),
                   textAlign: pw.TextAlign.center,
