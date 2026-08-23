@@ -1256,6 +1256,13 @@ class PdfReportService {
     );
     entries.add(
       _SommaireEntry(
+        titre: "${descSubIdx++}. Alimentation du site Moyen Tension",
+        key: 'desc_alim_site_mt',
+        level: 1,
+      ),
+    );
+    entries.add(
+      _SommaireEntry(
         titre:
             "${descSubIdx++}. Caractéristiques de l'alimentation moyenne tension",
         key: 'desc_mt',
@@ -1313,23 +1320,14 @@ class PdfReportService {
         level: 1,
       ),
     );
-    final bool hasItRegimeInSommaire =
-        desc?.regimeNeutre != null &&
-        (desc!.regimeNeutre == 'IT' ||
-            desc.regimeNeutre!.split(',').map((e) => e.trim()).contains('IT'));
-    final bool showCpiInSommaire =
-        hasItRegimeInSommaire || (desc != null && desc.cpi.isNotEmpty);
-
-    if (showCpiInSommaire) {
-      entries.add(
-        _SommaireEntry(
-          titre:
-              "${descSubIdx++}. Caractéristiques du Contrôleur Permanent d'Isolement (CPI)",
-          key: 'desc_cpi',
-          level: 1,
-        ),
-      );
-    }
+    entries.add(
+      _SommaireEntry(
+        titre:
+            "${descSubIdx++}. Caractéristiques du Contrôleur Permanent d'Isolement (CPI)",
+        key: 'desc_cpi',
+        level: 1,
+      ),
+    );
     entries.add(
       _SommaireEntry(
         titre: "${descSubIdx++}. Eclairage de sécurité",
@@ -6724,30 +6722,19 @@ class PdfReportService {
     widgets.add(_bodyText('- $regimeAffichage'));
     widgets.add(pw.SizedBox(height: 5));
 
-    final bool hasItRegimeInBody =
-        safeDesc.regimeNeutre != null &&
-        (safeDesc.regimeNeutre == 'IT' ||
-            safeDesc.regimeNeutre!
-                .split(',')
-                .map((e) => e.trim())
-                .contains('IT'));
-    final bool showCpiInBody = hasItRegimeInBody || safeDesc.cpi.isNotEmpty;
-
-    if (showCpiInBody) {
-      widgets.add(
-        PageTracker(
-          key: 'desc_cpi',
-          registry: trackedPages,
-          offset: offset,
-          child: _subTitle(
-            '${descBodyIdx++}. Caractéristiques du Contrôleur Permanent d\'Isolement (CPI)',
-          ),
+    widgets.add(
+      PageTracker(
+        key: 'desc_cpi',
+        registry: trackedPages,
+        offset: offset,
+        child: _subTitle(
+          '${descBodyIdx++}. Caractéristiques du Contrôleur Permanent d\'Isolement (CPI)',
         ),
-      );
-      widgets.add(pw.SizedBox(height: 4));
-      widgets.add(_buildCpiTable(safeDesc.cpi));
-      widgets.add(pw.SizedBox(height: 8));
-    }
+      ),
+    );
+    widgets.add(pw.SizedBox(height: 4));
+    widgets.add(_buildCpiTable(safeDesc.cpi));
+    widgets.add(pw.SizedBox(height: 8));
 
     widgets.add(
       PageTracker(
