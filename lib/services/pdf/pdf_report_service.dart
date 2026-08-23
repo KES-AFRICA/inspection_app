@@ -80,6 +80,16 @@ class _PdfEquipementItem {
   });
 }
 
+class _PdfRowGroup {
+  final String localName;
+  final List<InstallationDescriptionPdfRow> rows;
+
+  _PdfRowGroup({
+    required this.localName,
+    required this.rows,
+  });
+}
+
 // ================================================================
 //  PdfReportService
 // ================================================================
@@ -6936,50 +6946,33 @@ class PdfReportService {
         .where((col) => col != 'N\u00B0' && col != 'N°')
         .toList();
 
-    if (rows.isEmpty) {
-      if (finalOrder.isEmpty) {
-        return pw.Container(
-          padding: const pw.EdgeInsets.all(4),
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(color: borderColor, width: 0.4),
-          ),
-          child: _bodyText('Données non renseignees'),
-        );
-      }
+    final headers = ['POSTE / LOCAL', 'N\u00B0', ...finalOrder];
+    final columnWidths = <int, pw.TableColumnWidth>{
+      0: const pw.FlexColumnWidth(1.8),
+      1: const pw.FixedColumnWidth(18),
+      for (var i = 0; i < finalOrder.length; i++)
+        i + 2: const pw.FlexColumnWidth(1.0),
+    };
 
+    if (rows.isEmpty) {
       return pw.Table(
         border: pw.TableBorder.all(color: borderColor, width: 0.4),
-        columnWidths: {
-          0: const pw.FixedColumnWidth(18),
-          ...{
-            for (var i = 1; i <= finalOrder.length; i++)
-              i: const pw.FlexColumnWidth(1),
-          },
-        },
+        columnWidths: columnWidths,
         children: [
           pw.TableRow(
             decoration: pw.BoxDecoration(color: accentColor),
-            children: [
-              _cell('N\u00B0', isHeader: true, centered: true),
-              ...finalOrder.map((c) => _cell(c, isHeader: true, centered: true)),
-            ],
+            children: headers.map((c) => _cell(c, isHeader: true, centered: true)).toList(),
           ),
           pw.TableRow(
             decoration: const pw.BoxDecoration(color: PdfColors.white),
             children: [
+              _cell('-', isHeader: false, centered: true),
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 3,
-                  vertical: 3,
-                ),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
                   '1',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: fsSmall,
-                    color: headerColor,
-                  ),
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
                 ),
               ),
               ...finalOrder.map((_) => _cell('-', isHeader: false, centered: true)),
@@ -6989,60 +6982,127 @@ class PdfReportService {
       );
     }
 
-    return pw.Table(
-      border: pw.TableBorder.all(color: borderColor, width: 0.4),
-      columnWidths: {
-        0: const pw.FixedColumnWidth(18),
-        ...{
-          for (var i = 1; i <= finalOrder.length; i++)
-            i: const pw.FlexColumnWidth(1),
-        },
-      },
-      children: [
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: accentColor),
-          children: [
-            _cell('N\u00B0', isHeader: true, centered: true),
-            ...finalOrder.map((c) => _cell(c, isHeader: true, centered: true)),
-          ],
-        ),
-        ...rows.asMap().entries.map(
-          (e) => pw.TableRow(
-            decoration: pw.BoxDecoration(
-              color: e.key.isOdd ? tableRowAlt : PdfColors.white,
-            ),
+    // Regrouper les lignes contiguës par poste / local
+    final groups = <_PdfRowGroup>[];
+    for (final row in rows) {
+      final rawLoc = row.localName.trim();
+      final normLoc = rawLoc.isNotEmpty ? rawLoc : '-';
+      if (groups.isNotEmpty && groups.last.localName == normLoc) {
+        groups.last.rows.add(row);
+      } else {
+        groups.add(_PdfRowGroup(localName: normLoc, rows: [row]));
+      }
+    }
+
+    int globalRowIndex = 1;
+    final groupTables = <pw.Widget>[];
+
+    // En-tête du tableau
+    groupTables.add(
+      pw.Table(
+        border: pw.TableBorder.all(color: borderColor, width: 0.4),
+        columnWidths: columnWidths,
+        children: [
+          pw.TableRow(
+            decoration: pw.BoxDecoration(color: accentColor),
+            children: headers.map((c) => _cell(c, isHeader: true, centered: true)).toList(),
+          ),
+        ],
+      ),
+    );
+
+    // Groupes de postes / locaux avec rowSpan visuel
+    for (final group in groups) {
+      final tableRows = <pw.TableRow>[];
+      final count = group.rows.length;
+      final midIndex = (count - 1) ~/ 2;
+
+      for (int i = 0; i < count; i++) {
+        final row = group.rows[i];
+        final rowNum = globalRowIndex++;
+        final isOdd = rowNum % 2 == 1;
+        final rowBg = isOdd ? tableRowAlt : PdfColors.white;
+
+        final detailBorder = pw.Border(
+          top: i > 0 ? pw.BorderSide(color: borderColor, width: 0.4) : pw.BorderSide.none,
+          bottom: i < count - 1 ? pw.BorderSide(color: borderColor, width: 0.4) : pw.BorderSide.none,
+        );
+
+        tableRows.add(
+          pw.TableRow(
+            decoration: pw.BoxDecoration(color: rowBg),
             children: [
+              // Cellule 0 : POSTE / LOCAL (fusionnée visuellement sur la hauteur du groupe)
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 3,
-                  vertical: 3,
-                ),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                alignment: pw.Alignment.center,
+                child: i == midIndex
+                    ? pw.Text(
+                        group.localName.toUpperCase(),
+                        style: pw.TextStyle(
+                          font: _fontBold,
+                          fontSize: fsSmall,
+                          color: headerColor,
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      )
+                    : pw.SizedBox(),
+              ),
+
+              // Cellule 1 : N° d'élément
+              pw.Container(
+                decoration: pw.BoxDecoration(border: detailBorder),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
-                  '${e.key + 1}',
+                  '$rowNum',
                   style: pw.TextStyle(
                     font: _fontBold,
                     fontSize: fsSmall,
                     color: headerColor,
                   ),
+                  textAlign: pw.TextAlign.center,
                 ),
               ),
+
+              // Colonnes de détail
               ...finalOrder.map((key) {
-                final raw = e.value.getValueForColumn(key, sectionKey);
+                final raw = row.getValueForColumn(key, sectionKey);
                 final unit = _unitForField(key);
-                final display =
-                    (raw != '-' &&
+                final display = (raw != '-' &&
                         raw.isNotEmpty &&
                         unit.isNotEmpty &&
                         !raw.toLowerCase().contains(unit.toLowerCase()))
                     ? '$raw $unit'
                     : raw;
-                return _cell(display, isHeader: false, centered: true);
+                return pw.Container(
+                  decoration: pw.BoxDecoration(border: detailBorder),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    display,
+                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                );
               }),
             ],
           ),
+        );
+      }
+
+      groupTables.add(
+        pw.Table(
+          border: pw.TableBorder.all(color: borderColor, width: 0.4),
+          columnWidths: columnWidths,
+          children: tableRows,
         ),
-      ],
+      );
+    }
+
+    return pw.Column(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: groupTables,
     );
   }
 
