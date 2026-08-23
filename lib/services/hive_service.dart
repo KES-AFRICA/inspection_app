@@ -1667,6 +1667,68 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
         for (var el in transfo.elementsVerifies) {
           migrateElementControle(el, localType: local.type);
         }
+
+        // Data healing / Récupération automatique des champs perdus depuis DescriptionInstallations
+        final desc = getDescriptionInstallationsByMissionId(audit.missionId);
+        if (desc != null) {
+          final allItems = [
+            ...desc.alimentationMoyenneTension,
+            ...desc.alimentationBasseTension,
+          ];
+          for (final item in allItems) {
+            final data = item.data;
+            final syncIdInDesc = data['auditTransformateurId'];
+            final isMatch = (syncIdInDesc != null && syncIdInDesc == transfo.syncId);
+
+            if (isMatch) {
+              String? getVal(List<String> keys) {
+                for (final k in keys) {
+                  final v = data[k];
+                  if (v != null && v.trim().isNotEmpty && v.trim() != '-') {
+                    return v.trim();
+                  }
+                }
+                return null;
+              }
+
+              final c = getVal(['COUPLAGE', 'Couplage']);
+              if ((transfo.couplage == null || transfo.couplage!.isEmpty) && c != null) {
+                transfo.couplage = c;
+                changed = true;
+              }
+
+              final tr = getVal(['TYPE DE RESEAU', 'Type de réseau', 'Nature du réseau']);
+              if ((transfo.typeReseau == null || transfo.typeReseau!.isEmpty) && tr != null) {
+                transfo.typeReseau = tr;
+                changed = true;
+              }
+
+              final pcc = getVal(['PCC AMONT EN MVA', 'PCC amont', 'PCC AMONT']);
+              if ((transfo.pccAmont == null || transfo.pccAmont!.isEmpty) && pcc != null) {
+                transfo.pccAmont = pcc;
+                changed = true;
+              }
+
+              final ucc = getVal(['UCC EN %', 'Puissance UCC', 'UCC']);
+              if ((transfo.puissanceUcc == null || transfo.puissanceUcc!.isEmpty) && ucc != null) {
+                transfo.puissanceUcc = ucc;
+                changed = true;
+              }
+
+              final ik3 = getVal(['IK3 MAX(KA)', 'IK3 MAX', 'IK3 MAX (kA)']);
+              if ((transfo.ik3Max == null || transfo.ik3Max!.isEmpty) && ik3 != null) {
+                transfo.ik3Max = ik3;
+                changed = true;
+              }
+
+              final inom = getVal(['INTENSITE NOMINALE', 'Intensité nominale']);
+              if ((transfo.intensiteNominale == null || transfo.intensiteNominale!.isEmpty) && inom != null) {
+                transfo.intensiteNominale = inom;
+                changed = true;
+              }
+            }
+          }
+        }
       }
     }
   }

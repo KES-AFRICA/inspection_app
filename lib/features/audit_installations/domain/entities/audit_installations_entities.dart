@@ -138,6 +138,12 @@ class TransformateurMTBTEntity {
   final String? sectionCables;
   final String? syncId;
   final List<ElementControleEntity>? observations;
+  final String? intensiteNominale;
+  final String? couplage;
+  final String? typeReseau;
+  final String? pccAmont;
+  final String? puissanceUcc;
+  final String? ik3Max;
   final String? nom;
   final String? photo;
   final String? repere;
@@ -158,12 +164,72 @@ class TransformateurMTBTEntity {
     this.sectionCables,
     this.syncId,
     this.observations,
+    this.intensiteNominale,
+    this.couplage,
+    this.typeReseau,
+    this.pccAmont,
+    this.puissanceUcc,
+    this.ik3Max,
     this.nom,
     this.photo,
     this.repere,
     this.marque,
     this.anneeFabrication,
   });
+
+  TransformateurMTBTEntity copyWith({
+    String? typeTransformateur,
+    String? marqueAnnee,
+    String? puissanceAssignee,
+    String? tensionPrimaireSecondaire,
+    String? relaisBuchholz,
+    String? typeRefroidissement,
+    String? regimeNeutre,
+    List<ElementControleEntity>? elementsVerifies,
+    List<String>? photos,
+    String? calibreDisjoncteur,
+    String? sectionCables,
+    String? syncId,
+    List<ElementControleEntity>? observations,
+    String? intensiteNominale,
+    String? couplage,
+    String? typeReseau,
+    String? pccAmont,
+    String? puissanceUcc,
+    String? ik3Max,
+    String? nom,
+    String? photo,
+    String? repere,
+    String? marque,
+    String? anneeFabrication,
+  }) {
+    return TransformateurMTBTEntity(
+      typeTransformateur: typeTransformateur ?? this.typeTransformateur,
+      marqueAnnee: marqueAnnee ?? this.marqueAnnee,
+      puissanceAssignee: puissanceAssignee ?? this.puissanceAssignee,
+      tensionPrimaireSecondaire: tensionPrimaireSecondaire ?? this.tensionPrimaireSecondaire,
+      relaisBuchholz: relaisBuchholz ?? this.relaisBuchholz,
+      typeRefroidissement: typeRefroidissement ?? this.typeRefroidissement,
+      regimeNeutre: regimeNeutre ?? this.regimeNeutre,
+      elementsVerifies: elementsVerifies ?? this.elementsVerifies,
+      photos: photos ?? this.photos,
+      calibreDisjoncteur: calibreDisjoncteur ?? this.calibreDisjoncteur,
+      sectionCables: sectionCables ?? this.sectionCables,
+      syncId: syncId ?? this.syncId,
+      observations: observations ?? this.observations,
+      intensiteNominale: intensiteNominale ?? this.intensiteNominale,
+      couplage: couplage ?? this.couplage,
+      typeReseau: typeReseau ?? this.typeReseau,
+      pccAmont: pccAmont ?? this.pccAmont,
+      puissanceUcc: puissanceUcc ?? this.puissanceUcc,
+      ik3Max: ik3Max ?? this.ik3Max,
+      nom: nom ?? this.nom,
+      photo: photo ?? this.photo,
+      repere: repere ?? this.repere,
+      marque: marque ?? this.marque,
+      anneeFabrication: anneeFabrication ?? this.anneeFabrication,
+    );
+  }
 }
 
 class AlimentationEntity {
