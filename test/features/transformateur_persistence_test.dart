@@ -90,5 +90,23 @@ void main() {
       expect(restored.couplage, isNull);
       expect(restored.typeTransformateur, equals('Sec'));
     });
+
+    test('4. Tension MT/BT custom expressions like 20/0.4* or 15/0.4 are preserved without alteration', () {
+      final customTransfo = TransformateurMTBT(
+        typeTransformateur: 'Huile',
+        marqueAnnee: 'Schneider / 2022',
+        puissanceAssignee: '630 kVA',
+        tensionPrimaireSecondaire: '20/0.4*',
+        relaisBuchholz: 'Oui',
+        typeRefroidissement: 'ONAN',
+        regimeNeutre: 'TN-S',
+      );
+
+      final entity = AuditInstallationsMapper.toTransformateurEntity(customTransfo);
+      expect(entity.tensionPrimaireSecondaire, equals('20/0.4*'));
+
+      final restored = AuditInstallationsMapper.toTransformateurModel(entity);
+      expect(restored.tensionPrimaireSecondaire, equals('20/0.4*'));
+    });
   });
 }
