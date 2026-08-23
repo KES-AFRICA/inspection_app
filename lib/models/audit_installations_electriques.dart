@@ -850,6 +850,16 @@ class CoffretArmoire {
   @HiveField(27)
   bool? presenceCPI;
 
+  @HiveField(28)
+  String? id;
+
+  /// Identifiant technique immuable (avec fallback auto pour anciennes missions)
+  String get equipmentId {
+    if (id != null && id!.trim().isNotEmpty) return id!;
+    id = 'equip_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}';
+    return id!;
+  }
+
   bool get accessible => _accessible ?? true;
   set accessible(bool value) => _accessible = value;
 
@@ -864,6 +874,7 @@ class CoffretArmoire {
   }
 
   CoffretArmoire({
+    String? id,
     required this.qrCode, // Ajouté dans le constructeur
     required this.nom,
     required this.type,
@@ -892,7 +903,10 @@ class CoffretArmoire {
     List<String>? photosInternes,
     List<ObservationLibre>? observationsParafoudre,
     List<ElementControle>? observationsParafoudreEnrichies,
-  })  : _accessible = accessible ?? true,
+  })  : id = (id != null && id.trim().isNotEmpty)
+            ? id
+            : 'equip_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}',
+        _accessible = accessible ?? true,
         alimentations = alimentations ?? [],
         pointsVerification = pointsVerification ?? [],
         observationsLibres = observationsLibres ?? [],

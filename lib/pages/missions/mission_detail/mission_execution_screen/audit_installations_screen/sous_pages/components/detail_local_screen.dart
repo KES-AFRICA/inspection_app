@@ -996,17 +996,19 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   }
 
   void _editerCoffret(int index) async {
+    final coffretTarget = _local.coffrets[index];
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AjouterCoffretScreen(
+          key: ValueKey('edit_coffret_${coffretTarget.equipmentId}'),
           mission: widget.mission,
           parentType: 'local',
           parentIndex: widget.localIndex,
           isMoyenneTension: widget.isMoyenneTension,
           zoneIndex: widget.zoneIndex,
           isInZone: widget.isInZone,
-          coffret: _local.coffrets[index],
+          coffret: coffretTarget,
           coffretIndex: index,
         ),
       ),

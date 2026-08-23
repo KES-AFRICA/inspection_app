@@ -810,6 +810,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => AjouterCoffretScreen(
+          key: ValueKey('edit_coffret_${_coffret.equipmentId}'),
           mission: widget.mission,
           parentType: widget.parentType,
           parentIndex: widget.parentIndex,

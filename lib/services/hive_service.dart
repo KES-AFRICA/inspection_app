@@ -1892,6 +1892,10 @@ static CoffretArmoire? findCoffretByQrCode(String missionId, String qrCode) {
 /// - Collecte uniquement les [numeroEquipement] qui sont des entiers purs.
 /// - Retourne max + 1, ou 1 si aucun entier trouvé.
 /// - Les valeurs textuelles existantes sont totalement ignorées.
+/// Stratégie :
+/// - Parcourt TOUS les coffrets de la mission (locaux MT, zones MT, zones BT, locaux BT) ainsi que les brouillons.
+/// - Extrait les séquences numériques de [numeroEquipement].
+/// - Retourne max + 1, ou 1 si aucun entier trouvé.
 static int getNextNumeroEquipement(String missionId) {
   final audit = Hive.box<AuditInstallationsElectriques>(_auditBox)
       .values
@@ -1902,10 +1906,14 @@ static int getNextNumeroEquipement(String missionId) {
   bool foundAny = false;
 
   void checkCoffret(CoffretArmoire c) {
-    final n = int.tryParse(c.numeroEquipement?.trim() ?? '');
-    if (n != null) {
-      foundAny = true;
-      if (n > maxNumero) maxNumero = n;
+    final str = c.numeroEquipement?.trim() ?? '';
+    final match = RegExp(r'\d+').firstMatch(str);
+    if (match != null) {
+      final n = int.tryParse(match.group(0)!);
+      if (n != null) {
+        foundAny = true;
+        if (n > maxNumero) maxNumero = n;
+      }
     }
   }
 
@@ -1928,11 +1936,88 @@ static int getNextNumeroEquipement(String missionId) {
     }
   }
 
+  // Vérifier également les brouillons en cours pour la même mission
+  try {
+    if (Hive.isBoxOpen(_coffretDraftsBox)) {
+      final box = Hive.box(_coffretDraftsBox);
+      for (final val in box.values) {
+        if (val is Map && val['missionId'] == missionId && val['coffret'] is CoffretArmoire) {
+          checkCoffret(val['coffret'] as CoffretArmoire);
+        }
+      }
+    }
+  } catch (_) {}
+
   return foundAny ? maxNumero + 1 : 1;
+}
+
+/// Mettre à jour un coffret en base de données par son [equipmentId] immuable (SaveGuard inclus)
+static Future<bool> updateCoffretById({
+  required String missionId,
+  required String equipmentId,
+  required CoffretArmoire updatedCoffret,
+}) async {
+  try {
+    final audit = await getOrCreateAuditInstallations(missionId);
+    
+    bool findAndReplaceInList(List<CoffretArmoire> list) {
+      final index = list.indexWhere((c) => c.equipmentId == equipmentId || (c.id != null && c.id == equipmentId));
+      if (index != -1) {
+        updatedCoffret.id = equipmentId;
+        list[index] = updatedCoffret;
+        return true;
+      }
+      return false;
+    }
+
+    bool found = false;
+    for (var local in audit.moyenneTensionLocaux) {
+      if (findAndReplaceInList(local.coffrets)) { found = true; break; }
+    }
+
+    if (!found) {
+      for (var zone in audit.moyenneTensionZones) {
+        if (findAndReplaceInList(zone.coffrets)) { found = true; break; }
+        for (var local in zone.locaux) {
+          if (findAndReplaceInList(local.coffrets)) { found = true; break; }
+        }
+        if (found) break;
+      }
+    }
+
+    if (!found) {
+      for (var zone in audit.basseTensionZones) {
+        if (findAndReplaceInList(zone.coffretsDirects)) { found = true; break; }
+        for (var local in zone.locaux) {
+          if (findAndReplaceInList(local.coffrets)) { found = true; break; }
+        }
+        if (found) break;
+      }
+    }
+
+    if (!found) {
+      if (kDebugMode) {
+        print('❌ SAVEGUARD FAILURE: Équipement avec ID $equipmentId introuvable dans la mission $missionId.');
+      }
+      return false;
+    }
+
+    await saveAuditInstallations(audit);
+    if (kDebugMode) {
+      print('✅ Coffret mis à jour par ID immuable: $equipmentId');
+    }
+    return true;
+  } catch (e) {
+    if (kDebugMode) {
+      print('❌ Erreur updateCoffretById: $e');
+    }
+    return false;
+  }
 }
 
 // Vérifier si un QR code existe déjà
 static bool qrCodeExists(String missionId, String qrCode) {
+  if (qrCode.trim().isEmpty) return false;
   return findCoffretByQrCode(missionId, qrCode) != null;
 }
 
@@ -1942,6 +2027,7 @@ static Future<bool> validateUniqueQrCode({
   required String qrCode,
   String? excludeCoffretName, // Pour les mises à jour
 }) async {
+  if (qrCode.trim().isEmpty) return true;
   final existingCoffret = findCoffretByQrCode(missionId, qrCode);
   
   if (existingCoffret == null) {
@@ -2060,8 +2146,8 @@ static CoffretArmoire createNewCoffretWithQrCode({
 }
 
 static CoffretArmoire? getCoffretDraftByQrCode(String qrCode) {
+  if (qrCode.trim().isEmpty) return null;
   try {
-    // ✅ Utiliser Box sans type (dynamic) car la box est ouverte comme Box<dynamic>
     final box = Hive.box(_coffretDraftsBox);
     final data = box.get(qrCode);
     

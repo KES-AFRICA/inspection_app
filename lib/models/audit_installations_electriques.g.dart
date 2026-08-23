@@ -608,13 +608,14 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       accessible: fields[25] == null ? true : (fields[25] as bool? ?? true),
       alimenteeParTransformateur: fields[26] as bool?,
       presenceCPI: fields[27] as bool?,
+      id: fields[28] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, CoffretArmoire obj) {
     writer
-      ..writeByte(28)
+      ..writeByte(29)
       ..writeByte(0)
       ..write(obj.qrCode)
       ..writeByte(1)
@@ -670,7 +671,9 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       ..writeByte(26)
       ..write(obj.alimenteeParTransformateur)
       ..writeByte(27)
-      ..write(obj.presenceCPI);
+      ..write(obj.presenceCPI)
+      ..writeByte(28)
+      ..write(obj.id);
   }
 
   @override

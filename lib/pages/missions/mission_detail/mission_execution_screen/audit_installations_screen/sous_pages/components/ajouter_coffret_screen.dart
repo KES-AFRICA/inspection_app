@@ -3419,6 +3419,15 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
 
   Future<bool> _updateCoffret(CoffretArmoire newCoffret) async {
     try {
+      if (widget.coffret != null) {
+        newCoffret.id = widget.coffret!.equipmentId;
+        final ok = await HiveService.updateCoffretById(
+          missionId: widget.mission.id,
+          equipmentId: widget.coffret!.equipmentId,
+          updatedCoffret: newCoffret,
+        );
+        if (ok) return true;
+      }
       final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
       CoffretArmoire? target; bool found = false;
       if (widget.parentType == 'local') {
@@ -3436,6 +3445,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         else if (!widget.isMoyenneTension && widget.parentIndex < audit.basseTensionZones.length && widget.coffretIndex! < audit.basseTensionZones[widget.parentIndex].coffretsDirects.length) { target = audit.basseTensionZones[widget.parentIndex].coffretsDirects[widget.coffretIndex!]; found = true; }
       }
       if (found && target != null) {
+        target.id = newCoffret.equipmentId;
         target.qrCode = newCoffret.qrCode;
         target.nom = newCoffret.nom;
         target.type = newCoffret.type;

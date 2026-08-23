@@ -1016,15 +1016,17 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   }
 
   void _editerCoffretMT(int index) async {
+    final coffretTarget = _zone.coffrets[index];
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AjouterCoffretScreen(
+          key: ValueKey('edit_coffret_${coffretTarget.equipmentId}'),
           mission: widget.mission,
           parentType: 'zone_mt',
           parentIndex: widget.zoneIndex,
           isMoyenneTension: true,
-          coffret: _zone.coffrets[index],
+          coffret: coffretTarget,
           coffretIndex: index,
         ),
       ),
