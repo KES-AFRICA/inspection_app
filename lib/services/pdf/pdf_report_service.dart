@@ -13969,40 +13969,34 @@ class PdfReportService {
               "3. Essais de mesure d'isolement entre deux points d'un tronçon de câble",
             ),
           ),
-          pw.SizedBox(height: 8),
-          pw.Table(
-            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-            border: pw.TableBorder.all(color: borderColor, width: 0.4),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(1.8), // Repère du point d'origine
-              1: pw.FlexColumnWidth(2.0), // Point A (origine)
-              2: pw.FlexColumnWidth(2.0), // Point B (extrémité)
-              3: pw.FlexColumnWidth(1.4), // Section Point A
-              4: pw.FlexColumnWidth(1.4), // Section Point B
-              5: pw.FlexColumnWidth(1.2), // Nombre de câbles testés
-              6: pw.FlexColumnWidth(1.3), // Isolement
-              7: pw.FlexColumnWidth(1.7), // Appréciation
-            },
-            children: [
-              _tableHeaderRow([
-                'Repère du point d\'origine',
-                'Point A (origine)',
-                'Point B (extrémité)',
-                'Section câble Point A',
-                'Section câble Point B',
-                'Nb. câbles',
-                'Isolement (MΩ)',
-                'Appréciation',
-              ]),
-              if (mesures.essaisIsolement.isEmpty)
-                pw.TableRow(
-                  decoration: const pw.BoxDecoration(color: PdfColors.white),
-                  children: List.generate(
-                    8,
-                    (_) => _cell('', isHeader: false, centered: true),
-                  ),
-                )
-              else
+          pw.SizedBox(height: 5),
+          if (mesures.essaisIsolement.isEmpty)
+            _resultBox('Sans objet')
+          else
+            pw.Table(
+              defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+              border: pw.TableBorder.all(color: borderColor, width: 0.4),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(1.8), // Repère du point d'origine
+                1: pw.FlexColumnWidth(2.0), // Point A (origine)
+                2: pw.FlexColumnWidth(2.0), // Point B (extrémité)
+                3: pw.FlexColumnWidth(1.4), // Section Point A
+                4: pw.FlexColumnWidth(1.4), // Section Point B
+                5: pw.FlexColumnWidth(1.2), // Nombre de câbles testés
+                6: pw.FlexColumnWidth(1.3), // Isolement
+                7: pw.FlexColumnWidth(1.7), // Appréciation
+              },
+              children: [
+                _tableHeaderRow([
+                  'Repère du point d\'origine',
+                  'Point A (origine)',
+                  'Point B (extrémité)',
+                  'Section câble Point A',
+                  'Section câble Point B',
+                  'Nb. câbles',
+                  'Isolement (MΩ)',
+                  'Appréciation',
+                ]),
                 ...mesures.essaisIsolement.asMap().entries.map((e) {
                   final ei = e.value;
                   final app = ei.appreciation;
