@@ -12370,7 +12370,7 @@ class PdfReportService {
       rows.add(
         _ClassementRow(
           localisation: zone.nomZone,
-          zone: '',
+          zone: zone.nomZone,
           type: 'Zone ${zone.typeZone}',
           origineClassement: zone.origineClassement,
           af: zone.af,
@@ -12391,11 +12391,16 @@ class PdfReportService {
       );
       if (dejaPresent) continue;
 
+      final isZoneEmp = emp.typeEmplacement == 'zone';
+      final zoneVal = isZoneEmp
+          ? emp.localisation
+          : (emp.zone != null && emp.zone!.trim().isNotEmpty ? emp.zone!.trim() : '');
+
       rows.add(
         _ClassementRow(
           localisation: emp.localisation,
-          zone: emp.zone ?? '',
-          type: emp.typeEmplacement == 'zone' ? 'Zone' : 'Local',
+          zone: zoneVal,
+          type: isZoneEmp ? 'Zone' : 'Local',
           origineClassement: emp.origineClassement,
           af: emp.af,
           be: emp.be,
@@ -12404,7 +12409,7 @@ class PdfReportService {
           ag: emp.ag,
           ip: emp.ip,
           ik: emp.ik,
-          isZone: emp.typeEmplacement == 'zone',
+          isZone: isZoneEmp,
         ),
       );
     }
@@ -12425,8 +12430,8 @@ class PdfReportService {
         verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(1.7), // Localisation
-        1: pw.FlexColumnWidth(0.8), // Zone
+        0: pw.FlexColumnWidth(1.2), // Zone
+        1: pw.FlexColumnWidth(1.7), // Localisation
         2: pw.FlexColumnWidth(0.9), // Origine classement
         3: pw.FlexColumnWidth(2.4), // Influences externes (5 sub-cols)
         4: pw.FlexColumnWidth(1.4), // Indice mini (2 sub-cols)
@@ -12439,7 +12444,7 @@ class PdfReportService {
               alignment: pw.Alignment.center,
               padding: const pw.EdgeInsets.symmetric(vertical: 8),
               child: pw.Text(
-                'Localisation',
+                'Zone',
                 style: pw.TextStyle(
                   font: _fontBold,
                   fontSize: fsSmall,
@@ -12452,7 +12457,7 @@ class PdfReportService {
               alignment: pw.Alignment.center,
               padding: const pw.EdgeInsets.symmetric(vertical: 8),
               child: pw.Text(
-                'Zone',
+                'Localisation',
                 style: pw.TextStyle(
                   font: _fontBold,
                   fontSize: fsSmall,
@@ -12629,18 +12634,6 @@ class PdfReportService {
         pw.TableRow(
           decoration: pw.BoxDecoration(color: rowColor),
           children: [
-            // Localisation (uppercase)
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(
-                horizontal: 4,
-                vertical: 3,
-              ),
-              alignment: pw.Alignment.centerLeft,
-              child: pw.Text(
-                r.localisation.toUpperCase(),
-                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
-              ),
-            ),
             // Zone (uppercase, empty if null/empty)
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(
@@ -12650,6 +12643,18 @@ class PdfReportService {
               alignment: pw.Alignment.center,
               child: pw.Text(
                 zoneText.toUpperCase(),
+                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+              ),
+            ),
+            // Localisation (uppercase)
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 4,
+                vertical: 3,
+              ),
+              alignment: pw.Alignment.centerLeft,
+              child: pw.Text(
+                r.localisation.toUpperCase(),
                 style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
               ),
             ),
