@@ -58,6 +58,7 @@ class _DescriptionInstallationsScreenState extends ConsumerState<DescriptionInst
       ];
       
       final tempStatus = <String, bool>{};
+      tempStatus['alimentation_site_mt'] = desc.isSectionComplete('alimentation_site_mt');
       for (var section in sectionsWithCards) {
         tempStatus[section] = desc.isSectionComplete(section);
       }

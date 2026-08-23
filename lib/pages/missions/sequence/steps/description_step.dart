@@ -28,8 +28,8 @@ class DescriptionStepState extends State<DescriptionStep> {
       GlobalKey<DescriptionInstallationsSequenceScreenState>();
 
   /// Appelé depuis le drawer pour aller directement à une section.
-  void jumpToSection(int index) {
-    _subKey.currentState?.jumpToSection(index);
+  void jumpToSection(dynamic sectionKeyOrIndex) {
+    _subKey.currentState?.jumpToSection(sectionKeyOrIndex);
     if (widget.onSubStepChanged != null) {
       widget.onSubStepChanged!();
     }

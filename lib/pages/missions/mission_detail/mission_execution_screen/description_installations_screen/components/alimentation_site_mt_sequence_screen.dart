@@ -77,10 +77,27 @@ class _AlimentationSiteMtSequenceScreenState
       data: (desc) {
         if (_isFirstLoad) {
           _natureReseau = desc.natureReseauAlimentationSite;
-          _tensionController.text = desc.tensionAlimentationSite ?? '';
-          _nombreController.text = desc.nombreAlimentationSite ?? '';
+          if (_tensionController.text.isEmpty) {
+            _tensionController.text = desc.tensionAlimentationSite ?? '';
+          }
+          if (_nombreController.text.isEmpty) {
+            _nombreController.text = desc.nombreAlimentationSite ?? '';
+          }
           _presenceIacm = desc.presenceIacmAlimentationSite;
           _isFirstLoad = false;
+        } else {
+          if (_natureReseau == null && desc.natureReseauAlimentationSite != null) {
+            _natureReseau = desc.natureReseauAlimentationSite;
+          }
+          if (_tensionController.text.isEmpty && desc.tensionAlimentationSite != null) {
+            _tensionController.text = desc.tensionAlimentationSite!;
+          }
+          if (_nombreController.text.isEmpty && desc.nombreAlimentationSite != null) {
+            _nombreController.text = desc.nombreAlimentationSite!;
+          }
+          if (_presenceIacm == null && desc.presenceIacmAlimentationSite != null) {
+            _presenceIacm = desc.presenceIacmAlimentationSite;
+          }
         }
 
         return GestureDetector(

@@ -917,6 +917,21 @@ static Future<bool> resetAllDocuments(String missionId) async {
       if ((primary.etudeTechniqueFoudre == null || primary.etudeTechniqueFoudre!.isEmpty) && desc.etudeTechniqueFoudre != null && desc.etudeTechniqueFoudre!.isNotEmpty) {
         primary.etudeTechniqueFoudre = desc.etudeTechniqueFoudre;
       }
+      if ((primary.natureReseauAlimentationSite == null || primary.natureReseauAlimentationSite!.isEmpty) && desc.natureReseauAlimentationSite != null && desc.natureReseauAlimentationSite!.isNotEmpty) {
+        primary.natureReseauAlimentationSite = desc.natureReseauAlimentationSite;
+      }
+      if ((primary.tensionAlimentationSite == null || primary.tensionAlimentationSite!.isEmpty) && desc.tensionAlimentationSite != null && desc.tensionAlimentationSite!.isNotEmpty) {
+        primary.tensionAlimentationSite = desc.tensionAlimentationSite;
+      }
+      if ((primary.nombreAlimentationSite == null || primary.nombreAlimentationSite!.isEmpty) && desc.nombreAlimentationSite != null && desc.nombreAlimentationSite!.isNotEmpty) {
+        primary.nombreAlimentationSite = desc.nombreAlimentationSite;
+      }
+      if ((primary.presenceIacmAlimentationSite == null || primary.presenceIacmAlimentationSite!.isEmpty) && desc.presenceIacmAlimentationSite != null && desc.presenceIacmAlimentationSite!.isNotEmpty) {
+        primary.presenceIacmAlimentationSite = desc.presenceIacmAlimentationSite;
+      }
+      if (primary.foudreObservations.isEmpty && desc.foudreObservations.isNotEmpty) {
+        primary.foudreObservations = List.from(desc.foudreObservations);
+      }
 
       if (desc.updatedAt.isAfter(primary.updatedAt)) {
         primary.updatedAt = desc.updatedAt;

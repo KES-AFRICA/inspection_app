@@ -3,6 +3,7 @@ import 'package:hive/hive.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/services/installation_fields_registry.dart';
+import 'package:inspec_app/services/hive_service.dart';
 
 /// Service centralisé de synchronisation entre l'Audit des Installations 
 /// (Cellules MT et Transformateurs MT/BT) et la Description des Installations.
@@ -170,11 +171,8 @@ class InstallationDescriptionSyncService {
       final missionId = audit.missionId;
       final descBox = await Hive.openBox<DescriptionInstallations>('description_installations');
       
-      DescriptionInstallations? desc = descBox.get(missionId);
-      desc ??= descBox.values.firstWhere(
-        (d) => d.missionId == missionId,
-        orElse: () => DescriptionInstallations.create(missionId),
-      );
+      DescriptionInstallations? desc = HiveService.getDescriptionInstallationsByMissionId(missionId);
+      desc ??= DescriptionInstallations.create(missionId);
 
       final oldMTA = List<InstallationItem>.from(desc.alimentationMoyenneTension);
       final oldBTA = List<InstallationItem>.from(desc.alimentationBasseTension);

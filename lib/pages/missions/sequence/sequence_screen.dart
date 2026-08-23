@@ -524,9 +524,9 @@ class _SequenceScreenState extends State<SequenceScreen>
     }
   }
 
-  void _navigateToDescSub(int subIndex) {
+  void _navigateToDescSub(dynamic subKeyOrIndex) {
     _navigateToStep(2).then((_) {
-      _descKey.currentState?.jumpToSection(subIndex);
+      _descKey.currentState?.jumpToSection(subKeyOrIndex);
     });
   }
 
@@ -1269,7 +1269,7 @@ class _SequenceScreenState extends State<SequenceScreen>
                 ? null
                 : () {
                     if (sub.descSectionIndex != null) {
-                      _navigateToDescSub(sub.descSectionIndex!);
+                      _navigateToDescSub(sub.key);
                     } else if (sub.isAuditNav) {
                       _navigateToAuditSub(sub.key);
                     }

@@ -138,6 +138,16 @@ class _ParatonnerreSequenceScreenState
             _analyseRisqueFoudre = desc.analyseRisqueFoudre ?? 'Sans objet';
             _etudeTechniqueFoudre = desc.etudeTechniqueFoudre ?? 'Sans objet';
             _isFirstLoad = false;
+          } else {
+            if (_presenceParatonnerre == null && desc.presenceParatonnerre != null) {
+              _presenceParatonnerre = desc.presenceParatonnerre;
+            }
+            if ((_analyseRisqueFoudre == null || _analyseRisqueFoudre == 'Sans objet') && desc.analyseRisqueFoudre != null) {
+              _analyseRisqueFoudre = desc.analyseRisqueFoudre;
+            }
+            if ((_etudeTechniqueFoudre == null || _etudeTechniqueFoudre == 'Sans objet') && desc.etudeTechniqueFoudre != null) {
+              _etudeTechniqueFoudre = desc.etudeTechniqueFoudre;
+            }
           }
 
           final foudreObsList = desc.foudreObservations;

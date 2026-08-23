@@ -204,7 +204,7 @@ class _RadioSequenceScreenState extends ConsumerState<RadioSequenceScreen> {
       loading: () => const Center(child: CircularProgressIndicator()),
       error: (err, stack) => Center(child: Text('Erreur: $err')),
       data: (desc) {
-        if (_isFirstLoad) {
+        if (_isFirstLoad || !_isSaving) {
           if (widget.field == 'regime_neutre') {
             final value = desc.regimeNeutre;
             final detail = desc.regimeNeutreDetail;

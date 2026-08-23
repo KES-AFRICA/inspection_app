@@ -258,13 +258,22 @@ class DescriptionInstallationsSequenceScreenState
     super.dispose();
   }
 
-  Future<void> _saveCurrentPosition(int position) async {
+  Future<void> _saveCurrentPosition(int position, {String? sectionKey}) async {
     try {
+      final keyToSave = sectionKey ??
+          (_sections.length > position ? _sections[position]['key'] as String? : null);
       await SequenceProgressService.saveStepData(
         widget.mission.id,
         'description_current_step',
         position,
       );
+      if (keyToSave != null) {
+        await SequenceProgressService.saveStepData(
+          widget.mission.id,
+          'description_current_section_key',
+          keyToSave,
+        );
+      }
     } catch (e) {
       // Ignorer les erreurs
     }
@@ -282,6 +291,18 @@ class DescriptionInstallationsSequenceScreenState
     }
   }
 
+  Future<String?> _getSavedSectionKey() async {
+    try {
+      final saved = await SequenceProgressService.getStepData(
+        widget.mission.id,
+        'description_current_section_key',
+      );
+      return saved is String ? saved : null;
+    } catch (e) {
+      return null;
+    }
+  }
+
   Future<void> _loadProgress() async {
     setState(() => _isLoading = true);
 
@@ -290,19 +311,52 @@ class DescriptionInstallationsSequenceScreenState
       final descEntity = await getDescUseCase(widget.mission.id);
       final progress = descEntity.getProgress();
       final savedPosition = await _getSavedPosition();
+      final savedKey = await _getSavedSectionKey();
 
-      int targetStep = widget.initialSectionIndex ?? savedPosition;
+      int targetStep = -1;
 
-      if (widget.initialSectionIndex == null && _isFirstLoad && savedPosition == 0) {
-        for (int i = 0; i < _sections.length; i++) {
-          final section = _sections[i];
-          final key = section['key'] as String;
-          if (!progress.containsKey(key) || !progress[key]!) {
-            targetStep = i;
-            break;
+      if (widget.initialSectionIndex != null) {
+        targetStep = widget.initialSectionIndex!;
+      } else if (savedKey != null) {
+        targetStep = _sections.indexWhere((s) => s['key'] == savedKey);
+      }
+
+      if (targetStep == -1) {
+        if (_isFirstLoad) {
+          // Sur les missions existantes qui ont des données renseignées dans les sections aval
+          // mais où 'alimentation_site_mt' (index 0) n'a pas encore été renseigné,
+          // on privilégie l'ouverture sur la première section ayant déjà du contenu ou la section enregistrée.
+          final hasCompletedSubsequent = progress.entries.any(
+            (e) => e.key != 'alimentation_site_mt' && e.value == true,
+          );
+
+          if (savedPosition > 0 && savedPosition < _sections.length) {
+            targetStep = savedPosition;
+          } else if (hasCompletedSubsequent && progress['alimentation_site_mt'] != true) {
+            // Si des sections suivantes sont complétées, démarrer sur la première section complétée
+            targetStep = _sections.indexWhere(
+              (s) => progress[s['key']] == true,
+            );
+            if (targetStep == -1) targetStep = 0;
+          } else {
+            for (int i = 0; i < _sections.length; i++) {
+              final section = _sections[i];
+              final key = section['key'] as String;
+              if (!progress.containsKey(key) || !progress[key]!) {
+                targetStep = i;
+                break;
+              }
+            }
           }
+        } else {
+          targetStep = savedPosition;
         }
       }
+
+      if (targetStep < 0 || targetStep >= _sections.length) {
+        targetStep = 0;
+      }
+
       _isFirstLoad = false;
 
       if (!mounted) return;
@@ -325,15 +379,22 @@ class DescriptionInstallationsSequenceScreenState
   bool get isFirstSlide => _currentStep == 0;
   bool get isLastSlide => _currentStep == _sections.length - 1;
 
-  void jumpToSection(int index) {
-    if (index >= 0 && index < _sections.length) {
+  void jumpToSection(dynamic sectionKeyOrIndex) {
+    int targetIndex = -1;
+    if (sectionKeyOrIndex is String) {
+      targetIndex = _sections.indexWhere((s) => s['key'] == sectionKeyOrIndex);
+    } else if (sectionKeyOrIndex is int) {
+      targetIndex = sectionKeyOrIndex;
+    }
+
+    if (targetIndex >= 0 && targetIndex < _sections.length) {
       if (_pageController.hasClients) {
-        _pageController.jumpToPage(index);
+        _pageController.jumpToPage(targetIndex);
       }
       setState(() {
-        _currentStep = index;
+        _currentStep = targetIndex;
       });
-      _saveCurrentPosition(index);
+      _saveCurrentPosition(targetIndex, sectionKey: _sections[targetIndex]['key'] as String?);
     }
   }
 
