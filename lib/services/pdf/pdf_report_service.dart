@@ -17566,6 +17566,20 @@ class PdfReportService {
     );
   }
 
+  /// Génère le nom de fichier officiel pour le rapport PDF de Vérification Électrique.
+  /// Format : Rapport_Verif_elec_<site>_<année>_<timestamp>.pdf
+  static String buildElectricalReportFileName(
+    String nomClient, {
+    DateTime? date,
+    int? timestamp,
+  }) {
+    final now = date ?? DateTime.now();
+    final year = now.year;
+    final ts = timestamp ?? now.millisecondsSinceEpoch;
+    final sanitizedSite = nomClient.trim().replaceAll(RegExp(r'[<>:"/\\|?*]'), '_');
+    return 'Rapport_Verif_elec_${sanitizedSite}_${year}_$ts.pdf';
+  }
+
   static Future<File?> generateMissionReport(
     String missionId, {
     PdfProgressCallback? onProgress,
@@ -17605,7 +17619,8 @@ class PdfReportService {
       const String numeroRapportDoc = 'KES/IP/VE/2025/001';
 
       final systemTempDir = await getTemporaryDirectory();
-      final sessionTimestamp = DateTime.now().millisecondsSinceEpoch;
+      final generationDate = DateTime.now();
+      final sessionTimestamp = generationDate.millisecondsSinceEpoch;
       sessionDir = Directory(
         '${systemTempDir.path}/pdf_session_${missionId}_$sessionTimestamp',
       );
@@ -17670,9 +17685,11 @@ class PdfReportService {
         0.96,
         'Fusion binaire haute performance du document final...',
       );
-      final fileName =
-          'Rapport_${mission.nomClient}_${_formatDate(DateTime.now())}_$sessionTimestamp.pdf'
-              .replaceAll(RegExp(r'[<>:"/\\|?*\s]'), '_');
+      final fileName = buildElectricalReportFileName(
+        mission.nomClient,
+        date: generationDate,
+        timestamp: sessionTimestamp,
+      );
       final outputFile = File('${systemTempDir.path}/$fileName');
 
       final finalPdfFile = await PdfMergerService.mergePdfFiles(
