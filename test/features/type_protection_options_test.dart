@@ -7,17 +7,18 @@ void main() {
       'Disjoncteur',
       'Sectionneur',
       'Interrupteur',
+      'Interrupteur sectionneur',
       'Interrupteur différentiel',
       'Disjoncteur différentiel',
       'Sectionneur porte-fusible',
     ];
 
-    test('Official options list contains exactly the 6 requested values', () {
-      expect(officialOptions.length, equals(6));
+    test('Official options list contains expected protection type values', () {
       expect(officialOptions, containsAll([
         'Disjoncteur',
         'Sectionneur',
         'Interrupteur',
+        'Interrupteur sectionneur',
         'Interrupteur différentiel',
         'Disjoncteur différentiel',
         'Sectionneur porte-fusible',
@@ -40,13 +41,13 @@ void main() {
 
       // Legacy item should be prepended
       expect(items.first, equals('Fusibles'));
-      expect(items.length, equals(7));
+      expect(items.length, equals(officialOptions.length + 1));
       expect(alim.typeProtection, equals('Fusibles'));
     });
 
     test('Official protection type should not alter standard dropdown list length', () {
       final alim = Alimentation(
-        typeProtection: 'Disjoncteur',
+        typeProtection: 'Interrupteur sectionneur',
         pdcKA: '10',
         calibre: '16',
         sectionCable: '2.5 mm²',
@@ -57,8 +58,8 @@ void main() {
         items.insert(0, alim.typeProtection);
       }
 
-      expect(items.length, equals(6));
-      expect(items.first, equals('Disjoncteur'));
+      expect(items.length, equals(officialOptions.length));
+      expect(items.contains('Interrupteur sectionneur'), isTrue);
     });
   });
 }

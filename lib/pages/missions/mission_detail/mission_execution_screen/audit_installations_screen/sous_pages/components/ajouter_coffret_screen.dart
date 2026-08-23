@@ -1582,6 +1582,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     'Disjoncteur',
     'Sectionneur',
     'Interrupteur',
+    'Interrupteur sectionneur',
     'Interrupteur différentiel',
     'Disjoncteur différentiel',
     'Sectionneur porte-fusible',
