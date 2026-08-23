@@ -7114,6 +7114,7 @@ class PdfReportService {
 
                 // Cellule 2 : Tableau des lignes d'équipements de ce local
                 pw.Table(
+                  defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
                   border: pw.TableBorder(
                     horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
                     verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
@@ -7799,6 +7800,7 @@ class PdfReportService {
 
                 // Cellule 2 : Sous-tableau des détails des équipements ayant ce repère
                 pw.Table(
+                  defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
                   border: const pw.TableBorder(
                     horizontalInside: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
                     verticalInside: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
