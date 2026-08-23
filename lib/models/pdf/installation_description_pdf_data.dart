@@ -154,6 +154,15 @@ class InstallationDescriptionPdfData {
           final locName = activeCelluleLocalMap[auditCelluleId];
           mtRows.add(_createRowFromCelluleAndItem(c, item, mtRows.length + 1, localName: locName));
           processedCelluleIds.add(auditCelluleId);
+        } else {
+          final itemLocName = item.data['Poste'] ??
+              item.data['POSTE'] ??
+              item.data['Local'] ??
+              item.data['LOCAL'] ??
+              item.data['Localisation'] ??
+              item.data['Emplacement'] ??
+              '';
+          mtRows.add(_createRowFromItemOnly(item, mtRows.length + 1, localName: itemLocName));
         }
       }
 
@@ -167,6 +176,15 @@ class InstallationDescriptionPdfData {
           final locName = activeTransfoLocalMap[auditTransfoId];
           btRows.add(_createRowFromTransformateurAndItem(t, item, btRows.length + 1, localName: locName));
           processedTransfoIds.add(auditTransfoId);
+        } else {
+          final itemLocName = item.data['Poste'] ??
+              item.data['POSTE'] ??
+              item.data['Local'] ??
+              item.data['LOCAL'] ??
+              item.data['Localisation'] ??
+              item.data['Emplacement'] ??
+              '';
+          btRows.add(_createRowFromItemOnly(item, btRows.length + 1, localName: itemLocName));
         }
       }
     }
@@ -334,6 +352,24 @@ class InstallationDescriptionPdfData {
     return InstallationDescriptionPdfRow(
       index: rowIndex,
       rawId: t.syncId ?? 'transfo_$rowIndex',
+      localName: localName ?? '',
+      normalizedFields: normMap,
+    );
+  }
+
+  /// Construit une ligne de tableau PDF directement depuis un InstallationItem (sans entité d'audit liée)
+  static InstallationDescriptionPdfRow _createRowFromItemOnly(
+      InstallationItem item, int rowIndex, {String? localName}) {
+    final normMap = <String, String>{};
+    for (final entry in item.data.entries) {
+      if (entry.value.trim().isNotEmpty) {
+        normMap[entry.key] = entry.value.trim();
+        normMap[InstallationFieldsRegistry.normalizeKey(entry.key)] = entry.value.trim();
+      }
+    }
+    return InstallationDescriptionPdfRow(
+      index: rowIndex,
+      rawId: 'item_$rowIndex',
       localName: localName ?? '',
       normalizedFields: normMap,
     );

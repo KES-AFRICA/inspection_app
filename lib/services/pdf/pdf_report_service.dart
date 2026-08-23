@@ -6956,18 +6956,33 @@ class PdfReportService {
         .where((col) => col != 'N\u00B0' && col != 'N°')
         .toList();
 
-    final headers = ['POSTE / LOCAL', 'N\u00B0', ...finalOrder];
-    final columnWidths = <int, pw.TableColumnWidth>{
-      0: const pw.FlexColumnWidth(1.8),
-      1: const pw.FixedColumnWidth(18),
+    final headers = ['N\u00B0', 'POSTE / LOCAL', ...finalOrder];
+
+    // Calcul des largeurs relatives exactes pour l'en-tête et pour la table imbriquée des détails
+    final detailTotalFlex = finalOrder.length * 1.0;
+
+    final headerColumnWidths = <int, pw.TableColumnWidth>{
+      0: const pw.FixedColumnWidth(18),
+      1: const pw.FlexColumnWidth(1.8),
       for (var i = 0; i < finalOrder.length; i++)
         i + 2: const pw.FlexColumnWidth(1.0),
+    };
+
+    final outerColumnWidths = <int, pw.TableColumnWidth>{
+      0: const pw.FixedColumnWidth(18),
+      1: const pw.FlexColumnWidth(1.8),
+      2: pw.FlexColumnWidth(detailTotalFlex),
+    };
+
+    final innerDetailColumnWidths = <int, pw.TableColumnWidth>{
+      for (var i = 0; i < finalOrder.length; i++)
+        i: const pw.FlexColumnWidth(1.0),
     };
 
     if (rows.isEmpty) {
       return pw.Table(
         border: pw.TableBorder.all(color: borderColor, width: 0.4),
-        columnWidths: columnWidths,
+        columnWidths: headerColumnWidths,
         children: [
           pw.TableRow(
             decoration: pw.BoxDecoration(color: accentColor),
@@ -6976,7 +6991,6 @@ class PdfReportService {
           pw.TableRow(
             decoration: const pw.BoxDecoration(color: PdfColors.white),
             children: [
-              _cell('-', isHeader: false, centered: true),
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
                 alignment: pw.Alignment.center,
@@ -6985,6 +6999,7 @@ class PdfReportService {
                   style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
                 ),
               ),
+              _cell('-', isHeader: false, centered: true),
               ...finalOrder.map((_) => _cell('-', isHeader: false, centered: true)),
             ],
           ),
@@ -7005,13 +7020,14 @@ class PdfReportService {
     }
 
     int globalRowIndex = 1;
+    int localIndex = 1;
     final groupTables = <pw.Widget>[];
 
     // En-tête du tableau
     groupTables.add(
       pw.Table(
         border: pw.TableBorder.all(color: borderColor, width: 0.4),
-        columnWidths: columnWidths,
+        columnWidths: headerColumnWidths,
         children: [
           pw.TableRow(
             decoration: pw.BoxDecoration(color: accentColor),
@@ -7021,91 +7037,93 @@ class PdfReportService {
       ),
     );
 
-    // Groupes de postes / locaux avec rowSpan visuel
+    // Groupes de postes / locaux avec N° par local et centrage géométrique vertical sur tout le groupe
     for (final group in groups) {
-      final tableRows = <pw.TableRow>[];
-      final count = group.rows.length;
-      final midIndex = (count - 1) ~/ 2;
+      final currentLocalNum = localIndex++;
+      final detailTableRows = <pw.TableRow>[];
 
-      for (int i = 0; i < count; i++) {
+      for (int i = 0; i < group.rows.length; i++) {
         final row = group.rows[i];
         final rowNum = globalRowIndex++;
         final isOdd = rowNum % 2 == 1;
         final rowBg = isOdd ? tableRowAlt : PdfColors.white;
 
-        final detailBorder = pw.Border(
-          top: i > 0 ? pw.BorderSide(color: borderColor, width: 0.4) : pw.BorderSide.none,
-          bottom: i < count - 1 ? pw.BorderSide(color: borderColor, width: 0.4) : pw.BorderSide.none,
-        );
-
-        tableRows.add(
+        detailTableRows.add(
           pw.TableRow(
             decoration: pw.BoxDecoration(color: rowBg),
-            children: [
-              // Cellule 0 : POSTE / LOCAL (fusionnée visuellement sur la hauteur du groupe)
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                alignment: pw.Alignment.center,
-                child: i == midIndex
-                    ? pw.Text(
-                        group.localName.toUpperCase(),
-                        style: pw.TextStyle(
-                          font: _fontBold,
-                          fontSize: fsSmall,
-                          color: headerColor,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      )
-                    : pw.SizedBox(),
-              ),
-
-              // Cellule 1 : N° d'élément
-              pw.Container(
-                decoration: pw.BoxDecoration(border: detailBorder),
+            children: finalOrder.map((key) {
+              final raw = row.getValueForColumn(key, sectionKey);
+              final unit = _unitForField(key);
+              final display = (raw != '-' &&
+                      raw.isNotEmpty &&
+                      unit.isNotEmpty &&
+                      !raw.toLowerCase().contains(unit.toLowerCase()))
+                  ? '$raw $unit'
+                  : raw;
+              return pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
-                  '$rowNum',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: fsSmall,
-                    color: headerColor,
-                  ),
+                  display,
+                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
                   textAlign: pw.TextAlign.center,
                 ),
-              ),
-
-              // Colonnes de détail
-              ...finalOrder.map((key) {
-                final raw = row.getValueForColumn(key, sectionKey);
-                final unit = _unitForField(key);
-                final display = (raw != '-' &&
-                        raw.isNotEmpty &&
-                        unit.isNotEmpty &&
-                        !raw.toLowerCase().contains(unit.toLowerCase()))
-                    ? '$raw $unit'
-                    : raw;
-                return pw.Container(
-                  decoration: pw.BoxDecoration(border: detailBorder),
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    display,
-                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                );
-              }),
-            ],
+              );
+            }).toList(),
           ),
         );
       }
 
       groupTables.add(
         pw.Table(
+          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
           border: pw.TableBorder.all(color: borderColor, width: 0.4),
-          columnWidths: columnWidths,
-          children: tableRows,
+          columnWidths: outerColumnWidths,
+          children: [
+            pw.TableRow(
+              children: [
+                // Cellule 0 : N° du Local (centré verticalement et horizontalement au milieu du groupe)
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    '$currentLocalNum',
+                    style: pw.TextStyle(
+                      font: _fontBold,
+                      fontSize: fsSmall,
+                      color: headerColor,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+
+                // Cellule 1 : Nom du POSTE / LOCAL (centré verticalement et horizontalement au milieu du groupe)
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    group.localName.toUpperCase(),
+                    style: pw.TextStyle(
+                      font: _fontBold,
+                      fontSize: fsSmall,
+                      color: headerColor,
+                    ),
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ),
+
+                // Cellule 2 : Tableau des lignes d'équipements de ce local
+                pw.Table(
+                  border: pw.TableBorder(
+                    horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+                    verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+                  ),
+                  columnWidths: innerDetailColumnWidths,
+                  children: detailTableRows,
+                ),
+              ],
+            ),
+          ],
         ),
       );
     }
@@ -7771,7 +7789,15 @@ class PdfReportService {
 
       groupTables.add(
         pw.Table(
-          border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+          border: const pw.TableBorder(
+            left: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+            right: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+            top: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+            bottom: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+            verticalInside: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
+            horizontalInside: pw.BorderSide.none,
+          ),
           columnWidths: columnWidths,
           children: tableRows,
         ),
