@@ -9003,14 +9003,298 @@ class PdfReportService {
   }
 
   // ──────────────────────────────────────────────────────────────
+  //  PHOTO REFERENCE REGISTRY & BADGE INDICATOR FOR AUDIT TABLES
+  // ──────────────────────────────────────────────────────────────
+
+  static Map<String, int> _buildPhotoNumberRegistry(
+    AuditInstallationsElectriques? audit,
+    DescriptionInstallations? description,
+  ) {
+    final registry = <String, int>{};
+    final seenPaths = <String>{};
+    int photoCounter = 1;
+
+    void addPath(String? path) {
+      if (path == null) return;
+      final trimmed = path.trim();
+      if (trimmed.isNotEmpty && !seenPaths.contains(trimmed)) {
+        seenPaths.add(trimmed);
+        registry[trimmed] = photoCounter++;
+      }
+    }
+
+    void addPaths(List<String>? paths) {
+      if (paths == null) return;
+      for (final p in paths) {
+        addPath(p);
+      }
+    }
+
+    void processCoffret(CoffretArmoire c) {
+      addPaths(c.photosExternes);
+      addPaths(c.photos);
+      addPaths(c.photosInternes);
+      for (final pv in c.pointsVerification) {
+        addPaths(pv.photos);
+      }
+      for (final obs in c.observationsLibres) {
+        addPaths(obs.photos);
+      }
+      final pfEnrichies = c.observationsParafoudreEnrichies;
+      if (pfEnrichies != null) {
+        for (final obs in pfEnrichies) {
+          addPaths(obs.photos);
+        }
+      }
+    }
+
+    void processCellule(Cellule cell) {
+      addPath(cell.photo);
+      addPaths(cell.photos);
+      for (final ev in cell.elementsVerifies) {
+        addPaths(ev.photos);
+      }
+      if (cell.observations != null) {
+        for (final el in cell.observations!) {
+          addPaths(el.photos);
+        }
+      }
+    }
+
+    void processTransfo(TransformateurMTBT transfo) {
+      addPath(transfo.photo);
+      addPaths(transfo.photos);
+      for (final ev in transfo.elementsVerifies) {
+        addPaths(ev.photos);
+      }
+      if (transfo.observations != null) {
+        for (final el in transfo.observations!) {
+          addPaths(el.photos);
+        }
+      }
+    }
+
+    void processLocalMT(MoyenneTensionLocal l) {
+      addPaths(l.photos);
+      if (l.dispositionsConstructives != null) {
+        for (final d in l.dispositionsConstructives!) {
+          addPaths(d.photos);
+        }
+      }
+      if (l.conditionsExploitation != null) {
+        for (final c in l.conditionsExploitation!) {
+          addPaths(c.photos);
+        }
+      }
+      for (final obs in l.observationsLibres) {
+        addPaths(obs.photos);
+      }
+      for (final cell in l.cellules) {
+        processCellule(cell);
+      }
+      for (final transfo in l.transformateurs) {
+        processTransfo(transfo);
+      }
+      for (final coffret in l.coffrets) {
+        processCoffret(coffret);
+      }
+    }
+
+    void processLocalBT(BasseTensionLocal l) {
+      addPaths(l.photos);
+      if (l.dispositionsConstructives != null) {
+        for (final d in l.dispositionsConstructives!) {
+          addPaths(d.photos);
+        }
+      }
+      if (l.conditionsExploitation != null) {
+        for (final c in l.conditionsExploitation!) {
+          addPaths(c.photos);
+        }
+      }
+      for (final obs in l.observationsLibres) {
+        addPaths(obs.photos);
+      }
+      for (final coffret in l.coffrets) {
+        processCoffret(coffret);
+      }
+    }
+
+    // 1. Description Section
+    if (description != null) {
+      void addDescItems(List<InstallationItem>? items) {
+        if (items == null) return;
+        for (final item in items) {
+          addPaths(item.photoPaths);
+        }
+      }
+
+      addDescItems(description.alimentationMoyenneTension);
+      addDescItems(description.alimentationBasseTension);
+      addDescItems(description.groupeElectrogene);
+      addDescItems(description.alimentationCarburant);
+      addDescItems(description.inverseur);
+      addDescItems(description.stabilisateur);
+      addDescItems(description.onduleurs);
+    }
+
+    // 2. Audit Général
+    if (audit != null) {
+      addPaths(audit.photos);
+
+      // 3. MT Locaux Directs
+      for (final local in audit.moyenneTensionLocaux) {
+        processLocalMT(local);
+      }
+
+      // 4. MT Zones
+      for (final zone in audit.moyenneTensionZones) {
+        addPaths(zone.photos);
+        for (final obs in zone.observationsLibres) {
+          addPaths(obs.photos);
+        }
+        for (final coffret in zone.coffrets) {
+          processCoffret(coffret);
+        }
+        for (final local in zone.locaux) {
+          processLocalMT(local);
+        }
+      }
+
+      // 5. BT Zones
+      for (final zone in audit.basseTensionZones) {
+        addPaths(zone.photos);
+        for (final obs in zone.observationsLibres) {
+          addPaths(obs.photos);
+        }
+        for (final coffret in zone.coffretsDirects) {
+          processCoffret(coffret);
+        }
+        for (final local in zone.locaux) {
+          processLocalBT(local);
+        }
+      }
+    }
+
+    return registry;
+  }
+
+  static String _formatPhotoNumbers(List<int> numbers) {
+    if (numbers.isEmpty) return '';
+    final sorted = numbers.toSet().toList()..sort();
+    if (sorted.length == 1) {
+      return 'Photo ${sorted.first}';
+    }
+
+    final rangeStrings = <String>[];
+    int start = sorted.first;
+    int prev = sorted.first;
+
+    for (int i = 1; i < sorted.length; i++) {
+      final curr = sorted[i];
+      if (curr == prev + 1) {
+        prev = curr;
+      } else {
+        if (start == prev) {
+          rangeStrings.add('$start');
+        } else if (prev == start + 1) {
+          rangeStrings.add('$start, $prev');
+        } else {
+          rangeStrings.add('$start–$prev');
+        }
+        start = curr;
+        prev = curr;
+      }
+    }
+
+    if (start == prev) {
+      rangeStrings.add('$start');
+    } else if (prev == start + 1) {
+      rangeStrings.add('$start, $prev');
+    } else {
+      rangeStrings.add('$start–$prev');
+    }
+
+    return 'Photos ${rangeStrings.join(', ')}';
+  }
+
+  static pw.Widget _buildPhotoIndicatorWidget(
+    List<String> photoPaths,
+    Map<String, int>? photoRegistry,
+  ) {
+    if (photoPaths.isEmpty || photoRegistry == null || photoRegistry.isEmpty) {
+      return pw.SizedBox.shrink();
+    }
+
+    final numbers = <int>[];
+    for (final path in photoPaths) {
+      final trimmed = path.trim();
+      if (trimmed.isNotEmpty && photoRegistry.containsKey(trimmed)) {
+        numbers.add(photoRegistry[trimmed]!);
+      }
+    }
+
+    if (numbers.isEmpty) return pw.SizedBox.shrink();
+
+    final labelText = _formatPhotoNumbers(numbers);
+    if (labelText.isEmpty) return pw.SizedBox.shrink();
+
+    const cameraSvg =
+        '<svg width="10" height="8" viewBox="0 0 16 14" fill="none" xmlns="http://www.w3.org/2000/svg">'
+        '<path d="M5.5 1.5L4.2 3.5H2C1.17 3.5 0.5 4.17 0.5 5V11.5C0.5 12.33 1.17 13 2 13H14C14.83 13 15.5 12.33 15.5 11.5V5C15.5 4.17 14.83 3.5 14 3.5H11.8L10.5 1.5H5.5Z" stroke="#1D4ED8" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/>'
+        '<circle cx="8" cy="8.25" r="2.75" stroke="#1D4ED8" stroke-width="1.3"/>'
+        '</svg>';
+
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 3),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromInt(0xFFEFF6FF),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(3)),
+        border: pw.Border.all(color: PdfColor.fromInt(0xFFBFDBFE), width: 0.5),
+      ),
+      child: pw.Row(
+        mainAxisSize: pw.MainAxisSize.min,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.SvgImage(svg: cameraSvg, width: 8, height: 7),
+          pw.SizedBox(width: 3),
+          pw.Text(
+            labelText,
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: 7.5,
+              color: PdfColor.fromInt(0xFF1D4ED8),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @visibleForTesting
+  static String formatPhotoNumbersForTest(List<int> numbers) =>
+      _formatPhotoNumbers(numbers);
+
+  @visibleForTesting
+  static Map<String, int> buildPhotoNumberRegistryForTest(
+    AuditInstallationsElectriques? audit,
+    DescriptionInstallations? description,
+  ) =>
+      _buildPhotoNumberRegistry(audit, description);
+
+  // ──────────────────────────────────────────────────────────────
   //  AUDIT DES INSTALLATIONS ELECTRIQUES
   // ──────────────────────────────────────────────────────────────
 
   static List<pw.Widget> _buildAuditContentOrdered(
     AuditInstallationsElectriques audit,
-    Map<String, int> trackedPages,
-  ) {
+    Map<String, int> trackedPages, {
+    Map<String, int>? photoRegistry,
+    DescriptionInstallations? description,
+  }) {
     final widgets = <pw.Widget>[];
+    final reg = photoRegistry ?? _buildPhotoNumberRegistry(audit, description);
 
     // 1. Locaux MT directs (hors zone) — PREMIER local sur la même page que le titre
     if (audit.moyenneTensionLocaux.isNotEmpty) {
@@ -9021,7 +9305,7 @@ class PdfReportService {
         final local = audit.moyenneTensionLocaux[i];
         // Pas de NewPage pour le premier local (i == 0)
         if (i > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildLocalMT(local, trackedPages));
+        widgets.addAll(_buildLocalMT(local, trackedPages, photoRegistry: reg));
       }
     }
 
@@ -9029,7 +9313,7 @@ class PdfReportService {
     for (var zone in audit.moyenneTensionZones) {
       widgets.add(pw.NewPage());
       widgets.addAll(
-        _buildZone(zone.nom, zone.observationsLibres, trackedPages),
+        _buildZone(zone.nom, zone.observationsLibres, trackedPages, photoRegistry: reg),
       );
 
       int elementIndex = 0;
@@ -9037,7 +9321,7 @@ class PdfReportService {
       for (int i = 0; i < zone.locaux.length; i++) {
         final local = zone.locaux[i];
         if (elementIndex > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildLocalMT(local, trackedPages));
+        widgets.addAll(_buildLocalMT(local, trackedPages, photoRegistry: reg));
         elementIndex++;
       }
 
@@ -9045,7 +9329,7 @@ class PdfReportService {
       for (int i = 0; i < zone.coffrets.length; i++) {
         final coffret = zone.coffrets[i];
         if (elementIndex > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildCoffret(coffret, trackedPages, zone.nom));
+        widgets.addAll(_buildCoffret(coffret, trackedPages, zone.nom, photoRegistry: reg));
         elementIndex++;
       }
     }
@@ -9054,7 +9338,7 @@ class PdfReportService {
     for (var zone in audit.basseTensionZones) {
       widgets.add(pw.NewPage());
       widgets.addAll(
-        _buildZone(zone.nom, zone.observationsLibres, trackedPages),
+        _buildZone(zone.nom, zone.observationsLibres, trackedPages, photoRegistry: reg),
       );
 
       int elementIndex = 0;
@@ -9062,7 +9346,7 @@ class PdfReportService {
       for (int i = 0; i < zone.coffretsDirects.length; i++) {
         final coffret = zone.coffretsDirects[i];
         if (elementIndex > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildCoffret(coffret, trackedPages, zone.nom));
+        widgets.addAll(_buildCoffret(coffret, trackedPages, zone.nom, photoRegistry: reg));
         elementIndex++;
       }
 
@@ -9070,7 +9354,7 @@ class PdfReportService {
       for (int i = 0; i < zone.locaux.length; i++) {
         final local = zone.locaux[i];
         if (elementIndex > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildLocalBT(local, trackedPages));
+        widgets.addAll(_buildLocalBT(local, trackedPages, photoRegistry: reg));
         elementIndex++;
       }
     }
@@ -9085,8 +9369,9 @@ class PdfReportService {
   static List<pw.Widget> _buildZone(
     String nom,
     List<ObservationLibre> obs,
-    Map<String, int> trackedPages,
-  ) {
+    Map<String, int> trackedPages, {
+    Map<String, int>? photoRegistry,
+  }) {
     final widgets = <pw.Widget>[
       pw.SizedBox(height: 8),
       PageTracker(
@@ -9109,13 +9394,17 @@ class PdfReportService {
     ];
 
     widgets.add(pw.SizedBox(height: 5));
-    widgets.add(_buildObsZoneTable(nom, obs));
+    widgets.add(_buildObsZoneTable(nom, obs, photoRegistry: photoRegistry));
 
     widgets.add(pw.SizedBox(height: 5));
     return widgets;
   }
 
-  static pw.Widget _buildObsZoneTable(String zone, List<ObservationLibre> obs) {
+  static pw.Widget _buildObsZoneTable(
+    String zone,
+    List<ObservationLibre> obs, {
+    Map<String, int>? photoRegistry,
+  }) {
     final rows = <pw.TableRow>[
       // En-tête (avec Items centré et Titre à gauche en majuscule)
       pw.TableRow(
@@ -9206,9 +9495,15 @@ class PdfReportService {
                   horizontal: 5,
                   vertical: 4,
                 ),
-                child: pw.Text(
-                  e.value.texte,
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      e.value.texte,
+                      style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                    ),
+                    _buildPhotoIndicatorWidget(e.value.photos, photoRegistry),
+                  ],
                 ),
               ),
             ],
@@ -9400,6 +9695,7 @@ class PdfReportService {
     Map<String, int> trackedPages, {
     Map<dynamic, pw.MemoryImage?>? photoCache,
     bool saveFilesToDisk = true,
+    Map<String, int>? photoRegistry,
   }) {
     final widgets = <pw.Widget>[
       PageTracker(
@@ -9491,6 +9787,7 @@ class PdfReportService {
           local.dispositionsConstructives,
           'DISPOSITIONS CONSTRUCTIVES DU LOCAL TECHNIQUE MOYENNE TENSION',
           localType: local.type,
+          photoRegistry: photoRegistry,
         ),
       );
     }
@@ -9503,6 +9800,7 @@ class PdfReportService {
           local.conditionsExploitation,
           'CONDITIONS D\'EXPLOITATION ET DE SÉCURITÉ DU LOCAL MOYENNE TENSION',
           localType: local.type,
+          photoRegistry: photoRegistry,
         ),
       );
     }
@@ -9515,6 +9813,7 @@ class PdfReportService {
           localName: local.nom,
           photoCache: photoCache,
           saveFilesToDisk: saveFilesToDisk,
+          photoRegistry: photoRegistry,
         ),
       );
     }
@@ -9526,6 +9825,7 @@ class PdfReportService {
           localName: local.nom,
           photoCache: photoCache,
           saveFilesToDisk: saveFilesToDisk,
+          photoRegistry: photoRegistry,
         ),
       );
     }
@@ -9538,6 +9838,7 @@ class PdfReportService {
           trackedPages,
           local.nom,
           photoCache: photoCache,
+          photoRegistry: photoRegistry,
         ),
       );
     }
@@ -9549,6 +9850,7 @@ class PdfReportService {
     BasseTensionLocal local,
     Map<String, int> trackedPages, {
     Map<dynamic, pw.MemoryImage?>? photoCache,
+    Map<String, int>? photoRegistry,
   }) {
     final widgets = <pw.Widget>[
       PageTracker(
@@ -9663,6 +9965,7 @@ class PdfReportService {
           local.dispositionsConstructives!,
           dispTitle,
           localType: local.type,
+          photoRegistry: photoRegistry,
         ),
       );
     }
@@ -9677,6 +9980,7 @@ class PdfReportService {
           local.conditionsExploitation!,
           condTitle,
           localType: local.type,
+          photoRegistry: photoRegistry,
         ),
       );
     }
@@ -9689,6 +9993,7 @@ class PdfReportService {
           trackedPages,
           local.nom,
           photoCache: photoCache,
+          photoRegistry: photoRegistry,
         ),
       );
     }
@@ -9722,6 +10027,7 @@ class PdfReportService {
     List<ElementControle> elements,
     String titre, {
     String? localType,
+    Map<String, int>? photoRegistry,
   }) {
     const tableColumnWidths = <int, pw.TableColumnWidth>{
       0: pw.FlexColumnWidth(2.4), // POINTS DE VÉRIFICATION
@@ -9997,11 +10303,16 @@ class PdfReportService {
                 horizontal: 3,
                 vertical: 3,
               ),
-              alignment: pw.Alignment.center,
-              child: pw.Text(
-                el.observation ?? '',
-                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
-                textAlign: pw.TextAlign.center,
+              alignment: pw.Alignment.centerLeft,
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    el.observation ?? '',
+                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                  ),
+                  _buildPhotoIndicatorWidget(el.photos, photoRegistry),
+                ],
               ),
             ),
           ],
@@ -10096,6 +10407,7 @@ class PdfReportService {
     String? localName,
     Map<dynamic, pw.MemoryImage?>? photoCache,
     bool saveFilesToDisk = true,
+    Map<String, int>? photoRegistry,
   }) {
     DispositionsConstructivesRegistry.ensureCompleteCelluleChecklist(
       cellule.elementsVerifies,
@@ -10569,11 +10881,16 @@ class PdfReportService {
                 horizontal: 3,
                 vertical: 3,
               ),
-              alignment: pw.Alignment.center,
-              child: pw.Text(
-                el.observation ?? '',
-                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
-                textAlign: pw.TextAlign.center,
+              alignment: pw.Alignment.centerLeft,
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    el.observation ?? '',
+                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                  ),
+                  _buildPhotoIndicatorWidget(el.photos, photoRegistry),
+                ],
               ),
             ),
           ],
@@ -10609,6 +10926,7 @@ class PdfReportService {
     String? localName,
     Map<dynamic, pw.MemoryImage?>? photoCache,
     bool saveFilesToDisk = true,
+    Map<String, int>? photoRegistry,
   }) {
     DispositionsConstructivesRegistry.ensureCompleteTransformateurChecklist(
       transfo.elementsVerifies,
@@ -11088,11 +11406,16 @@ class PdfReportService {
                 horizontal: 3,
                 vertical: 3,
               ),
-              alignment: pw.Alignment.center,
-              child: pw.Text(
-                el.observation ?? '',
-                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
-                textAlign: pw.TextAlign.center,
+              alignment: pw.Alignment.centerLeft,
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                children: [
+                  pw.Text(
+                    el.observation ?? '',
+                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                  ),
+                  _buildPhotoIndicatorWidget(el.photos, photoRegistry),
+                ],
               ),
             ),
           ],
@@ -11252,6 +11575,7 @@ class PdfReportService {
     Map<String, int> trackedPages,
     String parentName, {
     Map<dynamic, pw.MemoryImage?>? photoCache,
+    Map<String, int>? photoRegistry,
   }) {
     final widgets = <pw.Widget>[pw.SizedBox(height: 6)];
     String safe(String v) => v.trim().isEmpty ? 'Non renseigné' : v;
@@ -12064,6 +12388,7 @@ class PdfReportService {
         _buildPointsVerificationTable(
           coffret.pointsVerification,
           coffretType: coffret.type,
+          photoRegistry: photoRegistry,
         ),
       );
     }
@@ -12074,7 +12399,11 @@ class PdfReportService {
     if (coffret.observationsLibres.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 3));
       widgets.add(
-        _buildSimpleObsTable(coffret.observationsLibres, 'Observations'),
+        _buildSimpleObsTable(
+          coffret.observationsLibres,
+          'Observations',
+          photoRegistry: photoRegistry,
+        ),
       );
     }
 
@@ -12110,6 +12439,7 @@ class PdfReportService {
   static pw.Widget _buildPointsVerificationTable(
     List<PointVerification> points, {
     String? coffretType,
+    Map<String, int>? photoRegistry,
   }) {
     return pw.Table(
       defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
@@ -12174,6 +12504,13 @@ class PdfReportService {
                     .where((s) => s.isNotEmpty)
                     .join('\n')
               : (pv.observation ?? '');
+
+          final allPvPhotos = <String>[...pv.photos];
+          if (pv.observations != null) {
+            for (final obs in pv.observations!) {
+              allPvPhotos.addAll(obs.photos);
+            }
+          }
 
           return pw.TableRow(
             decoration: pw.BoxDecoration(
@@ -12253,11 +12590,16 @@ class PdfReportService {
                   horizontal: 4,
                   vertical: 3,
                 ),
-                alignment: pw.Alignment.center,
-                child: pw.Text(
-                  obsText,
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
-                  textAlign: pw.TextAlign.center,
+                alignment: pw.Alignment.centerLeft,
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      obsText,
+                      style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                    ),
+                    _buildPhotoIndicatorWidget(allPvPhotos, photoRegistry),
+                  ],
                 ),
               ),
             ],
@@ -12269,8 +12611,25 @@ class PdfReportService {
 
   static pw.Widget _buildSimpleObsTable(
     List<ObservationLibre> obs,
-    String titre,
-  ) {
+    String titre, {
+    Map<String, int>? photoRegistry,
+  }) {
+    pw.Widget obsCell(ObservationLibre o) {
+      return pw.Padding(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+        child: pw.Column(
+          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          children: [
+            pw.Text(
+              o.texte,
+              style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+            ),
+            _buildPhotoIndicatorWidget(o.photos, photoRegistry),
+          ],
+        ),
+      );
+    }
+
     final hasAnyNormRef = obs.any((o) => o.hasNormativeReference);
     if (hasAnyNormRef) {
       return pw.Table(
@@ -12296,7 +12655,7 @@ class PdfReportService {
               ),
               children: [
                 _cell('${e.key + 1}', isHeader: false),
-                _cell(e.value.texte, isHeader: false),
+                obsCell(e.value),
                 _cell(e.value.referenceNormative ?? '-', isHeader: false),
               ],
             ),
@@ -12323,7 +12682,7 @@ class PdfReportService {
             ),
             children: [
               _cell('${e.key + 1}', isHeader: false),
-              _cell(e.value.texte, isHeader: false),
+              obsCell(e.value),
             ],
           ),
         ),
@@ -16950,10 +17309,13 @@ class PdfReportService {
     int pageOffset = 0,
     int? overrideTotalPages,
     bool saveFilesToDisk = true,
+    DescriptionInstallations? description,
   }) async {
     final chunkFiles = <File>[];
     final tempDir = await getTemporaryDirectory();
     int currentOffset = pageOffset;
+    final desc = description ?? HiveService.getDescriptionInstallationsByMissionId(mission.id);
+    final photoRegistry = _buildPhotoNumberRegistry(audit, desc);
 
     final bool hasNoAuditContent =
         audit.moyenneTensionLocaux.isEmpty &&
@@ -17085,6 +17447,7 @@ class PdfReportService {
             trackedPages,
             photoCache: mtPhotoCache,
             saveFilesToDisk: saveFilesToDisk,
+            photoRegistry: photoRegistry,
           ),
         );
       }
@@ -17130,7 +17493,7 @@ class PdfReportService {
       );
       final widgets = <pw.Widget>[];
       widgets.addAll(
-        _buildZone(zone.nom, zone.observationsLibres, trackedPages),
+        _buildZone(zone.nom, zone.observationsLibres, trackedPages, photoRegistry: photoRegistry),
       );
       int elemIdx = 0;
       for (int i = 0; i < zone.locaux.length; i++) {
@@ -17141,6 +17504,7 @@ class PdfReportService {
             trackedPages,
             photoCache: zonePhotoCache,
             saveFilesToDisk: saveFilesToDisk,
+            photoRegistry: photoRegistry,
           ),
         );
         elemIdx++;
@@ -17153,6 +17517,7 @@ class PdfReportService {
             trackedPages,
             zone.nom,
             photoCache: zonePhotoCache,
+            photoRegistry: photoRegistry,
           ),
         );
         elemIdx++;
@@ -17199,7 +17564,7 @@ class PdfReportService {
       );
       final widgets = <pw.Widget>[];
       widgets.addAll(
-        _buildZone(zone.nom, zone.observationsLibres, trackedPages),
+        _buildZone(zone.nom, zone.observationsLibres, trackedPages, photoRegistry: photoRegistry),
       );
       int elemIdx = 0;
       for (int i = 0; i < zone.coffretsDirects.length; i++) {
@@ -17210,6 +17575,7 @@ class PdfReportService {
             trackedPages,
             zone.nom,
             photoCache: zonePhotoCache,
+            photoRegistry: photoRegistry,
           ),
         );
         elemIdx++;
@@ -17221,6 +17587,7 @@ class PdfReportService {
             zone.locaux[i],
             trackedPages,
             photoCache: zonePhotoCache,
+            photoRegistry: photoRegistry,
           ),
         );
         elemIdx++;
