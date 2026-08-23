@@ -12781,6 +12781,7 @@ class PdfReportService {
 
     // Main header table with lightBlue decoration and headerColor texts
     final header = pw.Table(
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
       border: pw.TableBorder(
         top: pw.BorderSide(color: borderColor, width: 0.4),
         left: pw.BorderSide(color: borderColor, width: 0.4),
@@ -12855,6 +12856,7 @@ class PdfReportService {
                 ),
                 pw.Divider(height: 0.4, color: borderColor),
                 pw.Table(
+                  defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
                   border: pw.TableBorder(
                     verticalInside: pw.BorderSide(
                       color: borderColor,
@@ -12939,6 +12941,7 @@ class PdfReportService {
                 ),
                 pw.Divider(height: 0.4, color: borderColor),
                 pw.Table(
+                  defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
                   border: pw.TableBorder(
                     verticalInside: pw.BorderSide(
                       color: borderColor,
@@ -13003,18 +13006,20 @@ class PdfReportService {
               child: pw.Text(
                 zoneText.toUpperCase(),
                 style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                textAlign: pw.TextAlign.center,
               ),
             ),
-            // Localisation (uppercase)
+            // Localisation (uppercase, centered)
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(
                 horizontal: 4,
                 vertical: 3,
               ),
-              alignment: pw.Alignment.centerLeft,
+              alignment: pw.Alignment.center,
               child: pw.Text(
                 r.localisation.toUpperCase(),
                 style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                textAlign: pw.TextAlign.center,
               ),
             ),
             // Origine
@@ -13027,6 +13032,7 @@ class PdfReportService {
               child: pw.Text(
                 r.origineClassement,
                 style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                textAlign: pw.TextAlign.center,
               ),
             ),
             // Influences (5 colonnes plates)
@@ -13036,6 +13042,7 @@ class PdfReportService {
               child: pw.Text(
                 r.af ?? '',
                 style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                textAlign: pw.TextAlign.center,
               ),
             ),
             pw.Container(
@@ -13044,6 +13051,7 @@ class PdfReportService {
               child: pw.Text(
                 r.be ?? '',
                 style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                textAlign: pw.TextAlign.center,
               ),
             ),
             pw.Container(
@@ -13052,6 +13060,7 @@ class PdfReportService {
               child: pw.Text(
                 r.ae ?? '',
                 style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                textAlign: pw.TextAlign.center,
               ),
             ),
             pw.Container(
@@ -13060,6 +13069,7 @@ class PdfReportService {
               child: pw.Text(
                 r.ad ?? '',
                 style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                textAlign: pw.TextAlign.center,
               ),
             ),
             pw.Container(
@@ -13068,6 +13078,7 @@ class PdfReportService {
               child: pw.Text(
                 r.ag ?? '',
                 style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                textAlign: pw.TextAlign.center,
               ),
             ),
             // IP/IK (2 colonnes plates)
@@ -13077,6 +13088,7 @@ class PdfReportService {
               child: pw.Text(
                 r.ip ?? '',
                 style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                textAlign: pw.TextAlign.center,
               ),
             ),
             pw.Container(
@@ -13085,6 +13097,7 @@ class PdfReportService {
               child: pw.Text(
                 r.ik ?? '',
                 style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                textAlign: pw.TextAlign.center,
               ),
             ),
           ],
@@ -13094,6 +13107,7 @@ class PdfReportService {
 
     widgets.add(
       pw.Table(
+        defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
         border: pw.TableBorder(
           left: pw.BorderSide(color: borderColor, width: 0.4),
           right: pw.BorderSide(color: borderColor, width: 0.4),
