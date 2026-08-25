@@ -1025,7 +1025,9 @@ class MissionDomainInventoryEngine {
       }
     }
 
-    instances.add(instance);
+    if (instance.totalCheckpoints > 0 || instance.findings.isNotEmpty) {
+      instances.add(instance);
+    }
   }
 
   static void _visitTransformateur({
@@ -1086,7 +1088,9 @@ class MissionDomainInventoryEngine {
       }
     }
 
-    instances.add(instance);
+    if (instance.totalCheckpoints > 0 || instance.findings.isNotEmpty) {
+      instances.add(instance);
+    }
   }
 
   // ──────────────────────────────────────────────────────────────

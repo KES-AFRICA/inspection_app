@@ -5,6 +5,7 @@ import '../hive_service.dart';
 import '../dispositions_constructives_registry.dart';
 import 'audit_finding.dart';
 import 'domain_entity_instance.dart';
+import 'mission_domain_inventory_engine.dart';
 
 class _CategoryTracker {
   final String categoryKey;
@@ -54,145 +55,17 @@ class _CategoryTracker {
 
 /// Moteur de Récensement et d'Inventaire Unifié des Non-Conformités (`AuditFindingInventoryEngine`).
 /// 
-/// Responsabilité Unique : Parcourir 100 % des instances enregistrées en mémoire dans la mission,
-/// filtrer les constats non conformes et produire la collection d'inventaire brute certifiée (`AuditFindingInventory`).
+/// Responsabilité Unique : Déléguer à `MissionDomainInventoryEngine` pour garantir
+/// une SOURCE UNIQUE DE VÉRITÉ absolue entre l'inventaire physique et les non-conformités.
 class AuditFindingInventoryEngine {
   /// Génère l'inventaire brut exhaustif pour une mission donnée.
   static AuditFindingInventory buildInventory(String missionId) {
-    final audit = HiveService.getAuditInstallationsByMissionId(missionId);
-    final foudres = HiveService.getFoudreObservationsByMissionId(missionId);
-
-    final findings = <AuditFinding>[];
-    final seenFindingIds = <String>{};
-
-    final visitedMTLocaux = <int>{};
-    final visitedBTLocaux = <int>{};
-    final visitedCoffrets = <int>{};
-
-    final categoryTrackers = <String, _CategoryTracker>{
-      'local_mt': _CategoryTracker('local_mt', 'Locaux techniques Moyenne Tension'),
-      'local_bt': _CategoryTracker('local_bt', 'Locaux techniques Basse Tension'),
-      'local_ge': _CategoryTracker('local_ge', 'Locaux techniques Groupe Électrogène'),
-      'cellule_mt': _CategoryTracker('cellule_mt', 'Cellules MT'),
-      'transfo_mt_bt': _CategoryTracker('transfo_mt_bt', 'Transformateurs MT/BT'),
-      'tgbt': _CategoryTracker('tgbt', 'TGBT'),
-      'armoire': _CategoryTracker('armoire', 'Armoires'),
-      'coffret': _CategoryTracker('coffret', 'Coffrets'),
-      'inverseur': _CategoryTracker('inverseur', 'Inverseurs'),
-    };
-
-    void addFinding(AuditFinding finding) {
-      if (!seenFindingIds.contains(finding.id)) {
-        seenFindingIds.add(finding.id);
-        findings.add(finding);
-      }
-    }
-
-    if (audit != null) {
-      // 1. MOYENNE TENSION : LOCAUX DIRECTS
-      for (var lIdx = 0; lIdx < audit.moyenneTensionLocaux.length; lIdx++) {
-        final local = audit.moyenneTensionLocaux[lIdx];
-        local.migrateFromOldFields();
-        _visitMTLocal(
-          missionId: missionId,
-          local: local,
-          originNom: 'Local MT ${local.nom}',
-          addFinding: addFinding,
-          visitedMTLocaux: visitedMTLocaux,
-          visitedCoffrets: visitedCoffrets,
-          trackers: categoryTrackers,
-        );
-      }
-
-      // 2. MOYENNE TENSION : ZONES
-      for (var zIdx = 0; zIdx < audit.moyenneTensionZones.length; zIdx++) {
-        final zone = audit.moyenneTensionZones[zIdx];
-        for (var lIdx = 0; lIdx < zone.locaux.length; lIdx++) {
-          final local = zone.locaux[lIdx];
-          local.migrateFromOldFields();
-          _visitMTLocal(
-            missionId: missionId,
-            local: local,
-            originNom: 'Zone MT "${zone.nom}" / Local "${local.nom}"',
-            addFinding: addFinding,
-            visitedMTLocaux: visitedMTLocaux,
-            visitedCoffrets: visitedCoffrets,
-            trackers: categoryTrackers,
-          );
-        }
-        for (var eqIdx = 0; eqIdx < zone.coffrets.length; eqIdx++) {
-          final coffret = zone.coffrets[eqIdx];
-          _visitEquipement(
-            missionId: missionId,
-            coffret: coffret,
-            originNom: 'Zone MT "${zone.nom}"',
-            addFinding: addFinding,
-            visitedCoffrets: visitedCoffrets,
-            trackers: categoryTrackers,
-          );
-        }
-      }
-
-      // 3. BASSE TENSION : ZONES & LOCAUX
-      for (var zIdx = 0; zIdx < audit.basseTensionZones.length; zIdx++) {
-        final zone = audit.basseTensionZones[zIdx];
-        for (var lIdx = 0; lIdx < zone.locaux.length; lIdx++) {
-          final local = zone.locaux[lIdx];
-          _visitBTLocal(
-            missionId: missionId,
-            local: local,
-            originNom: 'Zone BT "${zone.nom}" / Local "${local.nom}"',
-            addFinding: addFinding,
-            visitedBTLocaux: visitedBTLocaux,
-            visitedCoffrets: visitedCoffrets,
-            trackers: categoryTrackers,
-          );
-        }
-        for (var eqIdx = 0; eqIdx < zone.coffretsDirects.length; eqIdx++) {
-          final coffret = zone.coffretsDirects[eqIdx];
-          _visitEquipement(
-            missionId: missionId,
-            coffret: coffret,
-            originNom: 'Zone BT "${zone.nom}"',
-            addFinding: addFinding,
-            visitedCoffrets: visitedCoffrets,
-            trackers: categoryTrackers,
-          );
-        }
-      }
-    }
-
-    // 4. MODULE FOUDRE
-    for (var i = 0; i < foudres.length; i++) {
-      final f = foudres[i];
-      if (f.observation.trim().isNotEmpty) {
-        final hash = identityHashCode(f);
-        addFinding(AuditFinding(
-          id: 'foudre_hash_${hash}_obs_$i',
-          missionId: missionId,
-          tensionDomain: TensionDomain.bt,
-          origin: 'Module Foudre',
-          objectType: 'Foudre',
-          objectName: 'Installation Foudre',
-          tableName: 'Observations Foudre',
-          verificationPoint: 'Observation Foudre ${i + 1}',
-          observationText: f.observation,
-          conformity: 'non',
-          criticality: 'Non spécifiée',
-          priority: f.niveauPriorite,
-        ));
-      }
-    }
-
-    final crossCategoryItems = categoryTrackers.values
-        .where((tr) => tr.equipmentCount > 0 || tr.totalPointsEvaluated > 0)
-        .map((tr) => tr.toCategoryCrossItem())
-        .toList();
+    final domainInventory = MissionDomainInventoryEngine.buildInventory(missionId);
 
     return AuditFindingInventory(
       missionId: missionId,
-      findings: findings,
-      crossCategoryItems: crossCategoryItems,
+      findings: domainInventory.allFindings,
+      crossCategoryItems: domainInventory.getCrossCategoryAnalysis(),
     );
   }
 
