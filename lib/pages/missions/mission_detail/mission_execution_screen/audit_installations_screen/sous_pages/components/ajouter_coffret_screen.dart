@@ -3567,6 +3567,12 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         else if (!widget.isMoyenneTension && widget.parentIndex < audit.basseTensionZones.length && widget.coffretIndex! < audit.basseTensionZones[widget.parentIndex].coffretsDirects.length) { target = audit.basseTensionZones[widget.parentIndex].coffretsDirects[widget.coffretIndex!]; found = true; }
       }
       if (found && target != null) {
+        if (widget.coffret != null && target.equipmentId != widget.coffret!.equipmentId) {
+          if (kDebugMode) {
+            print('❌ SAVEGUARD BLOCKED: Tentative de modification sur un équipement mismatched !');
+          }
+          return false;
+        }
         target.id = newCoffret.equipmentId;
         target.qrCode = newCoffret.qrCode;
         target.nom = newCoffret.nom;

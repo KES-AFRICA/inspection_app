@@ -5444,7 +5444,7 @@ static Future<bool> addObservationToCoffret({
     
     // Chercher dans les locaux MT
     for (var local in audit.moyenneTensionLocaux) {
-      final index = local.coffrets.indexWhere((c) => c.nom== coffret.nom && c.type == coffret.type);
+      final index = local.coffrets.indexWhere((c) => c.equipmentId == coffret.equipmentId || (c.nom == coffret.nom && c.type == coffret.type));
       if (index != -1) {
         local.coffrets[index].observationsLibres.add(ObservationLibre(
           texte: texte,
@@ -5458,7 +5458,7 @@ static Future<bool> addObservationToCoffret({
     // Chercher dans les zones MT
     if (!found) {
       for (var zone in audit.moyenneTensionZones) {
-        final index = zone.coffrets.indexWhere((c) => c.nom == coffret.nom && c.type == coffret.type);
+        final index = zone.coffrets.indexWhere((c) => c.equipmentId == coffret.equipmentId || (c.nom == coffret.nom && c.type == coffret.type));
         if (index != -1) {
           zone.coffrets[index].observationsLibres.add(ObservationLibre(
             texte: texte,
@@ -5473,7 +5473,7 @@ static Future<bool> addObservationToCoffret({
     // Chercher dans les zones BT (coffrets directs)
     if (!found) {
       for (var zone in audit.basseTensionZones) {
-        final index = zone.coffretsDirects.indexWhere((c) => c.nom == coffret.nom && c.type == coffret.type);
+        final index = zone.coffretsDirects.indexWhere((c) => c.equipmentId == coffret.equipmentId || (c.nom == coffret.nom && c.type == coffret.type));
         if (index != -1) {
           zone.coffretsDirects[index].observationsLibres.add(ObservationLibre(
             texte: texte,
@@ -5485,7 +5485,7 @@ static Future<bool> addObservationToCoffret({
         
         // Chercher dans les locaux BT
         for (var local in zone.locaux) {
-          final index = local.coffrets.indexWhere((c) => c.nom == coffret.nom && c.type == coffret.type);
+          final index = local.coffrets.indexWhere((c) => c.equipmentId == coffret.equipmentId || (c.nom == coffret.nom && c.type == coffret.type));
           if (index != -1) {
             local.coffrets[index].observationsLibres.add(ObservationLibre(
               texte: texte,

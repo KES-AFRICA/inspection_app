@@ -830,127 +830,69 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
 
   void _refreshCoffret() async {
     final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+    final targetId = _coffret.equipmentId;
     
-    // Recharger le coffret depuis la base
+    // Tenter la recherche ciblée par equipmentId
+    List<CoffretArmoire> candidates = [];
     if (widget.parentType == 'local') {
       if (widget.isMoyenneTension) {
-        if (widget.isInZone && widget.zoneIndex != null) {
-          // Coffret dans un local qui est dans une zone MT
-          if (widget.zoneIndex! < audit.moyenneTensionZones.length) {
-            final zone = audit.moyenneTensionZones[widget.zoneIndex!];
-            if (widget.parentIndex < zone.locaux.length) {
-              final local = zone.locaux[widget.parentIndex];
-              if (widget.coffretIndex < local.coffrets.length) {
-                setState(() {
-                  _coffret = local.coffrets[widget.coffretIndex];
-                });
-              }
-            }
-          }
-        } else {
-          // Coffret dans un local MT indépendant
-          if (widget.parentIndex < audit.moyenneTensionLocaux.length) {
-            final local = audit.moyenneTensionLocaux[widget.parentIndex];
-            if (widget.coffretIndex < local.coffrets.length) {
-              setState(() {
-                _coffret = local.coffrets[widget.coffretIndex];
-              });
-            }
-          }
+        if (widget.isInZone && widget.zoneIndex != null && widget.zoneIndex! < audit.moyenneTensionZones.length) {
+          final zone = audit.moyenneTensionZones[widget.zoneIndex!];
+          if (widget.parentIndex < zone.locaux.length) candidates = zone.locaux[widget.parentIndex].coffrets;
+        } else if (widget.parentIndex < audit.moyenneTensionLocaux.length) {
+          candidates = audit.moyenneTensionLocaux[widget.parentIndex].coffrets;
         }
-      } else {
-        // Logique pour basse tension
-        if (widget.zoneIndex != null && widget.zoneIndex! < audit.basseTensionZones.length) {
-          final zone = audit.basseTensionZones[widget.zoneIndex!];
-          if (widget.parentIndex < zone.locaux.length) {
-            final local = zone.locaux[widget.parentIndex];
-            if (widget.coffretIndex < local.coffrets.length) {
-              setState(() {
-                _coffret = local.coffrets[widget.coffretIndex];
-              });
-            }
-          }
-        }
+      } else if (widget.zoneIndex != null && widget.zoneIndex! < audit.basseTensionZones.length) {
+        final zone = audit.basseTensionZones[widget.zoneIndex!];
+        if (widget.parentIndex < zone.locaux.length) candidates = zone.locaux[widget.parentIndex].coffrets;
       }
-    } else if (widget.parentType == 'zone_mt') {
-      if (widget.parentIndex < audit.moyenneTensionZones.length) {
-        final zone = audit.moyenneTensionZones[widget.parentIndex];
-        if (widget.coffretIndex < zone.coffrets.length) {
-          setState(() {
-            _coffret = zone.coffrets[widget.coffretIndex];
-          });
-        }
-      }
-    } else if (widget.parentType == 'zone_bt') {
-      if (widget.parentIndex < audit.basseTensionZones.length) {
-        final zone = audit.basseTensionZones[widget.parentIndex];
-        if (widget.coffretIndex < zone.coffretsDirects.length) {
-          setState(() {
-            _coffret = zone.coffretsDirects[widget.coffretIndex];
-          });
-        }
-      }
+    } else if (widget.parentType == 'zone_mt' && widget.parentIndex < audit.moyenneTensionZones.length) {
+      candidates = audit.moyenneTensionZones[widget.parentIndex].coffrets;
+    } else if (widget.parentType == 'zone_bt' && widget.parentIndex < audit.basseTensionZones.length) {
+      candidates = audit.basseTensionZones[widget.parentIndex].coffretsDirects;
     }
+
+    final match = candidates.firstWhere((c) => c.equipmentId == targetId, orElse: () => candidates.length > widget.coffretIndex ? candidates[widget.coffretIndex] : _coffret);
+    setState(() {
+      _coffret = match;
+    });
     
     _chargerPhotosCoffret();
   }
 
   Future<void> _sauvegarderCoffret() async {
-    final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-    
-    if (widget.parentType == 'local') {
-      if (widget.isMoyenneTension) {
-        if (widget.isInZone && widget.zoneIndex != null) {
-          // Coffret dans un local qui est dans une zone MT
-          if (widget.zoneIndex! < audit.moyenneTensionZones.length) {
-            final zone = audit.moyenneTensionZones[widget.zoneIndex!];
-            if (widget.parentIndex < zone.locaux.length) {
-              final local = zone.locaux[widget.parentIndex];
-              if (widget.coffretIndex < local.coffrets.length) {
-                local.coffrets[widget.coffretIndex] = _coffret;
+    final ok = await HiveService.updateCoffretById(
+      missionId: widget.mission.id,
+      equipmentId: _coffret.equipmentId,
+      updatedCoffret: _coffret,
+    );
+    if (!ok) {
+      final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+      if (widget.parentType == 'local') {
+        if (widget.isMoyenneTension) {
+          if (widget.isInZone && widget.zoneIndex != null) {
+            if (widget.zoneIndex! < audit.moyenneTensionZones.length) {
+              final zone = audit.moyenneTensionZones[widget.zoneIndex!];
+              if (widget.parentIndex < zone.locaux.length && widget.coffretIndex < zone.locaux[widget.parentIndex].coffrets.length) {
+                zone.locaux[widget.parentIndex].coffrets[widget.coffretIndex] = _coffret;
               }
             }
+          } else if (widget.parentIndex < audit.moyenneTensionLocaux.length && widget.coffretIndex < audit.moyenneTensionLocaux[widget.parentIndex].coffrets.length) {
+            audit.moyenneTensionLocaux[widget.parentIndex].coffrets[widget.coffretIndex] = _coffret;
           }
-        } else {
-          // Coffret dans un local MT indépendant
-          if (widget.parentIndex < audit.moyenneTensionLocaux.length) {
-            final local = audit.moyenneTensionLocaux[widget.parentIndex];
-            if (widget.coffretIndex < local.coffrets.length) {
-              local.coffrets[widget.coffretIndex] = _coffret;
-            }
-          }
-        }
-      } else {
-        // Pour basse tension
-        if (widget.zoneIndex != null && widget.zoneIndex! < audit.basseTensionZones.length) {
+        } else if (widget.zoneIndex != null && widget.zoneIndex! < audit.basseTensionZones.length) {
           final zone = audit.basseTensionZones[widget.zoneIndex!];
-          if (widget.parentIndex < zone.locaux.length) {
-            final local = zone.locaux[widget.parentIndex];
-            if (widget.coffretIndex < local.coffrets.length) {
-              local.coffrets[widget.coffretIndex] = _coffret;
-            }
+          if (widget.parentIndex < zone.locaux.length && widget.coffretIndex < zone.locaux[widget.parentIndex].coffrets.length) {
+            zone.locaux[widget.parentIndex].coffrets[widget.coffretIndex] = _coffret;
           }
         }
+      } else if (widget.parentType == 'zone_mt' && widget.parentIndex < audit.moyenneTensionZones.length && widget.coffretIndex < audit.moyenneTensionZones[widget.parentIndex].coffrets.length) {
+        audit.moyenneTensionZones[widget.parentIndex].coffrets[widget.coffretIndex] = _coffret;
+      } else if (widget.parentType == 'zone_bt' && widget.parentIndex < audit.basseTensionZones.length && widget.coffretIndex < audit.basseTensionZones[widget.parentIndex].coffretsDirects.length) {
+        audit.basseTensionZones[widget.parentIndex].coffretsDirects[widget.coffretIndex] = _coffret;
       }
-    } else if (widget.parentType == 'zone_mt') {
-      // Coffret direct dans une zone MT
-      if (widget.parentIndex < audit.moyenneTensionZones.length) {
-        final zone = audit.moyenneTensionZones[widget.parentIndex];
-        if (widget.coffretIndex < zone.coffrets.length) {
-          zone.coffrets[widget.coffretIndex] = _coffret;
-        }
-      }
-    } else if (widget.parentType == 'zone_bt') {
-      // Coffret direct dans une zone BT
-      if (widget.parentIndex < audit.basseTensionZones.length) {
-        final zone = audit.basseTensionZones[widget.parentIndex];
-        if (widget.coffretIndex < zone.coffretsDirects.length) {
-          zone.coffretsDirects[widget.coffretIndex] = _coffret;
-        }
-      }
+      await HiveService.saveAuditInstallations(audit);
     }
-    
-    await HiveService.saveAuditInstallations(audit);
   }
 
   void _showSuccess(String message) {

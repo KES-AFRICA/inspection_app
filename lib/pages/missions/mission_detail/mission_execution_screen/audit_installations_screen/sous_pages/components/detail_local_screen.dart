@@ -136,6 +136,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => AjouterCoffretScreen(
+          key: ValueKey('draft_coffret_${draft.equipmentId}'),
           mission: widget.mission,
           parentType: 'local',
           parentIndex: widget.localIndex,
@@ -1705,7 +1706,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
 
     // Vrai index dans _local.coffrets (sans brouillons)
     final realIndex = _local.coffrets.indexWhere(
-      (c) => c.qrCode == coffret.qrCode,
+      (c) => c.equipmentId == coffret.equipmentId,
     );
 
     return Container(
@@ -1931,7 +1932,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                       if (isDraft) {
                         _supprimerBrouillon(coffret);
                       } else if (realIndex >= 0) {
-                        _supprimerCoffretByQr(coffret.qrCode);
+                        _supprimerCoffretTarget(coffret);
                       }
                     },
                     icon: const Icon(
@@ -2010,17 +2011,19 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
   }
 
   void _editerCoffretByIndex(int realIndex) async {
+    final targetCoffret = _local.coffrets[realIndex];
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AjouterCoffretScreen(
+          key: ValueKey('edit_coffret_${targetCoffret.equipmentId}'),
           mission: widget.mission,
           parentType: 'local',
           parentIndex: widget.localIndex,
           isMoyenneTension: widget.isMoyenneTension,
           zoneIndex: widget.zoneIndex,
           isInZone: widget.isInZone,
-          coffret: _local.coffrets[realIndex],
+          coffret: targetCoffret,
           coffretIndex: realIndex,
         ),
       ),
@@ -2028,12 +2031,12 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
     if (result == true) _rechargerLocal();
   }
 
-  void _supprimerCoffretByQr(String qrCode) {
+  void _supprimerCoffretTarget(CoffretArmoire coffretTarget) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirmer la suppression'),
-        content: const Text('Voulez-vous vraiment supprimer cet équipement ?'),
+        content: Text('Voulez-vous vraiment supprimer "${coffretTarget.nom}" ?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context),
@@ -2045,14 +2048,13 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
               final audit = await HiveService.getOrCreateAuditInstallations(
                 widget.mission.id,
               );
-              // Trouver et supprimer par QR code dans tous les emplacements possibles
               bool saved = false;
               if (widget.isMoyenneTension) {
                 if (widget.isInZone && widget.zoneIndex != null) {
                   final zone = audit.moyenneTensionZones[widget.zoneIndex!];
                   final local = zone.locaux[widget.localIndex];
                   final idx = local.coffrets.indexWhere(
-                    (c) => c.qrCode == qrCode,
+                    (c) => c.equipmentId == coffretTarget.equipmentId,
                   );
                   if (idx >= 0) {
                     local.coffrets.removeAt(idx);
@@ -2061,7 +2063,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                 } else {
                   final local = audit.moyenneTensionLocaux[widget.localIndex];
                   final idx = local.coffrets.indexWhere(
-                    (c) => c.qrCode == qrCode,
+                    (c) => c.equipmentId == coffretTarget.equipmentId,
                   );
                   if (idx >= 0) {
                     local.coffrets.removeAt(idx);
@@ -2073,7 +2075,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
                   final zone = audit.basseTensionZones[widget.zoneIndex!];
                   final local = zone.locaux[widget.localIndex];
                   final idx = local.coffrets.indexWhere(
-                    (c) => c.qrCode == qrCode,
+                    (c) => c.equipmentId == coffretTarget.equipmentId,
                   );
                   if (idx >= 0) {
                     local.coffrets.removeAt(idx);

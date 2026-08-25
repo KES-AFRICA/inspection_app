@@ -1745,9 +1745,9 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
             _ouvrirBrouillon(coffret);
           } else {
             final realIndex = isMoyenneTension
-                ? _zone.coffrets.indexWhere((c) => c.qrCode == coffret.qrCode)
+                ? _zone.coffrets.indexWhere((c) => c.equipmentId == coffret.equipmentId)
                 : _zone.coffretsDirects.indexWhere(
-                    (c) => c.qrCode == coffret.qrCode,
+                    (c) => c.equipmentId == coffret.equipmentId,
                   );
             if (realIndex >= 0) _voirCoffret(realIndex, isMoyenneTension);
           }
@@ -2017,13 +2017,14 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   ) async {
     // Recalculer le vrai index dans la liste source (sans brouillons)
     final realIndex = isMoyenneTension
-        ? _zone.coffrets.indexWhere((c) => c.qrCode == coffret.qrCode)
-        : _zone.coffretsDirects.indexWhere((c) => c.qrCode == coffret.qrCode);
+        ? _zone.coffrets.indexWhere((c) => c.equipmentId == coffret.equipmentId)
+        : _zone.coffretsDirects.indexWhere((c) => c.equipmentId == coffret.equipmentId);
 
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AjouterCoffretScreen(
+          key: ValueKey('edit_zone_coffret_${coffret.equipmentId}'),
           mission: widget.mission,
           parentType: widget.isMoyenneTension ? 'zone_mt' : 'zone_bt',
           parentIndex: widget.zoneIndex,
@@ -2083,7 +2084,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                   final realIndex = audit
                       .moyenneTensionZones[widget.zoneIndex]
                       .coffrets
-                      .indexWhere((c) => c.qrCode == coffret.qrCode);
+                      .indexWhere((c) => c.equipmentId == coffret.equipmentId);
                   if (realIndex >= 0) {
                     audit.moyenneTensionZones[widget.zoneIndex].coffrets
                         .removeAt(realIndex);
@@ -2095,7 +2096,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
                   final realIndex = audit
                       .basseTensionZones[widget.zoneIndex]
                       .coffretsDirects
-                      .indexWhere((c) => c.qrCode == coffret.qrCode);
+                      .indexWhere((c) => c.equipmentId == coffret.equipmentId);
                   if (realIndex >= 0) {
                     audit.basseTensionZones[widget.zoneIndex].coffretsDirects
                         .removeAt(realIndex);
