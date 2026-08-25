@@ -3552,9 +3552,11 @@ class PdfReportService {
   static pw.Widget _buildTableCell(
     String text, {
     bool isBold = false,
-    pw.TextAlign align = pw.TextAlign.left,
+    pw.TextAlign align = pw.TextAlign.center,
+    pw.Alignment alignment = pw.Alignment.center,
   }) {
-    return pw.Padding(
+    return pw.Container(
+      alignment: alignment,
       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
       child: pw.Text(
         text,
@@ -12701,12 +12703,18 @@ class PdfReportService {
     return widgets;
   }
 
-  /// Cellule valeur (police normale)
-  static pw.Widget _valueCell(String text) => pw.Padding(
+  /// Cellule valeur (police normale, centrée horizontalement et verticalement)
+  static pw.Widget _valueCell(
+    String text, {
+    pw.Alignment alignment = pw.Alignment.center,
+    pw.TextAlign textAlign = pw.TextAlign.center,
+  }) => pw.Container(
+    alignment: alignment,
     padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
     child: pw.Text(
       text,
       style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+      textAlign: textAlign,
     ),
   );
 
