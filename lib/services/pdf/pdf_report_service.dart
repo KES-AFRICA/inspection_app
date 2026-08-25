@@ -2978,7 +2978,8 @@ class PdfReportService {
                 textAlign: pw.TextAlign.center,
               ),
             ),
-            pw.Padding(
+            pw.Container(
+              alignment: pw.Alignment.center,
               padding: const pw.EdgeInsets.all(4),
               child: pw.Text(
                 parsed.observation,
@@ -2987,6 +2988,7 @@ class PdfReportService {
                   fontSize: 7.5,
                   color: headerColor,
                 ),
+                textAlign: pw.TextAlign.center,
               ),
             ),
             pw.Padding(
@@ -3527,7 +3529,7 @@ class PdfReportService {
               _buildTableCell(rows[i].natureRisque, isBold: true),
               _buildTableCell(rows[i].constats, align: pw.TextAlign.center),
               _buildTableCell(rows[i].partPct, align: pw.TextAlign.center),
-              _buildTableCell(rows[i].observation),
+              _buildTableCell(rows[i].observation, align: pw.TextAlign.center),
             ],
           ),
       ],
@@ -10541,13 +10543,15 @@ class PdfReportService {
                 horizontal: 3,
                 vertical: 3,
               ),
-              alignment: pw.Alignment.centerLeft,
+              alignment: pw.Alignment.center,
               child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                mainAxisAlignment: pw.MainAxisAlignment.center,
                 children: [
                   pw.Text(
                     el.observation ?? '',
                     style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                    textAlign: pw.TextAlign.center,
                   ),
                   _buildPhotoIndicatorWidget(el.photos, photoRegistry),
                 ],
@@ -11119,13 +11123,15 @@ class PdfReportService {
                 horizontal: 3,
                 vertical: 3,
               ),
-              alignment: pw.Alignment.centerLeft,
+              alignment: pw.Alignment.center,
               child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                mainAxisAlignment: pw.MainAxisAlignment.center,
                 children: [
                   pw.Text(
                     el.observation ?? '',
                     style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                    textAlign: pw.TextAlign.center,
                   ),
                   _buildPhotoIndicatorWidget(el.photos, photoRegistry),
                 ],
@@ -11673,13 +11679,15 @@ class PdfReportService {
                 horizontal: 3,
                 vertical: 3,
               ),
-              alignment: pw.Alignment.centerLeft,
+              alignment: pw.Alignment.center,
               child: pw.Column(
-                crossAxisAlignment: pw.CrossAxisAlignment.start,
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                mainAxisAlignment: pw.MainAxisAlignment.center,
                 children: [
                   pw.Text(
                     el.observation ?? '',
                     style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                    textAlign: pw.TextAlign.center,
                   ),
                   _buildPhotoIndicatorWidget(el.photos, photoRegistry),
                 ],
@@ -12879,13 +12887,15 @@ class PdfReportService {
                   horizontal: 4,
                   vertical: 3,
                 ),
-                alignment: pw.Alignment.centerLeft,
+                alignment: pw.Alignment.center,
                 child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  crossAxisAlignment: pw.CrossAxisAlignment.center,
+                  mainAxisAlignment: pw.MainAxisAlignment.center,
                   children: [
                     pw.Text(
                       obsText,
                       style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                      textAlign: pw.TextAlign.center,
                     ),
                     _buildPhotoIndicatorWidget(allPvPhotos, photoRegistry),
                   ],
@@ -12904,14 +12914,17 @@ class PdfReportService {
     Map<String, int>? photoRegistry,
   }) {
     pw.Widget obsCell(ObservationLibre o) {
-      return pw.Padding(
+      return pw.Container(
+        alignment: pw.Alignment.center,
         padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
         child: pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
+          crossAxisAlignment: pw.CrossAxisAlignment.center,
+          mainAxisAlignment: pw.MainAxisAlignment.center,
           children: [
             pw.Text(
               o.texte,
               style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+              textAlign: pw.TextAlign.center,
             ),
             _buildPhotoIndicatorWidget(o.photos, photoRegistry),
           ],
