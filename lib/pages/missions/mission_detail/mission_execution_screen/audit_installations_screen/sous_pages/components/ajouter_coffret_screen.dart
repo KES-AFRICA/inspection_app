@@ -1843,35 +1843,40 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     }
 
     return Container(
-      padding: EdgeInsets.all(context.spacingM),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(context.spacingM),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2)),
-        ],
-      ),
+      padding: isProtectionTete ? EdgeInsets.zero : EdgeInsets.all(context.spacingM),
+      decoration: isProtectionTete
+          ? null
+          : BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(context.spacingM),
+              border: Border.all(color: Colors.grey.shade200),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2)),
+              ],
+            ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: EdgeInsets.symmetric(horizontal: context.spacingS, vertical: context.spacingXS),
-                decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(context.spacingS)),
-                child: Text(title, style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.bold, color: Colors.orange.shade800)),
-              ),
-              if (canDelete && onDelete != null)
-                IconButton(
-                  icon: Icon(Icons.delete_outline, color: Colors.red.shade600, size: 20),
-                  tooltip: 'Supprimer cette sortie',
-                  onPressed: onDelete,
-                ),
-            ],
-          ),
-          SizedBox(height: context.spacingM),
+          if (title.isNotEmpty || (canDelete && onDelete != null)) ...[
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                if (title.isNotEmpty)
+                  Container(
+                    padding: EdgeInsets.symmetric(horizontal: context.spacingS, vertical: context.spacingXS),
+                    decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(context.spacingS)),
+                    child: Text(title, style: TextStyle(fontSize: context.fontSizeM, fontWeight: FontWeight.bold, color: Colors.orange.shade800)),
+                  ),
+                if (canDelete && onDelete != null)
+                  IconButton(
+                    icon: Icon(Icons.delete_outline, color: Colors.red.shade600, size: 20),
+                    tooltip: 'Supprimer cette sortie',
+                    onPressed: onDelete,
+                  ),
+              ],
+            ),
+            SizedBox(height: context.spacingM),
+          ],
           if ((widget.selectedType == 'INVERSEUR' && (index == 0 || index == 1)) ||
               (widget.selectedType != 'INVERSEUR' && !isProtectionTete && index == 0)) ...[
             _buildModernDropdown(
@@ -1998,7 +2003,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             SizedBox(height: context.spacingM),
             _buildAlimentationCard(
               context,
-              'DÉTAILS PROTECTION DE TÊTE',
+              '',
               widget.protectionTete!,
               (field, value) => _updateProtectionTete(field, value),
               isProtectionTete: true,
