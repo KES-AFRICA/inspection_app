@@ -7786,8 +7786,8 @@ class PdfReportService {
     }
 
     final headers = [
-      'N°',
       'Repère',
+      'N°',
       'Nom',
       'Type',
       'Vérifié',
@@ -7799,8 +7799,8 @@ class PdfReportService {
     const detailTotalFlex = 10.1;
 
     final headerColumnWidths = const {
-      0: pw.FixedColumnWidth(18),
-      1: pw.FlexColumnWidth(1.4),
+      0: pw.FlexColumnWidth(1.4),
+      1: pw.FixedColumnWidth(18),
       2: pw.FlexColumnWidth(2.5),
       3: pw.FlexColumnWidth(1.6),
       4: pw.FlexColumnWidth(1.1),
@@ -7810,18 +7810,18 @@ class PdfReportService {
     };
 
     final outerColumnWidths = const {
-      0: pw.FixedColumnWidth(18),
-      1: pw.FlexColumnWidth(1.4),
-      2: pw.FlexColumnWidth(detailTotalFlex),
+      0: pw.FlexColumnWidth(1.4),
+      1: pw.FlexColumnWidth(detailTotalFlex),
     };
 
     final innerDetailColumnWidths = const {
-      0: pw.FlexColumnWidth(2.5),
-      1: pw.FlexColumnWidth(1.6),
-      2: pw.FlexColumnWidth(1.1),
-      3: pw.FlexColumnWidth(1.8),
+      0: pw.FixedColumnWidth(18),
+      1: pw.FlexColumnWidth(2.5),
+      2: pw.FlexColumnWidth(1.6),
+      3: pw.FlexColumnWidth(1.1),
       4: pw.FlexColumnWidth(1.8),
-      5: pw.FlexColumnWidth(1.3),
+      5: pw.FlexColumnWidth(1.8),
+      6: pw.FlexColumnWidth(1.3),
     };
 
     final groups = <_PdfEquipementGroup>[];
@@ -7835,7 +7835,7 @@ class PdfReportService {
     }
 
     int globalRowIndex = 0;
-    int repereIndex = 1;
+    int globalEquipementNumber = 1;
     final groupTables = <pw.Widget>[];
 
     groupTables.add(
@@ -7868,11 +7868,11 @@ class PdfReportService {
     );
 
     for (final group in groups) {
-      final currentRepereNum = repereIndex++;
       final detailTableRows = <pw.TableRow>[];
 
       for (int i = 0; i < group.items.length; i++) {
         final eq = group.items[i];
+        final currentEqNum = globalEquipementNumber++;
         final idx = globalRowIndex++;
         final isEven = idx % 2 == 0;
         final bg = isEven ? PdfColors.white : PdfColors.grey100;
@@ -7881,6 +7881,18 @@ class PdfReportService {
           pw.TableRow(
             decoration: pw.BoxDecoration(color: bg),
             children: [
+              // Cellule 0 : N° de l'équipement (centré)
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  '$currentEqNum',
+                  style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+
+              // Cellule 1 : Nom
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
@@ -7890,6 +7902,8 @@ class PdfReportService {
                   textAlign: pw.TextAlign.center,
                 ),
               ),
+
+              // Cellule 2 : Type
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
@@ -7899,6 +7913,8 @@ class PdfReportService {
                   textAlign: pw.TextAlign.center,
                 ),
               ),
+
+              // Cellule 3 : Vérifié
               pw.Container(
                 color: eq.accessible ? conformeColor : nonConformeColor,
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -7914,7 +7930,7 @@ class PdfReportService {
                 ),
               ),
 
-              // Cellule 3 : Présence du parafoudre
+              // Cellule 4 : Présence du parafoudre
               pw.Container(
                 color: eq.presenceParafoudre == 'Oui'
                     ? conformeColor
@@ -7932,7 +7948,7 @@ class PdfReportService {
                 ),
               ),
 
-              // Cellule 4 : Vérification thermo
+              // Cellule 5 : Vérification thermo
               pw.Container(
                 color: eq.verificationThermo == 'Oui'
                     ? conformeColor
@@ -7950,7 +7966,7 @@ class PdfReportService {
                 ),
               ),
 
-              // Cellule 5 : Observation
+              // Cellule 6 : Observation
               pw.Container(
                 color: eq.hasObservation == 'Oui'
                     ? nonConformeColor
@@ -7980,18 +7996,7 @@ class PdfReportService {
           children: [
             pw.TableRow(
               children: [
-                // Cellule 0 : N° du Repère (centré verticalement et horizontalement au milieu du groupe)
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    '$currentRepereNum',
-                    style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-
-                // Cellule 1 : Repère (centré verticalement et horizontalement au milieu du groupe)
+                // Cellule 0 : Repère (centré verticalement et horizontalement au milieu du groupe)
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   alignment: pw.Alignment.center,
@@ -8002,7 +8007,7 @@ class PdfReportService {
                   ),
                 ),
 
-                // Cellule 2 : Sous-tableau des détails des équipements ayant ce repère
+                // Cellule 1 : Sous-tableau des détails des équipements ayant ce repère
                 pw.Table(
                   defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
                   border: const pw.TableBorder(
@@ -8023,6 +8028,22 @@ class PdfReportService {
       crossAxisAlignment: pw.CrossAxisAlignment.start,
       children: groupTables,
     );
+  }
+
+  @visibleForTesting
+  static void initFontsForTesting() {
+    _fontRegular = pw.Font.helvetica();
+    _fontBold = pw.Font.helveticaBold();
+  }
+
+  @visibleForTesting
+  static List<_PdfEquipementItem> collectEquipementsMTForTesting(AuditInstallationsElectriques? audit) {
+    return _collectEquipementsMT(audit);
+  }
+
+  @visibleForTesting
+  static pw.Widget buildEquipementsTableForTesting(List<_PdfEquipementItem> items) {
+    return _buildEquipementsTable(items);
   }
 
   static List<pw.Widget> _buildListeRecapitulativeMulti(
