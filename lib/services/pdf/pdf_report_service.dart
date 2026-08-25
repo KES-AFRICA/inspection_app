@@ -12281,7 +12281,7 @@ class PdfReportService {
     // ══════════════════════════════════════════════════════════════════════
     // TABLEAU 2 : Alimentations (+ Protection de tête si présente)
     // ══════════════════════════════════════════════════════════════════════
-    if (coffret.alimentations.isNotEmpty || coffret.protectionTete != null) {
+    if (coffret.alimentations.isNotEmpty || coffret.protectionTete != null || !coffret.isDepartPrisAvecProtection) {
       widgets.add(pw.SizedBox(height: 3));
       final List<pw.Widget> tables = <pw.Widget>[];
 
@@ -12504,9 +12504,11 @@ class PdfReportService {
 
       if (coffret.protectionTete != null || !coffret.isDepartPrisAvecProtection) {
         final pt = coffret.protectionTete ?? Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: '');
-        final String typeProtectionValue = !coffret.isDepartPrisAvecProtection
-            ? 'Départ pris sans protection'
-            : pt.typeProtection;
+        final bool isAvecProtection = coffret.isDepartPrisAvecProtection;
+
+        final String statusLabel = isAvecProtection
+            ? 'Départ pris avec protection'
+            : 'Départ pris sans protection';
 
         final pw.Widget protectionTeteTable = pw.Table(
           defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
@@ -12516,83 +12518,45 @@ class PdfReportService {
             bottom: pw.BorderSide(color: borderColor, width: 0.4),
             top: pw.BorderSide(color: borderColor, width: 0.4),
             verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+            horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
           ),
           columnWidths: const {
             0: pw.FlexColumnWidth(2.0),
-            1: pw.FlexColumnWidth(6.3),
+            1: pw.FlexColumnWidth(1.4),
+            2: pw.FlexColumnWidth(0.9),
+            3: pw.FlexColumnWidth(0.8),
+            4: pw.FlexColumnWidth(0.8),
+            5: pw.FlexColumnWidth(1.3),
+            6: pw.FlexColumnWidth(1.1),
           },
           children: [
             pw.TableRow(
+              decoration: pw.BoxDecoration(
+                color: PdfColor.fromInt(0xFFE8F0FB),
+              ),
               children: [
-                // Left column: label (spans two rows vertically)
-                pw.Container(
-                  color: PdfColor.fromInt(0xFFE8F0FB),
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 6,
-                  ),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    'Protection de tête de coffret\n/Armoire',
-                    style: pw.TextStyle(
-                      font: _fontBold,
-                      fontSize: fsSmall,
-                      color: headerColor,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
+                _thCell('Protection de tête de coffret/Armoire'),
+                _thCell('Type protection'),
+                _thCell('Courbe'),
+                _thCell('PDC (kA)'),
+                _thCell('Calibre (A)'),
+                _thCell('DDR (I\u0394n (mA))'),
+                _thCell('Section de câble (mm\u00B2)'),
+              ],
+            ),
+            pw.TableRow(
+              children: [
+                _valueCell(statusLabel),
+                _valueCell(isAvecProtection ? (pt.typeProtection.isNotEmpty ? pt.typeProtection : '-') : '-'),
+                _valueCell(isAvecProtection ? ((pt.courbe != null && pt.courbe!.isNotEmpty) ? pt.courbe! : '-') : '-'),
+                _valueCell(isAvecProtection ? (pt.pdcKA.isNotEmpty ? pt.pdcKA : '-') : '-'),
+                _valueCell(isAvecProtection ? (pt.calibre.isNotEmpty ? pt.calibre : '-') : '-'),
+                _valueCell(
+                  isAvecProtection
+                      ? ((pt.ddr != null && pt.ddr!.isNotEmpty) ? '${pt.ddr} mA' : '-')
+                      : '-',
                 ),
-                // Right column: nested table containing type, courbe, PDC, caliber, section headers and values
-                pw.Table(
-                  defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-                  border: pw.TableBorder(
-                    horizontalInside: pw.BorderSide(
-                      color: borderColor,
-                      width: 0.4,
-                    ),
-                    verticalInside: pw.BorderSide(
-                      color: borderColor,
-                      width: 0.4,
-                    ),
-                  ),
-                  columnWidths: const {
-                    0: pw.FlexColumnWidth(1.4),
-                    1: pw.FlexColumnWidth(0.9),
-                    2: pw.FlexColumnWidth(0.8),
-                    3: pw.FlexColumnWidth(0.8),
-                    4: pw.FlexColumnWidth(1.3),
-                    5: pw.FlexColumnWidth(1.1),
-                  },
-                  children: [
-                    pw.TableRow(
-                      decoration: pw.BoxDecoration(
-                        color: PdfColor.fromInt(0xFFE8F0FB),
-                      ),
-                      children: [
-                        _thCell('Type protection'),
-                        _thCell('Courbe'),
-                        _thCell('PDC (kA)'),
-                        _thCell('Calibre (A)'),
-                        _thCell('DDR (I\u0394n (mA))'),
-                        _thCell('Section de câble (mm\u00B2)'),
-                      ],
-                    ),
-                    pw.TableRow(
-                      children: [
-                        _valueCell(typeProtectionValue),
-                        _valueCell(pt.courbe ?? ''),
-                        _valueCell(pt.pdcKA),
-                        _valueCell(pt.calibre),
-                        _valueCell(
-                          pt.ddr != null && pt.ddr!.isNotEmpty
-                              ? '${pt.ddr} mA'
-                              : '-',
-                        ),
-                        _valueCell(pt.sectionCable),
-                      ],
-                    ),
-                  ],
-                ),
+                _valueCell(isAvecProtection ? (pt.sectionCable.isNotEmpty ? pt.sectionCable : '-') : '-'),
               ],
             ),
           ],
