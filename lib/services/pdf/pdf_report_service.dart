@@ -12229,88 +12229,45 @@ class PdfReportService {
     );
 
     // ══════════════════════════════════════════════════════════════════════
-    // OBSERVATIONS PARAFOUDRE
+    // OBSERVATION DU SLIDE 1 (DESCRIPTION DE L'ÉQUIPEMENT)
     // ══════════════════════════════════════════════════════════════════════
-    if (coffret.presenceParafoudre) {
-      final pfEnrichies = coffret.observationsParafoudreEnrichies ?? [];
-      final pfLegacy = coffret.observationsParafoudre;
-      if (pfEnrichies.isNotEmpty || pfLegacy.isNotEmpty) {
-        widgets.add(pw.SizedBox(height: 4));
-        widgets.add(
-          pw.Container(
-            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-            decoration: pw.BoxDecoration(
-              color: PdfColor.fromInt(0xFFFFF3E0),
-              border: pw.Border.all(
-                color: PdfColor.fromInt(0xFFE65100),
-                width: 0.5,
-              ),
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                pw.Text(
-                  'Observations parafoudre :',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: fsSmall,
-                    color: PdfColor.fromInt(0xFFE65100),
-                  ),
-                ),
-                pw.SizedBox(height: 3),
-                if (pfEnrichies.isNotEmpty)
-                  ...pfEnrichies.map(
-                    (obs) => pw.Row(
-                      children: [
-                        pw.Text(
-                          '•  ',
-                          style: pw.TextStyle(
-                            font: _fontBold,
-                            fontSize: fsSmall,
-                          ),
-                        ),
-                        pw.Expanded(
-                          child: pw.Text(
-                            '${obs.observation?.isNotEmpty == true ? obs.observation! : obs.elementControle}'
-                            '${obs.priorite != null ? ' [P${obs.priorite}]' : ''}'
-                            '${obs.referenceNormative?.isNotEmpty == true ? ' (${obs.referenceNormative})' : ''}',
-                            style: pw.TextStyle(
-                              font: _fontRegular,
-                              fontSize: fsSmall,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  )
-                else
-                  ...pfLegacy.map(
-                    (obs) => pw.Row(
-                      children: [
-                        pw.Text(
-                          '•  ',
-                          style: pw.TextStyle(
-                            font: _fontBold,
-                            fontSize: fsSmall,
-                          ),
-                        ),
-                        pw.Expanded(
-                          child: pw.Text(
-                            obs.texte,
-                            style: pw.TextStyle(
-                              font: _fontRegular,
-                              fontSize: fsSmall,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-              ],
+    if (coffret.description != null && coffret.description!.trim().isNotEmpty) {
+      widgets.add(pw.SizedBox(height: 4));
+      widgets.add(
+        pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+          decoration: pw.BoxDecoration(
+            color: PdfColor.fromInt(0xFFFFF3E0),
+            border: pw.Border.all(
+              color: PdfColor.fromInt(0xFFE65100),
+              width: 0.5,
             ),
           ),
-        );
-      }
+          child: pw.Row(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                'Observation : ',
+                style: pw.TextStyle(
+                  font: _fontBold,
+                  fontSize: fsSmall,
+                  color: PdfColor.fromInt(0xFFE65100),
+                ),
+              ),
+              pw.Expanded(
+                child: pw.Text(
+                  _normalizeText(coffret.description!.trim()),
+                  style: pw.TextStyle(
+                    font: _fontRegular,
+                    fontSize: fsSmall,
+                    color: darkGrey,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -13651,10 +13608,10 @@ class PdfReportService {
 
     final sorted = numbers.toSet().toList()..sort();
     if (sorted.length == 1) {
-      return '📷 ${sorted.first}';
+      return 'Photo ${sorted.first}';
     }
 
-    return '📷 ${sorted.join(', ')}';
+    return 'Photos ${sorted.join(', ')}';
   }
 
   static List<_ParafoudreEquipementRow> _collectParafoudreRows(

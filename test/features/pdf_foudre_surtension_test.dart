@@ -122,17 +122,17 @@ void main() {
       expect(rows[1].observation, equals('Disjoncteur de déconnexion parafoudre absent'));
     });
 
-    test('Cas 4: Observation avec une seule photo -> format 📷 X', () {
+    test('Cas 4: Observation avec une seule photo -> format Photo X', () {
       final photoRegistry = {'/path/photo1.jpg': 12};
       final photoLabel = PdfReportService.getFormattedPhotoLabelForTest(
         ['/path/photo1.jpg'],
         photoRegistry,
       );
 
-      expect(photoLabel, equals('📷 12'));
+      expect(photoLabel, equals('Photo 12'));
     });
 
-    test('Cas 5: Observation avec plusieurs photos -> format 📷 X, Y', () {
+    test('Cas 5: Observation avec plusieurs photos -> format Photos X, Y', () {
       final photoRegistry = {
         '/path/photo1.jpg': 5,
         '/path/photo2.jpg': 14,
@@ -142,7 +142,7 @@ void main() {
         photoRegistry,
       );
 
-      expect(photoLabel, equals('📷 5, 14'));
+      expect(photoLabel, equals('Photos 5, 14'));
     });
 
     test('Cas 6: Observation sans photo -> tiret "-"', () {
