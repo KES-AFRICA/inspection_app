@@ -1,5 +1,7 @@
 // lib/features/audit_installations/domain/entities/audit_installations_entities.dart
 
+import '../../../../core/utils/source_status_resolver.dart';
+
 class ElementControleEntity {
   final String elementControle;
   final bool? conforme;
@@ -250,6 +252,8 @@ class AlimentationEntity {
   final List<String> photos;
   final String source;
   final String? sourceKnown;
+
+  String get effectiveSourceKnown => SourceStatusResolver.resolve(typeProtection);
 
   const AlimentationEntity({
     required this.typeProtection,

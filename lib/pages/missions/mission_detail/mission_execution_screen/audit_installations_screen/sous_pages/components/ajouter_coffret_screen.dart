@@ -18,6 +18,7 @@ import 'package:http/http.dart' as http;
 import 'package:path_provider/path_provider.dart';
 import 'package:smooth_page_indicator/smooth_page_indicator.dart';
 import 'dart:convert';
+import 'package:inspec_app/core/utils/source_status_resolver.dart';
 import 'dart:async';
 import 'observation_enrichie_widget.dart';
 import 'package:inspec_app/components/safe_file_image.dart';
@@ -1676,7 +1677,10 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
   void _updateAlimentation(Alimentation a, String field, String value) {
     setState(() {
       switch (field) {
-        case 'typeProtection': a.typeProtection = value; break;
+        case 'typeProtection':
+          a.typeProtection = value;
+          a.sourceKnown = SourceStatusResolver.resolve(value);
+          break;
         case 'courbe': a.courbe = value; break;
         case 'ddr': a.ddr = value; break;
         case 'pdcKA': a.pdcKA = value; break;
@@ -1693,7 +1697,10 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     if (widget.protectionTete != null) {
       setState(() {
         switch (field) {
-          case 'typeProtection': widget.protectionTete!.typeProtection = value; break;
+          case 'typeProtection':
+            widget.protectionTete!.typeProtection = value;
+            widget.protectionTete!.sourceKnown = SourceStatusResolver.resolve(value);
+            break;
           case 'courbe': widget.protectionTete!.courbe = value; break;
           case 'ddr': widget.protectionTete!.ddr = value; break;
           case 'pdcKA': widget.protectionTete!.pdcKA = value; break;
@@ -1897,12 +1904,10 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           ],
           if ((widget.selectedType == 'INVERSEUR' && (index == 0 || index == 1)) ||
               (widget.selectedType != 'INVERSEUR' && !isProtectionTete && index == 0)) ...[
-            _buildModernDropdown(
+            _buildReadOnlySourceField(
               context,
               label: 'Source',
               value: a.effectiveSourceKnown,
-              items: const ['Connue', 'Inconnue'],
-              onChanged: (v) => onChanged('sourceKnown', v),
             ),
             SizedBox(height: context.spacingS),
           ],
@@ -2066,6 +2071,73 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           suffixText: suffix,
           suffixStyle: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w600, color: Colors.grey.shade500),
         ),
+      ),
+    );
+  }
+
+  Widget _buildReadOnlySourceField(BuildContext context, {required String label, required String value}) {
+    final isKnown = value == 'Connue';
+    final color = isKnown ? Colors.teal.shade800 : Colors.orange.shade800;
+    final bg = isKnown ? Colors.teal.shade50 : Colors.orange.shade50;
+    final border = isKnown ? Colors.teal.shade200 : Colors.orange.shade200;
+    final icon = isKnown ? Icons.check_circle_outline : Icons.help_outline;
+
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
+      decoration: BoxDecoration(
+        color: bg,
+        borderRadius: BorderRadius.circular(context.spacingS),
+        border: Border.all(color: border),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: context.fontSizeXS,
+                  color: Colors.grey.shade700,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Row(
+                children: [
+                  Icon(icon, size: 16, color: color),
+                  const SizedBox(width: 6),
+                  Text(
+                    value,
+                    style: TextStyle(
+                      fontSize: context.fontSizeS,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: context.spacingS, vertical: 3),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.8),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: border),
+            ),
+            child: Text(
+              isKnown ? 'Déduit du type de protection' : 'Déduit (Aucune protection)',
+              style: TextStyle(
+                fontSize: 10,
+                color: color,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,5 +1,6 @@
 // audit_installations_electriques.dart
 import 'package:hive/hive.dart';
+import '../core/utils/source_status_resolver.dart';
 import '../services/dispositions_constructives_registry.dart';
 
 part 'audit_installations_electriques.g.dart';
@@ -990,9 +991,8 @@ class Alimentation {
   @HiveField(8)
   String? sourceKnown; // "Connue" | "Inconnue" (nullable)
 
-  /// Résout le statut de connaissance de la source ("Connue" par défaut pour la rétrocompatibilité)
-  String get effectiveSourceKnown =>
-      (sourceKnown != null && sourceKnown!.isNotEmpty) ? sourceKnown! : 'Connue';
+  /// Résout le statut de connaissance de la source dérivé automatiquement de typeProtection
+  String get effectiveSourceKnown => SourceStatusResolver.resolve(typeProtection);
 
   Alimentation({
     required this.typeProtection,
@@ -1003,8 +1003,9 @@ class Alimentation {
     required this.sectionCable,
     List<String>? photos,
     this.source = '',
-    this.sourceKnown,
-  }) : photos = photos ?? [];
+    String? sourceKnown,
+  })  : photos = photos ?? [],
+        sourceKnown = sourceKnown ?? SourceStatusResolver.resolve(typeProtection);
 }
 
 @HiveType(typeId: 13)

@@ -166,7 +166,7 @@ class AuditInstallationsMapper {
       sectionCable: model.sectionCable,
       photos: List<String>.from(model.photos),
       source: model.source,
-      sourceKnown: model.sourceKnown,
+      sourceKnown: model.effectiveSourceKnown,
     );
   }
 
@@ -180,7 +180,7 @@ class AuditInstallationsMapper {
       sectionCable: entity.sectionCable,
       photos: List<String>.from(entity.photos),
       source: entity.source,
-      sourceKnown: entity.sourceKnown,
+      sourceKnown: entity.effectiveSourceKnown,
     );
   }
 
