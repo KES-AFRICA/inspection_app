@@ -1500,10 +1500,10 @@ class PdfReportService {
       ),
     );
 
-    // 12. Foudre
+    // 12. Foudre et surtension
     entries.add(
       _SommaireEntry(
-        titre: "FOUDRE",
+        titre: "FOUDRE ET SURTENSION",
         key: 'foudre',
         level: 0,
         isBold: true,
@@ -1512,7 +1512,7 @@ class PdfReportService {
     );
     entries.add(
       _SommaireEntry(
-        titre: "1. Observations par équipement",
+        titre: "1. Observation par équipement",
         key: 'foudre_equipements',
         level: 1,
       ),
@@ -9508,6 +9508,19 @@ class PdfReportService {
   ) =>
       _buildPhotoNumberRegistry(audit, description);
 
+  @visibleForTesting
+  static List<_ParafoudreEquipementRow> collectParafoudreRowsForTest(
+    AuditInstallationsElectriques? audit,
+  ) =>
+      _collectParafoudreRows(audit);
+
+  @visibleForTesting
+  static String getFormattedPhotoLabelForTest(
+    List<String> photoPaths,
+    Map<String, int>? photoRegistry,
+  ) =>
+      _getFormattedPhotoLabel(photoPaths, photoRegistry);
+
   // ──────────────────────────────────────────────────────────────
   //  AUDIT DES INSTALLATIONS ELECTRIQUES
   // ──────────────────────────────────────────────────────────────
@@ -13618,72 +13631,169 @@ class PdfReportService {
   //  FOUDRE
   // ──────────────────────────────────────────────────────────────
 
+  static String _getFormattedPhotoLabel(
+    List<String> photoPaths,
+    Map<String, int>? photoRegistry,
+  ) {
+    if (photoPaths.isEmpty || photoRegistry == null || photoRegistry.isEmpty) {
+      return '-';
+    }
+
+    final numbers = <int>[];
+    for (final path in photoPaths) {
+      final trimmed = path.trim();
+      if (trimmed.isNotEmpty && photoRegistry.containsKey(trimmed)) {
+        numbers.add(photoRegistry[trimmed]!);
+      }
+    }
+
+    if (numbers.isEmpty) return '-';
+
+    final sorted = numbers.toSet().toList()..sort();
+    if (sorted.length == 1) {
+      return '📷 ${sorted.first}';
+    }
+
+    return '📷 ${sorted.join(', ')}';
+  }
+
   static List<_ParafoudreEquipementRow> _collectParafoudreRows(
     AuditInstallationsElectriques? audit,
   ) {
     final rows = <_ParafoudreEquipementRow>[];
     if (audit == null) return rows;
 
-    void processCoffretList(List<CoffretArmoire> coffrets, String locName) {
-      for (var c in coffrets) {
-        if (c.presenceParafoudre) {
-          final coffretRepere = c.repere?.isNotEmpty == true
-              ? c.repere!
-              : (c.numeroEquipement ?? '');
-          final repStr = coffretRepere.isNotEmpty
-              ? ' [Réf: $coffretRepere]'
-              : '';
-          final typeStr = c.type.isNotEmpty ? c.type : 'Équipement';
-          final coffretTitle = '$typeStr : ${c.nom}$repStr';
-          final fullLoc = '$coffretTitle ($locName)';
+    final seenKeys = <String>{};
 
-          final pfEnrichies = c.observationsParafoudreEnrichies ?? [];
-          if (pfEnrichies.isNotEmpty) {
-            for (var obs in pfEnrichies) {
-              final text = obs.observation?.isNotEmpty == true
-                  ? obs.observation!
-                  : obs.elementControle;
-              if (text.trim().isNotEmpty) {
-                rows.add(
-                  _ParafoudreEquipementRow(
-                    observation: text.trim(),
-                    localisation: fullLoc,
-                  ),
-                );
-              }
-            }
-          } else {
-            for (var obs in c.observationsParafoudre) {
-              if (obs.texte.trim().isNotEmpty) {
-                rows.add(
-                  _ParafoudreEquipementRow(
-                    observation: obs.texte.trim(),
-                    localisation: fullLoc,
-                  ),
-                );
-              }
+    bool isParafoudreRelated(String text) {
+      final lower = text.toLowerCase();
+      return lower.contains('parafoudre') ||
+          lower.contains('surtension') ||
+          lower.contains('foudre') ||
+          lower.contains('limiteur');
+    }
+
+    void addRow({
+      required String repere,
+      required String observation,
+      List<String>? photoPaths,
+      required String key,
+    }) {
+      final textTrim = observation.trim();
+      if (textTrim.isEmpty) return;
+      if (seenKeys.contains(key)) return;
+      seenKeys.add(key);
+
+      rows.add(
+        _ParafoudreEquipementRow(
+          repere: repere.trim().isNotEmpty ? repere.trim() : '-',
+          observation: textTrim,
+          photoPaths: photoPaths ?? [],
+          identityKey: key,
+        ),
+      );
+    }
+
+    void processCoffret(CoffretArmoire c) {
+      final repere = (c.repere != null && c.repere!.trim().isNotEmpty)
+          ? c.repere!.trim()
+          : (c.numeroEquipement ?? c.nom);
+
+      // 1. Observations Slide 3 (Enrichies)
+      final pfEnrichies = c.observationsParafoudreEnrichies ?? [];
+      for (var obs in pfEnrichies) {
+        final text = obs.observation?.isNotEmpty == true
+            ? obs.observation!
+            : obs.elementControle;
+        addRow(
+          repere: repere,
+          observation: text,
+          photoPaths: obs.photos,
+          key: 'enrich_${identityHashCode(obs)}',
+        );
+      }
+
+      // 2. Observations Slide 3 (Simples)
+      for (var obs in c.observationsParafoudre) {
+        addRow(
+          repere: repere,
+          observation: obs.texte,
+          photoPaths: obs.photos,
+          key: 'pf_${identityHashCode(obs)}',
+        );
+      }
+
+      // 3. Points de vérification liés au parafoudre / surtension
+      for (var pv in c.pointsVerification) {
+        final isRelated = isParafoudreRelated(pv.pointVerification) ||
+            isParafoudreRelated(pv.familleRisque ?? '') ||
+            isParafoudreRelated(pv.referenceNormative ?? '') ||
+            isParafoudreRelated(pv.observation ?? '');
+
+        if (isRelated) {
+          if (pv.observation != null && pv.observation!.trim().isNotEmpty) {
+            addRow(
+              repere: repere,
+              observation: pv.observation!,
+              photoPaths: pv.photos,
+              key: 'pv_${identityHashCode(pv)}',
+            );
+          }
+          if (pv.observations != null) {
+            for (var el in pv.observations!) {
+              final text = el.observation?.isNotEmpty == true
+                  ? el.observation!
+                  : el.elementControle;
+              addRow(
+                repere: repere,
+                observation: text,
+                photoPaths: el.photos,
+                key: 'pvel_${identityHashCode(el)}',
+              );
             }
           }
+        }
+      }
+
+      // 4. Observations libres spécifiques au parafoudre sur le coffret
+      for (var obs in c.observationsLibres) {
+        if (isParafoudreRelated(obs.texte)) {
+          addRow(
+            repere: repere,
+            observation: obs.texte,
+            photoPaths: obs.photos,
+            key: 'obslibre_${identityHashCode(obs)}',
+          );
         }
       }
     }
 
     // 1. Locaux MT
     for (var local in audit.moyenneTensionLocaux) {
-      processCoffretList(local.coffrets, local.nom);
+      for (var coffret in local.coffrets) {
+        processCoffret(coffret);
+      }
     }
     // 2. Zones MT
     for (var zone in audit.moyenneTensionZones) {
-      processCoffretList(zone.coffrets, zone.nom);
+      for (var coffret in zone.coffrets) {
+        processCoffret(coffret);
+      }
       for (var local in zone.locaux) {
-        processCoffretList(local.coffrets, '${zone.nom} / ${local.nom}');
+        for (var coffret in local.coffrets) {
+          processCoffret(coffret);
+        }
       }
     }
     // 3. Zones BT
     for (var zone in audit.basseTensionZones) {
-      processCoffretList(zone.coffretsDirects, zone.nom);
+      for (var coffret in zone.coffretsDirects) {
+        processCoffret(coffret);
+      }
       for (var local in zone.locaux) {
-        processCoffretList(local.coffrets, '${zone.nom} / ${local.nom}');
+        for (var coffret in local.coffrets) {
+          processCoffret(coffret);
+        }
       }
     }
 
@@ -13697,6 +13807,7 @@ class PdfReportService {
     bool afficherTableauFoudre = false,
     int offset = 0,
     DescriptionInstallations? desc,
+    Map<String, int>? photoRegistry,
   }) {
     final equipRows = _collectParafoudreRows(audit);
     final presenceParatonnerre = desc?.presenceParatonnerre?.trim();
@@ -13740,7 +13851,7 @@ class PdfReportService {
           key: 'foudre',
           registry: trackedPages,
           offset: offset,
-          child: _sectionBox('FOUDRE'),
+          child: _sectionBox('FOUDRE ET SURTENSION'),
         ),
         pw.SizedBox(height: 10),
 
@@ -13949,12 +14060,12 @@ class PdfReportService {
           ),
           pw.SizedBox(height: 14),
 
-          // Sous-section : Observations par équipement
+          // Sous-section : Observation par équipement
           PageTracker(
             key: 'foudre_equipements',
             registry: trackedPages,
             offset: offset,
-            child: _subSectionBar("1. Observations par équipement"),
+            child: _subSectionBar("1. Observation par équipement"),
           ),
           pw.SizedBox(height: 6),
 
@@ -13962,24 +14073,69 @@ class PdfReportService {
             _bodyText('Aucune observation parafoudre par équipement disponible.')
           else
             pw.Table(
+              defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
               border: pw.TableBorder.all(color: borderColor, width: 0.4),
               columnWidths: const {
-                0: pw.FlexColumnWidth(0.6),
-                1: pw.FlexColumnWidth(3.4),
-                2: pw.FlexColumnWidth(2.0),
+                0: pw.FixedColumnWidth(24),
+                1: pw.FlexColumnWidth(1.6),
+                2: pw.FlexColumnWidth(3.8),
+                3: pw.FlexColumnWidth(1.2),
               },
               children: [
-                _tableHeaderRow(['Item', 'Observation', 'Localisation']),
+                _tableHeaderRow(['N°', 'Repère', 'Observation', 'Photo']),
                 ...equipRows.asMap().entries.map((e) {
                   final idx = e.key + 1;
                   final row = e.value;
                   final bg = e.key.isOdd ? tableRowAlt : PdfColors.white;
+                  final photoLabel = _getFormattedPhotoLabel(row.photoPaths, photoRegistry);
+
                   return pw.TableRow(
                     decoration: pw.BoxDecoration(color: bg),
                     children: [
-                      _cell('$idx', isHeader: false, centered: true),
-                      _cell(row.observation, isHeader: false),
-                      _cell(row.localisation, isHeader: false),
+                      // Cellule 0 : N°
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                        alignment: pw.Alignment.center,
+                        child: pw.Text(
+                          '$idx',
+                          style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ),
+                      // Cellule 1 : Repère
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                        alignment: pw.Alignment.center,
+                        child: pw.Text(
+                          row.repere,
+                          style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ),
+                      // Cellule 2 : Observation
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                        alignment: pw.Alignment.center,
+                        child: pw.Text(
+                          _normalizeText(row.observation),
+                          style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ),
+                      // Cellule 3 : Photo
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                        alignment: pw.Alignment.center,
+                        child: pw.Text(
+                          photoLabel,
+                          style: pw.TextStyle(
+                            font: photoLabel != '-' ? _fontBold : _fontRegular,
+                            fontSize: 8.5,
+                            color: photoLabel != '-' ? PdfColor.fromInt(0xFF1D4ED8) : PdfColors.black,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ),
                     ],
                   );
                 }),
@@ -18020,6 +18176,7 @@ class PdfReportService {
   }) async {
     final allChunkFiles = <File>[];
     final trackedPages = <String, int>{};
+    final photoRegistry = _buildPhotoNumberRegistry(audit, description);
 
     await _preloadCoverImages(mission, saveFilesToDisk: saveFilesToDisk);
 
@@ -18593,6 +18750,7 @@ class PdfReportService {
             afficherTableauFoudre: mission.afficherTableauFoudre,
             offset: currentOffset,
             desc: description,
+            photoRegistry: photoRegistry,
           ),
         ],
       ),
@@ -19127,12 +19285,17 @@ class _ObsGroup {
 }
 
 class _ParafoudreEquipementRow {
+  final String repere;
   final String observation;
-  final String localisation;
+  final List<String> photoPaths;
+  final String identityKey;
+
   _ParafoudreEquipementRow({
+    required this.repere,
     required this.observation,
-    required this.localisation,
-  });
+    List<String>? photoPaths,
+    required this.identityKey,
+  }) : photoPaths = photoPaths ?? [];
 }
 
 class _EquipmentPhotoGroup {
