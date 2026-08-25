@@ -12556,7 +12556,7 @@ class PdfReportService {
                       ? ((pt.ddr != null && pt.ddr!.isNotEmpty) ? '${pt.ddr} mA' : '-')
                       : '-',
                 ),
-                _valueCell(isAvecProtection ? (pt.sectionCable.isNotEmpty ? pt.sectionCable : '-') : '-'),
+                _valueCell(pt.sectionCable.isNotEmpty ? pt.sectionCable : '-'),
               ],
             ),
           ],
