@@ -919,13 +919,16 @@ class WordReportService {
     }
 
     // Protection de tête
-    if (coffret.protectionTete != null) {
-      final pt = coffret.protectionTete!;
+    if (coffret.protectionTete != null || !coffret.isDepartPrisAvecProtection) {
+      final pt = coffret.protectionTete ?? Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: '');
+      final typeProtDisplay = !coffret.isDepartPrisAvecProtection
+          ? 'Départ pris sans protection'
+          : pt.typeProtection;
       _subTitle(doc, 'Protection de tête');
       doc.addTable(Table(rows: [
         _headerRow(['Type protection', 'Courbe', 'PDC (kA)', 'Calibre (A)', 'DDR (I\u0394n (mA))', 'Section (mm\u00B2)']),
         TableRow(cells: [
-          TableCell.text(pt.typeProtection),
+          TableCell.text(typeProtDisplay),
           TableCell.text(pt.courbe ?? ''),
           TableCell.text(pt.pdcKA),
           TableCell.text(pt.calibre),

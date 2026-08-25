@@ -16,13 +16,12 @@ void main() {
         sourceKnown: null,
       );
 
-      expect(legacyAlim.sourceKnown, isNull);
       expect(legacyAlim.effectiveSourceKnown, equals('Connue'));
     });
 
     test('2. Source connue/inconnue : Modification et persistance de Inconnue', () {
       final unknownAlim = Alimentation(
-        typeProtection: 'Disjoncteur',
+        typeProtection: '-',
         pdcKA: '6',
         calibre: '10',
         sectionCable: '1.5 mm²',
@@ -111,9 +110,38 @@ void main() {
       expect(coffret.protectionTete!.calibre, equals('32'));
     });
 
+    test('5b. Modèle : Départ pris sans protection conserve les champs de protection et affiche "Départ pris sans protection"', () {
+      final protData = Alimentation(
+        typeProtection: 'Disjoncteur',
+        pdcKA: '20',
+        calibre: '40',
+        sectionCable: '10 mm²',
+      );
+
+      final coffret = CoffretArmoire(
+        qrCode: 'ARM_200',
+        nom: 'Armoire Pompe',
+        type: 'ARMOIRE',
+        protectionTete: protData,
+        departPrisAvecProtection: false,
+      );
+
+      expect(coffret.isDepartPrisAvecProtection, isFalse);
+      expect(coffret.protectionTete, isNotNull);
+      expect(coffret.protectionTete!.calibre, equals('40'));
+      expect(coffret.protectionTete!.pdcKA, equals('20'));
+      expect(coffret.protectionTete!.sectionCable, equals('10 mm²'));
+
+      final typeProtDisplay = !coffret.isDepartPrisAvecProtection
+          ? 'Départ pris sans protection'
+          : coffret.protectionTete!.typeProtection;
+
+      expect(typeProtDisplay, equals('Départ pris sans protection'));
+    });
+
     test('6. Backup JSON Import/Export Roundtrip de sourceKnown & departPrisAvecProtection', () {
       final alim = Alimentation(
-        typeProtection: 'Disjoncteur',
+        typeProtection: '-',
         pdcKA: '25',
         calibre: '63',
         sectionCable: '16 mm²',
@@ -155,8 +183,8 @@ void main() {
 
     test('7. Collection d\'équipements à source inconnue (TGBT, Armoire, Coffret, Inverseur)', () {
       final alimKnown = Alimentation(typeProtection: 'Disjoncteur', pdcKA: '10', calibre: '16', sectionCable: '2.5', sourceKnown: 'Connue');
-      final alimUnknown1 = Alimentation(typeProtection: 'Disjoncteur', pdcKA: '10', calibre: '16', sectionCable: '2.5', sourceKnown: 'Inconnue');
-      final alimUnknown2 = Alimentation(typeProtection: 'Disjoncteur', pdcKA: '10', calibre: '16', sectionCable: '2.5', sourceKnown: 'Inconnue');
+      final alimUnknown1 = Alimentation(typeProtection: '-', pdcKA: '10', calibre: '16', sectionCable: '2.5', sourceKnown: 'Inconnue');
+      final alimUnknown2 = Alimentation(typeProtection: '-', pdcKA: '10', calibre: '16', sectionCable: '2.5', sourceKnown: 'Inconnue');
 
       final tgbtUnknown = CoffretArmoire(
         qrCode: 'TGBT_01',

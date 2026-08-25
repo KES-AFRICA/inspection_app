@@ -2022,7 +2022,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
               },
             ),
           ),
-          if (isDepartPrisAvecProtection && widget.protectionTete != null) ...[
+          if (widget.protectionTete != null) ...[
             SizedBox(height: context.spacingM),
             _buildAlimentationCard(
               context,
