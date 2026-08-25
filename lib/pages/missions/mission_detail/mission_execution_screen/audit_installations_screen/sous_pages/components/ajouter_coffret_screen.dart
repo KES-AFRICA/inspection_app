@@ -3449,6 +3449,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         nom: _nomController.text.trim(),
         type: _selectedType!,
         accessible: _accessible,
+        departPrisAvecProtection: _departPrisAvecProtection,
         numeroEquipement: _numeroEquipementController.text.trim().isEmpty ? null : _numeroEquipementController.text.trim(),
         repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
         alimenteeParTransformateur: _alimenteeParTransformateur,
@@ -3583,6 +3584,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         target.nom = newCoffret.nom;
         target.type = newCoffret.type;
         target.accessible = newCoffret.accessible;
+        target.departPrisAvecProtection = newCoffret.departPrisAvecProtection;
         target.description = newCoffret.description;
         target.repere = newCoffret.repere;
         target.alimenteeParTransformateur = newCoffret.alimenteeParTransformateur;

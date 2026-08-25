@@ -53,7 +53,19 @@ void main() {
       expect(legacyCoffret.isDepartPrisAvecProtection, isTrue);
     });
 
-    test('4. Départ pris avec protection : Inverseur toujours avec protection (true)', () {
+    test('4. Départ pris avec protection : Persistance lors du décochage (false)', () {
+      final coffretFormSave = CoffretArmoire(
+        qrCode: 'ARM_002',
+        nom: 'Armoire TGBT Départ Direct',
+        type: 'ARMOIRE',
+        departPrisAvecProtection: false,
+      );
+
+      expect(coffretFormSave.departPrisAvecProtection, isFalse);
+      expect(coffretFormSave.isDepartPrisAvecProtection, isFalse);
+    });
+
+    test('4b. Départ pris avec protection : Inverseur toujours avec protection (true)', () {
       final inverseur = CoffretArmoire(
         qrCode: 'INV_001',
         nom: 'Inverseur Normal/Secours',
