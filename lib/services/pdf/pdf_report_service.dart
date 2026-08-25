@@ -14349,18 +14349,20 @@ class PdfReportService {
             defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
             border: pw.TableBorder.all(color: borderColor, width: 0.4),
             columnWidths: const {
-              0: pw.FlexColumnWidth(1.1), // Localisation
-              1: pw.FlexColumnWidth(1.1), // Identification
-              2: pw.FlexColumnWidth(1.0), // Condition
-              3: pw.FlexColumnWidth(1.1), // Nature
-              4: pw.FlexColumnWidth(1.0), // Méthode
-              5: pw.FlexColumnWidth(0.8), // Valeur
-              6: pw.FlexColumnWidth(0.9), // Interconnecté
-              7: pw.FlexColumnWidth(1.2), // Observation
-              8: pw.FlexColumnWidth(2.4), // Photo (Largeur propice pour lisibilité)
+              0: pw.FixedColumnWidth(24), // N°
+              1: pw.FlexColumnWidth(1.1), // Localisation
+              2: pw.FlexColumnWidth(1.1), // Identification
+              3: pw.FlexColumnWidth(1.0), // Condition
+              4: pw.FlexColumnWidth(1.1), // Nature
+              5: pw.FlexColumnWidth(1.0), // Méthode
+              6: pw.FlexColumnWidth(0.8), // Valeur
+              7: pw.FlexColumnWidth(0.9), // Interconnecté
+              8: pw.FlexColumnWidth(1.2), // Observation
+              9: pw.FlexColumnWidth(2.4), // Photo (Largeur propice pour lisibilité)
             },
             children: [
               _tableHeaderRow([
+                'N°',
                 'Localisation',
                 'Identification de la prise de terre',
                 'Condition de mesure',
@@ -14375,7 +14377,7 @@ class PdfReportService {
                 pw.TableRow(
                   decoration: const pw.BoxDecoration(color: PdfColors.white),
                   children: List.generate(
-                    9,
+                    10,
                     (_) => _cell('', isHeader: false, centered: true),
                   ),
                 )
@@ -14401,6 +14403,7 @@ class PdfReportService {
                       color: e.key.isOdd ? tableRowAlt : PdfColors.white,
                     ),
                     children: [
+                      _cell('${e.key + 1}', isHeader: false, centered: true),
                       _cell(pt.localisation, isHeader: false, centered: true),
                       _cell(pt.identification, isHeader: false, centered: true),
                       _cell(
@@ -14495,19 +14498,36 @@ class PdfReportService {
               verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
             ),
             columnWidths: const {
-              0: pw.FlexColumnWidth(1.6), // LOCALISATION
-              1: pw.FlexColumnWidth(2.2), // Désignation circuit
-              2: pw.FlexColumnWidth(1.6), // Type de dispositif
-              3: pw.FlexColumnWidth(1.3), // Calibre du dispositif (A)
-              4: pw.FlexColumnWidth(
+              0: pw.FixedColumnWidth(24), // N°
+              1: pw.FlexColumnWidth(1.6), // LOCALISATION
+              2: pw.FlexColumnWidth(2.2), // Désignation circuit
+              3: pw.FlexColumnWidth(1.6), // Type de dispositif
+              4: pw.FlexColumnWidth(1.3), // Calibre du dispositif (A)
+              5: pw.FlexColumnWidth(
                 2.0,
               ), // Réglage (divided into IAn and Tempo)
-              5: pw.FlexColumnWidth(1.1), // Essai
+              6: pw.FlexColumnWidth(1.1), // Essai
             },
             children: [
               pw.TableRow(
                 decoration: pw.BoxDecoration(color: accentColor),
                 children: [
+                  pw.Container(
+                    alignment: pw.Alignment.center,
+                    padding: const pw.EdgeInsets.symmetric(
+                      vertical: 8,
+                      horizontal: 4,
+                    ),
+                    child: pw.Text(
+                      "N°",
+                      style: pw.TextStyle(
+                        font: _fontBold,
+                        fontSize: fsSmall,
+                        color: PdfColors.white,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
                   pw.Container(
                     alignment: pw.Alignment.center,
                     padding: const pw.EdgeInsets.symmetric(
@@ -14655,7 +14675,7 @@ class PdfReportService {
               pw.TableRow(
                 decoration: const pw.BoxDecoration(color: PdfColors.white),
                 children: List.generate(
-                  7,
+                  8,
                   (_) => _cell('', isHeader: false, centered: true),
                 ),
               ),
@@ -14700,6 +14720,7 @@ class PdfReportService {
                 pw.TableRow(
                   decoration: pw.BoxDecoration(color: rowBg),
                   children: [
+                    _cell('$altIdx', isHeader: false, centered: true),
                     _cell(localText, isHeader: false, centered: true),
                     _cell(circuitText, isHeader: false, centered: true),
                     _cell(es.displayTypeDispositif, isHeader: false, centered: true),
@@ -14749,13 +14770,14 @@ class PdfReportService {
                 horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
               ),
               columnWidths: const {
-                0: pw.FlexColumnWidth(1.6), // LOCALISATION
-                1: pw.FlexColumnWidth(2.2), // Désignation circuit
-                2: pw.FlexColumnWidth(1.6), // Type de dispositif
-                3: pw.FlexColumnWidth(1.3), // Calibre du dispositif (A)
-                4: pw.FlexColumnWidth(1.0), // IAn
-                5: pw.FlexColumnWidth(1.0), // Tempo
-                6: pw.FlexColumnWidth(1.1), // Essai
+                0: pw.FixedColumnWidth(24), // N°
+                1: pw.FlexColumnWidth(1.6), // LOCALISATION
+                2: pw.FlexColumnWidth(2.2), // Désignation circuit
+                3: pw.FlexColumnWidth(1.6), // Type de dispositif
+                4: pw.FlexColumnWidth(1.3), // Calibre du dispositif (A)
+                5: pw.FlexColumnWidth(1.0), // IAn
+                6: pw.FlexColumnWidth(1.0), // Tempo
+                7: pw.FlexColumnWidth(1.1), // Essai
               },
               children: ddrRows,
             ),
@@ -14795,17 +14817,19 @@ class PdfReportService {
               defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
               border: pw.TableBorder.all(color: borderColor, width: 0.4),
               columnWidths: const {
-                0: pw.FlexColumnWidth(1.8), // Repère du point d'origine
-                1: pw.FlexColumnWidth(2.0), // Point A (origine)
-                2: pw.FlexColumnWidth(2.0), // Point B (extrémité)
-                3: pw.FlexColumnWidth(1.4), // Section Point A
-                4: pw.FlexColumnWidth(1.4), // Section Point B
-                5: pw.FlexColumnWidth(1.2), // Nombre de câbles testés
-                6: pw.FlexColumnWidth(1.3), // Isolement
-                7: pw.FlexColumnWidth(1.7), // Appréciation
+                0: pw.FixedColumnWidth(24), // N°
+                1: pw.FlexColumnWidth(1.8), // Repère du point d'origine
+                2: pw.FlexColumnWidth(2.0), // Point A (origine)
+                3: pw.FlexColumnWidth(2.0), // Point B (extrémité)
+                4: pw.FlexColumnWidth(1.4), // Section Point A
+                5: pw.FlexColumnWidth(1.4), // Section Point B
+                6: pw.FlexColumnWidth(1.2), // Nb. câbles
+                7: pw.FlexColumnWidth(1.3), // Isolement
+                8: pw.FlexColumnWidth(1.7), // Appréciation
               },
               children: [
                 _tableHeaderRow([
+                  'N°',
                   'Repère du point d\'origine',
                   'Point A (origine)',
                   'Point B (extrémité)',
@@ -14831,6 +14855,7 @@ class PdfReportService {
                       color: e.key.isOdd ? tableRowAlt : PdfColors.white,
                     ),
                     children: [
+                      _cell('${e.key + 1}', isHeader: false, centered: true),
                       pw.Container(
                         padding: const pw.EdgeInsets.symmetric(
                           horizontal: 3,
@@ -15041,14 +15066,16 @@ class PdfReportService {
             defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
             border: pw.TableBorder.all(color: borderColor, width: 0.4),
             columnWidths: const {
-              0: pw.FlexColumnWidth(1.8),
-              1: pw.FlexColumnWidth(2.4),
-              2: pw.FlexColumnWidth(1.5),
+              0: pw.FixedColumnWidth(24), // N°
+              1: pw.FlexColumnWidth(1.8),
+              2: pw.FlexColumnWidth(2.4),
               3: pw.FlexColumnWidth(1.5),
-              4: pw.FlexColumnWidth(1.8),
+              4: pw.FlexColumnWidth(1.5),
+              5: pw.FlexColumnWidth(1.8),
             },
             children: [
               _tableHeaderRow([
+                'N°',
                 'Localisation',
                 'Désignation Tableau / Equipement',
                 'Origine Mesure',
@@ -15059,7 +15086,7 @@ class PdfReportService {
                 pw.TableRow(
                   decoration: const pw.BoxDecoration(color: PdfColors.white),
                   children: List.generate(
-                    5,
+                    6,
                     (_) => _cell('', isHeader: false, centered: true),
                   ),
                 )
@@ -15085,6 +15112,7 @@ class PdfReportService {
                       color: e.key.isOdd ? tableRowAlt : PdfColors.white,
                     ),
                     children: [
+                      _cell('${e.key + 1}', isHeader: false, centered: true),
                       _cell(c.localisation, isHeader: false, centered: true),
                       _cell(c.designationTableau, isHeader: false, centered: true),
                       _cell(c.origineMesure, isHeader: false, centered: true),
