@@ -80,6 +80,22 @@ class _PdfEquipementItem {
   });
 }
 
+class _PdfUnknownSourceItem {
+  final String repere;
+  final String nom;
+  final String type;
+  final String alimentationConcernee;
+  final String source;
+
+  const _PdfUnknownSourceItem({
+    required this.repere,
+    required this.nom,
+    required this.type,
+    required this.alimentationConcernee,
+    this.source = 'Inconnue',
+  });
+}
+
 class _PdfRowGroup {
   final String localName;
   final List<InstallationDescriptionPdfRow> rows;
@@ -1420,6 +1436,16 @@ class PdfReportService {
           level: 1,
         ),
       );
+      final unknownSources = _collectEquipementsUnknownSource(audit);
+      if (unknownSources.isNotEmpty) {
+        entries.add(
+          _SommaireEntry(
+            titre: "3. Équipements aux sources non identifiées",
+            key: 'liste_recap_equipements_sources_inconnues',
+            level: 1,
+          ),
+        );
+      }
     }
 
     // 9. Liste récapitulative des observations (si audit)
@@ -7568,6 +7594,182 @@ class PdfReportService {
     }
 
     return list;
+  }
+
+  static List<_PdfUnknownSourceItem> _collectEquipementsUnknownSource(
+    AuditInstallationsElectriques? audit,
+  ) {
+    final list = <_PdfUnknownSourceItem>[];
+    if (audit == null) return list;
+
+    final seenHashes = <int>{};
+
+    void processCoffret(CoffretArmoire coffret) {
+      final hash = identityHashCode(coffret);
+      if (seenHashes.contains(hash)) return;
+      seenHashes.add(hash);
+
+      final normType = _normalizeEquipementType(coffret.type, coffret.nom) ?? coffret.type;
+      final rep = (coffret.repere != null && coffret.repere!.trim().isNotEmpty)
+          ? coffret.repere!.trim()
+          : '-';
+      final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : '-';
+
+      if (coffret.type == 'INVERSEUR') {
+        if (coffret.alimentations.isNotEmpty &&
+            coffret.alimentations[0].effectiveSourceKnown == 'Inconnue') {
+          list.add(
+            _PdfUnknownSourceItem(
+              repere: rep,
+              nom: nom,
+              type: 'Inverseur',
+              alimentationConcernee: 'Alimentation 1',
+            ),
+          );
+        }
+        if (coffret.alimentations.length > 1 &&
+            coffret.alimentations[1].effectiveSourceKnown == 'Inconnue') {
+          list.add(
+            _PdfUnknownSourceItem(
+              repere: rep,
+              nom: nom,
+              type: 'Inverseur',
+              alimentationConcernee: 'Alimentation 2',
+            ),
+          );
+        }
+      } else {
+        bool isUnknown = false;
+        for (final a in coffret.alimentations) {
+          if (a.effectiveSourceKnown == 'Inconnue') {
+            isUnknown = true;
+            break;
+          }
+        }
+        if (isUnknown) {
+          list.add(
+            _PdfUnknownSourceItem(
+              repere: rep,
+              nom: nom,
+              type: normType,
+              alimentationConcernee: 'Source d\'alimentation',
+            ),
+          );
+        }
+      }
+    }
+
+    for (final local in audit.moyenneTensionLocaux) {
+      for (final coffret in local.coffrets) {
+        processCoffret(coffret);
+      }
+    }
+
+    for (final zone in audit.moyenneTensionZones) {
+      for (final coffret in zone.coffrets) {
+        processCoffret(coffret);
+      }
+      for (final local in zone.locaux) {
+        for (final coffret in local.coffrets) {
+          processCoffret(coffret);
+        }
+      }
+    }
+
+    for (final zone in audit.basseTensionZones) {
+      for (final coffret in zone.coffretsDirects) {
+        processCoffret(coffret);
+      }
+      for (final local in zone.locaux) {
+        for (final coffret in local.coffrets) {
+          processCoffret(coffret);
+        }
+      }
+    }
+
+    return list;
+  }
+
+  static pw.Widget _buildUnknownSourcesTable(List<_PdfUnknownSourceItem> items) {
+    if (items.isEmpty) return pw.SizedBox();
+
+    final headers = [
+      'N°',
+      'Repère',
+      'Nom',
+      'Type',
+      'Alimentation concernée',
+      'Source',
+    ];
+
+    final columnWidths = const {
+      0: pw.FixedColumnWidth(24),
+      1: pw.FlexColumnWidth(1.8),
+      2: pw.FlexColumnWidth(2.5),
+      3: pw.FlexColumnWidth(1.5),
+      4: pw.FlexColumnWidth(2.0),
+      5: pw.FlexColumnWidth(1.4),
+    };
+
+    final rows = <pw.TableRow>[];
+
+    rows.add(
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: accentColor),
+        children: headers.map((h) => pw.Container(
+          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            h,
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: fsSmall,
+              color: PdfColors.white,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+        )).toList(),
+      ),
+    );
+
+    for (int i = 0; i < items.length; i++) {
+      final item = items[i];
+      final isEven = i % 2 == 0;
+      final bgColor = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
+
+      rows.add(
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: bgColor),
+          children: [
+            _valueCell('${i + 1}'),
+            _valueCell(item.repere),
+            _valueCell(item.nom),
+            _valueCell(item.type),
+            _valueCell(item.alimentationConcernee),
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              alignment: pw.Alignment.center,
+              child: pw.Text(
+                item.source,
+                style: pw.TextStyle(
+                  font: _fontBold,
+                  fontSize: fsSmall,
+                  color: PdfColor.fromInt(0xFFC62828),
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return pw.Table(
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+      border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+      columnWidths: columnWidths,
+      children: rows,
+    );
   }
 
   static pw.Widget _buildEquipementsTable(List<_PdfEquipementItem> items) {
@@ -17026,6 +17228,48 @@ class PdfReportService {
       chunkFiles.add(btFile);
     }
     currentOffset += btDoc.document.pdfPageList.pages.length;
+
+    // 4. Équipements aux sources d'alimentation non identifiées
+    final unknownSources = _collectEquipementsUnknownSource(audit);
+    if (unknownSources.isNotEmpty) {
+      final sourcesUnknownDoc = pw.Document(
+        title: 'Equipements Sources Inconnues - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: saveFilesToDisk,
+      );
+      sourcesUnknownDoc.addPage(
+        pw.MultiPage(
+          maxPages: 10000,
+          pageTheme: _buildInnerPageTheme(
+            pageOffset: currentOffset,
+            overrideTotalPages: overrideTotalPages,
+          ),
+          header: (ctx) => _buildPageHeaderWidget(
+            nomSite: nomSite,
+            numeroRapport: numeroRapport,
+          ),
+          build: (ctx) => [
+            PageTracker(
+              key: 'liste_recap_equipements_sources_inconnues',
+              registry: trackedPages,
+              offset: currentOffset,
+              child: _sectionBox('LISTE RÉCAPITULATIVE DES ÉQUIPEMENTS AUX SOURCES D’ALIMENTATION NON IDENTIFIÉES'),
+            ),
+            pw.SizedBox(height: 8),
+            _buildUnknownSourcesTable(unknownSources),
+          ],
+        ),
+      );
+      final sourcesBytes = await sourcesUnknownDoc.save();
+      if (saveFilesToDisk) {
+        final sourcesFile = File(
+          '${tempDir.path}/pdf_chunk_equipements_sources_inconnues_${mission.id}.pdf',
+        );
+        await sourcesFile.writeAsBytes(sourcesBytes);
+        chunkFiles.add(sourcesFile);
+      }
+      currentOffset += sourcesUnknownDoc.document.pdfPageList.pages.length;
+    }
 
     return _ChunkSectionResult(
       files: chunkFiles,

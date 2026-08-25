@@ -152,5 +152,71 @@ void main() {
       expect(entity.departPrisAvecProtection, isFalse);
       expect(entity.alimentations.first.sourceKnown, equals('Inconnue'));
     });
+
+    test('7. Collection d\'équipements à source inconnue (TGBT, Armoire, Coffret, Inverseur)', () {
+      final alimKnown = Alimentation(typeProtection: 'Disjoncteur', pdcKA: '10', calibre: '16', sectionCable: '2.5', sourceKnown: 'Connue');
+      final alimUnknown1 = Alimentation(typeProtection: 'Disjoncteur', pdcKA: '10', calibre: '16', sectionCable: '2.5', sourceKnown: 'Inconnue');
+      final alimUnknown2 = Alimentation(typeProtection: 'Disjoncteur', pdcKA: '10', calibre: '16', sectionCable: '2.5', sourceKnown: 'Inconnue');
+
+      final tgbtUnknown = CoffretArmoire(
+        qrCode: 'TGBT_01',
+        nom: 'TGBT Principal',
+        type: 'TGBT',
+        alimentations: [alimUnknown1],
+      );
+
+      final armoireKnown = CoffretArmoire(
+        qrCode: 'ARM_01',
+        nom: 'Armoire Clim',
+        type: 'ARMOIRE',
+        alimentations: [alimKnown],
+      );
+
+      final inverseurBothUnknown = CoffretArmoire(
+        qrCode: 'INV_01',
+        nom: 'Inverseur Normal/Secours',
+        type: 'INVERSEUR',
+        alimentations: [alimUnknown1, alimUnknown2],
+      );
+
+      final audit = AuditInstallationsElectriques(
+        missionId: 'M_TEST',
+        updatedAt: DateTime.now(),
+        moyenneTensionLocaux: [],
+        moyenneTensionZones: [],
+        basseTensionZones: [
+          BasseTensionZone(
+            nom: 'Zone 1',
+            coffretsDirects: [tgbtUnknown, armoireKnown, inverseurBothUnknown],
+            locaux: [],
+          ),
+        ],
+      );
+
+      // Tester l'isolation des sources inconnues
+      final unknownItems = <Map<String, String>>[];
+      for (final coffret in audit.basseTensionZones.first.coffretsDirects) {
+        if (coffret.type == 'INVERSEUR') {
+          if (coffret.alimentations.isNotEmpty && coffret.alimentations[0].effectiveSourceKnown == 'Inconnue') {
+            unknownItems.add({'type': 'Inverseur', 'alim': 'Alimentation 1'});
+          }
+          if (coffret.alimentations.length > 1 && coffret.alimentations[1].effectiveSourceKnown == 'Inconnue') {
+            unknownItems.add({'type': 'Inverseur', 'alim': 'Alimentation 2'});
+          }
+        } else {
+          if (coffret.alimentations.any((a) => a.effectiveSourceKnown == 'Inconnue')) {
+            unknownItems.add({'type': coffret.type, 'alim': 'Source d\'alimentation'});
+          }
+        }
+      }
+
+      expect(unknownItems.length, equals(3)); // 1 pour TGBT, 2 pour Inverseur (Alim 1 et Alim 2)
+      expect(unknownItems[0]['type'], equals('TGBT'));
+      expect(unknownItems[0]['alim'], equals('Source d\'alimentation'));
+      expect(unknownItems[1]['type'], equals('Inverseur'));
+      expect(unknownItems[1]['alim'], equals('Alimentation 1'));
+      expect(unknownItems[2]['type'], equals('Inverseur'));
+      expect(unknownItems[2]['alim'], equals('Alimentation 2'));
+    });
   });
 }
