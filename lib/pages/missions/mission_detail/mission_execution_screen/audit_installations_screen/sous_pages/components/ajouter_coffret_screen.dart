@@ -1944,6 +1944,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
 
   Widget _buildProtectionTeteCard(BuildContext context) {
     final bool isDepartPrisAvecProtection = widget.departPrisAvecProtection;
+    final bool isDepartPrisSansProtection = !isDepartPrisAvecProtection;
 
     return Container(
       padding: EdgeInsets.all(context.spacingM),
@@ -1983,43 +1984,130 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           SizedBox(height: context.spacingM),
           Container(
             decoration: BoxDecoration(
-              color: isDepartPrisAvecProtection
-                  ? Colors.green.shade50
-                  : Colors.orange.shade50,
+              color: isDepartPrisSansProtection
+                  ? Colors.red.shade50
+                  : Colors.green.shade50,
               borderRadius: BorderRadius.circular(context.spacingS),
               border: Border.all(
-                color: isDepartPrisAvecProtection
-                    ? Colors.green.shade200
-                    : Colors.orange.shade300,
+                color: isDepartPrisSansProtection
+                    ? Colors.red.shade200
+                    : Colors.green.shade200,
               ),
             ),
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            child: SwitchListTile(
-              contentPadding: EdgeInsets.symmetric(horizontal: context.spacingS),
-              title: Text(
-                'Départ pris avec protection',
-                style: TextStyle(
-                  fontSize: context.fontSizeS,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.darkBlue,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Départ pris sans protection',
+                        style: TextStyle(
+                          fontSize: context.fontSizeS,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.darkBlue,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        isDepartPrisSansProtection
+                            ? 'Départ sans protection (Risque non-conformité)'
+                            : 'Départ avec protection (Conforme)',
+                        style: TextStyle(
+                          fontSize: context.fontSizeXS,
+                          color: isDepartPrisSansProtection
+                              ? Colors.red.shade800
+                              : Colors.green.shade800,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              subtitle: Text(
-                isDepartPrisAvecProtection
-                    ? 'Protection de tête déclarée'
-                    : 'Départ pris sans protection',
-                style: TextStyle(
-                  fontSize: context.fontSizeXS,
-                  color: isDepartPrisAvecProtection
-                      ? Colors.green.shade800
-                      : Colors.orange.shade900,
+                const SizedBox(width: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isDepartPrisSansProtection
+                          ? Colors.red.shade300
+                          : Colors.green.shade300,
+                      width: 1,
+                    ),
+                  ),
+                  padding: const EdgeInsets.all(2),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Bouton OUI (Rouge)
+                      GestureDetector(
+                        onTap: () {
+                          if (!isDepartPrisSansProtection) {
+                            widget.onDepartPrisAvecProtectionChanged?.call(false);
+                          }
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: isDepartPrisSansProtection
+                                ? Colors.red.shade600
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Text(
+                            'Oui',
+                            style: TextStyle(
+                              fontSize: context.fontSizeS,
+                              fontWeight: FontWeight.bold,
+                              color: isDepartPrisSansProtection
+                                  ? Colors.white
+                                  : Colors.grey.shade700,
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Bouton NON (Vert)
+                      GestureDetector(
+                        onTap: () {
+                          if (isDepartPrisSansProtection) {
+                            widget.onDepartPrisAvecProtectionChanged?.call(true);
+                          }
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: !isDepartPrisSansProtection
+                                ? Colors.green.shade600
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(18),
+                          ),
+                          child: Text(
+                            'Non',
+                            style: TextStyle(
+                              fontSize: context.fontSizeS,
+                              fontWeight: FontWeight.bold,
+                              color: !isDepartPrisSansProtection
+                                  ? Colors.white
+                                  : Colors.grey.shade700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              value: isDepartPrisAvecProtection,
-              activeColor: Colors.green,
-              onChanged: (bool val) {
-                widget.onDepartPrisAvecProtectionChanged?.call(val);
-              },
+              ],
             ),
           ),
           if (widget.protectionTete != null) ...[
