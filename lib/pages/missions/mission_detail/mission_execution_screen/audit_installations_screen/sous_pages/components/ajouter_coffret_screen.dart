@@ -2804,8 +2804,12 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   }
 
   void _scheduleAutoSave() {
+    if (!mounted) return;
+    if (widget.isEdition) return;
     _autoSaveTimer?.cancel();
-    _autoSaveTimer = Timer(const Duration(milliseconds: 500), () { _saveDraft(); });
+    _autoSaveTimer = Timer(const Duration(milliseconds: 500), () {
+      if (mounted) _saveDraft();
+    });
   }
 
   void _addParafoudreObservation() {
@@ -2907,8 +2911,10 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
 
   @override
   void dispose() {
+    _autoSaveTimer?.cancel();
     _pointDebounceTimers.forEach((key, timer) => timer?.cancel());
     _nomController.dispose();
+    _numeroEquipementController.dispose();
     _repereController.dispose();
     _qrCodeController.dispose();
     _observationController.dispose();

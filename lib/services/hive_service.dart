@@ -1566,6 +1566,11 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
   }
 
   void migrateCoffret(CoffretArmoire coffret) {
+    if (coffret.id == null || coffret.id!.trim().isEmpty) {
+      coffret.id =
+          'equip_${DateTime.now().microsecondsSinceEpoch}_${coffret.nom.hashCode.abs()}_${coffret.qrCode.hashCode.abs()}';
+      changed = true;
+    }
     if (coffret.observationsParafoudreEnrichies == null) {
       coffret.observationsParafoudreEnrichies = [];
       changed = true;
@@ -2146,7 +2151,7 @@ static CoffretArmoire createNewCoffretWithQrCode({
 }
 
 static CoffretArmoire? getCoffretDraftByQrCode(String qrCode) {
-  if (qrCode.trim().isEmpty) return null;
+  if (qrCode.trim().isEmpty || qrCode.startsWith('TEMP_')) return null;
   try {
     final box = Hive.box(_coffretDraftsBox);
     final data = box.get(qrCode);
@@ -6698,10 +6703,9 @@ static Future<void> saveCoffretDraft({
   required CoffretArmoire coffret,
   required int currentStep,
 }) async {
+  if (coffret.qrCode.trim().isEmpty || coffret.qrCode.startsWith('TEMP_')) return;
   try {
-    // Utiliser Box<Map> comme partout ailleurs
     final box = Hive.box(_coffretDraftsBox);
-    
     String draftKey = coffret.qrCode;
     if (draftKey.isEmpty) {
       draftKey = 'TEMP_${DateTime.now().millisecondsSinceEpoch}';

@@ -350,6 +350,7 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
   }
 
   void _enterQrCodeManually() {
+    if (!kDebugMode) return;
     final TextEditingController manualController = TextEditingController();
     
     showDialog(
@@ -799,7 +800,7 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
             ),
         ],
       ),
-      bottomNavigationBar: !_qrCodeDetected
+      bottomNavigationBar: (!_qrCodeDetected && kDebugMode)
           ? Container(
               padding: const EdgeInsets.all(16),
               color: Colors.black87,
@@ -809,7 +810,7 @@ class _QrScanCoffretScreenState extends State<QrScanCoffretScreen> {
                   ElevatedButton.icon(
                     onPressed: _enterQrCodeManually,
                     icon: const Icon(Icons.keyboard),
-                    label: const Text('Saisir manuellement'),
+                    label: const Text('Saisir manuellement (Debug)'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.blueGrey,
                       foregroundColor: Colors.white,
