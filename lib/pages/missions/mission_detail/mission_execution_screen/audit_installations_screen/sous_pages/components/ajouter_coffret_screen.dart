@@ -11,6 +11,7 @@ import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/equipment_number_service.dart';
 import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 import 'dart:io';
 import 'package:http/http.dart' as http;
@@ -185,10 +186,11 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
         _buildModernTextField(
           context,
           controller: widget.numeroEquipementController,
-          label: 'Numéro de l\'équipement',
+          label: 'Numéro de l\'équipement (Auto)',
           icon: Icons.numbers_outlined,
-          isValid: widget.numeroEquipementValid,
-          onChanged: (_) => widget.onValidateNumeroEquipement(),
+          isValid: true,
+          readOnly: true,
+          onChanged: (_) {},
           isRequired: false,
         ),
         SizedBox(height: context.spacingM),
@@ -311,20 +313,32 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
     required bool isValid,
     required Function(String) onChanged,
     bool isRequired = true,
+    bool readOnly = false,
   }) {
     final showBorderError = isRequired && !isValid;
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: readOnly ? Colors.grey.shade100 : Colors.white,
         borderRadius: BorderRadius.circular(context.spacingM),
-        boxShadow: [
-          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: context.spacingS, offset: const Offset(0, 2)),
-        ],
+        boxShadow: readOnly
+            ? []
+            : [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.04),
+                  blurRadius: context.spacingS,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: TextFormField(
         controller: controller,
-        onChanged: onChanged,
-        style: TextStyle(fontSize: context.fontSizeM),
+        onChanged: readOnly ? null : onChanged,
+        readOnly: readOnly,
+        style: TextStyle(
+          fontSize: context.fontSizeM,
+          color: readOnly ? Colors.grey.shade800 : Colors.black,
+          fontWeight: readOnly ? FontWeight.bold : FontWeight.normal,
+        ),
         decoration: InputDecoration(
           labelText: isRequired ? '$label *' : label,
           labelStyle: TextStyle(
@@ -333,14 +347,18 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
           ),
           prefixIcon: Icon(
             icon,
-            color: showBorderError ? Colors.red.shade400 : AppTheme.primaryBlue,
+            color: showBorderError
+                ? Colors.red.shade400
+                : (readOnly ? Colors.grey.shade600 : AppTheme.primaryBlue),
             size: context.iconSizeM,
           ),
-          suffixIcon: isValid
-              ? Icon(Icons.check_circle, color: Colors.green, size: context.iconSizeS)
-              : (showBorderError
-                  ? Icon(Icons.error_outline, color: Colors.red.shade300, size: context.iconSizeS)
-                  : null),
+          suffixIcon: readOnly
+              ? Icon(Icons.lock_outline, color: Colors.grey.shade500, size: context.iconSizeS)
+              : (isValid
+                  ? Icon(Icons.check_circle, color: Colors.green, size: context.iconSizeS)
+                  : (showBorderError
+                      ? Icon(Icons.error_outline, color: Colors.red.shade300, size: context.iconSizeS)
+                      : null)),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(context.spacingM), borderSide: BorderSide.none),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(context.spacingM),
@@ -357,7 +375,7 @@ class _EtapeInformationsBaseState extends State<_EtapeInformationsBase> {
             ),
           ),
           filled: true,
-          fillColor: Colors.white,
+          fillColor: readOnly ? Colors.grey.shade100 : Colors.white,
           contentPadding: EdgeInsets.symmetric(horizontal: context.spacingL, vertical: context.spacingM),
         ),
       ),
@@ -2763,6 +2781,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   Future<void> _loadDraftByQrCode(String qrCode) async {
     final draft = HiveService.getCoffretDraftByQrCode(qrCode);
     if (draft != null) {
+      EquipmentNumberService.ensureEquipmentIdentityAndNumber(widget.mission.id, draft);
       setState(() {
         _nomController.text = draft.nom;
         _numeroEquipementController.text = draft.numeroEquipement ?? '';
@@ -3100,6 +3119,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
 
   void _chargerDonneesExistantes() {
     final coffret = widget.coffret!;
+    EquipmentNumberService.ensureEquipmentIdentityAndNumber(widget.mission.id, coffret);
     _nomController.text = coffret.nom;
     _numeroEquipementController.text = coffret.numeroEquipement ?? '';
     _selectedType = coffret.type;

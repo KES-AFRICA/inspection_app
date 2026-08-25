@@ -20,6 +20,7 @@ import 'package:inspec_app/services/trash_service.dart';
 import 'dispositions_constructives_registry.dart';
 import 'installation_description_sync_service.dart';
 import 'normative_matching/mission_normative_batch_service.dart';
+import 'equipment_number_service.dart';
 
 class HiveService {
   static const String _verificateurBox = 'verificateurs';
@@ -1359,6 +1360,10 @@ static Future<AuditInstallationsElectriques> getOrCreateAuditInstallations(Strin
   try {
     final existing = box.values.firstWhere((audit) => audit.missionId == missionId);
     _migrateAuditIfNeeded(existing);
+    final report = EquipmentNumberService.auditAndFixMissionNumbers(existing);
+    if (report.hasChanges) {
+      await existing.save();
+    }
     return existing;
   } catch (e) {
     // Créer une nouvelle instance
@@ -1897,64 +1902,10 @@ static CoffretArmoire? findCoffretByQrCode(String missionId, String qrCode) {
 /// - Collecte uniquement les [numeroEquipement] qui sont des entiers purs.
 /// - Retourne max + 1, ou 1 si aucun entier trouvé.
 /// - Les valeurs textuelles existantes sont totalement ignorées.
-/// Stratégie :
-/// - Parcourt TOUS les coffrets de la mission (locaux MT, zones MT, zones BT, locaux BT) ainsi que les brouillons.
-/// - Extrait les séquences numériques de [numeroEquipement].
-/// - Retourne max + 1, ou 1 si aucun entier trouvé.
-static int getNextNumeroEquipement(String missionId) {
-  final audit = Hive.box<AuditInstallationsElectriques>(_auditBox)
-      .values
-      .firstWhere((a) => a.missionId == missionId,
-          orElse: () => AuditInstallationsElectriques.create(missionId));
-
-  int maxNumero = 0;
-  bool foundAny = false;
-
-  void checkCoffret(CoffretArmoire c) {
-    final str = c.numeroEquipement?.trim() ?? '';
-    final match = RegExp(r'\d+').firstMatch(str);
-    if (match != null) {
-      final n = int.tryParse(match.group(0)!);
-      if (n != null) {
-        foundAny = true;
-        if (n > maxNumero) maxNumero = n;
-      }
-    }
+  /// Calcule le prochain numéro d'équipement pour une mission via [EquipmentNumberService].
+  static int getNextNumeroEquipement(String missionId) {
+    return EquipmentNumberService.getNextEquipmentNumber(missionId);
   }
-
-  // Locaux MT directs
-  for (final local in audit.moyenneTensionLocaux) {
-    for (final c in local.coffrets) checkCoffret(c);
-  }
-  // Zones MT → coffrets directs + coffrets dans les locaux
-  for (final zone in audit.moyenneTensionZones) {
-    for (final c in zone.coffrets) checkCoffret(c);
-    for (final local in zone.locaux) {
-      for (final c in local.coffrets) checkCoffret(c);
-    }
-  }
-  // Zones BT → coffrets directs + coffrets dans les locaux
-  for (final zone in audit.basseTensionZones) {
-    for (final c in zone.coffretsDirects) checkCoffret(c);
-    for (final local in zone.locaux) {
-      for (final c in local.coffrets) checkCoffret(c);
-    }
-  }
-
-  // Vérifier également les brouillons en cours pour la même mission
-  try {
-    if (Hive.isBoxOpen(_coffretDraftsBox)) {
-      final box = Hive.box(_coffretDraftsBox);
-      for (final val in box.values) {
-        if (val is Map && val['missionId'] == missionId && val['coffret'] is CoffretArmoire) {
-          checkCoffret(val['coffret'] as CoffretArmoire);
-        }
-      }
-    }
-  } catch (_) {}
-
-  return foundAny ? maxNumero + 1 : 1;
-}
 
 /// Mettre à jour un coffret en base de données par son [equipmentId] immuable (SaveGuard inclus)
 static Future<bool> updateCoffretById({
