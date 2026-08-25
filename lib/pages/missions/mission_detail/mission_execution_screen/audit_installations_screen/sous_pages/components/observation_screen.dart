@@ -14,6 +14,7 @@ import 'package:inspec_app/components/safe_file_image.dart';
 class ObservationScreen extends StatefulWidget {
   final ObservationLibre? observation; // null pour création, non-null pour édition
   final String title;
+  final String? equipmentType;
   final Function(ObservationLibre) onSave;
   final bool canAddPhotos;
 
@@ -21,6 +22,7 @@ class ObservationScreen extends StatefulWidget {
     super.key,
     this.observation,
     required this.title,
+    this.equipmentType,
     required this.onSave,
     this.canAddPhotos = true,
   });
@@ -61,7 +63,7 @@ class _ObservationScreenState extends State<ObservationScreen> {
   void _onTextChanged() {
     final text = _texteController.text.trim();
     if (text.length >= 3) {
-      final results = NormativeSearchService.search(text);
+      final results = NormativeSearchService.search(text, equipmentType: widget.equipmentType);
       setState(() {
         _searchResults = results;
       });

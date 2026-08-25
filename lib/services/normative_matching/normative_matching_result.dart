@@ -1,19 +1,27 @@
 import '../../models/audit_installations_electriques.dart';
 import '../normative_search_service.dart';
 
-/// Niveaux de confiance pour le rapprochement normatif
+/// Niveaux de confiance certifiés pour le rapprochement normatif en 4 tiers
 enum MatchingConfidenceLevel {
-  /// Score >= 30.0% et candidat unique dominant -> Rattachement automatique
-  certain,
+  /// Score >= 80.0% et candidat unique dominant -> Rattachement automatique certifié
+  veryHigh,
 
-  /// Score >= 30.0% mais plusieurs candidats très proches -> Ambigu, à réviser
-  ambiguous,
+  /// Score >= 60.0% -> Suggestion prioritaire dans l'interface utilisateur
+  high,
 
-  /// Score < 30.0% -> Incertain, conservé intact sans référence
-  uncertain,
+  /// Score >= 40.0% -> Proposition ambiguë nécessitant le choix explicite de l'inspecteur
+  medium,
+
+  /// Score < 40.0% -> Confiance insuffisante, conservée intacte sans référence normative
+  low;
+
+  /// Rétrocompatibilité avec l'ancien système à 3 états
+  bool get isCertain => this == MatchingConfidenceLevel.veryHigh;
+  bool get isAmbiguous => this == MatchingConfidenceLevel.high || this == MatchingConfidenceLevel.medium;
+  bool get isUncertain => this == MatchingConfidenceLevel.low;
 }
 
-/// Résultat de l'analyse d'une observation libre
+/// Résultat détaillé de l'analyse d'une observation libre
 class NormativeMatchAnalysis {
   final ObservationLibre observation;
   final NormativeSearchResult? bestMatch;
@@ -31,7 +39,8 @@ class NormativeMatchAnalysis {
     required this.justification,
   });
 
-  bool get shouldAutoLink => status == MatchingConfidenceLevel.certain && bestMatch != null;
+  /// Auto-rattachement autorisé UNIQUEMENT si la confiance est très élevée (>= 80%) et le match valide.
+  bool get shouldAutoLink => status == MatchingConfidenceLevel.veryHigh && bestMatch != null;
 }
 
 /// Rapport global d'exécution du batch de rattachement normatif sur une mission
@@ -52,3 +61,4 @@ class MissionNormativeBatchReport {
     required this.analyses,
   });
 }
+

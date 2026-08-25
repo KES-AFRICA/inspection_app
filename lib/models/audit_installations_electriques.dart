@@ -1108,7 +1108,7 @@ class ObservationLibre {
     pointVerificationKey = key;
     referenceNormative = refNormative;
     familleRisque = famille;
-    criticite = crit;
+    criticite = (criticite != null && criticite!.trim().isNotEmpty) ? criticite : crit;
     isAutoLinked = auto;
     dateModification = DateTime.now();
   }

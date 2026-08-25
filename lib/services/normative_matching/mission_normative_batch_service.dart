@@ -26,7 +26,7 @@ class MissionNormativeBatchService {
       analyses.add(analysis);
 
       switch (analysis.status) {
-        case MatchingConfidenceLevel.certain:
+        case MatchingConfidenceLevel.veryHigh:
           if (analysis.bestMatch != null) {
             final match = analysis.bestMatch!;
             obs.linkToNormativePoint(
@@ -39,10 +39,11 @@ class MissionNormativeBatchService {
             autoLinkedCount++;
           }
           break;
-        case MatchingConfidenceLevel.ambiguous:
+        case MatchingConfidenceLevel.high:
+        case MatchingConfidenceLevel.medium:
           ambiguousCount++;
           break;
-        case MatchingConfidenceLevel.uncertain:
+        case MatchingConfidenceLevel.low:
           uncertainCount++;
           break;
       }

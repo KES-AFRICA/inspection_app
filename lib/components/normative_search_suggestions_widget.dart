@@ -4,6 +4,7 @@ import '../services/normative_search_service.dart';
 /// Widget réutilisable d'affichage des suggestions normatives en temps réel et du badge de rattachement.
 class NormativeSearchSuggestionsWidget extends StatelessWidget {
   final String queryText;
+  final String? equipmentType;
   final String? selectedReferenceNormative;
   final String? selectedFamilleRisque;
   final String? selectedCriticite;
@@ -14,6 +15,7 @@ class NormativeSearchSuggestionsWidget extends StatelessWidget {
   const NormativeSearchSuggestionsWidget({
     super.key,
     required this.queryText,
+    this.equipmentType,
     this.selectedReferenceNormative,
     this.selectedFamilleRisque,
     this.selectedCriticite,
@@ -26,7 +28,9 @@ class NormativeSearchSuggestionsWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final hasRef = selectedReferenceNormative != null && selectedReferenceNormative!.trim().isNotEmpty;
     final isQueryValid = queryText.trim().length >= 3;
-    final results = isQueryValid ? NormativeSearchService.search(queryText.trim()) : <NormativeSearchResult>[];
+    final results = isQueryValid
+        ? NormativeSearchService.search(queryText.trim(), equipmentType: equipmentType)
+        : <NormativeSearchResult>[];
     final showSuggestionsZone = !hasRef && isQueryValid;
 
     return Column(

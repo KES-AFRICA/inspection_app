@@ -2363,6 +2363,8 @@ class DispositionsConstructivesRegistry {
     combined.addAll(_registry);
     combined.addAll(_btRegistry);
     combined.addAll(_geRegistry);
+    combined.addAll(_coffretRegistry);
+    combined.addAll(_inverseurRegistry);
     return combined;
   }
 
