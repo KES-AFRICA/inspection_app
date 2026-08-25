@@ -49,7 +49,7 @@ class DescriptionInstallationsAdapter
   @override
   void write(BinaryWriter writer, DescriptionInstallations obj) {
     writer
-      ..writeByte(21)
+      ..writeByte(24)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)

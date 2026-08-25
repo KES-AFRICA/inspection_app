@@ -27,9 +27,14 @@ class DescriptionInstallationsNotifier
     load();
   }
 
-  Future<DescriptionInstallations> load({bool syncWithAudit = false}) async {
+  Future<DescriptionInstallations> load({
+    bool syncWithAudit = false,
+    bool showLoading = true,
+  }) async {
     try {
-      state = const AsyncValue.loading();
+      if (showLoading && !state.hasValue) {
+        state = const AsyncValue.loading();
+      }
       if (syncWithAudit) {
         await InstallationDescriptionSyncService.repairAndSyncDescriptions(missionId);
       }
@@ -58,7 +63,7 @@ class DescriptionInstallationsNotifier
       );
 
       if (success) {
-        await load();
+        await load(showLoading: false);
       }
       return success;
     } catch (e) {
@@ -82,7 +87,7 @@ class DescriptionInstallationsNotifier
       );
 
       if (success) {
-        await load();
+        await load(showLoading: false);
       }
       return success;
     } catch (e) {
@@ -100,7 +105,7 @@ class DescriptionInstallationsNotifier
       );
 
       if (success) {
-        await load();
+        await load(showLoading: false);
       }
       return success;
     } catch (e) {
@@ -120,7 +125,7 @@ class DescriptionInstallationsNotifier
       );
 
       if (success) {
-        await load();
+        await load(showLoading: false);
       }
       return success;
     } catch (e) {

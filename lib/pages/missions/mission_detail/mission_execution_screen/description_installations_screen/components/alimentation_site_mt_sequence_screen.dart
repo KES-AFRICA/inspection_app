@@ -86,18 +86,14 @@ class _AlimentationSiteMtSequenceScreenState
           _presenceIacm = desc.presenceIacmAlimentationSite;
           _isFirstLoad = false;
         } else {
-          if (_natureReseau == null && desc.natureReseauAlimentationSite != null) {
-            _natureReseau = desc.natureReseauAlimentationSite;
-          }
+          _natureReseau ??= desc.natureReseauAlimentationSite;
           if (_tensionController.text.isEmpty && desc.tensionAlimentationSite != null) {
             _tensionController.text = desc.tensionAlimentationSite!;
           }
           if (_nombreController.text.isEmpty && desc.nombreAlimentationSite != null) {
             _nombreController.text = desc.nombreAlimentationSite!;
           }
-          if (_presenceIacm == null && desc.presenceIacmAlimentationSite != null) {
-            _presenceIacm = desc.presenceIacmAlimentationSite;
-          }
+          _presenceIacm ??= desc.presenceIacmAlimentationSite;
         }
 
         return GestureDetector(
