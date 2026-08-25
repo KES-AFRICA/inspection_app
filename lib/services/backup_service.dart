@@ -123,9 +123,26 @@ class BackupService {
   static const String _magicV2 = 'INSPEC_BACKUP_V2';
   static const String _magicV1 = 'INSPEC_BACKUP_V1'; // rétrocompat import
 
-  // ═══════════════════════════════════════════════════════════
-  // EXPORT (MOTEUR V4 ZIP BUNDLE STREAMING - MÉMOIRE < 5 MO)
-  // ═══════════════════════════════════════════════════════════
+  /// Génère un nom de fichier de sauvegarde au format standardisé :
+  /// backup_nomduclient_sitedelamission_matriculedelinspecteur_timestamp.inspec
+  static String buildBackupFileName({
+    required String clientName,
+    required String siteName,
+    required String matricule,
+    required String timestamp,
+  }) {
+    String sanitize(String? val, String fallback) {
+      if (val == null || val.trim().isEmpty) return fallback;
+      final s = val.trim().replaceAll(RegExp(r'[/\\?%*:|"<> ]'), '_');
+      return s.isEmpty ? fallback : s;
+    }
+
+    final safeClient = sanitize(clientName, 'client');
+    final safeSite = sanitize(siteName, 'site');
+    final safeMatricule = sanitize(matricule, 'kes');
+
+    return 'backup_${safeClient}_${safeSite}_${safeMatricule}_$timestamp.inspec';
+  }
 
   static Future<BackupResult> exporterMissions(
     String matricule, {
@@ -146,8 +163,17 @@ class BackupService {
           .replaceAll(':', '-')
           .replaceAll('.', '-')
           .substring(0, 19);
-      final safeMatricule = matricule.replaceAll(RegExp(r'[/\\?%*:|"<> ]'), '_');
-      final fileName = 'inspec_backup_${safeMatricule}_$ts.inspec';
+      final clientName =
+          missions.length == 1 ? missions.first.nomClient : 'tous_clients';
+      final siteName = missions.length == 1
+          ? (missions.first.nomSite ?? 'tous_sites')
+          : 'tous_sites';
+      final fileName = buildBackupFileName(
+        clientName: clientName,
+        siteName: siteName,
+        matricule: matricule,
+        timestamp: ts,
+      );
 
       final serializedMissions = <Map<String, dynamic>>[];
       for (int i = 0; i < missions.length; i++) {
@@ -226,8 +252,18 @@ class BackupService {
           .replaceAll(':', '-')
           .replaceAll('.', '-')
           .substring(0, 19);
-      final safeMatricule = matricule.replaceAll(RegExp(r'[/\\?%*:|"<> ]'), '_');
-      final fileName = 'inspec_backup_${safeMatricule}_$ts.inspec';
+      final clientName = missions.length == 1
+          ? missions.first.nomClient
+          : 'selection_clients';
+      final siteName = missions.length == 1
+          ? (missions.first.nomSite ?? 'selection_sites')
+          : 'selection_sites';
+      final fileName = buildBackupFileName(
+        clientName: clientName,
+        siteName: siteName,
+        matricule: matricule,
+        timestamp: ts,
+      );
 
       final serializedMissions = <Map<String, dynamic>>[];
       for (int i = 0; i < missions.length; i++) {
@@ -298,9 +334,16 @@ class BackupService {
           .replaceAll(':', '-')
           .replaceAll('.', '-')
           .substring(0, 19);
-      final safeClient =
-          mission.nomClient.replaceAll(RegExp(r'[/\\?%*:|"<> ]'), '_');
-      final fileName = 'inspec_${safeClient}_$ts.inspec';
+      final effectiveMatricule = (mission.verificateurs != null &&
+              mission.verificateurs!.isNotEmpty)
+          ? (mission.verificateurs!.first['matricule'] as String? ?? 'kes')
+          : 'kes';
+      final fileName = buildBackupFileName(
+        clientName: mission.nomClient,
+        siteName: mission.nomSite ?? 'site',
+        matricule: effectiveMatricule,
+        timestamp: ts,
+      );
 
       onProgressState?.call(OperationProgressState(
         type: OperationType.export,

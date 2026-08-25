@@ -45,6 +45,7 @@ dependencies:
   workmanager: ^0.6.0
   syncfusion_flutter_pdf: ^33.2.13
   pdf_merger: ^0.0.6
+  convert: ^3.1.2
 
 dev_dependencies:
   flutter_test:
