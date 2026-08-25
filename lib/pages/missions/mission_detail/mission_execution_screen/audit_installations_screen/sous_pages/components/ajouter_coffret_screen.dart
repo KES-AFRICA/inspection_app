@@ -2013,8 +2013,8 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                       const SizedBox(height: 2),
                       Text(
                         isDepartPrisSansProtection
-                            ? 'Départ sans protection (Risque non-conformité)'
-                            : 'Départ avec protection (Conforme)',
+                            ? 'Départ sans protection'
+                            : 'Départ avec protection',
                         style: TextStyle(
                           fontSize: context.fontSizeXS,
                           color: isDepartPrisSansProtection

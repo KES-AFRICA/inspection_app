@@ -22,8 +22,8 @@ import 'providers/groq_rest_provider.dart';
 ///    - Niveau 2 (Si échec API) : Dernier résumé valide conservé en cache pour cette mission.
 ///    - Niveau 3 (Si aucun cache) : Résumé déterministe généré localement (7 sous-sections 100% complètes).
 class MissionExecutiveSummaryService {
-  static const int promptVersion = 2;
-  static const int schemaVersion = 2;
+  static const int promptVersion = 3;
+  static const int schemaVersion = 3;
   static const String _boxName = 'executive_summary_cache';
 
   /// Clés API configurables
@@ -32,6 +32,22 @@ class MissionExecutiveSummaryService {
 
   /// Verrou de déduplication single-flight
   static final Map<String, Future<ExecutiveSummaryData>> _pendingRequests = {};
+
+  /// Efface le cache du résumé exécutif pour une mission spécifique
+  static Future<void> clearCacheForMission(String missionId) async {
+    try {
+      final box = await _getCacheBox();
+      await box.delete(missionId);
+    } catch (_) {}
+  }
+
+  /// Efface la totalité du cache des résumés exécutifs
+  static Future<void> clearAllCache() async {
+    try {
+      final box = await _getCacheBox();
+      await box.clear();
+    } catch (_) {}
+  }
 
   /// Récupère la boîte Hive dédiée au cache du résumé exécutif
   static Future<Box> _getCacheBox() async {
