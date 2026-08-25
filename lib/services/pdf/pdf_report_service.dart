@@ -12109,9 +12109,12 @@ class PdfReportService {
 
             for (int i = 0; i < entrees.length; i++) {
               final a = entrees[i];
-              final label = a.source.isNotEmpty
+              final String baseLabel = a.source.isNotEmpty
                   ? a.source
                   : 'Alimentation ${i + 1}';
+              final label = a.effectiveSourceKnown == 'Inconnue'
+                  ? '$baseLabel (source inconnue)'
+                  : baseLabel;
               alimentRows.add(
                 pw.TableRow(
                   children: [
@@ -12256,7 +12259,7 @@ class PdfReportService {
             alimentRows.add(
               pw.TableRow(
                 children: [
-                  _valueCell(a.source.isEmpty ? '-' : a.source),
+                  _valueCell(a.effectiveSourceKnown),
                   _valueCell(a.typeProtection),
                   _valueCell(a.courbe ?? ''),
                   _valueCell(a.pdcKA),
@@ -12296,11 +12299,66 @@ class PdfReportService {
         }
       }
 
-      if (coffret.protectionTete != null) {
-        final pt = coffret.protectionTete!;
+      if (coffret.protectionTete != null || !coffret.isDepartPrisAvecProtection) {
+        final pt = coffret.protectionTete ?? Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: '');
 
-        // Custom rowspan table using nested table to ensure perfect align and border scaling
-        final protectionTeteTable = pw.Table(
+        final pw.Widget protectionTeteTable;
+        if (!coffret.isDepartPrisAvecProtection) {
+          protectionTeteTable = pw.Table(
+            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+            border: pw.TableBorder(
+              left: pw.BorderSide(color: borderColor, width: 0.4),
+              right: pw.BorderSide(color: borderColor, width: 0.4),
+              bottom: pw.BorderSide(color: borderColor, width: 0.4),
+              top: pw.BorderSide(color: borderColor, width: 0.4),
+              verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+            ),
+            columnWidths: const {
+              0: pw.FlexColumnWidth(2.0),
+              1: pw.FlexColumnWidth(6.3),
+            },
+            children: [
+              pw.TableRow(
+                children: [
+                  pw.Container(
+                    color: PdfColor.fromInt(0xFFE8F0FB),
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 6,
+                    ),
+                    alignment: pw.Alignment.center,
+                    child: pw.Text(
+                      'Protection de tête de coffret\n/Armoire',
+                      style: pw.TextStyle(
+                        font: _fontBold,
+                        fontSize: fsSmall,
+                        color: headerColor,
+                      ),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                  pw.Container(
+                    padding: const pw.EdgeInsets.symmetric(
+                      horizontal: 6,
+                      vertical: 6,
+                    ),
+                    alignment: pw.Alignment.centerLeft,
+                    child: pw.Text(
+                      'Départ pris sans protection',
+                      style: pw.TextStyle(
+                        font: _fontBold,
+                        fontSize: fsSmall,
+                        color: PdfColor.fromInt(0xFF333333),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          );
+        } else {
+          // Custom rowspan table using nested table to ensure perfect align and border scaling
+          protectionTeteTable = pw.Table(
           defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
           border: pw.TableBorder(
             left: pw.BorderSide(color: borderColor, width: 0.4),
@@ -12389,6 +12447,7 @@ class PdfReportService {
             ),
           ],
         );
+        }
 
         if (tables.isNotEmpty) {
           tables.add(pw.SizedBox(height: 3));

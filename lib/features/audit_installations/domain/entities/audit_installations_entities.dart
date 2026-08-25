@@ -249,6 +249,7 @@ class AlimentationEntity {
   final String sectionCable;
   final List<String> photos;
   final String source;
+  final String? sourceKnown;
 
   const AlimentationEntity({
     required this.typeProtection,
@@ -259,6 +260,7 @@ class AlimentationEntity {
     required this.sectionCable,
     this.photos = const [],
     this.source = '',
+    this.sourceKnown,
   });
 }
 
@@ -326,6 +328,7 @@ class CoffretArmoireEntity {
   final String? presenceDefautThermo;
   final bool? alimenteeParTransformateur;
   final bool? presenceCPI;
+  final bool? departPrisAvecProtection;
   final List<AlimentationEntity> alimentations;
   final AlimentationEntity? protectionTete;
   final List<PointVerificationEntity> pointsVerification;
@@ -363,6 +366,7 @@ class CoffretArmoireEntity {
     this.presenceDefautThermo,
     this.alimenteeParTransformateur,
     this.presenceCPI,
+    this.departPrisAvecProtection,
     this.accessible = true,
     this.alimentations = const [],
     this.protectionTete,

@@ -850,6 +850,7 @@ class BackupService {
         'presenceDefautThermo': c.presenceDefautThermo,
         'alimenteeParTransformateur': c.alimenteeParTransformateur,
         'presenceCPI': c.presenceCPI,
+        'departPrisAvecProtection': c.departPrisAvecProtection,
         'photos': c.photos,
         'photosExternes': c.photosExternes,
         'photosInternes': c.photosInternes,
@@ -872,6 +873,7 @@ class BackupService {
         'calibre': a.calibre,
         'sectionCable': a.sectionCable,
         'source': a.source,
+        'sourceKnown': a.sourceKnown,
         'photos': a.photos,
       };
 
@@ -2453,6 +2455,7 @@ class BackupService {
         presenceDefautThermo: d['presenceDefautThermo'] as String?,
         alimenteeParTransformateur: d['alimenteeParTransformateur'] as bool?,
         presenceCPI: d['presenceCPI'] as bool?,
+        departPrisAvecProtection: d['departPrisAvecProtection'] as bool?,
         accessible: d['accessible'] as bool? ?? true,
         photos: _strList(d['photos']),
         photosExternes: _strList(d['photosExternes']),
@@ -2482,6 +2485,7 @@ class BackupService {
         calibre: d['calibre'] as String? ?? '',
         sectionCable: d['sectionCable'] as String? ?? '',
         source: d['source'] as String? ?? '',
+        sourceKnown: d['sourceKnown'] as String?,
         photos: _strList(d['photos']),
       );
 

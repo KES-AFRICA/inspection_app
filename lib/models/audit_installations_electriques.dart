@@ -874,6 +874,14 @@ class CoffretArmoire {
   @HiveField(28)
   String? id;
 
+  @HiveField(29)
+  bool? departPrisAvecProtection;
+
+  /// Résout l'état du switch "Départ pris avec protection" (Activé par défaut / Rétrocompatible)
+  /// L'Inverseur est toujours considéré à true.
+  bool get isDepartPrisAvecProtection =>
+      (type == 'INVERSEUR') ? true : (departPrisAvecProtection ?? true);
+
   /// Identifiant technique immuable (avec fallback auto pour anciennes missions)
   String get equipmentId {
     if (id != null && id!.trim().isNotEmpty) return id!;
@@ -911,6 +919,7 @@ class CoffretArmoire {
     this.presenceDefautThermo,
     this.alimenteeParTransformateur,
     this.presenceCPI,
+    this.departPrisAvecProtection,
     bool? accessible,
     List<Alimentation>? alimentations,
     this.protectionTete,
@@ -978,6 +987,13 @@ class Alimentation {
   @HiveField(7)
   String? ddr;
 
+  @HiveField(8)
+  String? sourceKnown; // "Connue" | "Inconnue" (nullable)
+
+  /// Résout le statut de connaissance de la source ("Connue" par défaut pour la rétrocompatibilité)
+  String get effectiveSourceKnown =>
+      (sourceKnown != null && sourceKnown!.isNotEmpty) ? sourceKnown! : 'Connue';
+
   Alimentation({
     required this.typeProtection,
     this.courbe = '',
@@ -987,6 +1003,7 @@ class Alimentation {
     required this.sectionCable,
     List<String>? photos,
     this.source = '',
+    this.sourceKnown,
   }) : photos = photos ?? [];
 }
 

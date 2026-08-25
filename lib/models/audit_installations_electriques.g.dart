@@ -615,13 +615,14 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       alimenteeParTransformateur: fields[26] as bool?,
       presenceCPI: fields[27] as bool?,
       id: fields[28] as String?,
+      departPrisAvecProtection: fields[29] as bool?,
     );
   }
 
   @override
   void write(BinaryWriter writer, CoffretArmoire obj) {
     writer
-      ..writeByte(29)
+      ..writeByte(30)
       ..writeByte(0)
       ..write(obj.qrCode)
       ..writeByte(1)
@@ -679,7 +680,9 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       ..writeByte(27)
       ..write(obj.presenceCPI)
       ..writeByte(28)
-      ..write(obj.id);
+      ..write(obj.id)
+      ..writeByte(29)
+      ..write(obj.departPrisAvecProtection);
   }
 
   @override
@@ -712,13 +715,14 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
       sectionCable: fields[3] as String,
       photos: (fields[4] as List?)?.cast<String>(),
       source: fields[5] as String,
+      sourceKnown: fields[8] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Alimentation obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.typeProtection)
       ..writeByte(1)
@@ -734,7 +738,9 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
       ..writeByte(6)
       ..write(obj.courbe)
       ..writeByte(7)
-      ..write(obj.ddr);
+      ..write(obj.ddr)
+      ..writeByte(8)
+      ..write(obj.sourceKnown);
   }
 
   @override

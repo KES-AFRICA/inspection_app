@@ -166,6 +166,7 @@ class AuditInstallationsMapper {
       sectionCable: model.sectionCable,
       photos: List<String>.from(model.photos),
       source: model.source,
+      sourceKnown: model.sourceKnown,
     );
   }
 
@@ -179,6 +180,7 @@ class AuditInstallationsMapper {
       sectionCable: entity.sectionCable,
       photos: List<String>.from(entity.photos),
       source: entity.source,
+      sourceKnown: entity.sourceKnown,
     );
   }
 
@@ -258,6 +260,7 @@ class AuditInstallationsMapper {
       presenceDefautThermo: model.presenceDefautThermo,
       alimenteeParTransformateur: model.alimenteeParTransformateur,
       presenceCPI: model.presenceCPI,
+      departPrisAvecProtection: model.departPrisAvecProtection,
       alimentations: model.alimentations.map(toAlimentationEntity).toList(),
       protectionTete: model.protectionTete != null ? toAlimentationEntity(model.protectionTete!) : null,
       pointsVerification: model.pointsVerification.map(toPointVerificationEntity).toList(),
@@ -290,6 +293,7 @@ class AuditInstallationsMapper {
       presenceDefautThermo: entity.presenceDefautThermo,
       alimenteeParTransformateur: entity.alimenteeParTransformateur,
       presenceCPI: entity.presenceCPI,
+      departPrisAvecProtection: entity.departPrisAvecProtection,
       accessible: entity.accessible,
       alimentations: entity.alimentations.map(toAlimentationModel).toList(),
       protectionTete: entity.protectionTete != null ? toAlimentationModel(entity.protectionTete!) : null,

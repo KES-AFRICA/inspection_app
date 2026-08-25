@@ -1527,6 +1527,8 @@ class _EtapeAlimentations extends StatefulWidget {
   final Alimentation? protectionTete;
   final VoidCallback onDataChanged;
   final List<String> sourcesDisponibles;
+  final bool departPrisAvecProtection;
+  final ValueChanged<bool>? onDepartPrisAvecProtectionChanged;
   final VoidCallback? onAddSortie;
   final Function(int index)? onDeleteSortie;
 
@@ -1535,6 +1537,8 @@ class _EtapeAlimentations extends StatefulWidget {
     required this.selectedType,
     required this.alimentations,
     required this.protectionTete,
+    required this.departPrisAvecProtection,
+    this.onDepartPrisAvecProtectionChanged,
     required this.onDataChanged,
     required this.sourcesDisponibles,
     this.onAddSortie,
@@ -1661,6 +1665,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
         case 'calibre': a.calibre = value; break;
         case 'sectionCable': a.sectionCable = value; break;
         case 'source': a.source = value; break;
+        case 'sourceKnown': a.sourceKnown = value; break;
       }
       widget.onDataChanged();
     });
@@ -1742,7 +1747,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           if (widget.alimentations.isNotEmpty)
             _buildAlimentationCard(context, 'ORIGINE DE LA SOURCE', widget.alimentations[0], (field, value) => _updateAlimentation(widget.alimentations[0], field, value), index: 0),
           if (widget.protectionTete != null)
-            _buildAlimentationCard(context, 'PROTECTION DE TÊTE', widget.protectionTete!, (field, value) => _updateProtectionTete(field, value), isProtectionTete: true),
+            _buildProtectionTeteCard(context),
         ],
         SizedBox(height: context.spacingXXL),
       ],
@@ -1867,6 +1872,17 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             ],
           ),
           SizedBox(height: context.spacingM),
+          if ((widget.selectedType == 'INVERSEUR' && (index == 0 || index == 1)) ||
+              (widget.selectedType != 'INVERSEUR' && !isProtectionTete && index == 0)) ...[
+            _buildModernDropdown(
+              context,
+              label: 'Source',
+              value: a.effectiveSourceKnown,
+              items: const ['Connue', 'Inconnue'],
+              onChanged: (v) => onChanged('sourceKnown', v),
+            ),
+            SizedBox(height: context.spacingS),
+          ],
           _buildModernDropdown(context, label: 'Type de protection', value: typeProtVal, items: typeProtectionItems, onChanged: (v) => onChanged('typeProtection', v)),
           SizedBox(height: context.spacingS),
           _buildModernDropdown(context, label: 'Courbe', value: courbeVal, items: courbeItems, onChanged: (v) => onChanged('courbe', v)),
@@ -1893,6 +1909,101 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             }
             return <Widget>[];
           }(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProtectionTeteCard(BuildContext context) {
+    final bool isDepartPrisAvecProtection = widget.departPrisAvecProtection;
+
+    return Container(
+      padding: EdgeInsets.all(context.spacingM),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingM),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: context.spacingS,
+              vertical: context.spacingXS,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(context.spacingS),
+            ),
+            child: Text(
+              'PROTECTION DE TÊTE',
+              style: TextStyle(
+                fontSize: context.fontSizeM,
+                fontWeight: FontWeight.bold,
+                color: Colors.orange.shade800,
+              ),
+            ),
+          ),
+          SizedBox(height: context.spacingM),
+          Container(
+            decoration: BoxDecoration(
+              color: isDepartPrisAvecProtection
+                  ? Colors.green.shade50
+                  : Colors.orange.shade50,
+              borderRadius: BorderRadius.circular(context.spacingS),
+              border: Border.all(
+                color: isDepartPrisAvecProtection
+                    ? Colors.green.shade200
+                    : Colors.orange.shade300,
+              ),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: SwitchListTile(
+              contentPadding: EdgeInsets.symmetric(horizontal: context.spacingS),
+              title: Text(
+                'Départ pris avec protection',
+                style: TextStyle(
+                  fontSize: context.fontSizeS,
+                  fontWeight: FontWeight.bold,
+                  color: AppTheme.darkBlue,
+                ),
+              ),
+              subtitle: Text(
+                isDepartPrisAvecProtection
+                    ? 'Protection de tête déclarée'
+                    : 'Départ pris sans protection',
+                style: TextStyle(
+                  fontSize: context.fontSizeXS,
+                  color: isDepartPrisAvecProtection
+                      ? Colors.green.shade800
+                      : Colors.orange.shade900,
+                ),
+              ),
+              value: isDepartPrisAvecProtection,
+              activeColor: Colors.green,
+              onChanged: (bool val) {
+                widget.onDepartPrisAvecProtectionChanged?.call(val);
+              },
+            ),
+          ),
+          if (isDepartPrisAvecProtection && widget.protectionTete != null) ...[
+            SizedBox(height: context.spacingM),
+            _buildAlimentationCard(
+              context,
+              'DÉTAILS PROTECTION DE TÊTE',
+              widget.protectionTete!,
+              (field, value) => _updateProtectionTete(field, value),
+              isProtectionTete: true,
+            ),
+          ],
         ],
       ),
     );
@@ -2599,6 +2710,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   bool _pointsValid = false;
   bool _domaineTensionValid = false;
   bool _accessible = true;
+  bool _departPrisAvecProtection = true;
 
   bool _photosExterneValid = false;
   bool _photosInterneValid = false;
@@ -2653,6 +2765,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         if (_numeroEquipementController.text.trim().isEmpty) _autoFillNumeroEquipement();
         _selectedType = draft.type;
         _accessible = draft.accessible;
+        _departPrisAvecProtection = draft.isDepartPrisAvecProtection;
         _alimenteeParTransformateur = draft.alimenteeParTransformateur;
         _presenceCPI = (draft.type == 'INVERSEUR') ? null : draft.presenceCPI;
         _zoneAtex = draft.zoneAtex;
@@ -2738,6 +2851,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         _repereController.text = draft.repere ?? '';
         if (_numeroEquipementController.text.trim().isEmpty) _autoFillNumeroEquipement();
         _selectedType = draft.type;
+        _departPrisAvecProtection = draft.isDepartPrisAvecProtection;
         _alimenteeParTransformateur = draft.alimenteeParTransformateur;
         _presenceCPI = (draft.type == 'INVERSEUR') ? null : draft.presenceCPI;
         _zoneAtex = draft.zoneAtex;
@@ -2847,6 +2961,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       nom: _nomController.text.trim(),
       type: _selectedType ?? '',
       accessible: _accessible,
+      departPrisAvecProtection: _departPrisAvecProtection,
       numeroEquipement: _numeroEquipementController.text.trim().isEmpty ? null : _numeroEquipementController.text.trim(),
       repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
       alimenteeParTransformateur: _alimenteeParTransformateur,
@@ -2984,6 +3099,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _numeroEquipementController.text = coffret.numeroEquipement ?? '';
     _selectedType = coffret.type;
     _accessible = coffret.accessible;
+    _departPrisAvecProtection = coffret.isDepartPrisAvecProtection;
     _repereController.text = coffret.repere ?? '';
     _alimenteeParTransformateur = coffret.alimenteeParTransformateur;
     _presenceCPI = coffret.presenceCPI;
@@ -3913,6 +4029,13 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                       selectedType: _selectedType,
                       alimentations: _alimentations,
                       protectionTete: _protectionTete,
+                      departPrisAvecProtection: _departPrisAvecProtection,
+                      onDepartPrisAvecProtectionChanged: (val) {
+                        setState(() {
+                          _departPrisAvecProtection = val;
+                        });
+                        _scheduleAutoSave();
+                      },
                       onDataChanged: () { _validateAlimentations(); setState(() {}); },
                       sourcesDisponibles: _getSourcesDisponibles(),
                       onAddSortie: _addSortieInverseur,
