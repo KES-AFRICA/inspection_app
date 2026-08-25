@@ -16,6 +16,7 @@ import 'package:inspec_app/services/hive_service.dart';
 import 'dart:io';
 
 import 'package:inspec_app/services/dispositions_constructives_registry.dart';
+import 'package:inspec_app/services/installation_fields_registry.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:inspec_app/components/safe_file_image.dart';
 
@@ -2718,8 +2719,18 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
             _buildInfoRow('Puissance', transfo.puissanceAssignee),
           if (transfo.tensionPrimaireSecondaire.isNotEmpty)
             _buildInfoRow('Tension', transfo.tensionPrimaireSecondaire),
-          if (transfo.relaisBuchholz.isNotEmpty)
-            _buildInfoRow('Relais Buchholz', transfo.relaisBuchholz),
+          if (transfo.isImmerge && transfo.typeImmersion != null && transfo.typeImmersion!.isNotEmpty)
+            _buildInfoRow('Type d\'immersion', transfo.typeImmersion!),
+          if (transfo.typeImmersion == InstallationFieldsRegistry.immersionConservateur && transfo.relaisBuchholz.isNotEmpty)
+            _buildInfoRow('Relais Buchholz', transfo.relaisBuchholz)
+          else if (transfo.typeImmersion == InstallationFieldsRegistry.immersionHermetique && transfo.presenceDGPT2 != null && transfo.presenceDGPT2!.isNotEmpty)
+            _buildInfoRow('DGPT2', transfo.presenceDGPT2!)
+          else ...[
+            if (transfo.relaisBuchholz.isNotEmpty)
+              _buildInfoRow('Relais Buchholz', transfo.relaisBuchholz),
+            if (transfo.presenceDGPT2 != null && transfo.presenceDGPT2!.isNotEmpty)
+              _buildInfoRow('DGPT2', transfo.presenceDGPT2!),
+          ],
           if (transfo.typeRefroidissement.isNotEmpty)
             _buildInfoRow('Refroidissement', transfo.typeRefroidissement),
           if (transfo.regimeNeutre.isNotEmpty)

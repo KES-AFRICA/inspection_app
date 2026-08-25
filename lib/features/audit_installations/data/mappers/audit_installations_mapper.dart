@@ -119,6 +119,8 @@ class AuditInstallationsMapper {
       repere: model.repere,
       marque: model.marque,
       anneeFabrication: model.anneeFabrication,
+      typeImmersion: model.typeImmersion,
+      presenceDGPT2: model.presenceDGPT2,
     );
   }
 
@@ -148,6 +150,8 @@ class AuditInstallationsMapper {
       repere: entity.repere,
       marque: entity.marque,
       anneeFabrication: entity.anneeFabrication,
+      typeImmersion: entity.typeImmersion,
+      presenceDGPT2: entity.presenceDGPT2,
     );
   }
 

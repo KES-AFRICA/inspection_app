@@ -149,6 +149,8 @@ class TransformateurMTBTEntity {
   final String? repere;
   final String? marque;
   final String? anneeFabrication;
+  final String? typeImmersion;
+  final String? presenceDGPT2;
 
   const TransformateurMTBTEntity({
     required this.typeTransformateur,
@@ -175,6 +177,8 @@ class TransformateurMTBTEntity {
     this.repere,
     this.marque,
     this.anneeFabrication,
+    this.typeImmersion,
+    this.presenceDGPT2,
   });
 
   TransformateurMTBTEntity copyWith({
@@ -202,6 +206,8 @@ class TransformateurMTBTEntity {
     String? repere,
     String? marque,
     String? anneeFabrication,
+    String? typeImmersion,
+    String? presenceDGPT2,
   }) {
     return TransformateurMTBTEntity(
       typeTransformateur: typeTransformateur ?? this.typeTransformateur,
@@ -228,6 +234,8 @@ class TransformateurMTBTEntity {
       repere: repere ?? this.repere,
       marque: marque ?? this.marque,
       anneeFabrication: anneeFabrication ?? this.anneeFabrication,
+      typeImmersion: typeImmersion ?? this.typeImmersion,
+      presenceDGPT2: presenceDGPT2 ?? this.presenceDGPT2,
     );
   }
 }

@@ -2444,6 +2444,8 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   final _transfoPuissanceController = TextEditingController();
   final _transfoTensionController = TextEditingController();
   final _transfoBuchholzController = TextEditingController();
+  final _transfoTypeImmersionController = TextEditingController();
+  final _transfoDgpt2Controller = TextEditingController();
   final _transfoRefroidissementController = TextEditingController();
   final _transfoRegimeController = TextEditingController();
   final _transfoCalibreDisjoncteurController = TextEditingController();
@@ -2580,6 +2582,8 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoPuissanceController.clear();
     _transfoTensionController.clear();
     _transfoBuchholzController.text = '';
+    _transfoTypeImmersionController.text = '';
+    _transfoDgpt2Controller.text = '';
     _transfoRefroidissementController.text = '';
     _transfoRegimeController.text = '';
     _transfoCalibreDisjoncteurController.clear();
@@ -2645,6 +2649,8 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoPuissanceController.text = transfo.puissanceAssignee;
     _transfoTensionController.text = transfo.tensionPrimaireSecondaire;
     _transfoBuchholzController.text = transfo.relaisBuchholz;
+    _transfoTypeImmersionController.text = transfo.typeImmersion ?? '';
+    _transfoDgpt2Controller.text = transfo.presenceDGPT2 ?? '';
     _transfoRefroidissementController.text = transfo.typeRefroidissement;
     _transfoRegimeController.text = transfo.regimeNeutre;
     
@@ -2959,6 +2965,12 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
       puissanceAssignee: _transfoPuissanceController.text.trim(),
       tensionPrimaireSecondaire: _transfoTensionController.text.trim(),
       relaisBuchholz: _transfoBuchholzController.text,
+      typeImmersion: _transfoTypeImmersionController.text.trim().isNotEmpty
+          ? _transfoTypeImmersionController.text.trim()
+          : null,
+      presenceDGPT2: _transfoDgpt2Controller.text.trim().isNotEmpty
+          ? _transfoDgpt2Controller.text.trim()
+          : null,
       typeRefroidissement: _transfoRefroidissementController.text,
       regimeNeutre: _transfoRegimeController.text,
       elementsVerifies: _transfoElements,
@@ -4241,8 +4253,50 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
           SizedBox(height: isSmallScreen ? 12 : 16),
 
           // 1. Type de transformateur
-          _buildDropdown(_transfoTypeController, 'Type de transformateur', InstallationFieldsRegistry.typeTransformateurOptions, isSmallScreen, optional: true),
+          _buildDropdownVal(
+            _transfoTypeController.text.isNotEmpty ? _transfoTypeController.text : null,
+            'Type de transformateur',
+            InstallationFieldsRegistry.typeTransformateurOptions,
+            isSmallScreen,
+            (value) {
+              setState(() {
+                _transfoTypeController.text = value ?? '';
+              });
+            },
+            optional: true,
+          ),
           SizedBox(height: isSmallScreen ? 12 : 16),
+
+          // Champ conditionnel : Type d'immersion & Protection (Buchholz / DGPT2)
+          if (_transfoTypeController.text.trim().toUpperCase() == 'IMMERGÉ' ||
+              _transfoTypeController.text.trim().toUpperCase() == 'IMMERGE') ...[
+            _buildDropdownVal(
+              _transfoTypeImmersionController.text.isNotEmpty ? _transfoTypeImmersionController.text : null,
+              'Type d\'immersion',
+              InstallationFieldsRegistry.typeImmersionOptions,
+              isSmallScreen,
+              (value) {
+                setState(() {
+                  _transfoTypeImmersionController.text = value ?? '';
+                });
+              },
+              optional: true,
+            ),
+            SizedBox(height: isSmallScreen ? 12 : 16),
+
+            // Protection conditionnelle basée sur le type d'immersion
+            if (_transfoTypeImmersionController.text == InstallationFieldsRegistry.immersionConservateur) ...[
+              _buildDropdown(_transfoBuchholzController, 'Présence de relais Bucholz', _ouiNonOptions, isSmallScreen, optional: true),
+              SizedBox(height: isSmallScreen ? 12 : 16),
+            ] else if (_transfoTypeImmersionController.text == InstallationFieldsRegistry.immersionHermetique) ...[
+              _buildDropdown(_transfoDgpt2Controller, 'Présence de DGPT2', _ouiNonOptions, isSmallScreen, optional: true),
+              SizedBox(height: isSmallScreen ? 12 : 16),
+            ] else if (_transfoBuchholzController.text.isNotEmpty) ...[
+              // Fallback mission ancienne : typeImmersion non renseigné mais valeur Buchholz existante
+              _buildDropdown(_transfoBuchholzController, 'Présence de relais Bucholz', _ouiNonOptions, isSmallScreen, optional: true),
+              SizedBox(height: isSmallScreen ? 12 : 16),
+            ],
+          ],
 
           // 2. Marque & Année de fabrication
           _buildTextField(_transfoMarqueController, 'Marque', isSmallScreen, optional: true),
@@ -4354,10 +4408,6 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
             optional: true,
             suffixText: 'kA',
           ),
-          SizedBox(height: isSmallScreen ? 12 : 16),
-
-          // 11. Présence du relais Buchholz
-          _buildDropdown(_transfoBuchholzController, 'Présence du relais Buchholz', _ouiNonOptions, isSmallScreen, optional: true),
           SizedBox(height: isSmallScreen ? 12 : 16),
 
           // 12. Type de refroidissement
@@ -4929,6 +4979,8 @@ Widget _buildPrioriteButton({
     _transfoPuissanceController.dispose();
     _transfoTensionController.dispose();
     _transfoBuchholzController.dispose();
+    _transfoTypeImmersionController.dispose();
+    _transfoDgpt2Controller.dispose();
     _transfoRefroidissementController.dispose();
     _transfoRegimeController.dispose();
     _transfoCalibreDisjoncteurController.dispose();

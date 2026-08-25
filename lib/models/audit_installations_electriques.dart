@@ -642,6 +642,18 @@ class TransformateurMTBT {
   @HiveField(23)
   String? anneeFabrication;
 
+  @HiveField(24)
+  String? typeImmersion;
+
+  @HiveField(25)
+  String? presenceDGPT2;
+
+  /// Indique si le transformateur est de type immergé (tolérant aux majuscules/accents)
+  bool get isImmerge {
+    final t = typeTransformateur.trim().toUpperCase();
+    return t == 'IMMERGÉ' || t == 'IMMERGE';
+  }
+
   TransformateurMTBT({
     required this.typeTransformateur,
     required this.marqueAnnee,
@@ -667,6 +679,8 @@ class TransformateurMTBT {
     this.repere,
     this.marque,
     this.anneeFabrication,
+    this.typeImmersion,
+    this.presenceDGPT2,
   })  : elementsVerifies = elementsVerifies ?? [],
         photos = photos ?? [],
         observations = observations ?? [],
@@ -730,6 +744,8 @@ class TransformateurMTBT {
     String? repere,
     String? marque,
     String? anneeFabrication,
+    String? typeImmersion,
+    String? presenceDGPT2,
   }) {
     return TransformateurMTBT(
       typeTransformateur: typeTransformateur ?? this.typeTransformateur,
@@ -753,6 +769,11 @@ class TransformateurMTBT {
       ik3Max: ik3Max ?? this.ik3Max,
       nom: nom ?? this.nom,
       photo: photo ?? this.photo,
+      repere: repere ?? this.repere,
+      marque: marque ?? this.marque,
+      anneeFabrication: anneeFabrication ?? this.anneeFabrication,
+      typeImmersion: typeImmersion ?? this.typeImmersion,
+      presenceDGPT2: presenceDGPT2 ?? this.presenceDGPT2,
     );
   }
 }

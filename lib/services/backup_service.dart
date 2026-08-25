@@ -765,6 +765,8 @@ class BackupService {
         'puissanceAssignee': t.puissanceAssignee,
         'tensionPrimaireSecondaire': t.tensionPrimaireSecondaire,
         'relaisBuchholz': t.relaisBuchholz,
+        'typeImmersion': t.typeImmersion,
+        'presenceDGPT2': t.presenceDGPT2,
         'typeRefroidissement': t.typeRefroidissement,
         'regimeNeutre': t.regimeNeutre,
         'photos': t.photos,
@@ -2363,6 +2365,8 @@ class BackupService {
         tensionPrimaireSecondaire:
             d['tensionPrimaireSecondaire'] as String? ?? '',
         relaisBuchholz: d['relaisBuchholz'] as String? ?? '',
+        typeImmersion: d['typeImmersion'] as String?,
+        presenceDGPT2: d['presenceDGPT2'] as String?,
         typeRefroidissement: d['typeRefroidissement'] as String? ?? '',
         regimeNeutre: d['regimeNeutre'] as String? ?? '',
         photos: _strList(d['photos']),

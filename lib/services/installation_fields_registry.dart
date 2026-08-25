@@ -42,6 +42,18 @@ class InstallationFieldsRegistry {
   static const String keyPccAmont = 'PCC amont';
   static const String keyPuissanceUcc = 'Puissance UCC';
   static const String keyIk3Max = 'IK3 MAX';
+  static const String keyTypeImmersion = 'Type d\'immersion';
+  static const String keyPresenceDGPT2 = 'Présence de DGPT2';
+
+  static const String immersionConservateur =
+      'Immersion avec conservateur d\'expansion d\'huile';
+  static const String immersionHermetique =
+      'Immersion hermétique à remplissage total';
+
+  static const List<String> typeImmersionOptions = [
+    immersionConservateur,
+    immersionHermetique,
+  ];
 
   /// Génère dynamiquement la liste des années valides à partir de l'année actuelle jusqu'à [startYear].
   static List<String> generateYearsList({int startYear = 1950}) {

@@ -499,13 +499,15 @@ class TransformateurMTBTAdapter extends TypeAdapter<TransformateurMTBT> {
       repere: fields[21] as String?,
       marque: fields[22] as String?,
       anneeFabrication: fields[23] as String?,
+      typeImmersion: fields[24] as String?,
+      presenceDGPT2: fields[25] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, TransformateurMTBT obj) {
     writer
-      ..writeByte(24)
+      ..writeByte(26)
       ..writeByte(0)
       ..write(obj.typeTransformateur)
       ..writeByte(1)
@@ -553,7 +555,11 @@ class TransformateurMTBTAdapter extends TypeAdapter<TransformateurMTBT> {
       ..writeByte(22)
       ..write(obj.marque)
       ..writeByte(23)
-      ..write(obj.anneeFabrication);
+      ..write(obj.anneeFabrication)
+      ..writeByte(24)
+      ..write(obj.typeImmersion)
+      ..writeByte(25)
+      ..write(obj.presenceDGPT2);
   }
 
   @override

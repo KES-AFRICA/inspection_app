@@ -11061,6 +11061,14 @@ class PdfReportService {
           safe(transfo.typeTransformateur),
           alt: false,
         ),
+        if (transfo.isImmerge &&
+            transfo.typeImmersion != null &&
+            transfo.typeImmersion!.trim().isNotEmpty)
+          tableDataRowInfo(
+            'Type d\'immersion',
+            safe(transfo.typeImmersion!),
+            alt: false,
+          ),
         tableDataRowInfo(
           'Marque',
           safe(transfo.effectiveMarque),
@@ -11117,11 +11125,32 @@ class PdfReportService {
           safe(transfo.ik3Max ?? ''),
           alt: false,
         ),
-        tableDataRowInfo(
-          'Présence du relais Buchholz',
-          safe(transfo.relaisBuchholz),
-          alt: false,
-        ),
+        if (transfo.typeImmersion == InstallationFieldsRegistry.immersionConservateur)
+          tableDataRowInfo(
+            'Présence du relais Buchholz',
+            safe(transfo.relaisBuchholz),
+            alt: false,
+          )
+        else if (transfo.typeImmersion == InstallationFieldsRegistry.immersionHermetique)
+          tableDataRowInfo(
+            'Présence de DGPT2',
+            safe(transfo.presenceDGPT2 ?? ''),
+            alt: false,
+          )
+        else ...[
+          if (transfo.relaisBuchholz.trim().isNotEmpty)
+            tableDataRowInfo(
+              'Présence du relais Buchholz',
+              safe(transfo.relaisBuchholz),
+              alt: false,
+            ),
+          if (transfo.presenceDGPT2 != null && transfo.presenceDGPT2!.trim().isNotEmpty)
+            tableDataRowInfo(
+              'Présence de DGPT2',
+              safe(transfo.presenceDGPT2!),
+              alt: false,
+            ),
+        ],
         tableDataRowInfo(
           'Type de refroidissement',
           safe(transfo.typeRefroidissement),

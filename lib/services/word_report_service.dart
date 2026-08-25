@@ -11,6 +11,7 @@ import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/renseignements_generaux.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/installation_fields_registry.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:intl/intl.dart';
@@ -815,11 +816,22 @@ class WordReportService {
       if (t.nom != null && t.nom!.trim().isNotEmpty)
         _dataRow(['Nom du transformateur', t.nom!.trim()]),
       _dataRow(['Type', t.typeTransformateur]),
+      if (t.isImmerge && t.typeImmersion != null && t.typeImmersion!.trim().isNotEmpty)
+        _dataRow(['Type d\'immersion', t.typeImmersion!]),
       _dataRow(['Marque', t.effectiveMarque]),
       _dataRow(['Année de fabrication', t.effectiveAnneeFabrication]),
       _dataRow(['Puissance assignée', t.puissanceAssignee]),
       _dataRow(['Tension primaire / secondaire', t.tensionPrimaireSecondaire]),
-      _dataRow(['Relais Buchholz', t.relaisBuchholz]),
+      if (t.typeImmersion == InstallationFieldsRegistry.immersionConservateur)
+        _dataRow(['Relais Buchholz', t.relaisBuchholz])
+      else if (t.typeImmersion == InstallationFieldsRegistry.immersionHermetique)
+        _dataRow(['Présence de DGPT2', t.presenceDGPT2 ?? ''])
+      else ...[
+        if (t.relaisBuchholz.trim().isNotEmpty)
+          _dataRow(['Relais Buchholz', t.relaisBuchholz]),
+        if (t.presenceDGPT2 != null && t.presenceDGPT2!.trim().isNotEmpty)
+          _dataRow(['Présence de DGPT2', t.presenceDGPT2!]),
+      ],
       _dataRow(['Type de refroidissement', t.typeRefroidissement]),
       _dataRow(['Régime du neutre', t.regimeNeutre]),
     ], borders: TableBorders.all()));
