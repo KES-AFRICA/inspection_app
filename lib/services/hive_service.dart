@@ -1907,69 +1907,80 @@ static CoffretArmoire? findCoffretByQrCode(String missionId, String qrCode) {
     return EquipmentNumberService.getNextEquipmentNumber(missionId);
   }
 
-/// Mettre à jour un coffret en base de données par son [equipmentId] immuable (SaveGuard inclus)
-static Future<bool> updateCoffretById({
-  required String missionId,
-  required String equipmentId,
-  required CoffretArmoire updatedCoffret,
-}) async {
-  try {
-    final audit = await getOrCreateAuditInstallations(missionId);
-    
-    bool findAndReplaceInList(List<CoffretArmoire> list) {
-      final index = list.indexWhere((c) => c.equipmentId == equipmentId || (c.id != null && c.id == equipmentId));
-      if (index != -1) {
-        updatedCoffret.id = equipmentId;
-        list[index] = updatedCoffret;
-        return true;
-      }
-      return false;
-    }
-
-    bool found = false;
-    for (var local in audit.moyenneTensionLocaux) {
-      if (findAndReplaceInList(local.coffrets)) { found = true; break; }
-    }
-
-    if (!found) {
-      for (var zone in audit.moyenneTensionZones) {
-        if (findAndReplaceInList(zone.coffrets)) { found = true; break; }
-        for (var local in zone.locaux) {
-          if (findAndReplaceInList(local.coffrets)) { found = true; break; }
+  /// Mettre à jour un coffret en base de données par son [equipmentId] immuable (SaveGuard inclus)
+  static Future<bool> updateCoffretById({
+    required String missionId,
+    required String equipmentId,
+    required CoffretArmoire updatedCoffret,
+  }) async {
+    try {
+      final audit = await getOrCreateAuditInstallations(missionId);
+      
+      bool findAndReplaceInList(List<CoffretArmoire> list) {
+        // 1. Match par equipmentId immuable / id
+        int index = list.indexWhere((c) => c.equipmentId == equipmentId || (c.id != null && c.id == equipmentId));
+        
+        // 2. Fallback pour anciennes missions importées : match par qrCode ou par nom
+        if (index == -1 && updatedCoffret.qrCode.trim().isNotEmpty) {
+          index = list.indexWhere((c) => c.qrCode.trim() == updatedCoffret.qrCode.trim());
         }
-        if (found) break;
-      }
-    }
-
-    if (!found) {
-      for (var zone in audit.basseTensionZones) {
-        if (findAndReplaceInList(zone.coffretsDirects)) { found = true; break; }
-        for (var local in zone.locaux) {
-          if (findAndReplaceInList(local.coffrets)) { found = true; break; }
+        if (index == -1 && updatedCoffret.nom.trim().isNotEmpty) {
+          index = list.indexWhere((c) => c.nom.trim() == updatedCoffret.nom.trim());
         }
-        if (found) break;
-      }
-    }
 
-    if (!found) {
+        if (index != -1) {
+          updatedCoffret.id = equipmentId;
+          list[index] = updatedCoffret;
+          return true;
+        }
+        return false;
+      }
+
+      bool found = false;
+      for (var local in audit.moyenneTensionLocaux) {
+        if (findAndReplaceInList(local.coffrets)) { found = true; break; }
+      }
+
+      if (!found) {
+        for (var zone in audit.moyenneTensionZones) {
+          if (findAndReplaceInList(zone.coffrets)) { found = true; break; }
+          for (var local in zone.locaux) {
+            if (findAndReplaceInList(local.coffrets)) { found = true; break; }
+          }
+          if (found) break;
+        }
+      }
+
+      if (!found) {
+        for (var zone in audit.basseTensionZones) {
+          if (findAndReplaceInList(zone.coffretsDirects)) { found = true; break; }
+          for (var local in zone.locaux) {
+            if (findAndReplaceInList(local.coffrets)) { found = true; break; }
+          }
+          if (found) break;
+        }
+      }
+
+      if (!found) {
+        if (kDebugMode) {
+          print('❌ SAVEGUARD FAILURE: Équipement avec ID $equipmentId (ou QR/Nom) introuvable dans la mission $missionId.');
+        }
+        return false;
+      }
+
+      await saveAuditInstallations(audit);
       if (kDebugMode) {
-        print('❌ SAVEGUARD FAILURE: Équipement avec ID $equipmentId introuvable dans la mission $missionId.');
+        print('✅ Coffret mis à jour par ID/Fallback immuable: $equipmentId (${updatedCoffret.nom})');
       }
-      return false;
+      return true;
+    } catch (e, stack) {
+      if (kDebugMode) {
+        print('❌ Erreur updateCoffretById: $e');
+        print(stack);
+      }
+      rethrow;
     }
-
-    await saveAuditInstallations(audit);
-    if (kDebugMode) {
-      print('✅ Coffret mis à jour par ID immuable: $equipmentId');
-    }
-    return true;
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Erreur updateCoffretById: $e');
-    }
-    return false;
   }
-}
 
 // Vérifier si un QR code existe déjà
 static bool qrCodeExists(String missionId, String qrCode) {

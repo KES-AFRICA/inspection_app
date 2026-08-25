@@ -3531,6 +3531,16 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     
     setState(() => _isSaving = true);
 
+    if (kDebugMode) {
+      print('💾 [SAVE PIPELINE] === START SAVE OPERATION ===');
+      print('💾 [SAVE PIPELINE] Mission ID: ${widget.mission.id}');
+      print('💾 [SAVE PIPELINE] Is Edition: ${widget.isEdition}');
+      print('💾 [SAVE PIPELINE] Equipment ID: ${widget.coffret?.equipmentId}');
+      print('💾 [SAVE PIPELINE] Type: $_selectedType | Nom: ${_nomController.text.trim()} | Repère: ${_repereController.text.trim()}');
+      print('💾 [SAVE PIPELINE] Points de vérification count: ${_pointsVerification.length}');
+      print('💾 [SAVE PIPELINE] Current Slide Step: $_currentStep');
+    }
+
     for (var obs in _observationsParafoudre) {
       obs.priorite = null;
     }
@@ -3566,6 +3576,11 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         observationsParafoudre: const [],
         observationsParafoudreEnrichies: _observationsParafoudre,
       );
+
+      if (kDebugMode) {
+        print('💾 [SAVE PIPELINE] Model constructed successfully: ${nouveauCoffret.nom} (${nouveauCoffret.equipmentId})');
+      }
+
       if (widget.isEdition && widget.coffret != null && widget.coffret!.nom != _nomController.text.trim()) await _transfererEssais(widget.coffret!.nom, _nomController.text.trim());
       bool success = false;
       if (widget.isEdition) success = await _updateCoffret(nouveauCoffret);
@@ -3580,6 +3595,11 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
           else success = await HiveService.addCoffretToBasseTensionZone(missionId: widget.mission.id, zoneIndex: widget.parentIndex, coffret: nouveauCoffret);
         }
       }
+
+      if (kDebugMode) {
+        print('💾 [SAVE PIPELINE] Operation success status: $success');
+      }
+
       if (success) {
         await HiveService.deleteCoffretDraft(_draftQrCode ?? _qrCodeController.text.trim());
         if (widget.isEdition) {
@@ -3606,8 +3626,19 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
           await Navigator.push(context, MaterialPageRoute(builder: (context) => AjouterEssaiDeclenchementScreen(mission: widget.mission, localisationPredefinie: localisation, coffretPredefini: nouveauCoffret.nom)));
           Navigator.pop(context, true);
         }
-      } else { _showError('Erreur lors de la sauvegarde'); }
-    } catch (e) { _showError('Erreur: $e'); } finally {
+      } else {
+        if (kDebugMode) {
+          print('❌ [SAVE PIPELINE ERROR] Échec de la méthode de persistance (success == false)');
+        }
+        _showError('Erreur lors de la sauvegarde : Équipement non localisé ou rejeté par la persistance');
+      }
+    } catch (e, stack) {
+      if (kDebugMode) {
+        print('❌ [SAVE PIPELINE EXCEPTION] Exception attrapée dans _sauvegarder: $e');
+        print(stack);
+      }
+      _showError('Erreur de sauvegarde : $e');
+    } finally {
       if (mounted) setState(() => _isSaving = false);
     }
   }
@@ -3641,12 +3672,23 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     try {
       if (widget.coffret != null) {
         newCoffret.id = widget.coffret!.equipmentId;
+        if (kDebugMode) {
+          print('💾 [SAVE PIPELINE] Attempting updateCoffretById for EquipmentId=${widget.coffret!.equipmentId}...');
+        }
         final ok = await HiveService.updateCoffretById(
           missionId: widget.mission.id,
           equipmentId: widget.coffret!.equipmentId,
           updatedCoffret: newCoffret,
         );
-        if (ok) return true;
+        if (ok) {
+          if (kDebugMode) {
+            print('✅ [SAVE PIPELINE] updateCoffretById returned true!');
+          }
+          return true;
+        }
+        if (kDebugMode) {
+          print('⚠️ [SAVE PIPELINE] updateCoffretById returned false. Falling back to container/index search...');
+        }
       }
       final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
       CoffretArmoire? target; bool found = false;
@@ -3667,7 +3709,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       if (found && target != null) {
         if (widget.coffret != null && target.equipmentId != widget.coffret!.equipmentId) {
           if (kDebugMode) {
-            print('❌ SAVEGUARD BLOCKED: Tentative de modification sur un équipement mismatched !');
+            print('❌ SAVEGUARD BLOCKED: Tentative de modification sur un équipement mismatched ! (target=${target.equipmentId} vs expected=${widget.coffret!.equipmentId})');
           }
           return false;
         }
@@ -3703,8 +3745,17 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         await HiveService.saveAuditInstallations(audit);
         return true;
       }
+      if (kDebugMode) {
+        print('❌ [SAVE PIPELINE] Equipment target not found in index search fallback');
+      }
       return false;
-    } catch (e) { return false; }
+    } catch (e, stack) {
+      if (kDebugMode) {
+        print('❌ [SAVE PIPELINE EXCEPTION] Exception in _updateCoffret: $e');
+        print(stack);
+      }
+      rethrow;
+    }
   }
 
   void _handleNext() {
