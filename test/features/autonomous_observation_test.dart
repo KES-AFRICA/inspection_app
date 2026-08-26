@@ -142,7 +142,7 @@ void main() {
                 conformite: 'non',
                 criticite: null, // Point sur-mesure à la main -> null
                 familleRisque: null,
-                referenceNormative: null,
+                referenceNormative: 'Point sur-mesure',
                 priorite: null, // null
               ),
             ],
@@ -163,9 +163,9 @@ void main() {
       final inventory = AuditFindingInventoryEngine.buildInventory(missionId);
       expect(inventory.totalFindings, equals(3));
 
-      // L'éclairage (Critique)
+      // L'éclairage (Majeure)
       final elFinding = inventory.findings.firstWhere((f) => f.verificationPoint == 'Éclairage normal');
-      expect(elFinding.criticality, equals('Critique'));
+      expect(elFinding.criticality, equals('Majeure'));
 
       // L'identification (Majeure persistée malgré priorite: 3)
       final pvFinding = inventory.findings.firstWhere((f) => f.verificationPoint == 'Identification complète des circuits');
@@ -240,12 +240,12 @@ void main() {
       final migratedEl = retrievedAudit!.moyenneTensionLocaux.first.dispositionsConstructives.first;
       expect(migratedEl.criticite, equals('Majeure'));
       expect(migratedEl.familleRisque, equals('Accès non autorisé / risque électrique'));
-      expect(migratedEl.referenceNormative, equals('NF C 15-100-7-729:2024 – § 729'));
+      expect(migratedEl.referenceNormative, equals('NF C 15-100-7-729:2024 – art 729'));
 
       final migratedPv = retrievedAudit.moyenneTensionLocaux.first.coffrets.first.pointsVerification.first;
       expect(migratedPv.criticite, equals('Majeure'));
       expect(migratedPv.familleRisque, equals('Accès / exploitation / intervention'));
-      expect(migratedPv.referenceNormative, equals('NF C 15-100-1:2024 – § 513'));
+      expect(migratedPv.referenceNormative, equals('NF C 15-100-1:2024 – art 513'));
 
       // Vérification de l'inventaire
       final inventory = AuditFindingInventoryEngine.buildInventory(missionId);

@@ -575,6 +575,12 @@ class MissionDomainInventoryEngine {
             rawModelRef: f,
           );
 
+          final foudreCrit = f.niveauPriorite == 3
+              ? 'Critique'
+              : (f.niveauPriorite == 2
+                  ? 'Majeure'
+                  : (f.niveauPriorite == 1 ? 'Mineure' : 'Non spécifiée'));
+
           final finding = AuditFinding(
             id: 'foudre_hash_${hash}_obs_$i',
             missionId: missionId,
@@ -586,11 +592,12 @@ class MissionDomainInventoryEngine {
             verificationPoint: 'Observation Foudre ${i + 1}',
             observationText: f.observation,
             conformity: 'non',
-            criticality: 'Non spécifiée',
+            criticality: foudreCrit,
             priority: f.niveauPriorite,
+            normativeReference: 'NF C 17-102:2011',
           );
 
-          inst.registerCheckpoint(conformity: 'non', criticality: 'Non spécifiée');
+          inst.registerCheckpoint(conformity: 'non', criticality: foudreCrit);
           addFinding(inst, finding);
           instances.add(inst);
         }

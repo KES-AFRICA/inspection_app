@@ -22,7 +22,7 @@ void main() {
       expect(titles, contains("RENSEIGNEMENTS GÉNÉRAUX DE L'ÉTABLISSEMENT"));
       expect(titles, contains("DESCRIPTION DES INSTALLATIONS"));
       expect(titles, contains("CLASSEMENT ET EMPLACEMENTS DES LOCAUX ET ZONES EN FONCTION DES INFLUENCES EXTERNES"));
-      expect(titles, contains("FOUDRE"));
+      expect(titles, contains("FOUDRE ET SURTENSION"));
       expect(titles, contains("PHOTOS"));
 
       // Sous-sections d'Analyse Statistique

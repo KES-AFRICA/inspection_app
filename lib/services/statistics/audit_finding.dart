@@ -328,7 +328,7 @@ class AuditFindingInventory {
   int get critiqueCount => pertinentFindings.where((f) => f.criticality == 'Critique').length;
   int get majeureCount => pertinentFindings.where((f) => f.criticality == 'Majeure').length;
   int get mineureCount => pertinentFindings.where((f) => f.criticality == 'Mineure').length;
-  int get unspecifiedCount => pertinentFindings.where((f) => f.criticality != 'Critique' && f.criticality != 'Majeure' && f.criticality != 'Mineure').length;
+  int get unspecifiedCount => findings.where((f) => f.criticality != 'Critique' && f.criticality != 'Majeure' && f.criticality != 'Mineure').length;
 
   /// Nombre de findings possédant une criticité normative résolue (Critique, Majeure ou Mineure).
   int get classifiedCount => critiqueCount + majeureCount + mineureCount;

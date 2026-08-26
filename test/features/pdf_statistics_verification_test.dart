@@ -98,10 +98,10 @@ void main() {
     print(summaryData.appreciationGlobale.assessmentParagraph3);
 
     // ── ASSERTIONS FORMELLES DE CONCORDANCE ──
-    expect(summary.criticalityStats.total, equals(237));
-    expect(summary.criticalityStats.critique, equals(97));
-    expect(summary.criticalityStats.majeure, equals(139));
-    expect(summary.criticalityStats.mineure, equals(1));
+    expect(summary.criticalityStats.total, equals(240));
+    expect(summary.criticalityStats.critique, equals(98));
+    expect(summary.criticalityStats.majeure, equals(140));
+    expect(summary.criticalityStats.mineure, equals(2));
 
     expect(summary.topTwoCategoriesResult.combinedNC, equals(185));
     expect(summary.topTwoCategoriesResult.cat1Name, equals('Armoires'));

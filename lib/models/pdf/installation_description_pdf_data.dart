@@ -149,11 +149,14 @@ class InstallationDescriptionPdfData {
       itemsMT.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       for (var item in itemsMT) {
         final auditCelluleId = item.data['auditCelluleId'];
-        if (auditCelluleId != null && activeCellulesMap.containsKey(auditCelluleId)) {
-          final c = activeCellulesMap[auditCelluleId]!;
-          final locName = activeCelluleLocalMap[auditCelluleId];
-          mtRows.add(_createRowFromCelluleAndItem(c, item, mtRows.length + 1, localName: locName));
-          processedCelluleIds.add(auditCelluleId);
+        if (auditCelluleId != null) {
+          if (activeCellulesMap.containsKey(auditCelluleId)) {
+            final c = activeCellulesMap[auditCelluleId]!;
+            final locName = activeCelluleLocalMap[auditCelluleId];
+            mtRows.add(_createRowFromCelluleAndItem(c, item, mtRows.length + 1, localName: locName));
+            processedCelluleIds.add(auditCelluleId);
+          }
+          // Si auditCelluleId est renseigné mais n'existe pas dans activeCellulesMap, c'est un item orphelin : on l'ignore !
         } else {
           final itemLocName = item.data['Poste'] ??
               item.data['POSTE'] ??
@@ -171,11 +174,14 @@ class InstallationDescriptionPdfData {
       itemsBT.sort((a, b) => a.createdAt.compareTo(b.createdAt));
       for (var item in itemsBT) {
         final auditTransfoId = item.data['auditTransformateurId'];
-        if (auditTransfoId != null && activeTransfosMap.containsKey(auditTransfoId)) {
-          final t = activeTransfosMap[auditTransfoId]!;
-          final locName = activeTransfoLocalMap[auditTransfoId];
-          btRows.add(_createRowFromTransformateurAndItem(t, item, btRows.length + 1, localName: locName));
-          processedTransfoIds.add(auditTransfoId);
+        if (auditTransfoId != null) {
+          if (activeTransfosMap.containsKey(auditTransfoId)) {
+            final t = activeTransfosMap[auditTransfoId]!;
+            final locName = activeTransfoLocalMap[auditTransfoId];
+            btRows.add(_createRowFromTransformateurAndItem(t, item, btRows.length + 1, localName: locName));
+            processedTransfoIds.add(auditTransfoId);
+          }
+          // Si auditTransfoId est renseigné mais n'existe pas dans activeTransfosMap, c'est un item orphelin : on l'ignore !
         } else {
           final itemLocName = item.data['Poste'] ??
               item.data['POSTE'] ??

@@ -115,10 +115,10 @@ void main() {
         nom: 'Poste MT 1',
         type: 'LOCAL_POSTE_HTA',
         dispositionsConstructives: [
-          ElementControle(elementControle: 'Porte d\'accès au local', conforme: false, priorite: 3, criticite: 'Critique'),
+          ElementControle(elementControle: 'Porte d\'accès au local', conforme: false, priorite: 3, criticite: 'Critique', referenceNormative: 'NF C 13-100:2015 – § 7.3'),
         ],
         conditionsExploitation: [
-          ElementControle(elementControle: 'Outillage d\'isolement', conforme: false, priorite: 2, criticite: 'Majeure'),
+          ElementControle(elementControle: 'Outillage d\'isolement', conforme: false, priorite: 2, criticite: 'Majeure', referenceNormative: 'NF C 13-100:2015 – § 7.3'),
         ],
         cellules: [
           Cellule(
@@ -130,7 +130,7 @@ void main() {
             numerotation: 'C1',
             parafoudres: 'Oui',
             elementsVerifies: [
-              ElementControle(elementControle: 'Verrouillage mécanique', conforme: false, priorite: 3, criticite: 'Critique'),
+              ElementControle(elementControle: 'Verrouillage mécanique', conforme: false, priorite: 3, criticite: 'Critique', referenceNormative: 'NF C 13-100:2015 – § 7.3'),
             ],
           ),
         ],
@@ -144,7 +144,7 @@ void main() {
             typeRefroidissement: 'ONAN',
             regimeNeutre: 'TN',
             elementsVerifies: [
-              ElementControle(elementControle: 'Niveau d\'huile', conforme: false, priorite: 2, criticite: 'Majeure'),
+              ElementControle(elementControle: 'Niveau d\'huile', conforme: false, priorite: 2, criticite: 'Majeure', referenceNormative: 'NF C 13-100:2015 – § 7.3'),
             ],
           ),
         ],
@@ -156,7 +156,7 @@ void main() {
         nom: 'Local Groupe Électrogène',
         type: 'LOCAL_GROUPE_ELECTROGENE',
         dispositionsConstructives: [
-          ElementControle(elementControle: 'Bac de rétention fuel', conforme: false, priorite: 3, criticite: 'Critique'),
+          ElementControle(elementControle: 'Bac de rétention fuel', conforme: false, priorite: 3, criticite: 'Critique', referenceNormative: 'NF C 15-100-1:2024 – § 512'),
         ],
         coffrets: [
           CoffretArmoire(
@@ -170,6 +170,7 @@ void main() {
                 observation: 'Plastron manquant',
                 priorite: 2,
                 criticite: 'Majeure',
+                referenceNormative: 'NF C 15-100-1:2024 – § 512',
               ),
               PointVerification(
                 pointVerification: 'Identification circuits',
@@ -270,7 +271,7 @@ void main() {
       expect(inventory.mineureCount, equals(1));
       expect(inventory.critiqueCount, equals(0));
       expect(inventory.majeureCount, equals(0));
-      expect(inventory.unspecifiedCount, equals(4));
+      expect(inventory.unspecifiedCount, equals(0));
     });
   });
 }

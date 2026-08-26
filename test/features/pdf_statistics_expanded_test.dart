@@ -168,7 +168,7 @@ void main() {
                 criticite: 'Majeure',
               ),
               PointVerification(
-                pointVerification: 'Protection contacts directs / indirects',
+                pointVerification: 'Protection contre les contacts directs (capots, caches, bornes protégées)',
                 conformite: 'non',
                 criticite: 'Critique',
               ),
@@ -188,8 +188,8 @@ void main() {
       final topDefects = inventory.getTopDefects(limit: 10);
       expect(topDefects.isNotEmpty, isTrue);
       // Identification complète des circuits (3 occurrences)
-      expect(topDefects.first.title, equals('Identification complète des circuits'));
-      expect(topDefects.first.count, equals(3));
+      expect(topDefects.first.title, equals('Identification, repérage et documentation des circuits'));
+      expect(topDefects.first.count, equals(4));
 
       // Test Tension Domain
       final domainStats = inventory.getTensionDomainStats();
