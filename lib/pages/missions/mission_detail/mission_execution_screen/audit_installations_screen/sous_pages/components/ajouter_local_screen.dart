@@ -5420,7 +5420,12 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   // Créer un local BT avec un type spécifié
   BasseTensionLocal _creerBasseTensionLocalAvecType(String type) {
     final isFlowLong = type == 'LOCAL_MTBT';
+    final now = DateTime.now().toUtc();
+    final existingLocal = widget.isEdition && widget.local is BasseTensionLocal ? (widget.local as BasseTensionLocal) : null;
     return BasseTensionLocal(
+      id: existingLocal?.localId,
+      createdAt: existingLocal?.createdAt ?? (widget.isEdition ? null : now),
+      updatedAt: now,
       nom: _nomController.text.trim().isEmpty ? 'Sans nom' : _nomController.text.trim(),
       type: type,
       dispositionsConstructives: _dispositionsConstructives,
@@ -6623,7 +6628,12 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   MoyenneTensionLocal _creerMoyenneTensionLocal() {
     // LOCAL_TRANSFORMATEUR et LOCAL_MTBT ont tous les deux cellules et transformateurs
     final isFlowLong = _selectedType == 'LOCAL_TRANSFORMATEUR' || _selectedType == 'LOCAL_MTBT';
+    final now = DateTime.now().toUtc();
+    final existingLocal = widget.isEdition && widget.local is MoyenneTensionLocal ? (widget.local as MoyenneTensionLocal) : null;
     return MoyenneTensionLocal(
+      id: existingLocal?.localId,
+      createdAt: existingLocal?.createdAt ?? (widget.isEdition ? null : now),
+      updatedAt: now,
       nom: _nomController.text.trim().isEmpty ? 'Sans nom' : _nomController.text.trim(),
       type: _selectedType!,
       dispositionsConstructives: _dispositionsConstructives,

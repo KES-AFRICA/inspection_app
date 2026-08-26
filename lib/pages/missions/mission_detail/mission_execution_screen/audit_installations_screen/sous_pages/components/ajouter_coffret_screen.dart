@@ -3140,7 +3140,11 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       _draftQrCode = qrCode;
     }
     final toutesPhotos = [..._coffretPhotosExterne, ..._coffretPhotosInterne];
+    final now = DateTime.now().toUtc();
     final draft = CoffretArmoire(
+      id: widget.coffret?.equipmentId,
+      createdAt: widget.coffret?.createdAt ?? (widget.isEdition ? null : now),
+      updatedAt: now,
       qrCode: qrCode,
       nom: _nomController.text.trim(),
       type: _selectedType ?? '',
@@ -3634,7 +3638,11 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     }
     try {
       final toutesPhotos = [..._coffretPhotosExterne, ..._coffretPhotosInterne];
+      final now = DateTime.now().toUtc();
       final nouveauCoffret = CoffretArmoire(
+        id: widget.coffret?.equipmentId,
+        createdAt: widget.coffret?.createdAt ?? (widget.isEdition ? null : now),
+        updatedAt: now,
         qrCode: _qrCodeController.text.trim(),
         nom: _nomController.text.trim(),
         type: _selectedType!,
@@ -3802,6 +3810,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
           return false;
         }
         target.id = newCoffret.equipmentId;
+        target.createdAt = target.createdAt ?? newCoffret.createdAt;
+        target.updatedAt = DateTime.now().toUtc();
         target.qrCode = newCoffret.qrCode;
         target.nom = newCoffret.nom;
         target.type = newCoffret.type;

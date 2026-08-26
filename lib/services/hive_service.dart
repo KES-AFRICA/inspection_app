@@ -1929,7 +1929,10 @@ static CoffretArmoire? findCoffretByQrCode(String missionId, String qrCode) {
         }
 
         if (index != -1) {
+          final existing = list[index];
           updatedCoffret.id = equipmentId;
+          updatedCoffret.createdAt = existing.createdAt ?? updatedCoffret.createdAt;
+          updatedCoffret.updatedAt = DateTime.now().toUtc();
           list[index] = updatedCoffret;
           return true;
         }
