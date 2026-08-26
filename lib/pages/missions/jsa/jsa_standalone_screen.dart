@@ -257,13 +257,17 @@ class _JsaStandaloneScreenState extends State<JsaStandaloneScreen> {
             _showPdfPreview = true;
           });
         }
-      } else {
+      } else if (!loaderController.isCancelled) {
         loaderController.dismiss();
         _showError('Erreur lors de la génération');
       }
     } catch (e) {
-      loaderController.dismiss();
-      _showError('Erreur: $e');
+      if (!loaderController.isCancelled) {
+        loaderController.dismiss();
+        _showError('Erreur: $e');
+      } else if (mounted) {
+        ReportGenerationLoader.showCancellationToast(context);
+      }
     } finally {
       if (mounted) setState(() => _isGenerating = false);
     }

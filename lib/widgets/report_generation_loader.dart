@@ -58,6 +58,58 @@ class ReportGenerationLoader extends StatefulWidget {
     );
   }
 
+  /// Affiche une notification toast épurée et moderne pour informer de l'annulation.
+  static void showCancellationToast(
+    BuildContext context, {
+    String message = 'Génération du rapport annulée',
+  }) {
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    scaffoldMessenger.hideCurrentSnackBar();
+    scaffoldMessenger.showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(6),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade700.withValues(alpha: 0.25),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(
+                Icons.cancel_outlined,
+                color: Colors.amberAccent,
+                size: 18,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                message,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ],
+        ),
+        backgroundColor: const Color(0xFF1E293B),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(14),
+          side: BorderSide(
+            color: Colors.white.withValues(alpha: 0.1),
+            width: 1,
+          ),
+        ),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        duration: const Duration(seconds: 3),
+        elevation: 6,
+      ),
+    );
+  }
+
   @override
   State<ReportGenerationLoader> createState() => _ReportGenerationLoaderState();
 }
@@ -182,6 +234,7 @@ class _ReportGenerationLoaderState extends State<ReportGenerationLoader>
         _progressController.stop();
         _rotationController.stop();
       } catch (_) {}
+      ReportGenerationLoader.showCancellationToast(context);
       Navigator.of(context, rootNavigator: true).pop();
     }
   }
@@ -425,8 +478,9 @@ class ReportGenerationLoaderController {
     cancellationToken.cancel();
     if (_onCancel != null) {
       _onCancel!();
+    } else {
+      dismiss();
     }
-    dismiss();
   }
 
   /// Met à jour la progression et le message affiché en temps réel.

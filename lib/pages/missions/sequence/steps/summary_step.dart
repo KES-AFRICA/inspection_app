@@ -137,12 +137,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
 
       if (loaderController.isCancelled) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Génération du rapport annulée'),
-              duration: Duration(seconds: 2),
-            ),
-          );
+          ReportGenerationLoader.showCancellationToast(context);
         }
         return;
       }
@@ -185,12 +180,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
         loaderController.dismiss();
         _showError('Erreur lors de la génération: $e');
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Génération du rapport annulée'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        ReportGenerationLoader.showCancellationToast(context);
       }
     } finally {
       if (mounted) {

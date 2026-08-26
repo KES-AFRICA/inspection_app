@@ -199,15 +199,19 @@ class _LightingSummaryScreenState extends State<LightingSummaryScreen> {
             _showPdfPreview = true;
           });
         }
-      } else {
+      } else if (!loaderController.isCancelled) {
         loaderController.dismiss();
         _showError('Erreur lors de la génération du rapport');
       }
     } catch (e) {
-      loaderController.dismiss();
-      _showError('Erreur: $e');
+      if (!loaderController.isCancelled) {
+        loaderController.dismiss();
+        _showError('Erreur: $e');
+      } else if (mounted) {
+        ReportGenerationLoader.showCancellationToast(context);
+      }
     } finally {
-      setState(() => _isGenerating = false);
+      if (mounted) setState(() => _isGenerating = false);
     }
   }
 

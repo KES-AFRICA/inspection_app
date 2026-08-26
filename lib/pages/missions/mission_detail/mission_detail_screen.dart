@@ -193,12 +193,7 @@ class _MissionDetailScreenState extends State<MissionDetailScreen>
 
       if (loaderController.isCancelled) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Génération du rapport annulée'),
-              duration: Duration(seconds: 2),
-            ),
-          );
+          ReportGenerationLoader.showCancellationToast(context);
         }
         return;
       }
@@ -215,12 +210,7 @@ class _MissionDetailScreenState extends State<MissionDetailScreen>
         loaderController.dismiss();
         _showError('Erreur: $e');
       } else if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Génération du rapport annulée'),
-            duration: Duration(seconds: 2),
-          ),
-        );
+        ReportGenerationLoader.showCancellationToast(context);
       }
     }
   }
