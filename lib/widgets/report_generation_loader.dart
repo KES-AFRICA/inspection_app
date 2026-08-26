@@ -1,6 +1,7 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:inspec_app/constants/app_theme.dart';
+import 'package:inspec_app/services/cancellation_token.dart';
 
 /// Composant de chargement premium réutilisable pour la génération de rapports.
 ///
@@ -405,29 +406,32 @@ class _ReportGenerationLoaderState extends State<ReportGenerationLoader>
 /// await ctrl.complete();
 /// ```
 class ReportGenerationLoaderController {
+  final CancellationToken cancellationToken;
+
+  ReportGenerationLoaderController({CancellationToken? cancellationToken})
+      : cancellationToken = cancellationToken ?? CancellationToken();
+
   Future<void> Function()? _onComplete;
   void Function()? _onDismiss;
   void Function()? _onCancel;
   void Function(double progress, String message)? _onProgress;
-  bool _isCancelled = false;
 
   /// Indique si l'utilisateur a annulé la génération.
-  bool get isCancelled => _isCancelled;
+  bool get isCancelled => cancellationToken.isCancelled;
 
   /// Annule la génération et ferme le dialogue.
   void cancel() {
-    if (_isCancelled) return;
-    _isCancelled = true;
+    if (cancellationToken.isCancelled) return;
+    cancellationToken.cancel();
     if (_onCancel != null) {
       _onCancel!();
-    } else {
-      dismiss();
     }
+    dismiss();
   }
 
   /// Met à jour la progression et le message affiché en temps réel.
   void updateProgress(double progressRatio, String message) {
-    if (_isCancelled) return;
+    if (cancellationToken.isCancelled) return;
     if (_onProgress != null) {
       _onProgress!(progressRatio, message);
     }
@@ -436,7 +440,7 @@ class ReportGenerationLoaderController {
   /// Déclenche l'animation de complétion (cercle → check → fermeture).
   /// Retourne un Future qui se résout lorsque le dialog est fermé.
   Future<void> complete() async {
-    if (_isCancelled) return;
+    if (cancellationToken.isCancelled) return;
     if (_onComplete != null) {
       await _onComplete!();
     }

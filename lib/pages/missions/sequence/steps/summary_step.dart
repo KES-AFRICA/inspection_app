@@ -122,6 +122,7 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
       } else {
         file = await PdfReportService.generateMissionReport(
           widget.mission.id,
+          cancellationToken: loaderController.cancellationToken,
           onProgress: (progress, statusMessage) {
             if (loaderController.isCancelled) {
               throw Exception('Génération annulée par l\'utilisateur');

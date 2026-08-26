@@ -182,6 +182,7 @@ class _MissionDetailScreenState extends State<MissionDetailScreen>
     try {
       final file = await PdfReportService.generateMissionReport(
         _currentMission.id,
+        cancellationToken: loaderController.cancellationToken,
         onProgress: (progress, statusMessage) {
           if (loaderController.isCancelled) {
             throw Exception('Génération annulée par l\'utilisateur');

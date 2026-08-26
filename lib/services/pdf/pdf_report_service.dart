@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter/widgets.dart';
 import 'package:inspec_app/models/classement_zone.dart';
+import 'package:inspec_app/services/cancellation_token.dart';
 import 'package:inspec_app/services/ai/executive_summary_snapshot.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -18081,7 +18082,9 @@ class PdfReportService {
     int? overrideTotalPages,
     bool saveFilesToDisk = true,
     PdfProgressCallback? onProgress,
+    CancellationToken? cancellationToken,
   }) async {
+    cancellationToken?.throwIfCancelled();
     final allChunkFiles = <File>[];
     final trackedPages = <String, int>{};
     final photoRegistry = _buildPhotoNumberRegistry(audit, description);
@@ -18910,16 +18913,19 @@ class PdfReportService {
   static Future<File?> generateMissionReport(
     String missionId, {
     PdfProgressCallback? onProgress,
+    CancellationToken? cancellationToken,
   }) async {
     List<File> allChunkFiles = [];
     Directory? sessionDir;
     try {
+      cancellationToken?.throwIfCancelled();
       onProgress?.call(0.02, 'Initialisation des ressources et des polices...');
       await _loadImages();
       await _loadFonts();
 
       // Permettre au Thread UI de traiter les callbacks de progression
       await Future.delayed(Duration.zero);
+      cancellationToken?.throwIfCancelled();
 
       onProgress?.call(0.05, 'Chargement des données de la mission...');
       final mission = HiveService.getMissionById(missionId);
@@ -18947,11 +18953,12 @@ class PdfReportService {
 
       final systemTempDir = await getTemporaryDirectory();
       final generationDate = DateTime.now();
-      final sessionTimestamp = generationDate.millisecondsSinceEpoch;
+      final sessionTimestamp = cancellationToken?.generationId ?? generationDate.millisecondsSinceEpoch.toString();
       sessionDir = Directory(
         '${systemTempDir.path}/pdf_session_${missionId}_$sessionTimestamp',
       );
       await sessionDir.create(recursive: true);
+      cancellationToken?.throwIfCancelled();
 
       // ── Passe 1 : Calcul préliminaire de la pagination totale et enregistrement des clés ──
       onProgress?.call(
@@ -18975,9 +18982,11 @@ class PdfReportService {
         numeroRapportDoc: numeroRapportDoc,
         tempDir: sessionDir,
         saveFilesToDisk: false,
+        cancellationToken: cancellationToken,
       );
 
       final totalReportPages = pass1Result.totalReportPages;
+      cancellationToken?.throwIfCancelled();
 
       // ── Passe 2 : Génération finale avec numérotation Page X / N et enregistrement sur disque ──
       onProgress?.call(
@@ -19003,9 +19012,11 @@ class PdfReportService {
         overrideTotalPages: totalReportPages,
         saveFilesToDisk: true,
         onProgress: onProgress,
+        cancellationToken: cancellationToken,
       );
 
       allChunkFiles = pass2Result.files;
+      cancellationToken?.throwIfCancelled();
 
       // ── Assembly final par fusion binaire ──
       onProgress?.call(
@@ -19015,7 +19026,7 @@ class PdfReportService {
       final fileName = buildElectricalReportFileName(
         mission.nomClient,
         date: generationDate,
-        timestamp: sessionTimestamp,
+        timestamp: DateTime.now().millisecondsSinceEpoch,
       );
       final outputFile = File('${systemTempDir.path}/$fileName');
 
@@ -19024,7 +19035,10 @@ class PdfReportService {
         outputFile,
         deleteChunksAfterMerge: false,
         onProgress: onProgress,
+        cancellationToken: cancellationToken,
       );
+
+      cancellationToken?.throwIfCancelled();
 
       if (kDebugMode && await finalPdfFile.exists()) {
         final double sizeMb = (await finalPdfFile.length()) / (1024 * 1024);
@@ -19036,6 +19050,12 @@ class PdfReportService {
       onProgress?.call(1.0, 'Génération du rapport terminée avec succès.');
       return finalPdfFile;
     } catch (e, stackTrace) {
+      if (e is ReportGenerationCancelledException) {
+        if (kDebugMode) {
+          print('🛑 [PDF Generation Cancelled] ${e.toString()}');
+        }
+        rethrow;
+      }
       if (kDebugMode) {
         print('❌ Erreur lors de la génération du rapport PDF: $e\n$stackTrace');
       }

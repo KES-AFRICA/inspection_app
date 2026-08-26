@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ui';
 import 'package:flutter/foundation.dart';
+import 'package:inspec_app/services/cancellation_token.dart';
 import 'package:pdf_merger/pdf_merger.dart';
 import 'package:syncfusion_flutter_pdf/pdf.dart' as sf;
 
@@ -22,7 +23,9 @@ class PdfMergerService {
     bool deleteChunksAfterMerge = true,
     int? batchSize,
     PdfMergeProgressCallback? onProgress,
+    CancellationToken? cancellationToken,
   }) async {
+    cancellationToken?.throwIfCancelled();
     final int effectiveBatchSize = (batchSize != null && batchSize > 0) ? batchSize : 5;
 
     if (chunkFiles.isEmpty) {
@@ -90,6 +93,7 @@ class PdfMergerService {
 
     try {
       while (currentLevelChunks.length > 1) {
+        cancellationToken?.throwIfCancelled();
         levelIndex++;
         final nextLevelChunks = <File>[];
 
