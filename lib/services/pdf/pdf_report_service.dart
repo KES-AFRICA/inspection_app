@@ -3470,7 +3470,11 @@ class PdfReportService {
               color: i % 2 == 1 ? tableRowAlt : PdfColors.white,
             ),
             children: [
-              _buildTableCell(rows[i].criticite, isBold: true),
+              _buildTableCell(
+                rows[i].criticite,
+                isBold: true,
+                color: _getCriticitePdfColor(rows[i].criticite),
+              ),
               _buildTableCell('${rows[i].nombre}', align: pw.TextAlign.center),
               _buildTableCell(rows[i].partPct, align: pw.TextAlign.center),
               _buildTableCell(rows[i].densiteStr, align: pw.TextAlign.center),
@@ -3557,6 +3561,7 @@ class PdfReportService {
     bool isBold = false,
     pw.TextAlign align = pw.TextAlign.center,
     pw.Alignment alignment = pw.Alignment.center,
+    PdfColor? color,
   }) {
     return pw.Container(
       alignment: alignment,
@@ -3566,11 +3571,36 @@ class PdfReportService {
         style: pw.TextStyle(
           font: isBold ? _fontBold : _fontRegular,
           fontSize: fsSmall,
-          color: darkGrey,
+          color: color ?? darkGrey,
         ),
         textAlign: align,
       ),
     );
+  }
+
+  /// Retourne la couleur standard KES pour l'affichage de la criticité dans les tableaux :
+  /// - Critique : Rouge (#D32F2F)
+  /// - Majeure : Orange (#E65100)
+  /// - Mineure : Jaune (#F57F17 - ambre lisible sur fond blanc)
+  static PdfColor _getCriticitePdfColor(String criticite) {
+    final c = criticite.trim().toLowerCase();
+    if (c.contains('critique') || c == '3') {
+      return PdfColor.fromInt(0xFFD32F2F); // Rouge
+    } else if (c.contains('majeur') || c == '2') {
+      return PdfColor.fromInt(0xFFE65100); // Orange
+    } else if (c.contains('mineur') || c == '1') {
+      return PdfColor.fromInt(0xFFF57F17); // Jaune / Ambre
+    }
+    return darkGrey;
+  }
+
+  /// Retourne la fonte appropriée (Gras si criticité définie)
+  static pw.Font _getCriticiteFont(String criticite) {
+    final c = criticite.trim().toLowerCase();
+    if (c.contains('critique') || c.contains('majeur') || c.contains('mineur')) {
+      return _fontBold;
+    }
+    return _fontRegular;
   }
 
   static List<pw.Widget> _buildAnalyseStatistique(
@@ -10532,9 +10562,9 @@ class PdfReportService {
               child: pw.Text(
                 criticite,
                 style: pw.TextStyle(
-                  font: criticite == 'Critique' ? _fontBold : _fontRegular,
+                  font: _getCriticiteFont(criticite),
                   fontSize: fsSmall - 0.5,
-                  color: criticite == 'Critique' ? PdfColors.red900 : darkGrey,
+                  color: _getCriticitePdfColor(criticite),
                 ),
                 textAlign: pw.TextAlign.center,
               ),
@@ -11112,9 +11142,9 @@ class PdfReportService {
               child: pw.Text(
                 criticite,
                 style: pw.TextStyle(
-                  font: criticite == 'Critique' ? _fontBold : _fontRegular,
+                  font: _getCriticiteFont(criticite),
                   fontSize: fsSmall - 0.5,
-                  color: criticite == 'Critique' ? PdfColors.red900 : darkGrey,
+                  color: _getCriticitePdfColor(criticite),
                 ),
                 textAlign: pw.TextAlign.center,
               ),
@@ -11668,9 +11698,9 @@ class PdfReportService {
               child: pw.Text(
                 criticite,
                 style: pw.TextStyle(
-                  font: criticite == 'Critique' ? _fontBold : _fontRegular,
+                  font: _getCriticiteFont(criticite),
                   fontSize: fsSmall - 0.5,
-                  color: criticite == 'Critique' ? PdfColors.red900 : darkGrey,
+                  color: _getCriticitePdfColor(criticite),
                 ),
                 textAlign: pw.TextAlign.center,
               ),
@@ -12782,13 +12812,9 @@ class PdfReportService {
                 child: pw.Text(
                   criticite,
                   style: pw.TextStyle(
-                    font: _fontBold,
+                    font: _getCriticiteFont(criticite),
                     fontSize: fsSmall,
-                    color: criticite == 'Critique'
-                        ? PdfColor.fromInt(0xFFD32F2F)
-                        : (criticite == 'Majeure'
-                              ? PdfColor.fromInt(0xFFE65100)
-                              : PdfColors.black),
+                    color: _getCriticitePdfColor(criticite),
                   ),
                   textAlign: pw.TextAlign.center,
                 ),
