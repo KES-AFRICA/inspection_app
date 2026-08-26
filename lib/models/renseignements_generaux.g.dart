@@ -35,6 +35,7 @@ class RenseignementsGenerauxAdapter
           ?.map((dynamic e) => (e as Map).cast<String, String>())
           ?.toList(),
       updatedAt: fields[12] as DateTime,
+      createdAt: fields[20] as DateTime?,
       nomSite: fields[13] as String,
       formationHabilitationElectrique: fields[14] as String?,
       activiteSurSite: fields[15] as String?,
@@ -46,7 +47,7 @@ class RenseignementsGenerauxAdapter
   @override
   void write(BinaryWriter writer, RenseignementsGeneraux obj) {
     writer
-      ..writeByte(18)
+      ..writeByte(19)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)
@@ -82,7 +83,9 @@ class RenseignementsGenerauxAdapter
       ..writeByte(16)
       ..write(obj.classementReglementaireType)
       ..writeByte(17)
-      ..write(obj.classementReglementaireCategorie);
+      ..write(obj.classementReglementaireCategorie)
+      ..writeByte(20)
+      ..write(obj.createdAt);
   }
 
   @override

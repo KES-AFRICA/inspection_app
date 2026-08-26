@@ -19,6 +19,7 @@ class DescriptionInstallationsAdapter
     };
     return DescriptionInstallations(
       missionId: fields[0] as String,
+      createdAt: fields[30] as DateTime?,
       alimentationMoyenneTension:
           (fields[1] as List?)?.cast<InstallationItem>(),
       alimentationBasseTension: (fields[2] as List?)?.cast<InstallationItem>(),
@@ -42,14 +43,14 @@ class DescriptionInstallationsAdapter
       nombreAlimentationSite: fields[21] as String?,
       presenceIacmAlimentationSite: fields[22] as String?,
       foudreObservations: (fields[23] as List?)?.cast<ObservationLibre>(),
-      updatedAt: (fields[16] as DateTime?) ?? DateTime.now(),
+      updatedAt: fields[16] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, DescriptionInstallations obj) {
     writer
-      ..writeByte(24)
+      ..writeByte(25)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)
@@ -97,7 +98,9 @@ class DescriptionInstallationsAdapter
       ..writeByte(23)
       ..write(obj.foudreObservations)
       ..writeByte(16)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(30)
+      ..write(obj.createdAt);
   }
 
   @override
@@ -122,22 +125,28 @@ class InstallationItemAdapter extends TypeAdapter<InstallationItem> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return InstallationItem(
+      id: fields[3] as String?,
       data: (fields[0] as Map).cast<String, String>(),
       photoPaths: (fields[1] as List?)?.cast<String>(),
       createdAt: fields[2] as DateTime?,
+      updatedAt: fields[4] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, InstallationItem obj) {
     writer
-      ..writeByte(3)
+      ..writeByte(5)
       ..writeByte(0)
       ..write(obj.data)
       ..writeByte(1)
       ..write(obj.photoPaths)
       ..writeByte(2)
-      ..write(obj.createdAt);
+      ..write(obj.createdAt)
+      ..writeByte(3)
+      ..write(obj.id)
+      ..writeByte(4)
+      ..write(obj.updatedAt);
   }
 
   @override

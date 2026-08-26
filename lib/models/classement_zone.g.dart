@@ -28,6 +28,7 @@ class ClassementZoneAdapter extends TypeAdapter<ClassementZone> {
       ip: fields[8] as String?,
       ik: fields[9] as String?,
       updatedAt: fields[10] as DateTime,
+      createdAt: fields[20] as DateTime?,
       typeZone: fields[11] as String,
     );
   }
@@ -35,7 +36,7 @@ class ClassementZoneAdapter extends TypeAdapter<ClassementZone> {
   @override
   void write(BinaryWriter writer, ClassementZone obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(13)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)
@@ -59,7 +60,9 @@ class ClassementZoneAdapter extends TypeAdapter<ClassementZone> {
       ..writeByte(10)
       ..write(obj.updatedAt)
       ..writeByte(11)
-      ..write(obj.typeZone);
+      ..write(obj.typeZone)
+      ..writeByte(20)
+      ..write(obj.createdAt);
   }
 
   @override

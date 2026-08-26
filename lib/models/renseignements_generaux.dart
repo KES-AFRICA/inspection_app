@@ -59,6 +59,9 @@ class RenseignementsGeneraux extends HiveObject {
   @HiveField(17)
   String? classementReglementaireCategorie;
 
+  @HiveField(20)
+  DateTime? createdAt;
+
   RenseignementsGeneraux({
     required this.missionId,
     required this.etablissement,
@@ -73,6 +76,7 @@ class RenseignementsGeneraux extends HiveObject {
     List<Map<String, String>>? accompagnateurs,
     List<Map<String, String>>? verificateurs,
     required this.updatedAt,
+    this.createdAt,
     required this.nomSite,
     String? formationHabilitationElectrique,
     this.activiteSurSite,
@@ -89,12 +93,14 @@ class RenseignementsGeneraux extends HiveObject {
           : formationHabilitationElectrique!;
 
   factory RenseignementsGeneraux.create(String missionId) {
+    final now = DateTime.now().toUtc();
     return RenseignementsGeneraux(
       missionId: missionId,
       etablissement: '',
       installation: '',
       activite: '',
-      updatedAt: DateTime.now(),
+      updatedAt: now,
+      createdAt: now,
       nomSite: '',
       formationHabilitationElectrique: 'Inconnu',
       compteRendu: [],  

@@ -278,6 +278,9 @@ class JSA extends HiveObject {
   @HiveField(9)
   int currentSubCategory; // 0-5
 
+  @HiveField(10)
+  DateTime? createdAt;
+
   JSA({
     required this.missionId,
     this.operationEffectuer = '',
@@ -288,6 +291,7 @@ class JSA extends HiveObject {
     JSAEPI? epi,
     JSAVerificationFinale? verificationFinale,
     DateTime? updatedAt,
+    this.createdAt,
     this.currentSubCategory = 0,
   })  : inspecteurs = inspecteurs ?? [],
         planUrgence = planUrgence ?? JSAPlanUrgence(),
@@ -295,9 +299,10 @@ class JSA extends HiveObject {
         exigencesGenerales = exigencesGenerales ?? JSAExigencesGenerales(),
         epi = epi ?? JSAEPI(),
         verificationFinale = verificationFinale ?? JSAVerificationFinale(),
-        updatedAt = updatedAt ?? DateTime.now();
+        updatedAt = updatedAt ?? DateTime.now().toUtc();
 
   factory JSA.create(String missionId) {
-    return JSA(missionId: missionId);
+    final now = DateTime.now().toUtc();
+    return JSA(missionId: missionId, createdAt: now, updatedAt: now);
   }
 }

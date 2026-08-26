@@ -50,6 +50,9 @@ class ClassementEmplacement extends HiveObject {
   @HiveField(15)
   String? zoneParenteId;
 
+  @HiveField(20)
+  DateTime? createdAt;
+
   ClassementEmplacement({
     required this.missionId,
     required this.localisation,
@@ -63,6 +66,7 @@ class ClassementEmplacement extends HiveObject {
     this.ip,
     this.ik,
     required this.updatedAt,
+    this.createdAt,
     this.typeLocal,
     this.typeEmplacement = 'local', // Par défaut 'local' pour rétrocompatibilité
     this.heriteDeZone = false,

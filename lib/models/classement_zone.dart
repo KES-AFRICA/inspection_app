@@ -44,6 +44,9 @@ class ClassementZone extends HiveObject {
   @HiveField(11)
   String typeZone; // 'MT' ou 'BT'
 
+  @HiveField(20)
+  DateTime? createdAt;
+
   ClassementZone({
     required this.missionId,
     required this.nomZone,
@@ -56,6 +59,7 @@ class ClassementZone extends HiveObject {
     this.ip,
     this.ik,
     required this.updatedAt,
+    this.createdAt,
     this.typeZone = 'BT',
   });
 

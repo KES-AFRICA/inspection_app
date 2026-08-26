@@ -11,6 +11,9 @@ class MesuresEssais extends HiveObject {
   @HiveField(1)
   DateTime updatedAt;
 
+  @HiveField(20)
+  DateTime? createdAt;
+
   // ================= SECTION 1: CONDITIONS DE MESURE =================
   @HiveField(2)
   ConditionMesure conditionMesure;
@@ -46,6 +49,7 @@ class MesuresEssais extends HiveObject {
   MesuresEssais({
     required this.missionId,
     required this.updatedAt,
+    this.createdAt,
     ConditionMesure? conditionMesure,
     EssaiDemarrageAuto? essaiDemarrageAuto,
     TestArretUrgence? testArretUrgence,
@@ -64,9 +68,11 @@ class MesuresEssais extends HiveObject {
         continuiteResistances = continuiteResistances ?? [];
 
   factory MesuresEssais.create(String missionId) {
+    final now = DateTime.now().toUtc();
     return MesuresEssais(
       missionId: missionId,
-      updatedAt: DateTime.now(),
+      updatedAt: now,
+      createdAt: now,
     );
   }
 
@@ -154,7 +160,23 @@ class PriseTerre {
   @HiveField(8)
   String? photo; // Chemin de la photo d'illustration
 
+  @HiveField(20)
+  String? id;
+
+  @HiveField(21)
+  DateTime? createdAt;
+
+  @HiveField(22)
+  DateTime? updatedAt;
+
+  String get ptId {
+    if (id != null && id!.trim().isNotEmpty) return id!;
+    id = 'pt_${DateTime.now().microsecondsSinceEpoch}_${identification.hashCode.abs()}';
+    return id!;
+  }
+
   PriseTerre({
+    String? id,
     required this.localisation,
     required this.identification,
     required this.conditionPriseTerre,
@@ -164,18 +186,25 @@ class PriseTerre {
     this.observation,
     this.interconnecteAutrePrise,
     this.photo,
-  });
+    this.createdAt,
+    this.updatedAt,
+  }) : id = (id != null && id.trim().isNotEmpty)
+            ? id
+            : 'pt_${DateTime.now().microsecondsSinceEpoch}_${identification.hashCode.abs()}';
 
   factory PriseTerre.create({
     required String localisation,
     required String identification,
   }) {
+    final now = DateTime.now().toUtc();
     return PriseTerre(
       localisation: localisation,
       identification: identification,
       conditionPriseTerre: 'Barette fermée', // ✅ Valeur par défaut
       naturePriseTerre: 'Boucle en fond de fouille',
       methodeMesure: 'Impédance de boucle',
+      createdAt: now,
+      updatedAt: now,
     );
   }
 
@@ -243,7 +272,23 @@ class EssaiDeclenchementDifferentiel {
   @HiveField(10)
   String? tempoText; // "Réglage d'origine" ou valeur numérique en String
 
+  @HiveField(20)
+  String? id;
+
+  @HiveField(21)
+  DateTime? createdAt;
+
+  @HiveField(22)
+  DateTime? updatedAt;
+
+  String get essaiId {
+    if (id != null && id!.trim().isNotEmpty) return id!;
+    id = 'essai_ddr_${DateTime.now().microsecondsSinceEpoch}_${localisation.hashCode.abs()}';
+    return id!;
+  }
+
   EssaiDeclenchementDifferentiel({
+    String? id,
     required this.localisation,
     this.coffret,
     this.designationCircuit,
@@ -255,17 +300,24 @@ class EssaiDeclenchementDifferentiel {
     this.observation,
     this.calibre,
     this.tempoText,
-  });
+    this.createdAt,
+    this.updatedAt,
+  }) : id = (id != null && id.trim().isNotEmpty)
+            ? id
+            : 'essai_ddr_${DateTime.now().microsecondsSinceEpoch}_${localisation.hashCode.abs()}';
 
   factory EssaiDeclenchementDifferentiel.create({
     required String localisation,
     required String designationCircuit,
   }) {
+    final now = DateTime.now().toUtc();
     return EssaiDeclenchementDifferentiel(
       localisation: localisation,
       designationCircuit: designationCircuit,
       typeDispositif: 'Disjoncteur différentiel',
       essai: 'NE', // Par défaut "Non essayé"
+      createdAt: now,
+      updatedAt: now,
     );
   }
 
@@ -332,22 +384,45 @@ class ContinuiteResistance {
   @HiveField(4)
   String? essai; // "Satisfaisant", "Non satisfaisant", "Sans objet"
 
+  @HiveField(20)
+  String? id;
+
+  @HiveField(21)
+  DateTime? createdAt;
+
+  @HiveField(22)
+  DateTime? updatedAt;
+
+  String get continuiteId {
+    if (id != null && id!.trim().isNotEmpty) return id!;
+    id = 'cont_${DateTime.now().microsecondsSinceEpoch}_${localisation.hashCode.abs()}';
+    return id!;
+  }
+
   ContinuiteResistance({
+    String? id,
     required this.localisation,
     required this.designationTableau,
     required this.origineMesure,
     this.observation,
     this.essai,
-  });
+    this.createdAt,
+    this.updatedAt,
+  }) : id = (id != null && id.trim().isNotEmpty)
+            ? id
+            : 'cont_${DateTime.now().microsecondsSinceEpoch}_${localisation.hashCode.abs()}';
 
   factory ContinuiteResistance.create({
     required String localisation,
     required String designationTableau,
   }) {
+    final now = DateTime.now().toUtc();
     return ContinuiteResistance(
       localisation: localisation,
       designationTableau: designationTableau,
       origineMesure: '',
+      createdAt: now,
+      updatedAt: now,
     );
   }
 
@@ -415,6 +490,12 @@ class EssaiIsolement {
   @HiveField(17)
   String? equipmentPointBSyncId; // Identifiant réel de l'équipement Point B
 
+  @HiveField(20)
+  DateTime? createdAt;
+
+  @HiveField(21)
+  DateTime? updatedAt;
+
   EssaiIsolement({
     required this.syncId,
     this.equipmentSyncId,
@@ -434,6 +515,8 @@ class EssaiIsolement {
     this.isSectionPointBManual,
     this.equipmentPointASyncId,
     this.equipmentPointBSyncId,
+    this.createdAt,
+    this.updatedAt,
   });
 
   factory EssaiIsolement.create({
@@ -449,6 +532,7 @@ class EssaiIsolement {
     String? equipmentPointASyncId,
     String? equipmentPointBSyncId,
   }) {
+    final now = DateTime.now().toUtc();
     return EssaiIsolement(
       syncId: 'iso_${DateTime.now().microsecondsSinceEpoch}',
       reperePointOrigine: reperePointOrigine,
@@ -464,6 +548,8 @@ class EssaiIsolement {
       designation: pointA,
       equipmentPointASyncId: equipmentPointASyncId,
       equipmentPointBSyncId: equipmentPointBSyncId,
+      createdAt: now,
+      updatedAt: now,
     );
   }
 

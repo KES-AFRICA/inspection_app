@@ -13,6 +13,9 @@ class AuditInstallationsElectriques extends HiveObject {
   @HiveField(1)
   DateTime updatedAt;
 
+  @HiveField(20)
+  DateTime? createdAt;
+
   // MOYENNE TENSION
   @HiveField(2)
   List<MoyenneTensionLocal> moyenneTensionLocaux;
@@ -31,6 +34,7 @@ class AuditInstallationsElectriques extends HiveObject {
   AuditInstallationsElectriques({
     required this.missionId,
     required this.updatedAt,
+    this.createdAt,
     List<MoyenneTensionLocal>? moyenneTensionLocaux,
     List<MoyenneTensionZone>? moyenneTensionZones,
     List<BasseTensionZone>? basseTensionZones,
@@ -41,9 +45,11 @@ class AuditInstallationsElectriques extends HiveObject {
         photos = photos ?? [];
 
   factory AuditInstallationsElectriques.create(String missionId) {
+    final now = DateTime.now().toUtc();
     return AuditInstallationsElectriques(
       missionId: missionId,
-      updatedAt: DateTime.now(),
+      updatedAt: now,
+      createdAt: now,
       moyenneTensionLocaux: [],
       moyenneTensionZones: [],
       basseTensionZones: [],
@@ -100,9 +106,27 @@ class MoyenneTensionLocal {
   @HiveField(34)
   bool isRiskZone;
 
+  @HiveField(40)
+  String? id;
+
+  @HiveField(41)
+  DateTime? createdAt;
+
+  @HiveField(42)
+  DateTime? updatedAt;
+
+  String get localId {
+    if (id != null && id!.trim().isNotEmpty) return id!;
+    id = 'local_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}';
+    return id!;
+  }
+
   MoyenneTensionLocal({
+    String? id,
     required this.nom,
     required this.type,
+    this.createdAt,
+    this.updatedAt,
     List<ElementControle>? dispositionsConstructives,
     List<ElementControle>? conditionsExploitation,
     this.cellule,
@@ -115,7 +139,10 @@ class MoyenneTensionLocal {
     bool? accessible,
     bool? aReverifier,
     bool? isRiskZone,
-  })  : dispositionsConstructives = dispositionsConstructives ?? [],
+  })  : id = (id != null && id.trim().isNotEmpty)
+            ? id
+            : 'local_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}',
+        dispositionsConstructives = dispositionsConstructives ?? [],
         conditionsExploitation = conditionsExploitation ?? [],
         coffrets = coffrets ?? [],
         observationsLibres = observationsLibres ?? [],
@@ -175,16 +202,37 @@ class MoyenneTensionZone {
   @HiveField(7)
   bool isRiskZone;
 
+  @HiveField(40)
+  String? id;
+
+  @HiveField(41)
+  DateTime? createdAt;
+
+  @HiveField(42)
+  DateTime? updatedAt;
+
+  String get zoneId {
+    if (id != null && id!.trim().isNotEmpty) return id!;
+    id = 'zone_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}';
+    return id!;
+  }
+
   MoyenneTensionZone({
+    String? id,
     required this.nom,
     this.description,
+    this.createdAt,
+    this.updatedAt,
     List<CoffretArmoire>? coffrets,
     List<ObservationLibre>? observationsLibres,
     List<String>? photos,
     List<MoyenneTensionLocal>? locaux,
     this.classementZoneId,
     bool? isRiskZone,
-  })  : coffrets = coffrets ?? [],
+  })  : id = (id != null && id.trim().isNotEmpty)
+            ? id
+            : 'zone_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}',
+        coffrets = coffrets ?? [],
         observationsLibres = observationsLibres ?? [],
         photos = photos ?? [],
         locaux = locaux ?? [],
@@ -219,16 +267,37 @@ class BasseTensionZone {
   @HiveField(7)
   bool isRiskZone;
 
+  @HiveField(40)
+  String? id;
+
+  @HiveField(41)
+  DateTime? createdAt;
+
+  @HiveField(42)
+  DateTime? updatedAt;
+
+  String get zoneId {
+    if (id != null && id!.trim().isNotEmpty) return id!;
+    id = 'zone_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}';
+    return id!;
+  }
+
   BasseTensionZone({
+    String? id,
     required this.nom,
     this.description,
+    this.createdAt,
+    this.updatedAt,
     List<BasseTensionLocal>? locaux,
     List<CoffretArmoire>? coffretsDirects,
     List<ObservationLibre>? observationsLibres,
     List<String>? photos,
     this.classementZoneId,
     bool? isRiskZone,
-  })  : locaux = locaux ?? [],
+  })  : id = (id != null && id.trim().isNotEmpty)
+            ? id
+            : 'zone_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}',
+        locaux = locaux ?? [],
         coffretsDirects = coffretsDirects ?? [],
         observationsLibres = observationsLibres ?? [],
         photos = photos ?? [],
@@ -276,9 +345,27 @@ class BasseTensionLocal {
   @HiveField(11)
   bool isRiskZone;
 
+  @HiveField(40)
+  String? id;
+
+  @HiveField(41)
+  DateTime? createdAt;
+
+  @HiveField(42)
+  DateTime? updatedAt;
+
+  String get localId {
+    if (id != null && id!.trim().isNotEmpty) return id!;
+    id = 'local_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}';
+    return id!;
+  }
+
   BasseTensionLocal({
+    String? id,
     required this.nom,
     required this.type,
+    this.createdAt,
+    this.updatedAt,
     List<ElementControle>? dispositionsConstructives,
     List<ElementControle>? conditionsExploitation,
     List<CoffretArmoire>? coffrets,
@@ -289,7 +376,10 @@ class BasseTensionLocal {
     List<Cellule>? cellules,
     List<TransformateurMTBT>? transformateurs,
     bool? isRiskZone,
-  })  : dispositionsConstructives = dispositionsConstructives ?? [],
+  })  : id = (id != null && id.trim().isNotEmpty)
+            ? id
+            : 'local_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}',
+        dispositionsConstructives = dispositionsConstructives ?? [],
         conditionsExploitation = conditionsExploitation ?? [],
         coffrets = coffrets ?? [],
         observationsLibres = observationsLibres ?? [],
@@ -448,6 +538,12 @@ class Cellule {
   @HiveField(22)
   String? annee;
 
+  @HiveField(23)
+  DateTime? createdAt;
+
+  @HiveField(24)
+  DateTime? updatedAt;
+
   Cellule({
     required this.fonction,
     required this.type,
@@ -456,6 +552,8 @@ class Cellule {
     required this.pouvoirCoupure,
     required this.numerotation,
     required this.parafoudres,
+    this.createdAt,
+    this.updatedAt,
     List<ElementControle>? elementsVerifies,
     List<String>? photos,
     this.gamme,
@@ -649,6 +747,12 @@ class TransformateurMTBT {
   @HiveField(25)
   String? presenceDGPT2;
 
+  @HiveField(26)
+  DateTime? createdAt;
+
+  @HiveField(27)
+  DateTime? updatedAt;
+
   /// Indique si le transformateur est de type immergé (tolérant aux majuscules/accents)
   bool get isImmerge {
     final t = typeTransformateur.trim().toUpperCase();
@@ -663,6 +767,8 @@ class TransformateurMTBT {
     required this.relaisBuchholz,
     required this.typeRefroidissement,
     required this.regimeNeutre,
+    this.createdAt,
+    this.updatedAt,
     List<ElementControle>? elementsVerifies,
     List<String>? photos,
     this.calibreDisjoncteur,
@@ -878,6 +984,12 @@ class CoffretArmoire {
   @HiveField(29)
   bool? departPrisAvecProtection;
 
+  @HiveField(30)
+  DateTime? createdAt;
+
+  @HiveField(31)
+  DateTime? updatedAt;
+
   /// Résout l'état du switch "Départ pris avec protection" (Activé par défaut / Rétrocompatible)
   /// L'Inverseur est toujours considéré à true.
   bool get isDepartPrisAvecProtection =>
@@ -921,6 +1033,8 @@ class CoffretArmoire {
     this.alimenteeParTransformateur,
     this.presenceCPI,
     this.departPrisAvecProtection,
+    this.createdAt,
+    this.updatedAt,
     bool? accessible,
     List<Alimentation>? alimentations,
     this.protectionTete,

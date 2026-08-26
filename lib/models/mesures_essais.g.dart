@@ -19,6 +19,7 @@ class MesuresEssaisAdapter extends TypeAdapter<MesuresEssais> {
     return MesuresEssais(
       missionId: fields[0] as String,
       updatedAt: fields[1] as DateTime,
+      createdAt: fields[20] as DateTime?,
       conditionMesure: fields[2] as ConditionMesure?,
       essaiDemarrageAuto: fields[3] as EssaiDemarrageAuto?,
       testArretUrgence: fields[4] as TestArretUrgence?,
@@ -35,11 +36,13 @@ class MesuresEssaisAdapter extends TypeAdapter<MesuresEssais> {
   @override
   void write(BinaryWriter writer, MesuresEssais obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)
       ..write(obj.updatedAt)
+      ..writeByte(20)
+      ..write(obj.createdAt)
       ..writeByte(2)
       ..write(obj.conditionMesure)
       ..writeByte(3)
@@ -182,6 +185,7 @@ class PriseTerreAdapter extends TypeAdapter<PriseTerre> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return PriseTerre(
+      id: fields[20] as String?,
       localisation: fields[0] as String,
       identification: fields[1] as String,
       conditionPriseTerre: fields[2] as String,
@@ -191,13 +195,15 @@ class PriseTerreAdapter extends TypeAdapter<PriseTerre> {
       observation: fields[6] as String?,
       interconnecteAutrePrise: fields[7] as String?,
       photo: fields[8] as String?,
+      createdAt: fields[21] as DateTime?,
+      updatedAt: fields[22] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, PriseTerre obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.localisation)
       ..writeByte(1)
@@ -215,7 +221,13 @@ class PriseTerreAdapter extends TypeAdapter<PriseTerre> {
       ..writeByte(7)
       ..write(obj.interconnecteAutrePrise)
       ..writeByte(8)
-      ..write(obj.photo);
+      ..write(obj.photo)
+      ..writeByte(20)
+      ..write(obj.id)
+      ..writeByte(21)
+      ..write(obj.createdAt)
+      ..writeByte(22)
+      ..write(obj.updatedAt);
   }
 
   @override
@@ -281,6 +293,7 @@ class EssaiDeclenchementDifferentielAdapter
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return EssaiDeclenchementDifferentiel(
+      id: fields[20] as String?,
       localisation: fields[0] as String,
       coffret: fields[1] as String?,
       designationCircuit: fields[2] as String?,
@@ -292,13 +305,15 @@ class EssaiDeclenchementDifferentielAdapter
       observation: fields[8] as String?,
       calibre: fields[9] as double?,
       tempoText: fields[10] as String?,
+      createdAt: fields[21] as DateTime?,
+      updatedAt: fields[22] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, EssaiDeclenchementDifferentiel obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(14)
       ..writeByte(0)
       ..write(obj.localisation)
       ..writeByte(1)
@@ -320,7 +335,13 @@ class EssaiDeclenchementDifferentielAdapter
       ..writeByte(9)
       ..write(obj.calibre)
       ..writeByte(10)
-      ..write(obj.tempoText);
+      ..write(obj.tempoText)
+      ..writeByte(20)
+      ..write(obj.id)
+      ..writeByte(21)
+      ..write(obj.createdAt)
+      ..writeByte(22)
+      ..write(obj.updatedAt);
   }
 
   @override
@@ -345,18 +366,21 @@ class ContinuiteResistanceAdapter extends TypeAdapter<ContinuiteResistance> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return ContinuiteResistance(
+      id: fields[20] as String?,
       localisation: fields[0] as String,
       designationTableau: fields[1] as String,
       origineMesure: fields[2] as String,
       observation: fields[3] as String?,
       essai: fields[4] as String?,
+      createdAt: fields[21] as DateTime?,
+      updatedAt: fields[22] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, ContinuiteResistance obj) {
     writer
-      ..writeByte(5)
+      ..writeByte(8)
       ..writeByte(0)
       ..write(obj.localisation)
       ..writeByte(1)
@@ -366,7 +390,13 @@ class ContinuiteResistanceAdapter extends TypeAdapter<ContinuiteResistance> {
       ..writeByte(3)
       ..write(obj.observation)
       ..writeByte(4)
-      ..write(obj.essai);
+      ..write(obj.essai)
+      ..writeByte(20)
+      ..write(obj.id)
+      ..writeByte(21)
+      ..write(obj.createdAt)
+      ..writeByte(22)
+      ..write(obj.updatedAt);
   }
 
   @override
@@ -394,7 +424,7 @@ class EssaiIsolementAdapter extends TypeAdapter<EssaiIsolement> {
       syncId: fields[0] as String,
       equipmentSyncId: fields[1] as String?,
       pointControle: fields[2] as String?,
-      isolement: (fields[3] as num).toDouble(),
+      isolement: fields[3] as double,
       appreciation: fields[4] as String,
       localisation: fields[5] as String?,
       designation: fields[6] as String?,
@@ -409,13 +439,15 @@ class EssaiIsolementAdapter extends TypeAdapter<EssaiIsolement> {
       isSectionPointBManual: fields[15] as bool?,
       equipmentPointASyncId: fields[16] as String?,
       equipmentPointBSyncId: fields[17] as String?,
+      createdAt: fields[20] as DateTime?,
+      updatedAt: fields[21] as DateTime?,
     );
   }
 
   @override
   void write(BinaryWriter writer, EssaiIsolement obj) {
     writer
-      ..writeByte(18)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.syncId)
       ..writeByte(1)
@@ -451,7 +483,11 @@ class EssaiIsolementAdapter extends TypeAdapter<EssaiIsolement> {
       ..writeByte(16)
       ..write(obj.equipmentPointASyncId)
       ..writeByte(17)
-      ..write(obj.equipmentPointBSyncId);
+      ..write(obj.equipmentPointBSyncId)
+      ..writeByte(20)
+      ..write(obj.createdAt)
+      ..writeByte(21)
+      ..write(obj.updatedAt);
   }
 
   @override

@@ -89,8 +89,12 @@ class DescriptionInstallations extends HiveObject {
   @HiveField(16)
   DateTime updatedAt;
 
+  @HiveField(30)
+  DateTime? createdAt;
+
   DescriptionInstallations({
     required this.missionId,
+    this.createdAt,
     List<InstallationItem>? alimentationMoyenneTension,
     List<InstallationItem>? alimentationBasseTension,
     List<InstallationItem>? groupeElectrogene,
@@ -126,9 +130,11 @@ class DescriptionInstallations extends HiveObject {
         foudreObservations = foudreObservations ?? [];
 
   factory DescriptionInstallations.create(String missionId) {
+    final now = DateTime.now().toUtc();
     return DescriptionInstallations(
       missionId: missionId,
-      updatedAt: DateTime.now(),
+      updatedAt: now,
+      createdAt: now,
       alimentationMoyenneTension: [],
       alimentationBasseTension: [],
       groupeElectrogene: [],
@@ -258,13 +264,30 @@ class InstallationItem extends HiveObject {
   @HiveField(2)
   DateTime createdAt;
 
+  @HiveField(3)
+  String? id;
+
+  @HiveField(4)
+  DateTime? updatedAt;
+
+  String get itemId {
+    if (id != null && id!.trim().isNotEmpty) return id!;
+    id = 'item_${DateTime.now().microsecondsSinceEpoch}_${data.hashCode.abs()}';
+    return id!;
+  }
+
   InstallationItem({
+    String? id,
     required Map<String, String> data,
     List<String>? photoPaths,
     DateTime? createdAt,
-  })  : data = Map<String, String>.from(data),
+    this.updatedAt,
+  })  : id = (id != null && id.trim().isNotEmpty)
+            ? id
+            : 'item_${DateTime.now().microsecondsSinceEpoch}_${data.hashCode.abs()}',
+        data = Map<String, String>.from(data),
         photoPaths = photoPaths ?? [],
-        createdAt = createdAt ?? DateTime.now();
+        createdAt = createdAt ?? DateTime.now().toUtc();
 
   bool isComplete(List<String> requiredFields) {
     for (final field in requiredFields) {

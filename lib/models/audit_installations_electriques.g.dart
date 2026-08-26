@@ -20,6 +20,7 @@ class AuditInstallationsElectriquesAdapter
     return AuditInstallationsElectriques(
       missionId: fields[0] as String,
       updatedAt: fields[1] as DateTime,
+      createdAt: fields[20] as DateTime?,
       moyenneTensionLocaux: (fields[2] as List?)?.cast<MoyenneTensionLocal>(),
       moyenneTensionZones: (fields[3] as List?)?.cast<MoyenneTensionZone>(),
       basseTensionZones: (fields[4] as List?)?.cast<BasseTensionZone>(),
@@ -30,11 +31,13 @@ class AuditInstallationsElectriquesAdapter
   @override
   void write(BinaryWriter writer, AuditInstallationsElectriques obj) {
     writer
-      ..writeByte(6)
+      ..writeByte(7)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)
       ..write(obj.updatedAt)
+      ..writeByte(20)
+      ..write(obj.createdAt)
       ..writeByte(2)
       ..write(obj.moyenneTensionLocaux)
       ..writeByte(3)
@@ -67,8 +70,11 @@ class MoyenneTensionLocalAdapter extends TypeAdapter<MoyenneTensionLocal> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return MoyenneTensionLocal(
+      id: fields[40] as String?,
       nom: fields[0] as String,
       type: fields[1] as String,
+      createdAt: fields[41] as DateTime?,
+      updatedAt: fields[42] as DateTime?,
       dispositionsConstructives: (fields[2] as List?)?.cast<ElementControle>(),
       conditionsExploitation: (fields[3] as List?)?.cast<ElementControle>(),
       cellule: fields[4] as Cellule?,
@@ -87,7 +93,7 @@ class MoyenneTensionLocalAdapter extends TypeAdapter<MoyenneTensionLocal> {
   @override
   void write(BinaryWriter writer, MoyenneTensionLocal obj) {
     writer
-      ..writeByte(14)
+      ..writeByte(17)
       ..writeByte(0)
       ..write(obj.nom)
       ..writeByte(1)
@@ -115,7 +121,13 @@ class MoyenneTensionLocalAdapter extends TypeAdapter<MoyenneTensionLocal> {
       ..writeByte(33)
       ..write(obj.aReverifier)
       ..writeByte(34)
-      ..write(obj.isRiskZone);
+      ..write(obj.isRiskZone)
+      ..writeByte(40)
+      ..write(obj.id)
+      ..writeByte(41)
+      ..write(obj.createdAt)
+      ..writeByte(42)
+      ..write(obj.updatedAt);
   }
 
   @override
@@ -140,8 +152,11 @@ class MoyenneTensionZoneAdapter extends TypeAdapter<MoyenneTensionZone> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return MoyenneTensionZone(
+      id: fields[40] as String?,
       nom: fields[0] as String,
       description: fields[1] as String?,
+      createdAt: fields[41] as DateTime?,
+      updatedAt: fields[42] as DateTime?,
       coffrets: (fields[2] as List?)?.cast<CoffretArmoire>(),
       observationsLibres: (fields[3] as List?)?.cast<ObservationLibre>(),
       photos: (fields[4] as List?)?.cast<String>(),
@@ -154,7 +169,7 @@ class MoyenneTensionZoneAdapter extends TypeAdapter<MoyenneTensionZone> {
   @override
   void write(BinaryWriter writer, MoyenneTensionZone obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.nom)
       ..writeByte(1)
@@ -170,7 +185,13 @@ class MoyenneTensionZoneAdapter extends TypeAdapter<MoyenneTensionZone> {
       ..writeByte(6)
       ..write(obj.classementZoneId)
       ..writeByte(7)
-      ..write(obj.isRiskZone);
+      ..write(obj.isRiskZone)
+      ..writeByte(40)
+      ..write(obj.id)
+      ..writeByte(41)
+      ..write(obj.createdAt)
+      ..writeByte(42)
+      ..write(obj.updatedAt);
   }
 
   @override
@@ -195,8 +216,11 @@ class BasseTensionZoneAdapter extends TypeAdapter<BasseTensionZone> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return BasseTensionZone(
+      id: fields[40] as String?,
       nom: fields[0] as String,
       description: fields[1] as String?,
+      createdAt: fields[41] as DateTime?,
+      updatedAt: fields[42] as DateTime?,
       locaux: (fields[2] as List?)?.cast<BasseTensionLocal>(),
       coffretsDirects: (fields[3] as List?)?.cast<CoffretArmoire>(),
       observationsLibres: (fields[4] as List?)?.cast<ObservationLibre>(),
@@ -209,7 +233,7 @@ class BasseTensionZoneAdapter extends TypeAdapter<BasseTensionZone> {
   @override
   void write(BinaryWriter writer, BasseTensionZone obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.nom)
       ..writeByte(1)
@@ -225,7 +249,13 @@ class BasseTensionZoneAdapter extends TypeAdapter<BasseTensionZone> {
       ..writeByte(6)
       ..write(obj.classementZoneId)
       ..writeByte(7)
-      ..write(obj.isRiskZone);
+      ..write(obj.isRiskZone)
+      ..writeByte(40)
+      ..write(obj.id)
+      ..writeByte(41)
+      ..write(obj.createdAt)
+      ..writeByte(42)
+      ..write(obj.updatedAt);
   }
 
   @override
@@ -250,8 +280,11 @@ class BasseTensionLocalAdapter extends TypeAdapter<BasseTensionLocal> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return BasseTensionLocal(
+      id: fields[40] as String?,
       nom: fields[0] as String,
       type: fields[1] as String,
+      createdAt: fields[41] as DateTime?,
+      updatedAt: fields[42] as DateTime?,
       dispositionsConstructives: (fields[2] as List?)?.cast<ElementControle>(),
       conditionsExploitation: (fields[3] as List?)?.cast<ElementControle>(),
       coffrets: (fields[4] as List?)?.cast<CoffretArmoire>(),
@@ -268,7 +301,7 @@ class BasseTensionLocalAdapter extends TypeAdapter<BasseTensionLocal> {
   @override
   void write(BinaryWriter writer, BasseTensionLocal obj) {
     writer
-      ..writeByte(12)
+      ..writeByte(15)
       ..writeByte(0)
       ..write(obj.nom)
       ..writeByte(1)
@@ -292,7 +325,13 @@ class BasseTensionLocalAdapter extends TypeAdapter<BasseTensionLocal> {
       ..writeByte(10)
       ..write(obj.transformateurs)
       ..writeByte(11)
-      ..write(obj.isRiskZone);
+      ..write(obj.isRiskZone)
+      ..writeByte(40)
+      ..write(obj.id)
+      ..writeByte(41)
+      ..write(obj.createdAt)
+      ..writeByte(42)
+      ..write(obj.updatedAt);
   }
 
   @override
@@ -382,6 +421,8 @@ class CelluleAdapter extends TypeAdapter<Cellule> {
       pouvoirCoupure: fields[4] as String,
       numerotation: fields[5] as String,
       parafoudres: fields[6] as String,
+      createdAt: fields[23] as DateTime?,
+      updatedAt: fields[24] as DateTime?,
       elementsVerifies: (fields[7] as List?)?.cast<ElementControle>(),
       photos: (fields[8] as List?)?.cast<String>(),
       gamme: fields[9] as String?,
@@ -404,7 +445,7 @@ class CelluleAdapter extends TypeAdapter<Cellule> {
   @override
   void write(BinaryWriter writer, Cellule obj) {
     writer
-      ..writeByte(23)
+      ..writeByte(25)
       ..writeByte(0)
       ..write(obj.fonction)
       ..writeByte(1)
@@ -450,7 +491,11 @@ class CelluleAdapter extends TypeAdapter<Cellule> {
       ..writeByte(21)
       ..write(obj.modele)
       ..writeByte(22)
-      ..write(obj.annee);
+      ..write(obj.annee)
+      ..writeByte(23)
+      ..write(obj.createdAt)
+      ..writeByte(24)
+      ..write(obj.updatedAt);
   }
 
   @override
@@ -482,6 +527,8 @@ class TransformateurMTBTAdapter extends TypeAdapter<TransformateurMTBT> {
       relaisBuchholz: fields[4] as String,
       typeRefroidissement: fields[5] as String,
       regimeNeutre: fields[6] as String,
+      createdAt: fields[26] as DateTime?,
+      updatedAt: fields[27] as DateTime?,
       elementsVerifies: (fields[7] as List?)?.cast<ElementControle>(),
       photos: (fields[8] as List?)?.cast<String>(),
       calibreDisjoncteur: fields[9] as String?,
@@ -507,7 +554,7 @@ class TransformateurMTBTAdapter extends TypeAdapter<TransformateurMTBT> {
   @override
   void write(BinaryWriter writer, TransformateurMTBT obj) {
     writer
-      ..writeByte(26)
+      ..writeByte(28)
       ..writeByte(0)
       ..write(obj.typeTransformateur)
       ..writeByte(1)
@@ -559,7 +606,11 @@ class TransformateurMTBTAdapter extends TypeAdapter<TransformateurMTBT> {
       ..writeByte(24)
       ..write(obj.typeImmersion)
       ..writeByte(25)
-      ..write(obj.presenceDGPT2);
+      ..write(obj.presenceDGPT2)
+      ..writeByte(26)
+      ..write(obj.createdAt)
+      ..writeByte(27)
+      ..write(obj.updatedAt);
   }
 
   @override
@@ -584,6 +635,7 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
     return CoffretArmoire(
+      id: fields[28] as String?,
       qrCode: fields[0] as String,
       nom: fields[1] as String,
       type: fields[2] as String,
@@ -597,6 +649,12 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       presenceParafoudre: fields[10] == null ? false : fields[10] as bool,
       verificationThermographie:
           fields[11] == null ? false : fields[11] as bool,
+      presenceDefautThermo: fields[24] as String?,
+      alimenteeParTransformateur: fields[26] as bool?,
+      presenceCPI: fields[27] as bool?,
+      departPrisAvecProtection: fields[29] as bool?,
+      createdAt: fields[30] as DateTime?,
+      updatedAt: fields[31] as DateTime?,
       alimentations: (fields[12] as List?)?.cast<Alimentation>(),
       protectionTete: fields[13] as Alimentation?,
       pointsVerification: (fields[14] as List?)?.cast<PointVerification>(),
@@ -610,19 +668,13 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       observationsParafoudre: (fields[22] as List?)?.cast<ObservationLibre>(),
       observationsParafoudreEnrichies:
           (fields[23] as List?)?.cast<ElementControle>(),
-      presenceDefautThermo: fields[24] as String?,
-      accessible: fields[25] == null ? true : (fields[25] as bool? ?? true),
-      alimenteeParTransformateur: fields[26] as bool?,
-      presenceCPI: fields[27] as bool?,
-      id: fields[28] as String?,
-      departPrisAvecProtection: fields[29] as bool?,
-    );
+    ).._accessible = fields[25] == null ? true : fields[25] as bool?;
   }
 
   @override
   void write(BinaryWriter writer, CoffretArmoire obj) {
     writer
-      ..writeByte(30)
+      ..writeByte(32)
       ..writeByte(0)
       ..write(obj.qrCode)
       ..writeByte(1)
@@ -674,7 +726,7 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       ..writeByte(24)
       ..write(obj.presenceDefautThermo)
       ..writeByte(25)
-      ..write(obj.accessible)
+      ..write(obj._accessible)
       ..writeByte(26)
       ..write(obj.alimenteeParTransformateur)
       ..writeByte(27)
@@ -682,7 +734,11 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       ..writeByte(28)
       ..write(obj.id)
       ..writeByte(29)
-      ..write(obj.departPrisAvecProtection);
+      ..write(obj.departPrisAvecProtection)
+      ..writeByte(30)
+      ..write(obj.createdAt)
+      ..writeByte(31)
+      ..write(obj.updatedAt);
   }
 
   @override
@@ -831,7 +887,7 @@ class ObservationLibreAdapter extends TypeAdapter<ObservationLibre> {
       referenceNormative: fields[5] as String?,
       familleRisque: fields[6] as String?,
       criticite: fields[7] as String?,
-      isAutoLinked: fields[8] as bool? ?? false,
+      isAutoLinked: fields[8] as bool,
     );
   }
 

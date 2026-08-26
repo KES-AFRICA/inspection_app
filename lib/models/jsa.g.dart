@@ -401,6 +401,7 @@ class JSAAdapter extends TypeAdapter<JSA> {
       epi: fields[6] as JSAEPI?,
       verificationFinale: fields[7] as JSAVerificationFinale?,
       updatedAt: fields[8] as DateTime?,
+      createdAt: fields[10] as DateTime?,
       currentSubCategory: fields[9] as int,
     );
   }
@@ -408,7 +409,7 @@ class JSAAdapter extends TypeAdapter<JSA> {
   @override
   void write(BinaryWriter writer, JSA obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)
@@ -428,7 +429,9 @@ class JSAAdapter extends TypeAdapter<JSA> {
       ..writeByte(8)
       ..write(obj.updatedAt)
       ..writeByte(9)
-      ..write(obj.currentSubCategory);
+      ..write(obj.currentSubCategory)
+      ..writeByte(10)
+      ..write(obj.createdAt);
   }
 
   @override
