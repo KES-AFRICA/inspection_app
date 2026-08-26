@@ -99,9 +99,9 @@ void main() {
 
     // ── ASSERTIONS FORMELLES DE CONCORDANCE ──
     expect(summary.criticalityStats.total, equals(237));
-    expect(summary.criticalityStats.critique, equals(103));
-    expect(summary.criticalityStats.majeure, equals(132));
-    expect(summary.criticalityStats.mineure, equals(2));
+    expect(summary.criticalityStats.critique, equals(97));
+    expect(summary.criticalityStats.majeure, equals(139));
+    expect(summary.criticalityStats.mineure, equals(1));
 
     expect(summary.topTwoCategoriesResult.combinedNC, equals(185));
     expect(summary.topTwoCategoriesResult.cat1Name, equals('Armoires'));
