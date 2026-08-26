@@ -2893,7 +2893,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   bool _pointsValid = false;
   bool _domaineTensionValid = false;
   bool _accessible = true;
-  bool _departPrisAvecProtection = true;
+  bool _departPrisAvecProtection = false;
 
   bool _photosExterneValid = false;
   bool _photosInterneValid = false;
