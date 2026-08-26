@@ -887,7 +887,7 @@ class ObservationLibreAdapter extends TypeAdapter<ObservationLibre> {
       referenceNormative: fields[5] as String?,
       familleRisque: fields[6] as String?,
       criticite: fields[7] as String?,
-      isAutoLinked: fields[8] as bool,
+      isAutoLinked: fields[8] == null ? false : fields[8] as bool,
     );
   }
 

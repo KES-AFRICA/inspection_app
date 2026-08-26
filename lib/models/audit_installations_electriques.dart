@@ -1192,7 +1192,7 @@ class ObservationLibre {
   @HiveField(7)
   String? criticite;
 
-  @HiveField(8)
+  @HiveField(8, defaultValue: false)
   bool isAutoLinked;
 
   ObservationLibre({

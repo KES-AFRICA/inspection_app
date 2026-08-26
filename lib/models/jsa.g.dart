@@ -402,7 +402,7 @@ class JSAAdapter extends TypeAdapter<JSA> {
       verificationFinale: fields[7] as JSAVerificationFinale?,
       updatedAt: fields[8] as DateTime?,
       createdAt: fields[10] as DateTime?,
-      currentSubCategory: fields[9] as int,
+      currentSubCategory: fields[9] == null ? 0 : fields[9] as int,
     );
   }
 

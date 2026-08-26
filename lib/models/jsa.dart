@@ -275,7 +275,7 @@ class JSA extends HiveObject {
   @HiveField(8)
   DateTime updatedAt;
 
-  @HiveField(9)
+  @HiveField(9, defaultValue: 0)
   int currentSubCategory; // 0-5
 
   @HiveField(10)
