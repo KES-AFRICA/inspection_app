@@ -164,7 +164,20 @@ class EquipmentNumberService {
       }
     }
 
-    // 2. Attribution séquentielle intelligente des numéros manquants/dupliqués
+    // 2. Tri déterministe de coffretsToAssign : par createdAt (si disponible) puis par ordre d'origine
+    coffretsToAssign.sort((a, b) {
+      if (a.createdAt != null && b.createdAt != null) {
+        final cmp = a.createdAt!.compareTo(b.createdAt!);
+        if (cmp != 0) return cmp;
+      } else if (a.createdAt != null) {
+        return -1; // Les équipements horodatés existants sont traités en priorité selon leur création réelle
+      } else if (b.createdAt != null) {
+        return 1;
+      }
+      return 0;
+    });
+
+    // 3. Attribution séquentielle intelligente des numéros manquants/dupliqués
     int currentCandidate = 1;
     for (final coffret in coffretsToAssign) {
       while (usedNumbers.contains(currentCandidate)) {
