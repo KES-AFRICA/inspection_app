@@ -1,51 +1,68 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
+import 'package:inspec_app/services/normative_search_service.dart';
 import 'package:inspec_app/services/normative_matching/normative_matching_engine.dart';
 import 'package:inspec_app/services/normative_matching/normative_matching_result.dart';
 import 'package:inspec_app/services/normative_matching/mission_normative_batch_service.dart';
 
 void main() {
-  group('NormativeMatchingEngine Tests', () {
-    test('1. Observation exacte -> Score certifié (Certain)', () {
+  group('NormativeMatchingEngine Tests - Refonte Déterministe', () {
+    test('1. Observation explicite -> Confiance VeryHigh (>= 80%) et auto-link autorisé', () {
       final obs = ObservationLibre(
-        texte: "Présence d'une porte pleine, ouvrant vers l'extérieur, munie d'un dispositif anti-panique",
+        texte: "Absence de schéma unifilaire dans le tableau électrique",
       );
 
       final analysis = NormativeMatchingEngine.analyze(obs);
 
-      expect(analysis.status, equals(MatchingConfidenceLevel.certain));
-      expect(analysis.confidenceScore, greaterThanOrEqualTo(30.0));
+      expect(analysis.status, equals(MatchingConfidenceLevel.veryHigh));
+      expect(analysis.confidenceScore, greaterThanOrEqualTo(80.0));
+      expect(analysis.shouldAutoLink, isTrue);
       expect(analysis.bestMatch, isNotNull);
-      expect(analysis.bestMatch!.referenceNormative, contains("NF C"));
+      expect(analysis.bestMatch!.referenceNormative, isNotEmpty);
+      expect(obs.texte, equals("Absence de schéma unifilaire dans le tableau électrique"));
     });
 
-    test('2. Mot-clé pertinent (porte anti-panique) -> Score >= 30% et Rattachement certifié', () {
+    test('2. Observation technique spécifique avec faute de frappe / pluriel -> Correctement appariée', () {
       final obs = ObservationLibre(
-        texte: "Porte accès sans dispositif anti-panique",
+        texte: "Defaut sur le parafoudre de tete",
       );
 
       final analysis = NormativeMatchingEngine.analyze(obs);
 
-      expect(analysis.status, equals(MatchingConfidenceLevel.certain));
-      expect(analysis.confidenceScore, greaterThanOrEqualTo(30.0));
-      expect(analysis.bestMatch!.referenceNormative, contains("NF C"));
+      expect(analysis.bestMatch, isNotNull);
+      expect(analysis.bestMatch!.pointVerification.toLowerCase(), contains('parafoudre'));
+      expect(analysis.confidenceScore, greaterThanOrEqualTo(60.0));
+      expect(obs.texte, equals("Defaut sur le parafoudre de tete"));
     });
 
-    test('3. Texte hors sujet ou trop générique -> Score < 30% (Incertain)', () {
+    test('3. Filtrage contextuel par type d\'équipement spécifié', () {
+      final resultsMT = NormativeSearchService.search(
+        "Absence de voyant de présence tension",
+        equipmentType: "CELLULE_MT",
+      );
+
+      expect(resultsMT, isNotEmpty);
+      final topMT = resultsMT.first;
+      expect(topMT.score, greaterThan(0.0));
+    });
+
+    test('4. Observation très vague -> Confiance Low (< 40%) et AUCUN auto-link', () {
       final obs = ObservationLibre(
-        texte: "Rien a signaler sur cet endroit",
+        texte: "Anomalie sur l'installation",
       );
 
       final analysis = NormativeMatchingEngine.analyze(obs);
 
-      expect(analysis.status, equals(MatchingConfidenceLevel.uncertain));
-      expect(analysis.confidenceScore, lessThan(30.0));
+      expect(analysis.status, equals(MatchingConfidenceLevel.low));
+      expect(analysis.shouldAutoLink, isFalse);
+      expect(obs.hasNormativeReference, isFalse);
     });
 
-    test('4. Immuabilité du texte, des photos et des dates', () {
+    test('5. Immuabilité et préservation absolue des métadonnées', () {
       final obs = ObservationLibre(
-        texte: "Porte sans anti-panique dans le local",
-        photos: ["/path/photo1.jpg"],
+        texte: "Absence de schéma unifilaire dans le tableau électrique",
+        photos: ["photo_1.jpg", "photo_2.jpg"],
+        criticite: "Critique",
       );
       final initialDate = obs.dateCreation;
 
@@ -60,8 +77,8 @@ void main() {
         );
       }
 
-      expect(obs.texte, equals("Porte sans anti-panique dans le local"));
-      expect(obs.photos, contains("/path/photo1.jpg"));
+      expect(obs.texte, equals("Absence de schéma unifilaire dans le tableau électrique"));
+      expect(obs.photos, contains("photo_1.jpg"));
       expect(obs.dateCreation, equals(initialDate));
       expect(obs.isAutoLinked, isTrue);
       expect(obs.hasNormativeReference, isTrue);
@@ -76,7 +93,7 @@ void main() {
         nom: 'Poste MT 1',
         type: 'LOCAL_POSTE_HTA',
         observationsLibres: [
-          ObservationLibre(texte: "Porte d'accès sans barre anti-panique"),
+          ObservationLibre(texte: "Absence de schéma unifilaire dans le tableau électrique"),
           ObservationLibre(texte: "Une petite remarque sans correspondance"),
         ],
       );
