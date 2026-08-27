@@ -13715,7 +13715,7 @@ class PdfReportService {
     return rows;
   }
 
-  static pw.Widget _buildFoudre(
+  static List<pw.Widget> _buildFoudre(
     AuditInstallationsElectriques? audit,
     List<Foudre> foudres,
     Map<String, int> trackedPages, {
@@ -13757,104 +13757,194 @@ class PdfReportService {
       );
     }
 
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: [
-        _buildPageHeaderWidget(),
-        pw.SizedBox(height: 10),
-        PageTracker(
-          key: 'foudre',
-          registry: trackedPages,
-          offset: offset,
-          child: _sectionBox('FOUDRE ET SURTENSION'),
-        ),
-        pw.SizedBox(height: 10),
+    final List<pw.Widget> widgets = [
+      _buildPageHeaderWidget(),
+      pw.SizedBox(height: 10),
+      PageTracker(
+        key: 'foudre',
+        registry: trackedPages,
+        offset: offset,
+        child: _sectionBox('FOUDRE ET SURTENSION'),
+      ),
+      pw.SizedBox(height: 10),
+    ];
 
-        // CAS 1 : Paratonnerre = "Non" -> Bloc Recommandation Protection contre la foudre EXCLUSIF
-        if (isParatonnerreNon) ...[
-          pw.Container(
-            width: double.infinity,
-            decoration: pw.BoxDecoration(
-              border: pw.Border.all(color: borderColor, width: 0.5),
-              color: PdfColors.white,
-            ),
-            child: pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
+    // CAS 1 : Paratonnerre = "Non" -> Bloc Recommandation Protection contre la foudre EXCLUSIF
+    if (isParatonnerreNon) {
+      widgets.addAll([
+        pw.Container(
+          width: double.infinity,
+          decoration: pw.BoxDecoration(
+            border: pw.Border.all(color: borderColor, width: 0.5),
+            color: PdfColors.white,
+          ),
+          child: pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Container(
+                width: double.infinity,
+                color: accentColor,
+                padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                child: pw.Text(
+                  'Recommandation – Protection contre la foudre',
+                  style: pw.TextStyle(
+                    font: _fontBold,
+                    fontSize: fsBody + 1,
+                    color: PdfColors.white,
+                  ),
+                ),
+              ),
+              pw.Padding(
+                padding: const pw.EdgeInsets.all(10),
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.start,
+                  children: [
+                    pw.Text(
+                      'Constat :',
+                      style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: headerColor),
+                    ),
+                    pw.SizedBox(height: 4),
+                    _bodyText(
+                      'Lors de la vérification des installations électriques, il a été constaté l’absence de dispositif de protection contre la foudre de type paratonnerre sur le site.',
+                    ),
+                    pw.SizedBox(height: 8),
+                    pw.Text(
+                      'Recommandation :',
+                      style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: headerColor),
+                    ),
+                    pw.SizedBox(height: 4),
+                    _bodyText(
+                      'Au regard de l’absence de dispositif de protection contre les impacts directs de la foudre, il serait souhaitable de faire réaliser une analyse et étude technique du risque foudre, prenant notamment en compte les caractéristiques du site, la nature et la hauteur des bâtiments, leur environnement, les équipements installés ainsi que les conséquences potentielles d’un impact de foudre.',
+                    ),
+                    pw.SizedBox(height: 4),
+                    _bodyText(
+                      'Cette étude permettra de déterminer la nécessité, le niveau et le type de protection approprié, ainsi que les caractéristiques du système de protection à mettre en œuvre, notamment le dispositif de capture et les parafoudres.',
+                    ),
+                    pw.SizedBox(height: 4),
+                    _bodyText(
+                      'Il est par conséquent recommandé de programmer la réalisation de ces études afin de statuer sur la nécessité d’installer un paratonnerre et, le cas échéant, de définir une solution de protection adaptée aux caractéristiques du site.',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        pw.SizedBox(height: 14),
+      ]);
+    } else {
+      // CAS 2 : Paratonnerre = "Oui" (ou afficherTableauFoudre activé)
+      widgets.addAll([
+        pw.Table(
+          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+          border: pw.TableBorder.all(color: borderColor, width: 0.4),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(0.6),
+            1: pw.FlexColumnWidth(0.9),
+            2: pw.FlexColumnWidth(4.5),
+          },
+          children: [
+            _tableHeaderRow(['Items', 'CRITICITÉ', 'Observations']),
+
+            // Ligne Principale (Contenu principal d'analyse & étude)
+            pw.TableRow(
+              decoration: const pw.BoxDecoration(color: PdfColors.white),
               children: [
                 pw.Container(
-                  width: double.infinity,
-                  color: accentColor,
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  alignment: pw.Alignment.center,
+                  padding: const pw.EdgeInsets.all(6),
                   child: pw.Text(
-                    'Recommandation – Protection contre la foudre',
+                    '1',
                     style: pw.TextStyle(
                       font: _fontBold,
-                      fontSize: fsBody + 1,
-                      color: PdfColors.white,
+                      fontSize: fsBody,
+                      color: headerColor,
+                    ),
+                  ),
+                ),
+                pw.Container(
+                  alignment: pw.Alignment.center,
+                  padding: const pw.EdgeInsets.all(6),
+                  child: pw.Text(
+                    'Majeure',
+                    style: pw.TextStyle(
+                      font: _fontBold,
+                      fontSize: fsSmall,
+                      color: PdfColor.fromInt(0xFFE65100),
                     ),
                   ),
                 ),
                 pw.Padding(
-                  padding: const pw.EdgeInsets.all(10),
+                  padding: const pw.EdgeInsets.all(6),
                   child: pw.Column(
                     crossAxisAlignment: pw.CrossAxisAlignment.start,
                     children: [
-                      pw.Text(
-                        'Constat :',
-                        style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: headerColor),
+                      _bodyText(
+                        "Une installation de paratonnerre conforme et efficace, doit répondre dans un premier temps aux principes de base d'installation d'un paratonnerre.",
+                      ),
+                      pw.SizedBox(height: 3),
+                      _bodyText("Il est indispensable de réaliser :"),
+                      itemBulletBold("- Une analyse risque foudre"),
+                      _bodyText(
+                        "L'ARF a pour objectif de définir précisément les biens à protéger ainsi que les niveaux de protection nécessaires aux installations et à l'étude technique.",
+                      ),
+                      pw.SizedBox(height: 3),
+                      _bodyText(
+                        "Analyse du Risque Foudre, selon la norme NF EN 62305-2,",
+                      ),
+                      _bodyText(
+                        "Elle intégrera les différents points suivants :",
+                      ),
+                      itemSubBullet(
+                        "•  Estimation des risques selon la norme EN 62305-2/FD 17018",
+                      ),
+                      itemSubBullet(
+                        "•  Définition des niveaux de protection exigés sur l'installation",
+                      ),
+                      itemSubBullet(
+                        "•  Identification des événements redoutés dus aux effets de la foudre",
+                      ),
+                      itemSubBullet(
+                        "•  La rédaction d'un rapport ARF (En langue Française) précisant le niveau de protection éventuelle à atteindre pour les structures et services à protéger",
                       ),
                       pw.SizedBox(height: 4),
+                      itemBulletBold("- Une étude technique foudre"),
                       _bodyText(
-                        'Lors de la vérification des installations électriques, il a été constaté l’absence de dispositif de protection contre la foudre de type paratonnerre sur le site.',
+                        "L'Etude Technique définit de façon détaillée les Installations Extérieures de Protection Foudre (IEPF) et les Installations Intérieures de Protection Foudre (IIPF) selon les normes en vigueur NF C 17 102, NF EN 62305-3 et NF EN 62305-4.",
                       ),
-                      pw.SizedBox(height: 8),
-                      pw.Text(
-                        'Recommandation :',
-                        style: pw.TextStyle(font: _fontBold, fontSize: fsBody, color: headerColor),
-                      ),
-                      pw.SizedBox(height: 4),
+                      pw.SizedBox(height: 3),
                       _bodyText(
-                        'Au regard de l’absence de dispositif de protection contre les impacts directs de la foudre, il serait souhaitable de faire réaliser une analyse et étude technique du risque foudre, prenant notamment en compte les caractéristiques du site, la nature et la hauteur des bâtiments, leur environnement, les équipements installés ainsi que les conséquences potentielles d’un impact de foudre.',
+                        "Elle intégrera les différents points suivants :",
                       ),
-                      pw.SizedBox(height: 4),
-                      _bodyText(
-                        'Cette étude permettra de déterminer la nécessité, le niveau et le type de protection approprié, ainsi que les caractéristiques du système de protection à mettre en œuvre, notamment le dispositif de capture et les parafoudres.',
+                      itemSubBullet("•  Les mesures de prévention"),
+                      itemSubBullet(
+                        "•  Le descriptif des équipements à installés (caractéristiques techniques)",
                       ),
-                      pw.SizedBox(height: 4),
-                      _bodyText(
-                        'Il est par conséquent recommandé de programmer la réalisation de ces études afin de statuer sur la nécessité d’installer un paratonnerre et, le cas échéant, de définir une solution de protection adaptée aux caractéristiques du site.',
+                      itemSubBullet(
+                        "•  Le lieu d'implantation des équipements de protection",
                       ),
                     ],
                   ),
                 ),
               ],
             ),
-          ),
-          pw.SizedBox(height: 14),
-        ]
 
-        // CAS 2 : Paratonnerre = "Oui" (ou afficherTableauFoudre activé)
-        else ...[
-          pw.Table(
-            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-            border: pw.TableBorder.all(color: borderColor, width: 0.4),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(0.6),
-              1: pw.FlexColumnWidth(0.9),
-              2: pw.FlexColumnWidth(4.5),
-            },
-            children: [
-              _tableHeaderRow(['Items', 'CRITICITÉ', 'Observations']),
+            // Lignes Dynamiques d'observations structurées (Ligne 2, Ligne 3...)
+            ...foudreObsList.asMap().entries.map((entry) {
+              final itemIndex = entry.key + 2;
+              final obs = entry.value;
+              final crit = obs.criticite?.trim().isNotEmpty == true ? obs.criticite! : 'Majeure';
 
-              // Ligne Principale (Contenu principal d'analyse & étude)
-              pw.TableRow(
-                decoration: const pw.BoxDecoration(color: PdfColors.white),
+              return pw.TableRow(
+                decoration: pw.BoxDecoration(
+                  color: entry.key.isOdd ? tableRowAlt : PdfColors.white,
+                ),
                 children: [
                   pw.Container(
                     alignment: pw.Alignment.center,
                     padding: const pw.EdgeInsets.all(6),
                     child: pw.Text(
-                      '1',
+                      '$itemIndex',
                       style: pw.TextStyle(
                         font: _fontBold,
                         fontSize: fsBody,
@@ -13866,7 +13956,7 @@ class PdfReportService {
                     alignment: pw.Alignment.center,
                     padding: const pw.EdgeInsets.all(6),
                     child: pw.Text(
-                      'Majeure',
+                      crit,
                       style: pw.TextStyle(
                         font: _fontBold,
                         fontSize: fsSmall,
@@ -13876,117 +13966,36 @@ class PdfReportService {
                   ),
                   pw.Padding(
                     padding: const pw.EdgeInsets.all(6),
-                    child: pw.Column(
-                      crossAxisAlignment: pw.CrossAxisAlignment.start,
-                      children: [
-                        _bodyText(
-                          "Une installation de paratonnerre conforme et efficace, doit répondre dans un premier temps aux principes de base d'installation d'un paratonnerre.",
-                        ),
-                        pw.SizedBox(height: 3),
-                        _bodyText("Il est indispensable de réaliser :"),
-                        itemBulletBold("- Une analyse risque foudre"),
-                        _bodyText(
-                          "L'ARF a pour objectif de définir précisément les biens à protéger ainsi que les niveaux de protection nécessaires aux installations et à l'étude technique.",
-                        ),
-                        pw.SizedBox(height: 3),
-                        _bodyText(
-                          "Analyse du Risque Foudre, selon la norme NF EN 62305-2,",
-                        ),
-                        _bodyText(
-                          "Elle intégrera les différents points suivants :",
-                        ),
-                        itemSubBullet(
-                          "•  Estimation des risques selon la norme EN 62305-2/FD 17018",
-                        ),
-                        itemSubBullet(
-                          "•  Définition des niveaux de protection exigés sur l'installation",
-                        ),
-                        itemSubBullet(
-                          "•  Identification des événements redoutés dus aux effets de la foudre",
-                        ),
-                        itemSubBullet(
-                          "•  La rédaction d'un rapport ARF (En langue Française) précisant le niveau de protection éventuelle à atteindre pour les structures et services à protéger",
-                        ),
-                        pw.SizedBox(height: 4),
-                        itemBulletBold("- Une étude technique foudre"),
-                        _bodyText(
-                          "L'Etude Technique définit de façon détaillée les Installations Extérieures de Protection Foudre (IEPF) et les Installations Intérieures de Protection Foudre (IIPF) selon les normes en vigueur NF C 17 102, NF EN 62305-3 et NF EN 62305-4.",
-                        ),
-                        pw.SizedBox(height: 3),
-                        _bodyText(
-                          "Elle intégrera les différents points suivants :",
-                        ),
-                        itemSubBullet("•  Les mesures de prévention"),
-                        itemSubBullet(
-                          "•  Le descriptif des équipements à installés (caractéristiques techniques)",
-                        ),
-                        itemSubBullet(
-                          "•  Le lieu d'implantation des équipements de protection",
-                        ),
-                      ],
-                    ),
+                    child: _bodyText(obs.texte),
                   ),
                 ],
-              ),
+              );
+            }),
+          ],
+        ),
+        pw.SizedBox(height: 14),
 
-              // Lignes Dynamiques d'observations structurées (Ligne 2, Ligne 3...)
-              ...foudreObsList.asMap().entries.map((entry) {
-                final itemIndex = entry.key + 2;
-                final obs = entry.value;
-                final crit = obs.criticite?.trim().isNotEmpty == true ? obs.criticite! : 'Majeure';
+        // Sous-section : Observation par équipement
+        PageTracker(
+          key: 'foudre_equipements',
+          registry: trackedPages,
+          offset: offset,
+          child: _subSectionBar("1. Observation par équipement"),
+        ),
+        pw.SizedBox(height: 6),
+      ]);
 
-                return pw.TableRow(
-                  decoration: pw.BoxDecoration(
-                    color: entry.key.isOdd ? tableRowAlt : PdfColors.white,
-                  ),
-                  children: [
-                    pw.Container(
-                      alignment: pw.Alignment.center,
-                      padding: const pw.EdgeInsets.all(6),
-                      child: pw.Text(
-                        '$itemIndex',
-                        style: pw.TextStyle(
-                          font: _fontBold,
-                          fontSize: fsBody,
-                          color: headerColor,
-                        ),
-                      ),
-                    ),
-                    pw.Container(
-                      alignment: pw.Alignment.center,
-                      padding: const pw.EdgeInsets.all(6),
-                      child: pw.Text(
-                        crit,
-                        style: pw.TextStyle(
-                          font: _fontBold,
-                          fontSize: fsSmall,
-                          color: PdfColor.fromInt(0xFFE65100),
-                        ),
-                      ),
-                    ),
-                    pw.Padding(
-                      padding: const pw.EdgeInsets.all(6),
-                      child: _bodyText(obs.texte),
-                    ),
-                  ],
-                );
-              }),
-            ],
-          ),
-          pw.SizedBox(height: 14),
+      if (equipRows.isEmpty) {
+        widgets.add(_bodyText('Aucune observation parafoudre par équipement disponible.'));
+      } else {
+        const int batchSize = 25;
+        for (int i = 0; i < equipRows.length; i += batchSize) {
+          final batch = equipRows.sublist(
+            i,
+            i + batchSize > equipRows.length ? equipRows.length : i + batchSize,
+          );
 
-          // Sous-section : Observation par équipement
-          PageTracker(
-            key: 'foudre_equipements',
-            registry: trackedPages,
-            offset: offset,
-            child: _subSectionBar("1. Observation par équipement"),
-          ),
-          pw.SizedBox(height: 6),
-
-          if (equipRows.isEmpty)
-            _bodyText('Aucune observation parafoudre par équipement disponible.')
-          else
+          widgets.add(
             pw.Table(
               defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
               border: pw.TableBorder.all(color: borderColor, width: 0.4),
@@ -13998,8 +14007,8 @@ class PdfReportService {
               },
               children: [
                 _tableHeaderRow(['N°', 'Repère', 'Observation', 'Photo']),
-                ...equipRows.asMap().entries.map((e) {
-                  final idx = e.key + 1;
+                ...batch.asMap().entries.map((e) {
+                  final globalIdx = i + e.key + 1;
                   final row = e.value;
                   final bg = e.key.isOdd ? tableRowAlt : PdfColors.white;
                   final photoLabel = _getFormattedPhotoLabel(row.photoPaths, photoRegistry);
@@ -14012,7 +14021,7 @@ class PdfReportService {
                         padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
                         alignment: pw.Alignment.center,
                         child: pw.Text(
-                          '$idx',
+                          '$globalIdx',
                           style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
                           textAlign: pw.TextAlign.center,
                         ),
@@ -14056,9 +14065,13 @@ class PdfReportService {
                 }),
               ],
             ),
-        ],
-      ],
-    );
+          );
+          widgets.add(pw.SizedBox(height: 8));
+        }
+      }
+    }
+
+    return widgets;
   }
 
   static Future<Map<PriseTerre, pw.MemoryImage?>> _preloadPrisesTerrePhotos(
@@ -18608,10 +18621,10 @@ class PdfReportService {
 
     // ── Section 6, 7 & 8 : Synthèse des Équipements, Synthèse des Observations et Audit par zone ──
     if (audit != null) {
-      if (saveFilesToDisk) {
-        onProgress?.call(0.45, 'Génération de la synthèse des équipements...');
-        await Future.delayed(Duration.zero);
-      }
+      final double progressSynthese = saveFilesToDisk ? 0.45 : 0.15;
+      onProgress?.call(progressSynthese, 'Génération de la synthèse des équipements...');
+      await Future.delayed(Duration.zero);
+
       final equipementsResult = await _addSyntheseEquipementsSectionChunked(
         mission,
         audit,
@@ -18626,10 +18639,10 @@ class PdfReportService {
       if (saveFilesToDisk) allChunkFiles.addAll(equipementsResult.files);
       currentOffset += equipementsResult.totalPages;
 
-      if (saveFilesToDisk) {
-        onProgress?.call(0.48, 'Génération de la synthèse récapitulative des observations...');
-        await Future.delayed(Duration.zero);
-      }
+      final double progressRecap = saveFilesToDisk ? 0.48 : 0.22;
+      onProgress?.call(progressRecap, 'Génération de la synthèse récapitulative des observations...');
+      await Future.delayed(Duration.zero);
+
       final recapResult = await _addListeRecapitulativeSectionChunked(
         mission,
         audit,
@@ -18643,10 +18656,10 @@ class PdfReportService {
       if (saveFilesToDisk) allChunkFiles.addAll(recapResult.files);
       currentOffset += recapResult.totalPages;
 
-      if (saveFilesToDisk) {
-        onProgress?.call(0.60, 'Audit détaillé des zones MT et BT...');
-        await Future.delayed(Duration.zero);
-      }
+      final double progressAudit = saveFilesToDisk ? 0.60 : 0.30;
+      onProgress?.call(progressAudit, 'Audit détaillé des zones MT et BT...');
+      await Future.delayed(Duration.zero);
+
       final auditResult = await _addAuditSectionChunked(
         mission,
         audit,
@@ -18662,19 +18675,19 @@ class PdfReportService {
     }
 
     // ── Sub-chunk 2.1 : Classement, Foudre, Mesures & Essais, Signatures ──
-    if (saveFilesToDisk) {
-      onProgress?.call(
-        0.75,
-        'Génération du classement, foudre et signatures...',
-      );
-      await Future.delayed(Duration.zero);
-    }
-    final pdfP2_1 = pw.Document(
-      title: 'Classement & Mesures - ${mission.nomClient}',
+    final double progressClassement = saveFilesToDisk ? 0.75 : 0.38;
+    onProgress?.call(
+      progressClassement,
+      'Génération du classement, foudre et signatures...',
+    );
+    await Future.delayed(Duration.zero);
+    // ── Sub-chunk 2.1a : Classement ──
+    final pdfClassement = pw.Document(
+      title: 'Classement - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
       compress: saveFilesToDisk,
     );
-    pdfP2_1.addPage(
+    pdfClassement.addPage(
       pw.MultiPage(
         maxPages: 10000,
         pageTheme: _buildInnerPageTheme(
@@ -18694,30 +18707,55 @@ class PdfReportService {
         ),
       ),
     );
-    pdfP2_1.addPage(
+    final bytesClassement = await pdfClassement.save();
+    if (saveFilesToDisk) {
+      final chunk = File('${tempDir.path}/pdf_chunk_classement_$missionId.pdf');
+      await chunk.writeAsBytes(bytesClassement);
+      allChunkFiles.add(chunk);
+    }
+    currentOffset += pdfClassement.document.pdfPageList.pages.length;
+
+    // ── Sub-chunk 2.1b : Foudre ──
+    final pdfFoudre = pw.Document(
+      title: 'Foudre - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: saveFilesToDisk,
+    );
+    pdfFoudre.addPage(
       pw.MultiPage(
         maxPages: 10000,
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
         ),
-        build: (ctx) => [
-          _buildFoudre(
-            audit,
-            foudres,
-            trackedPages,
-            afficherTableauFoudre: mission.afficherTableauFoudre,
-            offset: currentOffset,
-            desc: description,
-            photoRegistry: photoRegistry,
-          ),
-        ],
+        build: (ctx) => _buildFoudre(
+          audit,
+          foudres,
+          trackedPages,
+          afficherTableauFoudre: mission.afficherTableauFoudre,
+          offset: currentOffset,
+          desc: description,
+          photoRegistry: photoRegistry,
+        ),
       ),
     );
+    final bytesFoudre = await pdfFoudre.save();
+    if (saveFilesToDisk) {
+      final chunk = File('${tempDir.path}/pdf_chunk_foudre_$missionId.pdf');
+      await chunk.writeAsBytes(bytesFoudre);
+      allChunkFiles.add(chunk);
+    }
+    currentOffset += pdfFoudre.document.pdfPageList.pages.length;
 
+    // ── Sub-chunk 2.1c : Mesures & Essais ──
     if (mesures != null) {
+      final pdfMesures = pw.Document(
+        title: 'Mesures & Essais - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: saveFilesToDisk,
+      );
       await _addMesuresEssaisPages(
-        pdfP2_1,
+        pdfMesures,
         mesures,
         trackedPages,
         pageOffset: currentOffset,
@@ -18725,8 +18763,22 @@ class PdfReportService {
         desc: description,
         saveFilesToDisk: saveFilesToDisk,
       );
+      final bytesMesures = await pdfMesures.save();
+      if (saveFilesToDisk) {
+        final chunk = File('${tempDir.path}/pdf_chunk_mesures_$missionId.pdf');
+        await chunk.writeAsBytes(bytesMesures);
+        allChunkFiles.add(chunk);
+      }
+      currentOffset += pdfMesures.document.pdfPageList.pages.length;
     }
-    pdfP2_1.addPage(
+
+    // ── Sub-chunk 2.1d : Signatures ──
+    final pdfSignatures = pw.Document(
+      title: 'Signatures - ${mission.nomClient}',
+      author: 'KES INSPECTIONS AND PROJECTS',
+      compress: saveFilesToDisk,
+    );
+    pdfSignatures.addPage(
       pw.Page(
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
@@ -18740,20 +18792,21 @@ class PdfReportService {
         ),
       ),
     );
-    final bytesP2_1 = await pdfP2_1.save();
+    final bytesSignatures = await pdfSignatures.save();
     if (saveFilesToDisk) {
-      final chunkP2_1 = File('${tempDir.path}/pdf_chunk_p2_1_$missionId.pdf');
-      await chunkP2_1.writeAsBytes(bytesP2_1);
-      allChunkFiles.add(chunkP2_1);
+      final chunk = File('${tempDir.path}/pdf_chunk_signatures_$missionId.pdf');
+      await chunk.writeAsBytes(bytesSignatures);
+      allChunkFiles.add(chunk);
     }
-    currentOffset += pdfP2_1.document.pdfPageList.pages.length;
+    currentOffset += pdfSignatures.document.pdfPageList.pages.length;
 
     // ── Sub-chunk 2.2 : Page de garde Photos & Schéma ──
-    if (saveFilesToDisk)
-      onProgress?.call(
-        0.82,
-        'Génération de la section schéma et garde des photos...',
-      );
+    final double progressPhotosGarde = saveFilesToDisk ? 0.82 : 0.39;
+    onProgress?.call(
+      progressPhotosGarde,
+      'Génération de la section schéma et garde des photos...',
+    );
+    await Future.delayed(Duration.zero);
     final pdfP2_2 = pw.Document(
       title: 'Garde Photos & Schéma - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
@@ -18826,11 +18879,12 @@ class PdfReportService {
     currentOffset += pdfP2_2.document.pdfPageList.pages.length;
 
     // ── Section 13 : Photos Chunked ──
-    if (saveFilesToDisk)
-      onProgress?.call(
-        0.87,
-        'Traitement et compression des photos d\'illustration...',
-      );
+    final double progressPhotosChunked = saveFilesToDisk ? 0.87 : 0.40;
+    onProgress?.call(
+      progressPhotosChunked,
+      'Traitement et compression des photos d\'illustration...',
+    );
+    await Future.delayed(Duration.zero);
     final photoResult = await _addPhotosSectionChunked(
       mission,
       missionId,

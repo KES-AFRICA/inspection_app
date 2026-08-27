@@ -352,8 +352,10 @@ class InstallationDescriptionSyncService {
     return map;
   }
 
+  static final Map<String, DateTime> _lastSyncedAuditTime = {};
+
   /// Mécanisme d'auto-réparation et de synchronisation idempotente pour une mission
-  static Future<void> repairAndSyncDescriptions(String missionId) async {
+  static Future<void> repairAndSyncDescriptions(String missionId, {bool force = false}) async {
     try {
       Box<AuditInstallationsElectriques> auditBox;
       if (Hive.isBoxOpen(_auditBox)) {
@@ -367,7 +369,13 @@ class InstallationDescriptionSyncService {
         orElse: () => auditBox.get(missionId) ?? AuditInstallationsElectriques(missionId: missionId, updatedAt: DateTime.now()),
       );
       
+      final lastSync = _lastSyncedAuditTime[missionId];
+      if (!force && lastSync != null && (audit.updatedAt.isBefore(lastSync) || audit.updatedAt.isAtSameMomentAs(lastSync))) {
+        return;
+      }
+
       await syncAuditToDescription(audit);
+      _lastSyncedAuditTime[missionId] = DateTime.now();
     } catch (e, st) {
       if (kDebugMode) {
         print('❌ Erreur repairAndSyncDescriptions pour mission $missionId: $e\n$st');

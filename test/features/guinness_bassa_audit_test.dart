@@ -113,11 +113,16 @@ void main() {
     // Diagnostic Problème 2: Génération PDF
     print('⚙️ Lancement de la génération du rapport PDF...');
     try {
-      final pdfFile = await PdfReportService.generateMissionReport(missionId);
+      final pdfFile = await PdfReportService.generateMissionReport(
+        missionId,
+        onProgress: (progress, message) {
+          print('📈 [PDF PROGRESS ${(progress * 100).toStringAsFixed(1)}%] $message');
+        },
+      );
       print('🎉 Rapport PDF généré avec SUCÈS ! Fichier: ${pdfFile?.path}, Taille: ${(pdfFile != null ? (pdfFile.lengthSync() / (1024 * 1024)).toStringAsFixed(2) : 0)} Mo');
     } catch (e, st) {
       print('❌ EXCEPTION GÉNERATION PDF REPRODUITE: $e');
       print(st);
     }
-  }, timeout: const Timeout(Duration(minutes: 10)));
+  }, timeout: const Timeout(Duration(minutes: 25)));
 }
