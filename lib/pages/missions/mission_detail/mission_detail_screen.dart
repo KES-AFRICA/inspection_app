@@ -119,7 +119,8 @@ class _MissionDetailScreenState extends State<MissionDetailScreen>
     setState(() => _isLoading = true);
 
     final progress = await SequenceProgressService.getProgress(_currentMission.id);
-    final lastStep = (progress['currentStep'] as int?) ?? 0;
+    final rawStep = (progress['currentStep'] as int?) ?? 0;
+    final lastStep = rawStep.clamp(0, 5);
 
     if (_currentMission.isEnAttente) {
       await _updateMissionStatus('en_cours');

@@ -361,18 +361,22 @@ class _SequenceScreenState extends State<SequenceScreen>
       progress['completedSteps'] as List<dynamic>? ?? [],
     );
 
-    var savedStep = progress['currentStep'] ?? 0;
-    if (widget.initialStep > 0 && widget.initialStep < _steps.length) {
+    var savedStep = progress['currentStep'] as int? ?? 0;
+    if (widget.initialStep >= 0 && widget.initialStep < _steps.length) {
       savedStep = widget.initialStep;
       await SequenceProgressService.saveCurrentStep(
         widget.mission.id,
         savedStep,
       );
-    } else if (savedStep >= _steps.length) {
-      savedStep = _steps.length - 1;
+    } else if (savedStep < 0 || savedStep >= _steps.length) {
+      savedStep = 0;
+      await SequenceProgressService.saveCurrentStep(
+        widget.mission.id,
+        0,
+      );
     }
 
-    _currentStep = savedStep;
+    _currentStep = savedStep.clamp(0, _steps.length - 1);
     _pageController = PageController(initialPage: _currentStep);
 
     await _refreshSubProgress();

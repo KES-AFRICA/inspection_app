@@ -7,20 +7,27 @@ class SequenceProgressService {
   // Structure de progression pour une mission
   static Future<Map<String, dynamic>> getProgress(String missionId) async {
     final box = await Hive.openBox(_progressBox);
-    final progress = box.get(missionId, defaultValue: {
+    final raw = box.get(missionId, defaultValue: {
       'currentStep': 0,
       'completedSteps': <int>[],
       'stepData': <String, dynamic>{},
       'lastUpdated': DateTime.now().toIso8601String(),
     });
-    return Map<String, dynamic>.from(progress);
+    final progress = Map<String, dynamic>.from(raw);
+    int currentStep = (progress['currentStep'] as int?) ?? 0;
+    if (currentStep < 0 || currentStep >= 6) {
+      currentStep = 0;
+      progress['currentStep'] = 0;
+    }
+    return progress;
   }
   
   // Sauvegarder l'étape courante
   static Future<void> saveCurrentStep(String missionId, int stepIndex) async {
+    final safeStep = stepIndex.clamp(0, 5);
     final box = await Hive.openBox(_progressBox);
     final progress = await getProgress(missionId);
-    progress['currentStep'] = stepIndex;
+    progress['currentStep'] = safeStep;
     progress['lastUpdated'] = DateTime.now().toIso8601String();
     await box.put(missionId, progress);
   }

@@ -1667,6 +1667,9 @@ class BackupService {
         await _copyDirRecursively(entity, newDir);
       } else if (entity is File) {
         final newFile = File('${destination.path}/${entity.path.split('/').last}');
+        if (!await newFile.parent.exists()) {
+          await newFile.parent.create(recursive: true);
+        }
         if (!await newFile.exists()) {
           await entity.copy(newFile.path);
         }

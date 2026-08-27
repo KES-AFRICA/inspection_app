@@ -17277,126 +17277,140 @@ class PdfReportService {
     }
     currentOffset += coverDoc.document.pdfPageList.pages.length;
 
-    // 2. Équipements MT
+    // Helper interne pour effectuer le rendu par sous-lots (micro-chunking)
+    Future<void> _renderEquipementsSubBatches({
+      required List<_PdfEquipementItem> items,
+      required String sectionKey,
+      required String sectionTitle,
+      required String chunkPrefix,
+    }) async {
+      if (items.isEmpty) return;
+
+      const int batchSize = 15;
+      final totalBatches = (items.length / batchSize).ceil();
+
+      for (int b = 0; b < totalBatches; b++) {
+        final startIdx = b * batchSize;
+        final endIdx = ((b + 1) * batchSize).clamp(0, items.length);
+        final batchItems = items.sublist(startIdx, endIdx);
+
+        final doc = pw.Document(
+          title: '$sectionTitle (Part ${b + 1}/$totalBatches) - ${mission.nomClient}',
+          author: 'KES INSPECTIONS AND PROJECTS',
+          compress: saveFilesToDisk,
+        );
+
+        final isFirstBatch = (b == 0);
+        doc.addPage(
+          pw.MultiPage(
+            maxPages: 10000,
+            pageTheme: _buildInnerPageTheme(
+              pageOffset: currentOffset,
+              overrideTotalPages: overrideTotalPages,
+            ),
+            header: (ctx) => _buildPageHeaderWidget(
+              nomSite: nomSite,
+              numeroRapport: numeroRapport,
+            ),
+            build: (ctx) => [
+              if (isFirstBatch) ...[
+                PageTracker(
+                  key: sectionKey,
+                  registry: trackedPages,
+                  offset: currentOffset,
+                  child: _subSectionBar(sectionTitle),
+                ),
+                pw.SizedBox(height: 5),
+              ],
+              _buildEquipementsTable(batchItems),
+            ],
+          ),
+        );
+
+        final bytes = await doc.save();
+        if (saveFilesToDisk) {
+          final file = File(
+            '${tempDir.path}/pdf_chunk_${chunkPrefix}_p${b + 1}_${mission.id}.pdf',
+          );
+          await file.writeAsBytes(bytes);
+          chunkFiles.add(file);
+        }
+        currentOffset += doc.document.pdfPageList.pages.length;
+      }
+    }
+
+    // 2. Équipements MT (découpés par micro-lots de 40)
     final equipementsMT = _collectEquipementsMT(audit);
-    final mtDoc = pw.Document(
-      title: 'Equipements MT - ${mission.nomClient}',
-      author: 'KES INSPECTIONS AND PROJECTS',
-      compress: saveFilesToDisk,
+    await _renderEquipementsSubBatches(
+      items: equipementsMT,
+      sectionKey: 'liste_recap_equipements_mt',
+      sectionTitle: '1. Équipements moyenne tension',
+      chunkPrefix: 'equipements_mt',
     );
-    mtDoc.addPage(
-      pw.MultiPage(
-        maxPages: 10000,
-        pageTheme: _buildInnerPageTheme(
-          pageOffset: currentOffset,
-          overrideTotalPages: overrideTotalPages,
-        ),
-        header: (ctx) => _buildPageHeaderWidget(
-          nomSite: nomSite,
-          numeroRapport: numeroRapport,
-        ),
-        build: (ctx) => [
-          PageTracker(
-            key: 'liste_recap_equipements_mt',
-            registry: trackedPages,
-            offset: currentOffset,
-            child: _subSectionBar('1. Équipements moyenne tension'),
-          ),
-          pw.SizedBox(height: 5),
-          _buildEquipementsTable(equipementsMT),
-        ],
-      ),
-    );
-    final mtBytes = await mtDoc.save();
-    if (saveFilesToDisk) {
-      final mtFile = File(
-        '${tempDir.path}/pdf_chunk_equipements_mt_${mission.id}.pdf',
-      );
-      await mtFile.writeAsBytes(mtBytes);
-      chunkFiles.add(mtFile);
-    }
-    currentOffset += mtDoc.document.pdfPageList.pages.length;
 
-    // 3. Équipements BT
+    // 3. Équipements BT (découpés par micro-lots de 40)
     final equipementsBT = _collectEquipementsBT(audit, desc);
-    final btDoc = pw.Document(
-      title: 'Equipements BT - ${mission.nomClient}',
-      author: 'KES INSPECTIONS AND PROJECTS',
-      compress: saveFilesToDisk,
+    await _renderEquipementsSubBatches(
+      items: equipementsBT,
+      sectionKey: 'liste_recap_equipements_bt',
+      sectionTitle: '2. Équipements basse tension',
+      chunkPrefix: 'equipements_bt',
     );
-    btDoc.addPage(
-      pw.MultiPage(
-        maxPages: 10000,
-        pageTheme: _buildInnerPageTheme(
-          pageOffset: currentOffset,
-          overrideTotalPages: overrideTotalPages,
-        ),
-        header: (ctx) => _buildPageHeaderWidget(
-          nomSite: nomSite,
-          numeroRapport: numeroRapport,
-        ),
-        build: (ctx) => [
-          PageTracker(
-            key: 'liste_recap_equipements_bt',
-            registry: trackedPages,
-            offset: currentOffset,
-            child: _subSectionBar('2. Équipements basse tension'),
-          ),
-          pw.SizedBox(height: 5),
-          _buildEquipementsTable(equipementsBT),
-        ],
-      ),
-    );
-    final btBytes = await btDoc.save();
-    if (saveFilesToDisk) {
-      final btFile = File(
-        '${tempDir.path}/pdf_chunk_equipements_bt_${mission.id}.pdf',
-      );
-      await btFile.writeAsBytes(btBytes);
-      chunkFiles.add(btFile);
-    }
-    currentOffset += btDoc.document.pdfPageList.pages.length;
 
-    // 4. Équipements aux sources d'alimentation non identifiées
+    // 4. Équipements aux sources d'alimentation non identifiées (découpés par micro-lots de 40)
     final unknownSources = _collectEquipementsUnknownSource(audit);
     if (unknownSources.isNotEmpty) {
-      final sourcesUnknownDoc = pw.Document(
-        title: 'Equipements Sources Inconnues - ${mission.nomClient}',
-        author: 'KES INSPECTIONS AND PROJECTS',
-        compress: saveFilesToDisk,
-      );
-      sourcesUnknownDoc.addPage(
-        pw.MultiPage(
-          maxPages: 10000,
-          pageTheme: _buildInnerPageTheme(
-            pageOffset: currentOffset,
-            overrideTotalPages: overrideTotalPages,
-          ),
-          header: (ctx) => _buildPageHeaderWidget(
-            nomSite: nomSite,
-            numeroRapport: numeroRapport,
-          ),
-          build: (ctx) => [
-            PageTracker(
-              key: 'liste_recap_equipements_sources_inconnues',
-              registry: trackedPages,
-              offset: currentOffset,
-              child: _sectionBox('LISTE RÉCAPITULATIVE DES ÉQUIPEMENTS AUX SOURCES D’ALIMENTATION NON IDENTIFIÉES'),
-            ),
-            pw.SizedBox(height: 8),
-            _buildUnknownSourcesTable(unknownSources),
-          ],
-        ),
-      );
-      final sourcesBytes = await sourcesUnknownDoc.save();
-      if (saveFilesToDisk) {
-        final sourcesFile = File(
-          '${tempDir.path}/pdf_chunk_equipements_sources_inconnues_${mission.id}.pdf',
+      const int batchSize = 15;
+      final totalBatches = (unknownSources.length / batchSize).ceil();
+
+      for (int b = 0; b < totalBatches; b++) {
+        final startIdx = b * batchSize;
+        final endIdx = ((b + 1) * batchSize).clamp(0, unknownSources.length);
+        final batchItems = unknownSources.sublist(startIdx, endIdx);
+
+        final sourcesUnknownDoc = pw.Document(
+          title: 'Equipements Sources Inconnues (Part ${b + 1}/$totalBatches) - ${mission.nomClient}',
+          author: 'KES INSPECTIONS AND PROJECTS',
+          compress: saveFilesToDisk,
         );
-        await sourcesFile.writeAsBytes(sourcesBytes);
-        chunkFiles.add(sourcesFile);
+
+        final isFirstBatch = (b == 0);
+        sourcesUnknownDoc.addPage(
+          pw.MultiPage(
+            maxPages: 10000,
+            pageTheme: _buildInnerPageTheme(
+              pageOffset: currentOffset,
+              overrideTotalPages: overrideTotalPages,
+            ),
+            header: (ctx) => _buildPageHeaderWidget(
+              nomSite: nomSite,
+              numeroRapport: numeroRapport,
+            ),
+            build: (ctx) => [
+              if (isFirstBatch) ...[
+                PageTracker(
+                  key: 'liste_recap_equipements_sources_inconnues',
+                  registry: trackedPages,
+                  offset: currentOffset,
+                  child: _sectionBox('LISTE RÉCAPITULATIVE DES ÉQUIPEMENTS AUX SOURCES D’ALIMENTATION NON IDENTIFIÉES'),
+                ),
+                pw.SizedBox(height: 8),
+              ],
+              _buildUnknownSourcesTable(batchItems),
+            ],
+          ),
+        );
+
+        final sourcesBytes = await sourcesUnknownDoc.save();
+        if (saveFilesToDisk) {
+          final sourcesFile = File(
+            '${tempDir.path}/pdf_chunk_equipements_sources_inconnues_p${b + 1}_${mission.id}.pdf',
+          );
+          await sourcesFile.writeAsBytes(sourcesBytes);
+          chunkFiles.add(sourcesFile);
+        }
+        currentOffset += sourcesUnknownDoc.document.pdfPageList.pages.length;
       }
-      currentOffset += sourcesUnknownDoc.document.pdfPageList.pages.length;
     }
 
     return _ChunkSectionResult(
