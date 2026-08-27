@@ -53,7 +53,7 @@ void main() {
 
       final tableWidget = PdfReportService.buildEquipementsTableForTesting(equipementsMT);
       expect(tableWidget, isNotNull);
-      expect(tableWidget, isA<pw.Column>());
+      expect(tableWidget, isA<pw.Table>());
     });
   });
 }
