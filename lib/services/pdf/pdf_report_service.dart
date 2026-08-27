@@ -7080,119 +7080,91 @@ class PdfReportService {
       }
     }
 
+    final tableRows = <pw.TableRow>[
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: accentColor),
+        children: headers.map((c) => _cell(c, isHeader: true, centered: true)).toList(),
+      ),
+    ];
+
     int globalRowIndex = 1;
     int localIndex = 1;
-    final groupTables = <pw.Widget>[];
 
-    // En-tête du tableau
-    groupTables.add(
-      pw.Table(
-        border: pw.TableBorder.all(color: borderColor, width: 0.4),
-        columnWidths: headerColumnWidths,
-        children: [
-          pw.TableRow(
-            decoration: pw.BoxDecoration(color: accentColor),
-            children: headers.map((c) => _cell(c, isHeader: true, centered: true)).toList(),
-          ),
-        ],
-      ),
-    );
-
-    // Groupes de postes / locaux avec N° par local et centrage géométrique vertical sur tout le groupe
     for (final group in groups) {
       final currentLocalNum = localIndex++;
-      final detailTableRows = <pw.TableRow>[];
 
       for (int i = 0; i < group.rows.length; i++) {
         final row = group.rows[i];
         final rowNum = globalRowIndex++;
         final isOdd = rowNum % 2 == 1;
         final rowBg = isOdd ? tableRowAlt : PdfColors.white;
+        final showLocal = (i == 0);
 
-        detailTableRows.add(
+        tableRows.add(
           pw.TableRow(
             decoration: pw.BoxDecoration(color: rowBg),
-            children: finalOrder.map((key) {
-              final raw = row.getValueForColumn(key, sectionKey);
-              final unit = _unitForField(key);
-              final display = (raw != '-' &&
-                      raw.isNotEmpty &&
-                      unit.isNotEmpty &&
-                      !raw.toLowerCase().contains(unit.toLowerCase()))
-                  ? '$raw $unit'
-                  : raw;
-              return pw.Container(
+            children: [
+              // Cellule 0 : N° du Local
+              pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
-                  display,
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                  showLocal ? '$currentLocalNum' : '',
+                  style: pw.TextStyle(
+                    font: _fontBold,
+                    fontSize: fsSmall,
+                    color: headerColor,
+                  ),
                   textAlign: pw.TextAlign.center,
                 ),
-              );
-            }).toList(),
-          ),
-        );
-      }
+              ),
 
-      groupTables.add(
-        pw.Table(
-          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-          border: pw.TableBorder.all(color: borderColor, width: 0.4),
-          columnWidths: outerColumnWidths,
-          children: [
-            pw.TableRow(
-              children: [
-                // Cellule 0 : N° du Local (centré verticalement et horizontalement au milieu du groupe)
-                pw.Container(
+              // Cellule 1 : Nom du POSTE / LOCAL
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  showLocal ? group.localName.toUpperCase() : '',
+                  style: pw.TextStyle(
+                    font: _fontBold,
+                    fontSize: fsSmall,
+                    color: headerColor,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+
+              // Cellules 2..N : Colonnes de données
+              ...finalOrder.map((key) {
+                final raw = row.getValueForColumn(key, sectionKey);
+                final unit = _unitForField(key);
+                final display = (raw != '-' &&
+                        raw.isNotEmpty &&
+                        unit.isNotEmpty &&
+                        !raw.toLowerCase().contains(unit.toLowerCase()))
+                    ? '$raw $unit'
+                    : raw;
+                return pw.Container(
                   padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
                   alignment: pw.Alignment.center,
                   child: pw.Text(
-                    '$currentLocalNum',
-                    style: pw.TextStyle(
-                      font: _fontBold,
-                      fontSize: fsSmall,
-                      color: headerColor,
-                    ),
+                    display,
+                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
                     textAlign: pw.TextAlign.center,
                   ),
-                ),
-
-                // Cellule 1 : Nom du POSTE / LOCAL (centré verticalement et horizontalement au milieu du groupe)
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    group.localName.toUpperCase(),
-                    style: pw.TextStyle(
-                      font: _fontBold,
-                      fontSize: fsSmall,
-                      color: headerColor,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-
-                // Cellule 2 : Tableau des lignes d'équipements de ce local
-                pw.Table(
-                  defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-                  border: pw.TableBorder(
-                    horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
-                    verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
-                  ),
-                  columnWidths: innerDetailColumnWidths,
-                  children: detailTableRows,
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
+                );
+              }),
+            ],
+          ),
+        );
+      }
     }
 
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: groupTables,
+    return pw.Table(
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+      border: pw.TableBorder.all(color: borderColor, width: 0.4),
+      columnWidths: headerColumnWidths,
+      children: tableRows,
     );
   }
 
@@ -7725,7 +7697,10 @@ class PdfReportService {
     return list;
   }
 
-  static pw.Widget _buildUnknownSourcesTable(List<_PdfUnknownSourceItem> items) {
+  static pw.Widget _buildUnknownSourcesTable(
+    List<_PdfUnknownSourceItem> items, {
+    int startNumber = 1,
+  }) {
     if (items.isEmpty) return pw.SizedBox();
 
     final headers = [
@@ -7776,7 +7751,7 @@ class PdfReportService {
         pw.TableRow(
           decoration: pw.BoxDecoration(color: bgColor),
           children: [
-            _valueCell('${i + 1}'),
+            _valueCell('${startNumber + i}'),
             _valueCell(item.repere),
             _valueCell(item.nom),
             _valueCell(item.type),
@@ -7807,7 +7782,10 @@ class PdfReportService {
     );
   }
 
-  static pw.Widget _buildEquipementsTable(List<_PdfEquipementItem> items) {
+  static pw.Widget _buildEquipementsTable(
+    List<_PdfEquipementItem> items, {
+    int startNumber = 1,
+  }) {
     if (items.isEmpty) {
       return pw.Padding(
         padding: const pw.EdgeInsets.all(8),
@@ -7829,9 +7807,7 @@ class PdfReportService {
       'Observation',
     ];
 
-    const detailTotalFlex = 10.1;
-
-    final headerColumnWidths = const {
+    final columnWidths = const {
       0: pw.FlexColumnWidth(1.4),
       1: pw.FixedColumnWidth(18),
       2: pw.FlexColumnWidth(2.5),
@@ -7840,21 +7816,6 @@ class PdfReportService {
       5: pw.FlexColumnWidth(1.8),
       6: pw.FlexColumnWidth(1.8),
       7: pw.FlexColumnWidth(1.3),
-    };
-
-    final outerColumnWidths = const {
-      0: pw.FlexColumnWidth(1.4),
-      1: pw.FlexColumnWidth(detailTotalFlex),
-    };
-
-    final innerDetailColumnWidths = const {
-      0: pw.FixedColumnWidth(18),
-      1: pw.FlexColumnWidth(2.5),
-      2: pw.FlexColumnWidth(1.6),
-      3: pw.FlexColumnWidth(1.1),
-      4: pw.FlexColumnWidth(1.8),
-      5: pw.FlexColumnWidth(1.8),
-      6: pw.FlexColumnWidth(1.3),
     };
 
     final groups = <_PdfEquipementGroup>[];
@@ -7867,54 +7828,57 @@ class PdfReportService {
       }
     }
 
-    int globalRowIndex = 0;
-    int globalEquipementNumber = 1;
-    final groupTables = <pw.Widget>[];
-
-    groupTables.add(
-      pw.Table(
-        border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
-        columnWidths: headerColumnWidths,
-        children: [
-          pw.TableRow(
-            decoration: pw.BoxDecoration(color: accentColor),
-            children: headers
-                .map(
-                  (h) => pw.Container(
-                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-                    alignment: pw.Alignment.center,
-                    child: pw.Text(
-                      h,
-                      style: pw.TextStyle(
-                        font: _fontBold,
-                        fontSize: 8,
-                        color: PdfColors.white,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
+    final tableRows = <pw.TableRow>[
+      pw.TableRow(
+        decoration: pw.BoxDecoration(color: accentColor),
+        children: headers
+            .map(
+              (h) => pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  h,
+                  style: pw.TextStyle(
+                    font: _fontBold,
+                    fontSize: 8,
+                    color: PdfColors.white,
                   ),
-                )
-                .toList(),
-          ),
-        ],
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+            )
+            .toList(),
       ),
-    );
+    ];
+
+    int globalRowIndex = 0;
+    int globalEquipementNumber = startNumber;
 
     for (final group in groups) {
-      final detailTableRows = <pw.TableRow>[];
-
       for (int i = 0; i < group.items.length; i++) {
         final eq = group.items[i];
         final currentEqNum = globalEquipementNumber++;
         final idx = globalRowIndex++;
         final isEven = idx % 2 == 0;
         final bg = isEven ? PdfColors.white : PdfColors.grey100;
+        final showRepere = (i == 0);
 
-        detailTableRows.add(
+        tableRows.add(
           pw.TableRow(
             decoration: pw.BoxDecoration(color: bg),
             children: [
-              // Cellule 0 : N° de l'équipement (centré)
+              // Cellule 0 : Repère
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  showRepere ? group.repere : '',
+                  style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+
+              // Cellule 1 : N° de l'équipement
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                 alignment: pw.Alignment.center,
@@ -7925,7 +7889,7 @@ class PdfReportService {
                 ),
               ),
 
-              // Cellule 1 : Nom
+              // Cellule 2 : Nom
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
@@ -7936,7 +7900,7 @@ class PdfReportService {
                 ),
               ),
 
-              // Cellule 2 : Type
+              // Cellule 3 : Type
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
@@ -7947,7 +7911,7 @@ class PdfReportService {
                 ),
               ),
 
-              // Cellule 3 : Vérifié
+              // Cellule 4 : Vérifié
               pw.Container(
                 color: eq.accessible ? conformeColor : nonConformeColor,
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -7963,7 +7927,7 @@ class PdfReportService {
                 ),
               ),
 
-              // Cellule 4 : Présence du parafoudre
+              // Cellule 5 : Présence du parafoudre
               pw.Container(
                 color: eq.presenceParafoudre == 'Oui'
                     ? conformeColor
@@ -7981,7 +7945,7 @@ class PdfReportService {
                 ),
               ),
 
-              // Cellule 5 : Vérification thermo
+              // Cellule 6 : Vérification thermo
               pw.Container(
                 color: eq.verificationThermo == 'Oui'
                     ? conformeColor
@@ -7999,7 +7963,7 @@ class PdfReportService {
                 ),
               ),
 
-              // Cellule 6 : Observation
+              // Cellule 7 : Observation
               pw.Container(
                 color: eq.hasObservation == 'Oui'
                     ? nonConformeColor
@@ -8020,46 +7984,13 @@ class PdfReportService {
           ),
         );
       }
-
-      groupTables.add(
-        pw.Table(
-          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-          border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
-          columnWidths: outerColumnWidths,
-          children: [
-            pw.TableRow(
-              children: [
-                // Cellule 0 : Repère (centré verticalement et horizontalement au milieu du groupe)
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    group.repere,
-                    style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-
-                // Cellule 1 : Sous-tableau des détails des équipements ayant ce repère
-                pw.Table(
-                  defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-                  border: const pw.TableBorder(
-                    horizontalInside: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-                    verticalInside: pw.BorderSide(color: PdfColors.grey400, width: 0.5),
-                  ),
-                  columnWidths: innerDetailColumnWidths,
-                  children: detailTableRows,
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
     }
 
-    return pw.Column(
-      crossAxisAlignment: pw.CrossAxisAlignment.start,
-      children: groupTables,
+    return pw.Table(
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+      border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+      columnWidths: columnWidths,
+      children: tableRows,
     );
   }
 
@@ -17335,7 +17266,7 @@ class PdfReportService {
                 ),
                 pw.SizedBox(height: 5),
               ],
-              _buildEquipementsTable(batchItems),
+              _buildEquipementsTable(batchItems, startNumber: startIdx + 1),
             ],
           ),
         );
@@ -17409,7 +17340,7 @@ class PdfReportService {
                 ),
                 pw.SizedBox(height: 8),
               ],
-              _buildUnknownSourcesTable(batchItems),
+              _buildUnknownSourcesTable(batchItems, startNumber: startIdx + 1),
             ],
           ),
         );
