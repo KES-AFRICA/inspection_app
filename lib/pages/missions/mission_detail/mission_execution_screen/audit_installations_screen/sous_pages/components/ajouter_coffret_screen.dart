@@ -3731,7 +3731,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         await HiveService.deleteCoffretDraft(_draftQrCode ?? _qrCodeController.text.trim());
         if (widget.isEdition) {
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Équipement mis à jour avec succès'), backgroundColor: Colors.green));
-          Navigator.pop(context, true);
+          Navigator.pop(context, nouveauCoffret);
         } else {
           String localisation = '';
           final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
@@ -3806,6 +3806,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
           missionId: widget.mission.id,
           equipmentId: widget.coffret!.equipmentId,
           updatedCoffret: newCoffret,
+          oldNom: widget.coffret!.nom,
         );
         if (ok) {
           if (kDebugMode) {

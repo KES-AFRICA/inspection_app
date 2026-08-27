@@ -1016,7 +1016,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       ),
     );
 
-    if (result == true) {
+    if (result != null) {
       _rechargerLocal();
     }
   }

@@ -1912,6 +1912,7 @@ static CoffretArmoire? findCoffretByQrCode(String missionId, String qrCode) {
     required String missionId,
     required String equipmentId,
     required CoffretArmoire updatedCoffret,
+    String? oldNom,
   }) async {
     try {
       final audit = await getOrCreateAuditInstallations(missionId);
@@ -1920,9 +1921,12 @@ static CoffretArmoire? findCoffretByQrCode(String missionId, String qrCode) {
         // 1. Match par equipmentId immuable / id
         int index = list.indexWhere((c) => c.equipmentId == equipmentId || (c.id != null && c.id == equipmentId));
         
-        // 2. Fallback pour anciennes missions importées : match par qrCode ou par nom
+        // 2. Fallback pour anciennes missions importées : match par qrCode ou par ancien nom
         if (index == -1 && updatedCoffret.qrCode.trim().isNotEmpty) {
           index = list.indexWhere((c) => c.qrCode.trim() == updatedCoffret.qrCode.trim());
+        }
+        if (index == -1 && oldNom != null && oldNom.trim().isNotEmpty) {
+          index = list.indexWhere((c) => c.nom.trim() == oldNom.trim());
         }
         if (index == -1 && updatedCoffret.nom.trim().isNotEmpty) {
           index = list.indexWhere((c) => c.nom.trim() == updatedCoffret.nom.trim());
@@ -1930,7 +1934,7 @@ static CoffretArmoire? findCoffretByQrCode(String missionId, String qrCode) {
 
         if (index != -1) {
           final existing = list[index];
-          updatedCoffret.id = equipmentId;
+          updatedCoffret.id = existing.id ?? equipmentId;
           updatedCoffret.createdAt = existing.createdAt ?? updatedCoffret.createdAt;
           updatedCoffret.updatedAt = DateTime.now().toUtc();
           list[index] = updatedCoffret;

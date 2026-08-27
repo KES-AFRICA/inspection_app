@@ -995,10 +995,12 @@ class CoffretArmoire {
   bool get isDepartPrisAvecProtection =>
       (type == 'INVERSEUR') ? true : (departPrisAvecProtection ?? true);
 
-  /// Identifiant technique immuable (avec fallback auto pour anciennes missions)
+  /// Identifiant technique immuable (avec fallback auto déterministe pour anciennes missions)
   String get equipmentId {
     if (id != null && id!.trim().isNotEmpty) return id!;
-    id = 'equip_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}';
+    final createdTs = createdAt?.millisecondsSinceEpoch ?? 0;
+    final stableHash = (nom + (qrCode ?? '')).hashCode.abs();
+    id = 'equip_${createdTs}_$stableHash';
     return id!;
   }
 
