@@ -7700,6 +7700,7 @@ class PdfReportService {
   static pw.Widget _buildUnknownSourcesTable(
     List<_PdfUnknownSourceItem> items, {
     int startNumber = 1,
+    bool showTableHeader = true,
   }) {
     if (items.isEmpty) return pw.SizedBox();
 
@@ -7723,24 +7724,26 @@ class PdfReportService {
 
     final rows = <pw.TableRow>[];
 
-    rows.add(
-      pw.TableRow(
-        decoration: pw.BoxDecoration(color: accentColor),
-        children: headers.map((h) => pw.Container(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-          alignment: pw.Alignment.center,
-          child: pw.Text(
-            h,
-            style: pw.TextStyle(
-              font: _fontBold,
-              fontSize: fsSmall,
-              color: PdfColors.white,
+    if (showTableHeader) {
+      rows.add(
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: accentColor),
+          children: headers.map((h) => pw.Container(
+            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+            alignment: pw.Alignment.center,
+            child: pw.Text(
+              h,
+              style: pw.TextStyle(
+                font: _fontBold,
+                fontSize: fsSmall,
+                color: PdfColors.white,
+              ),
+              textAlign: pw.TextAlign.center,
             ),
-            textAlign: pw.TextAlign.center,
-          ),
-        )).toList(),
-      ),
-    );
+          )).toList(),
+        ),
+      );
+    }
 
     for (int i = 0; i < items.length; i++) {
       final item = items[i];
@@ -7785,6 +7788,7 @@ class PdfReportService {
   static pw.Widget _buildEquipementsTable(
     List<_PdfEquipementItem> items, {
     int startNumber = 1,
+    bool showTableHeader = true,
   }) {
     if (items.isEmpty) {
       return pw.Padding(
@@ -7829,26 +7833,27 @@ class PdfReportService {
     }
 
     final tableRows = <pw.TableRow>[
-      pw.TableRow(
-        decoration: pw.BoxDecoration(color: accentColor),
-        children: headers
-            .map(
-              (h) => pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-                alignment: pw.Alignment.center,
-                child: pw.Text(
-                  h,
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: 8,
-                    color: PdfColors.white,
+      if (showTableHeader)
+        pw.TableRow(
+          decoration: pw.BoxDecoration(color: accentColor),
+          children: headers
+              .map(
+                (h) => pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    h,
+                    style: pw.TextStyle(
+                      font: _fontBold,
+                      fontSize: 8,
+                      color: PdfColors.white,
+                    ),
+                    textAlign: pw.TextAlign.center,
                   ),
-                  textAlign: pw.TextAlign.center,
                 ),
-              ),
-            )
-            .toList(),
-      ),
+              )
+              .toList(),
+        ),
     ];
 
     int globalRowIndex = 0;
@@ -13527,23 +13532,39 @@ class PdfReportService {
     }) {
       final textTrim = observation.trim();
       if (textTrim.isEmpty) return;
-      if (seenKeys.contains(key)) return;
-      seenKeys.add(key);
+
+      final photosKey = (photoPaths ?? []).join(',');
+      final contentKey = '${repere.toLowerCase()}_${textTrim.toLowerCase()}_$photosKey';
+      if (seenKeys.contains(contentKey)) return;
+      seenKeys.add(contentKey);
 
       rows.add(
         _ParafoudreEquipementRow(
           repere: repere.trim().isNotEmpty ? repere.trim() : '-',
           observation: textTrim,
           photoPaths: photoPaths ?? [],
-          identityKey: key,
+          identityKey: contentKey,
         ),
       );
     }
 
     void processCoffret(CoffretArmoire c) {
-      final repere = (c.repere != null && c.repere!.trim().isNotEmpty)
-          ? c.repere!.trim()
-          : (c.numeroEquipement ?? c.nom);
+      final cRepere = (c.repere != null && c.repere!.trim().isNotEmpty) ? c.repere!.trim() : '';
+      final cNom = c.nom.trim();
+      final cNum = c.numeroEquipement?.trim() ?? '';
+
+      final String repere;
+      if (cRepere.isNotEmpty && cNom.isNotEmpty && cRepere != cNom) {
+        repere = '$cRepere - $cNom';
+      } else if (cRepere.isNotEmpty) {
+        repere = cRepere;
+      } else if (cNom.isNotEmpty) {
+        repere = cNom;
+      } else if (cNum.isNotEmpty) {
+        repere = cNum;
+      } else {
+        repere = '-';
+      }
 
       // 1. Observations Slide 3 (Enrichies)
       final pfEnrichies = c.observationsParafoudreEnrichies ?? [];
@@ -13919,86 +13940,78 @@ class PdfReportService {
       if (equipRows.isEmpty) {
         widgets.add(_bodyText('Aucune observation parafoudre par équipement disponible.'));
       } else {
-        const int batchSize = 25;
-        for (int i = 0; i < equipRows.length; i += batchSize) {
-          final batch = equipRows.sublist(
-            i,
-            i + batchSize > equipRows.length ? equipRows.length : i + batchSize,
-          );
+        widgets.add(
+          pw.Table(
+            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+            border: pw.TableBorder.all(color: borderColor, width: 0.4),
+            columnWidths: const {
+              0: pw.FixedColumnWidth(24),
+              1: pw.FlexColumnWidth(2.0),
+              2: pw.FlexColumnWidth(3.4),
+              3: pw.FlexColumnWidth(1.2),
+            },
+            children: [
+              _tableHeaderRow(['N°', 'Repère', 'Observation', 'Photo']),
+              ...equipRows.asMap().entries.map((e) {
+                final globalIdx = e.key + 1;
+                final row = e.value;
+                final bg = e.key.isOdd ? tableRowAlt : PdfColors.white;
+                final photoLabel = _getFormattedPhotoLabel(row.photoPaths, photoRegistry);
 
-          widgets.add(
-            pw.Table(
-              defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-              border: pw.TableBorder.all(color: borderColor, width: 0.4),
-              columnWidths: const {
-                0: pw.FixedColumnWidth(24),
-                1: pw.FlexColumnWidth(1.6),
-                2: pw.FlexColumnWidth(3.8),
-                3: pw.FlexColumnWidth(1.2),
-              },
-              children: [
-                _tableHeaderRow(['N°', 'Repère', 'Observation', 'Photo']),
-                ...batch.asMap().entries.map((e) {
-                  final globalIdx = i + e.key + 1;
-                  final row = e.value;
-                  final bg = e.key.isOdd ? tableRowAlt : PdfColors.white;
-                  final photoLabel = _getFormattedPhotoLabel(row.photoPaths, photoRegistry);
-
-                  return pw.TableRow(
-                    decoration: pw.BoxDecoration(color: bg),
-                    children: [
-                      // Cellule 0 : N°
-                      pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          '$globalIdx',
-                          style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                          textAlign: pw.TextAlign.center,
-                        ),
+                return pw.TableRow(
+                  decoration: pw.BoxDecoration(color: bg),
+                  children: [
+                    // Cellule 0 : N°
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        '$globalIdx',
+                        style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                        textAlign: pw.TextAlign.center,
                       ),
-                      // Cellule 1 : Repère
-                      pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          row.repere,
-                          style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                          textAlign: pw.TextAlign.center,
-                        ),
+                    ),
+                    // Cellule 1 : Repère
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        row.repere,
+                        style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                        textAlign: pw.TextAlign.center,
                       ),
-                      // Cellule 2 : Observation
-                      pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          _normalizeText(row.observation),
-                          style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
-                          textAlign: pw.TextAlign.center,
-                        ),
+                    ),
+                    // Cellule 2 : Observation
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        _normalizeText(row.observation),
+                        style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                        textAlign: pw.TextAlign.center,
                       ),
-                      // Cellule 3 : Photo
-                      pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          photoLabel,
-                          style: pw.TextStyle(
-                            font: photoLabel != '-' ? _fontBold : _fontRegular,
-                            fontSize: 8.5,
-                            color: photoLabel != '-' ? PdfColor.fromInt(0xFF1D4ED8) : PdfColors.black,
-                          ),
-                          textAlign: pw.TextAlign.center,
+                    ),
+                    // Cellule 3 : Photo
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        photoLabel,
+                        style: pw.TextStyle(
+                          font: photoLabel != '-' ? _fontBold : _fontRegular,
+                          fontSize: 8.5,
+                          color: photoLabel != '-' ? PdfColor.fromInt(0xFF1D4ED8) : PdfColors.black,
                         ),
+                        textAlign: pw.TextAlign.center,
                       ),
-                    ],
-                  );
-                }),
-              ],
-            ),
-          );
-          widgets.add(pw.SizedBox(height: 8));
-        }
+                    ),
+                  ],
+                );
+              }),
+            ],
+          ),
+        );
+        widgets.add(pw.SizedBox(height: 8));
       }
     }
 
@@ -17230,7 +17243,7 @@ class PdfReportService {
     }) async {
       if (items.isEmpty) return;
 
-      const int batchSize = 15;
+      const int batchSize = 60;
       final totalBatches = (items.length / batchSize).ceil();
 
       for (int b = 0; b < totalBatches; b++) {
@@ -17266,7 +17279,11 @@ class PdfReportService {
                 ),
                 pw.SizedBox(height: 5),
               ],
-              _buildEquipementsTable(batchItems, startNumber: startIdx + 1),
+              _buildEquipementsTable(
+                batchItems,
+                startNumber: startIdx + 1,
+                showTableHeader: isFirstBatch,
+              ),
             ],
           ),
         );
@@ -17283,7 +17300,7 @@ class PdfReportService {
       }
     }
 
-    // 2. Équipements MT (découpés par micro-lots de 40)
+    // 2. Équipements MT (découpés par micro-lots de 60)
     final equipementsMT = _collectEquipementsMT(audit);
     await _renderEquipementsSubBatches(
       items: equipementsMT,
@@ -17292,7 +17309,7 @@ class PdfReportService {
       chunkPrefix: 'equipements_mt',
     );
 
-    // 3. Équipements BT (découpés par micro-lots de 40)
+    // 3. Équipements BT (découpés par micro-lots de 60)
     final equipementsBT = _collectEquipementsBT(audit, desc);
     await _renderEquipementsSubBatches(
       items: equipementsBT,
@@ -17301,10 +17318,10 @@ class PdfReportService {
       chunkPrefix: 'equipements_bt',
     );
 
-    // 4. Équipements aux sources d'alimentation non identifiées (découpés par micro-lots de 40)
+    // 4. Équipements aux sources d'alimentation non identifiées (découpés par micro-lots de 60)
     final unknownSources = _collectEquipementsUnknownSource(audit);
     if (unknownSources.isNotEmpty) {
-      const int batchSize = 15;
+      const int batchSize = 60;
       final totalBatches = (unknownSources.length / batchSize).ceil();
 
       for (int b = 0; b < totalBatches; b++) {
@@ -17340,7 +17357,11 @@ class PdfReportService {
                 ),
                 pw.SizedBox(height: 8),
               ],
-              _buildUnknownSourcesTable(batchItems, startNumber: startIdx + 1),
+              _buildUnknownSourcesTable(
+                batchItems,
+                startNumber: startIdx + 1,
+                showTableHeader: isFirstBatch,
+              ),
             ],
           ),
         );

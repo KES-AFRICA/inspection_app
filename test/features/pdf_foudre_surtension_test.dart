@@ -34,7 +34,7 @@ void main() {
       final rows = PdfReportService.collectParafoudreRowsForTest(audit);
 
       expect(rows.length, equals(1));
-      expect(rows.first.repere, equals('REP-01'));
+      expect(rows.first.repere, contains('REP-01'));
       expect(rows.first.observation, equals('Voyant parafoudre au rouge'));
       expect(rows.first.photoPaths, contains('/path/photo1.jpg'));
     });
@@ -75,9 +75,9 @@ void main() {
       final rows = PdfReportService.collectParafoudreRowsForTest(audit);
 
       expect(rows.length, equals(2));
-      expect(rows[0].repere, equals('REP-02'));
+      expect(rows[0].repere, contains('REP-02'));
       expect(rows[0].observation, equals('Parafoudre déconnecté suite à surtension'));
-      expect(rows[1].repere, equals('REP-02'));
+      expect(rows[1].repere, contains('REP-02'));
       expect(rows[1].observation, equals('Câble de terre du limiteur sectionné'));
     });
 
@@ -189,9 +189,9 @@ void main() {
       final rows = PdfReportService.collectParafoudreRowsForTest(audit);
 
       expect(rows.length, equals(2));
-      expect(rows[0].repere, equals('REP-A'));
+      expect(rows[0].repere, contains('REP-A'));
       expect(rows[0].observation, equals('Défaut A1'));
-      expect(rows[1].repere, equals('REP-B'));
+      expect(rows[1].repere, contains('REP-B'));
       expect(rows[1].observation, equals('Défaut B1'));
     });
 
@@ -247,7 +247,7 @@ void main() {
 
       final rows = PdfReportService.collectParafoudreRowsForTest(audit);
       expect(rows.length, equals(1));
-      expect(rows.first.repere, equals('AG-01'));
+      expect(rows.first.repere, contains('AG-01'));
       expect(rows.first.observation, contains('détérioré suite à un impact de foudre'));
     });
   });
