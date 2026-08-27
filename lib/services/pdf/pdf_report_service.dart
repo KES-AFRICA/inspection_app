@@ -12353,7 +12353,7 @@ class PdfReportService {
                 pw.TableRow(
                   children: [
                     _valueCell(label),
-                    _valueCell(a.typeProtection),
+                    _valueCell(_formatTypeProtectionWithMarque(a.typeProtection, a.marqueDisjoncteur)),
                     _valueCell(a.courbe ?? ''),
                     _valueCell(a.pdcKA),
                     _valueCell(a.calibre),
@@ -12431,7 +12431,7 @@ class PdfReportService {
                 pw.TableRow(
                   children: [
                     _valueCell(label),
-                    _valueCell(s.typeProtection),
+                    _valueCell(_formatTypeProtectionWithMarque(s.typeProtection, s.marqueDisjoncteur)),
                     _valueCell(s.courbe ?? ''),
                     _valueCell(s.pdcKA),
                     _valueCell(s.calibre),
@@ -12494,7 +12494,7 @@ class PdfReportService {
               pw.TableRow(
                 children: [
                   _valueCell(a.effectiveSourceKnown),
-                  _valueCell(a.typeProtection),
+                  _valueCell(_formatTypeProtectionWithMarque(a.typeProtection, a.marqueDisjoncteur)),
                   _valueCell(a.courbe ?? ''),
                   _valueCell(a.pdcKA),
                   _valueCell(a.calibre),
@@ -12578,7 +12578,7 @@ class PdfReportService {
             pw.TableRow(
               children: [
                 _valueCell(statusLabel),
-                _valueCell(isAvecProtection ? (pt.typeProtection.isNotEmpty ? pt.typeProtection : '-') : '-'),
+                _valueCell(isAvecProtection ? (pt.typeProtection.isNotEmpty ? _formatTypeProtectionWithMarque(pt.typeProtection, pt.marqueDisjoncteur) : '-') : '-'),
                 _valueCell(isAvecProtection ? ((pt.courbe != null && pt.courbe!.isNotEmpty) ? pt.courbe! : '-') : '-'),
                 _valueCell(isAvecProtection ? (pt.pdcKA.isNotEmpty ? pt.pdcKA : '-') : '-'),
                 _valueCell(isAvecProtection ? (pt.calibre.isNotEmpty ? pt.calibre : '-') : '-'),
@@ -12641,6 +12641,14 @@ class PdfReportService {
 
     widgets.add(pw.SizedBox(height: 10));
     return widgets;
+  }
+
+  static String _formatTypeProtectionWithMarque(String typeProtection, String? marqueDisjoncteur) {
+    if (typeProtection.trim().isEmpty || typeProtection == '-') return typeProtection;
+    if (marqueDisjoncteur != null && marqueDisjoncteur.trim().isNotEmpty) {
+      return '$typeProtection\n(${marqueDisjoncteur.trim()})';
+    }
+    return typeProtection;
   }
 
   /// Cellule valeur (police normale, centrée horizontalement et verticalement)

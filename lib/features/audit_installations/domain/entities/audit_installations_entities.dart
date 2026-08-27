@@ -252,6 +252,7 @@ class AlimentationEntity {
   final List<String> photos;
   final String source;
   final String? sourceKnown;
+  final String? marqueDisjoncteur;
 
   String get effectiveSourceKnown => SourceStatusResolver.resolve(typeProtection);
 
@@ -265,6 +266,7 @@ class AlimentationEntity {
     this.photos = const [],
     this.source = '',
     this.sourceKnown,
+    this.marqueDisjoncteur,
   });
 }
 

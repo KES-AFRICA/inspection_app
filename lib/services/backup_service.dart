@@ -874,6 +874,7 @@ class BackupService {
         'sectionCable': a.sectionCable,
         'source': a.source,
         'sourceKnown': a.sourceKnown,
+        'marqueDisjoncteur': a.marqueDisjoncteur,
         'photos': a.photos,
       };
 
@@ -2486,6 +2487,7 @@ class BackupService {
         sectionCable: d['sectionCable'] as String? ?? '',
         source: d['source'] as String? ?? '',
         sourceKnown: d['sourceKnown'] as String?,
+        marqueDisjoncteur: d['marqueDisjoncteur'] as String?,
         photos: _strList(d['photos']),
       );
 

@@ -1105,6 +1105,9 @@ class Alimentation {
   @HiveField(8)
   String? sourceKnown; // "Connue" | "Inconnue" (nullable)
 
+  @HiveField(9)
+  String? marqueDisjoncteur;
+
   /// Résout le statut de connaissance de la source dérivé automatiquement de typeProtection
   String get effectiveSourceKnown => SourceStatusResolver.resolve(typeProtection);
 
@@ -1118,6 +1121,7 @@ class Alimentation {
     List<String>? photos,
     this.source = '',
     String? sourceKnown,
+    this.marqueDisjoncteur,
   })  : photos = photos ?? [],
         sourceKnown = sourceKnown ?? SourceStatusResolver.resolve(typeProtection);
 }

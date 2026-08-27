@@ -1612,6 +1612,28 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     'Coupe-circuit(porte-fusible)',
   ];
 
+  static const List<String> _marqueDisjoncteurOptions = [
+    'ABB',
+    'C&S Electric',
+    'Chint',
+    'Eaton',
+    'Fuji Electric',
+    'Gewiss',
+    'Hager',
+    'Hyundai Electric',
+    'LS Electric',
+    'Legrand',
+    'Lovato Electric',
+    'Mitsubishi Electric',
+    'Noark',
+    'Schneider Electric',
+    'Schrack Technik',
+    'Siemens',
+    'Socomec',
+    'TOMZN',
+    'Terasaki',
+  ];
+
   static const List<String> _courbeOptions = [
     'Courbe-B',
     'Courbe-C',
@@ -1688,6 +1710,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
         case 'sectionCable': a.sectionCable = value; break;
         case 'source': a.source = value; break;
         case 'sourceKnown': a.sourceKnown = value; break;
+        case 'marqueDisjoncteur': a.marqueDisjoncteur = value; break;
       }
       widget.onDataChanged();
     });
@@ -1706,6 +1729,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           case 'pdcKA': widget.protectionTete!.pdcKA = value; break;
           case 'calibre': widget.protectionTete!.calibre = value; break;
           case 'sectionCable': widget.protectionTete!.sectionCable = value; break;
+          case 'marqueDisjoncteur': widget.protectionTete!.marqueDisjoncteur = value; break;
         }
         widget.onDataChanged();
       });
@@ -1867,6 +1891,12 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
       ddrItems.insert(0, ddrVal);
     }
 
+    final marqueDisjVal = a.marqueDisjoncteur ?? '';
+    final marqueDisjoncteurItems = [..._marqueDisjoncteurOptions];
+    if (marqueDisjVal.isNotEmpty && !marqueDisjoncteurItems.contains(marqueDisjVal)) {
+      marqueDisjoncteurItems.insert(0, marqueDisjVal);
+    }
+
     return Container(
       padding: isProtectionTete ? EdgeInsets.zero : EdgeInsets.all(context.spacingM),
       decoration: isProtectionTete
@@ -1912,6 +1942,8 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             SizedBox(height: context.spacingS),
           ],
           _buildModernDropdown(context, label: 'Type de protection', value: typeProtVal, items: typeProtectionItems, onChanged: (v) => onChanged('typeProtection', v)),
+          SizedBox(height: context.spacingS),
+          _buildModernDropdown(context, label: 'Marque de disjoncteur', value: marqueDisjVal, items: marqueDisjoncteurItems, onChanged: (v) => onChanged('marqueDisjoncteur', v)),
           SizedBox(height: context.spacingS),
           _buildModernDropdown(context, label: 'Courbe', value: courbeVal, items: courbeItems, onChanged: (v) => onChanged('courbe', v)),
           SizedBox(height: context.spacingS),

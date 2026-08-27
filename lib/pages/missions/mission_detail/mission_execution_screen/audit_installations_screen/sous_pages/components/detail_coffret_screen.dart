@@ -1001,6 +1001,8 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
             ),
             const SizedBox(height: 12),
             _buildInfoRow('Type de protection', alimentation.typeProtection),
+            if (alimentation.marqueDisjoncteur != null && alimentation.marqueDisjoncteur!.isNotEmpty)
+              _buildInfoRow('Marque de disjoncteur', alimentation.marqueDisjoncteur!),
             if (alimentation.courbe != null && alimentation.courbe!.isNotEmpty)
               _buildInfoRow('Courbe', alimentation.courbe!),
             _buildInfoRow('PDC kA', alimentation.pdcKA),

@@ -907,7 +907,9 @@ class WordReportService {
         for (final a in coffret.alimentations)
           TableRow(cells: [
             TableCell.text(a.source.isNotEmpty ? a.source : '-'),
-            TableCell.text(a.typeProtection),
+            TableCell.text(a.marqueDisjoncteur != null && a.marqueDisjoncteur!.isNotEmpty
+                ? '${a.typeProtection} (${a.marqueDisjoncteur})'
+                : a.typeProtection),
             TableCell.text(a.courbe ?? ''),
             TableCell.text(a.pdcKA),
             TableCell.text(a.calibre),

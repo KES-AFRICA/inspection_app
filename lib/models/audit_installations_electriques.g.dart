@@ -772,13 +772,14 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
       photos: (fields[4] as List?)?.cast<String>(),
       source: fields[5] as String,
       sourceKnown: fields[8] as String?,
+      marqueDisjoncteur: fields[9] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Alimentation obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(10)
       ..writeByte(0)
       ..write(obj.typeProtection)
       ..writeByte(1)
@@ -796,7 +797,9 @@ class AlimentationAdapter extends TypeAdapter<Alimentation> {
       ..writeByte(7)
       ..write(obj.ddr)
       ..writeByte(8)
-      ..write(obj.sourceKnown);
+      ..write(obj.sourceKnown)
+      ..writeByte(9)
+      ..write(obj.marqueDisjoncteur);
   }
 
   @override

@@ -167,6 +167,7 @@ class AuditInstallationsMapper {
       photos: List<String>.from(model.photos),
       source: model.source,
       sourceKnown: model.effectiveSourceKnown,
+      marqueDisjoncteur: model.marqueDisjoncteur,
     );
   }
 
@@ -181,6 +182,7 @@ class AuditInstallationsMapper {
       photos: List<String>.from(entity.photos),
       source: entity.source,
       sourceKnown: entity.effectiveSourceKnown,
+      marqueDisjoncteur: entity.marqueDisjoncteur,
     );
   }
 
