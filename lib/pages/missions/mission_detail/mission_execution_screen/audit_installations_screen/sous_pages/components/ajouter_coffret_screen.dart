@@ -1723,6 +1723,8 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           case 'typeProtection':
             widget.protectionTete!.typeProtection = value;
             widget.protectionTete!.sourceKnown = SourceStatusResolver.resolve(value);
+            final bool hasProtection = value.isNotEmpty && value != '-aucun-';
+            widget.onDepartPrisAvecProtectionChanged?.call(hasProtection);
             break;
           case 'courbe': widget.protectionTete!.courbe = value; break;
           case 'ddr': widget.protectionTete!.ddr = value; break;
@@ -1947,10 +1949,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           SizedBox(height: context.spacingS),
           _buildModernDropdown(context, label: 'Courbe', value: courbeVal, items: courbeItems, onChanged: (v) => onChanged('courbe', v)),
           SizedBox(height: context.spacingS),
-          if (title == 'ORIGINE DE LA SOURCE') ...[
-            _buildModernTextField(context, label: 'Source (ex: TGBT, Armoire RDC...)', controller: sourceCtrl, onChanged: (v) => onChanged('source', v)),
-            SizedBox(height: context.spacingS),
-          ],
+
           _buildModernTextField(context, label: 'PDC kA', controller: pdcCtrl, onChanged: (v) => onChanged('pdcKA', v)),
           SizedBox(height: context.spacingS),
           // Champ calibre avec suffixe "A"
