@@ -7715,8 +7715,8 @@ class PdfReportService {
     if (items.isEmpty) return pw.SizedBox();
 
     final headers = [
-      'N°',
       'Repère',
+      'N°',
       'Nom',
       'Type',
       'Alimentation concernée',
@@ -7724,8 +7724,8 @@ class PdfReportService {
     ];
 
     final columnWidths = const {
-      0: pw.FixedColumnWidth(34),
-      1: pw.FlexColumnWidth(2.0),
+      0: pw.FlexColumnWidth(2.0),
+      1: pw.FixedColumnWidth(34),
       2: pw.FlexColumnWidth(2.5),
       3: pw.FlexColumnWidth(1.5),
       4: pw.FlexColumnWidth(2.0),
@@ -7788,7 +7788,18 @@ class PdfReportService {
           pw.TableRow(
             decoration: pw.BoxDecoration(color: bgColor),
             children: [
-              // Cellule 0 : N° d'équipement (compte chaque équipement, avec bordure inférieure)
+              pw.Container(
+                decoration: isLastInGroup ? pw.BoxDecoration(border: rowBorder) : null,
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: i == midIndex
+                    ? pw.Text(
+                        group.repere,
+                        style: pw.TextStyle(font: _fontBold, fontSize: fsSmall),
+                        textAlign: pw.TextAlign.center,
+                      )
+                    : pw.SizedBox(),
+              ),
               pw.Container(
                 decoration: pw.BoxDecoration(border: rowBorder),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
@@ -7957,6 +7968,7 @@ class PdfReportService {
         ),
     ];
 
+    int globalRowIndex = 0;
     int globalEquipementNumber = startNumber;
 
     for (final group in groups) {
@@ -7966,13 +7978,15 @@ class PdfReportService {
       for (int i = 0; i < count; i++) {
         final eq = group.items[i];
         final currentEqNum = globalEquipementNumber++;
+        final idx = globalRowIndex++;
         final isLastInGroup = (i == count - 1);
-        final bg = i % 2 == 0 ? PdfColors.white : PdfColors.grey100;
+        final bg = idx % 2 == 0 ? PdfColors.white : PdfColors.grey100;
 
         tableRows.add(
           pw.TableRow(
             decoration: pw.BoxDecoration(color: bg),
             children: [
+              // Cellule 0 : Repère (centré au milieu du groupe, masquage de bordures internes)
               pw.Container(
                 decoration: isLastInGroup ? pw.BoxDecoration(border: rowBorder) : null,
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -7985,6 +7999,8 @@ class PdfReportService {
                       )
                     : pw.SizedBox(),
               ),
+
+              // Cellule 1 : N° de l'équipement (case 34px)
               pw.Container(
                 decoration: pw.BoxDecoration(border: rowBorder),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
@@ -7995,6 +8011,8 @@ class PdfReportService {
                   textAlign: pw.TextAlign.center,
                 ),
               ),
+
+              // Cellule 2 : Nom
               pw.Container(
                 decoration: pw.BoxDecoration(border: rowBorder),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
@@ -8008,6 +8026,7 @@ class PdfReportService {
 
               // Cellule 3 : Type
               pw.Container(
+                decoration: pw.BoxDecoration(border: rowBorder),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
@@ -8019,7 +8038,10 @@ class PdfReportService {
 
               // Cellule 4 : Vérifié
               pw.Container(
-                color: eq.accessible ? conformeColor : nonConformeColor,
+                decoration: pw.BoxDecoration(
+                  color: eq.accessible ? conformeColor : nonConformeColor,
+                  border: rowBorder,
+                ),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
@@ -8035,9 +8057,12 @@ class PdfReportService {
 
               // Cellule 5 : Présence du parafoudre
               pw.Container(
-                color: eq.presenceParafoudre == 'Oui'
-                    ? conformeColor
-                    : (eq.presenceParafoudre == 'Non' ? nonConformeColor : bg),
+                decoration: pw.BoxDecoration(
+                  color: eq.presenceParafoudre == 'Oui'
+                      ? conformeColor
+                      : (eq.presenceParafoudre == 'Non' ? nonConformeColor : bg),
+                  border: rowBorder,
+                ),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
@@ -8053,9 +8078,12 @@ class PdfReportService {
 
               // Cellule 6 : Vérification thermo
               pw.Container(
-                color: eq.verificationThermo == 'Oui'
-                    ? conformeColor
-                    : (eq.verificationThermo == 'Non' ? nonConformeColor : bg),
+                decoration: pw.BoxDecoration(
+                  color: eq.verificationThermo == 'Oui'
+                      ? conformeColor
+                      : (eq.verificationThermo == 'Non' ? nonConformeColor : bg),
+                  border: rowBorder,
+                ),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
@@ -8071,9 +8099,12 @@ class PdfReportService {
 
               // Cellule 7 : Observation
               pw.Container(
-                color: eq.hasObservation == 'Oui'
-                    ? nonConformeColor
-                    : (eq.hasObservation == 'Non' ? conformeColor : bg),
+                decoration: pw.BoxDecoration(
+                  color: eq.hasObservation == 'Oui'
+                      ? nonConformeColor
+                      : (eq.hasObservation == 'Non' ? conformeColor : bg),
+                  border: rowBorder,
+                ),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
@@ -8094,7 +8125,14 @@ class PdfReportService {
 
     return pw.Table(
       defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-      border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+      border: const pw.TableBorder(
+        left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+        right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+        top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+        bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+        verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+        horizontalInside: pw.BorderSide.none,
+      ),
       columnWidths: columnWidths,
       children: tableRows,
     );
