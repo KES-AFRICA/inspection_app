@@ -990,10 +990,21 @@ class CoffretArmoire {
   @HiveField(31)
   DateTime? updatedAt;
 
-  /// Résout l'état du switch "Départ pris avec protection" (Activé par défaut / Rétrocompatible)
-  /// L'Inverseur est toujours considéré à true.
-  bool get isDepartPrisAvecProtection =>
-      (type == 'INVERSEUR') ? true : (departPrisAvecProtection ?? true);
+  /// Résout l'état du switch "Départ pris avec protection"
+  /// - L'Inverseur est toujours considéré à true (avec protection).
+  /// - Si la valeur a été explicitement définie/sauvegardée (non null), on respecte ce choix (override manuel).
+  /// - Si la valeur est null (ancienne mission), la règle déterministe s'applique :
+  ///   true si typeProtection est renseigné et != '-Aucun-' / 'Aucun', false sinon.
+  bool get isDepartPrisAvecProtection {
+    if (type == 'INVERSEUR') return true;
+    if (departPrisAvecProtection != null) return departPrisAvecProtection!;
+
+    final mainProt = protectionTete?.typeProtection ??
+        (alimentations.isNotEmpty ? alimentations.first.typeProtection : null);
+    if (mainProt == null) return false;
+    final normProt = mainProt.trim().toLowerCase();
+    return normProt.isNotEmpty && normProt != '-aucun-' && normProt != 'aucun' && normProt != '-';
+  }
 
   /// Identifiant technique immuable (avec fallback auto déterministe pour anciennes missions)
   String get equipmentId {

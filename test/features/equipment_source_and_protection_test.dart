@@ -40,16 +40,29 @@ void main() {
       expect(remapModel.effectiveSourceKnown, equals('Inconnue'));
     });
 
-    test('3. Départ pris avec protection : Rétrocompatibilité (null -> true)', () {
-      final legacyCoffret = CoffretArmoire(
+    test('3. Départ pris avec protection : Rétrocompatibilité dynamique (null + Type protection = Disjoncteur -> true, null + sans protection -> false)', () {
+      final legacyCoffretWithProt = CoffretArmoire(
         qrCode: 'COFF_001',
         nom: 'Coffret Éclairage',
         type: 'COFFRET',
         departPrisAvecProtection: null,
+        protectionTete: Alimentation(
+          typeProtection: 'Disjoncteur',
+          pdcKA: '',
+          calibre: '',
+          sectionCable: '',
+        ),
       );
 
-      expect(legacyCoffret.departPrisAvecProtection, isNull);
-      expect(legacyCoffret.isDepartPrisAvecProtection, isTrue);
+      final legacyCoffretWithoutProt = CoffretArmoire(
+        qrCode: 'COFF_002',
+        nom: 'Coffret Direct',
+        type: 'COFFRET',
+        departPrisAvecProtection: null,
+      );
+
+      expect(legacyCoffretWithProt.isDepartPrisAvecProtection, isTrue);
+      expect(legacyCoffretWithoutProt.isDepartPrisAvecProtection, isFalse);
     });
 
     test('4. Départ pris avec protection : Persistance lors du décochage (false)', () {

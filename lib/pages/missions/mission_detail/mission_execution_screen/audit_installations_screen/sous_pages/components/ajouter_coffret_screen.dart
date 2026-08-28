@@ -1723,7 +1723,8 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           case 'typeProtection':
             widget.protectionTete!.typeProtection = value;
             widget.protectionTete!.sourceKnown = SourceStatusResolver.resolve(value);
-            final bool hasProtection = value.isNotEmpty && value != '-aucun-';
+            final String norm = value.trim().toLowerCase();
+            final bool hasProtection = norm.isNotEmpty && norm != '-aucun-' && norm != 'aucun' && norm != '-';
             widget.onDepartPrisAvecProtectionChanged?.call(hasProtection);
             break;
           case 'courbe': widget.protectionTete!.courbe = value; break;

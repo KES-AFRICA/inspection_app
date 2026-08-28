@@ -348,6 +348,17 @@ class CoffretArmoireEntity {
   final List<ObservationLibreEntity> observationsParafoudre;
   final bool accessible;
 
+  bool get isDepartPrisAvecProtection {
+    if (type == 'INVERSEUR') return true;
+    if (departPrisAvecProtection != null) return departPrisAvecProtection!;
+
+    final mainProt = protectionTete?.typeProtection ??
+        (alimentations.isNotEmpty ? alimentations.first.typeProtection : null);
+    if (mainProt == null) return false;
+    final normProt = mainProt.trim().toLowerCase();
+    return normProt.isNotEmpty && normProt != '-aucun-' && normProt != 'aucun' && normProt != '-';
+  }
+
   String? get effectivePresenceDefautThermo {
     if (!verificationThermographie) return null;
     if (presenceDefautThermo != null && presenceDefautThermo!.isNotEmpty) {
