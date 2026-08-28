@@ -38,6 +38,10 @@ import 'hive_service.dart';
 import 'sequence_progress_service.dart';
 import 'package:inspec_app/services/backup/backup_format_strategy.dart';
 import 'package:inspec_app/services/backup/operation_progress_state.dart';
+import 'package:inspec_app/features/backup/data/datasources/backup_queue_service.dart';
+import 'package:inspec_app/features/backup/data/datasources/local_backup_store.dart';
+import 'package:inspec_app/features/backup/data/services/mission_activity_tracker.dart';
+import 'package:inspec_app/features/backup/domain/models/backup_queue_item.dart';
 
 // ─────────────────────────────────────────────────────────────
 // RÉSULTATS TYPÉS
@@ -2232,6 +2236,31 @@ class BackupService {
           }
         }
       }
+
+      // ✅ Enrôlement automatique de la mission importée pour la sauvegarde (Local + Cloud)
+      Future.microtask(() async {
+        try {
+          await MissionActivityTracker.markMissionModifiedToday(targetMissionId);
+          final localStore = LocalBackupStore();
+          await localStore.saveLocalBackup(
+            missionId: targetMissionId,
+            matricule: importeurMatricule,
+          );
+          final queueService = BackupQueueService();
+          await queueService.enqueueOrUpdate(
+            BackupQueueItem(
+              missionId: targetMissionId,
+              matricule: importeurMatricule,
+              status: BackupQueueStatus.pending,
+              addedAt: DateTime.now(),
+            ),
+          );
+        } catch (e) {
+          if (kDebugMode) {
+            print('⚠️ Auto-enrôlement sauvegarde post-importation: $e');
+          }
+        }
+      });
 
       return 'imported';
     } catch (e, st) {

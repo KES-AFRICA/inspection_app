@@ -128,5 +128,13 @@ void main() {
       expect(dir.existsSync(), isTrue);
       expect(dir.path.contains('sauvegardes_locales/mission_test_local_001'), isTrue);
     });
+
+    test('6. Détection et enrôlement automatique des missions importées', () async {
+      final importedMissionId = 'mission_imported_auto_006';
+      await MissionActivityTracker.markMissionModifiedToday(importedMissionId);
+
+      final isTracked = await MissionActivityTracker.isMissionModifiedToday(importedMissionId);
+      expect(isTracked, isTrue);
+    });
   });
 }

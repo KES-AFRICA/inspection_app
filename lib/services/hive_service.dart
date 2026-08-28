@@ -21,6 +21,7 @@ import 'dispositions_constructives_registry.dart';
 import 'installation_description_sync_service.dart';
 import 'normative_matching/mission_normative_batch_service.dart';
 import 'equipment_number_service.dart';
+import 'package:inspec_app/features/backup/data/services/mission_activity_tracker.dart';
 
 class HiveService {
   static const String _verificateurBox = 'verificateurs';
@@ -334,12 +335,20 @@ class HiveService {
     } catch (_) {
       // Aucun RenseignementsGeneraux existant pour l'instant
     }
+
+    // ✅ Détection automatique pour le système de sauvegarde 17h30
+    Future.microtask(() async {
+      await MissionActivityTracker.markMissionModifiedToday(mission.id);
+    });
   }
 
   static Future<void> saveMissions(List<Mission> missions) async {
     final box = Hive.box<Mission>(_missionBox);
     for (var m in missions) {
       await box.put(m.id, m);
+      Future.microtask(() async {
+        await MissionActivityTracker.markMissionModifiedToday(m.id);
+      });
     }
   }
 
