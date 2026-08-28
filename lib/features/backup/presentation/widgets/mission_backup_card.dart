@@ -144,10 +144,15 @@ class MissionBackupCard extends ConsumerWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    syncState.statusMessage ?? 'Transfert en cours...',
-                    style: const TextStyle(fontSize: 11, color: Color(0xFF0078D4)),
+                  Expanded(
+                    child: Text(
+                      syncState.statusMessage ?? 'Transfert en cours...',
+                      style: const TextStyle(fontSize: 11, color: Color(0xFF0078D4)),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
+                  const SizedBox(width: 8),
                   Text(
                     '${(syncState.progress * 100).toInt()}%',
                     style: const TextStyle(
@@ -166,11 +171,15 @@ class MissionBackupCard extends ConsumerWidget {
               children: [
                 Icon(Icons.calendar_today_rounded, size: 14, color: Colors.grey.shade600),
                 const SizedBox(width: 4),
-                Text(
-                  syncState.lastBackupDate != null
-                      ? 'Dernière sauvegarde: ${DateFormat('dd/MM/yyyy HH:mm').format(syncState.lastBackupDate!)}'
-                      : 'Aucune sauvegarde distante',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                Expanded(
+                  child: Text(
+                    syncState.lastBackupDate != null
+                        ? 'Dernière sauvegarde: ${DateFormat('dd/MM/yyyy HH:mm').format(syncState.lastBackupDate!)}'
+                        : 'Aucune sauvegarde distante',
+                    style: TextStyle(fontSize: 12, color: Colors.grey.shade700),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ],
             ),
@@ -238,25 +247,34 @@ class MissionBackupCard extends ConsumerWidget {
                               ? 'Sauvegarder'
                               : 'Sauvegarder',
                       style: const TextStyle(fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                OutlinedButton.icon(
-                  onPressed: isSyncing || syncState.status == SyncStatus.neverBackedUp
-                      ? null
-                      : () {
-                          _confirmRestore(context, ref);
-                        },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: const Color(0xFF0F172A),
-                    padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: isSyncing || syncState.status == SyncStatus.neverBackedUp
+                        ? null
+                        : () {
+                            _confirmRestore(context, ref);
+                          },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF0F172A),
+                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                    ),
+                    icon: const Icon(Icons.cloud_download_rounded, size: 16),
+                    label: const Text(
+                      'Restaurer',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
-                  icon: const Icon(Icons.cloud_download_rounded, size: 16),
-                  label: const Text('Restaurer'),
                 ),
               ],
             ),
@@ -296,25 +314,25 @@ class MissionBackupCard extends ConsumerWidget {
 
     switch (status) {
       case SyncStatus.upToDate:
-        text = 'PROTÉGÉE (CLOUD & LOCAL)';
+        text = 'CLOUD & LOCAL';
         bg = const Color(0xFFD1FAE5);
         fg = const Color(0xFF065F46);
         icon = Icons.check_circle_rounded;
         break;
       case SyncStatus.localOnly:
-        text = 'PROTÉGÉE LOCALEMENT';
+        text = 'LOCAL';
         bg = const Color(0xFFFEF3C7);
         fg = const Color(0xFFB45309);
         icon = Icons.phonelink_lock_rounded;
         break;
       case SyncStatus.pendingUpload:
-        text = 'EN FILE D\'ATTENTE';
+        text = 'EN ATTENTE';
         bg = const Color(0xFFDBEAFE);
         fg = const Color(0xFF1E40AF);
         icon = Icons.hourglass_top_rounded;
         break;
       case SyncStatus.localModifications:
-        text = 'MODIFIÉE (LOCAL & CLOUD)';
+        text = 'MODIFIÉE';
         bg = const Color(0xFFFEF3C7);
         fg = const Color(0xFF92400E);
         icon = Icons.edit_note_rounded;
@@ -339,7 +357,7 @@ class MissionBackupCard extends ConsumerWidget {
         break;
       case SyncStatus.failed:
       case SyncStatus.interrupted:
-        text = 'ÉCHEC CLOUD (RETRY)';
+        text = 'ÉCHEC CLOUD';
         bg = const Color(0xFFFEE2E2);
         fg = const Color(0xFF991B1B);
         icon = Icons.error_rounded;

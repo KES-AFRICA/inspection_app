@@ -285,6 +285,7 @@ class _CorbeilleScreenState extends State<CorbeilleScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Container(
                       padding: const EdgeInsets.all(8),
@@ -294,7 +295,7 @@ class _CorbeilleScreenState extends State<CorbeilleScreen> {
                       ),
                       child: Icon(Icons.restore_from_trash_rounded, color: AppTheme.primaryBlue, size: 22),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -302,22 +303,28 @@ class _CorbeilleScreenState extends State<CorbeilleScreen> {
                           Text(
                             '${_allItems.length} élément(s) dans la corbeille',
                             style: TextStyle(
-                              fontSize: 15,
+                              fontSize: 14,
                               fontWeight: FontWeight.bold,
                               color: isDarkMode ? Colors.white : AppTheme.textDark,
                             ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           const SizedBox(height: 2),
                           Row(
                             children: [
                               Icon(Icons.auto_delete_outlined, size: 13, color: Colors.grey.shade500),
                               const SizedBox(width: 4),
-                              Text(
-                                'Purge automatique après 90 jours',
-                                style: TextStyle(
-                                  fontSize: 11.5,
-                                  color: Colors.grey.shade500,
-                                  fontWeight: FontWeight.w500,
+                              Expanded(
+                                child: Text(
+                                  'Purge automatique après 90 jours',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: Colors.grey.shade500,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                 ),
                               ),
                             ],
@@ -325,18 +332,19 @@ class _CorbeilleScreenState extends State<CorbeilleScreen> {
                         ],
                       ),
                     ),
+                    const SizedBox(width: 8),
                     if (_allItems.isNotEmpty)
                       OutlinedButton.icon(
                         onPressed: _confirmEmptyTrash,
-                        icon: const Icon(Icons.delete_sweep_rounded, color: Colors.red, size: 18),
+                        icon: const Icon(Icons.delete_sweep_rounded, color: Colors.red, size: 16),
                         label: const Text(
                           'Tout vider',
-                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12),
+                          style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 11.5),
                         ),
                         style: OutlinedButton.styleFrom(
                           side: BorderSide(color: Colors.red.withValues(alpha: 0.3)),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         ),
                       ),
                   ],
