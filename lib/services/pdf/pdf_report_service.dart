@@ -117,6 +117,16 @@ class _PdfEquipementGroup {
   });
 }
 
+class _PdfUnknownSourceGroup {
+  final String repere;
+  final List<_PdfUnknownSourceItem> items;
+
+  _PdfUnknownSourceGroup({
+    required this.repere,
+    required this.items,
+  });
+}
+
 // ================================================================
 //  PdfReportService
 // ================================================================
@@ -7714,8 +7724,8 @@ class PdfReportService {
     ];
 
     final columnWidths = const {
-      0: pw.FixedColumnWidth(24),
-      1: pw.FlexColumnWidth(1.8),
+      0: pw.FixedColumnWidth(34),
+      1: pw.FlexColumnWidth(2.0),
       2: pw.FlexColumnWidth(2.5),
       3: pw.FlexColumnWidth(1.5),
       4: pw.FlexColumnWidth(2.0),
@@ -7745,41 +7755,128 @@ class PdfReportService {
       );
     }
 
-    for (int i = 0; i < items.length; i++) {
-      final item = items[i];
-      final isEven = i % 2 == 0;
-      final bgColor = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
+    final rowBorder = const pw.Border(
+      bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+    );
 
-      rows.add(
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: bgColor),
-          children: [
-            _valueCell('${startNumber + i}'),
-            _valueCell(item.repere),
-            _valueCell(item.nom),
-            _valueCell(item.type),
-            _valueCell(item.alimentationConcernee),
-            pw.Container(
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              alignment: pw.Alignment.center,
-              child: pw.Text(
-                item.source,
-                style: pw.TextStyle(
-                  font: _fontBold,
-                  fontSize: fsSmall,
-                  color: PdfColor.fromInt(0xFFC62828),
+    final groups = <_PdfUnknownSourceGroup>[];
+    for (final item in items) {
+      final normRep = item.repere.trim().isNotEmpty ? item.repere.trim() : '-';
+      if (groups.isNotEmpty && groups.last.repere == normRep) {
+        groups.last.items.add(item);
+      } else {
+        groups.add(_PdfUnknownSourceGroup(repere: normRep, items: [item]));
+      }
+    }
+
+    int globalRowIndex = 0;
+    int globalEquipementNumber = startNumber;
+
+    for (final group in groups) {
+      final count = group.items.length;
+      final midIndex = (count - 1) ~/ 2;
+
+      for (int i = 0; i < count; i++) {
+        final item = group.items[i];
+        final currentNum = globalEquipementNumber++;
+        final idx = globalRowIndex++;
+        final isEven = idx % 2 == 0;
+        final bgColor = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
+        final isLastInGroup = (i == count - 1);
+
+        rows.add(
+          pw.TableRow(
+            decoration: pw.BoxDecoration(color: bgColor),
+            children: [
+              // Cellule 0 : N° d'équipement (compte chaque équipement, avec bordure inférieure)
+              pw.Container(
+                decoration: pw.BoxDecoration(border: rowBorder),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  '$currentNum',
+                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall),
+                  textAlign: pw.TextAlign.center,
                 ),
-                textAlign: pw.TextAlign.center,
               ),
-            ),
-          ],
-        ),
-      );
+
+              // Cellule 1 : Repère (centré au milieu du groupe, masquage de bordures internes)
+              pw.Container(
+                decoration: isLastInGroup ? pw.BoxDecoration(border: rowBorder) : null,
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: i == midIndex
+                    ? pw.Text(
+                        group.repere,
+                        style: pw.TextStyle(font: _fontBold, fontSize: fsSmall),
+                        textAlign: pw.TextAlign.center,
+                      )
+                    : pw.SizedBox(),
+              ),
+
+              // Cellule 2 : Nom
+              pw.Container(
+                decoration: pw.BoxDecoration(border: rowBorder),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  item.nom,
+                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+
+              // Cellule 3 : Type
+              pw.Container(
+                decoration: pw.BoxDecoration(border: rowBorder),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  item.type,
+                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.Container(
+                decoration: pw.BoxDecoration(border: rowBorder),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  item.alimentationConcernee,
+                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.Container(
+                decoration: pw.BoxDecoration(border: rowBorder),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  item.source,
+                  style: pw.TextStyle(
+                    font: _fontBold,
+                    fontSize: fsSmall,
+                    color: PdfColor.fromInt(0xFFC62828),
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+        );
+      }
     }
 
     return pw.Table(
-      defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-      border: pw.TableBorder.all(color: PdfColors.grey400, width: 0.5),
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+      border: const pw.TableBorder(
+        left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+        right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+        top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+        bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+        verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+        horizontalInside: pw.BorderSide.none,
+      ),
       columnWidths: columnWidths,
       children: rows,
     );
@@ -7812,8 +7909,8 @@ class PdfReportService {
     ];
 
     final columnWidths = const {
-      0: pw.FlexColumnWidth(1.4),
-      1: pw.FixedColumnWidth(18),
+      0: pw.FlexColumnWidth(1.6),
+      1: pw.FixedColumnWidth(34),
       2: pw.FlexColumnWidth(2.5),
       3: pw.FlexColumnWidth(1.6),
       4: pw.FlexColumnWidth(1.1),
@@ -7831,6 +7928,10 @@ class PdfReportService {
         groups.add(_PdfEquipementGroup(repere: normRep, items: [eq]));
       }
     }
+
+    final rowBorder = const pw.Border(
+      bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+    );
 
     final tableRows = <pw.TableRow>[
       if (showTableHeader)
@@ -7856,35 +7957,36 @@ class PdfReportService {
         ),
     ];
 
-    int globalRowIndex = 0;
     int globalEquipementNumber = startNumber;
 
     for (final group in groups) {
-      for (int i = 0; i < group.items.length; i++) {
+      final count = group.items.length;
+      final midIndex = (count - 1) ~/ 2;
+
+      for (int i = 0; i < count; i++) {
         final eq = group.items[i];
         final currentEqNum = globalEquipementNumber++;
-        final idx = globalRowIndex++;
-        final isEven = idx % 2 == 0;
-        final bg = isEven ? PdfColors.white : PdfColors.grey100;
-        final showRepere = (i == 0);
+        final isLastInGroup = (i == count - 1);
+        final bg = i % 2 == 0 ? PdfColors.white : PdfColors.grey100;
 
         tableRows.add(
           pw.TableRow(
             decoration: pw.BoxDecoration(color: bg),
             children: [
-              // Cellule 0 : Repère
               pw.Container(
+                decoration: isLastInGroup ? pw.BoxDecoration(border: rowBorder) : null,
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
-                child: pw.Text(
-                  showRepere ? group.repere : '',
-                  style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                  textAlign: pw.TextAlign.center,
-                ),
+                child: i == midIndex
+                    ? pw.Text(
+                        group.repere,
+                        style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                        textAlign: pw.TextAlign.center,
+                      )
+                    : pw.SizedBox(),
               ),
-
-              // Cellule 1 : N° de l'équipement
               pw.Container(
+                decoration: pw.BoxDecoration(border: rowBorder),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
@@ -7893,9 +7995,8 @@ class PdfReportService {
                   textAlign: pw.TextAlign.center,
                 ),
               ),
-
-              // Cellule 2 : Nom
               pw.Container(
+                decoration: pw.BoxDecoration(border: rowBorder),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
