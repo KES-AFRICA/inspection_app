@@ -364,10 +364,14 @@ class InstallationDescriptionSyncService {
         auditBox = await Hive.openBox<AuditInstallationsElectriques>(_auditBox);
       }
       
-      final audit = auditBox.values.firstWhere(
-        (a) => a.missionId == missionId,
-        orElse: () => auditBox.get(missionId) ?? AuditInstallationsElectriques(missionId: missionId, updatedAt: DateTime.now()),
-      );
+      AuditInstallationsElectriques? audit = auditBox.get(missionId);
+      if (audit == null) {
+        try {
+          audit = auditBox.values.firstWhere((a) => a.missionId == missionId);
+        } catch (_) {
+          audit = AuditInstallationsElectriques(missionId: missionId, updatedAt: DateTime.now());
+        }
+      }
       
       final lastSync = _lastSyncedAuditTime[missionId];
       if (!force && lastSync != null && (audit.updatedAt.isBefore(lastSync) || audit.updatedAt.isAtSameMomentAs(lastSync))) {

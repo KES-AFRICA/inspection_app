@@ -86,6 +86,8 @@ class SafeFileImage extends StatefulWidget {
   final BoxFit fit;
   final double? width;
   final double? height;
+  final int? cacheWidth;
+  final int? cacheHeight;
   final WidgetBuilder? errorBuilder;
   final Widget? errorWidget;
 
@@ -95,6 +97,8 @@ class SafeFileImage extends StatefulWidget {
     this.fit = BoxFit.cover,
     this.width,
     this.height,
+    this.cacheWidth,
+    this.cacheHeight,
     this.errorBuilder,
     this.errorWidget,
   }) : super(key: key);
@@ -177,11 +181,23 @@ class _SafeFileImageState extends State<SafeFileImage> {
       return _buildFallback(context);
     }
 
+    final devicePixelRatio = MediaQuery.maybeOf(context)?.devicePixelRatio ?? 2.0;
+    final targetCacheWidth = widget.cacheWidth ??
+        (widget.width != null && widget.width! > 0 && widget.width!.isFinite
+            ? (widget.width! * devicePixelRatio).round()
+            : null);
+    final targetCacheHeight = widget.cacheHeight ??
+        (widget.height != null && widget.height! > 0 && widget.height!.isFinite
+            ? (widget.height! * devicePixelRatio).round()
+            : null);
+
     return Image.file(
       File(_resolvedPath!),
       fit: widget.fit,
       width: widget.width,
       height: widget.height,
+      cacheWidth: targetCacheWidth,
+      cacheHeight: targetCacheHeight,
       errorBuilder: (context, error, stackTrace) => _buildFallback(context),
     );
   }

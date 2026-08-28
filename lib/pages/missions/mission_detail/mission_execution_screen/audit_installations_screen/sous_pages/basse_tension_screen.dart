@@ -35,11 +35,13 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
 
   void _loadAudit() async {
     try {
-      await InstallationDescriptionSyncService.repairAndSyncDescriptions(widget.mission.id);
       final audit = await ref.read(auditInstallationsProvider(widget.mission.id).notifier).load();
       setState(() {
         _audit = audit;
         _isLoading = false;
+      });
+      Future.microtask(() {
+        InstallationDescriptionSyncService.repairAndSyncDescriptions(widget.mission.id);
       });
     } catch (e) {
       if (kDebugMode) {

@@ -16,7 +16,7 @@ class MissionStatisticsCollector {
   static final Map<String, DateTime> _inventoryCacheTime = {};
   static final Map<String, MissionStatisticsSummary> _summaryCache = {};
   static final Map<String, MissionStatistics> _statsCache = {};
-  static const Duration _cacheTtl = Duration(seconds: 10);
+  static const Duration _cacheTtl = Duration(minutes: 5);
 
   /// Invalide le cache pour une mission (à appeler lors d'une modification d'équipement/point).
   static void invalidateCache(String missionId) {

@@ -7,16 +7,29 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/moyenne_tension_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/mesures_essais_screen.dart';
 
-class AuditInstallationsScreen extends StatelessWidget {
+class AuditInstallationsScreen extends StatefulWidget {
   final Mission mission;
 
   const AuditInstallationsScreen({super.key, required this.mission});
+
+  @override
+  State<AuditInstallationsScreen> createState() => _AuditInstallationsScreenState();
+}
+
+class _AuditInstallationsScreenState extends State<AuditInstallationsScreen> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      MissionStatisticsCollector.getInventory(widget.mission.id);
+    });
+  }
 
   void _navigateToMoyenneTension(BuildContext context) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => MoyenneTensionScreen(mission: mission),
+        builder: (context) => MoyenneTensionScreen(mission: widget.mission),
       ),
     );
   }
@@ -25,7 +38,7 @@ class AuditInstallationsScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => BasseTensionScreen(mission: mission),
+        builder: (context) => BasseTensionScreen(mission: widget.mission),
       ),
     );
   }
@@ -34,7 +47,7 @@ class AuditInstallationsScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => FoudreScreen(mission: mission),
+        builder: (context) => FoudreScreen(mission: widget.mission),
       ),
     );
   }
@@ -43,17 +56,13 @@ class AuditInstallationsScreen extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => MesuresEssaisScreen(mission: mission),
+        builder: (context) => MesuresEssaisScreen(mission: widget.mission),
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    // Déclenchement automatique de l'inventaire et affichage du diagnostic dans la console de debug à l'ouverture
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      MissionStatisticsCollector.getInventory(mission.id);
-    });
 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),

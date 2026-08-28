@@ -3137,7 +3137,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     if (!mounted) return;
     if (widget.isEdition) return;
     _autoSaveTimer?.cancel();
-    _autoSaveTimer = Timer(const Duration(milliseconds: 500), () {
+    _autoSaveTimer = Timer(const Duration(milliseconds: 1200), () {
       if (mounted) _saveDraft();
     });
   }
