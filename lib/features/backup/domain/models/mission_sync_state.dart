@@ -1,11 +1,13 @@
 // lib/features/backup/domain/models/mission_sync_state.dart
 
 enum SyncStatus {
-  neverBackedUp,      // Jamais sauvegardée sur le Cloud
-  upToDate,           // Sauvegarde Cloud identique au travail local
-  localModifications, // Modifications effectuées depuis la dernière sauvegarde
+  neverBackedUp,      // Jamais sauvegardée (ni localement ni sur le cloud)
+  localOnly,          // Protégée localement (en attente de réseau / en file d'attente cloud)
+  pendingUpload,      // Dans la file d'attente de synchronisation cloud
+  upToDate,           // Sauvegardée localement ET sur le cloud à jour
+  localModifications, // Modifications effectuées depuis la dernière sauvegarde cloud
   syncing,            // Sauvegarde ou restauration en cours (avec progression %)
-  failed,             // Échec du dernier transfert
+  failed,             // Échec du dernier transfert cloud (retry programmé)
   interrupted,        // Interrompu (reprise possible)
   paused,             // Sauvegarde automatique mise en pause par l'inspecteur
 }
@@ -19,6 +21,12 @@ class MissionSyncState {
   final int? remoteSizeBytes;
   final String? errorMessage;
 
+  // Niveau 1 : Métadonnées de Sauvegarde Locale
+  final bool hasLocalBackup;
+  final DateTime? lastLocalBackupDate;
+  final int? localSizeBytes;
+  final String? localChecksum;
+
   const MissionSyncState({
     required this.missionId,
     required this.status,
@@ -27,6 +35,10 @@ class MissionSyncState {
     this.lastBackupDate,
     this.remoteSizeBytes,
     this.errorMessage,
+    this.hasLocalBackup = false,
+    this.lastLocalBackupDate,
+    this.localSizeBytes,
+    this.localChecksum,
   });
 
   MissionSyncState copyWith({
@@ -36,6 +48,10 @@ class MissionSyncState {
     DateTime? lastBackupDate,
     int? remoteSizeBytes,
     String? errorMessage,
+    bool? hasLocalBackup,
+    DateTime? lastLocalBackupDate,
+    int? localSizeBytes,
+    String? localChecksum,
   }) {
     return MissionSyncState(
       missionId: missionId,
@@ -45,6 +61,10 @@ class MissionSyncState {
       lastBackupDate: lastBackupDate ?? this.lastBackupDate,
       remoteSizeBytes: remoteSizeBytes ?? this.remoteSizeBytes,
       errorMessage: errorMessage ?? this.errorMessage,
+      hasLocalBackup: hasLocalBackup ?? this.hasLocalBackup,
+      lastLocalBackupDate: lastLocalBackupDate ?? this.lastLocalBackupDate,
+      localSizeBytes: localSizeBytes ?? this.localSizeBytes,
+      localChecksum: localChecksum ?? this.localChecksum,
     );
   }
 
@@ -56,6 +76,10 @@ class MissionSyncState {
         'lastBackupDate': lastBackupDate?.toIso8601String(),
         'remoteSizeBytes': remoteSizeBytes,
         'errorMessage': errorMessage,
+        'hasLocalBackup': hasLocalBackup,
+        'lastLocalBackupDate': lastLocalBackupDate?.toIso8601String(),
+        'localSizeBytes': localSizeBytes,
+        'localChecksum': localChecksum,
       };
 
   factory MissionSyncState.fromJson(Map<String, dynamic> json) => MissionSyncState(
@@ -71,5 +95,11 @@ class MissionSyncState {
             : null,
         remoteSizeBytes: json['remoteSizeBytes'] as int?,
         errorMessage: json['errorMessage'] as String?,
+        hasLocalBackup: json['hasLocalBackup'] as bool? ?? false,
+        lastLocalBackupDate: json['lastLocalBackupDate'] != null
+            ? DateTime.tryParse(json['lastLocalBackupDate'])
+            : null,
+        localSizeBytes: json['localSizeBytes'] as int?,
+        localChecksum: json['localChecksum'] as String?,
       );
 }

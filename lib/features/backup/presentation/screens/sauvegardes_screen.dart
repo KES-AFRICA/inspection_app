@@ -28,7 +28,10 @@ class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> with Widg
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _refresh();
-      ref.read(backupSchedulerServiceProvider).initializeWorkManager();
+      final user = HiveService.getCurrentUser();
+      if (user != null) {
+        ref.read(backupSchedulerServiceProvider).initializeWorkManager(user.matricule);
+      }
     });
   }
 

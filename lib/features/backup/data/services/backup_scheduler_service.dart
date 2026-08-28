@@ -8,7 +8,9 @@ import '../../domain/models/backup_queue_item.dart';
 import '../../domain/models/mission_sync_state.dart';
 import '../../domain/repositories/backup_sync_repository.dart';
 import '../datasources/backup_queue_service.dart';
+import '../datasources/local_backup_store.dart';
 import '../datasources/microsoft_auth_service.dart';
+import 'mission_activity_tracker.dart';
 
 const String kAutoBackupTask = 'com.kes.inspection.autobackup';
 
@@ -17,7 +19,6 @@ void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     try {
       debugPrint('[WorkManager] Exécution de la tâche planifiée d\'arrière-plan : $task');
-      // Tâche native d'arrière-plan résiliente
       return true;
     } catch (e) {
       debugPrint('[WorkManager] Erreur tâche d\'arrière-plan: $e');
@@ -30,24 +31,26 @@ class BackupSchedulerService {
   final BackupSyncRepository repository;
   final MicrosoftAuthService authService;
   final BackupQueueService queueService;
+  final LocalBackupStore localStore;
 
   bool _isProcessing = false;
+  Timer? _daily17h30Timer;
 
   BackupSchedulerService({
     required this.repository,
     required this.authService,
     required this.queueService,
-  });
+    LocalBackupStore? localStore,
+  }) : localStore = localStore ?? LocalBackupStore();
 
-  // Initialiser WorkManager natif pour les déclenchements Android/iOS
-  Future<void> initializeWorkManager() async {
+  /// Initialiser le WorkManager natif et programmer la surveillance quotidienne de 17h30
+  Future<void> initializeWorkManager(String matricule) async {
     try {
       await Workmanager().initialize(
         callbackDispatcher,
         isInDebugMode: kDebugMode,
       );
 
-      // Programmer le contrôle quotidien (du lundi au samedi)
       await Workmanager().registerPeriodicTask(
         '1',
         kAutoBackupTask,
@@ -60,6 +63,66 @@ class BackupSchedulerService {
     } catch (e) {
       debugPrint('[WorkManager] Initialisation ignorée sur cette plateforme : $e');
     }
+
+    _scheduleDaily17h30Timer(matricule);
+  }
+
+  /// Déclencher la planification du minuteur de 17h30
+  void _scheduleDaily17h30Timer(String matricule) {
+    _daily17h30Timer?.cancel();
+    final now = DateTime.now();
+    var scheduledTime = DateTime(now.year, now.month, now.day, 17, 30);
+    if (now.isAfter(scheduledTime)) {
+      scheduledTime = scheduledTime.add(const Duration(days: 1));
+    }
+    final duration = scheduledTime.difference(now);
+
+    _daily17h30Timer = Timer(duration, () async {
+      await triggerDailyAutoBackup(matricule);
+      _scheduleDaily17h30Timer(matricule); // Re-planifier pour le lendemain
+    });
+  }
+
+  /// Exécution de la Sauvegarde Automatique Quotidienne de 17h30
+  /// 1. Détecte les missions modifiées aujourd'hui
+  /// 2. Niveau 1 : Génère et scelle la sauvegarde locale .inspec
+  /// 3. Niveau 2 : Enrôle dans la file cloud pour upload
+  Future<int> triggerDailyAutoBackup(String matricule) async {
+    final modifiedMissions = await MissionActivityTracker.getMissionsModifiedToday();
+    if (modifiedMissions.isEmpty) {
+      if (kDebugMode) {
+        print('ℹ️ AutoBackup 17h30 : Aucune mission modifiée aujourd\'hui.');
+      }
+      return 0;
+    }
+
+    int backedUpLocallyCount = 0;
+
+    for (final missionId in modifiedMissions) {
+      // 1. Sauvegarde Locale Absolue (Niveau 1 - Offline First)
+      final localItem = await localStore.saveLocalBackup(
+        missionId: missionId,
+        matricule: matricule,
+      );
+
+      if (localItem != null) {
+        backedUpLocallyCount++;
+        // 2. Enrôler dans la file Cloud pour la synchronisation distante (Niveau 2)
+        await queueService.enqueueOrUpdate(
+          BackupQueueItem(
+            missionId: missionId,
+            matricule: matricule,
+            status: BackupQueueStatus.pending,
+            addedAt: DateTime.now(),
+          ),
+        );
+      }
+    }
+
+    // Tenter de dépiler et d'envoyer vers le Cloud immédiatement si le réseau est actif
+    unawaited(processQueue(matricule));
+
+    return backedUpLocallyCount;
   }
 
   // Effectuer l'inventaire des missions et enrôler les missions modifiées/non-sauvegardées
@@ -74,9 +137,9 @@ class BackupSchedulerService {
       final missionId = entry.key;
       final syncState = entry.value;
 
-      // Si la mission a des modifications locales ou n'a jamais été sauvegardée
       if (syncState.status == SyncStatus.localModifications ||
-          syncState.status == SyncStatus.neverBackedUp) {
+          syncState.status == SyncStatus.neverBackedUp ||
+          syncState.status == SyncStatus.localOnly) {
         await queueService.enqueueOrUpdate(
           BackupQueueItem(
             missionId: missionId,
@@ -94,11 +157,9 @@ class BackupSchedulerService {
 
   // Vérifications Pre-Flight (MSAL connecté, Réseau disponible, Pas de blocage)
   Future<bool> checkPreFlightConditions() async {
-    // 1. Vérifier la connexion Microsoft
     final user = await authService.getSavedUserProfile();
     if (user == null) return false;
 
-    // 2. Vérifier la connectivité Internet
     final connectivity = await Connectivity().checkConnectivity();
     if (connectivity.contains(ConnectivityResult.none)) {
       return false;
@@ -120,16 +181,21 @@ class BackupSchedulerService {
     _isProcessing = true;
 
     try {
-      // 1. Faire l'inventaire avant traitement
       await inventoryAndEnrollMissions(matricule);
 
-      // 2. Traiter chaque élément séquentiellement (FIFO)
       while (true) {
         final item = await queueService.getNextEligibleItem();
         if (item == null) break;
 
         await queueService.markProcessing(item.missionId);
 
+        // 1. S'assurer que le snapshot local Niveau 1 existe avant l'upload Cloud
+        final latestLocal = await localStore.getLatestLocalBackup(item.missionId);
+        if (latestLocal == null) {
+          await localStore.saveLocalBackup(missionId: item.missionId, matricule: matricule);
+        }
+
+        // 2. Transférer vers le Cloud (Niveau 2)
         final success = await repository.backupSingleMission(
           missionId: item.missionId,
           matricule: matricule,
@@ -142,6 +208,7 @@ class BackupSchedulerService {
 
         if (success) {
           await queueService.removeFromQueue(item.missionId);
+          await MissionActivityTracker.clearActivityForMission(item.missionId);
         } else {
           await queueService.markFailed(
             item.missionId,
@@ -154,5 +221,9 @@ class BackupSchedulerService {
     } finally {
       _isProcessing = false;
     }
+  }
+
+  void dispose() {
+    _daily17h30Timer?.cancel();
   }
 }

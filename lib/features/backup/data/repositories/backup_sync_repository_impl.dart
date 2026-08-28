@@ -10,17 +10,20 @@ import '../../domain/models/cloud_backup_manifest.dart';
 import '../../domain/models/microsoft_user_profile.dart';
 import '../../domain/models/mission_sync_state.dart';
 import '../../domain/repositories/backup_sync_repository.dart';
+import '../datasources/local_backup_store.dart';
 import '../datasources/microsoft_auth_service.dart';
 import '../datasources/microsoft_graph_storage_service.dart';
 
 class BackupSyncRepositoryImpl implements BackupSyncRepository {
   final MicrosoftAuthService authService;
   final MicrosoftGraphStorageService storageService;
+  final LocalBackupStore localStore;
 
   BackupSyncRepositoryImpl({
     required this.authService,
     required this.storageService,
-  });
+    LocalBackupStore? localStore,
+  }) : localStore = localStore ?? LocalBackupStore();
 
   @override
   Future<MicrosoftUserProfile?> checkAuthStatus() async {
@@ -55,20 +58,40 @@ class BackupSyncRepositoryImpl implements BackupSyncRepository {
     final map = <String, MissionSyncState>{};
 
     for (final mission in missions) {
+      final latestLocal = await localStore.getLatestLocalBackup(mission.id);
+
       final cachedRaw = cacheBox.get(mission.id);
       if (cachedRaw != null) {
         try {
           final Map<String, dynamic> json = Map<String, dynamic>.from(cachedRaw as Map);
           final cachedState = MissionSyncState.fromJson(json);
 
+          final hasLocal = latestLocal != null;
+          final lastLocal = latestLocal?.createdAt;
+          final localSize = latestLocal?.fileSizeBytes;
+
           if (cachedState.lastBackupDate != null) {
-            // Comparer l'horodatage local actuel de la mission avec la date de sauvegarde enregistrée
             final isModifiedLocally = mission.updatedAt.isAfter(cachedState.lastBackupDate!);
             map[mission.id] = cachedState.copyWith(
-              status: isModifiedLocally ? SyncStatus.localModifications : SyncStatus.upToDate,
+              hasLocalBackup: hasLocal,
+              lastLocalBackupDate: lastLocal,
+              localSizeBytes: localSize,
+              localChecksum: latestLocal?.sha256Checksum,
+              status: isModifiedLocally
+                  ? SyncStatus.localModifications
+                  : SyncStatus.upToDate,
               statusMessage: isModifiedLocally
-                  ? 'Modifications locales depuis la dernière sauvegarde'
-                  : 'Sauvegarde Cloud à jour (${((cachedState.remoteSizeBytes ?? 0) / (1024 * 1024)).toStringAsFixed(1)} Mo)',
+                  ? (hasLocal ? 'Protégée localement • Modifications à envoyer sur le Cloud' : 'Modifications locales en attente')
+                  : 'Protégée (Cloud & Local)',
+            );
+          } else if (hasLocal) {
+            map[mission.id] = cachedState.copyWith(
+              hasLocalBackup: true,
+              lastLocalBackupDate: lastLocal,
+              localSizeBytes: localSize,
+              localChecksum: latestLocal.sha256Checksum,
+              status: SyncStatus.localOnly,
+              statusMessage: 'Sauvegardée localement (En attente de connexion Cloud)',
             );
           } else {
             map[mission.id] = cachedState;
@@ -76,15 +99,21 @@ class BackupSyncRepositoryImpl implements BackupSyncRepository {
         } catch (_) {
           map[mission.id] = MissionSyncState(
             missionId: mission.id,
-            status: SyncStatus.neverBackedUp,
-            statusMessage: 'Vérification en cours...',
+            status: latestLocal != null ? SyncStatus.localOnly : SyncStatus.neverBackedUp,
+            hasLocalBackup: latestLocal != null,
+            lastLocalBackupDate: latestLocal?.createdAt,
+            localSizeBytes: latestLocal?.fileSizeBytes,
+            statusMessage: latestLocal != null ? 'Sauvegardée localement (Offline)' : 'Jamais sauvegardée',
           );
         }
       } else {
         map[mission.id] = MissionSyncState(
           missionId: mission.id,
-          status: SyncStatus.neverBackedUp,
-          statusMessage: 'Vérification en cours...',
+          status: latestLocal != null ? SyncStatus.localOnly : SyncStatus.neverBackedUp,
+          hasLocalBackup: latestLocal != null,
+          lastLocalBackupDate: latestLocal?.createdAt,
+          localSizeBytes: latestLocal?.fileSizeBytes,
+          statusMessage: latestLocal != null ? 'Sauvegardée localement (Offline)' : 'Jamais sauvegardée',
         );
       }
     }
@@ -100,20 +129,27 @@ class BackupSyncRepositoryImpl implements BackupSyncRepository {
     final user = await authService.getSavedUserProfile();
     final accessToken = await authService.getValidAccessToken();
 
-    if (accessToken == null || user == null) {
-      final map = <String, MissionSyncState>{};
-      for (final mission in missions) {
-        map[mission.id] = MissionSyncState(
-          missionId: mission.id,
-          status: SyncStatus.neverBackedUp,
-          statusMessage: 'Non connecté à Microsoft Cloud',
+    final futures = missions.map((mission) async {
+      final latestLocal = await localStore.getLatestLocalBackup(mission.id);
+      final hasLocal = latestLocal != null;
+
+      if (accessToken == null || user == null) {
+        return MapEntry(
+          mission.id,
+          MissionSyncState(
+            missionId: mission.id,
+            status: hasLocal ? SyncStatus.localOnly : SyncStatus.neverBackedUp,
+            hasLocalBackup: hasLocal,
+            lastLocalBackupDate: latestLocal?.createdAt,
+            localSizeBytes: latestLocal?.fileSizeBytes,
+            localChecksum: latestLocal?.sha256Checksum,
+            statusMessage: hasLocal
+                ? 'Sauvegardée localement (En attente de connexion Cloud)'
+                : 'Jamais sauvegardée',
+          ),
         );
       }
-      return map;
-    }
 
-    // Exécution parallèle accélérée (Future.wait) pour toutes les missions de l'inspecteur
-    final futures = missions.map((mission) async {
       try {
         final remoteFolderPath =
             'Apps/KES Inspection/Sauvegardes/${user.displayName}/Mission_${mission.nomClient}_${mission.id}';
@@ -127,35 +163,52 @@ class BackupSyncRepositoryImpl implements BackupSyncRepository {
             mission.id,
             MissionSyncState(
               missionId: mission.id,
-              status: SyncStatus.neverBackedUp,
-              statusMessage: 'Jamais sauvegardée sur le Cloud',
+              status: hasLocal ? SyncStatus.localOnly : SyncStatus.neverBackedUp,
+              hasLocalBackup: hasLocal,
+              lastLocalBackupDate: latestLocal?.createdAt,
+              localSizeBytes: latestLocal?.fileSizeBytes,
+              localChecksum: latestLocal?.sha256Checksum,
+              statusMessage: hasLocal
+                  ? 'Sauvegardée localement (En attente de synchronisation Cloud)'
+                  : 'Jamais sauvegardée sur le Cloud',
             ),
           );
         } else {
-          final lastModifiedDate = mission.updatedAt;
-          final isModifiedLocally = lastModifiedDate.isAfter(manifest.backupCreatedAt);
+          final isModifiedLocally = mission.updatedAt.isAfter(manifest.backupCreatedAt);
+          final isMatchChecksum = hasLocal && latestLocal.sha256Checksum == manifest.sha256Checksum;
 
           return MapEntry(
             mission.id,
             MissionSyncState(
               missionId: mission.id,
-              status: isModifiedLocally ? SyncStatus.localModifications : SyncStatus.upToDate,
+              status: (isModifiedLocally && !isMatchChecksum)
+                  ? SyncStatus.localModifications
+                  : SyncStatus.upToDate,
               lastBackupDate: manifest.backupCreatedAt,
               remoteSizeBytes: manifest.fileSizeBytes,
-              statusMessage: isModifiedLocally
-                  ? 'Modifications locales depuis la dernière sauvegarde'
-                  : 'Sauvegarde Cloud à jour (${(manifest.fileSizeBytes / (1024 * 1024)).toStringAsFixed(1)} Mo)',
+              hasLocalBackup: hasLocal,
+              lastLocalBackupDate: latestLocal?.createdAt,
+              localSizeBytes: latestLocal?.fileSizeBytes,
+              localChecksum: latestLocal?.sha256Checksum,
+              statusMessage: (isModifiedLocally && !isMatchChecksum)
+                  ? 'Modifications locales depuis la dernière sauvegarde Cloud'
+                  : 'Protégée (Cloud & Local à jour)',
             ),
           );
         }
       } catch (e) {
-        // En cas d'échec réseau / hors-ligne, ne pas réinitialiser l'état
         return MapEntry(
           mission.id,
           MissionSyncState(
             missionId: mission.id,
-            status: SyncStatus.interrupted,
-            statusMessage: 'Cloud temporairement inaccessible (Hors-ligne)',
+            status: hasLocal ? SyncStatus.localOnly : SyncStatus.interrupted,
+            hasLocalBackup: hasLocal,
+            lastLocalBackupDate: latestLocal?.createdAt,
+            localSizeBytes: latestLocal?.fileSizeBytes,
+            localChecksum: latestLocal?.sha256Checksum,
+            statusMessage: hasLocal
+                ? 'Sauvegardée localement • Cloud temporairement indisponible'
+                : 'Cloud temporairement inaccessible (Hors-ligne)',
           ),
         );
       }
@@ -164,17 +217,12 @@ class BackupSyncRepositoryImpl implements BackupSyncRepository {
     final entries = await Future.wait(futures);
     final resultMap = Map<String, MissionSyncState>.fromEntries(entries);
 
-    // Mettre à jour le cache persistant Hive
     final cacheBox = Hive.isBoxOpen('sync_cache')
         ? Hive.box('sync_cache')
         : await Hive.openBox('sync_cache');
 
     resultMap.forEach((missionId, state) {
-      if (state.status == SyncStatus.upToDate ||
-          state.status == SyncStatus.localModifications ||
-          state.status == SyncStatus.neverBackedUp) {
-        cacheBox.put(missionId, state.toJson());
-      }
+      cacheBox.put(missionId, state.toJson());
     });
 
     return resultMap;
@@ -186,50 +234,59 @@ class BackupSyncRepositoryImpl implements BackupSyncRepository {
     required String matricule,
     void Function(double progress, String statusMessage)? onProgress,
   }) async {
-    final accessToken = await authService.getValidAccessToken();
-    final user = await authService.getSavedUserProfile();
-
-    if (accessToken == null || user == null) {
-      onProgress?.call(0, 'Erreur: Non connecté à Microsoft 365');
-      return false;
-    }
-
     final mission = HiveService.getMissionById(missionId);
     if (mission == null) {
       onProgress?.call(0, 'Erreur: Mission introuvable');
       return false;
     }
 
-    onProgress?.call(0.05, 'Génération du bundle .inspec local en arrière-plan...');
+    // 1. NIVEAU 1 : Sauvegarde Locale Automatique & Permanente
+    onProgress?.call(0.05, 'Création et scellage de la sauvegarde locale (Niveau 1)...');
+    var localBackupItem = await localStore.getLatestLocalBackup(missionId);
+    if (localBackupItem == null || mission.updatedAt.isAfter(localBackupItem.createdAt)) {
+      localBackupItem = await localStore.saveLocalBackup(missionId: missionId, matricule: matricule);
+    }
 
-    // 1. Appeler l'exportateur BackupService en mode silencieux (sans feuille de partage OS)
-    final exportResult = await BackupService.exporterMission(
-      missionId,
-      openShareSheet: false,
-      isCloudBackup: true,
-    );
-    if (!exportResult.success || exportResult.filePath == null) {
-      onProgress?.call(0, 'Erreur d\'exportation: ${exportResult.message}');
+    if (localBackupItem == null) {
+      onProgress?.call(0, 'Erreur lors de la sauvegarde locale (Niveau 1)');
       return false;
     }
 
-    final localFile = File(exportResult.filePath!);
+    final localFile = File(localBackupItem.filePath);
     if (!localFile.existsSync()) {
-      onProgress?.call(0, 'Erreur: Fichier de sauvegarde introuvable sur le disque');
+      onProgress?.call(0, 'Erreur: Fichier de sauvegarde locale introuvable');
       return false;
     }
 
-    final fileSize = await localFile.length();
-    final fileBytes = await localFile.readAsBytes();
-    final checksumHex = sha256.convert(fileBytes).toString();
+    // 2. NIVEAU 2 : Synchronisation Cloud Microsoft 365 / OneDrive
+    final accessToken = await authService.getValidAccessToken();
+    final user = await authService.getSavedUserProfile();
+
+    if (accessToken == null || user == null) {
+      onProgress?.call(1.0, 'Sauvegardée localement avec succès (Cloud hors-ligne)');
+      return true; // Le Niveau 1 a réussi !
+    }
 
     final remoteFolderPath = 'Apps/KES Inspection/Sauvegardes/${user.displayName}/Mission_${mission.nomClient}_$missionId';
     final remoteFileName = 'sauvegarde_${mission.nomClient}_${DateTime.now().millisecondsSinceEpoch}.inspec';
 
-    // 2. Créer le dossier distant
+    // A. Déduplication par checksum SHA-256
+    final remoteManifest = await storageService.fetchRemoteManifest(
+      accessToken: accessToken,
+      remoteFolderPath: remoteFolderPath,
+    );
+
+    if (remoteManifest != null && remoteManifest.sha256Checksum == localBackupItem.sha256Checksum) {
+      onProgress?.call(1.0, 'Sauvegarde Cloud à jour (Déduplication No-Op)');
+      await localStore.markSyncedToCloud(missionId, localBackupItem.sha256Checksum);
+      return true;
+    }
+
+    // B. Créer le dossier distant
     await storageService.ensureFolderExists(accessToken, remoteFolderPath);
 
-    // 3. Téléverser par morceaux (Resumable Chunked Upload)
+    // C. Téléverser par morceaux (Resumable Chunked Upload)
+    onProgress?.call(0.2, 'Connexion au Cloud Microsoft...');
     final uploadSuccess = await storageService.uploadBackupFileChunked(
       accessToken: accessToken,
       file: localFile,
@@ -239,18 +296,18 @@ class BackupSyncRepositoryImpl implements BackupSyncRepository {
     );
 
     if (!uploadSuccess) {
-      onProgress?.call(0, 'Échec du téléversement vers le Cloud Microsoft');
+      onProgress?.call(0.5, 'Sauvegardée localement sur le téléphone (Upload Cloud temporairement échoué)');
       return false;
     }
 
-    // 4. Écrire le manifest.json de métadonnées
+    // D. Écrire le manifest.json de métadonnées
     final manifest = CloudBackupManifest(
       missionId: missionId,
       missionName: mission.nomClient,
       clientName: mission.nomClient,
       fileName: remoteFileName,
-      fileSizeBytes: fileSize,
-      sha256Checksum: checksumHex,
+      fileSizeBytes: localBackupItem.fileSizeBytes,
+      sha256Checksum: localBackupItem.sha256Checksum,
       backupCreatedAt: DateTime.now(),
       inspectorMatricule: matricule,
       inspectorName: user.displayName,
@@ -264,12 +321,10 @@ class BackupSyncRepositoryImpl implements BackupSyncRepository {
       remoteFolderPath: remoteFolderPath,
     );
 
-    // Nettoyage temporaire du fichier d'export local
-    try {
-      if (localFile.existsSync()) await localFile.delete();
-    } catch (_) {}
+    // Marquer la sauvegarde locale comme synchronisée
+    await localStore.markSyncedToCloud(missionId, localBackupItem.sha256Checksum);
 
-    onProgress?.call(1.0, 'Sauvegarde terminée avec succès !');
+    onProgress?.call(1.0, 'Sauvegarde terminée avec succès (Local + Cloud)');
     return true;
   }
 
@@ -306,7 +361,6 @@ class BackupSyncRepositoryImpl implements BackupSyncRepository {
 
     onProgress?.call(0.9, 'Restauration de la mission dans l\'application...');
 
-    // Appeler l'importateur BackupService existant
     final user = await authService.getSavedUserProfile();
     final importResult = await BackupService.importerSauvegardeFichier(
       filePath: downloadedFile.path,

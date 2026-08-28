@@ -270,6 +270,10 @@ class MissionBackupCard extends ConsumerWidget {
     switch (status) {
       case SyncStatus.upToDate:
         return const Color(0xFF10B981); // Vert
+      case SyncStatus.localOnly:
+        return const Color(0xFFF59E0B); // Ambre / Jaune
+      case SyncStatus.pendingUpload:
+        return const Color(0xFF3B82F6); // Bleu clair
       case SyncStatus.localModifications:
         return const Color(0xFFF59E0B); // Orange
       case SyncStatus.neverBackedUp:
@@ -292,13 +296,25 @@ class MissionBackupCard extends ConsumerWidget {
 
     switch (status) {
       case SyncStatus.upToDate:
-        text = 'À JOUR';
+        text = 'PROTÉGÉE (CLOUD & LOCAL)';
         bg = const Color(0xFFD1FAE5);
         fg = const Color(0xFF065F46);
         icon = Icons.check_circle_rounded;
         break;
+      case SyncStatus.localOnly:
+        text = 'PROTÉGÉE LOCALEMENT';
+        bg = const Color(0xFFFEF3C7);
+        fg = const Color(0xFFB45309);
+        icon = Icons.phonelink_lock_rounded;
+        break;
+      case SyncStatus.pendingUpload:
+        text = 'EN FILE D\'ATTENTE';
+        bg = const Color(0xFFDBEAFE);
+        fg = const Color(0xFF1E40AF);
+        icon = Icons.hourglass_top_rounded;
+        break;
       case SyncStatus.localModifications:
-        text = 'MODIFIÉE';
+        text = 'MODIFIÉE (LOCAL & CLOUD)';
         bg = const Color(0xFFFEF3C7);
         fg = const Color(0xFF92400E);
         icon = Icons.edit_note_rounded;
@@ -310,7 +326,7 @@ class MissionBackupCard extends ConsumerWidget {
         icon = Icons.cloud_off_rounded;
         break;
       case SyncStatus.syncing:
-        text = 'EN COURS';
+        text = 'TRANSFERT CLOUD';
         bg = const Color(0xFFDBEAFE);
         fg = const Color(0xFF1E40AF);
         icon = Icons.sync_rounded;
@@ -323,7 +339,7 @@ class MissionBackupCard extends ConsumerWidget {
         break;
       case SyncStatus.failed:
       case SyncStatus.interrupted:
-        text = 'ÉCHEC';
+        text = 'ÉCHEC CLOUD (RETRY)';
         bg = const Color(0xFFFEE2E2);
         fg = const Color(0xFF991B1B);
         icon = Icons.error_rounded;
