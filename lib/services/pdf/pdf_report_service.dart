@@ -7756,7 +7756,8 @@ class PdfReportService {
     }
 
     final rowBorder = const pw.Border(
-      bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+      top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5),
+      bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5),
     );
 
     final groups = <_PdfUnknownSourceGroup>[];
@@ -7782,14 +7783,27 @@ class PdfReportService {
         final idx = globalRowIndex++;
         final isEven = idx % 2 == 0;
         final bgColor = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
-        final isLastInGroup = (i == count - 1);
+        final isLastInGroup = (i == count - 1) || (idx == items.length - 1);
+        final isFirstInGroup = (i == 0);
+        final repereBorder = pw.Border(
+          top: isFirstInGroup
+              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
+              : pw.BorderSide.none,
+          bottom: isLastInGroup
+              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
+              : pw.BorderSide.none,
+        );
 
         rows.add(
           pw.TableRow(
             decoration: pw.BoxDecoration(color: bgColor),
             children: [
+              // Cellule 0 : Repère (centré au milieu du groupe, fond blanc unifié, masquage de bordures internes)
               pw.Container(
-                decoration: isLastInGroup ? pw.BoxDecoration(border: rowBorder) : null,
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.white,
+                  border: repereBorder,
+                ),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: i == midIndex
@@ -7800,6 +7814,8 @@ class PdfReportService {
                       )
                     : pw.SizedBox(),
               ),
+
+              // Cellule 1 : N° d'équipement (compte chaque équipement, avec bordure inférieure)
               pw.Container(
                 decoration: pw.BoxDecoration(border: rowBorder),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
@@ -7809,20 +7825,6 @@ class PdfReportService {
                   style: pw.TextStyle(font: _fontBold, fontSize: fsSmall),
                   textAlign: pw.TextAlign.center,
                 ),
-              ),
-
-              // Cellule 1 : Repère (centré au milieu du groupe, masquage de bordures internes)
-              pw.Container(
-                decoration: isLastInGroup ? pw.BoxDecoration(border: rowBorder) : null,
-                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                alignment: pw.Alignment.center,
-                child: i == midIndex
-                    ? pw.Text(
-                        group.repere,
-                        style: pw.TextStyle(font: _fontBold, fontSize: fsSmall),
-                        textAlign: pw.TextAlign.center,
-                      )
-                    : pw.SizedBox(),
               ),
 
               // Cellule 2 : Nom
@@ -7879,7 +7881,7 @@ class PdfReportService {
     }
 
     return pw.Table(
-      defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
       border: const pw.TableBorder(
         left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
         right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
@@ -7941,7 +7943,8 @@ class PdfReportService {
     }
 
     final rowBorder = const pw.Border(
-      bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+      top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5),
+      bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5),
     );
 
     final tableRows = <pw.TableRow>[
@@ -7979,16 +7982,29 @@ class PdfReportService {
         final eq = group.items[i];
         final currentEqNum = globalEquipementNumber++;
         final idx = globalRowIndex++;
-        final isLastInGroup = (i == count - 1);
-        final bg = idx % 2 == 0 ? PdfColors.white : PdfColors.grey100;
+        final isEven = idx % 2 == 0;
+        final bg = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
+        final isFirstInGroup = (i == 0);
+        final isLastInGroup = (i == count - 1) || (idx == items.length - 1);
+        final repereBorder = pw.Border(
+          top: isFirstInGroup
+              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
+              : pw.BorderSide.none,
+          bottom: isLastInGroup
+              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
+              : pw.BorderSide.none,
+        );
 
         tableRows.add(
           pw.TableRow(
             decoration: pw.BoxDecoration(color: bg),
             children: [
-              // Cellule 0 : Repère (centré au milieu du groupe, masquage de bordures internes)
+              // Cellule 0 : Repère (centré au milieu du groupe, fond blanc unifié, délimitation haute/basse)
               pw.Container(
-                decoration: isLastInGroup ? pw.BoxDecoration(border: rowBorder) : null,
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.white,
+                  border: repereBorder,
+                ),
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: i == midIndex
