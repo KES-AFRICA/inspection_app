@@ -31,6 +31,7 @@ class _SauvegardesScreenState extends ConsumerState<SauvegardesScreen> with Widg
       final user = HiveService.getCurrentUser();
       if (user != null) {
         ref.read(backupSchedulerServiceProvider).initializeWorkManager(user.matricule);
+        ref.read(backupJobManagerProvider).initialize(user.matricule);
       }
     });
   }

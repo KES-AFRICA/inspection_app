@@ -186,96 +186,220 @@ class MissionBackupCard extends ConsumerWidget {
 
             const SizedBox(height: 16),
 
-            // Boutons d'action intelligents
+            // Boutons d'action intelligents (Pause, Reprendre, Annuler, Sauvegarder, Restaurer)
             Row(
               children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: (isSyncing || syncState.status == SyncStatus.upToDate)
-                        ? null
-                        : () async {
-                            final success = await ref
-                                .read(backupSyncNotifierProvider.notifier)
-                                .backupMission(mission.id, currentMatricule);
+                if (syncState.status == SyncStatus.syncing) ...[
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final activeJob = await ref
+                            .read(backupJobManagerProvider)
+                            .getActiveJobForMission(mission.id);
+                        if (activeJob != null) {
+                          await ref
+                              .read(backupSyncNotifierProvider.notifier)
+                              .pauseBackup(activeJob.id);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFF59E0B),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      icon: const Icon(Icons.pause_circle_filled_rounded, size: 16),
+                      label: const Text(
+                        'Mettre en pause',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final activeJob = await ref
+                            .read(backupJobManagerProvider)
+                            .getActiveJobForMission(mission.id);
+                        if (activeJob != null) {
+                          await ref
+                              .read(backupSyncNotifierProvider.notifier)
+                              .cancelBackup(activeJob.id);
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red.shade700,
+                        side: BorderSide(color: Colors.red.shade300),
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      icon: const Icon(Icons.cancel_outlined, size: 16),
+                      label: const Text(
+                        'Annuler',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ] else if (syncState.status == SyncStatus.paused || syncState.status == SyncStatus.localOnly) ...[
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        final activeJob = await ref
+                            .read(backupJobManagerProvider)
+                            .getActiveJobForMission(mission.id);
+                        if (activeJob != null) {
+                          await ref
+                              .read(backupSyncNotifierProvider.notifier)
+                              .resumeBackup(activeJob.id, currentMatricule);
+                        } else {
+                          await ref
+                              .read(backupSyncNotifierProvider.notifier)
+                              .backupMission(mission.id, currentMatricule);
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF10B981),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      icon: const Icon(Icons.play_circle_fill_rounded, size: 16),
+                      label: const Text(
+                        'Reprendre',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: () async {
+                        final activeJob = await ref
+                            .read(backupJobManagerProvider)
+                            .getActiveJobForMission(mission.id);
+                        if (activeJob != null) {
+                          await ref
+                              .read(backupSyncNotifierProvider.notifier)
+                              .cancelBackup(activeJob.id);
+                        }
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red.shade700,
+                        side: BorderSide(color: Colors.red.shade300),
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      icon: const Icon(Icons.cancel_outlined, size: 16),
+                      label: const Text(
+                        'Annuler',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ),
+                ] else ...[
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: (isSyncing || syncState.status == SyncStatus.upToDate)
+                          ? null
+                          : () async {
+                              final success = await ref
+                                  .read(backupSyncNotifierProvider.notifier)
+                                  .backupMission(mission.id, currentMatricule);
 
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    success
-                                        ? 'Sauvegarde Cloud effectuée avec succès !'
-                                        : 'Échec de la sauvegarde.',
+                              if (context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      success
+                                          ? 'Sauvegarde Cloud effectuée avec succès !'
+                                          : 'Échec de la sauvegarde.',
+                                    ),
+                                    backgroundColor: success ? const Color(0xFF10B981) : Colors.red,
+                                    behavior: SnackBarBehavior.floating,
                                   ),
-                                  backgroundColor: success ? const Color(0xFF10B981) : Colors.red,
-                                  behavior: SnackBarBehavior.floating,
-                                ),
-                              );
-                            }
-                          },
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: syncState.status == SyncStatus.upToDate
-                          ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                          : const Color(0xFF0078D4),
-                      disabledBackgroundColor: syncState.status == SyncStatus.upToDate
-                          ? const Color(0xFF10B981).withValues(alpha: 0.15)
-                          : Colors.grey.shade300,
-                      foregroundColor: syncState.status == SyncStatus.upToDate
-                          ? const Color(0xFF047857)
-                          : Colors.white,
-                      disabledForegroundColor: syncState.status == SyncStatus.upToDate
-                          ? const Color(0xFF047857)
-                          : Colors.grey.shade600,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                      elevation: syncState.status == SyncStatus.upToDate ? 0 : 2,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: syncState.status == SyncStatus.upToDate
-                            ? const BorderSide(color: Color(0xFF10B981), width: 1)
-                            : BorderSide.none,
+                                );
+                              }
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: syncState.status == SyncStatus.upToDate
+                            ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                            : const Color(0xFF0078D4),
+                        disabledBackgroundColor: syncState.status == SyncStatus.upToDate
+                            ? const Color(0xFF10B981).withValues(alpha: 0.15)
+                            : Colors.grey.shade300,
+                        foregroundColor: syncState.status == SyncStatus.upToDate
+                            ? const Color(0xFF047857)
+                            : Colors.white,
+                        disabledForegroundColor: syncState.status == SyncStatus.upToDate
+                            ? const Color(0xFF047857)
+                            : Colors.grey.shade600,
+                        padding: const EdgeInsets.symmetric(vertical: 10),
+                        elevation: syncState.status == SyncStatus.upToDate ? 0 : 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                          side: syncState.status == SyncStatus.upToDate
+                              ? const BorderSide(color: Color(0xFF10B981), width: 1)
+                              : BorderSide.none,
+                        ),
+                      ),
+                      icon: Icon(
+                        syncState.status == SyncStatus.upToDate
+                            ? Icons.check_circle_rounded
+                            : Icons.cloud_upload_rounded,
+                        size: 16,
+                      ),
+                      label: Text(
+                        syncState.status == SyncStatus.upToDate
+                            ? 'Mission à jour'
+                            : 'Sauvegarder',
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    icon: Icon(
-                      syncState.status == SyncStatus.upToDate
-                          ? Icons.check_circle_rounded
-                          : Icons.cloud_upload_rounded,
-                      size: 16,
-                    ),
-                    label: Text(
-                      syncState.status == SyncStatus.upToDate
-                          ? 'Mission à jour'
-                          : syncState.status == SyncStatus.localModifications
-                              ? 'Sauvegarder'
-                              : 'Sauvegarder',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
                   ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: isSyncing || syncState.status == SyncStatus.neverBackedUp
-                        ? null
-                        : () {
-                            _confirmRestore(context, ref);
-                          },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF0F172A),
-                      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      onPressed: isSyncing || syncState.status == SyncStatus.neverBackedUp
+                          ? null
+                          : () {
+                              _confirmRestore(context, ref);
+                            },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: const Color(0xFF0F172A),
+                        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      icon: const Icon(Icons.cloud_download_rounded, size: 16),
+                      label: const Text(
+                        'Restaurer',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                    icon: const Icon(Icons.cloud_download_rounded, size: 16),
-                    label: const Text(
-                      'Restaurer',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
                   ),
-                ),
+                ],
               ],
             ),
           ],
