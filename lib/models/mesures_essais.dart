@@ -581,6 +581,11 @@ class EssaiIsolement {
   String get displaySectionPointA => _formatSectionValue(sectionCablePointA ?? sectionCable);
   String get displaySectionPointB => _formatSectionValue(sectionCablePointB ?? sectionCable);
   String get displayNombreCables => nombreCablesTestes != null ? nombreCablesTestes.toString() : '-';
+  String get displayIsolement {
+    if (appreciation == 'Sans objet') return 'Sans objet';
+    if (isolement <= 0) return '-';
+    return isolement % 1 == 0 ? isolement.toInt().toString() : isolement.toString().replaceAll('.', ',');
+  }
 
-  bool get isComplete => isolement > 0 && appreciation.isNotEmpty;
+  bool get isComplete => appreciation.isNotEmpty && (appreciation == 'Sans objet' || isolement > 0);
 }

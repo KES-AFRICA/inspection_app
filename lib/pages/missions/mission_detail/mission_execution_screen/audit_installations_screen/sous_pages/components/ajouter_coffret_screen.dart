@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
 import 'package:inspec_app/services/dispositions_constructives_registry.dart';
 import 'package:inspec_app/services/normative_reference_service.dart';
@@ -1732,6 +1731,8 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           case 'pdcKA': widget.protectionTete!.pdcKA = value; break;
           case 'calibre': widget.protectionTete!.calibre = value; break;
           case 'sectionCable': widget.protectionTete!.sectionCable = value; break;
+          case 'source': widget.protectionTete!.source = value; break;
+          case 'sourceKnown': widget.protectionTete!.sourceKnown = value; break;
           case 'marqueDisjoncteur': widget.protectionTete!.marqueDisjoncteur = value; break;
         }
         widget.onDataChanged();
@@ -1936,11 +1937,19 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             SizedBox(height: context.spacingM),
           ],
           if ((widget.selectedType == 'INVERSEUR' && (index == 0 || index == 1)) ||
-              (widget.selectedType != 'INVERSEUR' && !isProtectionTete && index == 0)) ...[
+              (widget.selectedType != 'INVERSEUR' && !isProtectionTete && index == 0) ||
+              isProtectionTete) ...[
             _buildReadOnlySourceField(
               context,
               label: 'Source',
               value: a.effectiveSourceKnown,
+            ),
+            SizedBox(height: context.spacingS),
+            _buildModernTextField(
+              context,
+              label: 'Origine de la source (Armoire de départ)',
+              controller: sourceCtrl,
+              onChanged: (v) => onChanged('source', v),
             ),
             SizedBox(height: context.spacingS),
           ],
@@ -1959,16 +1968,6 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           _buildModernDropdown(context, label: 'DDR IΔn (mA)', value: ddrVal, items: ddrItems, onChanged: (v) => onChanged('ddr', v)),
           SizedBox(height: context.spacingS),
           _buildModernDropdown(context, label: 'Section de câble', value: a.sectionCable, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCable', v)),
-          ...() {
-            String? pointControle;
-            if (widget.selectedType == 'INVERSEUR') {
-              if (index == 0) pointControle = 'Alimentation 1';
-              if (index == 1) pointControle = 'Alimentation 2';
-            } else if (!isProtectionTete && index == 0) {
-              pointControle = 'Origine de la source';
-            }
-            return <Widget>[];
-          }(),
         ],
       ),
     );

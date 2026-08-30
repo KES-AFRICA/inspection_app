@@ -14760,11 +14760,18 @@ class PdfReportService {
                 essaiColor = null;
               }
 
-              final circuitText =
-                  (es.designationCircuit != null &&
-                      es.designationCircuit!.isNotEmpty)
-                  ? es.designationCircuit!
-                  : es.coffret ?? "";
+              final hasCoffret = es.coffret != null && es.coffret!.trim().isNotEmpty;
+              final hasCircuit = es.designationCircuit != null && es.designationCircuit!.trim().isNotEmpty;
+              final String circuitText;
+              if (hasCoffret && hasCircuit && es.coffret!.trim() != es.designationCircuit!.trim()) {
+                circuitText = '${es.coffret!.trim()} - ${es.designationCircuit!.trim()}';
+              } else if (hasCircuit) {
+                circuitText = es.designationCircuit!.trim();
+              } else if (hasCoffret) {
+                circuitText = es.coffret!.trim();
+              } else {
+                circuitText = '-';
+              }
               final localText = es.localisation.trim().isEmpty
                   ? "-"
                   : es.localisation.trim();
@@ -15010,7 +15017,7 @@ class PdfReportService {
                         ),
                         alignment: pw.Alignment.center,
                         child: pw.Text(
-                          _formatIsolement(ei.isolement),
+                          ei.displayIsolement,
                           style: pw.TextStyle(
                             font: _fontRegular,
                             fontSize: fsSmall,

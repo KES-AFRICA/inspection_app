@@ -714,15 +714,22 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
       return;
     }
 
-    final isoValue = double.tryParse(_isolementController.text.trim().replaceAll(',', '.'));
-    if (isoValue == null || isoValue <= 0) {
-      _showErrorSnackBar('Veuillez saisir une valeur d\'isolement valide (MΩ).');
-      return;
-    }
-
     if (_selectedAppreciation == null || _selectedAppreciation!.isEmpty) {
       _showErrorSnackBar('Veuillez sélectionner une appréciation.');
       return;
+    }
+
+    final isSansObjet = _selectedAppreciation == 'Sans objet';
+    final double isoValue;
+    if (isSansObjet) {
+      isoValue = 0.0;
+    } else {
+      final parsedIso = double.tryParse(_isolementController.text.trim().replaceAll(',', '.'));
+      if (parsedIso == null || parsedIso <= 0) {
+        _showErrorSnackBar('Veuillez saisir une valeur d\'isolement valide (MΩ).');
+        return;
+      }
+      isoValue = parsedIso;
     }
 
     setState(() => _isSaving = true);
@@ -1126,13 +1133,16 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                       SizedBox(height: _spacingM),
 
                       // Isolement (MΩ)
-                      Text('Isolement (MΩ) *', style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600)),
+                      Text(
+                        _selectedAppreciation == 'Sans objet' ? 'Isolement (MΩ)' : 'Isolement (MΩ) *',
+                        style: TextStyle(fontSize: _fontSizeM, fontWeight: FontWeight.w600),
+                      ),
                       const SizedBox(height: 6),
                       TextFormField(
                         controller: _isolementController,
                         keyboardType: const TextInputType.numberWithOptions(decimal: true),
                         decoration: InputDecoration(
-                          hintText: 'Ex: 250.0',
+                          hintText: _selectedAppreciation == 'Sans objet' ? 'Sans objet (0.0)' : 'Ex: 250.0',
                           hintStyle: TextStyle(fontSize: 12, color: Colors.grey.shade400),
                           suffixText: 'MΩ',
                           suffixStyle: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue),
@@ -1142,6 +1152,7 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
                           border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                         ),
                         validator: (val) {
+                          if (_selectedAppreciation == 'Sans objet') return null;
                           if (val == null || val.trim().isEmpty) return 'Champ obligatoire';
                           final numVal = double.tryParse(val.trim().replaceAll(',', '.'));
                           if (numVal == null || numVal <= 0) return 'Saisir une valeur valide (ex: 250.0)';
