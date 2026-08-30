@@ -597,187 +597,184 @@ class DispositionsConstructivesRegistry {
   ];
 
   /// Registre spécifique des métadonnées pour le local Groupe Électrogène
-  static final Map<String, DispositionMetadata> _geRegistry = {
-    // --- DISPOSITIONS CONSTRUCTIVES GROUPE ÉLECTROGENE ---
+  static const Map<String, DispositionMetadata> _geRegistry = {
     "Sol du local imperméable et formé comme une cuvette étanche, le seuil des baies étant surélevé d'au moins 0,10 mètre et toutes dispositions doivent être prises pour que le combustible accidentellement répandu ne puisse se déverser par les orifices placés dans le sol.": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 551 et prescriptions du fabricant",
+      referenceNormative: "NF C 15-100-1:2024 – art 551 ; prescriptions du fabricant et réglementation applicable au stockage des combustibles",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
     'Signalisation visible "Local électrique – Accès réservé au personnel habilité"': DispositionMetadata(
-      referenceNormative: "NF C 15-100-7-729:2024 – § 729",
+      referenceNormative: "NF C 15-100-1:2024 – art 514 ; exigence spécifique de local électrique à confirmer sur NF C 15-100-7-729 (non fournie)",
       familleRisque: "Accès non autorisé / risque électrique",
       criticite: "Majeure",
     ),
     "Dimensions": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      referenceNormative: "NF C 15-100-1:2024 – art 513 et art 512.2",
       familleRisque: "Protection mécanique / pénétration corps solides-liquides",
       criticite: "Majeure",
     ),
     "Parois, plancher et plafond en matériaux non combustibles coupe-feu de degré 2 heures": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      referenceNormative: "NF C 15-100-1:2024 – art 421, art 422 et art 527",
       familleRisque: "Incendie / propagation du feu",
       criticite: "Majeure",
     ),
     "Présence d'une porte pleine coupe-feu de degré 1 heure, ouvrant vers l'extérieur, munie d'un dispositif antipanique": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      referenceNormative: "NF C 15-100-1:2024 – art 421, art 422 et art 513 ; exigences détaillées de porte coupe-feu à compléter par le référentiel bâtiment applicable",
       familleRisque: "Incendie / propagation du feu",
       criticite: "Majeure",
     ),
     "Absence de communication directe avec les locaux à risque": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      referenceNormative: "NF C 15-100-1:2024 – art 512.2 et art 522",
       familleRisque: "Protection mécanique / pénétration corps solides-liquides",
       criticite: "Majeure",
     ),
     "Absence de stockage d'objets non électriques": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      referenceNormative: "NF C 15-100-1:2024 – art 421 et art 422",
       familleRisque: "Incendie / propagation du feu",
       criticite: "Majeure",
     ),
     "Présence d'une rétention adaptée au stockage et aux fuites de combustible": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      referenceNormative: "NF C 15-100-1:2024 – art 551 ; prescriptions du fabricant et réglementation applicable",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
     "Présence d'un dispositif d'arrêt d'urgence accessible et identifié": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 462, § 465 et § 537",
+      referenceNormative: "NF C 15-100-1:2024 – art 465 et art 537",
       familleRisque: "Sécurité des interventions / arrêt d’urgence",
       criticite: "Critique",
     ),
     "Canalisations du combustible": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      referenceNormative: "NF C 15-100-1:2024 – art 551 ; prescriptions du fabricant",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
     "Absence de canalisations étrangères": DispositionMetadata(
-      referenceNormative: "NF C 15-100-7-729:2024 – § 729",
+      referenceNormative: "NF C 15-100-1:2024 – art 514 ; exigence spécifique de séparation des locaux à confirmer sur le référentiel applicable",
       familleRisque: "Sécurité d’exploitation",
       criticite: "Majeure",
     ),
     "Éclairage normal": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 559",
+      referenceNormative: "NF C 15-100-1:2024 – art 559",
       familleRisque: "Sécurité d’exploitation",
       criticite: "Majeure",
     ),
     "Éclairage de secours conforme": DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – Partie 5-56",
-      familleRisque: "Évacuation / continuité des installations de sécurité",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
     "Ventilation": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
-      familleRisque: "Échauffement / conditions d’environnement",
+      referenceNormative: "NF C 15-100-1:2024 – art 512.2 et art 551",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
     "Moyens d'extinction adaptés aux risques électriques et de carburant": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      referenceNormative: "NF C 15-100-1:2024 – art 421, art 422 et art 551 ; moyens d'extinction à adapter au risque",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
     "État et étanchéité des conduites et raccords de combustible": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      referenceNormative: "NF C 15-100-1:2024 – art 551 ; prescriptions du fabricant",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
     "Évacuation des gaz d'échappement vers l'extérieur sans risque pour les occupants": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      referenceNormative: "NF C 15-100-1:2024 – art 551 ; prescriptions du fabricant",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
     "Protection des parties chaudes et du conduit d'échappement": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      referenceNormative: "NF C 15-100-1:2024 – art 423 et art 551 ; prescriptions du fabricant",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
     "Ventilation suffisante pour le refroidissement et la combustion": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
-      familleRisque: "Échauffement / conditions d’environnement",
+      referenceNormative: "NF C 15-100-1:2024 – art 512.2 et art 551",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
     "Mise à la terre de toutes les masses métalliques": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 542 et § 543",
+      referenceNormative: "NF C 15-100-1:2024 – art 542 et art 543",
       familleRisque: "Électrisation / défaut de mise à la terre",
       criticite: "Critique",
     ),
     "Mise à la terre du châssis du groupe électrogène": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 542 et § 543",
+      referenceNormative: "NF C 15-100-1:2024 – art 542 et art 543",
       familleRisque: "Électrisation / défaut de mise à la terre",
       criticite: "Critique",
     ),
-
-    // --- CONDITIONS D'EXPLOITATION GROUPE ÉLECTROGENE ---
     "Accès réservé au personnel habilité (habilitation électrique à jour)": DispositionMetadata(
-      referenceNormative: "NF C 18-510",
+      referenceNormative: "NF C 15-100-1:2024 – art 6.5.1.2 ; NF C 18-510 (complémentaire, non fournie)",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
     "Présence d'un dispositif de mise hors tension générale du local": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 462, § 465 et § 537",
+      referenceNormative: "NF C 15-100-1:2024 – art 462, art 465 et art 537",
       familleRisque: "Sécurité des interventions / arrêt d’urgence",
       criticite: "Critique",
     ),
     "Présence et accessibilité des EPI électriques (gants, visière, tapis)": DispositionMetadata(
-      referenceNormative: "NF C 18-510",
+      referenceNormative: "NF C 18-510 (complémentaire, non fournie) ; NF C 15-100-1:2024 – art 6.5.1.2",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
     "Zone dégagée et propre, sans obstruction des voies d'accès": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 513",
+      referenceNormative: "NF C 15-100-1:2024 – art 513",
       familleRisque: "Accès / exploitation / intervention",
       criticite: "Majeure",
     ),
     "Absence de stockage de matériaux inflammables": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      referenceNormative: "NF C 15-100-1:2024 – art 421 et art 422",
       familleRisque: "Incendie / propagation du feu",
       criticite: "Majeure",
     ),
     "Présence d'un plan d'intervention et de consignation affiché": DispositionMetadata(
-      referenceNormative: "NF C 18-510",
+      referenceNormative: "NF C 15-100-1:2024 – art 514 ; NF C 18-510 (complémentaire, non fournie)",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
     "Disponibilité des consignes de démarrage, arrêt normal et arrêt d'urgence": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 462, § 465 et § 537",
+      referenceNormative: "NF C 15-100-1:2024 – art 551.2.4, art 465 et art 537",
       familleRisque: "Sécurité des interventions / arrêt d’urgence",
       criticite: "Critique",
     ),
     "Disponibilité du schéma de raccordement et de l'inverseur de sources": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551",
+      referenceNormative: "NF C 15-100-1:2024 – art 551.2.4 et art 537",
       familleRisque: "Défaillance de la source de remplacement / continuité de service",
       criticite: "Majeure",
     ),
     "Contrôle du niveau de carburant, huile et liquide de refroidissement": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      referenceNormative: "NF C 15-100-1:2024 – art 551 ; prescriptions du fabricant",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
     "Absence de fuite de carburant ou d'huile lors de l'exploitation": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551 et prescriptions du fabricant",
+      referenceNormative: "NF C 15-100-1:2024 – art 551 ; prescriptions du fabricant",
       familleRisque: "Incendie / brûlure / fuite de combustible",
       criticite: "Critique",
     ),
     "Essai périodique du démarrage automatique du groupe électrogène": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551",
+      referenceNormative: "NF C 15-100-1:2024 – art 551.2 et art 6.5",
       familleRisque: "Défaillance de la source de remplacement / continuité de service",
       criticite: "Majeure",
     ),
     "Traçabilité des essais périodiques et opérations de maintenance": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 561",
-      familleRisque: "Évacuation / sécurité incendie",
+      referenceNormative: "NF C 15-100-1:2024 – art 6.5 et art 6.6",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
     "Vérification du fonctionnement des alarmes et sécurités moteur": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551",
+      referenceNormative: "NF C 15-100-1:2024 – art 551.2 ; dispositifs d'alarme/sécurité selon le fabricant",
       familleRisque: "Défaillance de la source de remplacement / continuité de service",
       criticite: "Majeure",
     ),
     "Matériel de consignation (cadenas, étiquettes, détecteur de tension) disponible": DispositionMetadata(
-      referenceNormative: "NF C 18-510",
+      referenceNormative: "NF C 18-510 (complémentaire, non fournie) ; NF C 15-100-1:2024 – art 537",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
     "Extincteur CO₂ disponible et vérifié (date de validité à jour)": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      referenceNormative: "NF C 15-100-1:2024 – art 421 et art 422",
       familleRisque: "Erreur d’exploitation / maintenance",
       criticite: "Majeure",
     ),
@@ -860,187 +857,184 @@ class DispositionsConstructivesRegistry {
   ];
 
   /// Registre spécifique des métadonnées pour le local Basse Tension (BT)
-  static final Map<String, DispositionMetadata> _btRegistry = {
-    // --- DISPOSITIONS CONSTRUCTIVES BT ---
+  static const Map<String, DispositionMetadata> _btRegistry = {
     "Le local est exclusivement réservé à l'usage électrique": DispositionMetadata(
-      referenceNormative: "NF C 15-100-7-729:2024 – art 729",
-      familleRisque: "Sécurité d'exploitation",
+      referenceNormative: "NF C 15-100-1:2024 – art 513 et art 514 (aspects accessibilité/identification) ; exigence spécifique de local électrique à confirmer sur NF C 15-100-7-729 (non fournie)",
+      familleRisque: "Sécurité d’exploitation",
       criticite: "Majeure",
     ),
     'Signalisation visible "Local électrique – Accès réservé au personnel habilité"': DispositionMetadata(
-      referenceNormative: "NF C 15-100-7-729:2024 – § 729",
+      referenceNormative: "NF C 15-100-1:2024 – art 514 ; exigence spécifique de signalisation du local à confirmer sur NF C 15-100-7-729 (non fournie)",
       familleRisque: "Accès non autorisé / risque électrique",
       criticite: "Majeure",
     ),
     "Dimensions": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      referenceNormative: "NF C 15-100-1:2024 – art 513 et art 512.2 ; les dimensions précises du local ne sont pas fixées par la partie jointe",
       familleRisque: "Protection mécanique / pénétration corps solides-liquides",
       criticite: "Majeure",
     ),
     "Parois, plancher et plafond en matériaux non combustibles": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      referenceNormative: "NF C 15-100-1:2024 – art 421, art 422 et art 527",
       familleRisque: "Incendie / propagation du feu",
       criticite: "Majeure",
     ),
     "Présence d'une porte pleine, ouvrant vers l'extérieur, munie d'un dispositif anti-panique": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 462",
+      referenceNormative: "NF C 15-100-1:2024 – art 513 ; les exigences détaillées de porte/anti-panique sont à compléter par le référentiel bâtiment/local applicable",
       familleRisque: "Sécurité des interventions",
       criticite: "Majeure",
     ),
     "Verrouillage empêchant tout accès non autorisé": DispositionMetadata(
-      referenceNormative: "NF C 15-100-7-729:2024 – § 729",
+      referenceNormative: "NF C 15-100-1:2024 – art 513 et art 514 ; exigence spécifique de verrouillage du local à confirmer sur NF C 15-100-7-729 (non fournie)",
       familleRisque: "Accès non autorisé / risque électrique",
       criticite: "Majeure",
     ),
     "Absence de communication directe avec les locaux à risque": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+      referenceNormative: "NF C 15-100-1:2024 – art 512.2 et art 522",
       familleRisque: "Protection mécanique / pénétration corps solides-liquides",
       criticite: "Majeure",
     ),
     "Absence de stockage d'objets non électriques": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      referenceNormative: "NF C 15-100-1:2024 – art 421, art 422 et art 527",
       familleRisque: "Incendie / propagation du feu",
       criticite: "Majeure",
     ),
     "Accessibilité du local et dégagement permanent devant les tableaux": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 513",
+      referenceNormative: "NF C 15-100-1:2024 – art 513",
       familleRisque: "Accès / exploitation / intervention",
       criticite: "Majeure",
     ),
     "Obturation des traversées et maintien du degré coupe-feu des parois": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      referenceNormative: "NF C 15-100-1:2024 – art 421, art 422 et art 527",
       familleRisque: "Incendie / propagation du feu",
       criticite: "Majeure",
     ),
     "Présence et lisibilité des consignes de sécurité": DispositionMetadata(
-      referenceNormative: "NF C 18-510",
+      referenceNormative: "NF C 15-100-1:2024 – art 514 ; NF C 18-510 (référence complémentaire, non fournie)",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
     "Identification du schéma de liaison à la terre de l'installation": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      referenceNormative: "NF C 15-100-1:2024 – art 514",
       familleRisque: "Erreur d’exploitation / maintenance",
       criticite: "Majeure",
     ),
     "Présence de canalisations étrangères": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      referenceNormative: "NF C 15-100-1:2024 – art 512.2 et art 522",
       familleRisque: "Erreur d’exploitation / maintenance",
       criticite: "Majeure",
     ),
     "Absence d'infiltration d'eau, humidité ou condensation": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 512.2 et § 522",
+      referenceNormative: "NF C 15-100-1:2024 – art 421, art 422 et art 527",
       familleRisque: "Humidité / défaut d’isolement / électrisation",
       criticite: "Critique",
     ),
     "Éclairage normal": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 559",
+      referenceNormative: "NF C 15-100-1:2024 – art 512.2 et art 522",
       familleRisque: "Sécurité d’exploitation",
       criticite: "Majeure",
     ),
     "Éclairage de secours conforme": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – Partie 5-56",
-      familleRisque: "Évacuation / continuité des installations de sécurité",
+      referenceNormative: "NF C 15-100-1:2024 – art 559",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
     "Ventilation / Climatisation": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
-      familleRisque: "Échauffement / conditions d’environnement",
+      referenceNormative: "NF C 15-100-1:2024 – Partie 5-56 ; vérification détaillée à compléter avec le référentiel des installations de sécurité applicable",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
     "Revêtement de sol isolant ou antidérapant": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 555",
+      referenceNormative: "NF C 15-100-1:2024 – art 411, selon la mesure de protection retenue ; art 512.2 pour les influences externes",
       familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
     "Présence d'un revêtement diélectrique ou isolant au sol": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 555",
+      referenceNormative: "NF C 15-100-1:2024 – art 411, selon la mesure de protection retenue",
       familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
     "Mise à la terre de toutes les masses métalliques": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 542 et § 543",
+      referenceNormative: "NF C 15-100-1:2024 – art 542 et art 543",
       familleRisque: "Électrisation / défaut de mise à la terre",
       criticite: "Critique",
     ),
     "Présence de la terre du neutre": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 542 et § 543",
+      referenceNormative: "NF C 15-100-1:2024 – art 312.2 et art 542, selon le schéma de liaison à la terre",
       familleRisque: "Électrisation / défaut de mise à la terre",
       criticite: "Critique",
     ),
     "Présence de la terre des masses": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 542 et § 543",
+      referenceNormative: "NF C 15-100-1:2024 – art 411, art 542 et art 543",
       familleRisque: "Électrisation / défaut de mise à la terre",
       criticite: "Critique",
     ),
     "Continuité des liaisons équipotentielles principales": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 544",
+      referenceNormative: "NF C 15-100-1:2024 – art 544",
       familleRisque: "Électrisation / défaut d’équipotentialité",
       criticite: "Critique",
     ),
-
-    // --- CONDITIONS D'EXPLOITATION BT ---
     "Accès réservé au personnel habilité (habilitation électrique à jour)": DispositionMetadata(
-      referenceNormative: "NF C 18-510",
+      referenceNormative: "NF C 15-100-1:2024 – art 6.5.1.2 ; NF C 18-510 (référence complémentaire pour l'habilitation, non fournie)",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
     "Présence d'un dispositif de mise hors tension générale du local": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 462, § 465 et § 537",
+      referenceNormative: "NF C 15-100-1:2024 – art 462, art 465 et art 537",
       familleRisque: "Sécurité des interventions / arrêt d’urgence",
       criticite: "Critique",
     ),
     "Présence et accessibilité des EPI électriques (gants, visière, tapis)": DispositionMetadata(
-      referenceNormative: "NF C 18-510",
+      referenceNormative: "NF C 18-510 (référence complémentaire, non fournie) ; NF C 15-100-1:2024 – art 6.5.1.2",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
     "Zone dégagée et propre, sans obstruction des voies d'accès": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 513",
+      referenceNormative: "NF C 15-100-1:2024 – art 513",
       familleRisque: "Accès / exploitation / intervention",
       criticite: "Majeure",
     ),
     "Absence de stockage de matériaux inflammables": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 421, § 422 et § 527",
+      referenceNormative: "NF C 15-100-1:2024 – art 421 et art 422",
       familleRisque: "Incendie / propagation du feu",
       criticite: "Majeure",
     ),
     "Accès permanent aux dispositifs de coupure d'urgence": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 462, § 465 et § 537",
+      referenceNormative: "NF C 15-100-1:2024 – art 465 et art 537",
       familleRisque: "Sécurité des interventions / arrêt d’urgence",
       criticite: "Critique",
     ),
     "Absence de pièces nues sous tension accessibles": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 411 et Annexe 41A",
+      referenceNormative: "NF C 15-100-1:2024 – art 411 et Annexe 41A",
       familleRisque: "Électrisation / électrocution",
       criticite: "Critique",
     ),
     "Présence d'un plan d'intervention et de consignation affiché": DispositionMetadata(
-      referenceNormative: "NF C 18-510",
+      referenceNormative: "NF C 15-100-1:2024 – art 514 ; NF C 18-510 (complémentaire, non fournie)",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
     "Disponibilité et mise à jour du schéma unifilaire": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      referenceNormative: "NF C 15-100-1:2024 – art 514",
       familleRisque: "Erreur d’exploitation / maintenance",
       criticite: "Majeure",
     ),
     "Traçabilité des opérations de maintenance et des vérifications": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 561",
-      familleRisque: "Évacuation / sécurité incendie",
+      referenceNormative: "NF C 15-100-1:2024 – art 6.5 et art 6.6",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
     "Matériel de consignation (cadenas, étiquettes, détecteur de tension) disponible": DispositionMetadata(
-      referenceNormative: "NF C 18-510",
+      referenceNormative: "NF C 18-510 (référence complémentaire, non fournie) ; NF C 15-100-1:2024 – art 537",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
     "Extincteur CO₂ disponible et vérifié (date de validité à jour)": DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 514",
+      referenceNormative: "NF C 15-100-1:2024 – art 421 et art 422",
       familleRisque: "Erreur d’exploitation / maintenance",
       criticite: "Majeure",
     ),
     "Disponibilité d'une procédure de consignation électrique": DispositionMetadata(
-      referenceNormative: "NF C 18-510",
+      referenceNormative: "NF C 18-510 (référence complémentaire, non fournie) ; NF C 15-100-1:2024 – art 537",
       familleRisque: "Sécurité des interventions / risque électrique",
       criticite: "Majeure",
     ),
@@ -1380,150 +1374,173 @@ class DispositionsConstructivesRegistry {
   ];
 
   /// Registre spécifique des métadonnées pour Coffret / Armoire / TGBT
-  static final Map<String, DispositionMetadata> _coffretRegistry = {
-    "Emplacement / Dégagement autour": const DispositionMetadata(
+  static const Map<String, DispositionMetadata> _coffretRegistry = {
+    "TGBT XXXXXX - Localisation - Zone (L'inspecteur va faire la recherche)": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Present / Absent": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Emplacement / Dégagement autour": DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 513",
       familleRisque: "Accès / exploitation / intervention",
       criticite: "Majeure",
     ),
-    "Compatibilité du degré IP/IK avec l'environnement d'installation": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+    "Compatibilité du degré IP/IK avec l'environnement d'installation": DispositionMetadata(
+      referenceNormative: "Recherche automatique suivant le classement de la zone ou du local, quand c'est absent ça devient par defaut non conforme",
       familleRisque: "Contact électrique / influences externes / protection mécanique",
       criticite: "Majeure",
     ),
-    "Présence d'écrans ou plastrons empêchant l'accès aux parties actives": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 411 et Annexe 41A",
+    "Présence d'écrans ou plastrons empêchant l'accès aux parties actives": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 411 et Annexe 41A",
       familleRisque: "Électrisation / électrocution",
       criticite: "Critique",
     ),
-    "Continuité de la mise à la terre des portes et parties métalliques": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-7-729:2024 – § 729",
+    "Continuité de la mise à la terre des portes et parties métalliques": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 544",
       familleRisque: "Sécurité d’exploitation",
       criticite: "Majeure",
     ),
-    "Réserve disponible et obturation des emplacements non utilisés": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 411 et Annexe 41A",
+    "Réserve disponible et obturation des emplacements non utilisés": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 411 et Annexe 41A",
       familleRisque: "Électrisation / contact avec parties actives",
       criticite: "Critique",
     ),
-    "Présence d'une coupure générale clairement identifiée et accessible": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 462, § 465 et § 537",
+    "Présence d'une coupure générale clairement identifiée et accessible": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 462, art 465 et art 537",
       familleRisque: "Sécurité des interventions / arrêt d’urgence",
       criticite: "Critique",
     ),
-    "Identification complète des circuits": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 514",
+    "Identification complète des circuits": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 514",
       familleRisque: "Erreur d’exploitation / maintenance",
       criticite: "Majeure",
     ),
-    "Respect code couleur des câbles": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 514",
+    "Respect code couleur des câbles": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 514",
       familleRisque: "Erreur d’exploitation / maintenance",
       criticite: "Majeure",
     ),
-    "Présence et lisibilité du schéma unifilaire et du repérage des départs": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 514",
+    "Présence et lisibilité du schéma unifilaire et du repérage des départs": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 514",
       familleRisque: "Erreur d’exploitation / maintenance",
       criticite: "Majeure",
     ),
-    "Etat du Coffret / Armoire / TGBT": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – Annexe 41B",
+    "Etat du Coffret / Armoire / TGBT": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 6.6.4.3.1",
       familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
-    "Câblage": const DispositionMetadata(
+    "Câblage": DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – Partie 5-52",
-      familleRisque: "Dégradation des canalisations / échauffement / court-circuit",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
-    "Répartiteur de circuit": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 526 et § 533",
-      familleRisque: "Échauffement / surcharge / incendie",
+    "Répartiteur de circuit": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 526 et art 533",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Critique",
     ),
-    "Absence de surcharge des répartiteurs, borniers et jeux de barres": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 526 et § 533",
-      familleRisque: "Échauffement / surcharge / incendie",
+    "Absence de surcharge des répartiteurs, borniers et jeux de barres": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 523 et art 526",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Critique",
     ),
-    "État, fixation et protection des jeux de barres": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 526 et § 533",
-      familleRisque: "Échauffement / surcharge / incendie",
+    "État, fixation et protection des jeux de barres": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 523 et art 526",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Critique",
     ),
-    "Contrôle thermographique des connexions, et protections": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 6.6.4.3.2",
-      familleRisque: "Incendie / échauffement",
+    "Répartition des circuits": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 314",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
-    "Répartition des circuits": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 314",
-      familleRisque: "Continuité de service / surcharge / exploitation",
-      criticite: "Majeure",
-    ),
-    "Continuité du conducteur de protection (PE)": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 543 et § 6.4.3.2",
+    "Continuité du conducteur de protection (PE)": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 543 et art 6.4.3.8",
       familleRisque: "Électrisation / défaut de continuité de protection",
       criticite: "Critique",
     ),
-    "Contrôle du courant dans le conducteur neutre": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 524.2",
-      familleRisque: "Échauffement du neutre / harmoniques",
+    "Contrôle du courant dans le conducteur neutre": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 524.2",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
-    "Protection contre les contacts directs (capots, caches, bornes protégées)": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 411 et Annexe 41A",
+    "Protection contre les contacts directs (capots, caches, bornes protégées)": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 411 et Annexe 41A",
       familleRisque: "Électrisation / électrocution",
       criticite: "Critique",
     ),
-    "Présence et fonctionnement des dispositifs de protection": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 430 à § 436 et § 533",
+    "Présence et fonctionnement des dispositifs de protection": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 430 à art 436 et art 533",
       familleRisque: "Surintensité / court-circuit / incendie",
       criticite: "Critique",
     ),
-    "Adéquation des dispositifs de protection": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 430 à § 436 et § 533",
+    "Adéquation des dispositifs de protection": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 430 à art 436 et art 533",
       familleRisque: "Surintensité / court-circuit / incendie",
       criticite: "Critique",
     ),
-    "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés": const DispositionMetadata(
+    "Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés": DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 523, art 524 et art 433",
       familleRisque: "Incendie / échauffement / surcharge des conducteurs",
       criticite: "Critique",
     ),
-    "Coordination entre dispositifs de protection et contacteurs": const DispositionMetadata(
+    "Section des câbles de départs adaptée au courant nominal des disjoncteurs associés": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 523, art 524 et art 433",
+      familleRisque: "Incendie / échauffement / surcharge des conducteurs",
+      criticite: "Critique",
+    ),
+    "Calibre des disjoncteurs / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 434 et art 533",
+      familleRisque: "Incendie / échauffement / surcharge des conducteurs",
+      criticite: "Critique",
+    ),
+    "Coordination entre disjoncteurs et contacteurs": DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 536",
-      familleRisque: "Défaut de coordination / perte de sélectivité",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
-    "Coordination entre dispositifs de protection": const DispositionMetadata(
+    "Coordination entre disjoncteurs": DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 536",
-      familleRisque: "Défaut de coordination / perte de sélectivité",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
-    "Protection contre les contacts indirects": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 411",
+    "Protection contre les contacts indirects": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 411",
       familleRisque: "Électrisation / électrocution",
       criticite: "Critique",
     ),
-    "Sélectivité et coordination des protections (montée sélective des calibres)": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 536",
-      familleRisque: "Défaut de coordination / perte de sélectivité",
+    "Sélectivité  des protections (montée sélective des calibres)": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 536",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
-    "Présence et conformité du dispositif de protection contre les surtensions (parafoudre)": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 443 et § 534",
+    "Dispositif de protection contre les surtensions (parafoudre)": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 443 et art 534",
       familleRisque: "Surtension / foudre / détérioration des équipements",
       criticite: "Majeure",
     ),
-    "Coordination du parafoudre avec les protections amont et aval": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 443 et § 534",
+    "Coordination du parafoudre avec les protections amont et aval": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 443 et art 534",
       familleRisque: "Surtension / foudre / détérioration des équipements",
       criticite: "Majeure",
     ),
-    "Présence de double alimentation électrique": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 465",
+    "Présence de double alimentation électrique": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 313, art 551 et art 537 (selon la nature des deux sources)",
       familleRisque: "Sécurité des interventions / arrêt d’urgence",
+      criticite: "Majeure",
+    ),
+  };
+
+  static const Map<String, DispositionMetadata> _legacyRegistry = {
+    "Contrôle thermographique des connexions, et protections": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 6.6.4.3.2 (thermographie infrarouge en maintenance préventive)",
+      familleRisque: "Incendie / échauffement",
       criticite: "Majeure",
     ),
   };
@@ -1617,6 +1634,17 @@ class DispositionsConstructivesRegistry {
       }
     }
 
+    // Fallback historique sur le registre legacy
+    if (_legacyRegistry.containsKey(pointVerification)) {
+      return _legacyRegistry[pointVerification];
+    }
+    final normKeyLegacy = _normalizeKey(pointVerification);
+    for (final entry in _legacyRegistry.entries) {
+      if (_normalizeKey(entry.key) == normKeyLegacy) {
+        return entry.value;
+      }
+    }
+
     return null;
   }
 
@@ -1656,161 +1684,161 @@ class DispositionsConstructivesRegistry {
   ];
 
   /// Registre spécifique des métadonnées pour Inverseur de Source
-  static final Map<String, DispositionMetadata> _inverseurRegistry = {
-    "Emplacement / Dégagement autour": const DispositionMetadata(
+  static const Map<String, DispositionMetadata> _inverseurRegistry = {
+    "SORTIE INVERSEUR": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Emplacement / Dégagement autour": DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 513",
       familleRisque: "Accès / exploitation / intervention",
       criticite: "Majeure",
     ),
-    "Protection IP/IK adaptée au local d'installation": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 512.2",
+    "Protection IP/IK adaptée au local d'installation": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 512.2",
       familleRisque: "Protection mécanique / pénétration corps solides-liquides",
       criticite: "Majeure",
     ),
-    "Interverrouillage empêchant le couplage intempestif des deux sources": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551 et § 536",
+    "Interverrouillage empêchant le couplage intempestif des deux sources": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 551.2.1, art 551.2.2 et art 537",
       familleRisque: "Couplage intempestif / retour de tension / perte de continuité",
       criticite: "Critique",
     ),
-    "Identification complète des circuits": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 514",
+    "Identification complète des circuits": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 514",
       familleRisque: "Erreur d’exploitation / maintenance",
       criticite: "Majeure",
     ),
-    "Respect code couleur des câbles": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 514",
+    "Respect code couleur des câbles": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 514",
       familleRisque: "Erreur d’exploitation / maintenance",
       criticite: "Majeure",
     ),
-    "Identification claire des deux sources et de la source prioritaire": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 514",
+    "Identification claire des deux sources et de la source prioritaire": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 514 et art 551.2.1",
       familleRisque: "Erreur d’exploitation / maintenance",
       criticite: "Majeure",
     ),
-    "Signalisation de la position des sources et de l'état de l'inverseur": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 514",
+    "Signalisation de la position des sources et de l'état de l'inverseur": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 514 et art 551.2.4",
       familleRisque: "Erreur d’exploitation / maintenance",
       criticite: "Majeure",
     ),
-    "Etat du coffret / Armoire": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – Annexe 41B",
+    "Etat du coffret / Armoire": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 6.6.4.3.1",
       familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
-    "Câblage": const DispositionMetadata(
+    "Câblage": DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – Partie 5-52",
-      familleRisque: "Dégradation des canalisations / échauffement / court-circuit",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
-    "Répartiteur de circuit": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 526 et § 533",
-      familleRisque: "Échauffement / surcharge / incendie",
+    "Répartiteur de circuit": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 526 et art 533",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Critique",
     ),
-    "Dispositif de connexion": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 465",
+    "Dispositif de connexion": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 537",
       familleRisque: "Sécurité des interventions / arrêt d’urgence",
       criticite: "Majeure",
     ),
-    "Serrage et état des connexions contrôlés": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 526",
-      familleRisque: "Échauffement / mauvais contact / incendie",
+    "Serrage et état des connexions contrôlés": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 526",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
-    "Répartition des circuits": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 314",
-      familleRisque: "Continuité de service / surcharge / exploitation",
+    "Répartition des circuits": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 314",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
-    "Continuité du conducteur de protection (PE)": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 543 et § 6.4.3.2",
+    "Continuité du conducteur de protection (PE)": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 543 et art 6.4.3.8",
       familleRisque: "Électrisation / défaut de continuité de protection",
       criticite: "Critique",
     ),
-    "Protection contre les contacts directs (capots, caches, bornes protégées)": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 411 et Annexe 41A",
+    "Protection contre les contacts directs (capots, caches, bornes protégées)": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 411 et Annexe 41A",
       familleRisque: "Électrisation / électrocution",
       criticite: "Critique",
     ),
-    "Présence et fonctionnement des dispositifs de protection": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 430 à § 436 et § 533",
+    "Présence et fonctionnement des dispositifs de protection": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 430 à art 436 et art 533",
       familleRisque: "Surintensité / court-circuit / incendie",
       criticite: "Critique",
     ),
-    "Adéquation des dispositifs de protection": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 430 à § 436 et § 533",
+    "Adéquation des dispositifs de protection": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 430 à art 436 et art 533",
       familleRisque: "Surintensité / court-circuit / incendie",
       criticite: "Critique",
     ),
-    "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés": const DispositionMetadata(
+    "Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés": DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 523, art 524 et art 433",
       familleRisque: "Incendie / échauffement / surcharge des conducteurs",
       criticite: "Critique",
     ),
-    "Section des câbles de départs adaptée au courant nominal des dispositifs de protection associés": const DispositionMetadata(
+    "Section des câbles de départs adaptée au courant nominal des disjoncteurs associés": DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 523, art 524 et art 433",
       familleRisque: "Incendie / échauffement / surcharge des conducteurs",
       criticite: "Critique",
     ),
-    "Calibre des dispositifs de protection / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 523, art 524 et art 433",
+    "Calibre des disjoncteurs / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 434 et art 533 (pouvoir de coupure à vérifier par rapport au courant de court-circuit présumé)",
       familleRisque: "Incendie / échauffement / surcharge des conducteurs",
       criticite: "Critique",
     ),
-    "Coordination entre dispositifs de protection et contacteurs": const DispositionMetadata(
+    "Coordination entre disjoncteurs et contacteurs": DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 536",
-      familleRisque: "Défaut de coordination / perte de sélectivité",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
-    "Coordination entre dispositifs de protection": const DispositionMetadata(
+    "Coordination entre disjoncteurs": DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 536",
-      familleRisque: "Défaut de coordination / perte de sélectivité",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
-    "Protection contre les contacts indirects": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 411",
+    "Protection contre les contacts indirects": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 411",
       familleRisque: "Électrisation / électrocution",
       criticite: "Critique",
     ),
-    "Sélectivité et coordination des protections (montée sélective des calibres)": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 536",
-      familleRisque: "Défaut de coordination / perte de sélectivité",
+    "Sélectivité  des protections (montée sélective des calibres)": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 536",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
     ),
-    "Pouvoir de coupure et courant assigné adaptés à l'installation": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 434",
-      familleRisque: "Court-circuit / destruction de l’appareillage / incendie",
+    "Pouvoir de coupure et courant assigné adaptés à l'installation": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 434 et art 533",
+      familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Critique",
     ),
-    "Protection contre les retours de tension vers une source indisponible": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551 et § 536",
+    "Protection contre les retours de tension vers une source indisponible": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 551.2.1, art 551.2.2 et art 537",
       familleRisque: "Couplage intempestif / retour de tension / perte de continuité",
       criticite: "Critique",
     ),
-    "Présence et fonctionnement des dispositifs de coupure / arrêt d'urgence": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 462, § 465 et § 537",
+    "Présence et fonctionnement des dispositifs de coupure / arrêt d'urgence": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 465 et art 537",
       familleRisque: "Sécurité des interventions / arrêt d’urgence",
       criticite: "Critique",
     ),
-    "Fonctionnement du transfert automatique et du retour à la source normale": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551 et § 536",
+    "Fonctionnement du transfert automatique et du retour à la source normale": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 551.2.4 et art 537",
       familleRisque: "Couplage intempestif / retour de tension / perte de continuité",
       criticite: "Critique",
     ),
-    "Temps de transfert compatible avec les équipements alimentés": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551 et § 536",
+    "Temps de transfert compatible avec les équipements alimentés": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 551.2.3",
       familleRisque: "Couplage intempestif / retour de tension / perte de continuité",
       criticite: "Critique",
     ),
-    "Commande manuelle de secours fonctionnelle": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 551 et § 536",
+    "Commande manuelle de secours fonctionnelle": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 551.2.4 et art 537",
       familleRisque: "Couplage intempestif / retour de tension / perte de continuité",
       criticite: "Critique",
-    ),
-    "Absence d'échauffement anormal par thermographie infrarouge": const DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – § 6.6.4.3.2",
-      familleRisque: "Incendie / échauffement",
-      criticite: "Majeure",
     ),
   };
 

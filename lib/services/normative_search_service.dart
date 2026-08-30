@@ -95,6 +95,16 @@ class NormativeSearchService {
     'isolant': 2.5,
     'capot': 2.5,
     'barre': 2.5,
+    'inverseur': 3.5,
+    'transfert': 3.0,
+    'dgpt2': 3.5,
+    'buchholz': 3.5,
+    'cuvette': 3.0,
+    'retention': 3.0,
+    'thermographie': 3.0,
+    'dielectrique': 3.0,
+    'sf6': 3.5,
+    'interverrouillage': 3.0,
   };
 
   /// Normalisation avancée du texte (accents, casse, ponctuation, lemmatisation basique).
