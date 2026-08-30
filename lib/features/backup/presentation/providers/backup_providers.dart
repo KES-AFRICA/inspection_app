@@ -184,7 +184,7 @@ class BackupSyncStateNotifier extends StateNotifier<Map<String, MissionSyncState
       case BackupJobStatus.failed:
         return SyncStatus.failed;
       case BackupJobStatus.cancelled:
-        return SyncStatus.interrupted;
+        return SyncStatus.neverBackedUp;
     }
   }
 

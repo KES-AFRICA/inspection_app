@@ -391,15 +391,16 @@ class BackupJobManager {
     if (job != null) {
       _processingMissionIds.remove(job.missionId);
       _cancelTokens.remove(jobId);
-      // Si une URL de session Graph existe, envoyer la requête DELETE au serveur Microsoft
       if (job.uploadSessionUrl != null) {
         unawaited(storageService.cancelUploadSession(job.uploadSessionUrl!));
       }
 
       final cancelledJob = job.copyWith(
         status: BackupJobStatus.cancelled,
-        cancelledAt: DateTime.now(),
+        progress: 0.0,
+        uploadedBytes: 0,
         statusMessage: 'Sauvegarde annulée',
+        cancelledAt: DateTime.now(),
       );
       await _updateAndPublishJob(cancelledJob);
     }
@@ -461,6 +462,8 @@ class BackupJobManager {
     for (final j in allIncomplete) {
       map[j.missionId] = j;
     }
+    // S'assurer que le job couramment mis à jour (même annulé, terminé ou échoué) est inclus dans le Stream
+    map[job.missionId] = job;
     _jobsController.add(map);
   }
 
