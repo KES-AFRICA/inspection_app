@@ -193,14 +193,9 @@ class MissionBackupCard extends ConsumerWidget {
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        final activeJob = await ref
-                            .read(backupJobManagerProvider)
-                            .getActiveJobForMission(mission.id);
-                        if (activeJob != null) {
-                          await ref
-                              .read(backupSyncNotifierProvider.notifier)
-                              .pauseBackup(activeJob.id);
-                        }
+                        await ref
+                            .read(backupSyncNotifierProvider.notifier)
+                            .pauseBackupForMission(mission.id);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFFF59E0B),
@@ -223,14 +218,9 @@ class MissionBackupCard extends ConsumerWidget {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () async {
-                        final activeJob = await ref
-                            .read(backupJobManagerProvider)
-                            .getActiveJobForMission(mission.id);
-                        if (activeJob != null) {
-                          await ref
-                              .read(backupSyncNotifierProvider.notifier)
-                              .cancelBackup(activeJob.id);
-                        }
+                        await ref
+                            .read(backupSyncNotifierProvider.notifier)
+                            .cancelBackupForMission(mission.id);
                       },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red.shade700,
@@ -253,18 +243,9 @@ class MissionBackupCard extends ConsumerWidget {
                   Expanded(
                     child: ElevatedButton.icon(
                       onPressed: () async {
-                        final activeJob = await ref
-                            .read(backupJobManagerProvider)
-                            .getActiveJobForMission(mission.id);
-                        if (activeJob != null) {
-                          await ref
-                              .read(backupSyncNotifierProvider.notifier)
-                              .resumeBackup(activeJob.id, currentMatricule);
-                        } else {
-                          await ref
-                              .read(backupSyncNotifierProvider.notifier)
-                              .backupMission(mission.id, currentMatricule);
-                        }
+                        await ref
+                            .read(backupSyncNotifierProvider.notifier)
+                            .resumeBackupForMission(mission.id, currentMatricule);
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF10B981),
@@ -287,14 +268,9 @@ class MissionBackupCard extends ConsumerWidget {
                   Expanded(
                     child: OutlinedButton.icon(
                       onPressed: () async {
-                        final activeJob = await ref
-                            .read(backupJobManagerProvider)
-                            .getActiveJobForMission(mission.id);
-                        if (activeJob != null) {
-                          await ref
-                              .read(backupSyncNotifierProvider.notifier)
-                              .cancelBackup(activeJob.id);
-                        }
+                        await ref
+                            .read(backupSyncNotifierProvider.notifier)
+                            .cancelBackupForMission(mission.id);
                       },
                       style: OutlinedButton.styleFrom(
                         foregroundColor: Colors.red.shade700,
@@ -328,10 +304,10 @@ class MissionBackupCard extends ConsumerWidget {
                                   SnackBar(
                                     content: Text(
                                       success
-                                          ? 'Sauvegarde Cloud effectuée avec succès !'
-                                          : 'Échec de la sauvegarde.',
+                                          ? 'Sauvegarde de « ${mission.nomClient} » démarrée...'
+                                          : 'Impossible de démarrer la sauvegarde.',
                                     ),
-                                    backgroundColor: success ? const Color(0xFF10B981) : Colors.red,
+                                    backgroundColor: success ? const Color(0xFF0078D4) : Colors.red,
                                     behavior: SnackBarBehavior.floating,
                                   ),
                                 );

@@ -211,7 +211,7 @@ class BackupSyncStateNotifier extends StateNotifier<Map<String, MissionSyncState
     try {
       final manager = ref.read(backupJobManagerProvider);
       final job = await manager.startBackup(missionId: missionId, matricule: matricule);
-      return job.status == BackupJobStatus.completed;
+      return job.status != BackupJobStatus.failed && job.status != BackupJobStatus.cancelled;
     } catch (_) {
       return false;
     }
@@ -221,12 +221,24 @@ class BackupSyncStateNotifier extends StateNotifier<Map<String, MissionSyncState
     await ref.read(backupJobManagerProvider).pauseBackup(jobId);
   }
 
+  Future<void> pauseBackupForMission(String missionId) async {
+    await ref.read(backupJobManagerProvider).pauseBackupForMission(missionId);
+  }
+
   Future<void> resumeBackup(String jobId, String matricule) async {
     await ref.read(backupJobManagerProvider).resumeBackup(jobId, matricule);
   }
 
+  Future<void> resumeBackupForMission(String missionId, String matricule) async {
+    await ref.read(backupJobManagerProvider).resumeBackupForMission(missionId, matricule);
+  }
+
   Future<void> cancelBackup(String jobId) async {
     await ref.read(backupJobManagerProvider).cancelBackup(jobId);
+  }
+
+  Future<void> cancelBackupForMission(String missionId) async {
+    await ref.read(backupJobManagerProvider).cancelBackupForMission(missionId);
   }
 
   @override

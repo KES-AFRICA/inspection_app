@@ -169,5 +169,27 @@ void main() {
       expect(cancelledJob, isNotNull);
       expect(cancelledJob!.status, equals(BackupJobStatus.cancelled));
     });
+
+    test('7. Préservation stricte de l\'état paused (Non écrasé par la levée du BackupCancelToken)', () async {
+      final jobStore = BackupJobStore();
+      final jobId = 'job_pause_preservation_007';
+      final job = BackupJob(
+        id: jobId,
+        missionId: 'mission_pause_007',
+        matricule: 'KES001',
+        status: BackupJobStatus.uploading,
+        progress: 0.55,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      await jobStore.saveJob(job);
+      final manager = BackupJobManager(jobStore: jobStore);
+      await manager.pauseBackup(jobId);
+
+      final stateAfterPause = await jobStore.getJob(jobId);
+      expect(stateAfterPause!.status, equals(BackupJobStatus.paused));
+      expect(stateAfterPause.isPaused, isTrue);
+    });
   });
 }

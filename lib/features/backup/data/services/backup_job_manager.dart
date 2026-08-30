@@ -105,7 +105,10 @@ class BackupJobManager {
     final missionId = initialJob.missionId;
     final matricule = initialJob.matricule;
 
-    if (_processingMissionIds.contains(missionId)) return;
+    if (_processingMissionIds.contains(missionId)) {
+      _cancelTokens[jobId]?.cancel('Remplacement par nouvelle exécution');
+      _processingMissionIds.remove(missionId);
+    }
     _processingMissionIds.add(missionId);
 
     final cancelToken = BackupCancelToken();
@@ -283,9 +286,12 @@ class BackupJobManager {
       );
       await _updateAndPublishJob(currentJob);
     } on BackupCancelledException catch (e) {
-      if (kDebugMode) print('🛑 Job [$jobId] annulé proprement: ${e.message}');
+      if (kDebugMode) print('🛑 Job [$jobId] interrompu / annulé: ${e.message}');
       final job = await jobStore.getJob(jobId);
-      if (job != null && job.status != BackupJobStatus.cancelled) {
+      if (job != null &&
+          job.status != BackupJobStatus.paused &&
+          job.status != BackupJobStatus.waitingForNetwork &&
+          job.status != BackupJobStatus.cancelled) {
         final cancelledJob = job.copyWith(
           status: BackupJobStatus.cancelled,
           statusMessage: 'Sauvegarde annulée',
@@ -310,6 +316,31 @@ class BackupJobManager {
     }
   }
 
+  /// Mettre en pause une sauvegarde active par missionId
+  Future<void> pauseBackupForMission(String missionId) async {
+    final job = await jobStore.getActiveJobForMission(missionId);
+    if (job != null) {
+      await pauseBackup(job.id);
+    }
+  }
+
+  /// Reprendre une sauvegarde mise en pause ou suspendue par missionId
+  Future<BackupJob> resumeBackupForMission(String missionId, String matricule) async {
+    final job = await jobStore.getActiveJobForMission(missionId);
+    if (job != null) {
+      return await resumeBackup(job.id, matricule);
+    }
+    return await startBackup(missionId: missionId, matricule: matricule);
+  }
+
+  /// Annuler définitivement une sauvegarde par missionId
+  Future<void> cancelBackupForMission(String missionId) async {
+    final job = await jobStore.getActiveJobForMission(missionId);
+    if (job != null) {
+      await cancelBackup(job.id);
+    }
+  }
+
   /// Mettre en pause une sauvegarde active
   Future<void> pauseBackup(String jobId) async {
     final token = _cancelTokens[jobId];
@@ -317,6 +348,8 @@ class BackupJobManager {
 
     final job = await jobStore.getJob(jobId);
     if (job != null) {
+      _processingMissionIds.remove(job.missionId);
+      _cancelTokens.remove(jobId);
       final pausedJob = job.copyWith(
         status: BackupJobStatus.paused,
         pausedAt: DateTime.now(),
@@ -332,6 +365,9 @@ class BackupJobManager {
     if (job == null) {
       throw Exception('Job $jobId introuvable');
     }
+
+    _processingMissionIds.remove(job.missionId);
+    _cancelTokens.remove(jobId);
 
     if (job.status == BackupJobStatus.uploading) return job;
 
@@ -353,6 +389,8 @@ class BackupJobManager {
 
     final job = await jobStore.getJob(jobId);
     if (job != null) {
+      _processingMissionIds.remove(job.missionId);
+      _cancelTokens.remove(jobId);
       // Si une URL de session Graph existe, envoyer la requête DELETE au serveur Microsoft
       if (job.uploadSessionUrl != null) {
         unawaited(storageService.cancelUploadSession(job.uploadSessionUrl!));
