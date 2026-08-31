@@ -1850,20 +1850,96 @@ class DispositionsConstructivesRegistry {
 
   /// Table d'alias pour l'Inverseur de Source
   static final Map<String, String> _inverseurTitleAliases = {
+    _normalizeKey("Dispositif de protection contre les surtensions (parafoudre)"):
+        "Dispositif de protection contre les surtensions (parafoudre)",
+    _normalizeKey("Présence et conformité du dispositif de protection contre les surtensions (parafoudre)"):
+        "Dispositif de protection contre les surtensions (parafoudre)",
+    _normalizeKey("Présence d'un parafoudre"):
+        "Dispositif de protection contre les surtensions (parafoudre)",
+    _normalizeKey("Pouvoir de coupure et courant assigné adaptés à l'installation"):
+        "Pouvoir de coupure et courant assigné adaptés à l'installation",
+    _normalizeKey("Sélectivité des protections (montée sélective des calibres)"):
+        "Sélectivité des protections (montée sélective des calibres)",
+    _normalizeKey("Sélectivité et coordination des protections (montée sélective des calibres)"):
+        "Sélectivité des protections (montée sélective des calibres)",
+    _normalizeKey("Sélectivité  des protections (montée sélective des calibres)"):
+        "Sélectivité des protections (montée sélective des calibres)",
+    _normalizeKey("Emplacement / Dégagement autour"):
+        "Emplacement / Dégagement autour",
+    _normalizeKey("Compatibilité du degré IP/IK avec l'environnement d'installation"):
+        "Protection IP/IK adaptée au local d'installation",
+    _normalizeKey("Protection IP/IK adaptée au local"):
+        "Protection IP/IK adaptée au local d'installation",
+    _normalizeKey("Protection IP/IK adaptée au local d'installation"):
+        "Protection IP/IK adaptée au local d'installation",
+    _normalizeKey("Présence d'écrans ou plastrons empêchant l'accès aux parties actives"):
+        "Protection contre les contacts directs (capots, caches, bornes protégées)",
+    _normalizeKey("Continuité de la mise à la terre des portes et parties métalliques"):
+        "Continuité du conducteur de protection (PE)",
+    _normalizeKey("Réserve disponible et obturation des emplacements non utilisés"):
+        "Etat du coffret / Armoire",
+    _normalizeKey("Présence d'une coupure générale clairement identifiée et accessible"):
+        "Présence et fonctionnement des dispositifs de coupure / arrêt d'urgence",
+    _normalizeKey("Présence et lisibilité du schéma unifilaire et du repérage des départs"):
+        "Identification complète des circuits",
+    _normalizeKey("Identification complète des circuits"):
+        "Identification complète des circuits",
+    _normalizeKey("Respect code couleur des câbles"):
+        "Respect code couleur des câbles",
+    _normalizeKey("Etat du Coffret / Armoire / TGBT"):
+        "Etat du coffret / Armoire",
+    _normalizeKey("Etat du coffret / Armoire"):
+        "Etat du coffret / Armoire",
+    _normalizeKey("Propreté et état général du coffret"):
+        "Etat du coffret / Armoire",
+    _normalizeKey("Câblage"):
+        "Câblage",
+    _normalizeKey("Répartiteur de circuit"):
+        "Répartiteur de circuit",
+    _normalizeKey("Absence de surcharge des répartiteurs, borniers et jeux de barres"):
+        "Répartiteur de circuit",
+    _normalizeKey("Dispositif de connexion"):
+        "Dispositif de connexion",
+    _normalizeKey("Serrage et état des connexions contrôlés"):
+        "Serrage et état des connexions contrôlés",
+    _normalizeKey("Serrage des connexions de puissance"):
+        "Serrage et état des connexions contrôlés",
+    _normalizeKey("État, fixation et protection des jeux de barres"):
+        "Serrage et état des connexions contrôlés",
+    _normalizeKey("Répartition des circuits"):
+        "Répartition des circuits",
+    _normalizeKey("Continuité du conducteur de protection (PE)"):
+        "Continuité du conducteur de protection (PE)",
+    _normalizeKey("Protection contre les contacts directs (capots, caches, bornes protégées)"):
+        "Protection contre les contacts directs (capots, caches, bornes protégées)",
+    _normalizeKey("Présence et fonctionnement des dispositifs de protection"):
+        "Présence et fonctionnement des dispositifs de protection",
+    _normalizeKey("Adéquation des dispositifs de protection"):
+        "Adéquation des dispositifs de protection",
+    _normalizeKey("Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés"):
+        "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés",
     _normalizeKey("Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés"):
         "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés",
     _normalizeKey("Section des câbles de départs adaptée au courant nominal des disjoncteurs associés"):
         "Section des câbles de départs adaptée au courant nominal des dispositifs de protection associés",
+    _normalizeKey("Calibre des dispositifs de protection / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)"):
+        "Calibre des dispositifs de protection / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)",
     _normalizeKey("Calibre des disjoncteurs / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)"):
         "Calibre des dispositifs de protection / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)",
+    _normalizeKey("Contrôle du courant dans le conducteur neutre"):
+        "Calibre des dispositifs de protection / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)",
+    _normalizeKey("Coordination entre dispositifs de protection et contacteurs"):
+        "Coordination entre dispositifs de protection et contacteurs",
     _normalizeKey("Coordination entre disjoncteurs et contacteurs"):
         "Coordination entre dispositifs de protection et contacteurs",
+    _normalizeKey("Coordination entre dispositifs de protection"):
+        "Coordination entre dispositifs de protection",
     _normalizeKey("Coordination entre disjoncteurs"):
         "Coordination entre dispositifs de protection",
-    _normalizeKey("Protection IP/IK adaptée au local"):
-        "Protection IP/IK adaptée au local d'installation",
-    _normalizeKey("Compatibilité du degré IP/IK avec l'environnement d'installation"):
-        "Protection IP/IK adaptée au local d'installation",
+    _normalizeKey("Protection contre les contacts indirects"):
+        "Protection contre les contacts indirects",
+    _normalizeKey("Présence de double alimentation électrique"):
+        "Identification claire des deux sources et de la source prioritaire",
     _normalizeKey("Interverrouillage mécanique et électrique entre les deux sources"):
         "Interverrouillage empêchant le couplage intempestif des deux sources",
     _normalizeKey("Repérage des conducteurs / code couleur"):
@@ -1872,20 +1948,10 @@ class DispositionsConstructivesRegistry {
         "Identification claire des deux sources et de la source prioritaire",
     _normalizeKey("Signalisation claire de la position de l'inverseur (Normal / Secours)"):
         "Signalisation de la position des sources et de l'état de l'inverseur",
-    _normalizeKey("Etat du coffret / Armoire"):
-        "Etat du coffret / Armoire",
-    _normalizeKey("Propreté et état général du coffret"):
-        "Etat du coffret / Armoire",
-    _normalizeKey("Serrage des connexions de puissance"):
-        "Serrage et état des connexions contrôlés",
     _normalizeKey("Contrôle thermographique des connexions, et protections"):
         "Absence d'échauffement anormal par thermographie infrarouge",
     _normalizeKey("Thermographie infrarouge des connexions"):
         "Absence d'échauffement anormal par thermographie infrarouge",
-    _normalizeKey("Sélectivité et coordination des protections (montée sélective des calibres)"):
-        "Sélectivité des protections (montée sélective des calibres)",
-    _normalizeKey("Sélectivité  des protections (montée sélective des calibres)"):
-        "Sélectivité des protections (montée sélective des calibres)",
   };
 
   /// Assure l'exhaustivité, la migration et l'ordonnancement exact (1 à 31) pour l'Inverseur de Source
@@ -1912,15 +1978,15 @@ class DispositionsConstructivesRegistry {
       final targetKey = _normalizeKey(targetTitle);
 
       final confNorm = pt.conformite.toLowerCase().trim();
-      final isExistingNA = confNorm == 'na' || confNorm == 'non_applicable' || confNorm == 'sans_objet' || confNorm == 'n/a' || confNorm == 'sans objet' || confNorm.isEmpty;
+      final isExistingEmpty = confNorm.isEmpty;
 
       final current = existingMap[targetKey];
       if (current == null) {
         existingMap[targetKey] = pt;
       } else {
         final currentConfNorm = current.conformite.toLowerCase().trim();
-        final currentIsNA = currentConfNorm == 'na' || currentConfNorm == 'non_applicable' || currentConfNorm == 'sans_objet' || currentConfNorm == 'n/a' || currentConfNorm == 'sans objet' || currentConfNorm.isEmpty;
-        if (currentIsNA && !isExistingNA) {
+        final currentIsEmpty = currentConfNorm.isEmpty;
+        if (currentIsEmpty && !isExistingEmpty) {
           existingMap[targetKey] = pt;
         } else if ((pt.observation?.isNotEmpty == true || (pt.observations != null && pt.observations!.isNotEmpty)) &&
             (current.observation == null || current.observation!.isEmpty)) {
@@ -1950,7 +2016,7 @@ class DispositionsConstructivesRegistry {
             referenceNormative: meta?.referenceNormative,
             familleRisque: meta?.familleRisque,
             criticite: meta?.criticite,
-            conformite: 'Sans objet',
+            conformite: '',
           ),
         );
       }
@@ -1959,12 +2025,7 @@ class DispositionsConstructivesRegistry {
     // Conservation garantie de tous les points utilisateur orphelins
     for (final entry in existingMap.entries) {
       if (!usedKeys.contains(entry.key)) {
-        final pt = entry.value;
-        final confNorm = pt.conformite.toLowerCase().trim();
-        final isNA = confNorm == 'na' || confNorm == 'non_applicable' || confNorm == 'sans_objet' || confNorm == 'n/a' || confNorm == 'sans objet' || confNorm.isEmpty;
-        if (!isNA || (pt.observation != null && pt.observation!.isNotEmpty) || (pt.observations != null && pt.observations!.isNotEmpty)) {
-          points.add(pt);
-        }
+        points.add(entry.value);
       }
     }
   }
@@ -2031,7 +2092,7 @@ class DispositionsConstructivesRegistry {
             referenceNormative: meta?.referenceNormative,
             familleRisque: meta?.familleRisque,
             criticite: meta?.criticite,
-            conformite: 'Sans objet',
+            conformite: '',
           ),
         );
       }
@@ -2040,12 +2101,7 @@ class DispositionsConstructivesRegistry {
     // Conservation garantie de tous les points utilisateur orphelins
     for (final entry in existingMap.entries) {
       if (!usedKeys.contains(entry.key)) {
-        final pt = entry.value;
-        final confNorm = pt.conformite.toLowerCase().trim();
-        final isNA = confNorm == 'na' || confNorm == 'non_applicable' || confNorm == 'sans_objet' || confNorm == 'n/a' || confNorm == 'sans objet' || confNorm.isEmpty;
-        if (!isNA || (pt.observation != null && pt.observation!.isNotEmpty) || (pt.observations != null && pt.observations!.isNotEmpty)) {
-          points.add(pt);
-        }
+        points.add(entry.value);
       }
     }
   }

@@ -3199,6 +3199,11 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                   )))
               : null,
         )));
+        if (_selectedType == 'INVERSEUR') {
+          DispositionsConstructivesRegistry.ensureCompleteInverseurChecklist(_pointsVerification);
+        } else {
+          DispositionsConstructivesRegistry.ensureCompleteCoffretChecklist(_pointsVerification);
+        }
         _coffretPhotosExterne = draft.photos.where((p) => p.contains('externe')).toList();
         _coffretPhotosInterne = draft.photos.where((p) => p.contains('interne')).toList();
         _currentStep = draft.currentStep;
@@ -3285,6 +3290,11 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                   )))
               : null,
         )));
+        if (_selectedType == 'INVERSEUR') {
+          DispositionsConstructivesRegistry.ensureCompleteInverseurChecklist(_pointsVerification);
+        } else {
+          DispositionsConstructivesRegistry.ensureCompleteCoffretChecklist(_pointsVerification);
+        }
         if (draft.photosExternes.isNotEmpty || draft.photosInternes.isNotEmpty) {
           _coffretPhotosExterne = List.from(draft.photosExternes);
           _coffretPhotosInterne = List.from(draft.photosInternes);
