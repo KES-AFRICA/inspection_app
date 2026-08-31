@@ -12215,11 +12215,6 @@ class PdfReportService {
                 ? coffret.indiceIpIk!.trim()
                 : 'Non renseigné',
           ),
-          if (coffret.sourceNomComplet != null && coffret.sourceNomComplet!.trim().isNotEmpty)
-            tableRowChar(
-              'Équipement source d\'alimentation',
-              coffret.sourceNomComplet!.trim(),
-            ),
         ],
       ],
     );
@@ -12678,9 +12673,7 @@ class PdfReportService {
         final pt = coffret.protectionTete ?? Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: '');
         final bool isAvecProtection = coffret.isDepartPrisAvecProtection;
 
-        final String statusLabel = isAvecProtection
-            ? 'Départ pris avec protection'
-            : 'Départ pris sans protection';
+        final String statusLabel = isAvecProtection ? 'Présent' : 'Absent';
 
         final pw.Widget protectionTeteTable = pw.Table(
           defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
@@ -12776,7 +12769,6 @@ class PdfReportService {
             _thCell('Protection de tête du depart'),
             _thCell('Identification du depart'),
             _thCell('Type protection'),
-            _thCell('Marque'),
             _thCell('Courbe'),
             _thCell('PDC kA'),
             _thCell('Icc3 max (kA)'),
@@ -12793,7 +12785,6 @@ class PdfReportService {
               _valueCell(dep.protectionTete.isNotEmpty ? dep.protectionTete : '-'),
               _valueCell(dep.identification.isNotEmpty ? dep.identification : '-'),
               _valueCell(dep.typeProtection.isNotEmpty ? dep.typeProtection : '-'),
-              _valueCell(dep.marque.isNotEmpty ? dep.marque : '-'),
               _valueCell(dep.courbe.isNotEmpty ? dep.courbe : '-'),
               _valueCell(dep.pdcKA.isNotEmpty ? dep.pdcKA : '-'),
               _valueCell(dep.icc3Max.isNotEmpty ? dep.icc3Max : '-'),
@@ -12819,13 +12810,12 @@ class PdfReportService {
             0: pw.FlexColumnWidth(1.0),
             1: pw.FlexColumnWidth(1.1),
             2: pw.FlexColumnWidth(1.1),
-            3: pw.FlexColumnWidth(0.9),
+            3: pw.FlexColumnWidth(0.7),
             4: pw.FlexColumnWidth(0.7),
-            5: pw.FlexColumnWidth(0.7),
-            6: pw.FlexColumnWidth(0.8),
-            7: pw.FlexColumnWidth(0.7),
+            5: pw.FlexColumnWidth(0.8),
+            6: pw.FlexColumnWidth(0.7),
+            7: pw.FlexColumnWidth(0.9),
             8: pw.FlexColumnWidth(0.9),
-            9: pw.FlexColumnWidth(0.9),
           },
           children: departRows,
         ),
@@ -12866,7 +12856,6 @@ class PdfReportService {
             _thCell('Protection de tête du circuit'),
             _thCell('Identification du circuit'),
             _thCell('Type protection'),
-            _thCell('Marque'),
             _thCell('Courbe'),
             _thCell('PDC kA'),
             _thCell('Icc3 max (kA)'),
@@ -12883,7 +12872,6 @@ class PdfReportService {
               _valueCell(ct.protectionTete.isNotEmpty ? ct.protectionTete : '-'),
               _valueCell(ct.identification.isNotEmpty ? ct.identification : '-'),
               _valueCell(ct.typeProtection.isNotEmpty ? ct.typeProtection : '-'),
-              _valueCell(ct.marque.isNotEmpty ? ct.marque : '-'),
               _valueCell(ct.courbe.isNotEmpty ? ct.courbe : '-'),
               _valueCell(ct.pdcKA.isNotEmpty ? ct.pdcKA : '-'),
               _valueCell(ct.icc3Max.isNotEmpty ? ct.icc3Max : '-'),
@@ -12909,13 +12897,12 @@ class PdfReportService {
             0: pw.FlexColumnWidth(1.0),
             1: pw.FlexColumnWidth(1.1),
             2: pw.FlexColumnWidth(1.1),
-            3: pw.FlexColumnWidth(0.9),
+            3: pw.FlexColumnWidth(0.7),
             4: pw.FlexColumnWidth(0.7),
-            5: pw.FlexColumnWidth(0.7),
-            6: pw.FlexColumnWidth(0.8),
-            7: pw.FlexColumnWidth(0.7),
+            5: pw.FlexColumnWidth(0.8),
+            6: pw.FlexColumnWidth(0.7),
+            7: pw.FlexColumnWidth(0.9),
             8: pw.FlexColumnWidth(0.9),
-            9: pw.FlexColumnWidth(0.9),
           },
           children: circuitRows,
         ),
