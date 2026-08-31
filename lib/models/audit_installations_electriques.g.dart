@@ -655,6 +655,11 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       departPrisAvecProtection: fields[29] as bool?,
       createdAt: fields[30] as DateTime?,
       updatedAt: fields[31] as DateTime?,
+      indiceIpIk: fields[32] as String?,
+      departures: (fields[33] as List?)?.cast<DepartEquipement>(),
+      terminalCircuits: (fields[34] as List?)?.cast<CircuitTerminalEquipement>(),
+      sourceEquipementId: fields[35] as String?,
+      sourceNomComplet: fields[36] as String?,
       alimentations: (fields[12] as List?)?.cast<Alimentation>(),
       protectionTete: fields[13] as Alimentation?,
       pointsVerification: (fields[14] as List?)?.cast<PointVerification>(),
@@ -674,7 +679,7 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
   @override
   void write(BinaryWriter writer, CoffretArmoire obj) {
     writer
-      ..writeByte(32)
+      ..writeByte(37)
       ..writeByte(0)
       ..write(obj.qrCode)
       ..writeByte(1)
@@ -738,7 +743,17 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       ..writeByte(30)
       ..write(obj.createdAt)
       ..writeByte(31)
-      ..write(obj.updatedAt);
+      ..write(obj.updatedAt)
+      ..writeByte(32)
+      ..write(obj.indiceIpIk)
+      ..writeByte(33)
+      ..write(obj.departures)
+      ..writeByte(34)
+      ..write(obj.terminalCircuits)
+      ..writeByte(35)
+      ..write(obj.sourceEquipementId)
+      ..writeByte(36)
+      ..write(obj.sourceNomComplet);
   }
 
   @override
@@ -751,6 +766,129 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
+class DepartEquipementAdapter extends TypeAdapter<DepartEquipement> {
+  @override
+  final int typeId = 64;
+
+  @override
+  DepartEquipement read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return DepartEquipement(
+      id: fields[0] as String?,
+      protectionTete: fields[1] == null ? 'Présent' : fields[1] as String,
+      identification: fields[2] == null ? '' : fields[2] as String,
+      typeProtection: fields[3] == null ? '' : fields[3] as String,
+      marque: fields[4] == null ? '' : fields[4] as String,
+      courbe: fields[5] == null ? '' : fields[5] as String,
+      pdcKA: fields[6] == null ? '' : fields[6] as String,
+      icc3Max: fields[7] == null ? '' : fields[7] as String,
+      calibre: fields[8] == null ? '' : fields[8] as String,
+      sectionCable: fields[9] == null ? '' : fields[9] as String,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, DepartEquipement obj) {
+    writer
+      ..writeByte(10)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.protectionTete)
+      ..writeByte(2)
+      ..write(obj.identification)
+      ..writeByte(3)
+      ..write(obj.typeProtection)
+      ..writeByte(4)
+      ..write(obj.marque)
+      ..writeByte(5)
+      ..write(obj.courbe)
+      ..writeByte(6)
+      ..write(obj.pdcKA)
+      ..writeByte(7)
+      ..write(obj.icc3Max)
+      ..writeByte(8)
+      ..write(obj.calibre)
+      ..writeByte(9)
+      ..write(obj.sectionCable);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is DepartEquipementAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
+class CircuitTerminalEquipementAdapter extends TypeAdapter<CircuitTerminalEquipement> {
+  @override
+  final int typeId = 65;
+
+  @override
+  CircuitTerminalEquipement read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return CircuitTerminalEquipement(
+      id: fields[0] as String?,
+      protectionTete: fields[1] == null ? 'Oui' : fields[1] as String,
+      identification: fields[2] == null ? '' : fields[2] as String,
+      typeProtection: fields[3] == null ? '' : fields[3] as String,
+      marque: fields[4] == null ? '' : fields[4] as String,
+      courbe: fields[5] == null ? '' : fields[5] as String,
+      pdcKA: fields[6] == null ? '' : fields[6] as String,
+      icc3Max: fields[7] == null ? '' : fields[7] as String,
+      calibre: fields[8] == null ? '' : fields[8] as String,
+      sectionCable: fields[9] == null ? '' : fields[9] as String,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, CircuitTerminalEquipement obj) {
+    writer
+      ..writeByte(10)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.protectionTete)
+      ..writeByte(2)
+      ..write(obj.identification)
+      ..writeByte(3)
+      ..write(obj.typeProtection)
+      ..writeByte(4)
+      ..write(obj.marque)
+      ..writeByte(5)
+      ..write(obj.courbe)
+      ..writeByte(6)
+      ..write(obj.pdcKA)
+      ..writeByte(7)
+      ..write(obj.icc3Max)
+      ..writeByte(8)
+      ..write(obj.calibre)
+      ..writeByte(9)
+      ..write(obj.sectionCable);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CircuitTerminalEquipementAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
 
 class AlimentationAdapter extends TypeAdapter<Alimentation> {
   @override

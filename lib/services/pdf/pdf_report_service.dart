@@ -12198,6 +12198,16 @@ class PdfReportService {
             'Présence de défaut thermo',
             coffret.effectivePresenceDefautThermo,
           ),
+        tableRowChar(
+          'Récapitulatif nombre de départ',
+          '${coffret.effectiveDepartures.length}',
+        ),
+        tableRowChar(
+          'Récapitulatif nombre de circuit terminaux',
+          '${coffret.effectiveTerminalCircuits.length}',
+        ),
+        if (coffret.indiceIpIk != null && coffret.indiceIpIk!.isNotEmpty)
+          tableRowChar('Indice IP / IK', coffret.indiceIpIk!),
       ],
     );
 
@@ -12691,6 +12701,176 @@ class PdfReportService {
       }
 
       widgets.addAll(tables);
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // TABLEAU DÉPARTS ISSUS DE CE TGBT/ARMOIRE/COFFRET
+    // ══════════════════════════════════════════════════════════════════════
+    if (coffret.effectiveDepartures.isNotEmpty) {
+      widgets.add(pw.SizedBox(height: 4));
+      widgets.add(
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: const pw.BoxDecoration(
+            color: PdfColor.fromInt(0xFF1565C0),
+          ),
+          child: pw.Text(
+            'IDENTIFICATION DES DÉPARTS ISSUS DE CE TGBT/ARMOIRE/COFFRET (${coffret.effectiveDepartures.length})',
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: fsSmall,
+              color: PdfColors.white,
+            ),
+          ),
+        ),
+      );
+      final departRows = <pw.TableRow>[];
+      departRows.add(
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(
+            color: PdfColor.fromInt(0xFFE8F0FB),
+          ),
+          children: [
+            _thCell('Prot. tête'),
+            _thCell('Identification'),
+            _thCell('Type protection'),
+            _thCell('Marque'),
+            _thCell('Courbe'),
+            _thCell('PDC (kA)'),
+            _thCell('Icc3 max (kA)'),
+            _thCell('Calibre (A)'),
+            _thCell('Section (mm\u00B2)'),
+          ],
+        ),
+      );
+      for (final dep in coffret.effectiveDepartures) {
+        departRows.add(
+          pw.TableRow(
+            children: [
+              _valueCell(dep.protectionTete.isNotEmpty ? dep.protectionTete : '-'),
+              _valueCell(dep.identification.isNotEmpty ? dep.identification : '-'),
+              _valueCell(dep.typeProtection.isNotEmpty ? dep.typeProtection : '-'),
+              _valueCell(dep.marque.isNotEmpty ? dep.marque : '-'),
+              _valueCell(dep.courbe.isNotEmpty ? dep.courbe : '-'),
+              _valueCell(dep.pdcKA.isNotEmpty ? dep.pdcKA : '-'),
+              _valueCell(dep.icc3Max.isNotEmpty ? dep.icc3Max : '-'),
+              _valueCell(dep.calibre.isNotEmpty ? dep.calibre : '-'),
+              _valueCell(dep.sectionCable.isNotEmpty ? dep.sectionCable : '-'),
+            ],
+          ),
+        );
+      }
+      widgets.add(
+        pw.Table(
+          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+          border: pw.TableBorder(
+            left: pw.BorderSide(color: borderColor, width: 0.4),
+            right: pw.BorderSide(color: borderColor, width: 0.4),
+            bottom: pw.BorderSide(color: borderColor, width: 0.4),
+            top: pw.BorderSide(color: borderColor, width: 0.4),
+            verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+            horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+          ),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(1.0),
+            1: pw.FlexColumnWidth(1.4),
+            2: pw.FlexColumnWidth(1.4),
+            3: pw.FlexColumnWidth(1.0),
+            4: pw.FlexColumnWidth(0.8),
+            5: pw.FlexColumnWidth(0.8),
+            6: pw.FlexColumnWidth(0.8),
+            7: pw.FlexColumnWidth(0.8),
+            8: pw.FlexColumnWidth(1.0),
+          },
+          children: departRows,
+        ),
+      );
+    }
+
+    // ══════════════════════════════════════════════════════════════════════
+    // TABLEAU CIRCUITS TERMINAUX ISSUS DE CE TGBT/ARMOIRE/COFFRET
+    // ══════════════════════════════════════════════════════════════════════
+    if (coffret.effectiveTerminalCircuits.isNotEmpty) {
+      widgets.add(pw.SizedBox(height: 4));
+      widgets.add(
+        pw.Container(
+          width: double.infinity,
+          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+          decoration: const pw.BoxDecoration(
+            color: PdfColor.fromInt(0xFF00695C),
+          ),
+          child: pw.Text(
+            'IDENTIFICATION DES CIRCUITS TERMINAUX ISSUS DE CE TGBT/ARMOIRE/COFFRET (${coffret.effectiveTerminalCircuits.length})',
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: fsSmall,
+              color: PdfColors.white,
+            ),
+          ),
+        ),
+      );
+      final circuitRows = <pw.TableRow>[];
+      circuitRows.add(
+        pw.TableRow(
+          decoration: const pw.BoxDecoration(
+            color: PdfColor.fromInt(0xFFE0F2F1),
+          ),
+          children: [
+            _thCell('Circuit tête'),
+            _thCell('Identification'),
+            _thCell('Type protection'),
+            _thCell('Marque'),
+            _thCell('Courbe'),
+            _thCell('PDC (kA)'),
+            _thCell('Icc3 max (kA)'),
+            _thCell('Calibre (A)'),
+            _thCell('Section (mm\u00B2)'),
+          ],
+        ),
+      );
+      for (final ct in coffret.effectiveTerminalCircuits) {
+        circuitRows.add(
+          pw.TableRow(
+            children: [
+              _valueCell(ct.protectionTete.isNotEmpty ? ct.protectionTete : '-'),
+              _valueCell(ct.identification.isNotEmpty ? ct.identification : '-'),
+              _valueCell(ct.typeProtection.isNotEmpty ? ct.typeProtection : '-'),
+              _valueCell(ct.marque.isNotEmpty ? ct.marque : '-'),
+              _valueCell(ct.courbe.isNotEmpty ? ct.courbe : '-'),
+              _valueCell(ct.pdcKA.isNotEmpty ? ct.pdcKA : '-'),
+              _valueCell(ct.icc3Max.isNotEmpty ? ct.icc3Max : '-'),
+              _valueCell(ct.calibre.isNotEmpty ? ct.calibre : '-'),
+              _valueCell(ct.sectionCable.isNotEmpty ? ct.sectionCable : '-'),
+            ],
+          ),
+        );
+      }
+      widgets.add(
+        pw.Table(
+          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+          border: pw.TableBorder(
+            left: pw.BorderSide(color: borderColor, width: 0.4),
+            right: pw.BorderSide(color: borderColor, width: 0.4),
+            bottom: pw.BorderSide(color: borderColor, width: 0.4),
+            top: pw.BorderSide(color: borderColor, width: 0.4),
+            verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+            horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+          ),
+          columnWidths: const {
+            0: pw.FlexColumnWidth(1.0),
+            1: pw.FlexColumnWidth(1.4),
+            2: pw.FlexColumnWidth(1.4),
+            3: pw.FlexColumnWidth(1.0),
+            4: pw.FlexColumnWidth(0.8),
+            5: pw.FlexColumnWidth(0.8),
+            6: pw.FlexColumnWidth(0.8),
+            7: pw.FlexColumnWidth(0.8),
+            8: pw.FlexColumnWidth(1.0),
+          },
+          children: circuitRows,
+        ),
+      );
     }
 
     // ══════════════════════════════════════════════════════════════════════

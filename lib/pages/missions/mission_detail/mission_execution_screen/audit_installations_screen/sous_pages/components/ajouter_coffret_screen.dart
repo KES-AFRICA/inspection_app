@@ -23,6 +23,7 @@ import 'observation_enrichie_widget.dart';
 import 'package:inspec_app/components/safe_file_image.dart';
 import 'package:inspec_app/components/normative_search_suggestions_widget.dart';
 import 'package:inspec_app/services/normative_search_service.dart';
+import 'package:inspec_app/services/equipment_source_search_service.dart';
 
 // ================================================================
 // EXTENSION RESPONSIVE
@@ -1036,6 +1037,10 @@ class _EtapeInformationsGenerales extends StatefulWidget {
   final Function(int) onDeleteParafoudreObservation;
   final Future<String?> Function(File, String) onSavePhoto;
 
+  final TextEditingController? indiceIpIkController;
+  final int departuresCount;
+  final int terminalCircuitsCount;
+
   const _EtapeInformationsGenerales({
     this.equipmentType,
     required this.alimenteeParTransformateur,
@@ -1063,6 +1068,9 @@ class _EtapeInformationsGenerales extends StatefulWidget {
     required this.onAddParafoudreObservation,
     required this.onDeleteParafoudreObservation,
     required this.onSavePhoto,
+    this.indiceIpIkController,
+    this.departuresCount = 0,
+    this.terminalCircuitsCount = 0,
   });
 
   @override
@@ -1099,6 +1107,89 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildReadOnlyCountTile(BuildContext context, {required String label, required int count}) {
+    return Container(
+      margin: EdgeInsets.only(bottom: context.spacingS),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.blue.shade50.withOpacity(0.5),
+        borderRadius: BorderRadius.circular(context.spacingM),
+        border: Border.all(color: Colors.blue.shade200),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: context.fontSizeM,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.darkBlue,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryBlue,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '$count',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIndiceIpIkTile(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.only(bottom: context.spacingS),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingM),
+        border: Border.all(color: Colors.grey.shade300),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: context.spacingS,
+            offset: const Offset(0, 2),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Indice IP / IK',
+            style: TextStyle(
+              fontSize: context.fontSizeM,
+              fontWeight: FontWeight.w500,
+              color: AppTheme.darkBlue,
+            ),
+          ),
+          const SizedBox(height: 4),
+          TextField(
+            controller: widget.indiceIpIkController,
+            decoration: const InputDecoration(
+              hintText: 'Ex: IP55 / IK08 (Optionnel)',
+              isDense: true,
+              border: InputBorder.none,
+            ),
+            style: TextStyle(fontSize: context.fontSizeM, color: Colors.grey.shade800),
+          ),
+        ],
       ),
     );
   }
@@ -1299,7 +1390,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
     return ListView(
       padding: EdgeInsets.all(context.spacingL),
       children: [
-        _buildModernHeader(context, 'Informations générales', 2, 4),
+        _buildModernHeader(context, 'Informations générales', 3, 6),
         SizedBox(height: context.spacingXL),
         
         _buildOuiNonChoiceTile(
@@ -1321,12 +1412,18 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
         _buildModernCheckbox(context, 'Signalisation de danger électrique', widget.signalisationDanger, widget.onSignalisationDangerChanged),
         _buildModernCheckbox(context, 'Présence de schéma électrique', widget.presenceSchema, widget.onPresenceSchemaChanged),
         _buildModernCheckbox(context, 'Présence de parafoudre', widget.presenceParafoudre, widget.onPresenceParafoudreChanged),
-        _buildModernCheckbox(context, 'Vérification par thermographie', widget.verificationThermographie, widget.onVerificationThermographieChanged),
+        _buildModernCheckbox(context, 'Vérification par thermographie infrarouge', widget.verificationThermographie, widget.onVerificationThermographieChanged),
         
         if (widget.verificationThermographie) ...[
           const SizedBox(height: 4),
           _buildThermoDefectTile(context),
         ],
+
+        SizedBox(height: context.spacingM),
+        _buildReadOnlyCountTile(context, label: 'Récapitulatif nombre de départ', count: widget.departuresCount),
+        _buildReadOnlyCountTile(context, label: 'Récapitulatif nombre de circuit terminaux', count: widget.terminalCircuitsCount),
+        _buildIndiceIpIkTile(context),
+
         
         SizedBox(height: context.spacingXL),
         
@@ -1549,6 +1646,10 @@ class _EtapeAlimentations extends StatefulWidget {
   final ValueChanged<bool>? onDepartPrisAvecProtectionChanged;
   final VoidCallback? onAddSortie;
   final Function(int index)? onDeleteSortie;
+  final String missionId;
+  final String? currentEquipmentId;
+  final String? sourceNomComplet;
+  final Function(String? equipmentId, String displayName)? onSourceSelected;
 
   const _EtapeAlimentations({
     super.key,
@@ -1561,6 +1662,10 @@ class _EtapeAlimentations extends StatefulWidget {
     required this.sourcesDisponibles,
     this.onAddSortie,
     this.onDeleteSortie,
+    required this.missionId,
+    this.currentEquipmentId,
+    this.sourceNomComplet,
+    this.onSourceSelected,
   });
 
   @override
@@ -1937,37 +2042,42 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             SizedBox(height: context.spacingM),
           ],
           if ((widget.selectedType == 'INVERSEUR' && (index == 0 || index == 1)) ||
-              (widget.selectedType != 'INVERSEUR' && !isProtectionTete && index == 0) ||
-              isProtectionTete) ...[
-            _buildReadOnlySourceField(
-              context,
-              label: 'Source',
-              value: a.effectiveSourceKnown,
-            ),
-            SizedBox(height: context.spacingS),
-            _buildModernTextField(
-              context,
-              label: 'Origine de la source (Armoire de départ)',
-              controller: sourceCtrl,
-              onChanged: (v) => onChanged('source', v),
+              (widget.selectedType != 'INVERSEUR' && !isProtectionTete && index == 0)) ...[
+            _EquipmentSourceAutocompleteField(
+              label: 'Origine de la source',
+              initialText: a.source.isNotEmpty ? a.source : (widget.sourceNomComplet ?? ''),
+              missionId: widget.missionId,
+              currentEquipmentId: widget.currentEquipmentId,
+              onSelected: (result) {
+                if (result != null) {
+                  onChanged('source', result.displayName);
+                  widget.onSourceSelected?.call(result.equipmentId, result.displayName);
+                } else {
+                  onChanged('source', 'Inconnu');
+                  widget.onSourceSelected?.call(null, 'Inconnu');
+                }
+              },
             ),
             SizedBox(height: context.spacingS),
           ],
-          _buildModernDropdown(context, label: 'Type de protection', value: typeProtVal, items: typeProtectionItems, onChanged: (v) => onChanged('typeProtection', v)),
-          SizedBox(height: context.spacingS),
-          _buildModernDropdown(context, label: 'Marque de disjoncteur', value: marqueDisjVal, items: marqueDisjoncteurItems, onChanged: (v) => onChanged('marqueDisjoncteur', v)),
-          SizedBox(height: context.spacingS),
-          _buildModernDropdown(context, label: 'Courbe', value: courbeVal, items: courbeItems, onChanged: (v) => onChanged('courbe', v)),
-          SizedBox(height: context.spacingS),
+          if (!isProtectionTete) ...[
+            _buildModernDropdown(context, label: 'Type de protection', value: typeProtVal, items: typeProtectionItems, onChanged: (v) => onChanged('typeProtection', v)),
+            SizedBox(height: context.spacingS),
+            _buildModernDropdown(context, label: 'Marque de disjoncteur', value: marqueDisjVal, items: marqueDisjoncteurItems, onChanged: (v) => onChanged('marqueDisjoncteur', v)),
+            SizedBox(height: context.spacingS),
+            _buildModernDropdown(context, label: 'Courbe', value: courbeVal, items: courbeItems, onChanged: (v) => onChanged('courbe', v)),
+            SizedBox(height: context.spacingS),
 
-          _buildModernTextField(context, label: 'PDC kA', controller: pdcCtrl, onChanged: (v) => onChanged('pdcKA', v)),
-          SizedBox(height: context.spacingS),
-          // Champ calibre avec suffixe "A"
-          _buildModernTextFieldWithSuffix(context, label: isProtectionTete ? 'Calibre protection' : 'Calibre', suffix: 'A', controller: calibreCtrl, onChanged: (v) => onChanged('calibre', v)),
-          SizedBox(height: context.spacingS),
-          _buildModernDropdown(context, label: 'DDR IΔn (mA)', value: ddrVal, items: ddrItems, onChanged: (v) => onChanged('ddr', v)),
-          SizedBox(height: context.spacingS),
-          _buildModernDropdown(context, label: 'Section de câble', value: a.sectionCable, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCable', v)),
+            _buildModernTextField(context, label: 'PDC kA', controller: pdcCtrl, onChanged: (v) => onChanged('pdcKA', v)),
+            SizedBox(height: context.spacingS),
+            _buildModernTextFieldWithSuffix(context, label: 'Calibre', suffix: 'A', controller: calibreCtrl, onChanged: (v) => onChanged('calibre', v)),
+            SizedBox(height: context.spacingS),
+            _buildModernDropdown(context, label: 'DDR IΔn (mA)', value: ddrVal, items: ddrItems, onChanged: (v) => onChanged('ddr', v)),
+            SizedBox(height: context.spacingS),
+            _buildModernDropdown(context, label: 'Section de câble', value: a.sectionCable, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCable', v)),
+          ] else ...[
+            _buildModernDropdown(context, label: 'Section de câble', value: a.sectionCable, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCable', v)),
+          ],
         ],
       ),
     );
@@ -2902,6 +3012,12 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   Alimentation? _protectionTete;
   List<PointVerification> _pointsVerification = [];
 
+  final _indiceIpIkController = TextEditingController();
+  List<DepartEquipement> _departures = [];
+  List<CircuitTerminalEquipement> _terminalCircuits = [];
+  String? _sourceEquipementId;
+  String? _sourceNomComplet;
+
   List<String> _coffretPhotosExterne = [];
   List<String> _coffretPhotosInterne = [];
   bool _isLoadingPhotosExterne = false;
@@ -2991,6 +3107,11 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         _presenceParafoudre = draft.presenceParafoudre;
         _verificationThermographie = draft.verificationThermographie;
         _presenceDefautThermo = draft.presenceDefautThermo;
+        _indiceIpIkController.text = draft.indiceIpIk ?? '';
+        _departures = List.from(draft.effectiveDepartures.map((d) => d.copyWith()));
+        _terminalCircuits = List.from(draft.effectiveTerminalCircuits.map((c) => c.copyWith()));
+        _sourceEquipementId = draft.sourceEquipementId;
+        _sourceNomComplet = draft.sourceNomComplet;
         _alimentations = List.from(draft.alimentations);
         _protectionTete = draft.protectionTete;
         _pointsVerification = List.from(draft.pointsVerification.map((point) => PointVerification(
@@ -3193,6 +3314,11 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       presenceParafoudre: _presenceParafoudre,
       verificationThermographie: _verificationThermographie,
       presenceDefautThermo: _presenceDefautThermo,
+      indiceIpIk: _indiceIpIkController.text.trim().isEmpty ? null : _indiceIpIkController.text.trim(),
+      departures: _departures,
+      terminalCircuits: _terminalCircuits,
+      sourceEquipementId: _sourceEquipementId,
+      sourceNomComplet: _sourceNomComplet,
       alimentations: _alimentations,
       protectionTete: _protectionTete,
       pointsVerification: _pointsVerification,
@@ -3251,6 +3377,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _numeroEquipementController.dispose();
     _repereController.dispose();
     _qrCodeController.dispose();
+    _indiceIpIkController.dispose();
     _observationController.dispose();
     _mainPageController.dispose();
     super.dispose();
@@ -3332,6 +3459,11 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _presenceParafoudre = coffret.presenceParafoudre;
     _verificationThermographie = coffret.verificationThermographie;
     _presenceDefautThermo = coffret.presenceDefautThermo;
+    _indiceIpIkController.text = coffret.indiceIpIk ?? '';
+    _departures = List.from(coffret.effectiveDepartures.map((d) => d.copyWith()));
+    _terminalCircuits = List.from(coffret.effectiveTerminalCircuits.map((c) => c.copyWith()));
+    _sourceEquipementId = coffret.sourceEquipementId;
+    _sourceNomComplet = coffret.sourceNomComplet;
     _observationsParafoudre = List.from(coffret.observationsParafoudreEnrichies ?? []);
     if (_observationsParafoudre.isEmpty && coffret.observationsParafoudre.isNotEmpty) {
       for (var obs in coffret.observationsParafoudre) {
@@ -3691,6 +3823,11 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         presenceParafoudre: _presenceParafoudre,
         verificationThermographie: _verificationThermographie,
         presenceDefautThermo: _presenceDefautThermo,
+        indiceIpIk: _indiceIpIkController.text.trim().isEmpty ? null : _indiceIpIkController.text.trim(),
+        departures: _departures,
+        terminalCircuits: _terminalCircuits,
+        sourceEquipementId: _sourceEquipementId,
+        sourceNomComplet: _sourceNomComplet,
         alimentations: _alimentations,
         protectionTete: _protectionTete,
         pointsVerification: _pointsVerification,
@@ -3861,6 +3998,11 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         target.presenceParafoudre = newCoffret.presenceParafoudre;
         target.verificationThermographie = newCoffret.verificationThermographie;
         target.presenceDefautThermo = newCoffret.presenceDefautThermo;
+        target.indiceIpIk = newCoffret.indiceIpIk;
+        target.departures = newCoffret.departures;
+        target.terminalCircuits = newCoffret.terminalCircuits;
+        target.sourceEquipementId = newCoffret.sourceEquipementId;
+        target.sourceNomComplet = newCoffret.sourceNomComplet;
         target.alimentations = newCoffret.alimentations;
         target.protectionTete = newCoffret.protectionTete;
         target.pointsVerification = newCoffret.pointsVerification;
@@ -3912,6 +4054,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       }
     } else if (_currentStep == 4) {
+      _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
+    } else if (_currentStep == 5) {
       final pointsState = _etapePointsKey?.currentState;
       if (pointsState != null) {
         if (pointsState.canGoNext()) _sauvegarder();
@@ -3930,7 +4074,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       } else {
         _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       }
-    } else if (_currentStep == 4) {
+    } else if (_currentStep == 5) {
       final pointsState = _etapePointsKey?.currentState;
       if (pointsState != null && pointsState._currentSlide > 0) pointsState.previousSlide();
       else _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
@@ -3943,12 +4087,12 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     if (_currentStep == 1 && _accessible == false) {
       return 'Enregistrer';
     }
-    if (_currentStep == 4) {
+    if (_currentStep == 5) {
       final pointsState = _etapePointsKey?.currentState;
       if (pointsState != null && pointsState.canGoNext()) return 'Terminer';
       return 'Suivant';
     }
-    return _currentStep == 4 ? 'Terminer' : 'Suivant';
+    return _currentStep == 5 ? 'Terminer' : 'Suivant';
   }
 
   void _onPresenceParafoudreChanged(bool? value) {
@@ -3956,7 +4100,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _saveDraft();
   }
 
-  int _getTotalSteps() => _accessible ? 5 : 2;
+  int _getTotalSteps() => _accessible ? 6 : 2;
 
   Widget _buildSlideAccessibiliteEquipement() {
     return Padding(
@@ -4316,6 +4460,16 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                       alimentations: _alimentations,
                       protectionTete: _protectionTete,
                       departPrisAvecProtection: _departPrisAvecProtection,
+                      missionId: widget.mission.id,
+                      currentEquipmentId: widget.coffret?.equipmentId,
+                      sourceNomComplet: _sourceNomComplet,
+                      onSourceSelected: (equipId, displayName) {
+                        setState(() {
+                          _sourceEquipementId = equipId;
+                          _sourceNomComplet = displayName;
+                        });
+                        _scheduleAutoSave();
+                      },
                       onDepartPrisAvecProtectionChanged: (val) {
                         setState(() {
                           _departPrisAvecProtection = val;
@@ -4326,6 +4480,15 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                       sourcesDisponibles: _getSourcesDisponibles(),
                       onAddSortie: _addSortieInverseur,
                       onDeleteSortie: _deleteSortieInverseur,
+                    ),
+                  if (_selectedType != null && _accessible)
+                    _EtapeDepartsEtCircuits(
+                      departures: _departures,
+                      terminalCircuits: _terminalCircuits,
+                      onDataChanged: () {
+                        setState(() {});
+                        _scheduleAutoSave();
+                      },
                     ),
                   if (_selectedType != null && _pointsVerification.isNotEmpty && _accessible)
                     _EtapePointsVerification(
@@ -4375,4 +4538,668 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
 
 List<String> _getSourcesDisponibles() {
   return ['Inverseur', 'Armoire', 'Coffret', 'TGBT'];
+}
+
+// ================================================================
+// RECHERCHE DYNAMIQUE D'ÉQUIPEMENT SOURCE
+// ================================================================
+class _EquipmentSourceAutocompleteField extends StatefulWidget {
+  final String label;
+  final String initialText;
+  final String missionId;
+  final String? currentEquipmentId;
+  final Function(EquipmentSearchResult?) onSelected;
+
+  const _EquipmentSourceAutocompleteField({
+    required this.label,
+    required this.initialText,
+    required this.missionId,
+    this.currentEquipmentId,
+    required this.onSelected,
+  });
+
+  @override
+  State<_EquipmentSourceAutocompleteField> createState() => _EquipmentSourceAutocompleteFieldState();
+}
+
+class _EquipmentSourceAutocompleteFieldState extends State<_EquipmentSourceAutocompleteField> {
+  late TextEditingController _controller;
+  List<EquipmentSearchResult> _suggestions = [];
+  bool _showOverlay = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialText.isEmpty ? 'Inconnu' : widget.initialText);
+  }
+
+  @override
+  void didUpdateWidget(covariant _EquipmentSourceAutocompleteField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialText != oldWidget.initialText && widget.initialText != _controller.text) {
+      _controller.text = widget.initialText.isEmpty ? 'Inconnu' : widget.initialText;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _onQueryChanged(String query) {
+    final results = EquipmentSourceSearchService.searchSources(
+      missionId: widget.missionId,
+      query: query == 'Inconnu' ? '' : query,
+      excludeEquipmentId: widget.currentEquipmentId,
+    );
+    setState(() {
+      _suggestions = results;
+      _showOverlay = results.isNotEmpty;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          widget.label,
+          style: TextStyle(
+            fontSize: context.fontSizeS,
+            fontWeight: FontWeight.bold,
+            color: AppTheme.darkBlue,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(context.spacingS),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: TextField(
+            controller: _controller,
+            decoration: InputDecoration(
+              hintText: 'Rechercher un TGBT / Armoire / Coffret source...',
+              prefixIcon: const Icon(Icons.search, size: 20, color: AppTheme.primaryBlue),
+              suffixIcon: _controller.text.isNotEmpty && _controller.text != 'Inconnu'
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        _controller.text = 'Inconnu';
+                        widget.onSelected(null);
+                        setState(() { _showOverlay = false; });
+                      },
+                    )
+                  : null,
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            ),
+            style: TextStyle(fontSize: context.fontSizeM, color: AppTheme.darkBlue, fontWeight: FontWeight.w500),
+            onChanged: _onQueryChanged,
+            onTap: () => _onQueryChanged(_controller.text),
+          ),
+        ),
+        if (_showOverlay && _suggestions.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 4),
+            constraints: const BoxConstraints(maxHeight: 200),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.4)),
+              boxShadow: [
+                BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 6, offset: const Offset(0, 3)),
+              ],
+            ),
+            child: ListView.separated(
+              shrinkWrap: true,
+              itemCount: _suggestions.length,
+              separatorBuilder: (_, __) => const Divider(height: 1),
+              itemBuilder: (context, index) {
+                final item = _suggestions[index];
+                return ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.bolt, color: AppTheme.primaryBlue, size: 20),
+                  title: Text(item.displayName, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                  subtitle: item.localisation != null ? Text(item.localisation!, style: const TextStyle(fontSize: 11)) : null,
+                  onTap: () {
+                    _controller.text = item.displayName;
+                    widget.onSelected(item);
+                    setState(() { _showOverlay = false; });
+                  },
+                );
+              },
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+// ================================================================
+// SLIDE 5 : IDENTIFICATION DES DÉPARTS ET CIRCUITS TERMINAUX
+// ================================================================
+class _EtapeDepartsEtCircuits extends StatefulWidget {
+  final List<DepartEquipement> departures;
+  final List<CircuitTerminalEquipement> terminalCircuits;
+  final VoidCallback onDataChanged;
+
+  const _EtapeDepartsEtCircuits({
+    required this.departures,
+    required this.terminalCircuits,
+    required this.onDataChanged,
+  });
+
+  @override
+  State<_EtapeDepartsEtCircuits> createState() => _EtapeDepartsEtCircuitsState();
+}
+
+class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
+  static const List<String> _typeProtectionOptions = [
+    'Disjoncteur',
+    'Sectionneur',
+    'Interrupteur',
+    'Interrupteur sectionneur',
+    'Interrupteur différentiel',
+    'Disjoncteur différentiel',
+    'Sectionneur porte-fusible',
+    'Coupe-circuit(porte-fusible)',
+  ];
+
+  static const List<String> _marqueOptions = [
+    'ABB',
+    'C&S Electric',
+    'Chint',
+    'Eaton',
+    'Fuji Electric',
+    'Gewiss',
+    'Hager',
+    'Hyundai Electric',
+    'LS Electric',
+    'Legrand',
+    'Lovato Electric',
+    'Mitsubishi Electric',
+    'Noark',
+    'Schneider Electric',
+    'Schrack Technik',
+    'Siemens',
+    'Socomec',
+    'TOMZN',
+    'Terasaki',
+  ];
+
+  static const List<String> _courbeOptions = [
+    'Courbe-B',
+    'Courbe-C',
+    'Courbe-D',
+    'Courbe-K',
+    'Courbe-Z',
+    'Courbe-MA',
+  ];
+
+  static const List<String> _sectionCableOptions = [
+    '1.5 mm²', '2.5 mm²', '4 mm²', '6 mm²', '10 mm²', '16 mm²',
+    '25 mm²', '35 mm²', '50 mm²', '70 mm²', '95 mm²', '120 mm²',
+    '150 mm²', '185 mm²', '240 mm²', '300 mm²',
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: EdgeInsets.all(context.spacingL),
+      children: [
+        _buildModernHeader(context, 'Départs & Circuits Terminaux', 5, 6),
+        SizedBox(height: context.spacingXL),
+
+        // SECTION A : IDENTIFICATION DES DÉPARTS
+        _buildSectionHeader(
+          context,
+          title: 'IDENTIFICATION DES DÉPARTS ISSUS DE CE TGBT/ARMOIRE/COFFRET',
+          count: widget.departures.length,
+          color: Colors.blue.shade800,
+        ),
+        SizedBox(height: context.spacingM),
+        for (int i = 0; i < widget.departures.length; i++) ...[
+          _buildDepartCard(context, widget.departures[i], i),
+          SizedBox(height: context.spacingM),
+        ],
+        Center(
+          child: OutlinedButton.icon(
+            onPressed: () {
+              setState(() {
+                widget.departures.add(DepartEquipement(
+                  identification: 'Départ ${widget.departures.length + 1}',
+                ));
+              });
+              widget.onDataChanged();
+            },
+            icon: const Icon(Icons.add_circle_outline, color: AppTheme.primaryBlue),
+            label: const Text(
+              '+ Ajouter un départ',
+              style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              side: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ),
+
+        SizedBox(height: context.spacingXXL),
+
+        // SECTION B : IDENTIFICATION DES CIRCUITS TERMINAUX
+        _buildSectionHeader(
+          context,
+          title: 'IDENTIFICATION DES CIRCUITS TERMINAUX ISSUS DE CE TGBT/ARMOIRE/COFFRET',
+          count: widget.terminalCircuits.length,
+          color: Colors.teal.shade800,
+        ),
+        SizedBox(height: context.spacingM),
+        for (int i = 0; i < widget.terminalCircuits.length; i++) ...[
+          _buildTerminalCircuitCard(context, widget.terminalCircuits[i], i),
+          SizedBox(height: context.spacingM),
+        ],
+        Center(
+          child: OutlinedButton.icon(
+            onPressed: () {
+              setState(() {
+                widget.terminalCircuits.add(CircuitTerminalEquipement(
+                  identification: 'Circuit ${widget.terminalCircuits.length + 1}',
+                ));
+              });
+              widget.onDataChanged();
+            },
+            icon: const Icon(Icons.add_circle_outline, color: Colors.teal),
+            label: const Text(
+              '+ Ajouter un circuit terminal',
+              style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+            ),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              side: const BorderSide(color: Colors.teal, width: 1.5),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+          ),
+        ),
+        SizedBox(height: context.spacingXXL),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(BuildContext context, {required String title, required int count, required Color color}) {
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(context.spacingS),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              title,
+              style: TextStyle(
+                fontSize: context.fontSizeS,
+                fontWeight: FontWeight.bold,
+                color: color,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: color,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              '$count',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDepartCard(BuildContext context, DepartEquipement dep, int index) {
+    final typeProtItems = [..._typeProtectionOptions];
+    if (dep.typeProtection.isNotEmpty && !typeProtItems.contains(dep.typeProtection)) {
+      typeProtItems.insert(0, dep.typeProtection);
+    }
+    final marqueItems = [..._marqueOptions];
+    if (dep.marque.isNotEmpty && !marqueItems.contains(dep.marque)) {
+      marqueItems.insert(0, dep.marque);
+    }
+    final courbeItems = [..._courbeOptions];
+    if (dep.courbe.isNotEmpty && !courbeItems.contains(dep.courbe)) {
+      courbeItems.insert(0, dep.courbe);
+    }
+
+    return Container(
+      padding: EdgeInsets.all(context.spacingM),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingM),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Départ ${index + 1}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: context.fontSizeM, color: AppTheme.darkBlue)),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                onPressed: () {
+                  setState(() {
+                    widget.departures.removeAt(index);
+                  });
+                  widget.onDataChanged();
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          Row(
+            children: [
+              Text('Protection de tête du départ :', style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
+              const Spacer(),
+              ChoiceChip(
+                label: const Text('Présent'),
+                selected: dep.protectionTete == 'Présent',
+                selectedColor: Colors.green.shade100,
+                onSelected: (sel) {
+                  setState(() { dep.protectionTete = sel ? 'Présent' : 'Absent'; });
+                  widget.onDataChanged();
+                },
+              ),
+              const SizedBox(width: 6),
+              ChoiceChip(
+                label: const Text('Absent'),
+                selected: dep.protectionTete == 'Absent',
+                selectedColor: Colors.red.shade100,
+                onSelected: (sel) {
+                  setState(() { dep.protectionTete = sel ? 'Absent' : 'Présent'; });
+                  widget.onDataChanged();
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          TextFormField(
+            initialValue: dep.identification,
+            decoration: const InputDecoration(labelText: 'Identification du départ', isDense: true, border: OutlineInputBorder()),
+            onChanged: (v) { dep.identification = v; widget.onDataChanged(); },
+          ),
+          const SizedBox(height: 8),
+
+          DropdownButtonFormField<String>(
+            value: dep.typeProtection.isNotEmpty ? dep.typeProtection : null,
+            decoration: const InputDecoration(labelText: 'Type de protection', isDense: true, border: OutlineInputBorder()),
+            items: typeProtItems.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            onChanged: (v) { setState(() { dep.typeProtection = v ?? ''; }); widget.onDataChanged(); },
+          ),
+          const SizedBox(height: 8),
+
+          DropdownButtonFormField<String>(
+            value: dep.marque.isNotEmpty ? dep.marque : null,
+            decoration: const InputDecoration(labelText: 'Marque', isDense: true, border: OutlineInputBorder()),
+            items: marqueItems.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            onChanged: (v) { setState(() { dep.marque = v ?? ''; }); widget.onDataChanged(); },
+          ),
+          const SizedBox(height: 8),
+
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: dep.courbe.isNotEmpty ? dep.courbe : null,
+                  decoration: const InputDecoration(labelText: 'Courbe', isDense: true, border: OutlineInputBorder()),
+                  items: courbeItems.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  onChanged: (v) { setState(() { dep.courbe = v ?? ''; }); widget.onDataChanged(); },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  initialValue: dep.pdcKA,
+                  decoration: const InputDecoration(labelText: 'PDC (kA)', isDense: true, border: OutlineInputBorder()),
+                  onChanged: (v) { dep.pdcKA = v; widget.onDataChanged(); },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  initialValue: dep.icc3Max,
+                  decoration: const InputDecoration(labelText: 'Icc3 max (kA)', isDense: true, border: OutlineInputBorder()),
+                  onChanged: (v) { dep.icc3Max = v; widget.onDataChanged(); },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  initialValue: dep.calibre,
+                  decoration: const InputDecoration(labelText: 'Calibre (A)', suffixText: 'A', isDense: true, border: OutlineInputBorder()),
+                  onChanged: (v) { dep.calibre = v; widget.onDataChanged(); },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          DropdownButtonFormField<String>(
+            value: dep.sectionCable.isNotEmpty ? dep.sectionCable : null,
+            decoration: const InputDecoration(labelText: 'Section de câble (mm²)', isDense: true, border: OutlineInputBorder()),
+            items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            onChanged: (v) { setState(() { dep.sectionCable = v ?? ''; }); widget.onDataChanged(); },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTerminalCircuitCard(BuildContext context, CircuitTerminalEquipement ct, int index) {
+    final typeProtItems = [..._typeProtectionOptions];
+    if (ct.typeProtection.isNotEmpty && !typeProtItems.contains(ct.typeProtection)) {
+      typeProtItems.insert(0, ct.typeProtection);
+    }
+    final marqueItems = [..._marqueOptions];
+    if (ct.marque.isNotEmpty && !marqueItems.contains(ct.marque)) {
+      marqueItems.insert(0, ct.marque);
+    }
+    final courbeItems = [..._courbeOptions];
+    if (ct.courbe.isNotEmpty && !courbeItems.contains(ct.courbe)) {
+      courbeItems.insert(0, ct.courbe);
+    }
+
+    return Container(
+      padding: EdgeInsets.all(context.spacingM),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingM),
+        border: Border.all(color: Colors.grey.shade200),
+        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Circuit Terminal ${index + 1}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: context.fontSizeM, color: AppTheme.darkBlue)),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                onPressed: () {
+                  setState(() {
+                    widget.terminalCircuits.removeAt(index);
+                  });
+                  widget.onDataChanged();
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          Row(
+            children: [
+              Text('Circuit terminal de tête :', style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w600, color: Colors.grey.shade700)),
+              const Spacer(),
+              ChoiceChip(
+                label: const Text('Oui'),
+                selected: ct.protectionTete == 'Oui' || ct.protectionTete == 'Présent',
+                selectedColor: Colors.green.shade100,
+                onSelected: (sel) {
+                  setState(() { ct.protectionTete = sel ? 'Oui' : 'Non'; });
+                  widget.onDataChanged();
+                },
+              ),
+              const SizedBox(width: 6),
+              ChoiceChip(
+                label: const Text('Non'),
+                selected: ct.protectionTete == 'Non' || ct.protectionTete == 'Absent',
+                selectedColor: Colors.red.shade100,
+                onSelected: (sel) {
+                  setState(() { ct.protectionTete = sel ? 'Non' : 'Oui'; });
+                  widget.onDataChanged();
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          TextFormField(
+            initialValue: ct.identification,
+            decoration: const InputDecoration(labelText: 'Identification du circuit', isDense: true, border: OutlineInputBorder()),
+            onChanged: (v) { ct.identification = v; widget.onDataChanged(); },
+          ),
+          const SizedBox(height: 8),
+
+          DropdownButtonFormField<String>(
+            value: ct.typeProtection.isNotEmpty ? ct.typeProtection : null,
+            decoration: const InputDecoration(labelText: 'Type de protection', isDense: true, border: OutlineInputBorder()),
+            items: typeProtItems.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            onChanged: (v) { setState(() { ct.typeProtection = v ?? ''; }); widget.onDataChanged(); },
+          ),
+          const SizedBox(height: 8),
+
+          DropdownButtonFormField<String>(
+            value: ct.marque.isNotEmpty ? ct.marque : null,
+            decoration: const InputDecoration(labelText: 'Marque', isDense: true, border: OutlineInputBorder()),
+            items: marqueItems.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            onChanged: (v) { setState(() { ct.marque = v ?? ''; }); widget.onDataChanged(); },
+          ),
+          const SizedBox(height: 8),
+
+          Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  value: ct.courbe.isNotEmpty ? ct.courbe : null,
+                  decoration: const InputDecoration(labelText: 'Courbe', isDense: true, border: OutlineInputBorder()),
+                  items: courbeItems.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+                  onChanged: (v) { setState(() { ct.courbe = v ?? ''; }); widget.onDataChanged(); },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  initialValue: ct.pdcKA,
+                  decoration: const InputDecoration(labelText: 'PDC (kA)', isDense: true, border: OutlineInputBorder()),
+                  onChanged: (v) { ct.pdcKA = v; widget.onDataChanged(); },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          Row(
+            children: [
+              Expanded(
+                child: TextFormField(
+                  initialValue: ct.icc3Max,
+                  decoration: const InputDecoration(labelText: 'Icc3 max (kA)', isDense: true, border: OutlineInputBorder()),
+                  onChanged: (v) { ct.icc3Max = v; widget.onDataChanged(); },
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: TextFormField(
+                  initialValue: ct.calibre,
+                  decoration: const InputDecoration(labelText: 'Calibre (A)', suffixText: 'A', isDense: true, border: OutlineInputBorder()),
+                  onChanged: (v) { ct.calibre = v; widget.onDataChanged(); },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+
+          DropdownButtonFormField<String>(
+            value: ct.sectionCable.isNotEmpty ? ct.sectionCable : null,
+            decoration: const InputDecoration(labelText: 'Section de câble (mm²)', isDense: true, border: OutlineInputBorder()),
+            items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
+            onChanged: (v) { setState(() { ct.sectionCable = v ?? ''; }); widget.onDataChanged(); },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernHeader(BuildContext context, String title, int currentStep, int totalSteps) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: context.iconSizeXL * 1.2,
+              height: context.iconSizeXL * 1.2,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(colors: [AppTheme.primaryBlue, AppTheme.primaryBlue.withOpacity(0.7)]),
+                borderRadius: BorderRadius.circular(context.spacingS),
+              ),
+              child: Icon(Icons.alt_route, color: Colors.white, size: context.iconSizeM),
+            ),
+            SizedBox(width: context.spacingM),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: TextStyle(fontSize: context.fontSizeXXL, fontWeight: FontWeight.bold, color: AppTheme.darkBlue)),
+                  SizedBox(height: context.spacingXS),
+                  Text('Étape $currentStep sur $totalSteps', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: context.spacingM),
+        LinearProgressIndicator(
+          value: currentStep / totalSteps,
+          backgroundColor: Colors.grey.shade200,
+          valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+          minHeight: 4,
+          borderRadius: BorderRadius.circular(2),
+        ),
+      ],
+    );
+  }
 }

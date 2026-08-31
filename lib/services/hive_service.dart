@@ -82,6 +82,8 @@ class HiveService {
     if (!Hive.isAdapterRegistered(60)) Hive.registerAdapter(LightingInspectionAdapter());
     if (!Hive.isAdapterRegistered(61)) Hive.registerAdapter(NonConformingLuminaireAdapter());
     if (!Hive.isAdapterRegistered(62)) Hive.registerAdapter(LuminaireQuestionAnswerAdapter());
+    if (!Hive.isAdapterRegistered(64)) Hive.registerAdapter(DepartEquipementAdapter());
+    if (!Hive.isAdapterRegistered(65)) Hive.registerAdapter(CircuitTerminalEquipementAdapter());
   }
 
   // Initialiser Hive

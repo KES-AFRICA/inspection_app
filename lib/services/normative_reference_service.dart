@@ -6,7 +6,7 @@ class NormativeReferenceService {
   // Map des références normatives par libellé de point de vérification
   static const Map<String, String> _normativeReferences = {
     "Le local est exclusivement réservé à l'usage électrique": "NF C 15-100-1:2024 – art 513 et art 514 (aspects accessibilité/identification) ; exigence spécifique de local électrique à confirmer sur NF C 15-100-7-729 (non fournie)",
-    'Signalisation visible "Local électrique – Accès réservé au personnel habilité"': "NF C 15-100-1:2024 – art 514 ; exigence spécifique de signalisation du local à confirmer sur NF C 15-100-7-729 (non fournie)",
+    'Signalisation visible "Local électrique – Accès réservé au personnel habilité"': "NF C 15-100-7-729:2024 – art 729",
     "Dimensions": "NF C 15-100-1:2024 – art 513 et art 512.2 ; les dimensions précises du local ne sont pas fixées par la partie jointe",
     "Parois, plancher et plafond en matériaux non combustibles": "NF C 15-100-1:2024 – art 421, art 422 et art 527",
     "Présence d'une porte pleine, ouvrant vers l'extérieur, munie d'un dispositif anti-panique": "NF C 15-100-1:2024 – art 513 ; les exigences détaillées de porte/anti-panique sont à compléter par le référentiel bâtiment/local applicable",

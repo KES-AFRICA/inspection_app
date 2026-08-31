@@ -990,6 +990,24 @@ class CoffretArmoire {
   @HiveField(31)
   DateTime? updatedAt;
 
+  @HiveField(32)
+  String? indiceIpIk;
+
+  @HiveField(33)
+  List<DepartEquipement>? departures;
+
+  @HiveField(34)
+  List<CircuitTerminalEquipement>? terminalCircuits;
+
+  @HiveField(35)
+  String? sourceEquipementId;
+
+  @HiveField(36)
+  String? sourceNomComplet;
+
+  List<DepartEquipement> get effectiveDepartures => departures ?? [];
+  List<CircuitTerminalEquipement> get effectiveTerminalCircuits => terminalCircuits ?? [];
+
   /// Résout l'état du switch "Départ pris avec protection"
   /// - L'Inverseur est toujours considéré à true (avec protection).
   /// - Si la valeur a été explicitement définie/sauvegardée (non null), on respecte ce choix (override manuel).
@@ -1048,6 +1066,11 @@ class CoffretArmoire {
     this.departPrisAvecProtection,
     this.createdAt,
     this.updatedAt,
+    this.indiceIpIk,
+    List<DepartEquipement>? departures,
+    List<CircuitTerminalEquipement>? terminalCircuits,
+    this.sourceEquipementId,
+    this.sourceNomComplet,
     bool? accessible,
     List<Alimentation>? alimentations,
     this.protectionTete,
@@ -1065,6 +1088,8 @@ class CoffretArmoire {
             ? id
             : 'equip_${DateTime.now().microsecondsSinceEpoch}_${nom.hashCode.abs()}',
         _accessible = accessible ?? true,
+        departures = departures ?? [],
+        terminalCircuits = terminalCircuits ?? [],
         alimentations = alimentations ?? [],
         pointsVerification = pointsVerification ?? [],
         observationsLibres = observationsLibres ?? [],
@@ -1293,5 +1318,155 @@ class ObservationLibre {
   void updateTexte(String nouveauTexte) {
     texte = nouveauTexte;
     dateModification = DateTime.now();
+  }
+}
+
+// DÉPART ISSU D'UN TGBT/ARMOIRE/COFFRET
+@HiveType(typeId: 64)
+class DepartEquipement {
+  @HiveField(0)
+  String id;
+
+  @HiveField(1)
+  String protectionTete; // 'Présent' | 'Absent'
+
+  @HiveField(2)
+  String identification;
+
+  @HiveField(3)
+  String typeProtection;
+
+  @HiveField(4)
+  String marque;
+
+  @HiveField(5)
+  String courbe;
+
+  @HiveField(6)
+  String pdcKA;
+
+  @HiveField(7)
+  String icc3Max;
+
+  @HiveField(8)
+  String calibre;
+
+  @HiveField(9)
+  String sectionCable;
+
+  DepartEquipement({
+    String? id,
+    this.protectionTete = 'Présent',
+    this.identification = '',
+    this.typeProtection = '',
+    this.marque = '',
+    this.courbe = '',
+    this.pdcKA = '',
+    this.icc3Max = '',
+    this.calibre = '',
+    this.sectionCable = '',
+  }) : id = (id != null && id.trim().isNotEmpty)
+            ? id
+            : 'dep_${DateTime.now().microsecondsSinceEpoch}_${identification.hashCode.abs()}';
+
+  DepartEquipement copyWith({
+    String? id,
+    String? protectionTete,
+    String? identification,
+    String? typeProtection,
+    String? marque,
+    String? courbe,
+    String? pdcKA,
+    String? icc3Max,
+    String? calibre,
+    String? sectionCable,
+  }) {
+    return DepartEquipement(
+      id: id ?? this.id,
+      protectionTete: protectionTete ?? this.protectionTete,
+      identification: identification ?? this.identification,
+      typeProtection: typeProtection ?? this.typeProtection,
+      marque: marque ?? this.marque,
+      courbe: courbe ?? this.courbe,
+      pdcKA: pdcKA ?? this.pdcKA,
+      icc3Max: icc3Max ?? this.icc3Max,
+      calibre: calibre ?? this.calibre,
+      sectionCable: sectionCable ?? this.sectionCable,
+    );
+  }
+}
+
+// CIRCUIT TERMINAL ISSU D'UN TGBT/ARMOIRE/COFFRET
+@HiveType(typeId: 65)
+class CircuitTerminalEquipement {
+  @HiveField(0)
+  String id;
+
+  @HiveField(1)
+  String protectionTete; // 'Oui' | 'Non' / 'Présent' | 'Absent'
+
+  @HiveField(2)
+  String identification;
+
+  @HiveField(3)
+  String typeProtection;
+
+  @HiveField(4)
+  String marque;
+
+  @HiveField(5)
+  String courbe;
+
+  @HiveField(6)
+  String pdcKA;
+
+  @HiveField(7)
+  String icc3Max;
+
+  @HiveField(8)
+  String calibre;
+
+  @HiveField(9)
+  String sectionCable;
+
+  CircuitTerminalEquipement({
+    String? id,
+    this.protectionTete = 'Oui',
+    this.identification = '',
+    this.typeProtection = '',
+    this.marque = '',
+    this.courbe = '',
+    this.pdcKA = '',
+    this.icc3Max = '',
+    this.calibre = '',
+    this.sectionCable = '',
+  }) : id = (id != null && id.trim().isNotEmpty)
+            ? id
+            : 'ct_${DateTime.now().microsecondsSinceEpoch}_${identification.hashCode.abs()}';
+
+  CircuitTerminalEquipement copyWith({
+    String? id,
+    String? protectionTete,
+    String? identification,
+    String? typeProtection,
+    String? marque,
+    String? courbe,
+    String? pdcKA,
+    String? icc3Max,
+    String? calibre,
+    String? sectionCable,
+  }) {
+    return CircuitTerminalEquipement(
+      id: id ?? this.id,
+      protectionTete: protectionTete ?? this.protectionTete,
+      identification: identification ?? this.identification,
+      typeProtection: typeProtection ?? this.typeProtection,
+      marque: marque ?? this.marque,
+      courbe: courbe ?? this.courbe,
+      pdcKA: pdcKA ?? this.pdcKA,
+      icc3Max: icc3Max ?? this.icc3Max,
+      calibre: calibre ?? this.calibre,
+      sectionCable: sectionCable ?? this.sectionCable,
+    );
   }
 }

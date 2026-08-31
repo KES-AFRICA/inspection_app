@@ -1391,7 +1391,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Majeure",
     ),
     "Compatibilité du degré IP/IK avec l'environnement d'installation": DispositionMetadata(
-      referenceNormative: "Recherche automatique suivant le classement de la zone ou du local, quand c'est absent ça devient par defaut non conforme",
+      referenceNormative: "NF C 15-100-1:2024 – art 512.2",
       familleRisque: "Contact électrique / influences externes / protection mécanique",
       criticite: "Majeure",
     ),
