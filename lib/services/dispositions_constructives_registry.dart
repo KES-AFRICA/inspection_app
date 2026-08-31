@@ -1985,14 +1985,14 @@ class DispositionsConstructivesRegistry {
       pt.pointVerification = targetTitle;
       final targetKey = _normalizeKey(targetTitle);
 
-      final confNorm = pt.conformite.toLowerCase().trim();
+      final confNorm = pt.normalizedConformite;
       final isExistingEmpty = confNorm.isEmpty;
 
       final current = existingMap[targetKey];
       if (current == null) {
         existingMap[targetKey] = pt;
       } else {
-        final currentConfNorm = current.conformite.toLowerCase().trim();
+        final currentConfNorm = current.normalizedConformite;
         final currentIsEmpty = currentConfNorm.isEmpty;
         if (currentIsEmpty && !isExistingEmpty) {
           existingMap[targetKey] = pt;
@@ -2061,14 +2061,14 @@ class DispositionsConstructivesRegistry {
       pt.pointVerification = targetTitle;
       final targetKey = _normalizeKey(targetTitle);
 
-      final confNorm = pt.conformite.toLowerCase().trim();
+      final confNorm = pt.normalizedConformite;
       final isExistingEmpty = confNorm.isEmpty;
 
       final current = existingMap[targetKey];
       if (current == null) {
         existingMap[targetKey] = pt;
       } else {
-        final currentConfNorm = current.conformite.toLowerCase().trim();
+        final currentConfNorm = current.normalizedConformite;
         final currentIsEmpty = currentConfNorm.isEmpty;
         if (currentIsEmpty && !isExistingEmpty) {
           existingMap[targetKey] = pt;

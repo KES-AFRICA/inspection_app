@@ -1210,6 +1210,16 @@ class PointVerification {
     this.familleRisque,
   }) : photos = photos ?? [],
        observations = observations ?? [];
+
+  /// Getter normalisé déterministe pour la conformité
+  /// Convertit les équivalents majuscules / historiques / booléens en 'oui', 'non', 'na', ou ''
+  String get normalizedConformite {
+    final c = conformite.trim().toLowerCase();
+    if (c == 'oui' || c == 'true' || c == 'conforme') return 'oui';
+    if (c == 'non' || c == 'false' || c == 'non_conforme' || c == 'non conforme') return 'non';
+    if (c == 'na' || c == 'sans_objet' || c == 'sans objet' || c == 's.o.' || c == 'so' || c == 'non_acquis') return 'na';
+    return c;
+  }
 }
 
 @HiveType(typeId: 24)

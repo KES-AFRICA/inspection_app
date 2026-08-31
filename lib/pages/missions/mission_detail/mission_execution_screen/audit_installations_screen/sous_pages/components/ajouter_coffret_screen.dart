@@ -2932,7 +2932,7 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
   }
 
   Widget _buildConformiteToggle(BuildContext context, PointVerification point, int pointIndex) {
-    final isValid = point.conformite.isNotEmpty;
+    final isValid = point.normalizedConformite.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -2940,19 +2940,19 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
         SizedBox(height: context.spacingS),
         Row(
           children: [
-            Expanded(child: _buildConformiteButton(context, label: 'Oui', isSelected: point.conformite == 'oui', color: Colors.green, onTap: () {
+            Expanded(child: _buildConformiteButton(context, label: 'Oui', isSelected: point.normalizedConformite == 'oui', color: Colors.green, onTap: () {
               setState(() { point.conformite = 'oui'; point.referenceNormative = null; });
               widget.onObservationToggleChanged(pointIndex, false);
             })),
             SizedBox(width: context.spacingS),
-            Expanded(child: _buildConformiteButton(context, label: 'Non', isSelected: point.conformite == 'non', color: Colors.red, onTap: () {
+            Expanded(child: _buildConformiteButton(context, label: 'Non', isSelected: point.normalizedConformite == 'non', color: Colors.red, onTap: () {
               setState(() { point.conformite = 'non'; point.priorite ??= 3; });
               final reference = NormativeReferenceService.getReferenceForPoint(point.pointVerification);
               if (reference != null) point.referenceNormative = reference;
               widget.onObservationToggleChanged(pointIndex, true);
             })),
             SizedBox(width: context.spacingS),
-            Expanded(child: _buildConformiteButton(context, label: 'NA', isSelected: point.conformite == 'na', color: Colors.grey.shade600, onTap: () {
+            Expanded(child: _buildConformiteButton(context, label: 'NA', isSelected: point.normalizedConformite == 'na', color: Colors.grey.shade600, onTap: () {
               setState(() { point.conformite = 'na'; point.priorite ??= 3; point.referenceNormative = null; });
               widget.onObservationToggleChanged(pointIndex, false);
             })),
@@ -3641,7 +3641,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _validatePhotosInterne();
     for (int i = 0; i < _pointsVerification.length; i++) {
       final point = _pointsVerification[i];
-      if (point.conformite == 'non') _hasObservation[i] = true;
+      if (point.normalizedConformite == 'non') _hasObservation[i] = true;
       else _hasObservation[i] = point.observation != null && point.observation!.isNotEmpty;
     }
     _initializeForCoffretType(_selectedType);
@@ -3878,19 +3878,19 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
 
   void _onObservationToggleChanged(int index, bool value) {
     final point = _pointsVerification[index];
-    if (!value && point.conformite == 'non') { _showError('L\'observation est obligatoire quand la conformité est "Non"'); return; }
+    if (!value && point.normalizedConformite == 'non') { _showError('L\'observation est obligatoire quand la conformité est "Non"'); return; }
     setState(() {
       _hasObservation[index] = value;
       if (!value) {
         point.observation = null;
-        point.observations?.clear();
+        // Conserver point.observations pour éviter la destruction accidentelle d'observations historiques
       } else {
         point.observations ??= [];
         if (point.observations!.isEmpty) {
           point.observations!.add(ElementControle(
             elementControle: point.pointVerification,
             conforme: false,
-            priorite: point.conformite == 'non' ? 3 : null,
+            priorite: point.normalizedConformite == 'non' ? 3 : null,
             observation: '',
           ));
         }
