@@ -7,12 +7,14 @@ import 'package:inspec_app/services/installation_fields_registry.dart';
 class InstallationDescriptionPdfRow {
   final int index;
   final String rawId;
+  final String zoneName;
   final String localName;
   final Map<String, String> normalizedFields;
 
   InstallationDescriptionPdfRow({
     required this.index,
     required this.rawId,
+    this.zoneName = '',
     this.localName = '',
     required this.normalizedFields,
   });
@@ -76,63 +78,76 @@ class InstallationDescriptionPdfData {
     final mtRows = <InstallationDescriptionPdfRow>[];
     final btRows = <InstallationDescriptionPdfRow>[];
 
-    // Indexer les équipements d'audit actifs par leur syncId
+    // Indexer les équipements d'audit actifs par leur syncId ainsi que le nom de local et de zone
     final activeCellulesMap = <String, Cellule>{};
     final activeCelluleLocalMap = <String, String>{};
+    final activeCelluleZoneMap = <String, String>{};
 
     final activeTransfosMap = <String, TransformateurMTBT>{};
     final activeTransfoLocalMap = <String, String>{};
+    final activeTransfoZoneMap = <String, String>{};
 
     if (audit != null) {
-      // 1. Moyenne Tension Locaux
+      // 1. Moyenne Tension Locaux (Locaux directs hors zone)
       for (var local in audit.moyenneTensionLocaux) {
         local.migrateFromOldFields();
+        final locNom = local.nom.trim();
         for (var c in local.cellules) {
           if (c.syncId != null && c.syncId!.isNotEmpty) {
             activeCellulesMap[c.syncId!] = c;
-            activeCelluleLocalMap[c.syncId!] = local.nom.trim();
+            activeCelluleLocalMap[c.syncId!] = locNom;
+            activeCelluleZoneMap[c.syncId!] = '';
           }
         }
         for (var t in local.transformateurs) {
           if (t.syncId != null && t.syncId!.isNotEmpty) {
             activeTransfosMap[t.syncId!] = t;
-            activeTransfoLocalMap[t.syncId!] = local.nom.trim();
+            activeTransfoLocalMap[t.syncId!] = locNom;
+            activeTransfoZoneMap[t.syncId!] = '';
           }
         }
       }
 
-      // 2. Moyenne Tension Zones
+      // 2. Moyenne Tension Zones et leurs locaux
       for (var zone in audit.moyenneTensionZones) {
+        final zNom = zone.nom.trim();
         for (var local in zone.locaux) {
           local.migrateFromOldFields();
+          final locNom = local.nom.trim();
           for (var c in local.cellules) {
             if (c.syncId != null && c.syncId!.isNotEmpty) {
               activeCellulesMap[c.syncId!] = c;
-              activeCelluleLocalMap[c.syncId!] = local.nom.trim();
+              activeCelluleLocalMap[c.syncId!] = locNom;
+              activeCelluleZoneMap[c.syncId!] = zNom;
             }
           }
           for (var t in local.transformateurs) {
             if (t.syncId != null && t.syncId!.isNotEmpty) {
               activeTransfosMap[t.syncId!] = t;
-              activeTransfoLocalMap[t.syncId!] = local.nom.trim();
+              activeTransfoLocalMap[t.syncId!] = locNom;
+              activeTransfoZoneMap[t.syncId!] = zNom;
             }
           }
         }
       }
 
-      // 3. Basse Tension Zones
+      // 3. Basse Tension Zones et leurs locaux
       for (var zone in audit.basseTensionZones) {
+        final zNom = zone.nom.trim();
         for (var local in zone.locaux) {
+          final locNom = local.nom.trim();
           for (var c in local.cellules) {
             if (c.syncId != null && c.syncId!.isNotEmpty) {
               activeCellulesMap[c.syncId!] = c;
-              activeCelluleLocalMap[c.syncId!] = local.nom.trim();
+              activeCelluleLocalMap[c.syncId!] = locNom;
+              activeCelluleZoneMap[c.syncId!] = zNom;
             }
           }
           for (var t in local.transformateurs) {
             if (t.syncId != null && t.syncId!.isNotEmpty) {
               activeTransfosMap[t.syncId!] = t;
-              activeTransfoLocalMap[t.syncId!] = local.nom.trim();
+              activeTransfoLocalMap[t.syncId!] = locNom;
+              activeTransfoZoneMap[t.syncId!] = zNom;
             }
           }
         }
@@ -153,10 +168,10 @@ class InstallationDescriptionPdfData {
           if (activeCellulesMap.containsKey(auditCelluleId)) {
             final c = activeCellulesMap[auditCelluleId]!;
             final locName = activeCelluleLocalMap[auditCelluleId];
-            mtRows.add(_createRowFromCelluleAndItem(c, item, mtRows.length + 1, localName: locName));
+            final zName = activeCelluleZoneMap[auditCelluleId] ?? item.data['Zone'] ?? item.data['ZONE'] ?? '';
+            mtRows.add(_createRowFromCelluleAndItem(c, item, mtRows.length + 1, localName: locName, zoneName: zName));
             processedCelluleIds.add(auditCelluleId);
           }
-          // Si auditCelluleId est renseigné mais n'existe pas dans activeCellulesMap, c'est un item orphelin : on l'ignore !
         } else {
           final itemLocName = item.data['Poste'] ??
               item.data['POSTE'] ??
@@ -165,7 +180,8 @@ class InstallationDescriptionPdfData {
               item.data['Localisation'] ??
               item.data['Emplacement'] ??
               '';
-          mtRows.add(_createRowFromItemOnly(item, mtRows.length + 1, localName: itemLocName));
+          final itemZoneName = item.data['Zone'] ?? item.data['ZONE'] ?? '';
+          mtRows.add(_createRowFromItemOnly(item, mtRows.length + 1, localName: itemLocName, zoneName: itemZoneName));
         }
       }
 
@@ -178,10 +194,10 @@ class InstallationDescriptionPdfData {
           if (activeTransfosMap.containsKey(auditTransfoId)) {
             final t = activeTransfosMap[auditTransfoId]!;
             final locName = activeTransfoLocalMap[auditTransfoId];
-            btRows.add(_createRowFromTransformateurAndItem(t, item, btRows.length + 1, localName: locName));
+            final zName = activeTransfoZoneMap[auditTransfoId] ?? item.data['Zone'] ?? item.data['ZONE'] ?? '';
+            btRows.add(_createRowFromTransformateurAndItem(t, item, btRows.length + 1, localName: locName, zoneName: zName));
             processedTransfoIds.add(auditTransfoId);
           }
-          // Si auditTransfoId est renseigné mais n'existe pas dans activeTransfosMap, c'est un item orphelin : on l'ignore !
         } else {
           final itemLocName = item.data['Poste'] ??
               item.data['POSTE'] ??
@@ -190,7 +206,8 @@ class InstallationDescriptionPdfData {
               item.data['Localisation'] ??
               item.data['Emplacement'] ??
               '';
-          btRows.add(_createRowFromItemOnly(item, btRows.length + 1, localName: itemLocName));
+          final itemZoneName = item.data['Zone'] ?? item.data['ZONE'] ?? '';
+          btRows.add(_createRowFromItemOnly(item, btRows.length + 1, localName: itemLocName, zoneName: itemZoneName));
         }
       }
     }
@@ -200,13 +217,15 @@ class InstallationDescriptionPdfData {
       for (var entry in activeCellulesMap.entries) {
         if (!processedCelluleIds.contains(entry.key)) {
           final locName = activeCelluleLocalMap[entry.key];
-          mtRows.add(_createRowFromCellule(entry.value, mtRows.length + 1, localName: locName));
+          final zName = activeCelluleZoneMap[entry.key] ?? '';
+          mtRows.add(_createRowFromCellule(entry.value, mtRows.length + 1, localName: locName, zoneName: zName));
         }
       }
       for (var entry in activeTransfosMap.entries) {
         if (!processedTransfoIds.contains(entry.key)) {
           final locName = activeTransfoLocalMap[entry.key];
-          btRows.add(_createRowFromTransformateur(entry.value, btRows.length + 1, localName: locName));
+          final zName = activeTransfoZoneMap[entry.key] ?? '';
+          btRows.add(_createRowFromTransformateur(entry.value, btRows.length + 1, localName: locName, zoneName: zName));
         }
       }
     }
@@ -216,12 +235,12 @@ class InstallationDescriptionPdfData {
 
   /// Construit une ligne de tableau PDF à partir d'une Cellule active et de son item descriptif
   static InstallationDescriptionPdfRow _createRowFromCelluleAndItem(
-      Cellule c, InstallationItem item, int rowIndex, {String? localName}) {
+      Cellule c, InstallationItem item, int rowIndex, {String? localName, String? zoneName}) {
     final resolvedLocal = (localName != null && localName.trim().isNotEmpty)
         ? localName.trim()
         : (item.data['Poste'] ?? item.data['POSTE'] ?? item.data['Local'] ?? item.data['LOCAL'] ?? item.data['Localisation'] ?? '');
-    final row = _createRowFromCellule(c, rowIndex, localName: resolvedLocal);
-    // Enrichir avec tout champ personnalisé présent dans item.data
+    final resolvedZone = zoneName ?? item.data['Zone'] ?? item.data['ZONE'] ?? '';
+    final row = _createRowFromCellule(c, rowIndex, localName: resolvedLocal, zoneName: resolvedZone);
     for (final entry in item.data.entries) {
       if (entry.value.trim().isNotEmpty && !row.normalizedFields.containsKey(entry.key)) {
         row.normalizedFields[entry.key] = entry.value.trim();
@@ -233,12 +252,12 @@ class InstallationDescriptionPdfData {
 
   /// Construit une ligne de tableau PDF à partir d'un TransformateurMTBT actif et de son item descriptif
   static InstallationDescriptionPdfRow _createRowFromTransformateurAndItem(
-      TransformateurMTBT t, InstallationItem item, int rowIndex, {String? localName}) {
+      TransformateurMTBT t, InstallationItem item, int rowIndex, {String? localName, String? zoneName}) {
     final resolvedLocal = (localName != null && localName.trim().isNotEmpty)
         ? localName.trim()
         : (item.data['Poste'] ?? item.data['POSTE'] ?? item.data['Local'] ?? item.data['LOCAL'] ?? item.data['Localisation'] ?? '');
-    final row = _createRowFromTransformateur(t, rowIndex, localName: resolvedLocal);
-    // Enrichir avec tout champ personnalisé présent dans item.data
+    final resolvedZone = zoneName ?? item.data['Zone'] ?? item.data['ZONE'] ?? '';
+    final row = _createRowFromTransformateur(t, rowIndex, localName: resolvedLocal, zoneName: resolvedZone);
     for (final entry in item.data.entries) {
       if (entry.value.trim().isNotEmpty && !row.normalizedFields.containsKey(entry.key)) {
         row.normalizedFields[entry.key] = entry.value.trim();
@@ -249,7 +268,7 @@ class InstallationDescriptionPdfData {
   }
 
   /// Construit une ligne de tableau PDF directement depuis les propriétés de l'entité Cellule
-  static InstallationDescriptionPdfRow _createRowFromCellule(Cellule c, int rowIndex, {String? localName}) {
+  static InstallationDescriptionPdfRow _createRowFromCellule(Cellule c, int rowIndex, {String? localName, String? zoneName}) {
     final normMap = <String, String>{};
 
     void addField(String headerKey, String value) {
@@ -293,13 +312,14 @@ class InstallationDescriptionPdfData {
     return InstallationDescriptionPdfRow(
       index: rowIndex,
       rawId: c.syncId ?? 'cellule_$rowIndex',
+      zoneName: zoneName ?? '',
       localName: localName ?? '',
       normalizedFields: normMap,
     );
   }
 
   /// Construit une ligne de tableau PDF directement depuis les propriétés de l'entité TransformateurMTBT
-  static InstallationDescriptionPdfRow _createRowFromTransformateur(TransformateurMTBT t, int rowIndex, {String? localName}) {
+  static InstallationDescriptionPdfRow _createRowFromTransformateur(TransformateurMTBT t, int rowIndex, {String? localName, String? zoneName}) {
     final normMap = <String, String>{};
 
     void addField(String headerKey, String value) {
@@ -335,6 +355,10 @@ class InstallationDescriptionPdfData {
     addField('Tension', t.tensionPrimaireSecondaire);
     addField('COUPLAGE', t.couplage ?? '');
     addField('Couplage', t.couplage ?? '');
+    addField('REGIME DE NEUTRE', t.regimeNeutre);
+    addField('Régime de neutre', t.regimeNeutre);
+    addField('REGIME DU NEUTRE', t.regimeNeutre);
+    addField('Régime du neutre', t.regimeNeutre);
     addField('TYPE DE RESEAU', t.typeReseau ?? '');
     addField('Type de réseau', t.typeReseau ?? '');
     addField('PCC AMONT EN MVA', t.pccAmont ?? '');
@@ -358,6 +382,7 @@ class InstallationDescriptionPdfData {
     return InstallationDescriptionPdfRow(
       index: rowIndex,
       rawId: t.syncId ?? 'transfo_$rowIndex',
+      zoneName: zoneName ?? '',
       localName: localName ?? '',
       normalizedFields: normMap,
     );
@@ -365,7 +390,7 @@ class InstallationDescriptionPdfData {
 
   /// Construit une ligne de tableau PDF directement depuis un InstallationItem (sans entité d'audit liée)
   static InstallationDescriptionPdfRow _createRowFromItemOnly(
-      InstallationItem item, int rowIndex, {String? localName}) {
+      InstallationItem item, int rowIndex, {String? localName, String? zoneName}) {
     final normMap = <String, String>{};
     for (final entry in item.data.entries) {
       if (entry.value.trim().isNotEmpty) {
@@ -376,6 +401,7 @@ class InstallationDescriptionPdfData {
     return InstallationDescriptionPdfRow(
       index: rowIndex,
       rawId: 'item_$rowIndex',
+      zoneName: zoneName ?? '',
       localName: localName ?? '',
       normalizedFields: normMap,
     );

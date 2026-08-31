@@ -98,13 +98,22 @@ class _PdfUnknownSourceItem {
 }
 
 class _PdfRowGroup {
+  final String zoneName;
   final String localName;
   final List<InstallationDescriptionPdfRow> rows;
 
   _PdfRowGroup({
+    this.zoneName = '',
     required this.localName,
     required this.rows,
   });
+}
+
+class _RiskItem {
+  final String title;
+  final int indentLevel;
+
+  const _RiskItem({required this.title, required this.indentLevel});
 }
 
 class _PdfEquipementGroup {
@@ -201,6 +210,7 @@ class PdfReportService {
       'SECTION DU CABLE(mm2)',
       'TENSION MT/BT(KV)',
       'COUPLAGE',
+      'REGIME DE NEUTRE',
       'PCC AMONT(MVA)',
       'UCC EN(%)',
       'IK3 MAX(KA)',
@@ -6560,49 +6570,56 @@ class PdfReportService {
   static List<String> collectRiskZonesAndLocauxForTesting(
     AuditInstallationsElectriques? audit,
   ) {
-    return _collectRiskZonesAndLocaux(audit);
+    return _collectRiskZonesAndLocauxStructured(audit).map((e) => e.title).toList();
   }
 
-  static List<String> _collectRiskZonesAndLocaux(
+  static List<_RiskItem> _collectRiskZonesAndLocauxStructured(
     AuditInstallationsElectriques? audit,
   ) {
-    final items = <String>[];
+    final items = <_RiskItem>[];
     if (audit == null) return items;
 
-    void addZone(String name) {
-      final formatted = name.toLowerCase().startsWith('zone')
-          ? name
-          : 'Zone $name';
-      if (!items.contains(formatted)) items.add(formatted);
-    }
+    String formatZone(String name) =>
+        name.toLowerCase().startsWith('zone') ? name : 'Zone $name';
+    String formatLocal(String name) =>
+        name.toLowerCase().startsWith('local') || name.toLowerCase().startsWith('salle')
+            ? name
+            : 'Local $name';
 
-    void addLocal(String name) {
-      final formatted =
-          name.toLowerCase().startsWith('local') ||
-              name.toLowerCase().startsWith('salle')
-          ? name
-          : 'Local $name';
-      if (!items.contains(formatted)) items.add(formatted);
-    }
-
-    // Locaux MT directs
+    // 1. Locaux MT directs (hors zone)
     for (final local in audit.moyenneTensionLocaux) {
-      if (local.isRiskZone) addLocal(local.nom);
-    }
-
-    // Zones MT et leurs locaux
-    for (final zone in audit.moyenneTensionZones) {
-      if (zone.isRiskZone) addZone(zone.nom);
-      for (final local in zone.locaux) {
-        if (local.isRiskZone) addLocal(local.nom);
+      if (local.isRiskZone) {
+        items.add(_RiskItem(title: formatLocal(local.nom), indentLevel: 0));
       }
     }
 
-    // Zones BT et leurs locaux
+    // 2. Zones MT et leurs locaux à risque
+    for (final zone in audit.moyenneTensionZones) {
+      final riskLocaux = zone.locaux.where((l) => l.isRiskZone).toList();
+      if (zone.isRiskZone) {
+        items.add(_RiskItem(title: formatZone(zone.nom), indentLevel: 0));
+        for (final local in riskLocaux) {
+          items.add(_RiskItem(title: formatLocal(local.nom), indentLevel: 1));
+        }
+      } else {
+        for (final local in riskLocaux) {
+          items.add(_RiskItem(title: formatLocal(local.nom), indentLevel: 0));
+        }
+      }
+    }
+
+    // 3. Zones BT et leurs locaux à risque
     for (final zone in audit.basseTensionZones) {
-      if (zone.isRiskZone) addZone(zone.nom);
-      for (final local in zone.locaux) {
-        if (local.isRiskZone) addLocal(local.nom);
+      final riskLocaux = zone.locaux.where((l) => l.isRiskZone).toList();
+      if (zone.isRiskZone) {
+        items.add(_RiskItem(title: formatZone(zone.nom), indentLevel: 0));
+        for (final local in riskLocaux) {
+          items.add(_RiskItem(title: formatLocal(local.nom), indentLevel: 1));
+        }
+      } else {
+        for (final local in riskLocaux) {
+          items.add(_RiskItem(title: formatLocal(local.nom), indentLevel: 0));
+        }
       }
     }
 
@@ -6915,12 +6932,21 @@ class PdfReportService {
       ),
     );
 
-    final riskItems = _collectRiskZonesAndLocaux(audit);
+    final riskItems = _collectRiskZonesAndLocauxStructured(audit);
     if (riskItems.isEmpty) {
       widgets.add(_bodyText('Rien \u00e0 signaler.'));
     } else {
       for (final item in riskItems) {
-        widgets.add(_bodyText('\u2022 $item'));
+        if (item.indentLevel == 0) {
+          widgets.add(_bodyText('\u2022 ${item.title}'));
+        } else {
+          widgets.add(
+            pw.Padding(
+              padding: const pw.EdgeInsets.only(left: 16),
+              child: _bodyText('- ${item.title}'),
+            ),
+          );
+        }
       }
     }
 
@@ -7027,27 +7053,14 @@ class PdfReportService {
         .where((col) => col != 'N\u00B0' && col != 'N°')
         .toList();
 
-    final headers = ['N\u00B0', 'POSTE / LOCAL', ...finalOrder];
-
-    // Calcul des largeurs relatives exactes pour l'en-tête et pour la table imbriquée des détails
-    final detailTotalFlex = finalOrder.length * 1.0;
+    final headers = ['N\u00B0', 'ZONE', 'REP\u00C8RE', ...finalOrder];
 
     final headerColumnWidths = <int, pw.TableColumnWidth>{
       0: const pw.FixedColumnWidth(18),
-      1: const pw.FlexColumnWidth(1.8),
+      1: const pw.FlexColumnWidth(1.2),
+      2: const pw.FlexColumnWidth(1.6),
       for (var i = 0; i < finalOrder.length; i++)
-        i + 2: const pw.FlexColumnWidth(1.0),
-    };
-
-    final outerColumnWidths = <int, pw.TableColumnWidth>{
-      0: const pw.FixedColumnWidth(18),
-      1: const pw.FlexColumnWidth(1.8),
-      2: pw.FlexColumnWidth(detailTotalFlex),
-    };
-
-    final innerDetailColumnWidths = <int, pw.TableColumnWidth>{
-      for (var i = 0; i < finalOrder.length; i++)
-        i: const pw.FlexColumnWidth(1.0),
+        i + 3: const pw.FlexColumnWidth(1.0),
     };
 
     if (rows.isEmpty) {
@@ -7071,6 +7084,7 @@ class PdfReportService {
                 ),
               ),
               _cell('-', isHeader: false, centered: true),
+              _cell('-', isHeader: false, centered: true),
               ...finalOrder.map((_) => _cell('-', isHeader: false, centered: true)),
             ],
           ),
@@ -7078,73 +7092,125 @@ class PdfReportService {
       );
     }
 
-    // Regrouper les lignes contiguës par poste / local
+    // Regrouper les lignes contiguës par (zone, local)
     final groups = <_PdfRowGroup>[];
     for (final row in rows) {
+      final rawZone = row.zoneName.trim();
+      final normZone = rawZone.isNotEmpty ? rawZone : '';
       final rawLoc = row.localName.trim();
       final normLoc = rawLoc.isNotEmpty ? rawLoc : '-';
-      if (groups.isNotEmpty && groups.last.localName == normLoc) {
+
+      if (groups.isNotEmpty &&
+          groups.last.localName == normLoc &&
+          groups.last.zoneName == normZone) {
         groups.last.rows.add(row);
       } else {
-        groups.add(_PdfRowGroup(localName: normLoc, rows: [row]));
+        groups.add(
+          _PdfRowGroup(
+            zoneName: normZone,
+            localName: normLoc,
+            rows: [row],
+          ),
+        );
       }
     }
 
-    final tableRows = <pw.TableRow>[
-      pw.TableRow(
-        decoration: pw.BoxDecoration(color: accentColor),
-        children: headers.map((c) => _cell(c, isHeader: true, centered: true)).toList(),
+    final tableWidgets = <pw.Widget>[];
+
+    // En-tête du tableau
+    tableWidgets.add(
+      pw.Table(
+        border: pw.TableBorder.all(color: borderColor, width: 0.4),
+        columnWidths: headerColumnWidths,
+        children: [
+          pw.TableRow(
+            decoration: pw.BoxDecoration(color: accentColor),
+            children: headers.map((c) => _cell(c, isHeader: true, centered: true)).toList(),
+          ),
+        ],
       ),
-    ];
+    );
 
     int globalRowIndex = 1;
     int localIndex = 1;
 
     for (final group in groups) {
       final currentLocalNum = localIndex++;
+      final count = group.rows.length;
+      final midIndex = (count - 1) ~/ 2;
+      final tableRows = <pw.TableRow>[];
 
-      for (int i = 0; i < group.rows.length; i++) {
+      for (int i = 0; i < count; i++) {
         final row = group.rows[i];
         final rowNum = globalRowIndex++;
         final isOdd = rowNum % 2 == 1;
         final rowBg = isOdd ? tableRowAlt : PdfColors.white;
-        final showLocal = (i == 0);
+
+        final obsBorder = pw.Border(
+          top: i > 0
+              ? pw.BorderSide(color: borderColor, width: 0.4)
+              : pw.BorderSide.none,
+          bottom: i < count - 1
+              ? pw.BorderSide(color: borderColor, width: 0.4)
+              : pw.BorderSide.none,
+        );
 
         tableRows.add(
           pw.TableRow(
             decoration: pw.BoxDecoration(color: rowBg),
             children: [
-              // Cellule 0 : N° du Local
+              // Cellule 0 : N° du Local (centré verticalement sur la ligne médiane du groupe)
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
                 alignment: pw.Alignment.center,
-                child: pw.Text(
-                  showLocal ? '$currentLocalNum' : '',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: fsSmall,
-                    color: headerColor,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
+                child: i == midIndex
+                    ? pw.Text(
+                        '$currentLocalNum',
+                        style: pw.TextStyle(
+                          font: _fontBold,
+                          fontSize: fsSmall,
+                          color: headerColor,
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      )
+                    : pw.SizedBox(),
               ),
 
-              // Cellule 1 : Nom du POSTE / LOCAL
+              // Cellule 1 : Nom de la ZONE (centré verticalement sur la ligne médiane du groupe)
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 alignment: pw.Alignment.center,
-                child: pw.Text(
-                  showLocal ? group.localName.toUpperCase() : '',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: fsSmall,
-                    color: headerColor,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
+                child: i == midIndex
+                    ? pw.Text(
+                        group.zoneName.toUpperCase(),
+                        style: pw.TextStyle(
+                          font: _fontBold,
+                          fontSize: fsSmall,
+                          color: headerColor,
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      )
+                    : pw.SizedBox(),
               ),
 
-              // Cellules 2..N : Colonnes de données
+              // Cellule 2 : Nom du REPÈRE / LOCAL (centré verticalement sur la ligne médiane du groupe)
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                alignment: pw.Alignment.center,
+                child: i == midIndex
+                    ? pw.Text(
+                        group.localName.toUpperCase(),
+                        style: pw.TextStyle(
+                          font: _fontBold,
+                          fontSize: fsSmall,
+                          color: headerColor,
+                        ),
+                        textAlign: pw.TextAlign.center,
+                      )
+                    : pw.SizedBox(),
+              ),
+
+              // Cellules 3..N : Colonnes de données avec séparateur de ligne interne
               ...finalOrder.map((key) {
                 final raw = row.getValueForColumn(key, sectionKey);
                 final unit = _unitForField(key);
@@ -7155,6 +7221,7 @@ class PdfReportService {
                     ? '$raw $unit'
                     : raw;
                 return pw.Container(
+                  decoration: pw.BoxDecoration(border: obsBorder),
                   padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
                   alignment: pw.Alignment.center,
                   child: pw.Text(
@@ -7168,14 +7235,25 @@ class PdfReportService {
           ),
         );
       }
+
+      tableWidgets.add(
+        pw.Table(
+          defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+          border: pw.TableBorder(
+            left: pw.BorderSide(color: borderColor, width: 0.4),
+            right: pw.BorderSide(color: borderColor, width: 0.4),
+            top: pw.BorderSide(color: borderColor, width: 0.4),
+            bottom: pw.BorderSide(color: borderColor, width: 0.4),
+            verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+            horizontalInside: pw.BorderSide.none,
+          ),
+          columnWidths: headerColumnWidths,
+          children: tableRows,
+        ),
+      );
     }
 
-    return pw.Table(
-      defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-      border: pw.TableBorder.all(color: borderColor, width: 0.4),
-      columnWidths: headerColumnWidths,
-      children: tableRows,
-    );
+    return pw.Column(children: tableWidgets);
   }
 
   /// Résolution tolérante des valeurs pour un champ de colonne PDF donné
