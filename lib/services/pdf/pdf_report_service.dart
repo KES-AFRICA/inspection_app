@@ -12200,6 +12200,12 @@ class PdfReportService {
             'Présence de défaut thermo',
             coffret.effectivePresenceDefautThermo,
           ),
+        tableRowChar(
+          'Indice IP / IK',
+          (coffret.indiceIpIk != null && coffret.indiceIpIk!.trim().isNotEmpty)
+              ? coffret.indiceIpIk!.trim()
+              : 'Non renseigné',
+        ),
         if (coffret.type != 'INVERSEUR') ...[
           tableRowChar(
             'Récapitulatif nombre de départ',
@@ -12208,12 +12214,6 @@ class PdfReportService {
           tableRowChar(
             'Récapitulatif nombre de circuit terminaux',
             '${coffret.effectiveTerminalCircuits.length}',
-          ),
-          tableRowChar(
-            'Indice IP / IK',
-            (coffret.indiceIpIk != null && coffret.indiceIpIk!.trim().isNotEmpty)
-                ? coffret.indiceIpIk!.trim()
-                : 'Non renseigné',
           ),
         ],
       ],
