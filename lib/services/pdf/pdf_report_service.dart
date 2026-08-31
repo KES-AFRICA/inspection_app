@@ -7157,10 +7157,10 @@ class PdfReportService {
 
         tableRows.add(
           pw.TableRow(
-            decoration: pw.BoxDecoration(color: rowBg),
             children: [
-              // Cellule 0 : N° du Local (centré verticalement sur la ligne médiane du groupe)
+              // Cellule 0 : N° du Local (Fond BLANC permanent, centré sur la ligne médiane)
               pw.Container(
+                color: PdfColors.white,
                 padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
                 alignment: pw.Alignment.center,
                 child: i == midIndex
@@ -7176,8 +7176,9 @@ class PdfReportService {
                     : pw.SizedBox(),
               ),
 
-              // Cellule 1 : Nom de la ZONE (centré verticalement sur la ligne médiane du groupe)
+              // Cellule 1 : Nom de la ZONE (Fond BLANC permanent, centré sur la ligne médiane)
               pw.Container(
+                color: PdfColors.white,
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 alignment: pw.Alignment.center,
                 child: i == midIndex
@@ -7193,8 +7194,9 @@ class PdfReportService {
                     : pw.SizedBox(),
               ),
 
-              // Cellule 2 : Nom du REPÈRE / LOCAL (centré verticalement sur la ligne médiane du groupe)
+              // Cellule 2 : Nom du REPÈRE / LOCAL (Fond BLANC permanent, centré sur la ligne médiane)
               pw.Container(
+                color: PdfColors.white,
                 padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 alignment: pw.Alignment.center,
                 child: i == midIndex
@@ -7210,7 +7212,7 @@ class PdfReportService {
                     : pw.SizedBox(),
               ),
 
-              // Cellules 3..N : Colonnes de données avec séparateur de ligne interne
+              // Cellules 3..N : Colonnes de données avec couleur de ligne alternée et bordures internes
               ...finalOrder.map((key) {
                 final raw = row.getValueForColumn(key, sectionKey);
                 final unit = _unitForField(key);
@@ -7221,6 +7223,7 @@ class PdfReportService {
                     ? '$raw $unit'
                     : raw;
                 return pw.Container(
+                  color: rowBg,
                   decoration: pw.BoxDecoration(border: obsBorder),
                   padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
                   alignment: pw.Alignment.center,
