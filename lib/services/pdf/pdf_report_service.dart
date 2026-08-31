@@ -97,15 +97,23 @@ class _PdfUnknownSourceItem {
   });
 }
 
-class _PdfRowGroup {
-  final String zoneName;
+class _PdfRepereSubGroup {
   final String localName;
   final List<InstallationDescriptionPdfRow> rows;
 
-  _PdfRowGroup({
-    this.zoneName = '',
+  _PdfRepereSubGroup({
     required this.localName,
     required this.rows,
+  });
+}
+
+class _PdfZoneGroup {
+  final String zoneName;
+  final List<_PdfRepereSubGroup> repereGroups;
+
+  _PdfZoneGroup({
+    required this.zoneName,
+    required this.repereGroups,
   });
 }
 
@@ -7053,12 +7061,13 @@ class PdfReportService {
         .where((col) => col != 'N\u00B0' && col != 'N°')
         .toList();
 
-    final headers = ['N\u00B0', 'ZONE', 'REP\u00C8RE', ...finalOrder];
+    // Ordre des colonnes : ZONE | REPÈRE | N° | [Colonnes techniques...]
+    final headers = ['ZONE', 'REP\u00C8RE', 'N\u00B0', ...finalOrder];
 
     final headerColumnWidths = <int, pw.TableColumnWidth>{
-      0: const pw.FixedColumnWidth(18),
-      1: const pw.FlexColumnWidth(1.2),
-      2: const pw.FlexColumnWidth(1.6),
+      0: const pw.FlexColumnWidth(1.2), // ZONE
+      1: const pw.FlexColumnWidth(1.6), // REPÈRE
+      2: const pw.FixedColumnWidth(18), // N°
       for (var i = 0; i < finalOrder.length; i++)
         i + 3: const pw.FlexColumnWidth(1.0),
     };
@@ -7075,6 +7084,8 @@ class PdfReportService {
           pw.TableRow(
             decoration: const pw.BoxDecoration(color: PdfColors.white),
             children: [
+              _cell('-', isHeader: false, centered: true),
+              _cell('-', isHeader: false, centered: true),
               pw.Container(
                 padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
                 alignment: pw.Alignment.center,
@@ -7083,8 +7094,6 @@ class PdfReportService {
                   style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
                 ),
               ),
-              _cell('-', isHeader: false, centered: true),
-              _cell('-', isHeader: false, centered: true),
               ...finalOrder.map((_) => _cell('-', isHeader: false, centered: true)),
             ],
           ),
@@ -7092,24 +7101,31 @@ class PdfReportService {
       );
     }
 
-    // Regrouper les lignes contiguës par (zone, local)
-    final groups = <_PdfRowGroup>[];
+    // Regrouper à 2 niveaux : Zone -> Repère -> Éléments
+    final zoneGroups = <_PdfZoneGroup>[];
     for (final row in rows) {
       final rawZone = row.zoneName.trim();
       final normZone = rawZone.isNotEmpty ? rawZone : '';
       final rawLoc = row.localName.trim();
       final normLoc = rawLoc.isNotEmpty ? rawLoc : '-';
 
-      if (groups.isNotEmpty &&
-          groups.last.localName == normLoc &&
-          groups.last.zoneName == normZone) {
-        groups.last.rows.add(row);
+      if (zoneGroups.isNotEmpty && zoneGroups.last.zoneName == normZone) {
+        final currentZoneGroup = zoneGroups.last;
+        if (currentZoneGroup.repereGroups.isNotEmpty &&
+            currentZoneGroup.repereGroups.last.localName == normLoc) {
+          currentZoneGroup.repereGroups.last.rows.add(row);
+        } else {
+          currentZoneGroup.repereGroups.add(
+            _PdfRepereSubGroup(localName: normLoc, rows: [row]),
+          );
+        }
       } else {
-        groups.add(
-          _PdfRowGroup(
+        zoneGroups.add(
+          _PdfZoneGroup(
             zoneName: normZone,
-            localName: normLoc,
-            rows: [row],
+            repereGroups: [
+              _PdfRepereSubGroup(localName: normLoc, rows: [row]),
+            ],
           ),
         );
       }
@@ -7132,111 +7148,137 @@ class PdfReportService {
     );
 
     int globalRowIndex = 1;
-    int localIndex = 1;
+    int globalItemNumber = 1;
 
-    for (final group in groups) {
-      final currentLocalNum = localIndex++;
-      final count = group.rows.length;
-      final midIndex = (count - 1) ~/ 2;
+    for (final zoneGroup in zoneGroups) {
+      final totalZoneRows =
+          zoneGroup.repereGroups.fold<int>(0, (sum, g) => sum + g.rows.length);
+      final zoneMidIndex = (totalZoneRows - 1) ~/ 2;
       final tableRows = <pw.TableRow>[];
 
-      for (int i = 0; i < count; i++) {
-        final row = group.rows[i];
-        final rowNum = globalRowIndex++;
-        final isOdd = rowNum % 2 == 1;
-        final rowBg = isOdd ? tableRowAlt : PdfColors.white;
+      int zoneItemIndex = 0;
 
-        final obsBorder = pw.Border(
-          top: i > 0
-              ? pw.BorderSide(color: borderColor, width: 0.4)
-              : pw.BorderSide.none,
-          bottom: i < count - 1
-              ? pw.BorderSide(color: borderColor, width: 0.4)
-              : pw.BorderSide.none,
-        );
+      for (int rIdx = 0; rIdx < zoneGroup.repereGroups.length; rIdx++) {
+        final repereGroup = zoneGroup.repereGroups[rIdx];
+        final repereCount = repereGroup.rows.length;
+        final repereMidIndex = (repereCount - 1) ~/ 2;
+        final isLastRepereInZone = (rIdx == zoneGroup.repereGroups.length - 1);
 
-        tableRows.add(
-          pw.TableRow(
-            children: [
-              // Cellule 0 : N° du Local (Fond BLANC permanent, centré sur la ligne médiane)
-              pw.Container(
-                color: PdfColors.white,
-                padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-                alignment: pw.Alignment.center,
-                child: i == midIndex
-                    ? pw.Text(
-                        '$currentLocalNum',
-                        style: pw.TextStyle(
-                          font: _fontBold,
-                          fontSize: fsSmall,
-                          color: headerColor,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      )
-                    : pw.SizedBox(),
-              ),
+        for (int i = 0; i < repereCount; i++) {
+          final row = repereGroup.rows[i];
+          final currentZoneItemIdx = zoneItemIndex++;
+          final currentRepereItemIdx = i;
 
-              // Cellule 1 : Nom de la ZONE (Fond BLANC permanent, centré sur la ligne médiane)
-              pw.Container(
-                color: PdfColors.white,
-                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                alignment: pw.Alignment.center,
-                child: i == midIndex
-                    ? pw.Text(
-                        group.zoneName.toUpperCase(),
-                        style: pw.TextStyle(
-                          font: _fontBold,
-                          fontSize: fsSmall,
-                          color: headerColor,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      )
-                    : pw.SizedBox(),
-              ),
+          final itemNumber = globalItemNumber++;
+          final rowNum = globalRowIndex++;
+          final isOdd = rowNum % 2 == 1;
+          final rowBg = isOdd ? tableRowAlt : PdfColors.white;
 
-              // Cellule 2 : Nom du REPÈRE / LOCAL (Fond BLANC permanent, centré sur la ligne médiane)
-              pw.Container(
-                color: PdfColors.white,
-                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                alignment: pw.Alignment.center,
-                child: i == midIndex
-                    ? pw.Text(
-                        group.localName.toUpperCase(),
-                        style: pw.TextStyle(
-                          font: _fontBold,
-                          fontSize: fsSmall,
-                          color: headerColor,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      )
-                    : pw.SizedBox(),
-              ),
+          // Bordure inférieure pour la cellule REPÈRE :
+          // Ligne entre repères au sein d'une même zone
+          final repereBorder = pw.Border(
+            bottom: (currentRepereItemIdx == repereCount - 1 && !isLastRepereInZone)
+                ? pw.BorderSide(color: borderColor, width: 0.4)
+                : pw.BorderSide.none,
+          );
 
-              // Cellules 3..N : Colonnes de données avec couleur de ligne alternée et bordures internes
-              ...finalOrder.map((key) {
-                final raw = row.getValueForColumn(key, sectionKey);
-                final unit = _unitForField(key);
-                final display = (raw != '-' &&
-                        raw.isNotEmpty &&
-                        unit.isNotEmpty &&
-                        !raw.toLowerCase().contains(unit.toLowerCase()))
-                    ? '$raw $unit'
-                    : raw;
-                return pw.Container(
-                  color: rowBg,
-                  decoration: pw.BoxDecoration(border: obsBorder),
+          // Bordure inférieure pour les cellules N° et de Données :
+          // Ligne entre tous les éléments de la zone
+          final itemBorder = pw.Border(
+            bottom: (currentZoneItemIdx < totalZoneRows - 1)
+                ? pw.BorderSide(color: borderColor, width: 0.4)
+                : pw.BorderSide.none,
+          );
+
+          tableRows.add(
+            pw.TableRow(
+              children: [
+                // Cellule 0 : Nom de la ZONE (Fond BLANC permanent, centré sur la ligne médiane de la ZONE)
+                pw.Container(
+                  decoration: const pw.BoxDecoration(color: PdfColors.white),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                  alignment: pw.Alignment.center,
+                  child: currentZoneItemIdx == zoneMidIndex
+                      ? pw.Text(
+                          zoneGroup.zoneName.toUpperCase(),
+                          style: pw.TextStyle(
+                            font: _fontBold,
+                            fontSize: fsSmall,
+                            color: headerColor,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        )
+                      : pw.SizedBox(),
+                ),
+
+                // Cellule 1 : Nom du REPÈRE / LOCAL (Fond BLANC permanent, centré sur la ligne médiane du REPÈRE)
+                pw.Container(
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.white,
+                    border: repereBorder,
+                  ),
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                  alignment: pw.Alignment.center,
+                  child: currentRepereItemIdx == repereMidIndex
+                      ? pw.Text(
+                          repereGroup.localName.toUpperCase(),
+                          style: pw.TextStyle(
+                            font: _fontBold,
+                            fontSize: fsSmall,
+                            color: headerColor,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        )
+                      : pw.SizedBox(),
+                ),
+
+                // Cellule 2 : N° d'équipement/élément (Déplacé après REPÈRE !)
+                pw.Container(
+                  decoration: pw.BoxDecoration(
+                    color: rowBg,
+                    border: itemBorder,
+                  ),
                   padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
                   alignment: pw.Alignment.center,
                   child: pw.Text(
-                    display,
-                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                    '$itemNumber',
+                    style: pw.TextStyle(
+                      font: _fontBold,
+                      fontSize: fsSmall,
+                      color: headerColor,
+                    ),
                     textAlign: pw.TextAlign.center,
                   ),
-                );
-              }),
-            ],
-          ),
-        );
+                ),
+
+                // Cellules 3..N : Colonnes de données avec couleur de ligne alternée et bordures internes
+                ...finalOrder.map((key) {
+                  final raw = row.getValueForColumn(key, sectionKey);
+                  final unit = _unitForField(key);
+                  final display = (raw != '-' &&
+                          raw.isNotEmpty &&
+                          unit.isNotEmpty &&
+                          !raw.toLowerCase().contains(unit.toLowerCase()))
+                      ? '$raw $unit'
+                      : raw;
+                  return pw.Container(
+                    decoration: pw.BoxDecoration(
+                      color: rowBg,
+                      border: itemBorder,
+                    ),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+                    alignment: pw.Alignment.center,
+                    child: pw.Text(
+                      display,
+                      style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  );
+                }),
+              ],
+            ),
+          );
+        }
       }
 
       tableWidgets.add(
