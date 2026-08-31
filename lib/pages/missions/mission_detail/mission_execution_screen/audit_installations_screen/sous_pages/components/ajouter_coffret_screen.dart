@@ -25,6 +25,7 @@ import 'package:inspec_app/components/safe_file_image.dart';
 import 'package:inspec_app/components/normative_search_suggestions_widget.dart';
 import 'package:inspec_app/services/normative_search_service.dart';
 import 'package:inspec_app/services/equipment_source_search_service.dart';
+import 'package:inspec_app/services/ip_ik_evaluator_service.dart';
 
 // ================================================================
 // EXTENSION RESPONSIVE
@@ -1423,8 +1424,8 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
         if (widget.equipmentType?.toUpperCase().contains('INVERSEUR') != true) ...[
           _buildReadOnlyCountTile(context, label: 'Récapitulatif nombre de départ', count: widget.departuresCount),
           _buildReadOnlyCountTile(context, label: 'Récapitulatif nombre de circuit terminaux', count: widget.terminalCircuitsCount),
-          _buildIndiceIpIkTile(context),
         ],
+        _buildIndiceIpIkTile(context),
 
         
         SizedBox(height: context.spacingXL),
@@ -2489,6 +2490,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
 // ÉTAPE 4 : POINTS DE VÉRIFICATION (avec photos)
 // ================================================================
 class _EtapePointsVerification extends StatefulWidget {
+  final String missionId;
   final bool isEdition;
   final List<PointVerification> pointsVerification;
   final Map<int, List<String>> pointSuggestions;
@@ -2502,6 +2504,7 @@ class _EtapePointsVerification extends StatefulWidget {
 
   const _EtapePointsVerification({
     super.key,
+    required this.missionId,
     required this.isEdition,
     required this.pointsVerification,
     required this.pointSuggestions,
@@ -2932,6 +2935,92 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
   }
 
   Widget _buildConformiteToggle(BuildContext context, PointVerification point, int pointIndex) {
+    if (IpIkEvaluatorService.isIpIkPoint(point.pointVerification)) {
+      final parentState = context.findAncestorStateOfType<_AjouterCoffretScreenState>();
+      final eval = IpIkEvaluatorService.evaluate(
+        coffret: CoffretArmoire(
+          qrCode: parentState?._qrCodeController.text ?? '',
+          nom: parentState?._nomController.text ?? '',
+          type: parentState?._selectedType ?? 'COFFRET',
+          indiceIpIk: parentState?._indiceIpIkController.text.trim(),
+          repere: parentState?._repereController.text.trim(),
+        ),
+        missionId: widget.missionId,
+        parentName: parentState?._getParentLocationName(),
+      );
+
+      point.conformite = eval.conformite;
+      if (eval.observation != null) {
+        point.observation = eval.observation;
+      } else {
+        point.observation = null;
+      }
+
+      final isConforme = eval.conformite == 'oui';
+
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        decoration: BoxDecoration(
+          color: isConforme ? Colors.green.shade50 : Colors.red.shade50,
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(
+            color: isConforme ? Colors.green.shade300 : Colors.red.shade300,
+            width: 1.5,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  isConforme ? Icons.check_circle : Icons.cancel,
+                  color: isConforme ? Colors.green.shade700 : Colors.red.shade700,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isConforme ? 'Conforme' : 'Non conforme',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: context.fontSizeM,
+                    color: isConforme ? Colors.green.shade800 : Colors.red.shade800,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: Colors.blue.shade100,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Automatique',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue.shade900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (eval.observation != null) ...[
+              const SizedBox(height: 6),
+              Text(
+                'Observation : ${eval.observation}',
+                style: TextStyle(
+                  fontSize: context.fontSizeS,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.red.shade900,
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    }
+
     final isValid = point.normalizedConformite.isNotEmpty;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -3488,6 +3577,26 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     }
   }
 
+  String _getParentLocationName() {
+    final audit = HiveService.getAuditInstallationsByMissionId(widget.mission.id);
+    if (audit == null) return _repereController.text.trim();
+    if (widget.parentType == 'local') {
+      if (widget.isMoyenneTension) {
+        if (widget.isInZone && widget.zoneIndex != null && widget.zoneIndex! < audit.moyenneTensionZones.length) {
+          final zone = audit.moyenneTensionZones[widget.zoneIndex!];
+          if (widget.parentIndex < zone.locaux.length) return zone.locaux[widget.parentIndex].nom;
+        } else if (widget.parentIndex < audit.moyenneTensionLocaux.length) return audit.moyenneTensionLocaux[widget.parentIndex].nom;
+      } else if (widget.zoneIndex != null && widget.zoneIndex! < audit.basseTensionZones.length) {
+        final zone = audit.basseTensionZones[widget.zoneIndex!];
+        if (widget.parentIndex < zone.locaux.length) return zone.locaux[widget.parentIndex].nom;
+      }
+    } else if (widget.parentType == 'zone_mt' || widget.parentType == 'zone_bt') {
+      if (widget.isMoyenneTension && widget.parentIndex < audit.moyenneTensionZones.length) return audit.moyenneTensionZones[widget.parentIndex].nom;
+      else if (!widget.isMoyenneTension && widget.parentIndex < audit.basseTensionZones.length) return audit.basseTensionZones[widget.parentIndex].nom;
+    }
+    return _repereController.text.trim();
+  }
+
   @override
   void dispose() {
     _autoSaveTimer?.cancel();
@@ -3917,6 +4026,40 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
 
     for (var obs in _observationsParafoudre) {
       obs.priorite = null;
+    }
+    for (final point in _pointsVerification) {
+      if (IpIkEvaluatorService.isIpIkPoint(point.pointVerification)) {
+        final eval = IpIkEvaluatorService.evaluate(
+          coffret: CoffretArmoire(
+            qrCode: _qrCodeController.text.trim(),
+            nom: _nomController.text.trim(),
+            type: _selectedType!,
+            indiceIpIk: _indiceIpIkController.text.trim().isEmpty ? null : _indiceIpIkController.text.trim(),
+            repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
+          ),
+          missionId: widget.mission.id,
+          parentName: _getParentLocationName(),
+        );
+        point.conformite = eval.conformite;
+        if (eval.observation != null) {
+          point.observation = eval.observation;
+          point.observations ??= [];
+          if (point.observations!.isEmpty) {
+            point.observations!.add(ElementControle(
+              elementControle: point.pointVerification,
+              conforme: eval.conformite == 'oui',
+              priorite: 3,
+              observation: eval.observation,
+            ));
+          } else {
+            point.observations!.first.observation = eval.observation;
+            point.observations!.first.conforme = eval.conformite == 'oui';
+          }
+        } else {
+          point.observation = null;
+          point.observations?.clear();
+        }
+      }
     }
     try {
       final toutesPhotos = [..._coffretPhotosExterne, ..._coffretPhotosInterne];
@@ -4632,6 +4775,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                   if (_selectedType != null && _pointsVerification.isNotEmpty && _accessible)
                     _EtapePointsVerification(
                       key: _etapePointsKey,
+                      missionId: widget.mission.id,
                       isEdition: widget.isEdition,
                       pointsVerification: _pointsVerification,
                       pointSuggestions: _pointSuggestions,
