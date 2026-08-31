@@ -12432,12 +12432,14 @@ class PdfReportService {
         widgets.add(
           pw.Container(
             width: double.infinity,
+            alignment: pw.Alignment.center,
             padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             decoration: pw.BoxDecoration(
               color: accentColor,
             ),
             child: pw.Text(
               'IDENTIFICATION DE LA SOURCE D\'ALIMENTATION ET DU DISPOSITIF DE TETE DU TGBT/ARMOIRE/COFFRET',
+              textAlign: pw.TextAlign.center,
               style: pw.TextStyle(
                 font: _fontBold,
                 fontSize: fsSmall,
@@ -12746,12 +12748,14 @@ class PdfReportService {
       widgets.add(
         pw.Container(
           width: double.infinity,
+          alignment: pw.Alignment.center,
           padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
           decoration: pw.BoxDecoration(
             color: accentColor,
           ),
           child: pw.Text(
-            'IDENTIFICATION DES DÉPARTS ISSUS DE CE TGBT/ARMOIRE/COFFRET (${coffret.effectiveDepartures.length})',
+            'IDENTIFICATION DES DÉPARTS ISSUS DE CE TGBT/ARMOIRE/COFFRET',
+            textAlign: pw.TextAlign.center,
             style: pw.TextStyle(
               font: _fontBold,
               fontSize: fsSmall,
@@ -12831,12 +12835,14 @@ class PdfReportService {
       widgets.add(
         pw.Container(
           width: double.infinity,
+          alignment: pw.Alignment.center,
           padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
           decoration: pw.BoxDecoration(
             color: accentColor,
           ),
           child: pw.Text(
-            'IDENTIFICATION DES CIRCUITS TERMINAUX ISSUS DE CE TGBT/ARMOIRE/COFFRET (${coffret.effectiveTerminalCircuits.length})',
+            'IDENTIFICATION DES CIRCUITS TERMINAUX ISSUS DE CE TGBT/ARMOIRE/COFFRET',
+            textAlign: pw.TextAlign.center,
             style: pw.TextStyle(
               font: _fontBold,
               fontSize: fsSmall,
@@ -12926,12 +12932,14 @@ class PdfReportService {
         widgets.add(
           pw.Container(
             width: double.infinity,
+            alignment: pw.Alignment.center,
             padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
             decoration: pw.BoxDecoration(
               color: accentColor,
             ),
             child: pw.Text(
               'VERIFICATION DE CONFORMITE DU TGBT/ARMOIRE/COFFRET',
+              textAlign: pw.TextAlign.center,
               style: pw.TextStyle(
                 font: _fontBold,
                 fontSize: fsSmall,

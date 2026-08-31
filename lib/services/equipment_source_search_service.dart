@@ -19,12 +19,11 @@ class EquipmentSearchResult {
     required this.score,
   });
 
-  /// Nom d'affichage complet pour l'UI et la sauvegarde
+  /// Nom d'affichage complet pour l'UI, le rapport PDF et la sauvegarde (format: nom - local - zone)
   String get displayName {
     final buffer = StringBuffer();
-    if (type.isNotEmpty) buffer.write('[$type] ');
     buffer.write(nom);
-    if (repere != null && repere!.trim().isNotEmpty) {
+    if (repere != null && repere!.trim().isNotEmpty && repere!.trim().toLowerCase() != nom.trim().toLowerCase()) {
       buffer.write(' (${repere!.trim()})');
     }
     if (localisation != null && localisation!.trim().isNotEmpty) {
@@ -92,19 +91,27 @@ class EquipmentSourceSearchService {
       }
     }
 
-    // Moyenne Tension
+    // Moyenne Tension Locaux directs
+    for (final l in audit.moyenneTensionLocaux) {
+      final locStr = l.nom.trim().toLowerCase().startsWith('local') ? l.nom.trim() : 'Local ${l.nom.trim()}';
+      processCoffrets(l.coffrets, locStr);
+    }
+
+    // Moyenne Tension Zones
     for (final z in audit.moyenneTensionZones) {
-      processCoffrets(z.coffrets, 'Zone ${z.nom}');
+      processCoffrets(z.coffrets, z.nom.trim());
       for (final l in z.locaux) {
-        processCoffrets(l.coffrets, 'Local ${l.nom}');
+        final locStr = l.nom.trim().toLowerCase().startsWith('local') ? l.nom.trim() : 'Local ${l.nom.trim()}';
+        processCoffrets(l.coffrets, '$locStr - ${z.nom.trim()}');
       }
     }
 
-    // Basse Tension
+    // Basse Tension Zones
     for (final z in audit.basseTensionZones) {
-      processCoffrets(z.coffretsDirects, 'Zone ${z.nom}');
+      processCoffrets(z.coffretsDirects, z.nom.trim());
       for (final l in z.locaux) {
-        processCoffrets(l.coffrets, 'Local ${l.nom}');
+        final locStr = l.nom.trim().toLowerCase().startsWith('local') ? l.nom.trim() : 'Local ${l.nom.trim()}';
+        processCoffrets(l.coffrets, '$locStr - ${z.nom.trim()}');
       }
     }
 
