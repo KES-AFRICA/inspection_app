@@ -11,7 +11,7 @@ void main() {
   });
 
   group('Synthèse récapitulative des équipements — Ordre des colonnes & Numérotation continue', () {
-    test('1. Ordre exact des 8 colonnes (REPÈRE | N° | NOM | TYPE | VÉRIFIÉ | PRÉSENCE PARAFOUDRE | THERMO | OBSERVATION)', () {
+    test('1. Ordre exact des 9 colonnes (ZONE | REPÈRE | N° | ÉQUIPEMENT | TYPE | VÉRIFIÉ | PRÉSENCE PARAFOUDRE | THERMO | OBSERVATION)', () {
       final audit = AuditInstallationsElectriques(
         missionId: 'mission_summary_test',
         updatedAt: DateTime.now(),
@@ -53,7 +53,7 @@ void main() {
 
       final tableWidget = PdfReportService.buildEquipementsTableForTesting(equipementsMT);
       expect(tableWidget, isNotNull);
-      expect(tableWidget, isA<pw.Table>());
+      expect(tableWidget, isA<pw.Column>());
     });
   });
 }
