@@ -1874,7 +1874,7 @@ class DispositionsConstructivesRegistry {
     ),
   };
 
-  /// Table d'alias pour l'Inverseur de Source
+  /// Table d'alias 1-à-1 stricte pour l'Inverseur de Source (sans aucune collision N-to-1)
   static final Map<String, String> _inverseurTitleAliases = {
     _normalizeKey("Dispositif de protection contre les surtensions (parafoudre)"):
         "Dispositif de protection contre les surtensions (parafoudre)",
@@ -1898,19 +1898,11 @@ class DispositionsConstructivesRegistry {
         "Protection IP/IK adaptée au local d'installation",
     _normalizeKey("Protection IP/IK adaptée au local d'installation"):
         "Protection IP/IK adaptée au local d'installation",
-    _normalizeKey("Présence d'écrans ou plastrons empêchant l'accès aux parties actives"):
-        "Protection contre les contacts directs (capots, caches, bornes protégées)",
-    _normalizeKey("Continuité de la mise à la terre des portes et parties métalliques"):
-        "Continuité du conducteur de protection (PE)",
-    _normalizeKey("Réserve disponible et obturation des emplacements non utilisés"):
-        "Etat du coffret / Armoire",
-    _normalizeKey("Présence d'une coupure générale clairement identifiée et accessible"):
-        "Présence et fonctionnement des dispositifs de coupure / arrêt d'urgence",
-    _normalizeKey("Présence et lisibilité du schéma unifilaire et du repérage des départs"):
-        "Identification complète des circuits",
     _normalizeKey("Identification complète des circuits"):
         "Identification complète des circuits",
     _normalizeKey("Respect code couleur des câbles"):
+        "Respect code couleur des câbles",
+    _normalizeKey("Repérage des conducteurs / code couleur"):
         "Respect code couleur des câbles",
     _normalizeKey("Etat du Coffret / Armoire / TGBT"):
         "Etat du coffret / Armoire",
@@ -1922,15 +1914,9 @@ class DispositionsConstructivesRegistry {
         "Câblage",
     _normalizeKey("Répartiteur de circuit"):
         "Répartiteur de circuit",
-    _normalizeKey("Absence de surcharge des répartiteurs, borniers et jeux de barres"):
-        "Répartiteur de circuit",
     _normalizeKey("Dispositif de connexion"):
         "Dispositif de connexion",
     _normalizeKey("Serrage et état des connexions contrôlés"):
-        "Serrage et état des connexions contrôlés",
-    _normalizeKey("Serrage des connexions de puissance"):
-        "Serrage et état des connexions contrôlés",
-    _normalizeKey("État, fixation et protection des jeux de barres"):
         "Serrage et état des connexions contrôlés",
     _normalizeKey("Répartition des circuits"):
         "Répartition des circuits",
@@ -1946,13 +1932,13 @@ class DispositionsConstructivesRegistry {
         "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés",
     _normalizeKey("Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés"):
         "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés",
+    _normalizeKey("Section des câbles de départs adaptée au courant nominal des dispositifs de protection associés"):
+        "Section des câbles de départs adaptée au courant nominal des dispositifs de protection associés",
     _normalizeKey("Section des câbles de départs adaptée au courant nominal des disjoncteurs associés"):
         "Section des câbles de départs adaptée au courant nominal des dispositifs de protection associés",
     _normalizeKey("Calibre des dispositifs de protection / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)"):
         "Calibre des dispositifs de protection / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)",
     _normalizeKey("Calibre des disjoncteurs / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)"):
-        "Calibre des dispositifs de protection / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)",
-    _normalizeKey("Contrôle du courant dans le conducteur neutre"):
         "Calibre des dispositifs de protection / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)",
     _normalizeKey("Coordination entre dispositifs de protection et contacteurs"):
         "Coordination entre dispositifs de protection et contacteurs",
@@ -1964,12 +1950,8 @@ class DispositionsConstructivesRegistry {
         "Coordination entre dispositifs de protection",
     _normalizeKey("Protection contre les contacts indirects"):
         "Protection contre les contacts indirects",
-    _normalizeKey("Présence de double alimentation électrique"):
-        "Identification claire des deux sources et de la source prioritaire",
     _normalizeKey("Interverrouillage mécanique et électrique entre les deux sources"):
         "Interverrouillage empêchant le couplage intempestif des deux sources",
-    _normalizeKey("Repérage des conducteurs / code couleur"):
-        "Respect code couleur des câbles",
     _normalizeKey("Identification claire de la source prioritaire et de la source de secours"):
         "Identification claire des deux sources et de la source prioritaire",
     _normalizeKey("Signalisation claire de la position de l'inverseur (Normal / Secours)"):

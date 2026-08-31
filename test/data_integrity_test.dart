@@ -258,5 +258,40 @@ void main() {
       expect(years.contains(futureYearStr), isFalse);
       expect(years.contains('1950'), isTrue);
     });
+
+    test('Test 10 — Conservation 1-à-1 des conformités historiques sur l\'Inverseur de Source (sans collision)', () {
+      final points = [
+        PointVerification(
+          pointVerification: "Présence et lisibilité du schéma unifilaire et du repérage des départs",
+          conformite: "oui",
+        ),
+        PointVerification(
+          pointVerification: "Identification complète des circuits",
+          conformite: "non",
+          observation: "Repérage incomplet des sources",
+        ),
+        PointVerification(
+          pointVerification: "Présence d'écrans ou plastrons empêchant l'accès aux parties actives",
+          conformite: "sans_objet",
+        ),
+      ];
+
+      DispositionsConstructivesRegistry.ensureCompleteInverseurChecklist(points);
+
+      final ptOui = points.firstWhere(
+        (p) => p.pointVerification.contains("Présence et lisibilité du schéma unifilaire"),
+      );
+      final ptNon = points.firstWhere(
+        (p) => p.pointVerification.contains("Identification complète des circuits"),
+      );
+      final ptNA = points.firstWhere(
+        (p) => p.pointVerification.contains("Présence d'écrans ou plastrons"),
+      );
+
+      expect(ptOui.conformite, equals('oui'));
+      expect(ptNon.conformite, equals('non'));
+      expect(ptNon.observation, equals('Repérage incomplet des sources'));
+      expect(ptNA.conformite, equals('sans_objet'));
+    });
   });
 }
