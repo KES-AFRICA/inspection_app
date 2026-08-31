@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
@@ -1781,11 +1782,13 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     for (int i = 0; i < widget.alimentations.length; i++) {
       final a = widget.alimentations[i];
       _controllers['alim${i}_pdc'] = TextEditingController(text: a.pdcKA);
+      _controllers['alim${i}_icc3'] = TextEditingController(text: a.icc3Max ?? '');
       _controllers['alim${i}_calibre'] = TextEditingController(text: a.calibre);
       _controllers['alim${i}_source'] = TextEditingController(text: a.source);
     }
     if (widget.protectionTete != null) {
       _controllers['prot_pdc'] = TextEditingController(text: widget.protectionTete!.pdcKA);
+      _controllers['prot_icc3'] = TextEditingController(text: widget.protectionTete!.icc3Max ?? '');
       _controllers['prot_calibre'] = TextEditingController(text: widget.protectionTete!.calibre);
       _controllers['prot_source'] = TextEditingController(text: widget.protectionTete!.source);
     }
@@ -1811,6 +1814,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
         case 'courbe': a.courbe = value; break;
         case 'ddr': a.ddr = value; break;
         case 'pdcKA': a.pdcKA = value; break;
+        case 'icc3Max': a.icc3Max = value; break;
         case 'calibre': a.calibre = value; break;
         case 'sectionCable': a.sectionCable = value; break;
         case 'source': a.source = value; break;
@@ -1835,6 +1839,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           case 'courbe': widget.protectionTete!.courbe = value; break;
           case 'ddr': widget.protectionTete!.ddr = value; break;
           case 'pdcKA': widget.protectionTete!.pdcKA = value; break;
+          case 'icc3Max': widget.protectionTete!.icc3Max = value; break;
           case 'calibre': widget.protectionTete!.calibre = value; break;
           case 'sectionCable': widget.protectionTete!.sectionCable = value; break;
           case 'source': widget.protectionTete!.source = value; break;
@@ -1982,6 +1987,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
   }) {
     final sourceCtrl = _getController(isProtectionTete ? 'prot_source' : 'alim${index}_source', a.source);
     final pdcCtrl = _getController(isProtectionTete ? 'prot_pdc' : 'alim${index}_pdc', a.pdcKA);
+    final icc3Ctrl = _getController(isProtectionTete ? 'prot_icc3' : 'alim${index}_icc3', a.icc3Max ?? '');
     final calibreCtrl = _getController(isProtectionTete ? 'prot_calibre' : 'alim${index}_calibre', a.calibre);
 
     final typeProtVal = a.typeProtection;
@@ -2077,7 +2083,25 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             _buildModernDropdown(context, label: 'Courbe', value: courbeVal, items: courbeItems, onChanged: (v) => onChanged('courbe', v)),
             SizedBox(height: context.spacingS),
 
-            _buildModernTextField(context, label: 'PDC kA', controller: pdcCtrl, onChanged: (v) => onChanged('pdcKA', v)),
+            _buildModernTextFieldWithSuffix(
+              context,
+              label: 'PDC',
+              suffix: 'kA',
+              controller: pdcCtrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.,]?\d*'))],
+              onChanged: (v) => onChanged('pdcKA', v),
+            ),
+            SizedBox(height: context.spacingS),
+            _buildModernTextFieldWithSuffix(
+              context,
+              label: 'Icc3 max',
+              suffix: 'kA',
+              controller: icc3Ctrl,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.,]?\d*'))],
+              onChanged: (v) => onChanged('icc3Max', v),
+            ),
             SizedBox(height: context.spacingS),
             _buildModernTextFieldWithSuffix(context, label: 'Calibre', suffix: 'A', controller: calibreCtrl, onChanged: (v) => onChanged('calibre', v)),
             SizedBox(height: context.spacingS),
@@ -2274,11 +2298,20 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     );
   }
 
-  Widget _buildModernTextField(BuildContext context, {required String label, required TextEditingController controller, required Function(String) onChanged}) {
+  Widget _buildModernTextField(
+    BuildContext context, {
+    required String label,
+    required TextEditingController controller,
+    required Function(String) onChanged,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
     return Container(
       decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(context.spacingS), border: Border.all(color: Colors.grey.shade300)),
       child: TextFormField(
         controller: controller,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
         style: TextStyle(fontSize: context.fontSizeS),
         onChanged: onChanged,
         decoration: InputDecoration(
@@ -2291,14 +2324,23 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     );
   }
 
-  // NOUVEAU : champ avec suffixe (pour le calibre)
-  Widget _buildModernTextFieldWithSuffix(BuildContext context, {required String label, required String suffix, required TextEditingController controller, required Function(String) onChanged}) {
+  // NOUVEAU : champ avec suffixe (pour le calibre et Icc3 max)
+  Widget _buildModernTextFieldWithSuffix(
+    BuildContext context, {
+    required String label,
+    required String suffix,
+    required TextEditingController controller,
+    required Function(String) onChanged,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+  }) {
     return Container(
       decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(context.spacingS), border: Border.all(color: Colors.grey.shade300)),
       child: TextFormField(
         controller: controller,
         style: TextStyle(fontSize: context.fontSizeS),
-        keyboardType: TextInputType.number,
+        keyboardType: keyboardType ?? const TextInputType.numberWithOptions(decimal: true),
+        inputFormatters: inputFormatters,
         onChanged: onChanged,
         decoration: InputDecoration(
           labelText: label,
@@ -5084,6 +5126,14 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
     'Courbe-MA',
   ];
 
+  static const List<String> _ddrOptions = [
+    '10',
+    '30',
+    '100',
+    '300',
+    '500',
+  ];
+
   static const List<String> _sectionCableOptions = [
     '1.5 mm²', '2.5 mm²', '4 mm²', '6 mm²', '10 mm²', '16 mm²',
     '25 mm²', '35 mm²', '50 mm²', '70 mm²', '95 mm²', '120 mm²',
@@ -5321,6 +5371,10 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
     if (dep.courbe.isNotEmpty && !courbeItems.contains(dep.courbe)) {
       courbeItems.insert(0, dep.courbe);
     }
+    final ddrItems = [..._ddrOptions];
+    if (dep.ddr.isNotEmpty && !ddrItems.contains(dep.ddr)) {
+      ddrItems.insert(0, dep.ddr);
+    }
 
     return Container(
       padding: EdgeInsets.all(context.spacingM),
@@ -5451,7 +5505,8 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
           TextFormField(
             initialValue: dep.icc3Max,
             decoration: const InputDecoration(labelText: 'Icc3 max (kA)', suffixText: 'kA', isDense: true, border: OutlineInputBorder()),
-            keyboardType: TextInputType.number,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.,]?\d*'))],
             onChanged: (v) { dep.icc3Max = v; widget.onDataChanged(); },
           ),
           const SizedBox(height: 12),
@@ -5461,6 +5516,15 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
             decoration: const InputDecoration(labelText: 'Calibre (A)', suffixText: 'A', isDense: true, border: OutlineInputBorder()),
             keyboardType: TextInputType.number,
             onChanged: (v) { dep.calibre = v; widget.onDataChanged(); },
+          ),
+          const SizedBox(height: 12),
+
+          DropdownButtonFormField<String>(
+            value: dep.ddr.isNotEmpty ? dep.ddr : null,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'DDR IΔn (mA)', isDense: true, border: OutlineInputBorder()),
+            items: ddrItems.map((e) => DropdownMenuItem(value: e, child: Text('$e mA', overflow: TextOverflow.ellipsis))).toList(),
+            onChanged: (v) { setState(() { dep.ddr = v ?? ''; }); widget.onDataChanged(); },
           ),
           const SizedBox(height: 12),
 
@@ -5488,6 +5552,10 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
     final courbeItems = [..._courbeOptions];
     if (ct.courbe.isNotEmpty && !courbeItems.contains(ct.courbe)) {
       courbeItems.insert(0, ct.courbe);
+    }
+    final ddrItems = [..._ddrOptions];
+    if (ct.ddr.isNotEmpty && !ddrItems.contains(ct.ddr)) {
+      ddrItems.insert(0, ct.ddr);
     }
 
     return Container(
@@ -5607,7 +5675,8 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
           TextFormField(
             initialValue: ct.icc3Max,
             decoration: const InputDecoration(labelText: 'Icc3 max (kA)', suffixText: 'kA', isDense: true, border: OutlineInputBorder()),
-            keyboardType: TextInputType.number,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.,]?\d*'))],
             onChanged: (v) { ct.icc3Max = v; widget.onDataChanged(); },
           ),
           const SizedBox(height: 12),
@@ -5617,6 +5686,15 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
             decoration: const InputDecoration(labelText: 'Calibre (A)', suffixText: 'A', isDense: true, border: OutlineInputBorder()),
             keyboardType: TextInputType.number,
             onChanged: (v) { ct.calibre = v; widget.onDataChanged(); },
+          ),
+          const SizedBox(height: 12),
+
+          DropdownButtonFormField<String>(
+            value: ct.ddr.isNotEmpty ? ct.ddr : null,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'DDR IΔn (mA)', isDense: true, border: OutlineInputBorder()),
+            items: ddrItems.map((e) => DropdownMenuItem(value: e, child: Text('$e mA', overflow: TextOverflow.ellipsis))).toList(),
+            onChanged: (v) { setState(() { ct.ddr = v ?? ''; }); widget.onDataChanged(); },
           ),
           const SizedBox(height: 12),
 

@@ -510,7 +510,9 @@ class AuditDiagnosticEngine {
       final pv = coffret.pointsVerification[i];
       final confRaw = pv.conformite.toLowerCase().trim();
       final isNon = confRaw == 'non' || confRaw == 'non conforme' || confRaw == 'false';
-      final isSO = confRaw == 'na' || confRaw == 'sans_objet' || confRaw == 'n/a';
+      final isSO = confRaw == 'na' || confRaw == 'sans_objet' || confRaw == 'n/a' || confRaw == 'sans objet';
+      final isOui = confRaw == 'oui' || confRaw == 'true' || confRaw == 'conforme';
+      final resolvedRawConf = isNon ? 'non' : (isSO ? 'sans_objet' : (isOui ? 'oui' : 'non_renseigne'));
 
       if (pv.observations != null && pv.observations!.isNotEmpty) {
         for (var j = 0; j < pv.observations!.length; j++) {
@@ -521,7 +523,7 @@ class AuditDiagnosticEngine {
             objectId: 'hash_$coffretHash',
             tableName: 'Points de vérification',
             verificationPoint: pv.pointVerification,
-            rawConformity: isNon ? 'non' : (isSO ? 'sans_objet' : 'oui'),
+            rawConformity: resolvedRawConf,
             isNonConforme: isNon,
             retrievedCriticality: _resolveCriticalityString(obs),
             retrievedPriority: obs.priorite ?? pv.priorite,
@@ -537,7 +539,7 @@ class AuditDiagnosticEngine {
           objectId: 'hash_$coffretHash',
           tableName: 'Points de vérification',
           verificationPoint: pv.pointVerification,
-          rawConformity: isNon ? 'non' : (isSO ? 'sans_objet' : 'oui'),
+          rawConformity: resolvedRawConf,
           isNonConforme: isNon,
           retrievedCriticality: _resolvePointVerificationCriticality(pv, coffret.type),
           retrievedPriority: pv.priorite,

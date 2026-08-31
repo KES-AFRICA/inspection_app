@@ -1146,6 +1146,9 @@ class Alimentation {
   @HiveField(9)
   String? marqueDisjoncteur;
 
+  @HiveField(10)
+  String? icc3Max;
+
   /// Résout le statut de connaissance de la source dérivé automatiquement de typeProtection
   String get effectiveSourceKnown => SourceStatusResolver.resolve(typeProtection);
 
@@ -1160,6 +1163,7 @@ class Alimentation {
     this.source = '',
     String? sourceKnown,
     this.marqueDisjoncteur,
+    this.icc3Max = '',
   })  : photos = photos ?? [],
         sourceKnown = sourceKnown ?? SourceStatusResolver.resolve(typeProtection);
 }
@@ -1354,6 +1358,9 @@ class DepartEquipement {
   @HiveField(9)
   String sectionCable;
 
+  @HiveField(10)
+  String ddr;
+
   DepartEquipement({
     String? id,
     this.protectionTete = 'Présent',
@@ -1365,6 +1372,7 @@ class DepartEquipement {
     this.icc3Max = '',
     this.calibre = '',
     this.sectionCable = '',
+    this.ddr = '',
   }) : id = (id != null && id.trim().isNotEmpty)
             ? id
             : 'dep_${DateTime.now().microsecondsSinceEpoch}_${identification.hashCode.abs()}';
@@ -1380,6 +1388,7 @@ class DepartEquipement {
     String? icc3Max,
     String? calibre,
     String? sectionCable,
+    String? ddr,
   }) {
     return DepartEquipement(
       id: id ?? this.id,
@@ -1392,6 +1401,7 @@ class DepartEquipement {
       icc3Max: icc3Max ?? this.icc3Max,
       calibre: calibre ?? this.calibre,
       sectionCable: sectionCable ?? this.sectionCable,
+      ddr: ddr ?? this.ddr,
     );
   }
 }
@@ -1429,6 +1439,9 @@ class CircuitTerminalEquipement {
   @HiveField(9)
   String sectionCable;
 
+  @HiveField(10)
+  String ddr;
+
   CircuitTerminalEquipement({
     String? id,
     this.protectionTete = 'Oui',
@@ -1440,6 +1453,7 @@ class CircuitTerminalEquipement {
     this.icc3Max = '',
     this.calibre = '',
     this.sectionCable = '',
+    this.ddr = '',
   }) : id = (id != null && id.trim().isNotEmpty)
             ? id
             : 'ct_${DateTime.now().microsecondsSinceEpoch}_${identification.hashCode.abs()}';
@@ -1455,6 +1469,7 @@ class CircuitTerminalEquipement {
     String? icc3Max,
     String? calibre,
     String? sectionCable,
+    String? ddr,
   }) {
     return CircuitTerminalEquipement(
       id: id ?? this.id,
@@ -1467,6 +1482,7 @@ class CircuitTerminalEquipement {
       icc3Max: icc3Max ?? this.icc3Max,
       calibre: calibre ?? this.calibre,
       sectionCable: sectionCable ?? this.sectionCable,
+      ddr: ddr ?? this.ddr,
     );
   }
 }

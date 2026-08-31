@@ -1364,6 +1364,7 @@ class DispositionsConstructivesRegistry {
     "Présence et fonctionnement des dispositifs de protection",
     "Adéquation des dispositifs de protection",
     "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés",
+    "Section des câbles de départs adaptée au courant nominal des dispositifs de protection associés",
     "Coordination entre dispositifs de protection et contacteurs",
     "Coordination entre dispositifs de protection",
     "Protection contre les contacts indirects",
@@ -1485,6 +1486,31 @@ class DispositionsConstructivesRegistry {
       familleRisque: "Surintensité / court-circuit / incendie",
       criticite: "Critique",
     ),
+    "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 523, art 524 et art 433",
+      familleRisque: "Incendie / échauffement / surcharge des conducteurs",
+      criticite: "Critique",
+    ),
+    "Section des câbles de départs adaptée au courant nominal des dispositifs de protection associés": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 523, art 524 et art 433",
+      familleRisque: "Incendie / échauffement / surcharge des conducteurs",
+      criticite: "Critique",
+    ),
+    "Calibre des dispositifs de protection / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 434 et art 533",
+      familleRisque: "Incendie / échauffement / surcharge des conducteurs",
+      criticite: "Critique",
+    ),
+    "Coordination entre dispositifs de protection et contacteurs": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 536",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
+    "Coordination entre dispositifs de protection": DispositionMetadata(
+      referenceNormative: "NF C 15-100-1:2024 – art 536",
+      familleRisque: "Sécurité / conformité réglementaire",
+      criticite: "Majeure",
+    ),
     "Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés": DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 523, art 524 et art 433",
       familleRisque: "Incendie / échauffement / surcharge des conducteurs",
@@ -1588,7 +1614,7 @@ class DispositionsConstructivesRegistry {
     _normalizeKey("État des connexions et échauffement visuel"):
         "Contrôle thermographique des connexions, et protections",
     _normalizeKey("Section des câbles de départs adaptée au courant nominal des disjoncteurs associés"):
-        "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés",
+        "Section des câbles de départs adaptée au courant nominal des dispositifs de protection associés",
     _normalizeKey("Section des câbles d'alimentation adaptée au courant nominal des disjoncteurs associés"):
         "Section des câbles d'alimentation adaptée au courant nominal des dispositifs de protection associés",
     _normalizeKey("Coordination entre disjoncteurs et contacteurs"):
@@ -2054,15 +2080,15 @@ class DispositionsConstructivesRegistry {
       final targetKey = _normalizeKey(targetTitle);
 
       final confNorm = pt.conformite.toLowerCase().trim();
-      final isExistingNA = confNorm == 'na' || confNorm == 'non_applicable' || confNorm == 'sans_objet' || confNorm == 'n/a' || confNorm == 'sans objet' || confNorm.isEmpty;
+      final isExistingEmpty = confNorm.isEmpty;
 
       final current = existingMap[targetKey];
       if (current == null) {
         existingMap[targetKey] = pt;
       } else {
         final currentConfNorm = current.conformite.toLowerCase().trim();
-        final currentIsNA = currentConfNorm == 'na' || currentConfNorm == 'non_applicable' || currentConfNorm == 'sans_objet' || currentConfNorm == 'n/a' || currentConfNorm == 'sans objet' || currentConfNorm.isEmpty;
-        if (currentIsNA && !isExistingNA) {
+        final currentIsEmpty = currentConfNorm.isEmpty;
+        if (currentIsEmpty && !isExistingEmpty) {
           existingMap[targetKey] = pt;
         } else if ((pt.observation?.isNotEmpty == true || (pt.observations != null && pt.observations!.isNotEmpty)) &&
             (current.observation == null || current.observation!.isEmpty)) {
