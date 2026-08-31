@@ -12206,8 +12206,17 @@ class PdfReportService {
           'Récapitulatif nombre de circuit terminaux',
           '${coffret.effectiveTerminalCircuits.length}',
         ),
-        if (coffret.indiceIpIk != null && coffret.indiceIpIk!.isNotEmpty)
-          tableRowChar('Indice IP / IK', coffret.indiceIpIk!),
+        tableRowChar(
+          'Indice IP / IK',
+          (coffret.indiceIpIk != null && coffret.indiceIpIk!.trim().isNotEmpty)
+              ? coffret.indiceIpIk!.trim()
+              : 'Non renseigné',
+        ),
+        if (coffret.sourceNomComplet != null && coffret.sourceNomComplet!.trim().isNotEmpty)
+          tableRowChar(
+            'Équipement source d\'alimentation',
+            coffret.sourceNomComplet!.trim(),
+          ),
       ],
     );
 

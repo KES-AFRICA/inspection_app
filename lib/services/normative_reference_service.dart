@@ -128,7 +128,7 @@ class NormativeReferenceService {
     "Calibre des disjoncteurs / fusibles adapté à la section des câbles et au courant de court-circuit présumé (Icc)": "NF C 15-100-1:2024 – art 434 et art 533",
     "Coordination entre disjoncteurs et contacteurs": "NF C 15-100-1:2024 – art 536",
     "Coordination entre disjoncteurs": "NF C 15-100-1:2024 – art 536",
-    "Sélectivité  des protections (montée sélective des calibres)": "NF C 15-100-1:2024 – art 536",
+    "Sélectivité des protections (montée sélective des calibres)": "NF C 15-100-1:2024 – art 536",
     "Pouvoir de coupure et courant assigné adaptés à l'installation": "NF C 15-100-1:2024 – art 434 et art 533",
     "Présence et fonctionnement des dispositifs de coupure / arrêt d'urgence": "NF C 15-100-1:2024 – art 465 et art 537",
     "Fonctionnement du transfert automatique et du retour à la source normale": "NF C 15-100-1:2024 – art 551.2.4 et art 537",

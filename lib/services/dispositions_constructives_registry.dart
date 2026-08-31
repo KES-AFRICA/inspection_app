@@ -864,7 +864,7 @@ class DispositionsConstructivesRegistry {
       criticite: "Majeure",
     ),
     'Signalisation visible "Local électrique – Accès réservé au personnel habilité"': DispositionMetadata(
-      referenceNormative: "NF C 15-100-1:2024 – art 514 ; exigence spécifique de signalisation du local à confirmer sur NF C 15-100-7-729 (non fournie)",
+      referenceNormative: "NF C 15-100-7-729:2024 – art 729",
       familleRisque: "Accès non autorisé / risque électrique",
       criticite: "Majeure",
     ),
@@ -1367,8 +1367,8 @@ class DispositionsConstructivesRegistry {
     "Coordination entre dispositifs de protection et contacteurs",
     "Coordination entre dispositifs de protection",
     "Protection contre les contacts indirects",
-    "Sélectivité et coordination des protections (montée sélective des calibres)",
-    "Présence et conformité du dispositif de protection contre les surtensions (parafoudre)",
+    "Sélectivité des protections (montée sélective des calibres)",
+    "Dispositif de protection contre les surtensions (parafoudre)",
     "Coordination du parafoudre avec les protections amont et aval",
     "Présence de double alimentation électrique",
   ];
@@ -1515,7 +1515,7 @@ class DispositionsConstructivesRegistry {
       familleRisque: "Électrisation / électrocution",
       criticite: "Critique",
     ),
-    "Sélectivité  des protections (montée sélective des calibres)": DispositionMetadata(
+    "Sélectivité des protections (montée sélective des calibres)": DispositionMetadata(
       referenceNormative: "NF C 15-100-1:2024 – art 536",
       familleRisque: "Sécurité / conformité réglementaire",
       criticite: "Majeure",
@@ -1595,10 +1595,16 @@ class DispositionsConstructivesRegistry {
         "Coordination entre dispositifs de protection et contacteurs",
     _normalizeKey("Coordination entre disjoncteurs"):
         "Coordination entre dispositifs de protection",
+    _normalizeKey("Sélectivité et coordination des protections (montée sélective des calibres)"):
+        "Sélectivité des protections (montée sélective des calibres)",
+    _normalizeKey("Sélectivité  des protections (montée sélective des calibres)"):
+        "Sélectivité des protections (montée sélective des calibres)",
+    _normalizeKey("Présence et conformité du dispositif de protection contre les surtensions (parafoudre)"):
+        "Dispositif de protection contre les surtensions (parafoudre)",
     _normalizeKey("Présence d'un parafoudre et état du voyant de d'état"):
-        "Présence et conformité du dispositif de protection contre les surtensions (parafoudre)",
+        "Dispositif de protection contre les surtensions (parafoudre)",
     _normalizeKey("Présence d'un parafoudre"):
-        "Présence et conformité du dispositif de protection contre les surtensions (parafoudre)",
+        "Dispositif de protection contre les surtensions (parafoudre)",
   };
 
   /// Obtenir la métadonnée normative pour un point de coffret ou d'inverseur
@@ -1673,7 +1679,7 @@ class DispositionsConstructivesRegistry {
     "Coordination entre dispositifs de protection et contacteurs",
     "Coordination entre dispositifs de protection",
     "Protection contre les contacts indirects",
-    "Sélectivité et coordination des protections (montée sélective des calibres)",
+    "Sélectivité des protections (montée sélective des calibres)",
     "Pouvoir de coupure et courant assigné adaptés à l'installation",
     "Protection contre les retours de tension vers une source indisponible",
     "Présence et fonctionnement des dispositifs de coupure / arrêt d'urgence",
@@ -1876,6 +1882,10 @@ class DispositionsConstructivesRegistry {
         "Absence d'échauffement anormal par thermographie infrarouge",
     _normalizeKey("Thermographie infrarouge des connexions"):
         "Absence d'échauffement anormal par thermographie infrarouge",
+    _normalizeKey("Sélectivité et coordination des protections (montée sélective des calibres)"):
+        "Sélectivité des protections (montée sélective des calibres)",
+    _normalizeKey("Sélectivité  des protections (montée sélective des calibres)"):
+        "Sélectivité des protections (montée sélective des calibres)",
   };
 
   /// Assure l'exhaustivité, la migration et l'ordonnancement exact (1 à 31) pour l'Inverseur de Source
