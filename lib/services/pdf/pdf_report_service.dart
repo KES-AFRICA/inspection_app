@@ -7635,23 +7635,25 @@ class PdfReportService {
       if (coffret.type == 'INVERSEUR') {
         if (coffret.alimentations.isNotEmpty &&
             coffret.alimentations[0].effectiveSourceKnown == 'Inconnue') {
+          final s = coffret.alimentations[0].source.trim();
           list.add(
             _PdfUnknownSourceItem(
               repere: rep,
               nom: nom,
               type: 'Inverseur',
-              alimentationConcernee: 'Alimentation 1',
+              alimentationConcernee: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'Source inconnue',
             ),
           );
         }
         if (coffret.alimentations.length > 1 &&
             coffret.alimentations[1].effectiveSourceKnown == 'Inconnue') {
+          final s = coffret.alimentations[1].source.trim();
           list.add(
             _PdfUnknownSourceItem(
               repere: rep,
               nom: nom,
               type: 'Inverseur',
-              alimentationConcernee: 'Alimentation 2',
+              alimentationConcernee: (s.isNotEmpty && s.toLowerCase() != 'inconnu') ? s : 'Source inconnue',
             ),
           );
         }
@@ -12198,25 +12200,27 @@ class PdfReportService {
             'Présence de défaut thermo',
             coffret.effectivePresenceDefautThermo,
           ),
-        tableRowChar(
-          'Récapitulatif nombre de départ',
-          '${coffret.effectiveDepartures.length}',
-        ),
-        tableRowChar(
-          'Récapitulatif nombre de circuit terminaux',
-          '${coffret.effectiveTerminalCircuits.length}',
-        ),
-        tableRowChar(
-          'Indice IP / IK',
-          (coffret.indiceIpIk != null && coffret.indiceIpIk!.trim().isNotEmpty)
-              ? coffret.indiceIpIk!.trim()
-              : 'Non renseigné',
-        ),
-        if (coffret.sourceNomComplet != null && coffret.sourceNomComplet!.trim().isNotEmpty)
+        if (coffret.type != 'INVERSEUR') ...[
           tableRowChar(
-            'Équipement source d\'alimentation',
-            coffret.sourceNomComplet!.trim(),
+            'Récapitulatif nombre de départ',
+            '${coffret.effectiveDepartures.length}',
           ),
+          tableRowChar(
+            'Récapitulatif nombre de circuit terminaux',
+            '${coffret.effectiveTerminalCircuits.length}',
+          ),
+          tableRowChar(
+            'Indice IP / IK',
+            (coffret.indiceIpIk != null && coffret.indiceIpIk!.trim().isNotEmpty)
+                ? coffret.indiceIpIk!.trim()
+                : 'Non renseigné',
+          ),
+          if (coffret.sourceNomComplet != null && coffret.sourceNomComplet!.trim().isNotEmpty)
+            tableRowChar(
+              'Équipement source d\'alimentation',
+              coffret.sourceNomComplet!.trim(),
+            ),
+        ],
       ],
     );
 
@@ -12424,6 +12428,25 @@ class PdfReportService {
     // ══════════════════════════════════════════════════════════════════════
     if (coffret.alimentations.isNotEmpty || coffret.protectionTete != null || !coffret.isDepartPrisAvecProtection) {
       widgets.add(pw.SizedBox(height: 3));
+      if (coffret.type != 'INVERSEUR') {
+        widgets.add(
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: pw.BoxDecoration(
+              color: accentColor,
+            ),
+            child: pw.Text(
+              'IDENTIFICATION DE LA SOURCE D\'ALIMENTATION ET DU DISPOSITIF DE TETE DU TGBT/ARMOIRE/COFFRET',
+              style: pw.TextStyle(
+                font: _fontBold,
+                fontSize: fsSmall,
+                color: PdfColors.white,
+              ),
+            ),
+          ),
+        );
+      }
       final List<pw.Widget> tables = <pw.Widget>[];
 
       if (coffret.alimentations.isNotEmpty) {
@@ -12453,12 +12476,10 @@ class PdfReportService {
 
             for (int i = 0; i < entrees.length; i++) {
               final a = entrees[i];
-              final String baseLabel = a.source.isNotEmpty
-                  ? a.source
-                  : 'Alimentation ${i + 1}';
-              final label = a.effectiveSourceKnown == 'Inconnue'
-                  ? '$baseLabel (source inconnue)'
-                  : baseLabel;
+              final String sVal = a.source.trim();
+              final String label = (sVal.isNotEmpty && sVal.toLowerCase() != 'inconnu')
+                  ? sVal
+                  : 'Source inconnue';
               alimentRows.add(
                 pw.TableRow(
                   children: [
@@ -12532,11 +12553,10 @@ class PdfReportService {
 
             for (int i = 0; i < sorties.length; i++) {
               final s = sorties[i];
-              final label = s.source.isNotEmpty
-                  ? s.source
-                  : (sorties.length > 1
-                        ? 'Sortie inverseur ${i + 1}'
-                        : 'Sortie inverseur');
+              final String sVal = s.source.trim();
+              final String label = (sVal.isNotEmpty && sVal.toLowerCase() != 'inconnu')
+                  ? sVal
+                  : 'Source inconnue';
               sortieRows.add(
                 pw.TableRow(
                   children: [
@@ -12600,10 +12620,16 @@ class PdfReportService {
           );
 
           for (final a in coffret.alimentations) {
+            final String rawSource = a.source.trim().isNotEmpty
+                ? a.source.trim()
+                : (coffret.sourceNomComplet ?? '').trim();
+            final String label = (rawSource.isNotEmpty && rawSource.toLowerCase() != 'inconnu')
+                ? rawSource
+                : 'Source inconnue';
             alimentRows.add(
               pw.TableRow(
                 children: [
-                  _valueCell(a.effectiveSourceKnown),
+                  _valueCell(label),
                   _valueCell(_formatTypeProtectionWithMarque(a.typeProtection, a.marqueDisjoncteur)),
                   _valueCell(a.courbe ?? ''),
                   _valueCell(a.pdcKA),
@@ -12715,14 +12741,14 @@ class PdfReportService {
     // ══════════════════════════════════════════════════════════════════════
     // TABLEAU DÉPARTS ISSUS DE CE TGBT/ARMOIRE/COFFRET
     // ══════════════════════════════════════════════════════════════════════
-    if (coffret.effectiveDepartures.isNotEmpty) {
+    if (coffret.type != 'INVERSEUR' && coffret.effectiveDepartures.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 4));
       widgets.add(
         pw.Container(
           width: double.infinity,
           padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: const pw.BoxDecoration(
-            color: PdfColor.fromInt(0xFF1565C0),
+          decoration: pw.BoxDecoration(
+            color: accentColor,
           ),
           child: pw.Text(
             'IDENTIFICATION DES DÉPARTS ISSUS DE CE TGBT/ARMOIRE/COFFRET (${coffret.effectiveDepartures.length})',
@@ -12800,14 +12826,14 @@ class PdfReportService {
     // ══════════════════════════════════════════════════════════════════════
     // TABLEAU CIRCUITS TERMINAUX ISSUS DE CE TGBT/ARMOIRE/COFFRET
     // ══════════════════════════════════════════════════════════════════════
-    if (coffret.effectiveTerminalCircuits.isNotEmpty) {
+    if (coffret.type != 'INVERSEUR' && coffret.effectiveTerminalCircuits.isNotEmpty) {
       widgets.add(pw.SizedBox(height: 4));
       widgets.add(
         pw.Container(
           width: double.infinity,
           padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-          decoration: const pw.BoxDecoration(
-            color: PdfColor.fromInt(0xFF00695C),
+          decoration: pw.BoxDecoration(
+            color: accentColor,
           ),
           child: pw.Text(
             'IDENTIFICATION DES CIRCUITS TERMINAUX ISSUS DE CE TGBT/ARMOIRE/COFFRET (${coffret.effectiveTerminalCircuits.length})',
@@ -12896,6 +12922,25 @@ class PdfReportService {
         );
       }
       widgets.add(pw.SizedBox(height: 3));
+      if (coffret.type != 'INVERSEUR') {
+        widgets.add(
+          pw.Container(
+            width: double.infinity,
+            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+            decoration: pw.BoxDecoration(
+              color: accentColor,
+            ),
+            child: pw.Text(
+              'VERIFICATION DE CONFORMITE DU TGBT/ARMOIRE/COFFRET',
+              style: pw.TextStyle(
+                font: _fontBold,
+                fontSize: fsSmall,
+                color: PdfColors.white,
+              ),
+            ),
+          ),
+        );
+      }
       widgets.add(
         _buildPointsVerificationTable(
           coffret.pointsVerification,

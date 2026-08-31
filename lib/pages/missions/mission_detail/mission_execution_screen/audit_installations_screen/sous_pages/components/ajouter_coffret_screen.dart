@@ -2043,8 +2043,15 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             ),
             SizedBox(height: context.spacingM),
           ],
-          if ((widget.selectedType == 'INVERSEUR' && (index == 0 || index == 1)) ||
-              (widget.selectedType != 'INVERSEUR' && !isProtectionTete && index == 0)) ...[
+          if (widget.selectedType == 'INVERSEUR') ...[
+            _buildModernTextField(
+              context,
+              label: 'Origine de la source',
+              controller: sourceCtrl,
+              onChanged: (v) => onChanged('source', v),
+            ),
+            SizedBox(height: context.spacingS),
+          ] else if (widget.selectedType != 'INVERSEUR' && !isProtectionTete && index == 0) ...[
             _EquipmentSourceAutocompleteField(
               label: 'Origine de la source',
               initialText: a.source.isNotEmpty ? a.source : (widget.sourceNomComplet ?? ''),
@@ -3124,6 +3131,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _etapeAlimentationsKey = GlobalKey<_EtapeAlimentationsState>();
     _etapeDepartsCircuitsKey = GlobalKey<_EtapeDepartsEtCircuitsState>();
     _indiceIpIkController.addListener(() {
+      setState(() {});
       _scheduleAutoSave();
     });
     _autoFillRepere();
@@ -4090,6 +4098,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   }
 
   void _handleNext() {
+    final lastStepIndex = _selectedType == 'INVERSEUR' ? 4 : 5;
     if (_currentStep == 0) {
       if (!_nomValid) { _showError('Veuillez saisir le nom de l\'équipement'); return; }
       if (!_typeValid) { _showError('Veuillez sélectionner le type d\'équipement'); return; }
@@ -4112,14 +4121,14 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       } else {
         _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       }
-    } else if (_currentStep == 4) {
+    } else if (_currentStep == 4 && _selectedType != 'INVERSEUR') {
       final departsState = _etapeDepartsCircuitsKey?.currentState;
       if (departsState != null && departsState.nextSubSlide()) {
         setState(() {});
       } else {
         _mainPageController.nextPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       }
-    } else if (_currentStep == 5) {
+    } else if (_currentStep == lastStepIndex) {
       final pointsState = _etapePointsKey?.currentState;
       if (pointsState != null) {
         if (pointsState.canGoNext()) _sauvegarder();
@@ -4131,6 +4140,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   }
 
   void _handlePrevious() {
+    final lastStepIndex = _selectedType == 'INVERSEUR' ? 4 : 5;
     if (_currentStep == 3) {
       final alimState = _etapeAlimentationsKey?.currentState;
       if (alimState != null && alimState.previousSubSlide()) {
@@ -4138,14 +4148,14 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       } else {
         _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       }
-    } else if (_currentStep == 4) {
+    } else if (_currentStep == 4 && _selectedType != 'INVERSEUR') {
       final departsState = _etapeDepartsCircuitsKey?.currentState;
       if (departsState != null && departsState.previousSubSlide()) {
         setState(() {});
       } else {
         _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
       }
-    } else if (_currentStep == 5) {
+    } else if (_currentStep == lastStepIndex) {
       final pointsState = _etapePointsKey?.currentState;
       if (pointsState != null && pointsState._currentSlide > 0) pointsState.previousSlide();
       else _mainPageController.previousPage(duration: const Duration(milliseconds: 300), curve: Curves.easeInOut);
@@ -4155,15 +4165,16 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   }
 
   String _getNextButtonText() {
+    final lastStepIndex = _selectedType == 'INVERSEUR' ? 4 : 5;
     if (_currentStep == 1 && _accessible == false) {
       return 'Enregistrer';
     }
-    if (_currentStep == 5) {
+    if (_currentStep == lastStepIndex) {
       final pointsState = _etapePointsKey?.currentState;
       if (pointsState != null && pointsState.canGoNext()) return 'Terminer';
       return 'Suivant';
     }
-    return _currentStep == 5 ? 'Terminer' : 'Suivant';
+    return _currentStep == lastStepIndex ? 'Terminer' : 'Suivant';
   }
 
   void _onPresenceParafoudreChanged(bool? value) {
@@ -4171,7 +4182,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _saveDraft();
   }
 
-  int _getTotalSteps() => _accessible ? 6 : 2;
+  int _getTotalSteps() => _accessible ? (_selectedType == 'INVERSEUR' ? 5 : 6) : 2;
 
   Widget _buildSlideAccessibiliteEquipement() {
     return Padding(
@@ -4555,7 +4566,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                       onAddSortie: _addSortieInverseur,
                       onDeleteSortie: _deleteSortieInverseur,
                     ),
-                  if (_selectedType != null && _accessible)
+                  if (_selectedType != null && _selectedType != 'INVERSEUR' && _accessible)
                     _EtapeDepartsEtCircuits(
                       departures: _departures,
                       terminalCircuits: _terminalCircuits,
