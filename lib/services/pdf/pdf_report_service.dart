@@ -7820,19 +7820,6 @@ class PdfReportService {
       }
     }
 
-    if (desc != null) {
-      if (desc.inverseur.isNotEmpty) {
-        addEquipement(
-          refObj: desc.inverseur,
-          zoneName: '',
-          localName: '',
-          repere: 'INV-1',
-          nom: 'Inverseur de Source',
-          type: 'Inverseur',
-        );
-      }
-    }
-
     return list;
   }
 
@@ -8572,11 +8559,62 @@ class PdfReportService {
     return widgets;
   }
 
-  /// ── Tableau récap MT (Référence : Image 1) ──
-  /// En-tête Ligne 1 : LOCALISATION (22%) | NON-CONFORMITÉ - PRÉCONISATION (78%)
-  /// En-tête Ligne 2 : LOCAL (22%) | OBSERVATIONS (58%) | RÉF. NORMATIVE (20%)
-  /// RowSpan : LOCAL fusionné verticalement sur le groupe avec texte centré.
   static List<pw.Widget> _buildObsRecapTableMT(List<_ObsRecap> obs) {
+    return _buildObsRecapTableUnifie(obs);
+  }
+
+  static List<pw.Widget> _buildObsRecapTableBT(List<_ObsRecap> obs) {
+    return _buildObsRecapTableUnifie(obs);
+  }
+
+  static List<pw.Widget> _buildObsRecapTableBTFromGroups(
+    List<_ObsGroup> groups,
+  ) {
+    final flatObs = groups.expand((g) => g.items).toList();
+    return _buildObsRecapTableUnifie(flatObs);
+  }
+
+  static List<_ObsZoneGroup> _groupByZoneLocalEquip(List<_ObsRecap> obs) {
+    final zoneGroups = <_ObsZoneGroup>[];
+
+    for (final o in obs) {
+      final zName = o.zoneName.trim();
+      final lName = o.localName.trim();
+      final cName = o.coffret.trim();
+
+      _ObsZoneGroup currentZoneGroup;
+      if (zoneGroups.isNotEmpty && zoneGroups.last.zoneName == zName) {
+        currentZoneGroup = zoneGroups.last;
+      } else {
+        currentZoneGroup = _ObsZoneGroup(zoneName: zName, localGroups: []);
+        zoneGroups.add(currentZoneGroup);
+      }
+
+      _ObsLocalGroup currentLocalGroup;
+      if (currentZoneGroup.localGroups.isNotEmpty &&
+          currentZoneGroup.localGroups.last.localName == lName) {
+        currentLocalGroup = currentZoneGroup.localGroups.last;
+      } else {
+        currentLocalGroup = _ObsLocalGroup(localName: lName, equipGroups: []);
+        currentZoneGroup.localGroups.add(currentLocalGroup);
+      }
+
+      _ObsEquipGroup currentEquipGroup;
+      if (currentLocalGroup.equipGroups.isNotEmpty &&
+          currentLocalGroup.equipGroups.last.coffret == cName) {
+        currentEquipGroup = currentLocalGroup.equipGroups.last;
+      } else {
+        currentEquipGroup = _ObsEquipGroup(coffret: cName, items: []);
+        currentLocalGroup.equipGroups.add(currentEquipGroup);
+      }
+
+      currentEquipGroup.items.add(o);
+    }
+
+    return zoneGroups;
+  }
+
+  static List<pw.Widget> _buildObsRecapTableUnifie(List<_ObsRecap> obs) {
     if (obs.isEmpty) {
       return [
         pw.Container(
@@ -8599,7 +8637,15 @@ class PdfReportService {
       ];
     }
 
-    final groups = _groupByLocal(obs);
+    final columnWidths = const {
+      0: pw.FlexColumnWidth(1.2), // Zone
+      1: pw.FlexColumnWidth(1.5), // Repère / Local
+      2: pw.FlexColumnWidth(1.8), // Équipement
+      3: pw.FlexColumnWidth(4.0), // Non-conformités & Préconisations
+      4: pw.FlexColumnWidth(1.5), // Réf. Normative
+    };
+
+    final zoneGroups = _groupByZoneLocalEquip(obs);
     final widgets = <pw.Widget>[];
 
     // En-tête Ligne 1 (#1E3A8A Dark Navy)
@@ -8610,18 +8656,15 @@ class PdfReportService {
           width: 0.5,
         ),
         columnWidths: const {
-          0: pw.FlexColumnWidth(2.2),
-          1: pw.FlexColumnWidth(7.8),
+          0: pw.FlexColumnWidth(4.5), // Localisation (Zone + Repère + Équipement)
+          1: pw.FlexColumnWidth(5.5), // Non-conformité
         },
         children: [
           pw.TableRow(
             decoration: pw.BoxDecoration(color: headerColor),
             children: [
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 4,
-                ),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
                   'LOCALISATION',
@@ -8634,10 +8677,7 @@ class PdfReportService {
                 ),
               ),
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 4,
-                ),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
                   'NON-CONFORMITÉ - PRÉCONISATION',
@@ -8662,11 +8702,7 @@ class PdfReportService {
           color: PdfColor.fromHex('#475569'),
           width: 0.5,
         ),
-        columnWidths: const {
-          0: pw.FlexColumnWidth(2.2),
-          1: pw.FlexColumnWidth(5.8),
-          2: pw.FlexColumnWidth(2.0),
-        },
+        columnWidths: columnWidths,
         children: [
           pw.TableRow(
             decoration: const pw.BoxDecoration(
@@ -8674,50 +8710,47 @@ class PdfReportService {
             ),
             children: [
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 3,
-                ),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
-                  'LOCAL',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: 7.5,
-                    color: PdfColors.white,
-                  ),
+                  'Zone',
+                  style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColors.white),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 3,
-                ),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
-                  'OBSERVATIONS',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: 7.5,
-                    color: PdfColors.white,
-                  ),
+                  'Repère',
+                  style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColors.white),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
               pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 3,
-                ),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                 alignment: pw.Alignment.center,
                 child: pw.Text(
-                  'RÉF. NORMATIVE',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: 7.5,
-                    color: PdfColors.white,
-                  ),
+                  'Équipement',
+                  style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColors.white),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  'Observations',
+                  style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColors.white),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+              pw.Container(
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  'Réf. Normative',
+                  style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColors.white),
                   textAlign: pw.TextAlign.center,
                 ),
               ),
@@ -8727,486 +8760,159 @@ class PdfReportService {
       ),
     );
 
-    // Corps : 1 Table par groupe de Localisation avec effet visuel RowSpan (ligne médiane & masque de bordures)
-    for (final group in groups) {
+    int globalRowIndex = 0;
+
+    for (final zoneGroup in zoneGroups) {
+      final totalZoneItems = zoneGroup.localGroups.fold<int>(
+        0,
+        (sum, lg) => sum + lg.equipGroups.fold<int>(0, (s, eg) => s + eg.items.length),
+      );
+      final zoneMidIndex = (totalZoneItems - 1) ~/ 2;
       final tableRows = <pw.TableRow>[];
-      final count = group.items.length;
-      final midIndex = (count - 1) ~/ 2;
 
-      for (int i = 0; i < count; i++) {
-        final o = group.items[i];
-        final rowBg = i.isOdd ? tableRowAlt : PdfColors.white;
-        final obsBorder = pw.Border(
-          top: i > 0
-              ? const pw.BorderSide(
-                  color: PdfColor.fromInt(0xFF475569),
-                  width: 0.5,
-                )
-              : pw.BorderSide.none,
-          bottom: i < count - 1
-              ? const pw.BorderSide(
-                  color: PdfColor.fromInt(0xFF475569),
-                  width: 0.5,
-                )
-              : pw.BorderSide.none,
-        );
+      int zoneRowIndex = 0;
 
-        tableRows.add(
-          pw.TableRow(
-            decoration: pw.BoxDecoration(color: rowBg),
-            children: [
-              // Cellule 0 : Nom du LOCAL (centré verticalement sur la ligne médiane du groupe)
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 6,
-                  vertical: 4,
-                ),
-                alignment: pw.Alignment.center,
-                child: i == midIndex
-                    ? pw.Text(
-                        group.local.toUpperCase(),
-                        style: pw.TextStyle(
-                          font: _fontBold,
-                          fontSize: fsSmall,
-                          color: headerColor,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      )
-                    : pw.SizedBox(),
-              ),
-              // Cellule 1 : Observation (avec bordure supérieure et inférieure séparatrices)
-              pw.Container(
-                decoration: pw.BoxDecoration(border: obsBorder),
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 3,
-                ),
-                alignment: pw.Alignment.centerLeft,
-                child: pw.Text(
-                  o.observation,
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
-                ),
-              ),
-              // Cellule 2 : Référence Normative (avec bordure supérieure et inférieure séparatrices)
-              pw.Container(
-                decoration: pw.BoxDecoration(border: obsBorder),
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 3,
-                ),
-                alignment: pw.Alignment.center,
-                child: pw.Text(
-                  o.refNorm,
-                  style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
-                  textAlign: pw.TextAlign.center,
-                ),
-              ),
-            ],
-          ),
+      for (int lIdx = 0; lIdx < zoneGroup.localGroups.length; lIdx++) {
+        final localGroup = zoneGroup.localGroups[lIdx];
+        final totalLocalItems = localGroup.equipGroups.fold<int>(
+          0,
+          (s, eg) => s + eg.items.length,
         );
+        final localMidIndex = (totalLocalItems - 1) ~/ 2;
+        final isLastLocalInZone = (lIdx == zoneGroup.localGroups.length - 1);
+
+        int localRowIndex = 0;
+
+        for (int eIdx = 0; eIdx < localGroup.equipGroups.length; eIdx++) {
+          final equipGroup = localGroup.equipGroups[eIdx];
+          final totalEquipItems = equipGroup.items.length;
+          final equipMidIndex = (totalEquipItems - 1) ~/ 2;
+          final isLastEquipInLocal = (eIdx == localGroup.equipGroups.length - 1);
+
+          for (int i = 0; i < totalEquipItems; i++) {
+            final o = equipGroup.items[i];
+            final currentZoneRowIdx = zoneRowIndex++;
+            final currentLocalRowIdx = localRowIndex++;
+            final currentEquipRowIdx = i;
+
+            final idx = globalRowIndex++;
+            final isEven = idx % 2 == 0;
+            final bg = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
+
+            final localBorder = pw.Border(
+              bottom: (currentLocalRowIdx == totalLocalItems - 1 && !isLastLocalInZone)
+                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5)
+                  : pw.BorderSide.none,
+            );
+
+            final equipBorder = pw.Border(
+              bottom: (currentEquipRowIdx == totalEquipItems - 1 && !isLastEquipInLocal)
+                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5)
+                  : pw.BorderSide.none,
+            );
+
+            final obsBorder = pw.Border(
+              bottom: (currentZoneRowIdx < totalZoneItems - 1)
+                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5)
+                  : pw.BorderSide.none,
+            );
+
+            tableRows.add(
+              pw.TableRow(
+                decoration: pw.BoxDecoration(color: bg),
+                children: [
+                  // Cellule 0 : Zone
+                  pw.Container(
+                    decoration: const pw.BoxDecoration(color: PdfColors.white),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    alignment: pw.Alignment.center,
+                    child: (currentZoneRowIdx == zoneMidIndex && zoneGroup.zoneName.isNotEmpty)
+                        ? pw.Text(
+                            zoneGroup.zoneName,
+                            style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
+                            textAlign: pw.TextAlign.center,
+                          )
+                        : pw.SizedBox(),
+                  ),
+
+                  // Cellule 1 : Repère / Local
+                  pw.Container(
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.white,
+                      border: localBorder,
+                    ),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    alignment: pw.Alignment.center,
+                    child: (currentLocalRowIdx == localMidIndex && localGroup.localName.isNotEmpty)
+                        ? pw.Text(
+                            localGroup.localName,
+                            style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
+                            textAlign: pw.TextAlign.center,
+                          )
+                        : pw.SizedBox(),
+                  ),
+
+                  // Cellule 2 : Équipement
+                  pw.Container(
+                    decoration: pw.BoxDecoration(
+                      color: PdfColors.white,
+                      border: equipBorder,
+                    ),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                    alignment: pw.Alignment.center,
+                    child: (currentEquipRowIdx == equipMidIndex && equipGroup.coffret.isNotEmpty)
+                        ? pw.Text(
+                            equipGroup.coffret,
+                            style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
+                            textAlign: pw.TextAlign.center,
+                          )
+                        : pw.SizedBox(),
+                  ),
+
+                  // Cellule 3 : Observations
+                  pw.Container(
+                    decoration: pw.BoxDecoration(border: obsBorder),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                    alignment: pw.Alignment.centerLeft,
+                    child: pw.Text(
+                      o.observation,
+                      style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                    ),
+                  ),
+
+                  // Cellule 4 : Référence Normative
+                  pw.Container(
+                    decoration: pw.BoxDecoration(border: obsBorder),
+                    padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+                    alignment: pw.Alignment.center,
+                    child: pw.Text(
+                      o.refNorm,
+                      style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                      textAlign: pw.TextAlign.center,
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }
+        }
       }
 
       widgets.add(
         pw.Table(
           defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-          border: pw.TableBorder(
-            left: const pw.BorderSide(
-              color: PdfColor.fromInt(0xFF475569),
-              width: 0.5,
-            ),
-            right: const pw.BorderSide(
-              color: PdfColor.fromInt(0xFF475569),
-              width: 0.5,
-            ),
-            top: const pw.BorderSide(
-              color: PdfColor.fromInt(0xFF475569),
-              width: 0.5,
-            ),
-            bottom: const pw.BorderSide(
-              color: PdfColor.fromInt(0xFF475569),
-              width: 0.5,
-            ),
-            verticalInside: const pw.BorderSide(
-              color: PdfColor.fromInt(0xFF475569),
-              width: 0.5,
-            ),
+          border: const pw.TableBorder(
+            left: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+            right: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+            top: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+            bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+            verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
             horizontalInside: pw.BorderSide.none,
           ),
-          columnWidths: const {
-            0: pw.FlexColumnWidth(2.2),
-            1: pw.FlexColumnWidth(5.8),
-            2: pw.FlexColumnWidth(2.0),
-          },
+          columnWidths: columnWidths,
           children: tableRows,
         ),
       );
-    }
-
-    return widgets;
-  }
-
-  /// ── Tableau récap BT (Référence : Image 2) ──
-  /// Première ligne (2 sections) : LOCALISATION (30%) | NON-CONFORMITÉ - PRÉCONISATION (70%)
-  /// Deuxième ligne (4 colonnes) : LOCALISATION / cellule vide (8%) | ÉQUIPEMENT (22%) | OBSERVATIONS (52%) | RÉF. NORMATIVE (18%)
-  /// Troisième ligne (Sub-header) : LOCALISATION (30%) | VALEUR RÉELLE DE LA LOCALISATION (70%)
-  /// RowSpan : ÉQUIPEMENT et # fusionnés verticalement sur chaque sous-groupe avec texte centré.
-  static List<pw.Widget> _buildObsRecapTableBT(List<_ObsRecap> obs) {
-    return _buildObsRecapTableBTFromGroups(_groupByLocal(obs));
-  }
-
-  static List<pw.Widget> _buildObsRecapTableBTFromGroups(
-    List<_ObsGroup> groups,
-  ) {
-    if (groups.isEmpty) {
-      return [
-        pw.Container(
-          decoration: pw.BoxDecoration(
-            border: pw.Border.all(
-              color: PdfColor.fromHex('#475569'),
-              width: 0.5,
-            ),
-          ),
-          padding: const pw.EdgeInsets.all(6),
-          child: pw.Text(
-            'Aucune observation',
-            style: pw.TextStyle(
-              font: _fontRegular,
-              fontSize: fsSmall,
-              fontStyle: pw.FontStyle.italic,
-            ),
-          ),
-        ),
-      ];
-    }
-
-    final widgets = <pw.Widget>[];
-
-    // En-tête Ligne 1 (#1E3A8A Dark Navy)
-    widgets.add(
-      pw.Table(
-        border: pw.TableBorder.all(
-          color: PdfColor.fromHex('#475569'),
-          width: 0.5,
-        ),
-        columnWidths: const {
-          0: pw.FlexColumnWidth(3.0),
-          1: pw.FlexColumnWidth(7.0),
-        },
-        children: [
-          pw.TableRow(
-            decoration: pw.BoxDecoration(color: headerColor),
-            children: [
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 4,
-                ),
-                alignment: pw.Alignment.center,
-                child: pw.Text(
-                  'LOCALISATION',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: 8.0,
-                    color: PdfColors.white,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-              ),
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 4,
-                ),
-                alignment: pw.Alignment.center,
-                child: pw.Text(
-                  'NON-CONFORMITÉ - PRÉCONISATION',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: 8.0,
-                    color: PdfColors.white,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-
-    // En-tête Ligne 2 (#2E5F9A Medium Blue)
-    widgets.add(
-      pw.Table(
-        border: pw.TableBorder.all(
-          color: PdfColor.fromHex('#475569'),
-          width: 0.5,
-        ),
-        columnWidths: const {
-          0: pw.FlexColumnWidth(3.0),
-          1: pw.FlexColumnWidth(5.2),
-          2: pw.FlexColumnWidth(1.8),
-        },
-        children: [
-          pw.TableRow(
-            decoration: const pw.BoxDecoration(
-              color: PdfColor.fromInt(0xFF2E5F9A),
-            ),
-            children: [
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 3,
-                ),
-                alignment: pw.Alignment.center,
-                child: pw.Text(
-                  'ÉQUIPEMENT',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: 7.5,
-                    color: PdfColors.white,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-              ),
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 3,
-                ),
-                alignment: pw.Alignment.center,
-                child: pw.Text(
-                  'OBSERVATIONS',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: 7.5,
-                    color: PdfColors.white,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-              ),
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(
-                  horizontal: 4,
-                  vertical: 3,
-                ),
-                alignment: pw.Alignment.center,
-                child: pw.Text(
-                  'RÉF. NORMATIVE',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: 7.5,
-                    color: PdfColors.white,
-                  ),
-                  textAlign: pw.TextAlign.center,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-
-    int equipIdx = 0;
-
-    for (final group in groups) {
-      // Troisième ligne : Sous-titre Localisation (#DBEAFE Light Ice Blue)
-      widgets.add(
-        pw.Table(
-          border: pw.TableBorder.all(
-            color: PdfColor.fromHex('#475569'),
-            width: 0.5,
-          ),
-          columnWidths: const {
-            0: pw.FlexColumnWidth(3.0),
-            1: pw.FlexColumnWidth(7.0),
-          },
-          children: [
-            pw.TableRow(
-              decoration: const pw.BoxDecoration(
-                color: PdfColor.fromInt(0xFFDBEAFE),
-              ),
-              children: [
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 3,
-                  ),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    'LOCALISATION',
-                    style: pw.TextStyle(
-                      font: _fontBold,
-                      fontSize: 7.0,
-                      color: headerColor,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 3,
-                  ),
-                  alignment: pw.Alignment.centerLeft,
-                  child: pw.Text(
-                    group.local.toUpperCase(),
-                    style: pw.TextStyle(
-                      font: _fontBold,
-                      fontSize: 8.0,
-                      color: headerColor,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      );
-
-      // Sous-grouper par équipement (coffret)
-      final equipGroups = <_ObsGroup>[];
-      for (final o in group.items) {
-        if (equipGroups.isEmpty || equipGroups.last.local != o.coffret) {
-          equipGroups.add(_ObsGroup(local: o.coffret, items: [o]));
-        } else {
-          equipGroups.last.items.add(o);
-        }
-      }
-
-      for (final eq in equipGroups) {
-        equipIdx++;
-        final tableRows = <pw.TableRow>[];
-        final count = eq.items.length;
-        final midIndex = (count - 1) ~/ 2;
-
-        for (int i = 0; i < count; i++) {
-          final o = eq.items[i];
-          final rowBg = i.isOdd ? tableRowAlt : PdfColors.white;
-          final obsBorder = pw.Border(
-            top: i > 0
-                ? const pw.BorderSide(
-                    color: PdfColor.fromInt(0xFF475569),
-                    width: 0.5,
-                  )
-                : pw.BorderSide.none,
-            bottom: i < count - 1
-                ? const pw.BorderSide(
-                    color: PdfColor.fromInt(0xFF475569),
-                    width: 0.5,
-                  )
-                : pw.BorderSide.none,
-          );
-
-          tableRows.add(
-            pw.TableRow(
-              decoration: pw.BoxDecoration(color: rowBg),
-              children: [
-                // Cellule 0 : N° Équipement (#) - centré verticalement sur la ligne médiane
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 2,
-                    vertical: 4,
-                  ),
-                  alignment: pw.Alignment.center,
-                  child: i == midIndex
-                      ? pw.Text(
-                          '$equipIdx',
-                          style: pw.TextStyle(
-                            font: _fontBold,
-                            fontSize: fsSmall,
-                            color: headerColor,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        )
-                      : pw.SizedBox(),
-                ),
-                // Cellule 1 : Nom Équipement - centré verticalement sur la ligne médiane
-                pw.Container(
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 4,
-                  ),
-                  alignment: pw.Alignment.center,
-                  child: i == midIndex
-                      ? pw.Text(
-                          eq.local.toUpperCase(),
-                          style: pw.TextStyle(
-                            font: _fontBold,
-                            fontSize: fsSmall,
-                            color: headerColor,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        )
-                      : pw.SizedBox(),
-                ),
-                // Cellule 2 : Observation (avec bordures supérieure et inférieure séparatrices)
-                pw.Container(
-                  decoration: pw.BoxDecoration(border: obsBorder),
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 3,
-                  ),
-                  alignment: pw.Alignment.centerLeft,
-                  child: pw.Text(
-                    o.observation,
-                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
-                  ),
-                ),
-                // Cellule 3 : Référence Normative (avec bordures supérieure et inférieure séparatrices)
-                pw.Container(
-                  decoration: pw.BoxDecoration(border: obsBorder),
-                  padding: const pw.EdgeInsets.symmetric(
-                    horizontal: 4,
-                    vertical: 3,
-                  ),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    o.refNorm,
-                    style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-              ],
-            ),
-          );
-        }
-
-        widgets.add(
-          pw.Table(
-            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-            border: pw.TableBorder(
-              left: const pw.BorderSide(
-                color: PdfColor.fromInt(0xFF475569),
-                width: 0.5,
-              ),
-              right: const pw.BorderSide(
-                color: PdfColor.fromInt(0xFF475569),
-                width: 0.5,
-              ),
-              top: const pw.BorderSide(
-                color: PdfColor.fromInt(0xFF475569),
-                width: 0.5,
-              ),
-              bottom: const pw.BorderSide(
-                color: PdfColor.fromInt(0xFF475569),
-                width: 0.5,
-              ),
-              verticalInside: const pw.BorderSide(
-                color: PdfColor.fromInt(0xFF475569),
-                width: 0.5,
-              ),
-              horizontalInside: pw.BorderSide.none,
-            ),
-            columnWidths: const {
-              0: pw.FlexColumnWidth(0.8),
-              1: pw.FlexColumnWidth(2.2),
-              2: pw.FlexColumnWidth(5.2),
-              3: pw.FlexColumnWidth(1.8),
-            },
-            children: tableRows,
-          ),
-        );
-      }
     }
 
     return widgets;
@@ -10013,6 +9719,39 @@ class PdfReportService {
     Map<String, int>? photoRegistry,
   ) =>
       _getFormattedPhotoLabel(photoPaths, photoRegistry);
+
+  @visibleForTesting
+  static _ObsRecap createObsRecapForTesting({
+    String zoneName = '',
+    String localName = '',
+    String localisation = '',
+    required String coffret,
+    required String observation,
+    required String refNorm,
+    required String priorite,
+    String? repere,
+  }) {
+    return _ObsRecap(
+      zoneName: zoneName,
+      localName: localName,
+      localisation: localisation,
+      coffret: coffret,
+      observation: observation,
+      refNorm: refNorm,
+      priorite: priorite,
+      repere: repere,
+    );
+  }
+
+  @visibleForTesting
+  static List<_ObsZoneGroup> groupByZoneLocalEquipForTesting(List<_ObsRecap> obs) {
+    return _groupByZoneLocalEquip(obs);
+  }
+
+  @visibleForTesting
+  static List<pw.Widget> buildObsRecapTableUnifieForTesting(List<_ObsRecap> obs) {
+    return _buildObsRecapTableUnifie(obs);
+  }
 
   // ──────────────────────────────────────────────────────────────
   //  AUDIT DES INSTALLATIONS ELECTRIQUES
@@ -18277,11 +18016,11 @@ class PdfReportService {
     }
     currentOffset += mtDoc.document.pdfPageList.pages.length;
 
-    // 3. Basse Tension Récap (Découpé par tranche de 15 groupes de locaux max)
+    // 3. Basse Tension Récap (Découpé par tranche de 15 groupes de zones max)
     final obsBT = _collectObservationsBT(audit);
-    final groupsBT = _groupByLocal(obsBT);
+    final zoneGroupsBT = _groupByZoneLocalEquip(obsBT);
 
-    if (groupsBT.isEmpty) {
+    if (zoneGroupsBT.isEmpty) {
       final btDoc = pw.Document(
         title: 'Recap BT Empty - ${mission.nomClient}',
         author: 'KES INSPECTIONS AND PROJECTS',
@@ -18335,11 +18074,17 @@ class PdfReportService {
       currentOffset += btDoc.document.pdfPageList.pages.length;
     } else {
       const int batchSize = 15;
-      for (int i = 0; i < groupsBT.length; i += batchSize) {
-        final subGroups = groupsBT.sublist(
+      for (int i = 0; i < zoneGroupsBT.length; i += batchSize) {
+        final subZoneGroups = zoneGroupsBT.sublist(
           i,
-          (i + batchSize).clamp(0, groupsBT.length),
+          (i + batchSize).clamp(0, zoneGroupsBT.length),
         );
+        final obsSubList = subZoneGroups
+            .expand((zg) => zg.localGroups)
+            .expand((lg) => lg.equipGroups)
+            .expand((eg) => eg.items)
+            .toList();
+
         final btDoc = pw.Document(
           title: 'Recap BT Chunk ${i ~/ batchSize} - ${mission.nomClient}',
           author: 'KES INSPECTIONS AND PROJECTS',
@@ -18357,7 +18102,7 @@ class PdfReportService {
           );
           btWidgets.add(pw.SizedBox(height: 5));
         }
-        btWidgets.addAll(_buildObsRecapTableBTFromGroups(subGroups));
+        btWidgets.addAll(_buildObsRecapTableUnifie(obsSubList));
 
         btDoc.addPage(
           pw.MultiPage(
@@ -20010,20 +19755,56 @@ class PdfReportService {
 // ================================================================
 
 class _ObsRecap {
-  final String localisation;
+  final String zoneName;
+  final String localName;
   final String coffret;
   final String observation;
   final String refNorm;
   final String priorite;
   final String? repere;
+
   _ObsRecap({
-    required this.localisation,
+    String zoneName = '',
+    String localName = '',
+    String localisation = '',
     required this.coffret,
     required this.observation,
     required String refNorm,
     required this.priorite,
     this.repere,
-  }) : refNorm = refNorm.replaceAll(RegExp(r'§\s*'), 'art ');
+  })  : zoneName = zoneName.trim().isNotEmpty
+            ? zoneName.trim()
+            : (localisation.contains('/')
+                ? localisation.split('/')[0].trim()
+                : ''),
+        localName = localName.trim().isNotEmpty
+            ? localName.trim()
+            : (localisation.contains('/')
+                ? localisation.split('/').sublist(1).join('/').trim()
+                : (zoneName.trim().isEmpty ? localisation.trim() : '')),
+        refNorm = refNorm.replaceAll(RegExp(r'§\s*'), 'art ');
+
+  String get localisation => zoneName.isNotEmpty && localName.isNotEmpty
+      ? '$zoneName / $localName'
+      : (zoneName.isNotEmpty ? zoneName : localName);
+}
+
+class _ObsEquipGroup {
+  final String coffret;
+  final List<_ObsRecap> items;
+  _ObsEquipGroup({required this.coffret, required this.items});
+}
+
+class _ObsLocalGroup {
+  final String localName;
+  final List<_ObsEquipGroup> equipGroups;
+  _ObsLocalGroup({required this.localName, required this.equipGroups});
+}
+
+class _ObsZoneGroup {
+  final String zoneName;
+  final List<_ObsLocalGroup> localGroups;
+  _ObsZoneGroup({required this.zoneName, required this.localGroups});
 }
 
 class _ObsGroup {

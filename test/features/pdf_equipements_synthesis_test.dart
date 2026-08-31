@@ -79,7 +79,7 @@ void main() {
       expect(eq3.hasObservation, equals('Non'));
     });
 
-    test('Should handle Inverseur from DescriptionInstallations correctly', () {
+    test('Should only collect audited equipements from AuditInstallationsElectriques (DescriptionInstallations does not inject orphan equipements)', () {
       final desc = DescriptionInstallations.create('mission_inv_test');
       desc.inverseur = [
         InstallationItem(
@@ -93,13 +93,7 @@ void main() {
       ];
 
       final equipementsBT = PdfReportService.getEquipementsBTForTesting(null, desc);
-      expect(equipementsBT.length, equals(1));
-
-      final inv = equipementsBT.first;
-      expect(inv.repere, equals('INV-1'));
-      expect(inv.type, equals('Inverseur'));
-      expect(inv.verificationThermo, equals('Oui'));
-      expect(inv.hasObservation, equals('Oui'));
+      expect(equipementsBT, isEmpty);
     });
 
     test('Should filter out system placeholders and neutral keywords from observation calculation', () {
