@@ -1,7 +1,7 @@
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/services/hive_service.dart';
 
-/// Résultat de recherche pour une source d'alimentation d'équipement
+/// Résultat de recherche pour une source d'alimentation d'équipement (Coffret / Armoire / TGBT / Départ)
 class EquipmentSearchResult {
   final String equipmentId;
   final String nom;
@@ -9,6 +9,8 @@ class EquipmentSearchResult {
   final String type;
   final String? localisation;
   final double score;
+  final DepartEquipement? depart;
+  final CoffretArmoire? parentCoffret;
 
   const EquipmentSearchResult({
     required this.equipmentId,
@@ -17,10 +19,17 @@ class EquipmentSearchResult {
     required this.type,
     this.localisation,
     required this.score,
+    this.depart,
+    this.parentCoffret,
   });
 
-  /// Nom d'affichage complet pour l'UI, le rapport PDF et la sauvegarde (format: nom - local - zone)
+  bool get isDepart => depart != null;
+
+  /// Nom d'affichage complet pour l'UI, le rapport PDF et la sauvegarde
   String get displayName {
+    if (isDepart && depart != null && depart!.identification.trim().isNotEmpty) {
+      return depart!.identification.trim();
+    }
     final buffer = StringBuffer();
     buffer.write(nom);
     if (repere != null && repere!.trim().isNotEmpty && repere!.trim().toLowerCase() != nom.trim().toLowerCase()) {
@@ -33,7 +42,7 @@ class EquipmentSearchResult {
   }
 }
 
-/// Service intelligent de recherche d'équipements sources par similarité textuelle
+/// Service intelligent de recherche d'équipements et départs sources par similarité textuelle
 class EquipmentSourceSearchService {
   static const Set<String> _stopWords = {
     'de', 'la', 'le', 'les', 'du', 'des', 'un', 'une', 'en', 'et', 'a', 'au',
@@ -118,7 +127,7 @@ class EquipmentSourceSearchService {
     return list;
   }
 
-  /// Recherche tolérante des équipements sources d'une mission
+  /// Recherche tolérante des équipements et départs sources d'une mission
   static List<EquipmentSearchResult> searchSources({
     required String missionId,
     required String query,
@@ -146,7 +155,12 @@ class EquipmentSourceSearchService {
         continue;
       }
 
-      // Si pas de requête saisie, retourner tous les équipements disponibles ordonnés par nom
+      // 1. ÉVALUATION DE L'ÉQUIPEMENT (TGBT / Armoire / Coffret / Inverseur)
+      final nomNorm = _normalize(c.nom);
+      final repereNorm = c.repere != null ? _normalize(c.repere!) : '';
+      final numNorm = c.numeroEquipement != null ? _normalize(c.numeroEquipement!) : '';
+      final locNorm = loc != null ? _normalize(loc) : '';
+
       if (queryNorm.isEmpty) {
         results.add(
           EquipmentSearchResult(
@@ -156,50 +170,89 @@ class EquipmentSourceSearchService {
             type: c.type,
             localisation: loc,
             score: 1.0,
+            parentCoffret: c,
           ),
         );
-        continue;
+      } else {
+        final targetText = '$nomNorm $repereNorm $numNorm $locNorm ${c.type.toLowerCase()}';
+        double score = 0.0;
+        if (nomNorm == queryNorm || repereNorm == queryNorm) {
+          score += 10.0;
+        } else if (targetText.contains(queryNorm)) {
+          score += 5.0;
+        }
+        if (queryTokens.isNotEmpty) {
+          int tokenMatches = 0;
+          for (final qt in queryTokens) {
+            if (targetText.contains(qt)) tokenMatches++;
+          }
+          score += (tokenMatches / queryTokens.length) * 4.0;
+        }
+        if (score > 0.5) {
+          results.add(
+            EquipmentSearchResult(
+              equipmentId: c.equipmentId,
+              nom: c.nom,
+              repere: c.repere,
+              type: c.type,
+              localisation: loc,
+              score: score,
+              parentCoffret: c,
+            ),
+          );
+        }
       }
 
-      // Nom, repère et numéro d'équipement
-      final nomNorm = _normalize(c.nom);
-      final repereNorm = c.repere != null ? _normalize(c.repere!) : '';
-      final numNorm = c.numeroEquipement != null ? _normalize(c.numeroEquipement!) : '';
-      final locNorm = loc != null ? _normalize(loc) : '';
+      // 2. ÉVALUATION DES DÉPARTS ENREGISTRÉS SUR CET ÉQUIPEMENT
+      for (final dep in c.effectiveDepartures) {
+        final iden = dep.identification.trim();
+        if (iden.isEmpty || iden.toLowerCase() == 'inconnu') continue;
 
-      final targetText = '$nomNorm $repereNorm $numNorm $locNorm ${c.type.toLowerCase()}';
+        final idenNorm = _normalize(iden);
+        final depTargetText = '$idenNorm $nomNorm $repereNorm $locNorm depart';
 
-      double score = 0.0;
-
-      // Match exact
-      if (nomNorm == queryNorm || repereNorm == queryNorm) {
-        score += 10.0;
-      } else if (targetText.contains(queryNorm)) {
-        score += 5.0;
-      }
-
-      // Match par tokens
-      if (queryTokens.isNotEmpty) {
-        int tokenMatches = 0;
-        for (final qt in queryTokens) {
-          if (targetText.contains(qt)) {
-            tokenMatches++;
+        if (queryNorm.isEmpty) {
+          results.add(
+            EquipmentSearchResult(
+              equipmentId: c.equipmentId,
+              nom: iden,
+              repere: c.nom,
+              type: 'Départ',
+              localisation: loc,
+              score: 0.9,
+              depart: dep,
+              parentCoffret: c,
+            ),
+          );
+        } else {
+          double depScore = 0.0;
+          if (idenNorm == queryNorm) {
+            depScore += 10.0;
+          } else if (depTargetText.contains(queryNorm)) {
+            depScore += 6.0;
+          }
+          if (queryTokens.isNotEmpty) {
+            int tokenMatches = 0;
+            for (final qt in queryTokens) {
+              if (depTargetText.contains(qt)) tokenMatches++;
+            }
+            depScore += (tokenMatches / queryTokens.length) * 4.0;
+          }
+          if (depScore > 0.5) {
+            results.add(
+              EquipmentSearchResult(
+                equipmentId: c.equipmentId,
+                nom: iden,
+                repere: c.nom,
+                type: 'Départ',
+                localisation: loc,
+                score: depScore,
+                depart: dep,
+                parentCoffret: c,
+              ),
+            );
           }
         }
-        score += (tokenMatches / queryTokens.length) * 4.0;
-      }
-
-      if (score > 0.5) {
-        results.add(
-          EquipmentSearchResult(
-            equipmentId: c.equipmentId,
-            nom: c.nom,
-            repere: c.repere,
-            type: c.type,
-            localisation: loc,
-            score: score,
-          ),
-        );
       }
     }
 

@@ -1005,6 +1005,9 @@ class CoffretArmoire {
   @HiveField(36)
   String? sourceNomComplet;
 
+  @HiveField(37)
+  String? sourceDepartId;
+
   List<DepartEquipement> get effectiveDepartures => departures ?? [];
   List<CircuitTerminalEquipement> get effectiveTerminalCircuits => terminalCircuits ?? [];
 
@@ -1071,6 +1074,7 @@ class CoffretArmoire {
     List<CircuitTerminalEquipement>? terminalCircuits,
     this.sourceEquipementId,
     this.sourceNomComplet,
+    this.sourceDepartId,
     bool? accessible,
     List<Alimentation>? alimentations,
     this.protectionTete,

@@ -1652,7 +1652,8 @@ class _EtapeAlimentations extends StatefulWidget {
   final String missionId;
   final String? currentEquipmentId;
   final String? sourceNomComplet;
-  final Function(String? equipmentId, String displayName)? onSourceSelected;
+  final String? sourceDepartId;
+  final Function(String? equipmentId, String displayName, String? departId)? onSourceSelected;
 
   const _EtapeAlimentations({
     super.key,
@@ -1668,6 +1669,7 @@ class _EtapeAlimentations extends StatefulWidget {
     required this.missionId,
     this.currentEquipmentId,
     this.sourceNomComplet,
+    this.sourceDepartId,
     this.onSourceSelected,
   });
 
@@ -2015,6 +2017,8 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
       marqueDisjoncteurItems.insert(0, marqueDisjVal);
     }
 
+    final bool isLocked = (!isProtectionTete && index == 0 && widget.sourceDepartId != null && widget.sourceDepartId!.isNotEmpty);
+
     return Container(
       padding: isProtectionTete ? EdgeInsets.zero : EdgeInsets.all(context.spacingM),
       decoration: isProtectionTete
@@ -2050,6 +2054,33 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             ),
             SizedBox(height: context.spacingM),
           ],
+          if (isLocked) ...[
+            Container(
+              margin: EdgeInsets.only(bottom: context.spacingS),
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade50,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.amber.shade300),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.lock_outline, size: 16, color: Colors.amber.shade900),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Caractéristiques électriques verrouillées (alimentées par le départ sélectionné)',
+                      style: TextStyle(
+                        fontSize: context.fontSizeXS,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.amber.shade900,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
           if (widget.selectedType == 'INVERSEUR') ...[
             _buildModernTextField(
               context,
@@ -2067,21 +2098,40 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
               onSelected: (result) {
                 if (result != null) {
                   onChanged('source', result.displayName);
-                  widget.onSourceSelected?.call(result.equipmentId, result.displayName);
+                  if (result.isDepart && result.depart != null) {
+                    final dep = result.depart!;
+                    onChanged('typeProtection', dep.typeProtection);
+                    onChanged('marqueDisjoncteur', dep.marque);
+                    onChanged('courbe', dep.courbe);
+                    onChanged('pdcKA', dep.pdcKA);
+                    onChanged('icc3Max', dep.icc3Max);
+                    onChanged('calibre', dep.calibre);
+                    onChanged('ddr', dep.ddr);
+                    onChanged('sectionCable', dep.sectionCable);
+                    widget.onSourceSelected?.call(result.equipmentId, result.displayName, dep.id);
+                  } else {
+                    widget.onSourceSelected?.call(result.equipmentId, result.displayName, null);
+                  }
                 } else {
                   onChanged('source', 'Inconnu');
-                  widget.onSourceSelected?.call(null, 'Inconnu');
+                  widget.onSourceSelected?.call(null, 'Inconnu', null);
+                }
+              },
+              onTextChanged: (text) {
+                if (text.trim().isNotEmpty && text.trim() != a.source) {
+                  onChanged('source', text.trim());
+                  widget.onSourceSelected?.call(null, text.trim(), null);
                 }
               },
             ),
             SizedBox(height: context.spacingS),
           ],
           if (!isProtectionTete || isDepartPrisAvecProtection) ...[
-            _buildModernDropdown(context, label: 'Type de protection', value: typeProtVal, items: typeProtectionItems, onChanged: (v) => onChanged('typeProtection', v)),
+            _buildModernDropdown(context, label: 'Type de protection', value: typeProtVal, items: typeProtectionItems, onChanged: (v) => onChanged('typeProtection', v), readOnly: isLocked),
             SizedBox(height: context.spacingS),
-            _buildModernDropdown(context, label: 'Marque de disjoncteur', value: marqueDisjVal, items: marqueDisjoncteurItems, onChanged: (v) => onChanged('marqueDisjoncteur', v)),
+            _buildModernDropdown(context, label: 'Marque de disjoncteur', value: marqueDisjVal, items: marqueDisjoncteurItems, onChanged: (v) => onChanged('marqueDisjoncteur', v), readOnly: isLocked),
             SizedBox(height: context.spacingS),
-            _buildModernDropdown(context, label: 'Courbe', value: courbeVal, items: courbeItems, onChanged: (v) => onChanged('courbe', v)),
+            _buildModernDropdown(context, label: 'Courbe', value: courbeVal, items: courbeItems, onChanged: (v) => onChanged('courbe', v), readOnly: isLocked),
             SizedBox(height: context.spacingS),
 
             _buildModernTextFieldWithSuffix(
@@ -2092,6 +2142,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.,]?\d*'))],
               onChanged: (v) => onChanged('pdcKA', v),
+              readOnly: isLocked,
             ),
             SizedBox(height: context.spacingS),
             _buildModernTextFieldWithSuffix(
@@ -2102,14 +2153,15 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.,]?\d*'))],
               onChanged: (v) => onChanged('icc3Max', v),
+              readOnly: isLocked,
             ),
             SizedBox(height: context.spacingS),
-            _buildModernTextFieldWithSuffix(context, label: 'Calibre', suffix: 'A', controller: calibreCtrl, onChanged: (v) => onChanged('calibre', v)),
+            _buildModernTextFieldWithSuffix(context, label: 'Calibre', suffix: 'A', controller: calibreCtrl, onChanged: (v) => onChanged('calibre', v), readOnly: isLocked),
             SizedBox(height: context.spacingS),
-            _buildModernDropdown(context, label: 'DDR IΔn (mA)', value: ddrVal, items: ddrItems, onChanged: (v) => onChanged('ddr', v)),
+            _buildModernDropdown(context, label: 'DDR IΔn (mA)', value: ddrVal, items: ddrItems, onChanged: (v) => onChanged('ddr', v), readOnly: isLocked),
             SizedBox(height: context.spacingS),
           ],
-          _buildModernDropdown(context, label: 'Section de câble', value: a.sectionCable, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCable', v)),
+          _buildModernDropdown(context, label: 'Section de câble', value: a.sectionCable, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCable', v), readOnly: isLocked),
         ],
       ),
     );
@@ -2325,7 +2377,6 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     );
   }
 
-  // NOUVEAU : champ avec suffixe (pour le calibre et Icc3 max)
   Widget _buildModernTextFieldWithSuffix(
     BuildContext context, {
     required String label,
@@ -2334,22 +2385,26 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     required Function(String) onChanged,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
+    bool readOnly = false,
   }) {
     return Container(
-      decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(context.spacingS), border: Border.all(color: Colors.grey.shade300)),
+      decoration: BoxDecoration(color: readOnly ? Colors.amber.shade50.withOpacity(0.5) : Colors.grey.shade50, borderRadius: BorderRadius.circular(context.spacingS), border: Border.all(color: readOnly ? Colors.amber.shade300 : Colors.grey.shade300)),
       child: TextFormField(
         controller: controller,
-        style: TextStyle(fontSize: context.fontSizeS),
+        readOnly: readOnly,
+        enabled: !readOnly,
+        style: TextStyle(fontSize: context.fontSizeS, color: readOnly ? Colors.amber.shade900 : Colors.black87, fontWeight: readOnly ? FontWeight.bold : FontWeight.normal),
         keyboardType: keyboardType ?? const TextInputType.numberWithOptions(decimal: true),
         inputFormatters: inputFormatters,
         onChanged: onChanged,
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
+          labelStyle: TextStyle(fontSize: context.fontSizeS, color: readOnly ? Colors.amber.shade900 : Colors.grey.shade600),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
+          suffixIcon: readOnly ? Icon(Icons.lock_outline, size: 16, color: Colors.amber.shade900) : null,
           suffixText: suffix,
-          suffixStyle: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w600, color: Colors.grey.shade500),
+          suffixStyle: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w600, color: readOnly ? Colors.amber.shade900 : Colors.grey.shade500),
         ),
       ),
     );
@@ -2422,25 +2477,25 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     );
   }
 
-  Widget _buildModernDropdown(BuildContext context, {required String label, required String value, required List<String> items, required Function(String) onChanged}) {
+  Widget _buildModernDropdown(BuildContext context, {required String label, required String value, required List<String> items, required Function(String) onChanged, bool readOnly = false}) {
     return Container(
-      decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(context.spacingS), border: Border.all(color: Colors.grey.shade300)),
+      decoration: BoxDecoration(color: readOnly ? Colors.amber.shade50.withOpacity(0.5) : Colors.grey.shade50, borderRadius: BorderRadius.circular(context.spacingS), border: Border.all(color: readOnly ? Colors.amber.shade300 : Colors.grey.shade300)),
       child: DropdownButtonFormField<String>(
         value: value.isNotEmpty ? value : null,
         isExpanded: true,
-        icon: Icon(Icons.arrow_drop_down, color: Colors.grey.shade600),
+        icon: Icon(readOnly ? Icons.lock_outline : Icons.arrow_drop_down, size: readOnly ? 16 : 24, color: readOnly ? Colors.amber.shade900 : Colors.grey.shade600),
         hint: Text('Sélectionnez...', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500)),
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
+          labelStyle: TextStyle(fontSize: context.fontSizeS, color: readOnly ? Colors.amber.shade900 : Colors.grey.shade600),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
         ),
         items: [
           DropdownMenuItem<String>(value: '', child: Text('— Aucun —', style: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade500, fontStyle: FontStyle.italic))),
-          ...items.map((item) => DropdownMenuItem<String>(value: item, child: Text(item, style: TextStyle(fontSize: context.fontSizeS)))),
+          ...items.map((item) => DropdownMenuItem<String>(value: item, child: Text(item, style: TextStyle(fontSize: context.fontSizeS, color: readOnly ? Colors.amber.shade900 : null, fontWeight: readOnly ? FontWeight.bold : FontWeight.normal)))),
         ],
-        onChanged: (v) => onChanged(v ?? ''),
+        onChanged: readOnly ? null : (v) => onChanged(v ?? ''),
       ),
     );
   }
@@ -3237,6 +3292,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   List<CircuitTerminalEquipement> _terminalCircuits = [];
   String? _sourceEquipementId;
   String? _sourceNomComplet;
+  String? _sourceDepartId;
 
   List<String> _coffretPhotosExterne = [];
   List<String> _coffretPhotosInterne = [];
@@ -3338,6 +3394,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         _terminalCircuits = List.from(draft.effectiveTerminalCircuits.map((c) => c.copyWith()));
         _sourceEquipementId = draft.sourceEquipementId;
         _sourceNomComplet = draft.sourceNomComplet;
+        _sourceDepartId = draft.sourceDepartId;
         _alimentations = List.from(draft.alimentations);
         _protectionTete = draft.protectionTete;
         _pointsVerification = List.from(draft.pointsVerification.map((point) => PointVerification(
@@ -3555,6 +3612,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       terminalCircuits: _terminalCircuits,
       sourceEquipementId: _sourceEquipementId,
       sourceNomComplet: _sourceNomComplet,
+      sourceDepartId: _sourceDepartId,
       alimentations: _alimentations,
       protectionTete: _protectionTete,
       pointsVerification: _pointsVerification,
@@ -3720,6 +3778,20 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _terminalCircuits = List.from(coffret.effectiveTerminalCircuits.map((c) => c.copyWith()));
     _sourceEquipementId = coffret.sourceEquipementId;
     _sourceNomComplet = coffret.sourceNomComplet;
+    _sourceDepartId = coffret.sourceDepartId;
+    if (_sourceDepartId == null && _sourceNomComplet != null && _sourceNomComplet!.trim().isNotEmpty) {
+      final results = EquipmentSourceSearchService.searchSources(
+        missionId: widget.mission.id,
+        query: _sourceNomComplet!,
+        excludeEquipmentId: coffret.equipmentId,
+      );
+      for (final res in results) {
+        if (res.isDepart && res.displayName.trim().toLowerCase() == _sourceNomComplet!.trim().toLowerCase()) {
+          _sourceDepartId = res.depart?.id;
+          break;
+        }
+      }
+    }
     _observationsParafoudre = List.from(coffret.observationsParafoudreEnrichies ?? []);
     if (_observationsParafoudre.isEmpty && coffret.observationsParafoudre.isNotEmpty) {
       for (var obs in coffret.observationsParafoudre) {
@@ -4118,6 +4190,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         terminalCircuits: _terminalCircuits,
         sourceEquipementId: _sourceEquipementId,
         sourceNomComplet: _sourceNomComplet,
+        sourceDepartId: _sourceDepartId,
         alimentations: _alimentations,
         protectionTete: _protectionTete,
         pointsVerification: _pointsVerification,
@@ -4176,8 +4249,32 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
             if (widget.isMoyenneTension && widget.parentIndex < audit.moyenneTensionZones.length) localisation = audit.moyenneTensionZones[widget.parentIndex].nom;
             else if (!widget.isMoyenneTension && widget.parentIndex < audit.basseTensionZones.length) localisation = audit.basseTensionZones[widget.parentIndex].nom;
           }
-          if (localisation.isEmpty) localisation = 'Localisation non définie';
-          await Navigator.push(context, MaterialPageRoute(builder: (context) => AjouterEssaiDeclenchementScreen(mission: widget.mission, localisationPredefinie: localisation, coffretPredefini: nouveauCoffret.nom)));
+          final String repereEffective = (nouveauCoffret.repere != null && nouveauCoffret.repere!.trim().isNotEmpty)
+              ? nouveauCoffret.repere!.trim()
+              : (localisation.isNotEmpty ? localisation : 'Localisation non définie');
+
+          final String? typeProtPredefini = nouveauCoffret.protectionTete?.typeProtection.isNotEmpty == true
+              ? nouveauCoffret.protectionTete!.typeProtection
+              : (nouveauCoffret.alimentations.isNotEmpty && nouveauCoffret.alimentations.first.typeProtection.isNotEmpty
+                  ? nouveauCoffret.alimentations.first.typeProtection
+                  : null);
+
+          final String? ddrPredefini = nouveauCoffret.protectionTete?.ddr?.isNotEmpty == true
+              ? nouveauCoffret.protectionTete!.ddr
+              : (nouveauCoffret.alimentations.isNotEmpty ? nouveauCoffret.alimentations.first.ddr : null);
+
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AjouterEssaiDeclenchementScreen(
+                mission: widget.mission,
+                localisationPredefinie: repereEffective,
+                coffretPredefini: nouveauCoffret.nom,
+                typeDispositifPredefini: typeProtPredefini,
+                reglageIAnPredefini: ddrPredefini,
+              ),
+            ),
+          );
           Navigator.pop(context, true);
         }
       } else {
@@ -4771,10 +4868,12 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                       missionId: widget.mission.id,
                       currentEquipmentId: widget.coffret?.equipmentId,
                       sourceNomComplet: _sourceNomComplet,
-                      onSourceSelected: (equipId, displayName) {
+                      sourceDepartId: _sourceDepartId,
+                      onSourceSelected: (equipId, displayName, departId) {
                         setState(() {
                           _sourceEquipementId = equipId;
                           _sourceNomComplet = displayName;
+                          _sourceDepartId = departId;
                         });
                         _scheduleAutoSave();
                       },
@@ -5615,25 +5714,18 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
           ),
           const SizedBox(height: 12),
 
-          _EquipmentSourceAutocompleteField(
-            label: 'Identification du départ',
-            hintText: 'Rechercher un équipement ou saisir l\'identification...',
-            defaultBadgeText: 'Inconnu (par défaut)',
-            initialText: (dep.identification.isEmpty || RegExp(r'^Départ \d+$').hasMatch(dep.identification)) ? '' : dep.identification,
-            missionId: widget.missionId,
-            currentEquipmentId: widget.currentEquipmentId,
-            onSelected: (result) {
-              if (result != null) {
-                setState(() {
-                  dep.identification = result.displayName;
-                });
-                widget.onDataChanged();
-              }
-            },
-            onTextChanged: (text) {
-              setState(() {
-                dep.identification = text.trim().isEmpty ? 'Inconnu' : text.trim();
-              });
+          TextFormField(
+            initialValue: dep.identification,
+            decoration: InputDecoration(
+              labelText: 'Identification du départ',
+              hintText: 'Ex: Départ éclairage atelier',
+              isDense: true,
+              border: const OutlineInputBorder(),
+              labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade700),
+            ),
+            style: TextStyle(fontSize: context.fontSizeS),
+            onChanged: (v) {
+              dep.identification = v;
               widget.onDataChanged();
             },
           ),

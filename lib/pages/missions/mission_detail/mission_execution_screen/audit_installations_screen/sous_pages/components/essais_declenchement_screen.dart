@@ -478,6 +478,8 @@ class AjouterEssaiDeclenchementScreen extends ConsumerStatefulWidget {
   final int? index;
   final String? localisationPredefinie;
   final String? coffretPredefini;
+  final String? typeDispositifPredefini;
+  final String? reglageIAnPredefini;
 
   const AjouterEssaiDeclenchementScreen({
     super.key,
@@ -486,6 +488,8 @@ class AjouterEssaiDeclenchementScreen extends ConsumerStatefulWidget {
     this.index,
     this.localisationPredefinie,
     this.coffretPredefini,
+    this.typeDispositifPredefini,
+    this.reglageIAnPredefini,
   });
 
   bool get isEdition => essai != null;
@@ -550,6 +554,13 @@ class _AjouterEssaiDeclenchementScreenState extends ConsumerState<AjouterEssaiDe
         _localisationController.text = widget.localisationPredefinie!;
         _localisationValid = true;
         _updateCoffretsForLocalisation(widget.localisationPredefinie!);
+      }
+      if (widget.typeDispositifPredefini != null && widget.typeDispositifPredefini!.isNotEmpty) {
+        _selectedType = widget.typeDispositifPredefini!;
+      }
+      if (widget.reglageIAnPredefini != null && widget.reglageIAnPredefini!.isNotEmpty) {
+        _reglageController.text = widget.reglageIAnPredefini!;
+        _reglageValid = true;
       }
     }
   }

@@ -36,5 +36,34 @@ void main() {
       expect(copy.identification, 'C1');
       expect(copy.sectionCable, '4 mm²');
     });
+    test('EquipmentSearchResult handles depart entries properly', () {
+      final parent = CoffretArmoire(qrCode: 'QR_TGBT_1', nom: 'TGBT PRINCIPAL', type: 'TGBT');
+      final depart = DepartEquipement(
+        id: 'dep_1',
+        identification: 'Départ Bâtiment A',
+        typeProtection: 'Disjoncteur',
+        marque: 'Schneider',
+        courbe: 'C',
+        pdcKA: '10',
+        icc3Max: '8.5',
+        calibre: '32',
+        ddr: '300',
+        sectionCable: '10 mm²',
+      );
+
+      final result = EquipmentSearchResult(
+        equipmentId: 'eq_1',
+        nom: 'TGBT PRINCIPAL',
+        type: 'TGBT',
+        score: 0.9,
+        depart: depart,
+        parentCoffret: parent,
+      );
+
+      expect(result.isDepart, true);
+      expect(result.depart?.id, 'dep_1');
+      expect(result.depart?.calibre, '32');
+      expect(result.parentCoffret?.nom, 'TGBT PRINCIPAL');
+    });
   });
 }

@@ -660,6 +660,7 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       terminalCircuits: (fields[34] as List?)?.cast<CircuitTerminalEquipement>(),
       sourceEquipementId: fields[35] as String?,
       sourceNomComplet: fields[36] as String?,
+      sourceDepartId: fields[37] as String?,
       alimentations: (fields[12] as List?)?.cast<Alimentation>(),
       protectionTete: fields[13] as Alimentation?,
       pointsVerification: (fields[14] as List?)?.cast<PointVerification>(),
@@ -679,7 +680,7 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
   @override
   void write(BinaryWriter writer, CoffretArmoire obj) {
     writer
-      ..writeByte(37)
+      ..writeByte(38)
       ..writeByte(0)
       ..write(obj.qrCode)
       ..writeByte(1)
@@ -753,7 +754,9 @@ class CoffretArmoireAdapter extends TypeAdapter<CoffretArmoire> {
       ..writeByte(35)
       ..write(obj.sourceEquipementId)
       ..writeByte(36)
-      ..write(obj.sourceNomComplet);
+      ..write(obj.sourceNomComplet)
+      ..writeByte(37)
+      ..write(obj.sourceDepartId);
   }
 
   @override
