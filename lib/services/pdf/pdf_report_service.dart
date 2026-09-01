@@ -8656,87 +8656,83 @@ class PdfReportService {
           widgets.add(pw.NewPage());
         }
 
-        // En-tête de Localisation (Zone & Repère)
-        final locTextBuf = StringBuffer();
-        if (zoneGroup.zoneName.isNotEmpty) {
-          locTextBuf.write('ZONE : ${zoneGroup.zoneName.toUpperCase()}');
-        }
-        if (localGroup.localName.isNotEmpty) {
-          if (locTextBuf.isNotEmpty) locTextBuf.write('   |   ');
-          locTextBuf.write('REPÈRE : ${localGroup.localName.toUpperCase()}');
-        }
+        // En-tête de Localisation (Rappel explicite systématique de la Zone et du Repère)
+        final String zoneStr = zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName.toUpperCase() : '';
+        final String repereStr = localGroup.localName.isNotEmpty ? localGroup.localName.toUpperCase() : '';
+        final String locationHeaderStr = 'ZONE : $zoneStr   |   REPÈRE : $repereStr';
 
-        final locationHeaderStr = locTextBuf.toString();
-
-        if (locationHeaderStr.isNotEmpty) {
-          widgets.add(
-            pw.Container(
-              width: double.infinity,
-              decoration: pw.BoxDecoration(
-                color: headerColor, // #1E3A8A Dark Navy
-                borderRadius: const pw.BorderRadius.only(
-                  topLeft: pw.Radius.circular(2),
-                  topRight: pw.Radius.circular(2),
-                ),
-              ),
-              padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-              child: pw.Text(
-                locationHeaderStr,
-                style: pw.TextStyle(
-                  font: _fontBold,
-                  fontSize: 8.0,
-                  color: PdfColors.white,
-                ),
+        widgets.add(
+          pw.Container(
+            width: double.infinity,
+            decoration: pw.BoxDecoration(
+              color: headerColor, // #1E3A8A Dark Navy
+              borderRadius: const pw.BorderRadius.only(
+                topLeft: pw.Radius.circular(2),
+                topRight: pw.Radius.circular(2),
               ),
             ),
-          );
-        }
+            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            child: pw.Text(
+              locationHeaderStr,
+              style: pw.TextStyle(
+                font: _fontBold,
+                fontSize: 8.0,
+                color: PdfColors.white,
+              ),
+            ),
+          ),
+        );
 
         for (final equipGroup in localGroup.equipGroups) {
           final equipName = equipGroup.coffret.isNotEmpty
               ? equipGroup.coffret
               : 'ÉQUIPEMENT SANS NOM';
+          final obsCountStr = '${equipGroup.items.length} observation(s)';
 
-          // Bandeau d'En-tête de l'Équipement (Option C1)
-          final equipmentHeaderWidget = pw.Container(
-            width: double.infinity,
-            decoration: const pw.BoxDecoration(
-              color: PdfColor.fromInt(0xFFDBEAFE), // Soft Blue Accent (#DBEAFE)
-              border: pw.Border(
-                left: pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0),
-                right: pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0),
-                top: pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0),
-                bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0),
+          // Table unique indissociable par équipement (Rang 0 = En-tête équipement, Rang 1 = En-tête colonnes, Rangs 2..N = Observations)
+          final rows = <pw.TableRow>[];
+
+          // LIGNE 0 : BANDEAU D'ÉQUIPEMENT (Fond Soft Blue #DBEAFE, Texte Gras Navy)
+          rows.add(
+            pw.TableRow(
+              decoration: const pw.BoxDecoration(
+                color: PdfColor.fromInt(0xFFDBEAFE),
               ),
-            ),
-            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-            child: pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
               children: [
-                pw.Text(
-                  'ÉQUIPEMENT : $equipName',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: 8.5,
-                    color: PdfColor.fromInt(0xFF1E3A8A),
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  alignment: pw.Alignment.centerLeft,
+                  child: pw.SizedBox(),
+                ),
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  alignment: pw.Alignment.centerLeft,
+                  child: pw.Text(
+                    'ÉQUIPEMENT : $equipName',
+                    style: pw.TextStyle(
+                      font: _fontBold,
+                      fontSize: 8.5,
+                      color: PdfColor.fromInt(0xFF1E3A8A),
+                    ),
                   ),
                 ),
-                pw.Text(
-                  '${equipGroup.items.length} observation(s)',
-                  style: pw.TextStyle(
-                    font: _fontBold,
-                    fontSize: 7.5,
-                    color: PdfColor.fromInt(0xFF1E3A8A),
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                  alignment: pw.Alignment.centerRight,
+                  child: pw.Text(
+                    obsCountStr,
+                    style: pw.TextStyle(
+                      font: _fontBold,
+                      fontSize: 7.5,
+                      color: PdfColor.fromInt(0xFF1E3A8A),
+                    ),
                   ),
                 ),
               ],
             ),
           );
 
-          // Sous-tableau des observations de l'équipement
-          final rows = <pw.TableRow>[];
-
-          // Ligne d'en-tête du sous-tableau
+          // LIGNE 1 : EN-TÊTE DES COLONNES DU SOUS-TABLEAU (Fond Medium Blue #2E5F9A, Texte Blanc)
           rows.add(
             pw.TableRow(
               decoration: const pw.BoxDecoration(
@@ -8773,6 +8769,7 @@ class PdfReportService {
             ),
           );
 
+          // LIGNES 2..N : LIGNES D'OBSERVATIONS
           for (int itemIdx = 0; itemIdx < equipGroup.items.length; itemIdx++) {
             final o = equipGroup.items[itemIdx];
             final isEven = itemIdx % 2 == 0;
@@ -8818,25 +8815,20 @@ class PdfReportService {
             );
           }
 
-          // Assemblage de l'équipement dans un bloc pw.Column indissociable
+          // Tableau unique indissociable pour l'ensemble de l'équipement
           widgets.add(
-            pw.Column(
-              crossAxisAlignment: pw.CrossAxisAlignment.start,
-              children: [
-                equipmentHeaderWidget,
-                pw.Table(
-                  defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-                  border: const pw.TableBorder(
-                    left: pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0),
-                    right: pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0),
-                    bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0),
-                    horizontalInside: pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.5),
-                    verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFFE2E8F0), width: 0.5),
-                  ),
-                  columnWidths: subTableColumnWidths,
-                  children: rows,
-                ),
-              ],
+            pw.Table(
+              defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+              border: const pw.TableBorder(
+                left: pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0),
+                right: pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0),
+                top: pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0),
+                bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0),
+                horizontalInside: pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.5),
+                verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFFE2E8F0), width: 0.5),
+              ),
+              columnWidths: subTableColumnWidths,
+              children: rows,
             ),
           );
 
