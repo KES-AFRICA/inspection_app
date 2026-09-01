@@ -8787,7 +8787,9 @@ class PdfReportService {
           final equipGroup = localGroup.equipGroups[eIdx];
           final totalEquipItems = equipGroup.items.length;
           final equipMidIndex = (totalEquipItems - 1) ~/ 2;
-          final isLastEquipInLocal = (eIdx == localGroup.equipGroups.length - 1);
+
+          // Fond alterné par bloc d'équipement (Blanc / Soft Slate Ice #F8FAFC)
+          final equipBg = eIdx % 2 == 0 ? PdfColors.white : PdfColor.fromInt(0xFFF8FAFC);
 
           for (int i = 0; i < totalEquipItems; i++) {
             final o = equipGroup.items[i];
@@ -8795,35 +8797,51 @@ class PdfReportService {
             final currentLocalRowIdx = localRowIndex++;
             final currentEquipRowIdx = i;
 
-            final idx = globalRowIndex++;
-            final isEven = idx % 2 == 0;
-            final bg = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
+            final isEndOfEquip = (currentEquipRowIdx == totalEquipItems - 1);
+            final isEndOfLocal = (currentLocalRowIdx == totalLocalItems - 1);
+            final isEndOfZone = (currentZoneRowIdx == totalZoneItems - 1);
+
+            final zoneBorder = pw.Border(
+              bottom: isEndOfZone
+                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                  : pw.BorderSide.none,
+            );
 
             final localBorder = pw.Border(
-              bottom: (currentLocalRowIdx == totalLocalItems - 1 && !isLastLocalInZone)
-                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5)
-                  : pw.BorderSide.none,
+              bottom: isEndOfZone
+                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                  : (isEndOfLocal
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 1.0)
+                      : pw.BorderSide.none),
             );
 
             final equipBorder = pw.Border(
-              bottom: (currentEquipRowIdx == totalEquipItems - 1 && !isLastEquipInLocal)
-                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5)
-                  : pw.BorderSide.none,
+              bottom: isEndOfZone
+                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                  : (isEndOfLocal
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 1.0)
+                      : (isEndOfEquip
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.75)
+                          : pw.BorderSide.none)),
             );
 
             final obsBorder = pw.Border(
-              bottom: (currentZoneRowIdx < totalZoneItems - 1)
-                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5)
-                  : pw.BorderSide.none,
+              bottom: isEndOfZone
+                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                  : (isEndOfLocal
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 1.0)
+                      : (isEndOfEquip
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.75)
+                          : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4))),
             );
 
             tableRows.add(
               pw.TableRow(
-                decoration: pw.BoxDecoration(color: bg),
+                decoration: pw.BoxDecoration(color: equipBg),
                 children: [
-                  // Cellule 0 : Zone
+                  // Cellule 0 : Zone (fond blanc permanent)
                   pw.Container(
-                    decoration: const pw.BoxDecoration(color: PdfColors.white),
+                    decoration: pw.BoxDecoration(color: PdfColors.white, border: zoneBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                     alignment: pw.Alignment.center,
                     child: (currentZoneRowIdx == zoneMidIndex && zoneGroup.zoneName.isNotEmpty)
@@ -8835,12 +8853,9 @@ class PdfReportService {
                         : pw.SizedBox(),
                   ),
 
-                  // Cellule 1 : Repère / Local
+                  // Cellule 1 : Repère / Local (fond blanc permanent)
                   pw.Container(
-                    decoration: pw.BoxDecoration(
-                      color: PdfColors.white,
-                      border: localBorder,
-                    ),
+                    decoration: pw.BoxDecoration(color: PdfColors.white, border: localBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                     alignment: pw.Alignment.center,
                     child: (currentLocalRowIdx == localMidIndex && localGroup.localName.isNotEmpty)
@@ -8852,12 +8867,9 @@ class PdfReportService {
                         : pw.SizedBox(),
                   ),
 
-                  // Cellule 2 : Équipement
+                  // Cellule 2 : Équipement (fond blanc permanent)
                   pw.Container(
-                    decoration: pw.BoxDecoration(
-                      color: PdfColors.white,
-                      border: equipBorder,
-                    ),
+                    decoration: pw.BoxDecoration(color: PdfColors.white, border: equipBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                     alignment: pw.Alignment.center,
                     child: (currentEquipRowIdx == equipMidIndex && equipGroup.coffret.isNotEmpty)
