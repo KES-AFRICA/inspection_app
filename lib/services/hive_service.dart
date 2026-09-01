@@ -2817,13 +2817,51 @@ static List<ClassementEmplacement> getEmplacementsByMissionId(String missionId) 
   }
 }
 
-/// Récupérer un emplacement par son nom
+/// Normalisation robuste d'une chaîne pour la comparaison d'emplacements (casse, espaces, accents)
+static String _normalizeLocationKey(String text) {
+  return text
+      .trim()
+      .toLowerCase()
+      .replaceAll(RegExp(r'[éèêë]'), 'e')
+      .replaceAll(RegExp(r'[àâä]'), 'a')
+      .replaceAll(RegExp(r'[îï]'), 'i')
+      .replaceAll(RegExp(r'[ôö]'), 'o')
+      .replaceAll(RegExp(r'[ùûü]'), 'u')
+      .replaceAll(RegExp(r'[ç]'), 'c')
+      .replaceAll(RegExp(r'[^a-z0-9]'), '');
+}
+
+/// Récupérer un emplacement (Local ou Zone) par son nom
 static ClassementEmplacement? getEmplacementByNom(String missionId, String localisation) {
   final box = Hive.box<ClassementEmplacement>(_classementBox);
   try {
-    return box.values.firstWhere(
-      (e) => e.missionId == missionId && e.localisation == localisation,
-    );
+    final targetRaw = localisation.trim();
+    if (targetRaw.isEmpty) return null;
+
+    // 1. Recherche par égalité exacte
+    for (var e in box.values) {
+      if (e.missionId == missionId && e.localisation == targetRaw) {
+        return e;
+      }
+    }
+
+    // 2. Recherche insensible à la casse et aux espaces aux extrémités
+    final targetLower = targetRaw.toLowerCase();
+    for (var e in box.values) {
+      if (e.missionId == missionId && e.localisation.trim().toLowerCase() == targetLower) {
+        return e;
+      }
+    }
+
+    // 3. Recherche normalisée (sans accents et caractères spéciaux)
+    final normTarget = _normalizeLocationKey(targetRaw);
+    for (var e in box.values) {
+      if (e.missionId == missionId && _normalizeLocationKey(e.localisation) == normTarget) {
+        return e;
+      }
+    }
+
+    return null;
   } catch (e) {
     return null;
   }

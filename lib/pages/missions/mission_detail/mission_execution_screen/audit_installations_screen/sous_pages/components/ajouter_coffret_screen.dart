@@ -2568,9 +2568,14 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
         point.priorite ??= 3;
         if (point.conformite == 'non') {
           final pointIndex = _getPointIndex(point);
-          final hasObservation = widget.hasObservation[pointIndex] ?? false;
-          if (!hasObservation) return false;
-          if (point.observation == null || point.observation!.trim().isEmpty) return false;
+          if (IpIkEvaluatorService.isIpIkPoint(point.pointVerification)) {
+            // Pour le point IP/IK automatique, l'observation est générée dynamiquement
+            if (point.observation == null || point.observation!.trim().isEmpty) return false;
+          } else {
+            final hasObservation = widget.hasObservation[pointIndex] ?? false;
+            if (!hasObservation) return false;
+            if (point.observation == null || point.observation!.trim().isEmpty) return false;
+          }
         }
       }
     }
@@ -2588,14 +2593,21 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
         }
         if (point.conformite == 'non') {
           final pointIndex = _getPointIndex(point);
-          final hasObservation = widget.hasObservation[pointIndex] ?? false;
-          if (!hasObservation) {
-            _showError('L\'observation est obligatoire quand la conformité est "Non"');
-            return;
-          }
-          if (point.observation == null || point.observation!.trim().isEmpty) {
-            _showError('Veuillez saisir une observation pour le point non conforme');
-            return;
+          if (IpIkEvaluatorService.isIpIkPoint(point.pointVerification)) {
+            if (point.observation == null || point.observation!.trim().isEmpty) {
+              _showError('Veuillez renseigner l\'indice IP/IK ou vérifier le classement du repère');
+              return;
+            }
+          } else {
+            final hasObservation = widget.hasObservation[pointIndex] ?? false;
+            if (!hasObservation) {
+              _showError('L\'observation est obligatoire quand la conformité est "Non"');
+              return;
+            }
+            if (point.observation == null || point.observation!.trim().isEmpty) {
+              _showError('Veuillez saisir une observation pour le point non conforme');
+              return;
+            }
           }
         }
       }
@@ -2952,11 +2964,27 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
       point.conformite = eval.conformite;
       if (eval.observation != null) {
         point.observation = eval.observation;
+        point.observations ??= [];
+        if (point.observations!.isEmpty) {
+          point.observations!.add(ElementControle(
+            elementControle: point.pointVerification,
+            conforme: eval.conformite == 'oui',
+            priorite: 3,
+            observation: eval.observation,
+          ));
+        } else {
+          point.observations!.first.observation = eval.observation;
+          point.observations!.first.conforme = eval.conformite == 'oui';
+        }
       } else {
         point.observation = null;
+        point.observations?.clear();
       }
 
       final isConforme = eval.conformite == 'oui';
+      if (!isConforme) {
+        widget.hasObservation[pointIndex] = true;
+      }
 
       return Container(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
