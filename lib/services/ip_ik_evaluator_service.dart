@@ -106,7 +106,7 @@ class IpIkEvaluatorService {
     if (targetLocation == null || targetLocation.trim().isEmpty) {
       return const IpIkEvaluationResult(
         conformite: 'non',
-        observation: "Absence d'indice ip/ik du repere",
+        observation: "Absence d'indice ip/ik du repère",
       );
     }
 
@@ -116,7 +116,7 @@ class IpIkEvaluatorService {
     if (emplacement == null) {
       return const IpIkEvaluationResult(
         conformite: 'non',
-        observation: "Absence d'indice ip/ik du repere",
+        observation: "Absence d'indice ip/ik du repère",
       );
     }
 
@@ -130,7 +130,7 @@ class IpIkEvaluatorService {
     if (!repereParsed.hasIpOrIk) {
       return const IpIkEvaluationResult(
         conformite: 'non',
-        observation: "Absence d'indice ip/ik du repere",
+        observation: "Absence d'indice ip/ik du repère",
       );
     }
 
@@ -148,7 +148,7 @@ class IpIkEvaluatorService {
     // CAS C2 — Présent + différent
     return IpIkEvaluationResult(
       conformite: 'non',
-      observation: "Indice ip/ik different de l'indice du repere",
+      observation: "Indice ip/ik différent de l'indice du repère",
       repereIpIkFormatted: repereFormatted,
     );
   }

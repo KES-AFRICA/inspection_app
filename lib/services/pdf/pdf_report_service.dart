@@ -8646,9 +8646,17 @@ class PdfReportService {
       2: pw.FlexColumnWidth(2.5), // Référence Normative
     };
 
-    for (final zoneGroup in zoneGroups) {
-      for (final localGroup in zoneGroup.localGroups) {
-        // En-tête de Localisation (Zone & Local)
+    for (int zIdx = 0; zIdx < zoneGroups.length; zIdx++) {
+      final zoneGroup = zoneGroups[zIdx];
+      for (int lIdx = 0; lIdx < zoneGroup.localGroups.length; lIdx++) {
+        final localGroup = zoneGroup.localGroups[lIdx];
+
+        // RÈGLE EXPLICITE DE CLARTÉ : Chaque Zone ou Repère débute sur une NOUVELLE PAGE
+        if (widgets.isNotEmpty) {
+          widgets.add(pw.NewPage());
+        }
+
+        // En-tête de Localisation (Zone & Repère)
         final locTextBuf = StringBuffer();
         if (zoneGroup.zoneName.isNotEmpty) {
           locTextBuf.write('ZONE : ${zoneGroup.zoneName.toUpperCase()}');
@@ -8754,11 +8762,11 @@ class PdfReportService {
                 ),
                 pw.Container(
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3.5),
-                  alignment: pw.Alignment.center,
+                  alignment: pw.Alignment.centerLeft,
                   child: pw.Text(
                     'Réf. Normative',
                     style: pw.TextStyle(font: _fontBold, fontSize: 7.5, color: PdfColors.white),
-                    textAlign: pw.TextAlign.center,
+                    textAlign: pw.TextAlign.left,
                   ),
                 ),
               ],
@@ -8798,11 +8806,11 @@ class PdfReportService {
                   // Cellule Référence Normative
                   pw.Container(
                     padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3.5),
-                    alignment: pw.Alignment.center,
+                    alignment: pw.Alignment.centerLeft,
                     child: pw.Text(
                       o.refNorm.isNotEmpty ? o.refNorm : '-',
                       style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
-                      textAlign: pw.TextAlign.center,
+                      textAlign: pw.TextAlign.left,
                     ),
                   ),
                 ],
@@ -10515,7 +10523,7 @@ class PdfReportService {
                 horizontal: 2,
                 vertical: 3,
               ),
-              alignment: pw.Alignment.center,
+              alignment: pw.Alignment.centerLeft,
               child: pw.Text(
                 'RÉF. NORMATIVE',
                 style: pw.TextStyle(
@@ -10523,7 +10531,7 @@ class PdfReportService {
                   fontSize: fsSmall,
                   color: headerColor,
                 ),
-                textAlign: pw.TextAlign.center,
+                textAlign: pw.TextAlign.left,
               ),
             ),
             pw.Container(
@@ -10649,14 +10657,14 @@ class PdfReportService {
                 horizontal: 2,
                 vertical: 3,
               ),
-              alignment: pw.Alignment.center,
+              alignment: pw.Alignment.centerLeft,
               child: pw.Text(
                 refNorm,
                 style: pw.TextStyle(
                   font: _fontRegular,
                   fontSize: fsSmall - 0.5,
                 ),
-                textAlign: pw.TextAlign.center,
+                textAlign: pw.TextAlign.left,
               ),
             ),
             pw.Container(
@@ -12495,6 +12503,7 @@ class PdfReportService {
                   _thCell('PDC (kA)'),
                   _thCell('Icc3 max (kA)'),
                   _thCell('Calibre (A)'),
+                  _thCell('DDR (I\u0394n(mA))'),
                   _thCell('Section de câble (mm\u00B2)'),
                 ],
               ),
@@ -12516,6 +12525,7 @@ class PdfReportService {
                     _valueCell(a.pdcKA.isNotEmpty ? a.pdcKA : '-'),
                     _valueCell(a.icc3Max != null && a.icc3Max!.isNotEmpty ? a.icc3Max! : '-'),
                     _valueCell(a.calibre.isNotEmpty ? a.calibre : '-'),
+                    _valueCell(a.ddr != null && a.ddr!.isNotEmpty ? (a.ddr!.contains('mA') ? a.ddr! : '${a.ddr!} mA') : '-'),
                     _valueCell(a.sectionCable.isNotEmpty ? a.sectionCable : '-'),
                   ],
                 ),
@@ -12536,14 +12546,15 @@ class PdfReportService {
                   ),
                 ),
                 columnWidths: const {
-                  0: pw.FlexColumnWidth(2.2),
-                  1: pw.FlexColumnWidth(1.2),
-                  2: pw.FlexColumnWidth(1.0),
-                  3: pw.FlexColumnWidth(0.8),
-                  4: pw.FlexColumnWidth(0.8),
-                  5: pw.FlexColumnWidth(0.9),
-                  6: pw.FlexColumnWidth(0.8),
-                  7: pw.FlexColumnWidth(1.0),
+                  0: pw.FlexColumnWidth(2.0),
+                  1: pw.FlexColumnWidth(1.1),
+                  2: pw.FlexColumnWidth(0.9),
+                  3: pw.FlexColumnWidth(0.7),
+                  4: pw.FlexColumnWidth(0.7),
+                  5: pw.FlexColumnWidth(0.8),
+                  6: pw.FlexColumnWidth(0.7),
+                  7: pw.FlexColumnWidth(0.9),
+                  8: pw.FlexColumnWidth(0.9),
                 },
                 children: alimentRows,
               ),
@@ -12573,6 +12584,7 @@ class PdfReportService {
                   _thCell('PDC (kA)'),
                   _thCell('Icc3 max (kA)'),
                   _thCell('Calibre (A)'),
+                  _thCell('DDR (I\u0394n(mA))'),
                   _thCell('Section de câble (mm\u00B2)'),
                 ],
               ),
@@ -12594,6 +12606,7 @@ class PdfReportService {
                     _valueCell(s.pdcKA.isNotEmpty ? s.pdcKA : '-'),
                     _valueCell(s.icc3Max != null && s.icc3Max!.isNotEmpty ? s.icc3Max! : '-'),
                     _valueCell(s.calibre.isNotEmpty ? s.calibre : '-'),
+                    _valueCell(s.ddr != null && s.ddr!.isNotEmpty ? (s.ddr!.contains('mA') ? s.ddr! : '${s.ddr!} mA') : '-'),
                     _valueCell(s.sectionCable.isNotEmpty ? s.sectionCable : '-'),
                   ],
                 ),
@@ -12614,14 +12627,15 @@ class PdfReportService {
                   ),
                 ),
                 columnWidths: const {
-                  0: pw.FlexColumnWidth(2.2),
-                  1: pw.FlexColumnWidth(1.2),
-                  2: pw.FlexColumnWidth(1.0),
-                  3: pw.FlexColumnWidth(0.8),
-                  4: pw.FlexColumnWidth(0.8),
-                  5: pw.FlexColumnWidth(0.9),
-                  6: pw.FlexColumnWidth(0.8),
-                  7: pw.FlexColumnWidth(1.0),
+                  0: pw.FlexColumnWidth(2.0),
+                  1: pw.FlexColumnWidth(1.1),
+                  2: pw.FlexColumnWidth(0.9),
+                  3: pw.FlexColumnWidth(0.7),
+                  4: pw.FlexColumnWidth(0.7),
+                  5: pw.FlexColumnWidth(0.8),
+                  6: pw.FlexColumnWidth(0.7),
+                  7: pw.FlexColumnWidth(0.9),
+                  8: pw.FlexColumnWidth(0.9),
                 },
                 children: sortieRows,
               ),
@@ -12642,6 +12656,7 @@ class PdfReportService {
                 _thCell('PDC (kA)'),
                 _thCell('Icc3 max (kA)'),
                 _thCell('Calibre (A)'),
+                _thCell('DDR (I\u0394n(mA))'),
                 _thCell('Section de câble (mm\u00B2)'),
               ],
             ),
@@ -12664,6 +12679,7 @@ class PdfReportService {
                   _valueCell(a.pdcKA.isNotEmpty ? a.pdcKA : '-'),
                   _valueCell(a.icc3Max != null && a.icc3Max!.isNotEmpty ? a.icc3Max! : '-'),
                   _valueCell(a.calibre.isNotEmpty ? a.calibre : '-'),
+                  _valueCell(a.ddr != null && a.ddr!.isNotEmpty ? (a.ddr!.contains('mA') ? a.ddr! : '${a.ddr!} mA') : '-'),
                   _valueCell(a.sectionCable.isNotEmpty ? a.sectionCable : '-'),
                 ],
               ),
@@ -12682,14 +12698,15 @@ class PdfReportService {
                 horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
               ),
               columnWidths: const {
-                0: pw.FlexColumnWidth(2.2),
-                1: pw.FlexColumnWidth(1.2),
-                2: pw.FlexColumnWidth(1.0),
-                3: pw.FlexColumnWidth(0.8),
-                4: pw.FlexColumnWidth(0.8),
-                5: pw.FlexColumnWidth(0.9),
-                6: pw.FlexColumnWidth(0.8),
-                7: pw.FlexColumnWidth(1.0),
+                0: pw.FlexColumnWidth(2.0),
+                1: pw.FlexColumnWidth(1.1),
+                2: pw.FlexColumnWidth(0.9),
+                3: pw.FlexColumnWidth(0.7),
+                4: pw.FlexColumnWidth(0.7),
+                5: pw.FlexColumnWidth(0.8),
+                6: pw.FlexColumnWidth(0.7),
+                7: pw.FlexColumnWidth(0.9),
+                8: pw.FlexColumnWidth(0.9),
               },
               children: alimentRows,
             ),
@@ -12714,14 +12731,15 @@ class PdfReportService {
             horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
           ),
           columnWidths: const {
-            0: pw.FlexColumnWidth(2.2),
-            1: pw.FlexColumnWidth(1.2),
-            2: pw.FlexColumnWidth(1.0),
-            3: pw.FlexColumnWidth(0.8),
-            4: pw.FlexColumnWidth(0.8),
-            5: pw.FlexColumnWidth(0.9),
-            6: pw.FlexColumnWidth(0.8),
-            7: pw.FlexColumnWidth(1.0),
+            0: pw.FlexColumnWidth(2.0),
+            1: pw.FlexColumnWidth(1.1),
+            2: pw.FlexColumnWidth(0.9),
+            3: pw.FlexColumnWidth(0.7),
+            4: pw.FlexColumnWidth(0.7),
+            5: pw.FlexColumnWidth(0.8),
+            6: pw.FlexColumnWidth(0.7),
+            7: pw.FlexColumnWidth(0.9),
+            8: pw.FlexColumnWidth(0.9),
           },
           children: [
             pw.TableRow(
@@ -12736,6 +12754,7 @@ class PdfReportService {
                 _thCell('PDC kA'),
                 _thCell('Icc3 max (kA)'),
                 _thCell('Calibre'),
+                _thCell('DDR (I\u0394n(mA))'),
                 _thCell('Section de câble'),
               ],
             ),
@@ -12748,6 +12767,7 @@ class PdfReportService {
                 _valueCell(isAvecProtection ? (pt.pdcKA.isNotEmpty ? pt.pdcKA : '-') : '-'),
                 _valueCell(isAvecProtection ? ((pt.icc3Max != null && pt.icc3Max!.isNotEmpty) ? pt.icc3Max! : '-') : '-'),
                 _valueCell(isAvecProtection ? (pt.calibre.isNotEmpty ? pt.calibre : '-') : '-'),
+                _valueCell(isAvecProtection ? ((pt.ddr != null && pt.ddr!.isNotEmpty) ? (pt.ddr!.contains('mA') ? pt.ddr! : '${pt.ddr!} mA') : '-') : '-'),
                 _valueCell(pt.sectionCable.isNotEmpty ? pt.sectionCable : '-'),
               ],
             ),
