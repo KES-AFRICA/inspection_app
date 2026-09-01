@@ -13340,11 +13340,13 @@ class PdfReportService {
 
     final rows = <_ClassementRow>[];
 
+    // 1. Zones classées dans la mission (Règles A et B : Ligne 1 de la Zone avec Repère vide)
     for (var zone in zonesClassement) {
+      if (zone.nomZone.trim().isEmpty) continue;
       rows.add(
         _ClassementRow(
-          localisation: zone.nomZone,
-          zone: zone.nomZone,
+          localisation: '', // Repère vide pour l'entrée de Zone elle-même (Règles A et B)
+          zone: zone.nomZone.trim(),
           type: 'Zone ${zone.typeZone}',
           origineClassement: zone.origineClassement,
           af: zone.af,
@@ -13359,38 +13361,95 @@ class PdfReportService {
       );
     }
 
+    // 2. Emplacements / Locaux classés (Règles B et C)
     for (var emp in emplacements) {
-      final dejaPresent = zonesClassement.any(
-        (z) => z.nomZone == emp.localisation && emp.typeEmplacement == 'zone',
-      );
-      if (dejaPresent) continue;
-
       final isZoneEmp = emp.typeEmplacement == 'zone';
-      final zoneVal = isZoneEmp
-          ? emp.localisation
-          : (emp.zone != null && emp.zone!.trim().isNotEmpty ? emp.zone!.trim() : '');
 
-      rows.add(
-        _ClassementRow(
-          localisation: emp.localisation,
-          zone: zoneVal,
-          type: isZoneEmp ? 'Zone' : 'Local',
-          origineClassement: emp.origineClassement,
-          af: emp.af,
-          be: emp.be,
-          ae: emp.ae,
-          ad: emp.ad,
-          ag: emp.ag,
-          ip: emp.ip,
-          ik: emp.ik,
-          isZone: isZoneEmp,
-        ),
-      );
+      // Si c'est une zone déjà traitée dans zonesClassement, ne pas la dupliquer
+      if (isZoneEmp) {
+        final dejaPresente = zonesClassement.any(
+          (z) => z.nomZone.trim().toLowerCase() == emp.localisation.trim().toLowerCase(),
+        );
+        if (dejaPresente) continue;
+      }
+
+      final hasZoneParent = (emp.zone != null && emp.zone!.trim().isNotEmpty);
+      final String parentZoneName = hasZoneParent ? emp.zone!.trim() : '';
+
+      if (isZoneEmp) {
+        // Zone classée présente uniquement dans emplacements (Règle A)
+        rows.add(
+          _ClassementRow(
+            localisation: '', // Repère vide (Règle A)
+            zone: emp.localisation.trim(),
+            type: 'Zone',
+            origineClassement: emp.origineClassement,
+            af: emp.af,
+            be: emp.be,
+            ae: emp.ae,
+            ad: emp.ad,
+            ag: emp.ag,
+            ip: emp.ip,
+            ik: emp.ik,
+            isZone: true,
+          ),
+        );
+      } else {
+        // C'est un local / repère (Règle B ou C)
+        if (hasZoneParent) {
+          // Règle B : Local dans une zone classée (Zone = nom zone, Repère = nom local)
+          rows.add(
+            _ClassementRow(
+              localisation: emp.localisation.trim(),
+              zone: parentZoneName,
+              type: 'Local',
+              origineClassement: emp.origineClassement,
+              af: emp.af,
+              be: emp.be,
+              ae: emp.ae,
+              ad: emp.ad,
+              ag: emp.ag,
+              ip: emp.ip,
+              ik: emp.ik,
+              isZone: false,
+            ),
+          );
+        } else {
+          // Règle C : Local hors zone (Zone = '', Repère = nom local)
+          rows.add(
+            _ClassementRow(
+              localisation: emp.localisation.trim(),
+              zone: '',
+              type: 'Local',
+              origineClassement: emp.origineClassement,
+              af: emp.af,
+              be: emp.be,
+              ae: emp.ae,
+              ad: emp.ad,
+              ag: emp.ag,
+              ip: emp.ip,
+              ik: emp.ik,
+              isZone: false,
+            ),
+          );
+        }
+      }
     }
 
+    // Tri ordonné par Zone puis Repère (Ligne 1 de la zone en premier)
     rows.sort((a, b) {
-      if (a.isZone && !b.isZone) return -1;
-      if (!a.isZone && b.isZone) return 1;
+      final aZoneKey = a.zone.trim().toLowerCase();
+      final bZoneKey = b.zone.trim().toLowerCase();
+
+      if (aZoneKey != bZoneKey) {
+        if (aZoneKey.isEmpty) return 1; // Hors zone en fin de tableau
+        if (bZoneKey.isEmpty) return -1;
+        return aZoneKey.compareTo(bZoneKey);
+      }
+
+      // Dans la même zone : la ligne propre de la Zone (Repère vide) en PREMIER (Ligne 1)
+      if (a.localisation.isEmpty && b.localisation.isNotEmpty) return -1;
+      if (a.localisation.isNotEmpty && b.localisation.isEmpty) return 1;
       return a.localisation.compareTo(b.localisation);
     });
 
@@ -13406,7 +13465,7 @@ class PdfReportService {
       ),
       columnWidths: const {
         0: pw.FlexColumnWidth(1.2), // Zone
-        1: pw.FlexColumnWidth(1.7), // Localisation
+        1: pw.FlexColumnWidth(1.7), // Repère
         2: pw.FlexColumnWidth(0.9), // Origine classement
         3: pw.FlexColumnWidth(2.4), // Influences externes (5 sub-cols)
         4: pw.FlexColumnWidth(1.4), // Indice mini (2 sub-cols)
@@ -13432,7 +13491,7 @@ class PdfReportService {
               alignment: pw.Alignment.center,
               padding: const pw.EdgeInsets.symmetric(vertical: 8),
               child: pw.Text(
-                'Localisation',
+                'Repère',
                 style: pw.TextStyle(
                   font: _fontBold,
                   fontSize: fsSmall,
@@ -13956,31 +14015,7 @@ class PdfReportService {
           lower.contains('limiteur');
     }
 
-    void addRow({
-      required String repere,
-      required String observation,
-      List<String>? photoPaths,
-      required String key,
-    }) {
-      final textTrim = observation.trim();
-      if (textTrim.isEmpty) return;
-
-      final photosKey = (photoPaths ?? []).join(',');
-      final contentKey = '${repere.toLowerCase()}_${textTrim.toLowerCase()}_$photosKey';
-      if (seenKeys.contains(contentKey)) return;
-      seenKeys.add(contentKey);
-
-      rows.add(
-        _ParafoudreEquipementRow(
-          repere: repere.trim().isNotEmpty ? repere.trim() : '-',
-          observation: textTrim,
-          photoPaths: photoPaths ?? [],
-          identityKey: contentKey,
-        ),
-      );
-    }
-
-    void processCoffret(CoffretArmoire c) {
+    void processCoffret(CoffretArmoire c, {String zoneName = '', String localName = ''}) {
       final cRepere = (c.repere != null && c.repere!.trim().isNotEmpty) ? c.repere!.trim() : '';
       final cNom = c.nom.trim();
       final cNum = c.numeroEquipement?.trim() ?? '';
@@ -13998,6 +14033,67 @@ class PdfReportService {
         repere = '-';
       }
 
+      final String equipementName;
+      if (cNom.isNotEmpty) {
+        equipementName = cNom;
+      } else if (cRepere.isNotEmpty) {
+        equipementName = cRepere;
+      } else if (cNum.isNotEmpty) {
+        equipementName = cNum;
+      } else {
+        equipementName = '-';
+      }
+
+      String resolvedZone = zoneName.trim();
+      String resolvedLocal = localName.trim();
+
+      if (resolvedZone.isEmpty && resolvedLocal.isEmpty) {
+        final targetLoc = cRepere.isNotEmpty ? cRepere : cNom;
+        if (targetLoc.isNotEmpty) {
+          final emp = HiveService.getEmplacementByNom(audit.missionId, targetLoc);
+          if (emp != null) {
+            if (emp.typeEmplacement == 'zone') {
+              resolvedZone = emp.localisation.trim();
+            } else {
+              resolvedLocal = emp.localisation.trim();
+              if (emp.zone != null && emp.zone!.trim().isNotEmpty) {
+                resolvedZone = emp.zone!.trim();
+              }
+            }
+          }
+        }
+      }
+
+      if (resolvedLocal.isEmpty && cRepere.isNotEmpty && cRepere != cNom) {
+        resolvedLocal = cRepere;
+      }
+
+      void addRow({
+        required String observation,
+        List<String>? photoPaths,
+        required String key,
+      }) {
+        final textTrim = observation.trim();
+        if (textTrim.isEmpty) return;
+
+        final photosKey = (photoPaths ?? []).join(',');
+        final contentKey = '${resolvedZone.toLowerCase()}_${resolvedLocal.toLowerCase()}_${equipementName.toLowerCase()}_${textTrim.toLowerCase()}_$photosKey';
+        if (seenKeys.contains(contentKey)) return;
+        seenKeys.add(contentKey);
+
+        rows.add(
+          _ParafoudreEquipementRow(
+            zoneName: resolvedZone,
+            localName: resolvedLocal,
+            equipementName: equipementName,
+            repere: repere,
+            observation: textTrim,
+            photoPaths: photoPaths ?? [],
+            identityKey: contentKey,
+          ),
+        );
+      }
+
       // 1. Observations Slide 3 (Enrichies)
       final pfEnrichies = c.observationsParafoudreEnrichies ?? [];
       for (var obs in pfEnrichies) {
@@ -14005,7 +14101,6 @@ class PdfReportService {
             ? obs.observation!
             : obs.elementControle;
         addRow(
-          repere: repere,
           observation: text,
           photoPaths: obs.photos,
           key: 'enrich_${identityHashCode(obs)}',
@@ -14015,7 +14110,6 @@ class PdfReportService {
       // 2. Observations Slide 3 (Simples)
       for (var obs in c.observationsParafoudre) {
         addRow(
-          repere: repere,
           observation: obs.texte,
           photoPaths: obs.photos,
           key: 'pf_${identityHashCode(obs)}',
@@ -14032,7 +14126,6 @@ class PdfReportService {
         if (isRelated) {
           if (pv.observation != null && pv.observation!.trim().isNotEmpty) {
             addRow(
-              repere: repere,
               observation: pv.observation!,
               photoPaths: pv.photos,
               key: 'pv_${identityHashCode(pv)}',
@@ -14044,7 +14137,6 @@ class PdfReportService {
                   ? el.observation!
                   : el.elementControle;
               addRow(
-                repere: repere,
                 observation: text,
                 photoPaths: el.photos,
                 key: 'pvel_${identityHashCode(el)}',
@@ -14058,7 +14150,6 @@ class PdfReportService {
       for (var obs in c.observationsLibres) {
         if (isParafoudreRelated(obs.texte)) {
           addRow(
-            repere: repere,
             observation: obs.texte,
             photoPaths: obs.photos,
             key: 'obslibre_${identityHashCode(obs)}',
@@ -14067,36 +14158,79 @@ class PdfReportService {
       }
     }
 
-    // 1. Locaux MT
+    // 1. Locaux MT (Hors zone)
     for (var local in audit.moyenneTensionLocaux) {
       for (var coffret in local.coffrets) {
-        processCoffret(coffret);
+        processCoffret(coffret, localName: local.nom);
       }
     }
     // 2. Zones MT
     for (var zone in audit.moyenneTensionZones) {
       for (var coffret in zone.coffrets) {
-        processCoffret(coffret);
+        processCoffret(coffret, zoneName: zone.nom);
       }
       for (var local in zone.locaux) {
         for (var coffret in local.coffrets) {
-          processCoffret(coffret);
+          processCoffret(coffret, zoneName: zone.nom, localName: local.nom);
         }
       }
     }
     // 3. Zones BT
     for (var zone in audit.basseTensionZones) {
       for (var coffret in zone.coffretsDirects) {
-        processCoffret(coffret);
+        processCoffret(coffret, zoneName: zone.nom);
       }
       for (var local in zone.locaux) {
         for (var coffret in local.coffrets) {
-          processCoffret(coffret);
+          processCoffret(coffret, zoneName: zone.nom, localName: local.nom);
         }
       }
     }
 
     return rows;
+  }
+
+  static List<_FoudreZoneGroup> _groupByZoneLocalEquipFoudre(
+    List<_ParafoudreEquipementRow> obsList,
+  ) {
+    final zoneGroups = <_FoudreZoneGroup>[];
+
+    for (final o in obsList) {
+      final zName = o.zoneName.trim();
+      final lName = o.localName.trim();
+      final eName = o.equipementName.trim();
+
+      _FoudreZoneGroup currentZoneGroup;
+      final existingZoneIdx = zoneGroups.indexWhere((z) => z.zoneName == zName);
+      if (existingZoneIdx != -1) {
+        currentZoneGroup = zoneGroups[existingZoneIdx];
+      } else {
+        currentZoneGroup = _FoudreZoneGroup(zoneName: zName, localGroups: []);
+        zoneGroups.add(currentZoneGroup);
+      }
+
+      _FoudreLocalGroup currentLocalGroup;
+      final existingLocalIdx = currentZoneGroup.localGroups.indexWhere((l) => l.localName == lName);
+      if (existingLocalIdx != -1) {
+        currentLocalGroup = currentZoneGroup.localGroups[existingLocalIdx];
+      } else {
+        currentLocalGroup = _FoudreLocalGroup(localName: lName, equipGroups: []);
+        currentZoneGroup.localGroups.add(currentLocalGroup);
+      }
+
+      _FoudreEquipGroup currentEquipGroup;
+      final existingEquipIdx = currentLocalGroup.equipGroups.indexWhere((e) => e.equipementName == eName);
+      if (existingEquipIdx != -1) {
+        currentEquipGroup = currentLocalGroup.equipGroups[existingEquipIdx];
+      } else {
+        currentEquipGroup = _FoudreEquipGroup(equipementName: eName, items: []);
+        currentLocalGroup.equipGroups.add(currentEquipGroup);
+      }
+
+      currentEquipGroup.items.add(o);
+    }
+
+    return zoneGroups;
   }
 
   static List<pw.Widget> _buildFoudre(
@@ -14372,75 +14506,201 @@ class PdfReportService {
       if (equipRows.isEmpty) {
         widgets.add(_bodyText('Aucune observation parafoudre par équipement disponible.'));
       } else {
+        final zoneGroups = _groupByZoneLocalEquipFoudre(equipRows);
+        final tableRows = <pw.TableRow>[];
+
+        tableRows.add(
+          _tableHeaderRow(['Zone', 'Repère', 'N°', 'Équipement', 'Observation', 'Photo']),
+        );
+
+        int zoneRowIndex = 0;
+        int globalEquipNumber = 1;
+
+        for (final zoneGroup in zoneGroups) {
+          final totalZoneItems = zoneGroup.localGroups.fold<int>(
+            0,
+            (sum, lg) => sum + lg.equipGroups.fold<int>(0, (s, eg) => s + eg.items.length),
+          );
+          final zoneMidIndex = (totalZoneItems - 1) ~/ 2;
+
+          int localRowIndex = 0;
+
+          for (int lIdx = 0; lIdx < zoneGroup.localGroups.length; lIdx++) {
+            final localGroup = zoneGroup.localGroups[lIdx];
+            final totalLocalItems = localGroup.equipGroups.fold<int>(
+              0,
+              (s, eg) => s + eg.items.length,
+            );
+            final localMidIndex = (totalLocalItems - 1) ~/ 2;
+
+            for (int eIdx = 0; eIdx < localGroup.equipGroups.length; eIdx++) {
+              final equipGroup = localGroup.equipGroups[eIdx];
+              final totalEquipItems = equipGroup.items.length;
+              final equipMidIndex = (totalEquipItems - 1) ~/ 2;
+              final currentEquipNo = globalEquipNumber++;
+
+              final equipBg = eIdx % 2 == 0 ? PdfColors.white : PdfColor.fromInt(0xFFF8FAFC);
+
+              for (int i = 0; i < totalEquipItems; i++) {
+                final o = equipGroup.items[i];
+                final currentZoneRowIdx = zoneRowIndex++;
+                final currentLocalRowIdx = localRowIndex++;
+                final currentEquipRowIdx = i;
+
+                final isEndOfEquip = (currentEquipRowIdx == totalEquipItems - 1);
+                final isEndOfLocal = (currentLocalRowIdx == totalLocalItems - 1);
+                final isEndOfZone = (currentZoneRowIdx == totalZoneItems - 1);
+
+                final zoneBorder = pw.Border(
+                  bottom: isEndOfZone
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                      : pw.BorderSide.none,
+                );
+
+                final localBorder = pw.Border(
+                  bottom: isEndOfZone
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                      : (isEndOfLocal
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 1.0)
+                          : pw.BorderSide.none),
+                );
+
+                final equipBorder = pw.Border(
+                  bottom: isEndOfZone
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                      : (isEndOfLocal
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 1.0)
+                          : (isEndOfEquip
+                              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.75)
+                              : pw.BorderSide.none)),
+                );
+
+                final obsBorder = pw.Border(
+                  bottom: isEndOfZone
+                      ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                      : (isEndOfLocal
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 1.0)
+                          : (isEndOfEquip
+                              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.75)
+                              : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4))),
+                );
+
+                final photoLabel = _getFormattedPhotoLabel(o.photoPaths, photoRegistry);
+
+                tableRows.add(
+                  pw.TableRow(
+                    decoration: pw.BoxDecoration(color: equipBg),
+                    children: [
+                      // Cellule 0 : Zone (fond blanc permanent, centré verticalement)
+                      pw.Container(
+                        decoration: pw.BoxDecoration(color: PdfColors.white, border: zoneBorder),
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        alignment: pw.Alignment.center,
+                        child: (currentZoneRowIdx == zoneMidIndex && zoneGroup.zoneName.isNotEmpty)
+                            ? pw.Text(
+                                zoneGroup.zoneName,
+                                style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
+                                textAlign: pw.TextAlign.center,
+                              )
+                            : pw.SizedBox(),
+                      ),
+
+                      // Cellule 1 : Repère (fond blanc permanent, centré verticalement)
+                      pw.Container(
+                        decoration: pw.BoxDecoration(color: PdfColors.white, border: localBorder),
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        alignment: pw.Alignment.center,
+                        child: (currentLocalRowIdx == localMidIndex && localGroup.localName.isNotEmpty)
+                            ? pw.Text(
+                                localGroup.localName,
+                                style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
+                                textAlign: pw.TextAlign.center,
+                              )
+                            : pw.SizedBox(),
+                      ),
+
+                      // Cellule 2 : N° d'Équipement (fond blanc permanent, centré verticalement)
+                      pw.Container(
+                        decoration: pw.BoxDecoration(color: PdfColors.white, border: equipBorder),
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                        alignment: pw.Alignment.center,
+                        child: (currentEquipRowIdx == equipMidIndex)
+                            ? pw.Text(
+                                '$currentEquipNo',
+                                style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
+                                textAlign: pw.TextAlign.center,
+                              )
+                            : pw.SizedBox(),
+                      ),
+
+                      // Cellule 3 : Nom de l'Équipement (fond blanc permanent, centré verticalement)
+                      pw.Container(
+                        decoration: pw.BoxDecoration(color: PdfColors.white, border: equipBorder),
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        alignment: pw.Alignment.center,
+                        child: (currentEquipRowIdx == equipMidIndex && equipGroup.equipementName.isNotEmpty)
+                            ? pw.Text(
+                                equipGroup.equipementName,
+                                style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
+                                textAlign: pw.TextAlign.center,
+                              )
+                            : pw.SizedBox(),
+                      ),
+
+                      // Cellule 4 : Observation
+                      pw.Container(
+                        decoration: pw.BoxDecoration(border: obsBorder),
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 4),
+                        alignment: pw.Alignment.centerLeft,
+                        child: pw.Text(
+                          _normalizeText(o.observation),
+                          style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                        ),
+                      ),
+
+                      // Cellule 5 : Photo
+                      pw.Container(
+                        decoration: pw.BoxDecoration(border: obsBorder),
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                        alignment: pw.Alignment.center,
+                        child: pw.Text(
+                          photoLabel,
+                          style: pw.TextStyle(
+                            font: photoLabel != '-' ? _fontBold : _fontRegular,
+                            fontSize: 8.5,
+                            color: photoLabel != '-' ? PdfColor.fromInt(0xFF1D4ED8) : PdfColors.black,
+                          ),
+                          textAlign: pw.TextAlign.center,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            }
+          }
+        }
+
         widgets.add(
           pw.Table(
             defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-            border: pw.TableBorder.all(color: borderColor, width: 0.4),
+            border: const pw.TableBorder(
+              left: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+              right: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+              top: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+              bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+              verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+              horizontalInside: pw.BorderSide.none,
+            ),
             columnWidths: const {
-              0: pw.FixedColumnWidth(24),
-              1: pw.FlexColumnWidth(2.0),
-              2: pw.FlexColumnWidth(3.4),
-              3: pw.FlexColumnWidth(1.2),
+              0: pw.FlexColumnWidth(1.2), // Zone
+              1: pw.FlexColumnWidth(1.5), // Repère
+              2: pw.FlexColumnWidth(0.5), // N°
+              3: pw.FlexColumnWidth(1.8), // Équipement
+              4: pw.FlexColumnWidth(3.8), // Observation
+              5: pw.FlexColumnWidth(1.2), // Photo
             },
-            children: [
-              _tableHeaderRow(['N°', 'Repère', 'Observation', 'Photo']),
-              ...equipRows.asMap().entries.map((e) {
-                final globalIdx = e.key + 1;
-                final row = e.value;
-                final bg = e.key.isOdd ? tableRowAlt : PdfColors.white;
-                final photoLabel = _getFormattedPhotoLabel(row.photoPaths, photoRegistry);
-
-                return pw.TableRow(
-                  decoration: pw.BoxDecoration(color: bg),
-                  children: [
-                    // Cellule 0 : N°
-                    pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-                      alignment: pw.Alignment.center,
-                      child: pw.Text(
-                        '$globalIdx',
-                        style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-                    // Cellule 1 : Repère
-                    pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-                      alignment: pw.Alignment.center,
-                      child: pw.Text(
-                        row.repere,
-                        style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-                    // Cellule 2 : Observation
-                    pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 5),
-                      alignment: pw.Alignment.center,
-                      child: pw.Text(
-                        _normalizeText(row.observation),
-                        style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-                    // Cellule 3 : Photo
-                    pw.Container(
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 5),
-                      alignment: pw.Alignment.center,
-                      child: pw.Text(
-                        photoLabel,
-                        style: pw.TextStyle(
-                          font: photoLabel != '-' ? _fontBold : _fontRegular,
-                          fontSize: 8.5,
-                          color: photoLabel != '-' ? PdfColor.fromInt(0xFF1D4ED8) : PdfColors.black,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-                  ],
-                );
-              }),
-            ],
+            children: tableRows,
           ),
         );
         widgets.add(pw.SizedBox(height: 8));
@@ -19748,17 +20008,41 @@ class _ObsGroup {
 }
 
 class _ParafoudreEquipementRow {
+  final String zoneName;
+  final String localName;
+  final String equipementName;
   final String repere;
   final String observation;
   final List<String> photoPaths;
   final String identityKey;
 
   _ParafoudreEquipementRow({
+    this.zoneName = '',
+    this.localName = '',
+    this.equipementName = '',
     required this.repere,
     required this.observation,
     List<String>? photoPaths,
     required this.identityKey,
   }) : photoPaths = photoPaths ?? [];
+}
+
+class _FoudreZoneGroup {
+  final String zoneName;
+  final List<_FoudreLocalGroup> localGroups;
+  _FoudreZoneGroup({required this.zoneName, required this.localGroups});
+}
+
+class _FoudreLocalGroup {
+  final String localName;
+  final List<_FoudreEquipGroup> equipGroups;
+  _FoudreLocalGroup({required this.localName, required this.equipGroups});
+}
+
+class _FoudreEquipGroup {
+  final String equipementName;
+  final List<_ParafoudreEquipementRow> items;
+  _FoudreEquipGroup({required this.equipementName, required this.items});
 }
 
 class _EquipmentPhotoGroup {
