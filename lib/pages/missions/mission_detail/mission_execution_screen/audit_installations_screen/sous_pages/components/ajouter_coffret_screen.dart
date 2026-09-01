@@ -5889,15 +5889,12 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
           ),
           const SizedBox(height: 12),
 
-          TextFormField(
-            initialValue: (ct.identification.isEmpty || RegExp(r'^Circuit \d+$').hasMatch(ct.identification)) ? '' : ct.identification,
-            decoration: const InputDecoration(
-              labelText: 'Identification du circuit',
-              hintText: 'Saisir l\'identification du circuit...',
-              isDense: true,
-              border: OutlineInputBorder(),
-            ),
-            onChanged: (v) { ct.identification = v; widget.onDataChanged(); },
+          _HybridCircuitIdentificationField(
+            initialValue: ct.identification,
+            onChanged: (v) {
+              ct.identification = v;
+              widget.onDataChanged();
+            },
           ),
           const SizedBox(height: 12),
 
@@ -6009,6 +6006,111 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
           valueColor: const AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
           minHeight: 4,
           borderRadius: BorderRadius.circular(2),
+        ),
+      ],
+    );
+  }
+}
+
+// ================================================================
+// CHAMP HYBRIDE TEXTE / SELECTION — IDENTIFICATION DU CIRCUIT
+// ================================================================
+class _HybridCircuitIdentificationField extends StatefulWidget {
+  final String initialValue;
+  final ValueChanged<String> onChanged;
+
+  const _HybridCircuitIdentificationField({
+    required this.initialValue,
+    required this.onChanged,
+  });
+
+  @override
+  State<_HybridCircuitIdentificationField> createState() => _HybridCircuitIdentificationFieldState();
+}
+
+class _HybridCircuitIdentificationFieldState extends State<_HybridCircuitIdentificationField> {
+  late TextEditingController _controller;
+  static const List<String> _options = ['Éclairage', 'Climatisation', 'Prise de courant'];
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.initialValue);
+  }
+
+  @override
+  void didUpdateWidget(covariant _HybridCircuitIdentificationField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.initialValue != oldWidget.initialValue && widget.initialValue != _controller.text) {
+      _controller.text = widget.initialValue;
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _selectOption(String option) {
+    setState(() {
+      _controller.text = option;
+    });
+    widget.onChanged(option);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextFormField(
+          controller: _controller,
+          style: TextStyle(fontSize: context.fontSizeS),
+          decoration: InputDecoration(
+            labelText: 'Identification du circuit',
+            hintText: 'Saisir ou sélectionner l\'identification...',
+            isDense: true,
+            border: const OutlineInputBorder(),
+            labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade700),
+            suffixIcon: PopupMenuButton<String>(
+              icon: Icon(Icons.arrow_drop_down_circle_outlined, color: AppTheme.primaryBlue, size: 20),
+              tooltip: 'Sélectionner une option prédéfinie',
+              onSelected: _selectOption,
+              itemBuilder: (context) => _options.map((opt) {
+                return PopupMenuItem<String>(
+                  value: opt,
+                  child: Text(opt, style: TextStyle(fontSize: context.fontSizeS)),
+                );
+              }).toList(),
+            ),
+          ),
+          onChanged: (v) => widget.onChanged(v),
+        ),
+        const SizedBox(height: 6),
+        Wrap(
+          spacing: 6,
+          runSpacing: 4,
+          children: _options.map((opt) {
+            final isSelected = _controller.text.trim().toLowerCase() == opt.toLowerCase();
+            return ActionChip(
+              visualDensity: VisualDensity.compact,
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              backgroundColor: isSelected ? Colors.blue.shade100 : Colors.grey.shade100,
+              side: BorderSide(
+                color: isSelected ? AppTheme.primaryBlue : Colors.grey.shade300,
+              ),
+              label: Text(
+                opt,
+                style: TextStyle(
+                  fontSize: 11,
+                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                  color: isSelected ? AppTheme.primaryBlue : Colors.grey.shade800,
+                ),
+              ),
+              onPressed: () => _selectOption(opt),
+            );
+          }).toList(),
         ),
       ],
     );
