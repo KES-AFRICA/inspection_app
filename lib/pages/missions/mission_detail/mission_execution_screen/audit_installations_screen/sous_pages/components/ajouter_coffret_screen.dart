@@ -1807,7 +1807,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     super.dispose();
   }
 
-  void _updateAlimentation(Alimentation a, String field, String value) {
+  void _updateAlimentation(Alimentation a, String field, String value, {int index = 0, bool isProtectionTete = false}) {
     setState(() {
       switch (field) {
         case 'typeProtection':
@@ -1816,11 +1816,27 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           break;
         case 'courbe': a.courbe = value; break;
         case 'ddr': a.ddr = value; break;
-        case 'pdcKA': a.pdcKA = value; break;
-        case 'icc3Max': a.icc3Max = value; break;
-        case 'calibre': a.calibre = value; break;
+        case 'pdcKA':
+          a.pdcKA = value;
+          final key = isProtectionTete ? 'prot_pdc' : 'alim${index}_pdc';
+          if (_controllers.containsKey(key) && _controllers[key]!.text != value) _controllers[key]!.text = value;
+          break;
+        case 'icc3Max':
+          a.icc3Max = value;
+          final key = isProtectionTete ? 'prot_icc3' : 'alim${index}_icc3';
+          if (_controllers.containsKey(key) && _controllers[key]!.text != value) _controllers[key]!.text = value;
+          break;
+        case 'calibre':
+          a.calibre = value;
+          final key = isProtectionTete ? 'prot_calibre' : 'alim${index}_calibre';
+          if (_controllers.containsKey(key) && _controllers[key]!.text != value) _controllers[key]!.text = value;
+          break;
         case 'sectionCable': a.sectionCable = value; break;
-        case 'source': a.source = value; break;
+        case 'source':
+          a.source = value;
+          final key = isProtectionTete ? 'prot_source' : 'alim${index}_source';
+          if (_controllers.containsKey(key) && _controllers[key]!.text != value) _controllers[key]!.text = value;
+          break;
         case 'sourceKnown': a.sourceKnown = value; break;
         case 'marqueDisjoncteur': a.marqueDisjoncteur = value; break;
       }
@@ -2096,6 +2112,17 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
               missionId: widget.missionId,
               currentEquipmentId: widget.currentEquipmentId,
               onSelected: (result) {
+                void clearElectricalFields() {
+                  onChanged('typeProtection', '');
+                  onChanged('marqueDisjoncteur', '');
+                  onChanged('courbe', '');
+                  onChanged('pdcKA', '');
+                  onChanged('icc3Max', '');
+                  onChanged('calibre', '');
+                  onChanged('ddr', '');
+                  onChanged('sectionCable', '');
+                }
+
                 if (result != null) {
                   onChanged('source', result.displayName);
                   if (result.isDepart && result.depart != null) {
@@ -2110,16 +2137,28 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                     onChanged('sectionCable', dep.sectionCable);
                     widget.onSourceSelected?.call(result.equipmentId, result.displayName, dep.id);
                   } else {
+                    clearElectricalFields();
                     widget.onSourceSelected?.call(result.equipmentId, result.displayName, null);
                   }
                 } else {
                   onChanged('source', 'Inconnu');
+                  clearElectricalFields();
                   widget.onSourceSelected?.call(null, 'Inconnu', null);
                 }
               },
               onTextChanged: (text) {
                 if (text.trim().isNotEmpty && text.trim() != a.source) {
                   onChanged('source', text.trim());
+                  if (widget.sourceDepartId != null && widget.sourceDepartId!.isNotEmpty) {
+                    onChanged('typeProtection', '');
+                    onChanged('marqueDisjoncteur', '');
+                    onChanged('courbe', '');
+                    onChanged('pdcKA', '');
+                    onChanged('icc3Max', '');
+                    onChanged('calibre', '');
+                    onChanged('ddr', '');
+                    onChanged('sectionCable', '');
+                  }
                   widget.onSourceSelected?.call(null, text.trim(), null);
                 }
               },
