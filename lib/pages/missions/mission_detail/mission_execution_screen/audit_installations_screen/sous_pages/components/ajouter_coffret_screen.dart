@@ -2004,6 +2004,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     bool canDelete = false,
     VoidCallback? onDelete,
   }) {
+    final nbCablesCtrl = _getController(isProtectionTete ? 'prot_nb_cables' : 'alim${index}_nb_cables', a.nombreCables ?? '');
     final sourceCtrl = _getController(isProtectionTete ? 'prot_source' : 'alim${index}_source', a.source);
     final pdcCtrl = _getController(isProtectionTete ? 'prot_pdc' : 'alim${index}_pdc', a.pdcKA);
     final icc3Ctrl = _getController(isProtectionTete ? 'prot_icc3' : 'alim${index}_icc3', a.icc3Max ?? '');
@@ -2097,6 +2098,16 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
               ),
             ),
           ],
+          _buildModernTextField(
+            context,
+            label: 'Nombre de câble',
+            controller: nbCablesCtrl,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onChanged: (v) => onChanged('nombreCables', v),
+            readOnly: isLocked,
+          ),
+          SizedBox(height: context.spacingS),
           if (widget.selectedType == 'INVERSEUR') ...[
             _buildModernTextField(
               context,
@@ -2113,6 +2124,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
               currentEquipmentId: widget.currentEquipmentId,
               onSelected: (result) {
                 void clearElectricalFields() {
+                  onChanged('nombreCables', '');
                   onChanged('typeProtection', '');
                   onChanged('marqueDisjoncteur', '');
                   onChanged('courbe', '');
@@ -2121,12 +2133,14 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                   onChanged('calibre', '');
                   onChanged('ddr', '');
                   onChanged('sectionCable', '');
+                  onChanged('sectionCableNeutre', '');
                 }
 
                 if (result != null) {
                   onChanged('source', result.displayName);
                   if (result.isDepart && result.depart != null) {
                     final dep = result.depart!;
+                    onChanged('nombreCables', dep.nombreCables ?? '');
                     onChanged('typeProtection', dep.typeProtection);
                     onChanged('marqueDisjoncteur', dep.marque);
                     onChanged('courbe', dep.courbe);
@@ -2135,6 +2149,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                     onChanged('calibre', dep.calibre);
                     onChanged('ddr', dep.ddr);
                     onChanged('sectionCable', dep.sectionCable);
+                    onChanged('sectionCableNeutre', dep.effectiveSectionCableNeutre);
                     widget.onSourceSelected?.call(result.equipmentId, result.displayName, dep.id);
                   } else {
                     clearElectricalFields();
@@ -2150,6 +2165,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                 if (text.trim().isNotEmpty && text.trim() != a.source) {
                   onChanged('source', text.trim());
                   if (widget.sourceDepartId != null && widget.sourceDepartId!.isNotEmpty) {
+                    onChanged('nombreCables', '');
                     onChanged('typeProtection', '');
                     onChanged('marqueDisjoncteur', '');
                     onChanged('courbe', '');
@@ -2158,6 +2174,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                     onChanged('calibre', '');
                     onChanged('ddr', '');
                     onChanged('sectionCable', '');
+                    onChanged('sectionCableNeutre', '');
                   }
                   widget.onSourceSelected?.call(null, text.trim(), null);
                 }
@@ -2200,7 +2217,9 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             _buildModernDropdown(context, label: 'DDR IΔn (mA)', value: ddrVal, items: ddrItems, onChanged: (v) => onChanged('ddr', v), readOnly: isLocked),
             SizedBox(height: context.spacingS),
           ],
-          _buildModernDropdown(context, label: 'Section de câble', value: a.sectionCable, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCable', v), readOnly: isLocked),
+          _buildModernDropdown(context, label: 'Section de câble phase', value: a.sectionCable, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCable', v), readOnly: isLocked),
+          SizedBox(height: context.spacingS),
+          _buildModernDropdown(context, label: 'Section de câble neutre', value: a.effectiveSectionCableNeutre, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCableNeutre', v), readOnly: isLocked),
         ],
       ),
     );
@@ -2397,18 +2416,20 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     required Function(String) onChanged,
     TextInputType? keyboardType,
     List<TextInputFormatter>? inputFormatters,
+    bool readOnly = false,
   }) {
     return Container(
-      decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(context.spacingS), border: Border.all(color: Colors.grey.shade300)),
+      decoration: BoxDecoration(color: readOnly ? Colors.amber.shade50.withOpacity(0.5) : Colors.grey.shade50, borderRadius: BorderRadius.circular(context.spacingS), border: Border.all(color: readOnly ? Colors.amber.shade300 : Colors.grey.shade300)),
       child: TextFormField(
         controller: controller,
+        readOnly: readOnly,
         keyboardType: keyboardType,
         inputFormatters: inputFormatters,
-        style: TextStyle(fontSize: context.fontSizeS),
+        style: TextStyle(fontSize: context.fontSizeS, color: readOnly ? Colors.amber.shade900 : null, fontWeight: readOnly ? FontWeight.bold : FontWeight.normal),
         onChanged: onChanged,
         decoration: InputDecoration(
           labelText: label,
-          labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade600),
+          labelStyle: TextStyle(fontSize: context.fontSizeS, color: readOnly ? Colors.amber.shade900 : Colors.grey.shade600),
           border: InputBorder.none,
           contentPadding: EdgeInsets.symmetric(horizontal: context.spacingM, vertical: context.spacingS),
         ),
@@ -5831,12 +5852,35 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
           ),
           const SizedBox(height: 12),
 
+          TextFormField(
+            initialValue: dep.nombreCables ?? '',
+            decoration: const InputDecoration(
+              labelText: 'Nombre de câble',
+              hintText: 'Ex: 1, 2, 3...',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onChanged: (v) { dep.nombreCables = v.trim().isEmpty ? null : v.trim(); widget.onDataChanged(); },
+          ),
+          const SizedBox(height: 12),
+
           DropdownButtonFormField<String>(
             value: dep.sectionCable.isNotEmpty ? dep.sectionCable : null,
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Section de câble (mm²)', isDense: true, border: OutlineInputBorder()),
+            decoration: const InputDecoration(labelText: 'Section de câble phase (mm²)', isDense: true, border: OutlineInputBorder()),
             items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
             onChanged: (v) { setState(() { dep.sectionCable = v ?? ''; }); widget.onDataChanged(); },
+          ),
+          const SizedBox(height: 12),
+
+          DropdownButtonFormField<String>(
+            value: dep.effectiveSectionCableNeutre.isNotEmpty ? dep.effectiveSectionCableNeutre : null,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Section de câble neutre (mm²)', isDense: true, border: OutlineInputBorder()),
+            items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+            onChanged: (v) { setState(() { dep.sectionCableNeutre = v ?? ''; }); widget.onDataChanged(); },
           ),
         ],
       ),
@@ -5998,12 +6042,35 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
           ),
           const SizedBox(height: 12),
 
+          TextFormField(
+            initialValue: ct.nombreCables ?? '',
+            decoration: const InputDecoration(
+              labelText: 'Nombre de câble',
+              hintText: 'Ex: 1, 2, 3...',
+              isDense: true,
+              border: OutlineInputBorder(),
+            ),
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onChanged: (v) { ct.nombreCables = v.trim().isEmpty ? null : v.trim(); widget.onDataChanged(); },
+          ),
+          const SizedBox(height: 12),
+
           DropdownButtonFormField<String>(
             value: ct.sectionCable.isNotEmpty ? ct.sectionCable : null,
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Section de câble (mm²)', isDense: true, border: OutlineInputBorder()),
+            decoration: const InputDecoration(labelText: 'Section de câble phase (mm²)', isDense: true, border: OutlineInputBorder()),
             items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
             onChanged: (v) { setState(() { ct.sectionCable = v ?? ''; }); widget.onDataChanged(); },
+          ),
+          const SizedBox(height: 12),
+
+          DropdownButtonFormField<String>(
+            value: ct.effectiveSectionCableNeutre.isNotEmpty ? ct.effectiveSectionCableNeutre : null,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Section de câble neutre (mm²)', isDense: true, border: OutlineInputBorder()),
+            items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+            onChanged: (v) { setState(() { ct.sectionCableNeutre = v ?? ''; }); widget.onDataChanged(); },
           ),
         ],
       ),

@@ -1153,6 +1153,19 @@ class Alimentation {
   @HiveField(10)
   String? icc3Max;
 
+  @HiveField(11)
+  String? nombreCables;
+
+  @HiveField(12)
+  String? sectionCableNeutre;
+
+  /// Getter rétrocompatible pour la section phase (réutilise le champ historique sectionCable)
+  String get sectionCablePhase => sectionCable;
+  set sectionCablePhase(String val) => sectionCable = val;
+
+  /// Getter rétrocompatible pour la section neutre (avec fallback auto sur sectionCable Phase si absent)
+  String get effectiveSectionCableNeutre => (sectionCableNeutre != null && sectionCableNeutre!.trim().isNotEmpty) ? sectionCableNeutre! : sectionCable;
+
   /// Résout le statut de connaissance de la source dérivé automatiquement de typeProtection
   String get effectiveSourceKnown => SourceStatusResolver.resolve(typeProtection);
 
@@ -1168,6 +1181,8 @@ class Alimentation {
     String? sourceKnown,
     this.marqueDisjoncteur,
     this.icc3Max = '',
+    this.nombreCables,
+    this.sectionCableNeutre,
   })  : photos = photos ?? [],
         sourceKnown = sourceKnown ?? SourceStatusResolver.resolve(typeProtection);
 }
@@ -1375,6 +1390,19 @@ class DepartEquipement {
   @HiveField(10)
   String ddr;
 
+  @HiveField(11)
+  String? nombreCables;
+
+  @HiveField(12)
+  String? sectionCableNeutre;
+
+  /// Getter rétrocompatible pour la section phase (réutilise le champ historique sectionCable)
+  String get sectionCablePhase => sectionCable;
+  set sectionCablePhase(String val) => sectionCable = val;
+
+  /// Getter rétrocompatible pour la section neutre (avec fallback auto sur sectionCable Phase si absent)
+  String get effectiveSectionCableNeutre => (sectionCableNeutre != null && sectionCableNeutre!.trim().isNotEmpty) ? sectionCableNeutre! : sectionCable;
+
   DepartEquipement({
     String? id,
     this.protectionTete = 'Présent',
@@ -1387,6 +1415,8 @@ class DepartEquipement {
     this.calibre = '',
     this.sectionCable = '',
     this.ddr = '',
+    this.nombreCables,
+    this.sectionCableNeutre,
   }) : id = (id != null && id.trim().isNotEmpty)
             ? id
             : 'dep_${DateTime.now().microsecondsSinceEpoch}_${identification.hashCode.abs()}';
@@ -1403,6 +1433,8 @@ class DepartEquipement {
     String? calibre,
     String? sectionCable,
     String? ddr,
+    String? nombreCables,
+    String? sectionCableNeutre,
   }) {
     return DepartEquipement(
       id: id ?? this.id,
@@ -1416,6 +1448,8 @@ class DepartEquipement {
       calibre: calibre ?? this.calibre,
       sectionCable: sectionCable ?? this.sectionCable,
       ddr: ddr ?? this.ddr,
+      nombreCables: nombreCables ?? this.nombreCables,
+      sectionCableNeutre: sectionCableNeutre ?? this.sectionCableNeutre,
     );
   }
 }
@@ -1456,6 +1490,19 @@ class CircuitTerminalEquipement {
   @HiveField(10)
   String ddr;
 
+  @HiveField(11)
+  String? nombreCables;
+
+  @HiveField(12)
+  String? sectionCableNeutre;
+
+  /// Getter rétrocompatible pour la section phase (réutilise le champ historique sectionCable)
+  String get sectionCablePhase => sectionCable;
+  set sectionCablePhase(String val) => sectionCable = val;
+
+  /// Getter rétrocompatible pour la section neutre (avec fallback auto sur sectionCable Phase si absent)
+  String get effectiveSectionCableNeutre => (sectionCableNeutre != null && sectionCableNeutre!.trim().isNotEmpty) ? sectionCableNeutre! : sectionCable;
+
   CircuitTerminalEquipement({
     String? id,
     this.protectionTete = 'Oui',
@@ -1468,6 +1515,8 @@ class CircuitTerminalEquipement {
     this.calibre = '',
     this.sectionCable = '',
     this.ddr = '',
+    this.nombreCables,
+    this.sectionCableNeutre,
   }) : id = (id != null && id.trim().isNotEmpty)
             ? id
             : 'ct_${DateTime.now().microsecondsSinceEpoch}_${identification.hashCode.abs()}';
@@ -1484,6 +1533,8 @@ class CircuitTerminalEquipement {
     String? calibre,
     String? sectionCable,
     String? ddr,
+    String? nombreCables,
+    String? sectionCableNeutre,
   }) {
     return CircuitTerminalEquipement(
       id: id ?? this.id,
@@ -1497,6 +1548,8 @@ class CircuitTerminalEquipement {
       calibre: calibre ?? this.calibre,
       sectionCable: sectionCable ?? this.sectionCable,
       ddr: ddr ?? this.ddr,
+      nombreCables: nombreCables ?? this.nombreCables,
+      sectionCableNeutre: sectionCableNeutre ?? this.sectionCableNeutre,
     );
   }
 }

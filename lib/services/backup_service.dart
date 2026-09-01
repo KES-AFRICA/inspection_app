@@ -880,6 +880,8 @@ class BackupService {
         'sourceKnown': a.sourceKnown,
         'marqueDisjoncteur': a.marqueDisjoncteur,
         'photos': a.photos,
+        'nombreCables': a.nombreCables,
+        'sectionCableNeutre': a.sectionCableNeutre,
       };
 
   static Map<String, dynamic> _serializePoint(PointVerification p) => {
@@ -2521,6 +2523,8 @@ class BackupService {
         sourceKnown: d['sourceKnown'] as String?,
         marqueDisjoncteur: d['marqueDisjoncteur'] as String?,
         photos: _strList(d['photos']),
+        nombreCables: d['nombreCables'] as String?,
+        sectionCableNeutre: d['sectionCableNeutre'] as String?,
       );
 
   static PointVerification _parsePoint(Map<String, dynamic> d) {
