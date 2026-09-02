@@ -15,6 +15,7 @@ class PdfFooterBuilder {
   /// Pied de page Première Page (firstpage_footer - Référence Officielle Inversée)
   static pw.Widget buildFirstPageFooter(
     pw.Context ctx, {
+    double pageWidth = kFullPageWidth,
     required pw.Font fontRegular,
     required pw.Font fontBold,
   }) {
@@ -23,19 +24,19 @@ class PdfFooterBuilder {
     const double totalHeight = mainBoxHeight + subFooterHeight;
 
     return pw.Container(
-      width: kFullPageWidth,
+      width: pageWidth,
       height: totalHeight,
       child: pw.Column(
         children: [
           // ── Zone Principale : Hauteur Augmentée, Centrage Parfait & Biseau Inversé (/) ──
           pw.Container(
             height: mainBoxHeight,
-            width: kFullPageWidth,
+            width: pageWidth,
             child: pw.Stack(
               children: [
                 // 1. Arrière-plan vectoriel (Gris en bas de y=0 à y=size.y-12, Bleu en haut de y=12 à y=size.y)
                 pw.CustomPaint(
-                  size: const PdfPoint(kFullPageWidth, mainBoxHeight),
+                  size: PdfPoint(pageWidth, mainBoxHeight),
                   painter: (PdfGraphics canvas, PdfPoint size) {
                     // Polygon Gris Ardoise (y=0 à y=size.y-12)
                     canvas.setFillColor(darkSlateGrey);
@@ -149,7 +150,7 @@ class PdfFooterBuilder {
           // ── Sous-Ligne Inférieure Systématique : Phrase d'activités centrée sous les 2 blocs ──
           pw.Container(
             height: subFooterHeight,
-            width: kFullPageWidth,
+            width: pageWidth,
             color: PdfColors.white,
             alignment: pw.Alignment.center,
             child: pw.Text(
@@ -170,6 +171,7 @@ class PdfFooterBuilder {
   /// Pied de page Pages Suivantes (otherpage_footer - Pagination parfaitement centrée verticalement)
   static pw.Widget buildOtherPageFooter(
     pw.Context ctx, {
+    double pageWidth = kFullPageWidth,
     int pageOffset = 0,
     int? overrideTotalPages,
     required pw.Font fontRegular,
@@ -185,13 +187,13 @@ class PdfFooterBuilder {
         : 'Page $pageNum';
 
     return pw.Container(
-      width: kFullPageWidth,
+      width: pageWidth,
       height: totalHeight,
       child: pw.Stack(
         children: [
           // Arrière-plan vectoriel : Bloc Gris en 1er (Arrière-plan), Bloc Bleu en 2nd (Premier plan masquant la pointe gauche)
           pw.CustomPaint(
-            size: const PdfPoint(kFullPageWidth, totalHeight),
+            size: PdfPoint(pageWidth, totalHeight),
             painter: (PdfGraphics canvas, PdfPoint size) {
               // 1. Bande Gris Ardoise en bas
               canvas.setFillColor(darkSlateGrey);

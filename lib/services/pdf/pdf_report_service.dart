@@ -526,15 +526,18 @@ class PdfReportService {
     final double descente = isFirstPage
         ? (kBottomMargin + 40)
         : (kBottomMargin + 12);
+    final double pageWidth = ctx.page.pageFormat.width;
 
     final widget = isFirstPage
         ? PdfFooterBuilder.buildFirstPageFooter(
             ctx,
+            pageWidth: pageWidth,
             fontRegular: _fontRegular,
             fontBold: _fontBold,
           )
         : PdfFooterBuilder.buildOtherPageFooter(
             ctx,
+            pageWidth: pageWidth,
             pageOffset: pageOffset,
             overrideTotalPages: overrideTotalPages,
             fontRegular: _fontRegular,
@@ -550,7 +553,7 @@ class PdfReportService {
           right: -kRightMargin,
           child: pw.SizedBox(
             height: footerHeight,
-            width: PdfPageFormat.a4.width,
+            width: pageWidth,
             child: widget,
           ),
         ),
@@ -7704,42 +7707,87 @@ class PdfReportService {
     }) {
       for (final c in cellules) {
         final rep = c.getEffectiveRepere(localName);
-        final nom = c.nom?.trim().isNotEmpty == true
-            ? c.nom!.trim()
-            : (c.numerotation.trim().isNotEmpty
-                ? c.numerotation.trim()
-                : (rep.isNotEmpty ? rep : 'Cellule'));
-        final type = (c.fonction.trim().isNotEmpty)
-            ? c.fonction.trim()
-            : (c.type.trim().isNotEmpty ? c.type.trim() : 'Cellule');
+
+        String equipNom = '';
+        final rawNom = c.nom?.trim() ?? '';
+        final isGenericNom = rawNom.isEmpty ||
+            rawNom.toLowerCase() == 'présent' ||
+            rawNom.toLowerCase() == 'present' ||
+            rawNom.toLowerCase() == 'oui' ||
+            rawNom.toLowerCase() == 'non' ||
+            rawNom.toLowerCase() == 'cellule';
+
+        if (!isGenericNom) {
+          equipNom = rawNom;
+        } else if (c.repere?.trim().isNotEmpty == true &&
+            c.repere!.trim() != localName) {
+          equipNom = c.repere!.trim();
+        } else if (c.numerotation.trim().isNotEmpty) {
+          equipNom = c.numerotation.trim().toLowerCase().contains('cellule')
+              ? c.numerotation.trim()
+              : 'Cellule ${c.numerotation.trim()}';
+        } else if (c.fonction.trim().isNotEmpty) {
+          equipNom = c.fonction.trim().toLowerCase().contains('cellule')
+              ? c.fonction.trim()
+              : 'Cellule ${c.fonction.trim()}';
+        } else if (c.type.trim().isNotEmpty) {
+          equipNom = c.type.trim().toLowerCase().contains('cellule')
+              ? c.type.trim()
+              : 'Cellule ${c.type.trim()}';
+        } else if (rep.isNotEmpty) {
+          equipNom = rep;
+        } else {
+          equipNom = 'Cellule';
+        }
+
         addEquipement(
           refObj: c,
           zoneName: zoneName,
           localName: localName,
           repere: rep,
-          nom: nom,
-          type: type,
+          nom: equipNom,
+          type: 'Cellule',
           accessible: true,
         );
       }
 
       for (final t in transfos) {
         final rep = t.getEffectiveRepere(localName);
-        final nom = t.nom?.trim().isNotEmpty == true
-            ? t.nom!.trim()
-            : (t.repere?.trim().isNotEmpty == true
-                ? t.repere!.trim()
-                : (rep.isNotEmpty ? rep : 'Transformateur'));
-        final type = (t.typeTransformateur.trim().isNotEmpty)
-            ? t.typeTransformateur.trim()
-            : 'Transformateur';
+
+        String equipNom = '';
+        final rawNom = t.nom?.trim() ?? '';
+        final isGenericNom = rawNom.isEmpty ||
+            rawNom == localName ||
+            rawNom.toLowerCase() == 'présent' ||
+            rawNom.toLowerCase() == 'present' ||
+            rawNom.toLowerCase() == 'oui' ||
+            rawNom.toLowerCase() == 'non' ||
+            rawNom.toLowerCase() == 'transformateur';
+
+        if (!isGenericNom) {
+          equipNom = rawNom;
+        } else if (t.repere?.trim().isNotEmpty == true &&
+            t.repere!.trim() != localName) {
+          equipNom = t.repere!.trim();
+        } else if (t.puissanceAssignee.trim().isNotEmpty) {
+          equipNom = 'Transformateur ${t.puissanceAssignee.trim()}';
+        } else if (t.marqueAnnee.trim().isNotEmpty) {
+          equipNom = 'Transformateur ${t.marqueAnnee.trim()}';
+        } else if (t.typeTransformateur.trim().isNotEmpty) {
+          equipNom = 'Transformateur ${t.typeTransformateur.trim()}';
+        } else if (rep.isNotEmpty) {
+          equipNom = rep;
+        } else {
+          equipNom = 'Transformateur';
+        }
+
         addEquipement(
           refObj: t,
           zoneName: zoneName,
           localName: localName,
           repere: rep,
-          nom: nom,
-          type: type,
+          nom: equipNom,
+          type: 'Transformateur',
           accessible: true,
         );
       }
@@ -8127,16 +8175,20 @@ class PdfReportService {
           final isEven = idx % 2 == 0;
           final bgColor = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
 
-          final repereBorder = pw.Border(
-            bottom: (currentRepereItemIdx == repereCount - 1 && !isLastRepereInZone)
+          final zoneBorder = pw.Border(
+            bottom: (currentZoneItemIdx == totalZoneItems - 1)
                 ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
                 : pw.BorderSide.none,
           );
 
-          final itemBorder = pw.Border(
-            bottom: (currentZoneItemIdx < totalZoneItems - 1)
+          final repereBorder = pw.Border(
+            bottom: (currentRepereItemIdx == repereCount - 1 || currentZoneItemIdx == totalZoneItems - 1)
                 ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
                 : pw.BorderSide.none,
+          );
+
+          final itemBorder = const pw.Border(
+            bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5),
           );
 
           final rawSource = item.source.trim();
@@ -8152,7 +8204,10 @@ class PdfReportService {
               children: [
                 // Cellule 0 : Zone (fond blanc permanent, centré sur la ligne médiane de la Zone)
                 pw.Container(
-                  decoration: const pw.BoxDecoration(color: PdfColors.white),
+                  decoration: pw.BoxDecoration(
+                    color: PdfColors.white,
+                    border: zoneBorder,
+                  ),
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   alignment: pw.Alignment.center,
                   child: (currentZoneItemIdx == zoneMidIndex && zoneGroup.zoneName.isNotEmpty)
@@ -8412,22 +8467,29 @@ class PdfReportService {
           final isEven = idx % 2 == 0;
           final bg = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
 
-          final repereBorder = pw.Border(
-            bottom: (currentRepereItemIdx == repereCount - 1 && !isLastRepereInZone)
+          final zoneBorder = pw.Border(
+            bottom: (currentZoneItemIdx == totalZoneItems - 1)
                 ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
                 : pw.BorderSide.none,
           );
 
-          final itemBorder = pw.Border(
-            bottom: (currentZoneItemIdx < totalZoneItems - 1)
+          final repereBorder = pw.Border(
+            bottom: (currentRepereItemIdx == repereCount - 1 || currentZoneItemIdx == totalZoneItems - 1)
                 ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
                 : pw.BorderSide.none,
+          );
+
+          final itemBorder = const pw.Border(
+            bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5),
           );
 
           final rowCells = <pw.Widget>[
             // Cellule 0 : Zone (fond blanc permanent, centré sur la ligne médiane de la Zone)
             pw.Container(
-              decoration: const pw.BoxDecoration(color: PdfColors.white),
+              decoration: pw.BoxDecoration(
+                color: PdfColors.white,
+                border: zoneBorder,
+              ),
               padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
               alignment: pw.Alignment.center,
               child: (currentZoneItemIdx == zoneMidIndex && zoneGroup.zoneName.isNotEmpty)

@@ -11,7 +11,7 @@ void main() {
   });
 
   group('Évolution Synthèse des Équipements — Validation des Nouvelles Règles MT/BT', () {
-    test('TEST 1 — MT pur : Cellules et Transformateurs apparaissent uniquement en MT', () {
+    test('TEST 1 — MT pur : Cellules et Transformateurs apparaissent uniquement en MT avec Nom réel et Type générique', () {
       final audit = AuditInstallationsElectriques(
         missionId: 'm_mt_pur',
         updatedAt: DateTime.now(),
@@ -53,10 +53,17 @@ void main() {
       final btItems = PdfReportService.getEquipementsBTForTesting(audit, null);
 
       expect(mtItems.length, equals(2));
+      // Équipement = Nom réel enregistré
       expect(mtItems[0].nom, equals('Cellule Arrivée'));
       expect(mtItems[0].localName, equals('LOCAL TRANSFO 01'));
+      // Type = Catégorie générique 'Cellule'
+      expect(mtItems[0].type, equals('Cellule'));
+
+      // Équipement = Nom réel enregistré
       expect(mtItems[1].nom, equals('Transfo T1'));
       expect(mtItems[1].localName, equals('LOCAL TRANSFO 01'));
+      // Type = Catégorie générique 'Transformateur'
+      expect(mtItems[1].type, equals('Transformateur'));
 
       expect(btItems.isEmpty, isTrue);
     });
@@ -150,9 +157,11 @@ void main() {
       // MT : Cellule et Transformateur
       expect(mtItems.length, equals(2));
       expect(mtItems[0].nom, equals('Cellule MT'));
+      expect(mtItems[0].type, equals('Cellule'));
       expect(mtItems[0].localName, equals('LOCAL MT 01'));
       expect(mtItems[0].zoneName, equals('Poste Électrique'));
       expect(mtItems[1].nom, equals('Transformateur 1'));
+      expect(mtItems[1].type, equals('Transformateur'));
       expect(mtItems[1].localName, equals('LOCAL MT 01'));
       expect(mtItems[1].zoneName, equals('Poste Électrique'));
 
