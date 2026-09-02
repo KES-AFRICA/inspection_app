@@ -482,9 +482,10 @@ class PdfReportService {
     int pageOffset = 0,
     int? overrideTotalPages,
     bool showWatermark = true,
+    PdfPageFormat pageFormat = PdfPageFormat.a4,
   }) {
     return pw.PageTheme(
-      pageFormat: PdfPageFormat.a4,
+      pageFormat: pageFormat,
       theme: pw.ThemeData.withFont(base: _fontRegular, bold: _fontBold),
       margin: pw.EdgeInsets.only(
         left: kLeftMargin,
@@ -6882,12 +6883,31 @@ class PdfReportService {
       ),
     );
 
-    String regimeAffichage = safeDesc.regimeNeutre ?? 'Non renseigné';
-    if (safeDesc.regimeNeutre == 'TN' && safeDesc.regimeNeutreDetail != null) {
-      regimeAffichage = 'TN (TN-${safeDesc.regimeNeutreDetail})';
+    final String rawRegime = safeDesc.regimeNeutre?.trim() ?? '';
+    if (rawRegime.isEmpty ||
+        rawRegime.toLowerCase() == 'non renseigné' ||
+        rawRegime.toLowerCase() == 'absent') {
+      widgets.add(_bodyText('- absent'));
+    } else {
+      final items = rawRegime
+          .split(RegExp(r'[,/;\n]+'))
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toList();
+      if (items.isEmpty) {
+        widgets.add(_bodyText('- absent'));
+      } else {
+        for (final item in items) {
+          String displayItem = item;
+          if (item == 'TN' &&
+              safeDesc.regimeNeutreDetail != null &&
+              safeDesc.regimeNeutreDetail!.isNotEmpty) {
+            displayItem = 'TN (TN-${safeDesc.regimeNeutreDetail})';
+          }
+          widgets.add(_bodyText('- $displayItem'));
+        }
+      }
     }
-
-    widgets.add(_bodyText('- $regimeAffichage'));
     widgets.add(pw.SizedBox(height: 5));
 
     widgets.add(
@@ -6912,9 +6932,9 @@ class PdfReportService {
         child: _subTitle('${descBodyIdx++}. Eclairage de sécurité'),
       ),
     );
-    widgets.add(
-      _bodyText('- ${safeDesc.eclairageSecurite ?? 'Non renseigné'}'),
-    );
+    final String rawEclairage = safeDesc.eclairageSecurite?.trim() ?? '';
+    final String eclairageDisplay = (rawEclairage.isEmpty || rawEclairage.toLowerCase() == 'non renseigné' || rawEclairage.toLowerCase() == 'absent') ? 'absent' : rawEclairage;
+    widgets.add(_bodyText('- $eclairageDisplay'));
     widgets.add(pw.SizedBox(height: 5));
 
     widgets.add(
@@ -6927,7 +6947,9 @@ class PdfReportService {
         ),
       ),
     );
-    widgets.add(_bodyText(safeDesc.modificationsInstallations ?? 'Sans objet'));
+    final String rawMods = safeDesc.modificationsInstallations?.trim() ?? '';
+    final String modsDisplay = (rawMods.isEmpty || rawMods.toLowerCase() == 'non renseigné' || rawMods.toLowerCase() == 'sans objet' || rawMods.toLowerCase() == 'absent') ? 'absent' : rawMods;
+    widgets.add(_bodyText(modsDisplay));
     widgets.add(pw.SizedBox(height: 5));
 
     widgets.add(
@@ -6940,7 +6962,9 @@ class PdfReportService {
         ),
       ),
     );
-    widgets.add(_bodyText('- ${safeDesc.noteCalcul ?? 'Non transmis'}'));
+    final String rawNote = safeDesc.noteCalcul?.trim() ?? '';
+    final String noteDisplay = (rawNote.isEmpty || rawNote.toLowerCase() == 'non renseigné' || rawNote.toLowerCase() == 'non transmis' || rawNote.toLowerCase() == 'absent') ? 'absent' : rawNote;
+    widgets.add(_bodyText('- $noteDisplay'));
     widgets.add(pw.SizedBox(height: 5));
 
     widgets.add(
@@ -6976,7 +7000,9 @@ class PdfReportService {
         child: _subTitle('${descBodyIdx++}. Registre de sécurité'),
       ),
     );
-    widgets.add(_bodyText('- ${safeDesc.registreSecurite ?? 'Non transmis'}'));
+    final String rawReg = safeDesc.registreSecurite?.trim() ?? '';
+    final String regDisplay = (rawReg.isEmpty || rawReg.toLowerCase() == 'non renseigné' || rawReg.toLowerCase() == 'non transmis' || rawReg.toLowerCase() == 'absent') ? 'absent' : rawReg;
+    widgets.add(_bodyText('- $regDisplay'));
     widgets.add(pw.SizedBox(height: 5));
 
     widgets.add(
@@ -7425,8 +7451,9 @@ class PdfReportService {
       'CAPACITE': 'L',
     };
     if (units.containsKey(fieldKey)) return units[fieldKey]!;
-    if (units.containsKey(fieldKey.toUpperCase()))
+    if (units.containsKey(fieldKey.toUpperCase())) {
       return units[fieldKey.toUpperCase()]!;
+    }
     final norm = InstallationFieldsRegistry.normalizeKey(fieldKey);
     for (var entry in units.entries) {
       if (InstallationFieldsRegistry.normalizeKey(entry.key) == norm) {
@@ -11940,7 +11967,7 @@ class PdfReportService {
                   val = 'IT';
                 } else {
                   final raw = data[key]?.trim();
-                  val = (raw != null && raw.isNotEmpty) ? raw : 'Non renseigné';
+                  val = (raw != null && raw.isNotEmpty && raw.toLowerCase() != 'non renseigné') ? raw : 'absent';
                 }
                 return _cell(val, isHeader: false, centered: true);
               }),
@@ -17706,9 +17733,13 @@ class PdfReportService {
     );
   }
 
-  static pw.Widget _subTitle(String title) {
+  static pw.Widget _subTitle(
+    String title, {
+    double topPadding = 4,
+    double bottomPadding = 2,
+  }) {
     return pw.Padding(
-      padding: const pw.EdgeInsets.only(top: 10, bottom: 5),
+      padding: pw.EdgeInsets.only(top: topPadding, bottom: bottomPadding),
       child: pw.Text(
         _normalizeText(title),
         style: pw.TextStyle(
@@ -18875,11 +18906,12 @@ class PdfReportService {
     int currentOffset = subChunk1_1_Pages;
 
     // ── Sub-chunk 1.2 : Objet, Périmètre & Mesures de sécurité ──
-    if (saveFilesToDisk)
+    if (saveFilesToDisk) {
       onProgress?.call(
         0.18,
         'Génération du périmètre et des mesures de sécurité...',
       );
+    }
     final pdfP1_2 = pw.Document(
       title: 'Périmètre & Sécurité - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
@@ -18958,31 +18990,31 @@ class PdfReportService {
             offset: currentOffset,
             child: _sectionBox('RAPPEL DES RESPONSABILITÉS DE L\'EMPLOYEUR'),
           ),
-          pw.SizedBox(height: 8),
+          pw.SizedBox(height: 4),
           _bodyText(
             'KES INSPECTIONS AND PROJECTS a le plaisir de vous transmettre le présent rapport de vérification de vos installations électriques, établi à la suite des constats réalisés sur site.\n'
             'Ce document présente les observations effectuées par le vérificateur à partir des éléments et moyens mis à sa disposition.\n'
             'Il identifie les points de non-conformité constatés au regard des exigences réglementaires, et formule, le cas échéant, les recommandations techniques nécessaires à leur mise en conformité.',
           ),
-          pw.SizedBox(height: 5),
+          pw.SizedBox(height: 2),
           PageTracker(
             key: 'rappel_accompagnement',
             registry: trackedPages,
             offset: currentOffset,
-            child: _subTitle('1. Responsabilité et accompagnement'),
+            child: _subTitle('1. Responsabilité et accompagnement', topPadding: 4, bottomPadding: 2),
           ),
           _bodyText(
-            'Dans le cadre de la mission, il appartient à l\'employeur de désigner une personne qualifiée et informée des installations, chargée d\'accompagner le vérificateur durant l\'intervention.\n'
-            'Cette personne doit pouvoir faciliter l\'accès à l\'ensemble des locaux, appareillages et équipements à contrôler.\n\n'
-            'L\'employeur reste responsable du bon fonctionnement, de la sécurité et de la disponibilité des installations tout au long de la vérification.\n'
+            'Dans le cadre de la mission, il appartient à l\'employeur de désigner une personne qualifiée et informée des installations, chargée d\'accompagner le vérificateur durant l\'intervention. '
+            'Cette personne doit pouvoir faciliter l\'accès à l\'ensemble des locaux, appareillages et équipements à contrôler.\n'
+            'L\'employeur reste responsable du bon fonctionnement, de la sécurité et de la disponibilité des installations tout au long de la vérification. '
             'Les informations et documents techniques fournis sous sa responsabilité doivent permettre la réalisation des contrôles dans de bonnes conditions.',
           ),
-          pw.SizedBox(height: 5),
+          pw.SizedBox(height: 2),
           PageTracker(
             key: 'rappel_conditions',
             registry: trackedPages,
             offset: currentOffset,
-            child: _subTitle('2. Conditions de réalisation'),
+            child: _subTitle('2. Conditions de réalisation', topPadding: 4, bottomPadding: 2),
           ),
           _bodyText(
             'Afin d\'assurer le bon déroulement des opérations, l\'employeur doit\u00a0:',
@@ -18996,30 +19028,32 @@ class PdfReportService {
           _bulletItem(
             'Garantir au vérificateur l\'accès à l\'ensemble des équipements à contrôler, sans risque de chute ou d\'incident.',
           ),
-          pw.SizedBox(height: 5),
+          pw.SizedBox(height: 2),
           _bodyText(
             'Si certaines vérifications n\'ont pu être effectuées (impossibilité d\'accès, absence d\'agents habilités, contraintes d\'exploitation, documentation manquante, etc.), '
-            'KES INSPECTIONS AND PROJECTS en mentionnera la cause dans le rapport.\n\n'
+            'KES INSPECTIONS AND PROJECTS en mentionnera la cause dans le rapport.\n'
             'Dans le cas des installations de moyenne ou haute tension, la mise hors tension et les manœuvres associées relèvent exclusivement de la responsabilité de l\'employeur ou de son représentant habilité.',
           ),
-          pw.SizedBox(height: 5),
+          pw.SizedBox(height: 2),
           PageTracker(
             key: 'rappel_complementaires',
             registry: trackedPages,
             offset: currentOffset,
-            child: _subTitle('3. Vérifications complémentaires'),
+            child: _subTitle('3. Vérifications complémentaires', topPadding: 4, bottomPadding: 2),
           ),
           _bodyText(
             'Lorsque des éléments du poste ou de l\'installation n\'ont pu être contrôlés lors de la visite initiale, une intervention complémentaire pourra être programmée à la demande de l\'employeur.\n'
             'Cette mission additionnelle fera alors l\'objet d\'une planification et d\'un rapport spécifique.',
           ),
-          pw.SizedBox(height: 5),
+          pw.SizedBox(height: 2),
           PageTracker(
             key: 'rappel_maintenance',
             registry: trackedPages,
             offset: currentOffset,
             child: _subTitle(
               '4. Surveillance et maintenance des installations électriques',
+              topPadding: 4,
+              bottomPadding: 2,
             ),
           ),
           _bodyText(
@@ -19027,13 +19061,15 @@ class PdfReportService {
             'le chef d\'établissement doit mettre en place une organisation pour les opérations de surveillance et la maintenance des installations électriques. '
             'C\'est dans le cadre de ces opérations que les dispositions doivent être prises afin de remédier aux défectuosités constatées pendant la vérification ou celles qui peuvent se manifester après la vérification.',
           ),
-          pw.SizedBox(height: 5),
+          pw.SizedBox(height: 2),
           PageTracker(
             key: 'rappel_formation',
             registry: trackedPages,
             offset: currentOffset,
             child: _subTitle(
               '5. Formation du personnel intervenant sur les installations et à proximité',
+              topPadding: 4,
+              bottomPadding: 2,
             ),
           ),
           _bodyText(
@@ -19254,6 +19290,7 @@ class PdfReportService {
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
+          pageFormat: PdfPageFormat.a4.landscape,
         ),
         header: (ctx) => _buildPageHeaderWidget(
           nomClient: mission.nomClient,
