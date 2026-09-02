@@ -401,7 +401,7 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
     
     for (var point in coffret.pointsVerification) {
       if (point.conformite.isEmpty) return false;
-      if (point.conformite == 'non') {
+      if (point.normalizedConformite == 'non') {
         if (point.observation == null || point.observation!.trim().isEmpty) return false;
       }
     }

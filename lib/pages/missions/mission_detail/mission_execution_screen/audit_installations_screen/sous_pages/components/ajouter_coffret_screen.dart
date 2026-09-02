@@ -4466,10 +4466,11 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         target.verificationThermographie = newCoffret.verificationThermographie;
         target.presenceDefautThermo = newCoffret.presenceDefautThermo;
         target.indiceIpIk = newCoffret.indiceIpIk;
-        target.departures = newCoffret.departures;
-        target.terminalCircuits = newCoffret.terminalCircuits;
+        target.departures = (newCoffret.departures?.isNotEmpty == true || target.departures == null) ? newCoffret.departures : target.departures;
+        target.terminalCircuits = (newCoffret.terminalCircuits?.isNotEmpty == true || target.terminalCircuits == null) ? newCoffret.terminalCircuits : target.terminalCircuits;
         target.sourceEquipementId = newCoffret.sourceEquipementId;
         target.sourceNomComplet = newCoffret.sourceNomComplet;
+        target.sourceDepartId = newCoffret.sourceDepartId;
         target.alimentations = newCoffret.alimentations;
         target.protectionTete = newCoffret.protectionTete;
         target.pointsVerification = newCoffret.pointsVerification;

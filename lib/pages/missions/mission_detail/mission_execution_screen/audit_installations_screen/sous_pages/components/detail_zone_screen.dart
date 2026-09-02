@@ -1672,13 +1672,13 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     bool isMoyenneTension,
   ) {
     final pointsConformes = coffret.pointsVerification
-        .where((p) => p.conformite == 'oui')
+        .where((p) => p.normalizedConformite == 'oui')
         .length;
     final pointsNon = coffret.pointsVerification
-        .where((p) => p.conformite == 'non')
+        .where((p) => p.normalizedConformite == 'non')
         .length;
     final totalPoints = coffret.pointsVerification
-        .where((p) => p.conformite != 'na')
+        .where((p) => p.normalizedConformite != 'na' && p.normalizedConformite.isNotEmpty)
         .length;
     final pourcentage = totalPoints > 0
         ? (pointsConformes / totalPoints * 100).round()
