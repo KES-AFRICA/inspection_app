@@ -1784,12 +1784,14 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
   void _initControllers() {
     for (int i = 0; i < widget.alimentations.length; i++) {
       final a = widget.alimentations[i];
+      _controllers['alim${i}_nb_cables'] = TextEditingController(text: a.nombreCables ?? '');
       _controllers['alim${i}_pdc'] = TextEditingController(text: a.pdcKA);
       _controllers['alim${i}_icc3'] = TextEditingController(text: a.icc3Max ?? '');
       _controllers['alim${i}_calibre'] = TextEditingController(text: a.calibre);
       _controllers['alim${i}_source'] = TextEditingController(text: a.source);
     }
     if (widget.protectionTete != null) {
+      _controllers['prot_nb_cables'] = TextEditingController(text: widget.protectionTete!.nombreCables ?? '');
       _controllers['prot_pdc'] = TextEditingController(text: widget.protectionTete!.pdcKA);
       _controllers['prot_icc3'] = TextEditingController(text: widget.protectionTete!.icc3Max ?? '');
       _controllers['prot_calibre'] = TextEditingController(text: widget.protectionTete!.calibre);
@@ -1831,7 +1833,18 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           final key = isProtectionTete ? 'prot_calibre' : 'alim${index}_calibre';
           if (_controllers.containsKey(key) && _controllers[key]!.text != value) _controllers[key]!.text = value;
           break;
-        case 'sectionCable': a.sectionCable = value; break;
+        case 'nombreCables':
+          a.nombreCables = value.trim().isEmpty ? null : value.trim();
+          final key = isProtectionTete ? 'prot_nb_cables' : 'alim${index}_nb_cables';
+          if (_controllers.containsKey(key) && _controllers[key]!.text != value) _controllers[key]!.text = value;
+          break;
+        case 'sectionCable':
+        case 'sectionCablePhase':
+          a.sectionCable = value;
+          break;
+        case 'sectionCableNeutre':
+          a.sectionCableNeutre = value;
+          break;
         case 'source':
           a.source = value;
           final key = isProtectionTete ? 'prot_source' : 'alim${index}_source';
@@ -1860,7 +1873,14 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           case 'pdcKA': widget.protectionTete!.pdcKA = value; break;
           case 'icc3Max': widget.protectionTete!.icc3Max = value; break;
           case 'calibre': widget.protectionTete!.calibre = value; break;
-          case 'sectionCable': widget.protectionTete!.sectionCable = value; break;
+          case 'nombreCables':
+            widget.protectionTete!.nombreCables = value.trim().isEmpty ? null : value.trim();
+            final key = 'prot_nb_cables';
+            if (_controllers.containsKey(key) && _controllers[key]!.text != value) _controllers[key]!.text = value;
+            break;
+          case 'sectionCable':
+          case 'sectionCablePhase': widget.protectionTete!.sectionCable = value; break;
+          case 'sectionCableNeutre': widget.protectionTete!.sectionCableNeutre = value; break;
           case 'source': widget.protectionTete!.source = value; break;
           case 'sourceKnown': widget.protectionTete!.sourceKnown = value; break;
           case 'marqueDisjoncteur': widget.protectionTete!.marqueDisjoncteur = value; break;
