@@ -7655,11 +7655,6 @@ class PdfReportService {
     return false;
   }
 
-  @visibleForTesting
-  static List<_PdfEquipementItem> getEquipementsBTForTesting(
-    AuditInstallationsElectriques? audit,
-    DescriptionInstallations? desc,
-  ) => _collectEquipementsBT(audit, desc);
 
   static List<_PdfEquipementItem> _collectEquipementsMT(
     AuditInstallationsElectriques? audit,
@@ -7701,58 +7696,100 @@ class PdfReportService {
       }
     }
 
-    void processLocal(dynamic local, {String zoneName = ''}) {
-      final locName = local.nom != null ? local.nom.toString().trim() : '';
-      if (local.coffrets != null) {
-        for (final coffret in local.coffrets) {
-          final normType = _normalizeEquipementType(coffret.type, coffret.nom);
-          if (normType != null) {
-            final rep = (coffret.repere != null && coffret.repere!.trim().isNotEmpty)
-                ? coffret.repere!.trim()
-                : '';
-            final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : (rep.isNotEmpty ? rep : normType);
+    void processCellulesAndTransfos(
+      List<Cellule> cellules,
+      List<TransformateurMTBT> transfos, {
+      String zoneName = '',
+      String localName = '',
+    }) {
+      for (final c in cellules) {
+        final rep = c.getEffectiveRepere(localName);
+        final nom = c.nom?.trim().isNotEmpty == true
+            ? c.nom!.trim()
+            : (c.numerotation.trim().isNotEmpty
+                ? c.numerotation.trim()
+                : (rep.isNotEmpty ? rep : 'Cellule'));
+        final type = (c.fonction.trim().isNotEmpty)
+            ? c.fonction.trim()
+            : (c.type.trim().isNotEmpty ? c.type.trim() : 'Cellule');
+        addEquipement(
+          refObj: c,
+          zoneName: zoneName,
+          localName: localName,
+          repere: rep,
+          nom: nom,
+          type: type,
+          accessible: true,
+        );
+      }
 
-            addEquipement(
-              refObj: coffret,
-              zoneName: zoneName,
-              localName: locName,
-              repere: rep,
-              nom: nom,
-              type: normType,
-              accessible: (coffret as dynamic).accessible != false,
-            );
-          }
-        }
+      for (final t in transfos) {
+        final rep = t.getEffectiveRepere(localName);
+        final nom = t.nom?.trim().isNotEmpty == true
+            ? t.nom!.trim()
+            : (t.repere?.trim().isNotEmpty == true
+                ? t.repere!.trim()
+                : (rep.isNotEmpty ? rep : 'Transformateur'));
+        final type = (t.typeTransformateur.trim().isNotEmpty)
+            ? t.typeTransformateur.trim()
+            : 'Transformateur';
+        addEquipement(
+          refObj: t,
+          zoneName: zoneName,
+          localName: localName,
+          repere: rep,
+          nom: nom,
+          type: type,
+          accessible: true,
+        );
       }
     }
 
-    for (final local in audit.moyenneTensionLocaux) {
-      processLocal(local, zoneName: '');
-    }
-
-    for (final zone in audit.moyenneTensionZones) {
-      final zName = zone.nom.trim();
-      for (final coffret in zone.coffrets) {
+    void processCoffretsMT(
+      List<CoffretArmoire> coffrets, {
+      String zoneName = '',
+      String localName = '',
+    }) {
+      for (final coffret in coffrets) {
         final normType = _normalizeEquipementType(coffret.type, coffret.nom);
-        if (normType != null) {
+        // Explicitement : Seuls les coffrets de type Cellule ou Transformateur entrent en MT
+        if (normType != null && (normType == 'Cellule' || normType == 'Transformateur')) {
           final rep = (coffret.repere != null && coffret.repere!.trim().isNotEmpty)
               ? coffret.repere!.trim()
               : '';
-          final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : (rep.isNotEmpty ? rep : normType);
+          final nom = coffret.nom.trim().isNotEmpty
+              ? coffret.nom.trim()
+              : (rep.isNotEmpty ? rep : normType);
 
           addEquipement(
             refObj: coffret,
-            zoneName: zName,
-            localName: '',
+            zoneName: zoneName,
+            localName: localName,
             repere: rep,
             nom: nom,
             type: normType,
-            accessible: (coffret as dynamic).accessible != false,
+            accessible: coffret.accessible,
           );
         }
       }
+    }
+
+    // 1. Moyenne tension locaux directs (hors zone)
+    for (final local in audit.moyenneTensionLocaux) {
+      final locName = local.nom.trim();
+      processCellulesAndTransfos(local.cellules, local.transformateurs, zoneName: '', localName: locName);
+      processCoffretsMT(local.coffrets, zoneName: '', localName: locName);
+    }
+
+    // 2. Moyenne tension zones
+    for (final zone in audit.moyenneTensionZones) {
+      final zName = zone.nom.trim();
+      processCoffretsMT(zone.coffrets, zoneName: zName, localName: '');
+
       for (final local in zone.locaux) {
-        processLocal(local, zoneName: zName);
+        final locName = local.nom.trim();
+        processCellulesAndTransfos(local.cellules, local.transformateurs, zoneName: zName, localName: locName);
+        processCoffretsMT(local.coffrets, zoneName: zName, localName: locName);
       }
     }
 
@@ -7799,50 +7836,61 @@ class PdfReportService {
       }
     }
 
+    void processCoffretsBT(
+      List<CoffretArmoire> coffrets, {
+      String zoneName = '',
+      String localName = '',
+    }) {
+      for (final coffret in coffrets) {
+        final normType = _normalizeEquipementType(coffret.type, coffret.nom);
+        // Tout coffret de type BT (TGBT, Inverseur, Armoire, Coffret) est collecté dans la BT
+        if (normType != null && normType != 'Cellule' && normType != 'Transformateur') {
+          final rep = (coffret.repere != null && coffret.repere!.trim().isNotEmpty)
+              ? coffret.repere!.trim()
+              : '';
+          final nom = coffret.nom.trim().isNotEmpty
+              ? coffret.nom.trim()
+              : (rep.isNotEmpty ? rep : normType);
+
+          addEquipement(
+            refObj: coffret,
+            zoneName: zoneName,
+            localName: localName,
+            repere: rep,
+            nom: nom,
+            type: normType,
+            accessible: coffret.accessible,
+            isMT: false,
+          );
+        }
+      }
+    }
+
     if (audit != null) {
+      // 1. Basse tension zones
       for (final zone in audit.basseTensionZones) {
         final zName = zone.nom.trim();
-        for (final coffret in zone.coffretsDirects) {
-          final normType = _normalizeEquipementType(coffret.type, coffret.nom);
-          if (normType != null) {
-            final rep = (coffret.repere != null && coffret.repere!.trim().isNotEmpty)
-                ? coffret.repere!.trim()
-                : '';
-            final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : (rep.isNotEmpty ? rep : normType);
-
-            addEquipement(
-              refObj: coffret,
-              zoneName: zName,
-              localName: '',
-              repere: rep,
-              nom: nom,
-              type: normType,
-              accessible: (coffret as dynamic).accessible != false,
-            );
-          }
-        }
+        processCoffretsBT(zone.coffretsDirects, zoneName: zName, localName: '');
 
         for (final local in zone.locaux) {
           final locName = local.nom.trim();
-          for (final coffret in local.coffrets) {
-            final normType = _normalizeEquipementType(coffret.type, coffret.nom);
-            if (normType != null) {
-              final rep = (coffret.repere != null && coffret.repere!.trim().isNotEmpty)
-                  ? coffret.repere!.trim()
-                  : '';
-              final nom = coffret.nom.trim().isNotEmpty ? coffret.nom.trim() : (rep.isNotEmpty ? rep : normType);
+          processCoffretsBT(local.coffrets, zoneName: zName, localName: locName);
+        }
+      }
 
-              addEquipement(
-                refObj: coffret,
-                zoneName: zName,
-                localName: locName,
-                repere: rep,
-                nom: nom,
-                type: normType,
-                accessible: (coffret as dynamic).accessible != false,
-              );
-            }
-          }
+      // 2. Moyenne tension locaux & zones (Règle Métier : Équipements BT installés dans des locaux MT)
+      for (final local in audit.moyenneTensionLocaux) {
+        final locName = local.nom.trim();
+        processCoffretsBT(local.coffrets, zoneName: '', localName: locName);
+      }
+
+      for (final zone in audit.moyenneTensionZones) {
+        final zName = zone.nom.trim();
+        processCoffretsBT(zone.coffrets, zoneName: zName, localName: '');
+
+        for (final local in zone.locaux) {
+          final locName = local.nom.trim();
+          processCoffretsBT(local.coffrets, zoneName: zName, localName: locName);
         }
       }
     }
@@ -8214,6 +8262,7 @@ class PdfReportService {
     List<_PdfEquipementItem> items, {
     int startNumber = 1,
     bool showTableHeader = true,
+    bool isMT = false,
   }) {
     if (items.isEmpty) {
       return pw.Padding(
@@ -8225,29 +8274,49 @@ class PdfReportService {
       );
     }
 
-    final headers = [
-      'Zone',
-      'Repère',
-      'N°',
-      'Équipement',
-      'Type',
-      'Vérifié',
-      'Présence du parafoudre',
-      'Vérification thermo',
-      'Observation',
-    ];
+    final headers = isMT
+        ? [
+            'Zone',
+            'Repère',
+            'N°',
+            'Équipement',
+            'Type',
+            'Vérifié',
+            'Observation',
+          ]
+        : [
+            'Zone',
+            'Repère',
+            'N°',
+            'Équipement',
+            'Type',
+            'Vérifié',
+            'Présence du parafoudre',
+            'Vérification thermo',
+            'Observation',
+          ];
 
-    final columnWidths = const {
-      0: pw.FlexColumnWidth(1.2), // Zone
-      1: pw.FlexColumnWidth(1.5), // Repère
-      2: pw.FixedColumnWidth(34), // N°
-      3: pw.FlexColumnWidth(2.2), // Équipement (Nom)
-      4: pw.FlexColumnWidth(1.5), // Type
-      5: pw.FlexColumnWidth(1.0), // Vérifié
-      6: pw.FlexColumnWidth(1.3), // Présence du parafoudre
-      7: pw.FlexColumnWidth(1.3), // Vérification thermo
-      8: pw.FlexColumnWidth(1.3), // Observation
-    };
+    final columnWidths = isMT
+        ? const {
+            0: pw.FlexColumnWidth(1.3), // Zone
+            1: pw.FlexColumnWidth(1.6), // Repère
+            2: pw.FixedColumnWidth(34), // N°
+            3: pw.FlexColumnWidth(2.5), // Équipement (Nom)
+            4: pw.FlexColumnWidth(1.6), // Type
+            5: pw.FlexColumnWidth(1.1), // Vérifié
+            6: pw.FlexColumnWidth(1.3), // Observation
+          }
+        : const {
+            0: pw.FlexColumnWidth(1.2), // Zone
+            1: pw.FlexColumnWidth(1.5), // Repère
+            2: pw.FixedColumnWidth(34), // N°
+            3: pw.FlexColumnWidth(2.2), // Équipement (Nom)
+            4: pw.FlexColumnWidth(1.5), // Type
+            5: pw.FlexColumnWidth(1.0), // Vérifié
+            6: pw.FlexColumnWidth(1.3), // Présence du parafoudre
+            7: pw.FlexColumnWidth(1.3), // Vérification thermo
+            8: pw.FlexColumnWidth(1.3), // Observation
+          };
 
     final zoneGroups = <_PdfEquipementZoneGroup>[];
     for (final eq in items) {
@@ -8355,159 +8424,169 @@ class PdfReportService {
                 : pw.BorderSide.none,
           );
 
+          final rowCells = <pw.Widget>[
+            // Cellule 0 : Zone (fond blanc permanent, centré sur la ligne médiane de la Zone)
+            pw.Container(
+              decoration: const pw.BoxDecoration(color: PdfColors.white),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              alignment: pw.Alignment.center,
+              child: (currentZoneItemIdx == zoneMidIndex && zoneGroup.zoneName.isNotEmpty)
+                  ? pw.Text(
+                      zoneGroup.zoneName,
+                      style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                      textAlign: pw.TextAlign.center,
+                    )
+                  : pw.SizedBox(),
+            ),
+
+            // Cellule 1 : Repère (fond blanc permanent, centré sur la ligne médiane du Repère)
+            pw.Container(
+              decoration: pw.BoxDecoration(
+                color: PdfColors.white,
+                border: repereBorder,
+              ),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              alignment: pw.Alignment.center,
+              child: (currentRepereItemIdx == repereMidIndex && repereGroup.localName.isNotEmpty)
+                  ? pw.Text(
+                      repereGroup.localName,
+                      style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                      textAlign: pw.TextAlign.center,
+                    )
+                  : pw.SizedBox(),
+            ),
+
+            // Cellule 2 : N° de l'équipement
+            pw.Container(
+              decoration: pw.BoxDecoration(border: itemBorder),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+              alignment: pw.Alignment.center,
+              child: pw.Text(
+                '$currentEqNum',
+                style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
+
+            // Cellule 3 : Équipement (Nom)
+            pw.Container(
+              decoration: pw.BoxDecoration(border: itemBorder),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              alignment: pw.Alignment.center,
+              child: pw.Text(
+                eq.nom.isNotEmpty ? eq.nom : '-',
+                style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
+
+            // Cellule 4 : Type
+            pw.Container(
+              decoration: pw.BoxDecoration(border: itemBorder),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              alignment: pw.Alignment.center,
+              child: pw.Text(
+                eq.type.isNotEmpty ? eq.type : 'Équipement',
+                style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
+
+            // Cellule 5 : Vérifié
+            pw.Container(
+              decoration: pw.BoxDecoration(
+                color: eq.accessible ? conformeColor : nonConformeColor,
+                border: itemBorder,
+              ),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              alignment: pw.Alignment.center,
+              child: pw.Text(
+                eq.accessible ? 'Oui' : 'Non',
+                style: pw.TextStyle(
+                  font: _fontBold,
+                  fontSize: 8.5,
+                  color: PdfColors.black,
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
+          ];
+
+          if (!isMT) {
+            // Cellule 6 : Présence du parafoudre (BT uniquement)
+            rowCells.add(
+              pw.Container(
+                decoration: pw.BoxDecoration(
+                  color: eq.presenceParafoudre == 'Oui'
+                      ? conformeColor
+                      : (eq.presenceParafoudre == 'Non' ? nonConformeColor : bg),
+                  border: itemBorder,
+                ),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  eq.presenceParafoudre ?? '-',
+                  style: pw.TextStyle(
+                    font: eq.presenceParafoudre != null ? _fontBold : _fontRegular,
+                    fontSize: 8.5,
+                    color: PdfColors.black,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+            );
+
+            // Cellule 7 : Vérification thermo (BT uniquement)
+            rowCells.add(
+              pw.Container(
+                decoration: pw.BoxDecoration(
+                  color: eq.verificationThermo == 'Oui'
+                      ? conformeColor
+                      : (eq.verificationThermo == 'Non' ? nonConformeColor : bg),
+                  border: itemBorder,
+                ),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: pw.Text(
+                  eq.verificationThermo ?? '-',
+                  style: pw.TextStyle(
+                    font: eq.verificationThermo != null ? _fontBold : _fontRegular,
+                    fontSize: 8.5,
+                    color: PdfColors.black,
+                  ),
+                  textAlign: pw.TextAlign.center,
+                ),
+              ),
+            );
+          }
+
+          // Cellule Observation (Dernière cellule pour MT et BT)
+          rowCells.add(
+            pw.Container(
+              decoration: pw.BoxDecoration(
+                color: eq.hasObservation == 'Oui'
+                    ? nonConformeColor
+                    : (eq.hasObservation == 'Non' ? conformeColor : bg),
+                border: itemBorder,
+              ),
+              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+              alignment: pw.Alignment.center,
+              child: pw.Text(
+                eq.hasObservation,
+                style: pw.TextStyle(
+                  font: _fontBold,
+                  fontSize: 8.5,
+                  color: PdfColors.black,
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
+          );
+
           tableRows.add(
             pw.TableRow(
               decoration: pw.BoxDecoration(color: bg),
-              children: [
-                // Cellule 0 : Zone (fond blanc permanent, centré sur la ligne médiane de la Zone)
-                pw.Container(
-                  decoration: const pw.BoxDecoration(color: PdfColors.white),
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  alignment: pw.Alignment.center,
-                  child: (currentZoneItemIdx == zoneMidIndex && zoneGroup.zoneName.isNotEmpty)
-                      ? pw.Text(
-                          zoneGroup.zoneName,
-                          style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                          textAlign: pw.TextAlign.center,
-                        )
-                      : pw.SizedBox(),
-                ),
-
-                // Cellule 1 : Repère (fond blanc permanent, centré sur la ligne médiane du Repère)
-                pw.Container(
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.white,
-                    border: repereBorder,
-                  ),
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  alignment: pw.Alignment.center,
-                  child: (currentRepereItemIdx == repereMidIndex && repereGroup.localName.isNotEmpty)
-                      ? pw.Text(
-                          repereGroup.localName,
-                          style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                          textAlign: pw.TextAlign.center,
-                        )
-                      : pw.SizedBox(),
-                ),
-
-                // Cellule 2 : N° de l'équipement
-                pw.Container(
-                  decoration: pw.BoxDecoration(border: itemBorder),
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    '$currentEqNum',
-                    style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-
-                // Cellule 3 : Équipement (Nom)
-                pw.Container(
-                  decoration: pw.BoxDecoration(border: itemBorder),
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    eq.nom.isNotEmpty ? eq.nom : '-',
-                    style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-
-                // Cellule 4 : Type
-                pw.Container(
-                  decoration: pw.BoxDecoration(border: itemBorder),
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    eq.type.isNotEmpty ? eq.type : 'Équipement',
-                    style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-
-                // Cellule 5 : Vérifié
-                pw.Container(
-                  decoration: pw.BoxDecoration(
-                    color: eq.accessible ? conformeColor : nonConformeColor,
-                    border: itemBorder,
-                  ),
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    eq.accessible ? 'Oui' : 'Non',
-                    style: pw.TextStyle(
-                      font: _fontBold,
-                      fontSize: 8.5,
-                      color: PdfColors.black,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-
-                // Cellule 6 : Présence du parafoudre
-                pw.Container(
-                  decoration: pw.BoxDecoration(
-                    color: eq.presenceParafoudre == 'Oui'
-                        ? conformeColor
-                        : (eq.presenceParafoudre == 'Non' ? nonConformeColor : bg),
-                    border: itemBorder,
-                  ),
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    eq.presenceParafoudre ?? '-',
-                    style: pw.TextStyle(
-                      font: eq.presenceParafoudre != null ? _fontBold : _fontRegular,
-                      fontSize: 8.5,
-                      color: PdfColors.black,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-
-                // Cellule 7 : Vérification thermo
-                pw.Container(
-                  decoration: pw.BoxDecoration(
-                    color: eq.verificationThermo == 'Oui'
-                        ? conformeColor
-                        : (eq.verificationThermo == 'Non' ? nonConformeColor : bg),
-                    border: itemBorder,
-                  ),
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    eq.verificationThermo ?? '-',
-                    style: pw.TextStyle(
-                      font: eq.verificationThermo != null ? _fontBold : _fontRegular,
-                      fontSize: 8.5,
-                      color: PdfColors.black,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-
-                // Cellule 8 : Observation
-                pw.Container(
-                  decoration: pw.BoxDecoration(
-                    color: eq.hasObservation == 'Oui'
-                        ? nonConformeColor
-                        : (eq.hasObservation == 'Non' ? conformeColor : bg),
-                    border: itemBorder,
-                  ),
-                  padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  alignment: pw.Alignment.center,
-                  child: pw.Text(
-                    eq.hasObservation,
-                    style: pw.TextStyle(
-                      font: _fontBold,
-                      fontSize: 8.5,
-                      color: PdfColors.black,
-                    ),
-                    textAlign: pw.TextAlign.center,
-                  ),
-                ),
-              ],
+              children: rowCells,
             ),
           );
         }
@@ -8534,6 +8613,22 @@ class PdfReportService {
   }
 
   @visibleForTesting
+  static List<_PdfEquipementItem> getEquipementsBTForTesting(
+    AuditInstallationsElectriques? audit,
+    DescriptionInstallations? desc,
+  ) {
+    return _collectEquipementsBT(audit, desc);
+  }
+
+  @visibleForTesting
+  static pw.Widget buildEquipementsTableForTesting(
+    List<_PdfEquipementItem> items, {
+    bool isMT = false,
+  }) {
+    return _buildEquipementsTable(items, isMT: isMT);
+  }
+
+  @visibleForTesting
   static void initFontsForTesting() {
     try {
       _fontRegular = pw.Font.helvetica();
@@ -8548,10 +8643,6 @@ class PdfReportService {
     return _collectEquipementsMT(audit);
   }
 
-  @visibleForTesting
-  static pw.Widget buildEquipementsTableForTesting(List<_PdfEquipementItem> items) {
-    return _buildEquipementsTable(items);
-  }
 
   static List<pw.Widget> _buildListeRecapitulativeMulti(
     AuditInstallationsElectriques audit,
@@ -8859,7 +8950,7 @@ class PdfReportService {
             ),
           );
 
-          widgets.add(pw.SizedBox(height: 8));
+          widgets.add(pw.SizedBox(height: 3.5));
         }
       }
     }
@@ -17970,6 +18061,7 @@ class PdfReportService {
       required String sectionKey,
       required String sectionTitle,
       required String chunkPrefix,
+      bool isMT = false,
     }) async {
       if (items.isEmpty) return;
 
@@ -18013,6 +18105,7 @@ class PdfReportService {
                 batchItems,
                 startNumber: startIdx + 1,
                 showTableHeader: isFirstBatch,
+                isMT: isMT,
               ),
             ],
           ),
@@ -18037,6 +18130,7 @@ class PdfReportService {
       sectionKey: 'liste_recap_equipements_mt',
       sectionTitle: '1. Équipements moyenne tension',
       chunkPrefix: 'equipements_mt',
+      isMT: true,
     );
 
     // 3. Équipements BT (découpés par micro-lots de 60)
@@ -18046,6 +18140,7 @@ class PdfReportService {
       sectionKey: 'liste_recap_equipements_bt',
       sectionTitle: '2. Équipements basse tension',
       chunkPrefix: 'equipements_bt',
+      isMT: false,
     );
 
     // 4. Équipements aux sources d'alimentation non identifiées (découpés par micro-lots de 60)

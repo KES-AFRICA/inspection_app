@@ -11,9 +11,55 @@ void main() {
   });
 
   group('Synthèse récapitulative des équipements — Ordre des colonnes & Numérotation continue', () {
-    test('1. Ordre exact des 9 colonnes (ZONE | REPÈRE | N° | ÉQUIPEMENT | TYPE | VÉRIFIÉ | PRÉSENCE PARAFOUDRE | THERMO | OBSERVATION)', () {
+    test('1. Tableau MT (7 colonnes : ZONE | REPÈRE | N° | ÉQUIPEMENT | TYPE | VÉRIFIÉ | OBSERVATION)', () {
       final audit = AuditInstallationsElectriques(
-        missionId: 'mission_summary_test',
+        missionId: 'mission_summary_test_mt',
+        updatedAt: DateTime.now(),
+        moyenneTensionLocaux: [
+          MoyenneTensionLocal(
+            nom: 'Local MT 1',
+            type: 'Poste HT',
+            dispositionsConstructives: [],
+            conditionsExploitation: [],
+            cellules: [
+              Cellule(
+                fonction: 'Protection Transfo',
+                type: 'QM',
+                marqueModeleAnnee: 'Schneider',
+                tensionAssignee: '20kV',
+                pouvoirCoupure: '16kA',
+                numerotation: 'C1',
+                parafoudres: 'Non',
+                nom: 'Cellule 1',
+              ),
+            ],
+            transformateurs: [
+              TransformateurMTBT(
+                typeTransformateur: 'Sec',
+                marqueAnnee: 'ABB',
+                puissanceAssignee: '630kVA',
+                tensionPrimaireSecondaire: '20kV/400V',
+                relaisBuchholz: 'Non',
+                typeRefroidissement: 'AN',
+                regimeNeutre: 'TN-S',
+                nom: 'Transfo 1',
+              ),
+            ],
+          ),
+        ],
+      );
+
+      final equipementsMT = PdfReportService.collectEquipementsMTForTesting(audit);
+      expect(equipementsMT.length, equals(2));
+
+      final tableWidget = PdfReportService.buildEquipementsTableForTesting(equipementsMT, isMT: true);
+      expect(tableWidget, isNotNull);
+      expect(tableWidget, isA<pw.Column>());
+    });
+
+    test('2. Tableau BT (9 colonnes : ZONE | REPÈRE | N° | ÉQUIPEMENT | TYPE | VÉRIFIÉ | PRÉSENCE PARAFOUDRE | THERMO | OBSERVATION)', () {
+      final audit = AuditInstallationsElectriques(
+        missionId: 'mission_summary_test_bt',
         updatedAt: DateTime.now(),
         moyenneTensionLocaux: [
           MoyenneTensionLocal(
@@ -25,19 +71,19 @@ void main() {
               CoffretArmoire(
                 qrCode: 'QR1',
                 repere: 'REP-A',
-                nom: 'Armoire Principale MT',
+                nom: 'Armoire Principale BT',
                 type: 'ARMOIRE_ELECTRIQUE',
               ),
               CoffretArmoire(
                 qrCode: 'QR2',
                 repere: 'REP-A',
-                nom: 'Coffret Secondaire MT',
+                nom: 'Coffret Secondaire BT',
                 type: 'COFFRET_ELECTRIQUE',
               ),
               CoffretArmoire(
                 qrCode: 'QR3',
                 repere: 'REP-B',
-                nom: 'TGBT MT',
+                nom: 'TGBT BT',
                 type: 'TGBT',
               ),
             ],
@@ -45,13 +91,12 @@ void main() {
         ],
       );
 
-      final equipementsMT = PdfReportService.collectEquipementsMTForTesting(audit);
-      expect(equipementsMT.length, equals(3));
-      expect(equipementsMT[0].repere, 'REP-A');
-      expect(equipementsMT[1].repere, 'REP-A');
-      expect(equipementsMT[2].repere, 'REP-B');
+      final equipementsBT = PdfReportService.getEquipementsBTForTesting(audit, null);
+      expect(equipementsBT.length, equals(3));
+      expect(equipementsBT[0].localName, 'Local MT 1');
+      expect(equipementsBT[0].repere, 'REP-A');
 
-      final tableWidget = PdfReportService.buildEquipementsTableForTesting(equipementsMT);
+      final tableWidget = PdfReportService.buildEquipementsTableForTesting(equipementsBT, isMT: false);
       expect(tableWidget, isNotNull);
       expect(tableWidget, isA<pw.Column>());
     });
