@@ -485,7 +485,7 @@ class WordReportService {
     }
 
     void addPt(String loc, String equip, PointVerification p) {
-      if (p.conformite == 'non') {
+      if (p.normalizedConformite == 'non') {
         if (p.observations != null && p.observations!.isNotEmpty) {
           for (final obs in p.observations!) {
             list.add([
@@ -566,7 +566,7 @@ class WordReportService {
     }
 
     void addPt(String loc, String equip, PointVerification p) {
-      if (p.conformite == 'non') {
+      if (p.normalizedConformite == 'non') {
         if (p.observations != null && p.observations!.isNotEmpty) {
           for (final obs in p.observations!) {
             list.add([
@@ -948,10 +948,10 @@ class WordReportService {
         for (final p in coffret.pointsVerification)
           TableRow(cells: [
             TableCell.text(p.pointVerification),
-            TableCell.text(p.conformite,
-                backgroundColor: p.conformite == 'oui'
+            TableCell.text(p.normalizedConformite.toUpperCase(),
+                backgroundColor: p.normalizedConformite == 'oui'
                     ? _green
-                    : p.conformite == 'non'
+                    : p.normalizedConformite == 'non'
                         ? _red
                         : _orange),
             TableCell.text(

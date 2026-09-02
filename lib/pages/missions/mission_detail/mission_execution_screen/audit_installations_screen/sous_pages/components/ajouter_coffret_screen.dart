@@ -3628,11 +3628,68 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
 
   void _scheduleAutoSave() {
     if (!mounted) return;
-    if (widget.isEdition) return;
     _autoSaveTimer?.cancel();
-    _autoSaveTimer = Timer(const Duration(milliseconds: 1200), () {
-      if (mounted) _saveDraft();
+    _autoSaveTimer = Timer(const Duration(milliseconds: 600), () {
+      if (!mounted) return;
+      if (widget.isEdition && widget.coffret != null) {
+        _autoSaveEdition();
+      } else {
+        _saveDraft();
+      }
     });
+  }
+
+  Future<void> _autoSaveEdition() async {
+    if (!mounted || widget.coffret == null) return;
+    try {
+      final now = DateTime.now().toUtc();
+      final nouveauCoffret = CoffretArmoire(
+        id: widget.coffret?.equipmentId,
+        createdAt: widget.coffret?.createdAt ?? now,
+        updatedAt: now,
+        qrCode: _qrCodeController.text.trim(),
+        nom: _nomController.text.trim(),
+        type: _selectedType ?? '',
+        accessible: _accessible,
+        departPrisAvecProtection: _departPrisAvecProtection,
+        numeroEquipement: _numeroEquipementController.text.trim().isEmpty ? null : _numeroEquipementController.text.trim(),
+        repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
+        alimenteeParTransformateur: _alimenteeParTransformateur,
+        presenceCPI: _presenceCPI,
+        zoneAtex: _zoneAtex,
+        domaineTension: _domaineTension,
+        identificationArmoire: _identificationArmoire,
+        signalisationDanger: _signalisationDanger,
+        presenceSchema: _presenceSchema,
+        presenceParafoudre: _presenceParafoudre,
+        verificationThermographie: _verificationThermographie,
+        presenceDefautThermo: _presenceDefautThermo,
+        indiceIpIk: _indiceIpIkController.text.trim().isEmpty ? null : _indiceIpIkController.text.trim(),
+        departures: _departures,
+        terminalCircuits: _terminalCircuits,
+        sourceEquipementId: _sourceEquipementId,
+        sourceNomComplet: _sourceNomComplet,
+        sourceDepartId: _sourceDepartId,
+        alimentations: _alimentations,
+        protectionTete: _protectionTete,
+        pointsVerification: _pointsVerification,
+        observationsLibres: List.from(_observationsLibresCoffret),
+        photos: [..._coffretPhotosExterne, ..._coffretPhotosInterne],
+        photosExternes: List.from(_coffretPhotosExterne),
+        photosInternes: List.from(_coffretPhotosInterne),
+        observationsParafoudre: List.from(_observationsParafoudre),
+        statut: widget.coffret?.statut ?? 'incomplet',
+        currentStep: _currentStep,
+      );
+      await HiveService.updateCoffretById(
+        missionId: widget.mission.id,
+        equipmentId: widget.coffret!.equipmentId,
+        updatedCoffret: nouveauCoffret,
+        oldNom: widget.coffret!.nom,
+      );
+    } catch (e) {
+      if (kDebugMode) print('⚠️ [AUTO SAVE EDITION EXCEPTION] $e');
+    }
   }
 
   void _addParafoudreObservation() {
@@ -5421,13 +5478,9 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
   @override
   void initState() {
     super.initState();
-    // Par défaut, si des éléments existent, le dernier créé/édité est déplié
-    if (widget.departures.isNotEmpty) {
-      _expandedDepartId = widget.departures.last.id;
-    }
-    if (widget.terminalCircuits.isNotEmpty) {
-      _expandedCircuitId = widget.terminalCircuits.last.id;
-    }
+    // Par défaut, à l'ouverture du Slide 5, toutes les cartes sont fermées (collapsed)
+    _expandedDepartId = null;
+    _expandedCircuitId = null;
   }
 
   bool nextSubSlide() {

@@ -1174,8 +1174,8 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
                 style: TextStyle(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
-                  color: point.conformite == 'non' ? Colors.red : 
-                         point.conformite == 'oui' ? Colors.green : Colors.orange,
+                  color: point.normalizedConformite == 'non' ? Colors.red : 
+                         point.normalizedConformite == 'oui' ? Colors.green : Colors.orange,
                 ),
               ),
               SizedBox(height: 4),
@@ -1193,8 +1193,8 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(4),
                           border: Border.all(
-                            color: point.conformite == 'non' ? Colors.red.shade300 : 
-                                   point.conformite == 'oui' ? Colors.green.shade300 : Colors.orange.shade300,
+                            color: point.normalizedConformite == 'non' ? Colors.red.shade300 : 
+                                   point.normalizedConformite == 'oui' ? Colors.green.shade300 : Colors.orange.shade300,
                           ),
                         ),
                         child: ClipRRect(

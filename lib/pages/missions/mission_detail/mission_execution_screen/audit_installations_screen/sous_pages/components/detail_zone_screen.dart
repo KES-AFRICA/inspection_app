@@ -2172,8 +2172,8 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     if (coffret.photos.isEmpty) return false;
 
     for (var point in coffret.pointsVerification) {
-      if (point.conformite.isEmpty) return false;
-      if (point.conformite == 'non') {
+      if (point.normalizedConformite.isEmpty) return false;
+      if (point.normalizedConformite == 'non') {
         if (point.observation == null || point.observation!.trim().isEmpty)
           return false;
       }
