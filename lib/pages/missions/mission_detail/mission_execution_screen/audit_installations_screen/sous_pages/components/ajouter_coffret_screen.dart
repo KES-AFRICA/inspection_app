@@ -5413,8 +5413,22 @@ class _EtapeDepartsEtCircuits extends StatefulWidget {
 
 class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
   int _currentSubSlide = 0; // 0: Départs, 1: Circuits Terminaux
+  String? _expandedDepartId;
+  String? _expandedCircuitId;
 
   int get currentSubSlide => _currentSubSlide;
+
+  @override
+  void initState() {
+    super.initState();
+    // Par défaut, si des éléments existent, le dernier créé/édité est déplié
+    if (widget.departures.isNotEmpty) {
+      _expandedDepartId = widget.departures.last.id;
+    }
+    if (widget.terminalCircuits.isNotEmpty) {
+      _expandedCircuitId = widget.terminalCircuits.last.id;
+    }
+  }
 
   bool nextSubSlide() {
     if (_currentSubSlide == 0) {
@@ -5491,6 +5505,127 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
     '25 mm²', '35 mm²', '50 mm²', '70 mm²', '95 mm²', '120 mm²',
     '150 mm²', '185 mm²', '240 mm²', '300 mm²',
   ];
+
+  Future<void> _confirmDelete(
+    BuildContext context, {
+    required String title,
+    required String message,
+    required VoidCallback onConfirm,
+  }) async {
+    return showDialog<void>(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext dialogContext) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(color: Colors.red.shade50, shape: BoxShape.circle),
+                child: const Icon(Icons.warning_amber_rounded, color: Colors.red, size: 24),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: context.fontSizeM, color: AppTheme.darkBlue),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            message,
+            style: TextStyle(color: Colors.grey.shade700, fontSize: context.fontSizeS),
+          ),
+          actions: <Widget>[
+            TextButton(
+              child: Text('Annuler', style: TextStyle(color: Colors.grey.shade700, fontWeight: FontWeight.w600)),
+              onPressed: () => Navigator.of(dialogContext).pop(),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red.shade600,
+                elevation: 0,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+              ),
+              child: const Text('Supprimer', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              onPressed: () {
+                Navigator.of(dialogContext).pop();
+                onConfirm();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildEmptyState(
+    BuildContext context, {
+    required String title,
+    required String subtitle,
+    required VoidCallback onAdd,
+    required Color color,
+    required String buttonLabel,
+  }) {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.03),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: color.withOpacity(0.15), width: 1.5),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.08),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(Icons.account_tree_outlined, size: 36, color: color),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: context.fontSizeM,
+              fontWeight: FontWeight.bold,
+              color: AppTheme.darkBlue,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: context.fontSizeS,
+              color: Colors.grey.shade600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 20),
+          ElevatedButton.icon(
+            onPressed: onAdd,
+            icon: const Icon(Icons.add_circle, color: Colors.white, size: 20),
+            label: Text(
+              buttonLabel,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white),
+            ),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: color,
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+              elevation: 2,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -5583,41 +5718,49 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
           ),
           SizedBox(height: context.spacingM),
           if (widget.departures.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Center(
-                child: Text(
-                  'Aucun départ ajouté pour le moment.',
-                  style: TextStyle(color: Colors.grey.shade500, fontStyle: FontStyle.italic),
-                ),
-              ),
-            ),
-          for (int i = 0; i < widget.departures.length; i++) ...[
-            _buildDepartCard(context, widget.departures[i], i),
-            SizedBox(height: context.spacingM),
-          ],
-          Center(
-            child: OutlinedButton.icon(
-              onPressed: () {
+            _buildEmptyState(
+              context,
+              title: 'Aucun départ enregistré',
+              subtitle: 'Ajoutez les départs électriques issus de cet équipement pour documenter votre inspection.',
+              color: Colors.blue.shade800,
+              buttonLabel: '+ Ajouter un départ',
+              onAdd: () {
+                final newDepart = DepartEquipement(identification: '');
                 setState(() {
-                  widget.departures.add(DepartEquipement(
-                    identification: '',
-                  ));
+                  widget.departures.add(newDepart);
+                  _expandedDepartId = newDepart.id;
                 });
                 widget.onDataChanged();
               },
-              icon: const Icon(Icons.add_circle_outline, color: AppTheme.primaryBlue),
-              label: const Text(
-                '+ Ajouter un départ',
-                style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
-              ),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                side: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            )
+          else ...[
+            for (int i = 0; i < widget.departures.length; i++) ...[
+              _buildDepartCard(context, widget.departures[i], i),
+              SizedBox(height: context.spacingM),
+            ],
+            Center(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  final newDepart = DepartEquipement(identification: '');
+                  setState(() {
+                    widget.departures.add(newDepart);
+                    _expandedDepartId = newDepart.id;
+                  });
+                  widget.onDataChanged();
+                },
+                icon: const Icon(Icons.add_circle_outline, color: AppTheme.primaryBlue),
+                label: const Text(
+                  '+ Ajouter un départ',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  side: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
               ),
             ),
-          ),
+          ],
         ] else ...[
           // SECTION B : IDENTIFICATION DES CIRCUITS TERMINAUX
           _buildSectionHeader(
@@ -5628,41 +5771,49 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
           ),
           SizedBox(height: context.spacingM),
           if (widget.terminalCircuits.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 24),
-              child: Center(
-                child: Text(
-                  'Aucun circuit terminal ajouté pour le moment.',
-                  style: TextStyle(color: Colors.grey.shade500, fontStyle: FontStyle.italic),
-                ),
-              ),
-            ),
-          for (int i = 0; i < widget.terminalCircuits.length; i++) ...[
-            _buildTerminalCircuitCard(context, widget.terminalCircuits[i], i),
-            SizedBox(height: context.spacingM),
-          ],
-          Center(
-            child: OutlinedButton.icon(
-              onPressed: () {
+            _buildEmptyState(
+              context,
+              title: 'Aucun circuit terminal enregistré',
+              subtitle: 'Ajoutez les circuits terminaux issus de cet équipement pour documenter votre inspection.',
+              color: Colors.teal.shade800,
+              buttonLabel: '+ Ajouter un circuit terminal',
+              onAdd: () {
+                final newCircuit = CircuitTerminalEquipement(identification: '');
                 setState(() {
-                  widget.terminalCircuits.add(CircuitTerminalEquipement(
-                    identification: '',
-                  ));
+                  widget.terminalCircuits.add(newCircuit);
+                  _expandedCircuitId = newCircuit.id;
                 });
                 widget.onDataChanged();
               },
-              icon: const Icon(Icons.add_circle_outline, color: Colors.teal),
-              label: const Text(
-                '+ Ajouter un circuit terminal',
-                style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
-              ),
-              style: OutlinedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                side: const BorderSide(color: Colors.teal, width: 1.5),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            )
+          else ...[
+            for (int i = 0; i < widget.terminalCircuits.length; i++) ...[
+              _buildTerminalCircuitCard(context, widget.terminalCircuits[i], i),
+              SizedBox(height: context.spacingM),
+            ],
+            Center(
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  final newCircuit = CircuitTerminalEquipement(identification: '');
+                  setState(() {
+                    widget.terminalCircuits.add(newCircuit);
+                    _expandedCircuitId = newCircuit.id;
+                  });
+                  widget.onDataChanged();
+                },
+                icon: const Icon(Icons.add_circle_outline, color: Colors.teal),
+                label: const Text(
+                  '+ Ajouter un circuit terminal',
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
+                ),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                  side: const BorderSide(color: Colors.teal, width: 1.5),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                ),
               ),
             ),
-          ),
+          ],
         ],
         SizedBox(height: context.spacingXXL),
       ],
@@ -5711,6 +5862,8 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
   }
 
   Widget _buildDepartCard(BuildContext context, DepartEquipement dep, int index) {
+    final isExpanded = _expandedDepartId == dep.id;
+
     final typeProtItems = [..._typeProtectionOptions];
     if (dep.typeProtection.isNotEmpty && !typeProtItems.contains(dep.typeProtection)) {
       typeProtItems.insert(0, dep.typeProtection);
@@ -5728,180 +5881,330 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
       ddrItems.insert(0, dep.ddr);
     }
 
+    // Préparation des badges de résumé pour la carte fermée
+    final summarySpecs = [
+      if (dep.typeProtection.isNotEmpty) dep.typeProtection,
+      if (dep.calibre.isNotEmpty) '${dep.calibre}A',
+      if (dep.courbe.isNotEmpty) dep.courbe,
+      if (dep.pdcKA.isNotEmpty) '${dep.pdcKA}kA',
+    ].join(' • ');
+
+    final cableSpecs = [
+      if (dep.sectionCable.isNotEmpty) 'Phase: ${dep.sectionCable}',
+      if (dep.effectiveSectionCableNeutre.isNotEmpty && dep.sectionCableNeutre != null) 'Neutre: ${dep.effectiveSectionCableNeutre}',
+      if (dep.nombreCables != null && dep.nombreCables!.isNotEmpty) 'Nbr: ${dep.nombreCables}',
+    ].join(' | ');
+
     return Container(
-      padding: EdgeInsets.all(context.spacingM),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(context.spacingM),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isExpanded ? AppTheme.primaryBlue.withOpacity(0.5) : Colors.grey.shade200,
+          width: isExpanded ? 1.5 : 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isExpanded ? AppTheme.primaryBlue.withOpacity(0.06) : Colors.black.withOpacity(0.02),
+            blurRadius: isExpanded ? 8 : 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Départ ${index + 1}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: context.fontSizeM, color: AppTheme.darkBlue)),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                onPressed: () {
-                  setState(() {
-                    widget.departures.removeAt(index);
-                  });
-                  widget.onDataChanged();
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Protection de tête du départ :',
-                style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
-              ),
-              const SizedBox(height: 6),
-              Row(
+          // EN-TÊTE COMPACTÉ / ACCORDÉON
+          InkWell(
+            onTap: () {
+              setState(() {
+                _expandedDepartId = isExpanded ? null : dep.id;
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: ChoiceChip(
-                      label: const Center(child: Text('Présent')),
-                      selected: dep.protectionTete == 'Présent',
-                      selectedColor: Colors.green.shade100,
-                      onSelected: (sel) {
-                        setState(() { dep.protectionTete = sel ? 'Présent' : 'Absent'; });
-                        widget.onDataChanged();
-                      },
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryBlue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Départ ${index + 1}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: context.fontSizeS,
+                            color: AppTheme.primaryBlue,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          dep.identification.isNotEmpty ? dep.identification : 'Sans identification',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: context.fontSizeS,
+                            color: dep.identification.isNotEmpty ? AppTheme.darkBlue : Colors.grey.shade400,
+                            fontStyle: dep.identification.isNotEmpty ? FontStyle.normal : FontStyle.italic,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              isExpanded ? Icons.edit_note : Icons.edit_outlined,
+                              color: isExpanded ? AppTheme.primaryBlue : Colors.grey.shade600,
+                              size: 20,
+                            ),
+                            tooltip: 'Modifier',
+                            onPressed: () {
+                              setState(() {
+                                _expandedDepartId = isExpanded ? null : dep.id;
+                              });
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                            tooltip: 'Supprimer',
+                            onPressed: () {
+                              _confirmDelete(
+                                context,
+                                title: 'Supprimer ce départ ?',
+                                message: 'Cette action supprimera définitivement les informations saisies pour le Départ ${index + 1}.',
+                                onConfirm: () {
+                                  setState(() {
+                                    widget.departures.removeWhere((d) => d.id == dep.id);
+                                    if (_expandedDepartId == dep.id) {
+                                      _expandedDepartId = null;
+                                    }
+                                  });
+                                  widget.onDataChanged();
+                                },
+                              );
+                            },
+                          ),
+                          Icon(
+                            isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                            color: Colors.grey.shade600,
+                            size: 24,
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ChoiceChip(
-                      label: const Center(child: Text('Absent')),
-                      selected: dep.protectionTete == 'Absent',
-                      selectedColor: Colors.red.shade100,
-                      onSelected: (sel) {
-                        setState(() { dep.protectionTete = sel ? 'Absent' : 'Présent'; });
-                        widget.onDataChanged();
-                      },
+                  if (!isExpanded && (summarySpecs.isNotEmpty || cableSpecs.isNotEmpty)) ...[
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (summarySpecs.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Text(
+                              summarySpecs,
+                              style: TextStyle(fontSize: 11, color: Colors.grey.shade800, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        if (cableSpecs.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.blue.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.blue.shade200),
+                            ),
+                            child: Text(
+                              cableSpecs,
+                              style: TextStyle(fontSize: 11, color: Colors.blue.shade900, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                      ],
                     ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          // CONTENU DÉPLIÉ DU FORMULAIRE
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(),
+                  const SizedBox(height: 8),
+
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Protection de tête du départ :',
+                        style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ChoiceChip(
+                              label: const Center(child: Text('Présent')),
+                              selected: dep.protectionTete == 'Présent',
+                              selectedColor: Colors.green.shade100,
+                              onSelected: (sel) {
+                                setState(() { dep.protectionTete = sel ? 'Présent' : 'Absent'; });
+                                widget.onDataChanged();
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ChoiceChip(
+                              label: const Center(child: Text('Absent')),
+                              selected: dep.protectionTete == 'Absent',
+                              selectedColor: Colors.red.shade100,
+                              onSelected: (sel) {
+                                setState(() { dep.protectionTete = sel ? 'Absent' : 'Présent'; });
+                                widget.onDataChanged();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextFormField(
+                    initialValue: dep.identification,
+                    decoration: InputDecoration(
+                      labelText: 'Identification du départ',
+                      hintText: 'Ex: Départ éclairage atelier',
+                      isDense: true,
+                      border: const OutlineInputBorder(),
+                      labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade700),
+                    ),
+                    style: TextStyle(fontSize: context.fontSizeS),
+                    onChanged: (v) {
+                      dep.identification = v;
+                      widget.onDataChanged();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    value: dep.typeProtection.isNotEmpty ? dep.typeProtection : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Type de protection', isDense: true, border: OutlineInputBorder()),
+                    items: typeProtItems.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) { setState(() { dep.typeProtection = v ?? ''; }); widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    value: dep.marque.isNotEmpty ? dep.marque : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Marque', isDense: true, border: OutlineInputBorder()),
+                    items: marqueItems.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) { setState(() { dep.marque = v ?? ''; }); widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    value: dep.courbe.isNotEmpty ? dep.courbe : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Courbe', isDense: true, border: OutlineInputBorder()),
+                    items: courbeItems.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) { setState(() { dep.courbe = v ?? ''; }); widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextFormField(
+                    initialValue: dep.pdcKA,
+                    decoration: const InputDecoration(labelText: 'PDC (kA)', suffixText: 'kA', isDense: true, border: OutlineInputBorder()),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) { dep.pdcKA = v; widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextFormField(
+                    initialValue: dep.icc3Max,
+                    decoration: const InputDecoration(labelText: 'Icc3 max (kA)', suffixText: 'kA', isDense: true, border: OutlineInputBorder()),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.,]?\d*'))],
+                    onChanged: (v) { dep.icc3Max = v; widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextFormField(
+                    initialValue: dep.calibre,
+                    decoration: const InputDecoration(labelText: 'Calibre (A)', suffixText: 'A', isDense: true, border: OutlineInputBorder()),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) { dep.calibre = v; widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    value: dep.ddr.isNotEmpty ? dep.ddr : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'DDR IΔn (mA)', isDense: true, border: OutlineInputBorder()),
+                    items: ddrItems.map((e) => DropdownMenuItem(value: e, child: Text('$e mA', overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) { setState(() { dep.ddr = v ?? ''; }); widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextFormField(
+                    initialValue: dep.nombreCables ?? '',
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre de câble',
+                      hintText: 'Ex: 1, 2, 3...',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    onChanged: (v) { dep.nombreCables = v.trim().isEmpty ? null : v.trim(); widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    value: dep.sectionCable.isNotEmpty ? dep.sectionCable : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Section de câble phase (mm²)', isDense: true, border: OutlineInputBorder()),
+                    items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) { setState(() { dep.sectionCable = v ?? ''; }); widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    value: dep.effectiveSectionCableNeutre.isNotEmpty ? dep.effectiveSectionCableNeutre : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Section de câble neutre (mm²)', isDense: true, border: OutlineInputBorder()),
+                    items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) { setState(() { dep.sectionCableNeutre = v ?? ''; }); widget.onDataChanged(); },
                   ),
                 ],
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          TextFormField(
-            initialValue: dep.identification,
-            decoration: InputDecoration(
-              labelText: 'Identification du départ',
-              hintText: 'Ex: Départ éclairage atelier',
-              isDense: true,
-              border: const OutlineInputBorder(),
-              labelStyle: TextStyle(fontSize: context.fontSizeS, color: Colors.grey.shade700),
             ),
-            style: TextStyle(fontSize: context.fontSizeS),
-            onChanged: (v) {
-              dep.identification = v;
-              widget.onDataChanged();
-            },
-          ),
-          const SizedBox(height: 12),
-
-          DropdownButtonFormField<String>(
-            value: dep.typeProtection.isNotEmpty ? dep.typeProtection : null,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Type de protection', isDense: true, border: OutlineInputBorder()),
-            items: typeProtItems.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (v) { setState(() { dep.typeProtection = v ?? ''; }); widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          DropdownButtonFormField<String>(
-            value: dep.marque.isNotEmpty ? dep.marque : null,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Marque', isDense: true, border: OutlineInputBorder()),
-            items: marqueItems.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (v) { setState(() { dep.marque = v ?? ''; }); widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          DropdownButtonFormField<String>(
-            value: dep.courbe.isNotEmpty ? dep.courbe : null,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Courbe', isDense: true, border: OutlineInputBorder()),
-            items: courbeItems.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (v) { setState(() { dep.courbe = v ?? ''; }); widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          TextFormField(
-            initialValue: dep.pdcKA,
-            decoration: const InputDecoration(labelText: 'PDC (kA)', suffixText: 'kA', isDense: true, border: OutlineInputBorder()),
-            keyboardType: TextInputType.number,
-            onChanged: (v) { dep.pdcKA = v; widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          TextFormField(
-            initialValue: dep.icc3Max,
-            decoration: const InputDecoration(labelText: 'Icc3 max (kA)', suffixText: 'kA', isDense: true, border: OutlineInputBorder()),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.,]?\d*'))],
-            onChanged: (v) { dep.icc3Max = v; widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          TextFormField(
-            initialValue: dep.calibre,
-            decoration: const InputDecoration(labelText: 'Calibre (A)', suffixText: 'A', isDense: true, border: OutlineInputBorder()),
-            keyboardType: TextInputType.number,
-            onChanged: (v) { dep.calibre = v; widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          DropdownButtonFormField<String>(
-            value: dep.ddr.isNotEmpty ? dep.ddr : null,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'DDR IΔn (mA)', isDense: true, border: OutlineInputBorder()),
-            items: ddrItems.map((e) => DropdownMenuItem(value: e, child: Text('$e mA', overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (v) { setState(() { dep.ddr = v ?? ''; }); widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          TextFormField(
-            initialValue: dep.nombreCables ?? '',
-            decoration: const InputDecoration(
-              labelText: 'Nombre de câble',
-              hintText: 'Ex: 1, 2, 3...',
-              isDense: true,
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onChanged: (v) { dep.nombreCables = v.trim().isEmpty ? null : v.trim(); widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          DropdownButtonFormField<String>(
-            value: dep.sectionCable.isNotEmpty ? dep.sectionCable : null,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Section de câble phase (mm²)', isDense: true, border: OutlineInputBorder()),
-            items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (v) { setState(() { dep.sectionCable = v ?? ''; }); widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          DropdownButtonFormField<String>(
-            value: dep.effectiveSectionCableNeutre.isNotEmpty ? dep.effectiveSectionCableNeutre : null,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Section de câble neutre (mm²)', isDense: true, border: OutlineInputBorder()),
-            items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (v) { setState(() { dep.sectionCableNeutre = v ?? ''; }); widget.onDataChanged(); },
+            crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 250),
           ),
         ],
       ),
@@ -5909,6 +6212,8 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
   }
 
   Widget _buildTerminalCircuitCard(BuildContext context, CircuitTerminalEquipement ct, int index) {
+    final isExpanded = _expandedCircuitId == ct.id;
+
     final typeProtItems = [..._typeProtectionOptions];
     if (ct.typeProtection.isNotEmpty && !typeProtItems.contains(ct.typeProtection)) {
       typeProtItems.insert(0, ct.typeProtection);
@@ -5926,172 +6231,321 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
       ddrItems.insert(0, ct.ddr);
     }
 
+    final summarySpecs = [
+      if (ct.typeProtection.isNotEmpty) ct.typeProtection,
+      if (ct.calibre.isNotEmpty) '${ct.calibre}A',
+      if (ct.courbe.isNotEmpty) ct.courbe,
+      if (ct.pdcKA.isNotEmpty) '${ct.pdcKA}kA',
+    ].join(' • ');
+
+    final cableSpecs = [
+      if (ct.sectionCable.isNotEmpty) 'Phase: ${ct.sectionCable}',
+      if (ct.effectiveSectionCableNeutre.isNotEmpty && ct.sectionCableNeutre != null) 'Neutre: ${ct.effectiveSectionCableNeutre}',
+      if (ct.nombreCables != null && ct.nombreCables!.isNotEmpty) 'Nbr: ${ct.nombreCables}',
+    ].join(' | ');
+
     return Container(
-      padding: EdgeInsets.all(context.spacingM),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(context.spacingM),
-        border: Border.all(color: Colors.grey.shade200),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 4, offset: const Offset(0, 2))],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isExpanded ? Colors.teal.shade700.withOpacity(0.5) : Colors.grey.shade200,
+          width: isExpanded ? 1.5 : 1.0,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: isExpanded ? Colors.teal.shade700.withOpacity(0.06) : Colors.black.withOpacity(0.02),
+            blurRadius: isExpanded ? 8 : 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Circuit Terminal ${index + 1}', style: TextStyle(fontWeight: FontWeight.bold, fontSize: context.fontSizeM, color: AppTheme.darkBlue)),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                onPressed: () {
-                  setState(() {
-                    widget.terminalCircuits.removeAt(index);
-                  });
-                  widget.onDataChanged();
-                },
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Circuit terminal de tête :',
-                style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
-              ),
-              const SizedBox(height: 6),
-              Row(
+          // EN-TÊTE COMPACTÉ / ACCORDÉON
+          InkWell(
+            onTap: () {
+              setState(() {
+                _expandedCircuitId = isExpanded ? null : ct.id;
+              });
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: ChoiceChip(
-                      label: const Center(child: Text('Oui')),
-                      selected: ct.protectionTete == 'Oui' || ct.protectionTete == 'Présent',
-                      selectedColor: Colors.green.shade100,
-                      onSelected: (sel) {
-                        setState(() { ct.protectionTete = sel ? 'Oui' : 'Non'; });
-                        widget.onDataChanged();
-                      },
-                    ),
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.teal.shade50,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(
+                          'Circuit ${index + 1}',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: context.fontSizeS,
+                            color: Colors.teal.shade800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          ct.identification.isNotEmpty ? ct.identification : 'Sans identification',
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: context.fontSizeS,
+                            color: ct.identification.isNotEmpty ? AppTheme.darkBlue : Colors.grey.shade400,
+                            fontStyle: ct.identification.isNotEmpty ? FontStyle.normal : FontStyle.italic,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          IconButton(
+                            icon: Icon(
+                              isExpanded ? Icons.edit_note : Icons.edit_outlined,
+                              color: isExpanded ? Colors.teal.shade700 : Colors.grey.shade600,
+                              size: 20,
+                            ),
+                            tooltip: 'Modifier',
+                            onPressed: () {
+                              setState(() {
+                                _expandedCircuitId = isExpanded ? null : ct.id;
+                              });
+                            },
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                            tooltip: 'Supprimer',
+                            onPressed: () {
+                              _confirmDelete(
+                                context,
+                                title: 'Supprimer ce circuit ?',
+                                message: 'Cette action supprimera définitivement les informations saisies pour le Circuit ${index + 1}.',
+                                onConfirm: () {
+                                  setState(() {
+                                    widget.terminalCircuits.removeWhere((c) => c.id == ct.id);
+                                    if (_expandedCircuitId == ct.id) {
+                                      _expandedCircuitId = null;
+                                    }
+                                  });
+                                  widget.onDataChanged();
+                                },
+                              );
+                            },
+                          ),
+                          Icon(
+                            isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
+                            color: Colors.grey.shade600,
+                            size: 24,
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ChoiceChip(
-                      label: const Center(child: Text('Non')),
-                      selected: ct.protectionTete == 'Non' || ct.protectionTete == 'Absent',
-                      selectedColor: Colors.red.shade100,
-                      onSelected: (sel) {
-                        setState(() { ct.protectionTete = sel ? 'Non' : 'Oui'; });
-                        widget.onDataChanged();
-                      },
+                  if (!isExpanded && (summarySpecs.isNotEmpty || cableSpecs.isNotEmpty)) ...[
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      children: [
+                        if (summarySpecs.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.grey.shade300),
+                            ),
+                            child: Text(
+                              summarySpecs,
+                              style: TextStyle(fontSize: 11, color: Colors.grey.shade800, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                        if (cableSpecs.isNotEmpty)
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: Colors.teal.shade50,
+                              borderRadius: BorderRadius.circular(4),
+                              border: Border.all(color: Colors.teal.shade200),
+                            ),
+                            child: Text(
+                              cableSpecs,
+                              style: TextStyle(fontSize: 11, color: Colors.teal.shade900, fontWeight: FontWeight.w500),
+                            ),
+                          ),
+                      ],
                     ),
+                  ],
+                ],
+              ),
+            ),
+          ),
+
+          // CONTENU DÉPLIÉ DU FORMULAIRE
+          AnimatedCrossFade(
+            firstChild: const SizedBox.shrink(),
+            secondChild: Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Divider(),
+                  const SizedBox(height: 8),
+
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Circuit terminal de tête :',
+                        style: TextStyle(fontSize: context.fontSizeS, fontWeight: FontWeight.w600, color: Colors.grey.shade700),
+                      ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ChoiceChip(
+                              label: const Center(child: Text('Oui')),
+                              selected: ct.protectionTete == 'Oui' || ct.protectionTete == 'Présent',
+                              selectedColor: Colors.green.shade100,
+                              onSelected: (sel) {
+                                setState(() { ct.protectionTete = sel ? 'Oui' : 'Non'; });
+                                widget.onDataChanged();
+                              },
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: ChoiceChip(
+                              label: const Center(child: Text('Non')),
+                              selected: ct.protectionTete == 'Non' || ct.protectionTete == 'Absent',
+                              selectedColor: Colors.red.shade100,
+                              onSelected: (sel) {
+                                setState(() { ct.protectionTete = sel ? 'Non' : 'Oui'; });
+                                widget.onDataChanged();
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+
+                  _HybridCircuitIdentificationField(
+                    initialValue: ct.identification,
+                    onChanged: (v) {
+                      ct.identification = v;
+                      widget.onDataChanged();
+                    },
+                  ),
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    value: ct.typeProtection.isNotEmpty ? ct.typeProtection : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Type de protection', isDense: true, border: OutlineInputBorder()),
+                    items: typeProtItems.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) { setState(() { ct.typeProtection = v ?? ''; }); widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    value: ct.marque.isNotEmpty ? ct.marque : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Marque', isDense: true, border: OutlineInputBorder()),
+                    items: marqueItems.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) { setState(() { ct.marque = v ?? ''; }); widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    value: ct.courbe.isNotEmpty ? ct.courbe : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Courbe', isDense: true, border: OutlineInputBorder()),
+                    items: courbeItems.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) { setState(() { ct.courbe = v ?? ''; }); widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextFormField(
+                    initialValue: ct.pdcKA,
+                    decoration: const InputDecoration(labelText: 'PDC (kA)', suffixText: 'kA', isDense: true, border: OutlineInputBorder()),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) { ct.pdcKA = v; widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextFormField(
+                    initialValue: ct.icc3Max,
+                    decoration: const InputDecoration(labelText: 'Icc3 max (kA)', suffixText: 'kA', isDense: true, border: OutlineInputBorder()),
+                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.,]?\d*'))],
+                    onChanged: (v) { ct.icc3Max = v; widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextFormField(
+                    initialValue: ct.calibre,
+                    decoration: const InputDecoration(labelText: 'Calibre (A)', suffixText: 'A', isDense: true, border: OutlineInputBorder()),
+                    keyboardType: TextInputType.number,
+                    onChanged: (v) { ct.calibre = v; widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    value: ct.ddr.isNotEmpty ? ct.ddr : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'DDR IΔn (mA)', isDense: true, border: OutlineInputBorder()),
+                    items: ddrItems.map((e) => DropdownMenuItem(value: e, child: Text('$e mA', overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) { setState(() { ct.ddr = v ?? ''; }); widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextFormField(
+                    initialValue: ct.nombreCables ?? '',
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre de câble',
+                      hintText: 'Ex: 1, 2, 3...',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    onChanged: (v) { ct.nombreCables = v.trim().isEmpty ? null : v.trim(); widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    value: ct.sectionCable.isNotEmpty ? ct.sectionCable : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Section de câble phase (mm²)', isDense: true, border: OutlineInputBorder()),
+                    items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) { setState(() { ct.sectionCable = v ?? ''; }); widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  DropdownButtonFormField<String>(
+                    value: ct.effectiveSectionCableNeutre.isNotEmpty ? ct.effectiveSectionCableNeutre : null,
+                    isExpanded: true,
+                    decoration: const InputDecoration(labelText: 'Section de câble neutre (mm²)', isDense: true, border: OutlineInputBorder()),
+                    items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
+                    onChanged: (v) { setState(() { ct.sectionCableNeutre = v ?? ''; }); widget.onDataChanged(); },
                   ),
                 ],
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          _HybridCircuitIdentificationField(
-            initialValue: ct.identification,
-            onChanged: (v) {
-              ct.identification = v;
-              widget.onDataChanged();
-            },
-          ),
-          const SizedBox(height: 12),
-
-          DropdownButtonFormField<String>(
-            value: ct.typeProtection.isNotEmpty ? ct.typeProtection : null,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Type de protection', isDense: true, border: OutlineInputBorder()),
-            items: typeProtItems.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (v) { setState(() { ct.typeProtection = v ?? ''; }); widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          DropdownButtonFormField<String>(
-            value: ct.marque.isNotEmpty ? ct.marque : null,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Marque', isDense: true, border: OutlineInputBorder()),
-            items: marqueItems.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (v) { setState(() { ct.marque = v ?? ''; }); widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          DropdownButtonFormField<String>(
-            value: ct.courbe.isNotEmpty ? ct.courbe : null,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Courbe', isDense: true, border: OutlineInputBorder()),
-            items: courbeItems.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (v) { setState(() { ct.courbe = v ?? ''; }); widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          TextFormField(
-            initialValue: ct.pdcKA,
-            decoration: const InputDecoration(labelText: 'PDC (kA)', suffixText: 'kA', isDense: true, border: OutlineInputBorder()),
-            keyboardType: TextInputType.number,
-            onChanged: (v) { ct.pdcKA = v; widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          TextFormField(
-            initialValue: ct.icc3Max,
-            decoration: const InputDecoration(labelText: 'Icc3 max (kA)', suffixText: 'kA', isDense: true, border: OutlineInputBorder()),
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.,]?\d*'))],
-            onChanged: (v) { ct.icc3Max = v; widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          TextFormField(
-            initialValue: ct.calibre,
-            decoration: const InputDecoration(labelText: 'Calibre (A)', suffixText: 'A', isDense: true, border: OutlineInputBorder()),
-            keyboardType: TextInputType.number,
-            onChanged: (v) { ct.calibre = v; widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          DropdownButtonFormField<String>(
-            value: ct.ddr.isNotEmpty ? ct.ddr : null,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'DDR IΔn (mA)', isDense: true, border: OutlineInputBorder()),
-            items: ddrItems.map((e) => DropdownMenuItem(value: e, child: Text('$e mA', overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (v) { setState(() { ct.ddr = v ?? ''; }); widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          TextFormField(
-            initialValue: ct.nombreCables ?? '',
-            decoration: const InputDecoration(
-              labelText: 'Nombre de câble',
-              hintText: 'Ex: 1, 2, 3...',
-              isDense: true,
-              border: OutlineInputBorder(),
             ),
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onChanged: (v) { ct.nombreCables = v.trim().isEmpty ? null : v.trim(); widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          DropdownButtonFormField<String>(
-            value: ct.sectionCable.isNotEmpty ? ct.sectionCable : null,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Section de câble phase (mm²)', isDense: true, border: OutlineInputBorder()),
-            items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (v) { setState(() { ct.sectionCable = v ?? ''; }); widget.onDataChanged(); },
-          ),
-          const SizedBox(height: 12),
-
-          DropdownButtonFormField<String>(
-            value: ct.effectiveSectionCableNeutre.isNotEmpty ? ct.effectiveSectionCableNeutre : null,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Section de câble neutre (mm²)', isDense: true, border: OutlineInputBorder()),
-            items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
-            onChanged: (v) { setState(() { ct.sectionCableNeutre = v ?? ''; }); widget.onDataChanged(); },
+            crossFadeState: isExpanded ? CrossFadeState.showSecond : CrossFadeState.showFirst,
+            duration: const Duration(milliseconds: 250),
           ),
         ],
       ),

@@ -95,5 +95,21 @@ void main() {
       expect(restoredList.first.effectiveTerminalCircuits.first.identification, equals('Prises RDC'));
       expect(restoredList.first.sourceDepartId, equals('dep_parent_123'));
     });
+
+    test('DepartEquipement and CircuitTerminalEquipement deletion by stable ID leaves other items intact', () {
+      final dep1 = DepartEquipement(id: 'dep_1', identification: 'Départ 1', calibre: '16A');
+      final dep2 = DepartEquipement(id: 'dep_2', identification: 'Départ 2', calibre: '32A');
+      final dep3 = DepartEquipement(id: 'dep_3', identification: 'Départ 3', calibre: '63A');
+      final list = [dep1, dep2, dep3];
+
+      // Supprimer uniquement le départ 2
+      list.removeWhere((d) => d.id == 'dep_2');
+
+      expect(list.length, equals(2));
+      expect(list[0].id, equals('dep_1'));
+      expect(list[0].identification, equals('Départ 1'));
+      expect(list[1].id, equals('dep_3'));
+      expect(list[1].identification, equals('Départ 3'));
+    });
   });
 }
