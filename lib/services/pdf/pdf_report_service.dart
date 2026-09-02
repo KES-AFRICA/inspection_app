@@ -12195,6 +12195,23 @@ class PdfReportService {
   }) {
     final widgets = <pw.Widget>[pw.SizedBox(height: 6)];
     String safe(String v) => v.trim().isEmpty ? 'Non renseigné' : v;
+    String formatProtectionWithTypeAndMarque(String typeProtection, String? marque) {
+      final typeClean = typeProtection.trim();
+      final marqueClean = marque?.trim() ?? '';
+
+      if (typeClean.isNotEmpty && marqueClean.isNotEmpty) {
+        if (typeClean.toLowerCase().contains(marqueClean.toLowerCase())) {
+          return typeClean;
+        }
+        return '$typeClean ($marqueClean)';
+      } else if (typeClean.isNotEmpty) {
+        return typeClean;
+      } else if (marqueClean.isNotEmpty) {
+        return marqueClean;
+      } else {
+        return '-';
+      }
+    }
     pw.MemoryImage? photoInterne = photoCache?[coffret];
     if (photoInterne == null && photoCache == null) {
       for (final src in [
@@ -12673,19 +12690,19 @@ class PdfReportService {
             final alimentRows = <pw.TableRow>[];
             alimentRows.add(
               pw.TableRow(
-                decoration: pw.BoxDecoration(
+                decoration: const pw.BoxDecoration(
                   color: PdfColor.fromInt(0xFFE8F0FB),
                 ),
                 children: [
                   _thCell("Origine de la source d'alimentation"),
                   _thCell('Type protection'),
-                  _thCell('Marque'),
                   _thCell('Courbe'),
                   _thCell('PDC (kA)'),
                   _thCell('Icc3 max (kA)'),
                   _thCell('Calibre (A)'),
                   _thCell('DDR (I\u0394n(mA))'),
-                  _thCell('Section de câble (mm\u00B2)'),
+                  _thCell('Section de câble phase'),
+                  _thCell('Section de câble neutre'),
                 ],
               ),
             );
@@ -12700,14 +12717,14 @@ class PdfReportService {
                 pw.TableRow(
                   children: [
                     _valueCell(label),
-                    _valueCell(a.typeProtection.isNotEmpty ? a.typeProtection : '-'),
-                    _valueCell(a.marqueDisjoncteur != null && a.marqueDisjoncteur!.isNotEmpty ? a.marqueDisjoncteur! : '-'),
+                    _valueCell(formatProtectionWithTypeAndMarque(a.typeProtection, a.marqueDisjoncteur)),
                     _valueCell(a.courbe != null && a.courbe!.isNotEmpty ? a.courbe! : '-'),
                     _valueCell(a.pdcKA.isNotEmpty ? a.pdcKA : '-'),
                     _valueCell(a.icc3Max != null && a.icc3Max!.isNotEmpty ? a.icc3Max! : '-'),
                     _valueCell(a.calibre.isNotEmpty ? a.calibre : '-'),
                     _valueCell(a.ddr != null && a.ddr!.isNotEmpty ? (a.ddr!.contains('mA') ? a.ddr! : '${a.ddr!} mA') : '-'),
-                    _valueCell(a.sectionCable.isNotEmpty ? a.sectionCable : '-'),
+                    _valueCell(a.sectionCablePhase.isNotEmpty ? a.sectionCablePhase : '-'),
+                    _valueCell(a.effectiveSectionCableNeutre.isNotEmpty ? a.effectiveSectionCableNeutre : '-'),
                   ],
                 ),
               );
@@ -12715,25 +12732,23 @@ class PdfReportService {
 
             tables.add(
               pw.Table(
+                defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
                 border: pw.TableBorder(
                   left: pw.BorderSide(color: borderColor, width: 0.4),
                   right: pw.BorderSide(color: borderColor, width: 0.4),
                   bottom: pw.BorderSide(color: borderColor, width: 0.4),
                   top: pw.BorderSide(color: borderColor, width: 0.4),
                   verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
-                  horizontalInside: pw.BorderSide(
-                    color: borderColor,
-                    width: 0.4,
-                  ),
+                  horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
                 ),
                 columnWidths: const {
-                  0: pw.FlexColumnWidth(2.0),
-                  1: pw.FlexColumnWidth(1.1),
-                  2: pw.FlexColumnWidth(0.9),
+                  0: pw.FlexColumnWidth(1.8),
+                  1: pw.FlexColumnWidth(1.4),
+                  2: pw.FlexColumnWidth(0.7),
                   3: pw.FlexColumnWidth(0.7),
-                  4: pw.FlexColumnWidth(0.7),
-                  5: pw.FlexColumnWidth(0.8),
-                  6: pw.FlexColumnWidth(0.7),
+                  4: pw.FlexColumnWidth(0.8),
+                  5: pw.FlexColumnWidth(0.7),
+                  6: pw.FlexColumnWidth(0.9),
                   7: pw.FlexColumnWidth(0.9),
                   8: pw.FlexColumnWidth(0.9),
                 },
@@ -12754,19 +12769,19 @@ class PdfReportService {
             final sortieRows = <pw.TableRow>[];
             sortieRows.add(
               pw.TableRow(
-                decoration: pw.BoxDecoration(
+                decoration: const pw.BoxDecoration(
                   color: PdfColor.fromInt(0xFFE8F0FB),
                 ),
                 children: [
                   _thCell('SORTIE INVERSEUR'),
                   _thCell('Type protection'),
-                  _thCell('Marque'),
                   _thCell('Courbe'),
                   _thCell('PDC (kA)'),
                   _thCell('Icc3 max (kA)'),
                   _thCell('Calibre (A)'),
                   _thCell('DDR (I\u0394n(mA))'),
-                  _thCell('Section de câble (mm\u00B2)'),
+                  _thCell('Section de câble phase'),
+                  _thCell('Section de câble neutre'),
                 ],
               ),
             );
@@ -12781,14 +12796,14 @@ class PdfReportService {
                 pw.TableRow(
                   children: [
                     _valueCell(label),
-                    _valueCell(s.typeProtection.isNotEmpty ? s.typeProtection : '-'),
-                    _valueCell(s.marqueDisjoncteur != null && s.marqueDisjoncteur!.isNotEmpty ? s.marqueDisjoncteur! : '-'),
+                    _valueCell(formatProtectionWithTypeAndMarque(s.typeProtection, s.marqueDisjoncteur)),
                     _valueCell(s.courbe != null && s.courbe!.isNotEmpty ? s.courbe! : '-'),
                     _valueCell(s.pdcKA.isNotEmpty ? s.pdcKA : '-'),
                     _valueCell(s.icc3Max != null && s.icc3Max!.isNotEmpty ? s.icc3Max! : '-'),
                     _valueCell(s.calibre.isNotEmpty ? s.calibre : '-'),
                     _valueCell(s.ddr != null && s.ddr!.isNotEmpty ? (s.ddr!.contains('mA') ? s.ddr! : '${s.ddr!} mA') : '-'),
-                    _valueCell(s.sectionCable.isNotEmpty ? s.sectionCable : '-'),
+                    _valueCell(s.sectionCablePhase.isNotEmpty ? s.sectionCablePhase : '-'),
+                    _valueCell(s.effectiveSectionCableNeutre.isNotEmpty ? s.effectiveSectionCableNeutre : '-'),
                   ],
                 ),
               );
@@ -12796,25 +12811,23 @@ class PdfReportService {
 
             tables.add(
               pw.Table(
+                defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
                 border: pw.TableBorder(
                   left: pw.BorderSide(color: borderColor, width: 0.4),
                   right: pw.BorderSide(color: borderColor, width: 0.4),
                   bottom: pw.BorderSide(color: borderColor, width: 0.4),
                   top: pw.BorderSide(color: borderColor, width: 0.4),
                   verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
-                  horizontalInside: pw.BorderSide(
-                    color: borderColor,
-                    width: 0.4,
-                  ),
+                  horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
                 ),
                 columnWidths: const {
-                  0: pw.FlexColumnWidth(2.0),
-                  1: pw.FlexColumnWidth(1.1),
-                  2: pw.FlexColumnWidth(0.9),
+                  0: pw.FlexColumnWidth(1.8),
+                  1: pw.FlexColumnWidth(1.4),
+                  2: pw.FlexColumnWidth(0.7),
                   3: pw.FlexColumnWidth(0.7),
-                  4: pw.FlexColumnWidth(0.7),
-                  5: pw.FlexColumnWidth(0.8),
-                  6: pw.FlexColumnWidth(0.7),
+                  4: pw.FlexColumnWidth(0.8),
+                  5: pw.FlexColumnWidth(0.7),
+                  6: pw.FlexColumnWidth(0.9),
                   7: pw.FlexColumnWidth(0.9),
                   8: pw.FlexColumnWidth(0.9),
                 },
@@ -12828,17 +12841,17 @@ class PdfReportService {
 
           alimentRows.add(
             pw.TableRow(
-              decoration: pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
+              decoration: const pw.BoxDecoration(color: PdfColor.fromInt(0xFFE8F0FB)),
               children: [
                 _thCell("Origine de la source d'alimentation"),
                 _thCell('Type protection'),
-                _thCell('Marque'),
                 _thCell('Courbe'),
                 _thCell('PDC (kA)'),
                 _thCell('Icc3 max (kA)'),
                 _thCell('Calibre (A)'),
                 _thCell('DDR (I\u0394n(mA))'),
-                _thCell('Section de câble (mm\u00B2)'),
+                _thCell('Section de câble phase'),
+                _thCell('Section de câble neutre'),
               ],
             ),
           );
@@ -12854,14 +12867,14 @@ class PdfReportService {
               pw.TableRow(
                 children: [
                   _valueCell(label),
-                  _valueCell(a.typeProtection.isNotEmpty ? a.typeProtection : '-'),
-                  _valueCell(a.marqueDisjoncteur != null && a.marqueDisjoncteur!.isNotEmpty ? a.marqueDisjoncteur! : '-'),
+                  _valueCell(formatProtectionWithTypeAndMarque(a.typeProtection, a.marqueDisjoncteur)),
                   _valueCell(a.courbe != null && a.courbe!.isNotEmpty ? a.courbe! : '-'),
                   _valueCell(a.pdcKA.isNotEmpty ? a.pdcKA : '-'),
                   _valueCell(a.icc3Max != null && a.icc3Max!.isNotEmpty ? a.icc3Max! : '-'),
                   _valueCell(a.calibre.isNotEmpty ? a.calibre : '-'),
                   _valueCell(a.ddr != null && a.ddr!.isNotEmpty ? (a.ddr!.contains('mA') ? a.ddr! : '${a.ddr!} mA') : '-'),
-                  _valueCell(a.sectionCable.isNotEmpty ? a.sectionCable : '-'),
+                  _valueCell(a.sectionCablePhase.isNotEmpty ? a.sectionCablePhase : '-'),
+                  _valueCell(a.effectiveSectionCableNeutre.isNotEmpty ? a.effectiveSectionCableNeutre : '-'),
                 ],
               ),
             );
@@ -12879,13 +12892,13 @@ class PdfReportService {
                 horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
               ),
               columnWidths: const {
-                0: pw.FlexColumnWidth(2.0),
-                1: pw.FlexColumnWidth(1.1),
-                2: pw.FlexColumnWidth(0.9),
+                0: pw.FlexColumnWidth(1.8),
+                1: pw.FlexColumnWidth(1.4),
+                2: pw.FlexColumnWidth(0.7),
                 3: pw.FlexColumnWidth(0.7),
-                4: pw.FlexColumnWidth(0.7),
-                5: pw.FlexColumnWidth(0.8),
-                6: pw.FlexColumnWidth(0.7),
+                4: pw.FlexColumnWidth(0.8),
+                5: pw.FlexColumnWidth(0.7),
+                6: pw.FlexColumnWidth(0.9),
                 7: pw.FlexColumnWidth(0.9),
                 8: pw.FlexColumnWidth(0.9),
               },
@@ -12912,44 +12925,44 @@ class PdfReportService {
             horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
           ),
           columnWidths: const {
-            0: pw.FlexColumnWidth(2.0),
-            1: pw.FlexColumnWidth(1.1),
-            2: pw.FlexColumnWidth(0.9),
+            0: pw.FlexColumnWidth(1.8),
+            1: pw.FlexColumnWidth(1.4),
+            2: pw.FlexColumnWidth(0.7),
             3: pw.FlexColumnWidth(0.7),
-            4: pw.FlexColumnWidth(0.7),
-            5: pw.FlexColumnWidth(0.8),
-            6: pw.FlexColumnWidth(0.7),
+            4: pw.FlexColumnWidth(0.8),
+            5: pw.FlexColumnWidth(0.7),
+            6: pw.FlexColumnWidth(0.9),
             7: pw.FlexColumnWidth(0.9),
             8: pw.FlexColumnWidth(0.9),
           },
           children: [
             pw.TableRow(
-              decoration: pw.BoxDecoration(
+              decoration: const pw.BoxDecoration(
                 color: PdfColor.fromInt(0xFFE8F0FB),
               ),
               children: [
                 _thCell('Protection de tête de coffret/Armoire'),
                 _thCell('Type protection'),
-                _thCell('Marque'),
                 _thCell('Courbe'),
                 _thCell('PDC kA'),
                 _thCell('Icc3 max (kA)'),
                 _thCell('Calibre'),
                 _thCell('DDR (I\u0394n(mA))'),
-                _thCell('Section de câble'),
+                _thCell('Section de câble phase'),
+                _thCell('Section de câble neutre'),
               ],
             ),
             pw.TableRow(
               children: [
                 _valueCell(statusLabel),
-                _valueCell(isAvecProtection ? (pt.typeProtection.isNotEmpty ? pt.typeProtection : '-') : '-'),
-                _valueCell(isAvecProtection ? ((pt.marqueDisjoncteur != null && pt.marqueDisjoncteur!.isNotEmpty) ? pt.marqueDisjoncteur! : '-') : '-'),
+                _valueCell(isAvecProtection ? formatProtectionWithTypeAndMarque(pt.typeProtection, pt.marqueDisjoncteur) : '-'),
                 _valueCell(isAvecProtection ? ((pt.courbe != null && pt.courbe!.isNotEmpty) ? pt.courbe! : '-') : '-'),
                 _valueCell(isAvecProtection ? (pt.pdcKA.isNotEmpty ? pt.pdcKA : '-') : '-'),
                 _valueCell(isAvecProtection ? ((pt.icc3Max != null && pt.icc3Max!.isNotEmpty) ? pt.icc3Max! : '-') : '-'),
                 _valueCell(isAvecProtection ? (pt.calibre.isNotEmpty ? pt.calibre : '-') : '-'),
                 _valueCell(isAvecProtection ? ((pt.ddr != null && pt.ddr!.isNotEmpty) ? (pt.ddr!.contains('mA') ? pt.ddr! : '${pt.ddr!} mA') : '-') : '-'),
-                _valueCell(pt.sectionCable.isNotEmpty ? pt.sectionCable : '-'),
+                _valueCell(pt.sectionCablePhase.isNotEmpty ? pt.sectionCablePhase : '-'),
+                _valueCell(pt.effectiveSectionCableNeutre.isNotEmpty ? pt.effectiveSectionCableNeutre : '-'),
               ],
             ),
           ],
@@ -13003,7 +13016,8 @@ class PdfReportService {
             _thCell('Icc3 max (kA)'),
             _thCell('Calibre'),
             _thCell('DDR (I\u0394n (mA))'),
-            _thCell('Section de câble'),
+            _thCell('Section de câble phase'),
+            _thCell('Section de câble neutre'),
           ],
         ),
       );
@@ -13013,13 +13027,14 @@ class PdfReportService {
             children: [
               _valueCell(dep.protectionTete.isNotEmpty ? dep.protectionTete : '-'),
               _valueCell(dep.identification.isNotEmpty ? dep.identification : '-'),
-              _valueCell(dep.typeProtection.isNotEmpty ? dep.typeProtection : '-'),
+              _valueCell(formatProtectionWithTypeAndMarque(dep.typeProtection, dep.marque)),
               _valueCell(dep.courbe.isNotEmpty ? dep.courbe : '-'),
               _valueCell(dep.pdcKA.isNotEmpty ? dep.pdcKA : '-'),
               _valueCell(dep.icc3Max.isNotEmpty ? dep.icc3Max : '-'),
               _valueCell(dep.calibre.isNotEmpty ? dep.calibre : '-'),
               _valueCell(dep.ddr.isNotEmpty ? (dep.ddr.contains('mA') ? dep.ddr : '${dep.ddr} mA') : '-'),
-              _valueCell(dep.sectionCable.isNotEmpty ? dep.sectionCable : '-'),
+              _valueCell(dep.sectionCablePhase.isNotEmpty ? dep.sectionCablePhase : '-'),
+              _valueCell(dep.effectiveSectionCableNeutre.isNotEmpty ? dep.effectiveSectionCableNeutre : '-'),
             ],
           ),
         );
@@ -13038,13 +13053,14 @@ class PdfReportService {
           columnWidths: const {
             0: pw.FlexColumnWidth(1.0),
             1: pw.FlexColumnWidth(1.1),
-            2: pw.FlexColumnWidth(1.1),
-            3: pw.FlexColumnWidth(0.7),
-            4: pw.FlexColumnWidth(0.7),
-            5: pw.FlexColumnWidth(0.8),
-            6: pw.FlexColumnWidth(0.7),
-            7: pw.FlexColumnWidth(0.9),
-            8: pw.FlexColumnWidth(0.9),
+            2: pw.FlexColumnWidth(1.3),
+            3: pw.FlexColumnWidth(0.6),
+            4: pw.FlexColumnWidth(0.6),
+            5: pw.FlexColumnWidth(0.7),
+            6: pw.FlexColumnWidth(0.6),
+            7: pw.FlexColumnWidth(0.8),
+            8: pw.FlexColumnWidth(0.8),
+            9: pw.FlexColumnWidth(0.8),
           },
           children: departRows,
         ),
@@ -13079,7 +13095,7 @@ class PdfReportService {
       circuitRows.add(
         pw.TableRow(
           decoration: const pw.BoxDecoration(
-            color: PdfColor.fromInt(0xFFE0F2F1),
+            color: PdfColor.fromInt(0xFFE8F0FB),
           ),
           children: [
             _thCell('Protection de tête du circuit'),
@@ -13090,7 +13106,8 @@ class PdfReportService {
             _thCell('Icc3 max (kA)'),
             _thCell('Calibre'),
             _thCell('DDR (I\u0394n (mA))'),
-            _thCell('Section de câble'),
+            _thCell('Section de câble phase'),
+            _thCell('Section de câble neutre'),
           ],
         ),
       );
@@ -13100,13 +13117,14 @@ class PdfReportService {
             children: [
               _valueCell(ct.protectionTete.isNotEmpty ? ct.protectionTete : '-'),
               _valueCell(ct.identification.isNotEmpty ? ct.identification : '-'),
-              _valueCell(ct.typeProtection.isNotEmpty ? ct.typeProtection : '-'),
+              _valueCell(formatProtectionWithTypeAndMarque(ct.typeProtection, ct.marque)),
               _valueCell(ct.courbe.isNotEmpty ? ct.courbe : '-'),
               _valueCell(ct.pdcKA.isNotEmpty ? ct.pdcKA : '-'),
               _valueCell(ct.icc3Max.isNotEmpty ? ct.icc3Max : '-'),
               _valueCell(ct.calibre.isNotEmpty ? ct.calibre : '-'),
               _valueCell(ct.ddr.isNotEmpty ? (ct.ddr.contains('mA') ? ct.ddr : '${ct.ddr} mA') : '-'),
-              _valueCell(ct.sectionCable.isNotEmpty ? ct.sectionCable : '-'),
+              _valueCell(ct.sectionCablePhase.isNotEmpty ? ct.sectionCablePhase : '-'),
+              _valueCell(ct.effectiveSectionCableNeutre.isNotEmpty ? ct.effectiveSectionCableNeutre : '-'),
             ],
           ),
         );
@@ -13125,13 +13143,14 @@ class PdfReportService {
           columnWidths: const {
             0: pw.FlexColumnWidth(1.0),
             1: pw.FlexColumnWidth(1.1),
-            2: pw.FlexColumnWidth(1.1),
-            3: pw.FlexColumnWidth(0.7),
-            4: pw.FlexColumnWidth(0.7),
-            5: pw.FlexColumnWidth(0.8),
-            6: pw.FlexColumnWidth(0.7),
-            7: pw.FlexColumnWidth(0.9),
-            8: pw.FlexColumnWidth(0.9),
+            2: pw.FlexColumnWidth(1.3),
+            3: pw.FlexColumnWidth(0.6),
+            4: pw.FlexColumnWidth(0.6),
+            5: pw.FlexColumnWidth(0.7),
+            6: pw.FlexColumnWidth(0.6),
+            7: pw.FlexColumnWidth(0.8),
+            8: pw.FlexColumnWidth(0.8),
+            9: pw.FlexColumnWidth(0.8),
           },
           children: circuitRows,
         ),
