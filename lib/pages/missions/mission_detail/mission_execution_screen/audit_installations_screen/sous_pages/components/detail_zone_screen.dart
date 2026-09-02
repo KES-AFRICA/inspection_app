@@ -1032,9 +1032,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       ),
     );
 
-    if (result == true) {
-      _rechargerZone();
-    }
+    _rechargerZone();
   }
 
   void _supprimerCoffretMT(int index) {
@@ -1131,9 +1129,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       ),
     );
 
-    if (result == true) {
-      _rechargerZone();
-    }
+    _rechargerZone();
   }
 
   void _supprimerCoffretDirectBT(int index) {
@@ -2037,9 +2033,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       ),
     );
 
-    if (result == true) {
-      _rechargerZone();
-    }
+    _rechargerZone();
   }
 
   // MODIFIER : Voir un Équipement complet
@@ -2132,9 +2126,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       ),
     );
 
-    if (result == true) {
-      _rechargerZone();
-    }
+    _rechargerZone();
   }
 
   // Supprimer un brouillon

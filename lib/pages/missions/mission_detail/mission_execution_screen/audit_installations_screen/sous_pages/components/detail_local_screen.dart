@@ -149,9 +149,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       ),
     );
 
-    if (result == true) {
-      _rechargerLocal();
-    }
+    _rechargerLocal();
   }
 
   // ===== Supprimer un brouillon =====
@@ -1016,9 +1014,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       ),
     );
 
-    if (result != null) {
-      _rechargerLocal();
-    }
+    _rechargerLocal();
   }
 
   void _supprimerCoffret(int index) {
@@ -2028,7 +2024,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
         ),
       ),
     );
-    if (result == true) _rechargerLocal();
+    _rechargerLocal();
   }
 
   void _supprimerCoffretTarget(CoffretArmoire coffretTarget) {

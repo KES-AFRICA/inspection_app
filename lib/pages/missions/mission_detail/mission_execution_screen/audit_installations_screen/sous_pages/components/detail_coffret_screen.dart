@@ -823,14 +823,12 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
       ),
     );
 
-    if (result != null) {
-      if (result is CoffretArmoire) {
-        setState(() {
-          _coffret = result;
-        });
-      }
-      _refreshCoffret();
+    if (result is CoffretArmoire) {
+      setState(() {
+        _coffret = result;
+      });
     }
+    _refreshCoffret();
   }
 
   void _refreshCoffret() async {
