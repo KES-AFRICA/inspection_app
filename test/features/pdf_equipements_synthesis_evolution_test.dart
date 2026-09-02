@@ -201,5 +201,29 @@ void main() {
       expect(btItems[0].localName, equals('POSTE MT 02'));
       expect(btItems[1].localName, equals('POSTE MT 02'));
     });
+
+    test('TEST 5 — Repli de la Zone dans la colonne Repère si Repère vide (et non l\'inverse)', () {
+      final audit = AuditInstallationsElectriques(
+        missionId: 'm_zone_repere_fallback',
+        updatedAt: DateTime.now(),
+        basseTensionZones: [
+          BasseTensionZone(
+            nom: 'Zone EC wagon',
+            coffretsDirects: [
+              CoffretArmoire(qrCode: 'Q30', repere: '', nom: 'TGBT EC', type: 'TGBT'),
+            ],
+          ),
+        ],
+      );
+
+      final btItems = PdfReportService.getEquipementsBTForTesting(audit, null);
+      expect(btItems.length, equals(1));
+      expect(btItems[0].zoneName, equals('Zone EC wagon'));
+      expect(btItems[0].localName, isEmpty);
+
+      final tableWidget = PdfReportService.buildEquipementsTableForTesting(btItems, isMT: false);
+      expect(tableWidget, isNotNull);
+      expect(tableWidget, isA<pw.Column>());
+    });
   });
 }

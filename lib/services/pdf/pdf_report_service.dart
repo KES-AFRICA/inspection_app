@@ -8198,6 +8198,10 @@ class PdfReportService {
               ? 'non identifie'
               : rawSource;
 
+          final displayRepere = repereGroup.localName.isNotEmpty
+              ? repereGroup.localName
+              : (zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : '');
+
           tableRows.add(
             pw.TableRow(
               decoration: pw.BoxDecoration(color: bgColor),
@@ -8227,9 +8231,9 @@ class PdfReportService {
                   ),
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                   alignment: pw.Alignment.center,
-                  child: (currentRepereItemIdx == repereMidIndex && repereGroup.localName.isNotEmpty)
+                  child: (currentRepereItemIdx == repereMidIndex && displayRepere.isNotEmpty)
                       ? pw.Text(
-                          repereGroup.localName,
+                          displayRepere,
                           style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
                           textAlign: pw.TextAlign.center,
                         )
@@ -8502,21 +8506,26 @@ class PdfReportService {
             ),
 
             // Cellule 1 : Repère (fond blanc permanent, centré sur la ligne médiane du Repère)
-            pw.Container(
-              decoration: pw.BoxDecoration(
-                color: PdfColors.white,
-                border: repereBorder,
-              ),
-              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              alignment: pw.Alignment.center,
-              child: (currentRepereItemIdx == repereMidIndex && repereGroup.localName.isNotEmpty)
-                  ? pw.Text(
-                      repereGroup.localName,
-                      style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                      textAlign: pw.TextAlign.center,
-                    )
-                  : pw.SizedBox(),
-            ),
+            () {
+              final displayRepere = repereGroup.localName.isNotEmpty
+                  ? repereGroup.localName
+                  : (zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : '');
+              return pw.Container(
+                decoration: pw.BoxDecoration(
+                  color: PdfColors.white,
+                  border: repereBorder,
+                ),
+                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                alignment: pw.Alignment.center,
+                child: (currentRepereItemIdx == repereMidIndex && displayRepere.isNotEmpty)
+                    ? pw.Text(
+                        displayRepere,
+                        style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                        textAlign: pw.TextAlign.center,
+                      )
+                    : pw.SizedBox(),
+              );
+            }(),
 
             // Cellule 2 : N° de l'équipement
             pw.Container(
