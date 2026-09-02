@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
+import 'package:inspec_app/services/backup_service.dart';
 import 'package:inspec_app/services/ip_ik_evaluator_service.dart';
 
 void main() {
@@ -62,8 +63,37 @@ void main() {
         coffret: CoffretArmoire(qrCode: 'QR', nom: 'Coffret', type: 'COFFRET', indiceIpIk: 'IP55 / IK08'),
         missionId: 'm1',
       );
-      // Evaluates based on location rank fallback
       expect(evalWithIpIk.conformite, isNotNull);
+    });
+
+    test('BackupService serialization includes departures and terminalCircuits', () {
+      final coffret = CoffretArmoire(
+        qrCode: 'QR_999',
+        nom: 'COFFRET DEPART',
+        type: 'COFFRET',
+        departures: [
+          DepartEquipement(id: 'dep_100', calibre: '32A', sectionCable: '6 mm²'),
+        ],
+        terminalCircuits: [
+          CircuitTerminalEquipement(id: 'circ_200', identification: 'Prises RDC', calibre: '20A'),
+        ],
+        sourceDepartId: 'dep_parent_123',
+      );
+
+      final jsonMap = BackupService.testSerializeCoffret(coffret);
+      expect(jsonMap['departures'], isNotNull);
+      expect((jsonMap['departures'] as List).length, equals(1));
+      expect(jsonMap['terminalCircuits'], isNotNull);
+      expect((jsonMap['terminalCircuits'] as List).length, equals(1));
+      expect(jsonMap['sourceDepartId'], equals('dep_parent_123'));
+
+      final restoredList = BackupService.testParseCoffrets([jsonMap]);
+      expect(restoredList.length, equals(1));
+      expect(restoredList.first.effectiveDepartures.length, equals(1));
+      expect(restoredList.first.effectiveDepartures.first.id, equals('dep_100'));
+      expect(restoredList.first.effectiveTerminalCircuits.length, equals(1));
+      expect(restoredList.first.effectiveTerminalCircuits.first.identification, equals('Prises RDC'));
+      expect(restoredList.first.sourceDepartId, equals('dep_parent_123'));
     });
   });
 }

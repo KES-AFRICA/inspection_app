@@ -834,6 +834,12 @@ class BackupService {
             t.elementsVerifies.map(_serializeElement).toList(),
       };
 
+  @visibleForTesting
+  static Map<String, dynamic> testSerializeCoffret(CoffretArmoire c) => _serializeCoffret(c);
+
+  @visibleForTesting
+  static List<CoffretArmoire> testParseCoffrets(dynamic raw) => _parseCoffrets(raw);
+
   static Map<String, dynamic> _serializeCoffret(CoffretArmoire c) => {
         'qrCode': c.qrCode,
         'nom': c.nom,
@@ -867,6 +873,43 @@ class BackupService {
         'observationsLibres': c.observationsLibres.map(_serializeObs).toList(),
         'observationsParafoudre':
             c.observationsParafoudre.map(_serializeObs).toList(),
+        'departures': c.effectiveDepartures.map(_serializeDepart).toList(),
+        'terminalCircuits': c.effectiveTerminalCircuits.map(_serializeCircuit).toList(),
+        'sourceEquipementId': c.sourceEquipementId,
+        'sourceNomComplet': c.sourceNomComplet,
+        'sourceDepartId': c.sourceDepartId,
+      };
+
+  static Map<String, dynamic> _serializeDepart(DepartEquipement d) => {
+        'id': d.id,
+        'protectionTete': d.protectionTete,
+        'identification': d.identification,
+        'typeProtection': d.typeProtection,
+        'courbe': d.courbe,
+        'ddr': d.ddr,
+        'pdcKA': d.pdcKA,
+        'icc3Max': d.icc3Max,
+        'calibre': d.calibre,
+        'sectionCable': d.sectionCable,
+        'marque': d.marque,
+        'nombreCables': d.nombreCables,
+        'sectionCableNeutre': d.sectionCableNeutre,
+      };
+
+  static Map<String, dynamic> _serializeCircuit(CircuitTerminalEquipement c) => {
+        'id': c.id,
+        'protectionTete': c.protectionTete,
+        'identification': c.identification,
+        'typeProtection': c.typeProtection,
+        'courbe': c.courbe,
+        'ddr': c.ddr,
+        'pdcKA': c.pdcKA,
+        'icc3Max': c.icc3Max,
+        'calibre': c.calibre,
+        'sectionCable': c.sectionCable,
+        'marque': c.marque,
+        'nombreCables': c.nombreCables,
+        'sectionCableNeutre': c.sectionCableNeutre,
       };
 
   static Map<String, dynamic> _serializeAlim(Alimentation a) => {
@@ -2508,9 +2551,52 @@ class BackupService {
             [],
         observationsLibres: _parseObs(d['observationsLibres']),
         observationsParafoudre: _parseObs(d['observationsParafoudre']),
+        departures: (d['departures'] as List<dynamic>?)
+                ?.map((dep) => _parseDepart(dep as Map<String, dynamic>))
+                .toList() ??
+            [],
+        terminalCircuits: (d['terminalCircuits'] as List<dynamic>?)
+                ?.map((circ) => _parseCircuit(circ as Map<String, dynamic>))
+                .toList() ??
+            [],
+        sourceEquipementId: d['sourceEquipementId'] as String?,
+        sourceNomComplet: d['sourceNomComplet'] as String?,
+        sourceDepartId: d['sourceDepartId'] as String?,
       );
     }).toList();
   }
+
+  static DepartEquipement _parseDepart(Map<String, dynamic> d) => DepartEquipement(
+        id: d['id'] as String?,
+        protectionTete: d['protectionTete'] as String? ?? 'Présent',
+        identification: d['identification'] as String? ?? d['nom'] as String? ?? '',
+        typeProtection: d['typeProtection'] as String? ?? '',
+        courbe: d['courbe'] as String? ?? '',
+        ddr: d['ddr'] as String? ?? '',
+        pdcKA: d['pdcKA'] as String? ?? '',
+        icc3Max: d['icc3Max'] as String? ?? '',
+        calibre: d['calibre'] as String? ?? '',
+        sectionCable: d['sectionCable'] as String? ?? '',
+        marque: d['marque'] as String? ?? '',
+        nombreCables: d['nombreCables'] as String?,
+        sectionCableNeutre: d['sectionCableNeutre'] as String?,
+      );
+
+  static CircuitTerminalEquipement _parseCircuit(Map<String, dynamic> d) => CircuitTerminalEquipement(
+        id: d['id'] as String?,
+        protectionTete: d['protectionTete'] as String? ?? 'Présent',
+        identification: d['identification'] as String? ?? '',
+        typeProtection: d['typeProtection'] as String? ?? '',
+        courbe: d['courbe'] as String? ?? '',
+        ddr: d['ddr'] as String? ?? '',
+        pdcKA: d['pdcKA'] as String? ?? '',
+        icc3Max: d['icc3Max'] as String? ?? '',
+        calibre: d['calibre'] as String? ?? '',
+        sectionCable: d['sectionCable'] as String? ?? '',
+        marque: d['marque'] as String? ?? '',
+        nombreCables: d['nombreCables'] as String?,
+        sectionCableNeutre: d['sectionCableNeutre'] as String?,
+      );
 
   static Alimentation _parseAlim(Map<String, dynamic> d) => Alimentation(
         typeProtection: d['typeProtection'] as String? ?? '',
