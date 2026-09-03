@@ -2092,6 +2092,10 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             ),
             SizedBox(height: context.spacingM),
           ],
+          if (!isProtectionTete && index == 0 && widget.selectedType != 'INVERSEUR') ...[
+            _buildDepartPrisSansProtectionControl(context, isDepartPrisAvecProtection, (field, val) => onChanged(field, val)),
+            SizedBox(height: context.spacingS),
+          ],
           if (isLocked) ...[
             Container(
               margin: EdgeInsets.only(bottom: context.spacingS),
@@ -2119,16 +2123,6 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
               ),
             ),
           ],
-          _buildModernTextField(
-            context,
-            label: 'Nombre de câble',
-            controller: nbCablesCtrl,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onChanged: (v) => onChanged('nombreCables', v),
-            readOnly: isLocked,
-          ),
-          SizedBox(height: context.spacingS),
           if (widget.selectedType == 'INVERSEUR') ...[
             _buildModernTextField(
               context,
@@ -2161,6 +2155,11 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                   onChanged('source', result.displayName);
                   if (result.isDepart && result.depart != null) {
                     final dep = result.depart!;
+                    final depTypeProt = dep.typeProtection;
+                    final bool isDepProtValid = depTypeProt.trim().isNotEmpty &&
+                        depTypeProt.trim().toLowerCase() != '-aucun-' &&
+                        depTypeProt.trim().toLowerCase() != 'aucun';
+
                     onChanged('nombreCables', dep.nombreCables ?? '');
                     onChanged('typeProtection', dep.typeProtection);
                     onChanged('marqueDisjoncteur', dep.marque);
@@ -2171,6 +2170,8 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                     onChanged('ddr', dep.ddr);
                     onChanged('sectionCable', dep.sectionCable);
                     onChanged('sectionCableNeutre', dep.effectiveSectionCableNeutre);
+
+                    widget.onDepartPrisAvecProtectionChanged?.call(isDepProtValid);
                     widget.onSourceSelected?.call(result.equipmentId, result.displayName, dep.id);
                   } else {
                     clearElectricalFields();
@@ -2203,40 +2204,67 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             ),
             SizedBox(height: context.spacingS),
           ],
+          _buildModernTextField(
+            context,
+            label: 'Nombre de câble',
+            controller: nbCablesCtrl,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onChanged: (v) => onChanged('nombreCables', v),
+            readOnly: isLocked,
+          ),
+          SizedBox(height: context.spacingS),
           if (!isProtectionTete || isDepartPrisAvecProtection) ...[
-            _buildModernDropdown(context, label: 'Type de protection', value: typeProtVal, items: typeProtectionItems, onChanged: (v) => onChanged('typeProtection', v), readOnly: isLocked),
-            SizedBox(height: context.spacingS),
-            _buildModernDropdown(context, label: 'Marque de disjoncteur', value: marqueDisjVal, items: marqueDisjoncteurItems, onChanged: (v) => onChanged('marqueDisjoncteur', v), readOnly: isLocked),
-            SizedBox(height: context.spacingS),
-            _buildModernDropdown(context, label: 'Courbe', value: courbeVal, items: courbeItems, onChanged: (v) => onChanged('courbe', v), readOnly: isLocked),
-            SizedBox(height: context.spacingS),
+            if (isDepartPrisAvecProtection || isProtectionTete) ...[
+              _buildModernDropdown(
+                context,
+                label: 'Type de protection',
+                value: typeProtVal,
+                items: typeProtectionItems,
+                onChanged: (v) {
+                  onChanged('typeProtection', v);
+                  final isNone = v.trim().isEmpty || v.trim().toLowerCase() == '-aucun-' || v.trim().toLowerCase() == 'aucun';
+                  if (isNone && isDepartPrisAvecProtection) {
+                    widget.onDepartPrisAvecProtectionChanged?.call(false);
+                  } else if (!isNone && !isDepartPrisAvecProtection) {
+                    widget.onDepartPrisAvecProtectionChanged?.call(true);
+                  }
+                },
+                readOnly: isLocked,
+              ),
+              SizedBox(height: context.spacingS),
+              _buildModernDropdown(context, label: 'Marque de disjoncteur', value: marqueDisjVal, items: marqueDisjoncteurItems, onChanged: (v) => onChanged('marqueDisjoncteur', v), readOnly: isLocked),
+              SizedBox(height: context.spacingS),
+              _buildModernDropdown(context, label: 'Courbe', value: courbeVal, items: courbeItems, onChanged: (v) => onChanged('courbe', v), readOnly: isLocked),
+              SizedBox(height: context.spacingS),
 
-            _buildModernTextFieldWithSuffix(
-              context,
-              label: 'PDC',
-              suffix: 'kA',
-              controller: pdcCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.,]?\d*'))],
-              onChanged: (v) => onChanged('pdcKA', v),
-              readOnly: isLocked,
-            ),
-            SizedBox(height: context.spacingS),
-            _buildModernTextFieldWithSuffix(
-              context,
-              label: 'Icc3 max',
-              suffix: 'kA',
-              controller: icc3Ctrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.,]?\d*'))],
-              onChanged: (v) => onChanged('icc3Max', v),
-              readOnly: isLocked,
-            ),
-            SizedBox(height: context.spacingS),
-            _buildModernTextFieldWithSuffix(context, label: 'Calibre', suffix: 'A', controller: calibreCtrl, onChanged: (v) => onChanged('calibre', v), readOnly: isLocked),
-            SizedBox(height: context.spacingS),
-            _buildModernDropdown(context, label: 'DDR IΔn (mA)', value: ddrVal, items: ddrItems, onChanged: (v) => onChanged('ddr', v), readOnly: isLocked),
-            SizedBox(height: context.spacingS),
+              _buildModernTextFieldWithSuffix(
+                context,
+                label: 'PDC',
+                suffix: 'kA',
+                controller: pdcCtrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.,]?\d*'))],
+                onChanged: (v) => onChanged('pdcKA', v),
+                readOnly: isLocked,
+              ),
+              SizedBox(height: context.spacingS),
+              _buildModernTextFieldWithSuffix(
+                context,
+                label: 'Icc3 max',
+                suffix: 'kA',
+                controller: icc3Ctrl,
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                inputFormatters: [FilteringTextInputFormatter.allow(RegExp(r'^\d*[\.,]?\d*'))],
+                onChanged: (v) => onChanged('icc3Max', v),
+                readOnly: isLocked,
+              ),
+              SizedBox(height: context.spacingS),
+              _buildModernTextFieldWithSuffix(context, label: 'Calibre', suffix: 'A', controller: calibreCtrl, onChanged: (v) => onChanged('calibre', v), readOnly: isLocked),
+              SizedBox(height: context.spacingS),
+              _buildModernDropdown(context, label: 'DDR IΔn (mA)', value: ddrVal, items: ddrItems, onChanged: (v) => onChanged('ddr', v), readOnly: isLocked),
+              SizedBox(height: context.spacingS),
+            ],
           ],
           _buildModernDropdown(context, label: 'Section de câble phase', value: a.sectionCable, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCable', v), readOnly: isLocked),
           SizedBox(height: context.spacingS),
@@ -2246,9 +2274,130 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     );
   }
 
+  Widget _buildDepartPrisSansProtectionControl(
+    BuildContext context,
+    bool isDepartPrisAvecProtection,
+    Function(String field, String value) onChanged,
+  ) {
+    final bool isDepartPrisSansProtection = !isDepartPrisAvecProtection;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: isDepartPrisSansProtection
+            ? Colors.red.shade50
+            : Colors.green.shade50,
+        borderRadius: BorderRadius.circular(context.spacingS),
+        border: Border.all(
+          color: isDepartPrisSansProtection
+              ? Colors.red.shade200
+              : Colors.green.shade200,
+        ),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(
+              'Départ pris sans protection',
+              style: TextStyle(
+                fontSize: context.fontSizeS,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.darkBlue,
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: isDepartPrisSansProtection
+                    ? Colors.red.shade300
+                    : Colors.green.shade300,
+                width: 1,
+              ),
+            ),
+            padding: const EdgeInsets.all(2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Bouton OUI (Rouge)
+                GestureDetector(
+                  onTap: () {
+                    if (!isDepartPrisSansProtection) {
+                      widget.onDepartPrisAvecProtectionChanged?.call(false);
+                      onChanged('typeProtection', '-Aucun-');
+                    }
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isDepartPrisSansProtection
+                          ? Colors.red.shade600
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Text(
+                      'Oui',
+                      style: TextStyle(
+                        fontSize: context.fontSizeS,
+                        fontWeight: FontWeight.bold,
+                        color: isDepartPrisSansProtection
+                            ? Colors.white
+                            : Colors.grey.shade700,
+                      ),
+                    ),
+                  ),
+                ),
+                // Bouton NON (Vert)
+                GestureDetector(
+                  onTap: () {
+                    if (isDepartPrisSansProtection) {
+                      widget.onDepartPrisAvecProtectionChanged?.call(true);
+                      onChanged('typeProtection', 'Disjoncteur');
+                    }
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: !isDepartPrisSansProtection
+                          ? Colors.green.shade600
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: Text(
+                      'Non',
+                      style: TextStyle(
+                        fontSize: context.fontSizeS,
+                        fontWeight: FontWeight.bold,
+                        color: !isDepartPrisSansProtection
+                            ? Colors.white
+                            : Colors.grey.shade700,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildProtectionTeteCard(BuildContext context) {
     final bool isDepartPrisAvecProtection = widget.departPrisAvecProtection;
-    final bool isDepartPrisSansProtection = !isDepartPrisAvecProtection;
+    final bool isPresent = isDepartPrisAvecProtection;
 
     return Container(
       padding: EdgeInsets.all(context.spacingM),
@@ -2267,152 +2416,46 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: EdgeInsets.symmetric(
-              horizontal: context.spacingS,
-              vertical: context.spacingXS,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.orange.shade50,
-              borderRadius: BorderRadius.circular(context.spacingS),
-            ),
-            child: Text(
-              'PROTECTION DE TÊTE',
-              style: TextStyle(
-                fontSize: context.fontSizeM,
-                fontWeight: FontWeight.bold,
-                color: Colors.orange.shade800,
-              ),
-            ),
-          ),
-          SizedBox(height: context.spacingM),
-          Container(
-            decoration: BoxDecoration(
-              color: isDepartPrisSansProtection
-                  ? Colors.red.shade50
-                  : Colors.green.shade50,
-              borderRadius: BorderRadius.circular(context.spacingS),
-              border: Border.all(
-                color: isDepartPrisSansProtection
-                    ? Colors.red.shade200
-                    : Colors.green.shade200,
-              ),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Départ pris sans protection',
-                        style: TextStyle(
-                          fontSize: context.fontSizeS,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.darkBlue,
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        isDepartPrisSansProtection
-                            ? 'Départ sans protection'
-                            : 'Départ avec protection',
-                        style: TextStyle(
-                          fontSize: context.fontSizeXS,
-                          color: isDepartPrisSansProtection
-                              ? Colors.red.shade800
-                              : Colors.green.shade800,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Container(
+                padding: EdgeInsets.symmetric(
+                  horizontal: context.spacingS,
+                  vertical: context.spacingXS,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.orange.shade50,
+                  borderRadius: BorderRadius.circular(context.spacingS),
+                ),
+                child: Text(
+                  'PROTECTION DE TÊTE',
+                  style: TextStyle(
+                    fontSize: context.fontSizeM,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade800,
                   ),
                 ),
-                const SizedBox(width: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: isDepartPrisSansProtection
-                          ? Colors.red.shade300
-                          : Colors.green.shade300,
-                      width: 1,
-                    ),
-                  ),
-                  padding: const EdgeInsets.all(2),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Bouton OUI (Rouge)
-                      GestureDetector(
-                        onTap: () {
-                          if (!isDepartPrisSansProtection) {
-                            widget.onDepartPrisAvecProtectionChanged?.call(false);
-                          }
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isDepartPrisSansProtection
-                                ? Colors.red.shade600
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Text(
-                            'Oui',
-                            style: TextStyle(
-                              fontSize: context.fontSizeS,
-                              fontWeight: FontWeight.bold,
-                              color: isDepartPrisSansProtection
-                                  ? Colors.white
-                                  : Colors.grey.shade700,
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Bouton NON (Vert)
-                      GestureDetector(
-                        onTap: () {
-                          if (isDepartPrisSansProtection) {
-                            widget.onDepartPrisAvecProtectionChanged?.call(true);
-                          }
-                        },
-                        child: AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 6,
-                          ),
-                          decoration: BoxDecoration(
-                            color: !isDepartPrisSansProtection
-                                ? Colors.green.shade600
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Text(
-                            'Non',
-                            style: TextStyle(
-                              fontSize: context.fontSizeS,
-                              fontWeight: FontWeight.bold,
-                              color: !isDepartPrisSansProtection
-                                  ? Colors.white
-                                  : Colors.grey.shade700,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+                decoration: BoxDecoration(
+                  color: isPresent ? Colors.green.shade50 : Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isPresent ? Colors.green.shade200 : Colors.red.shade200,
                   ),
                 ),
-              ],
-            ),
+                child: Text(
+                  isPresent ? 'Présent' : 'Absent',
+                  style: TextStyle(
+                    fontSize: context.fontSizeXS,
+                    fontWeight: FontWeight.bold,
+                    color: isPresent ? Colors.green.shade800 : Colors.red.shade800,
+                  ),
+                ),
+              ),
+            ],
           ),
           if (widget.protectionTete != null) ...[
             SizedBox(height: context.spacingM),

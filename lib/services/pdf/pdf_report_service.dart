@@ -12576,6 +12576,10 @@ class PdfReportService {
       final typeClean = typeProtection.trim();
       final marqueClean = marque?.trim() ?? '';
 
+      if (typeClean.isEmpty || typeClean.toLowerCase() == '-aucun-' || typeClean.toLowerCase() == 'aucun') {
+        return 'absent';
+      }
+
       if (typeClean.isNotEmpty && marqueClean.isNotEmpty) {
         if (typeClean.toLowerCase().contains(marqueClean.toLowerCase())) {
           return typeClean;
@@ -12586,7 +12590,7 @@ class PdfReportService {
       } else if (marqueClean.isNotEmpty) {
         return marqueClean;
       } else {
-        return '-';
+        return 'absent';
       }
     }
     pw.MemoryImage? photoInterne = photoCache?[coffret];
@@ -13332,7 +13336,7 @@ class PdfReportService {
             pw.TableRow(
               children: [
                 _valueCell(statusLabel),
-                _valueCell(isAvecProtection ? formatProtectionWithTypeAndMarque(pt.typeProtection, pt.marqueDisjoncteur) : '-'),
+                _valueCell(isAvecProtection ? formatProtectionWithTypeAndMarque(pt.typeProtection, pt.marqueDisjoncteur) : 'absent'),
                 _valueCell(isAvecProtection ? ((pt.courbe != null && pt.courbe!.isNotEmpty) ? pt.courbe! : '-') : '-'),
                 _valueCell(isAvecProtection ? (pt.pdcKA.isNotEmpty ? pt.pdcKA : '-') : '-'),
                 _valueCell(isAvecProtection ? ((pt.icc3Max != null && pt.icc3Max!.isNotEmpty) ? pt.icc3Max! : '-') : '-'),
