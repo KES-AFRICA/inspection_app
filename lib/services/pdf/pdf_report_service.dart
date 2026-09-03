@@ -271,6 +271,30 @@ class _ContinuiteZoneGroup {
   });
 }
 
+class _IsolementRowItem {
+  final String zoneName;
+  final String repereName;
+  final int index;
+  final EssaiIsolement item;
+
+  _IsolementRowItem({
+    required this.zoneName,
+    required this.repereName,
+    required this.index,
+    required this.item,
+  });
+}
+
+class _IsolementZoneGroup {
+  final String zoneName;
+  final List<_IsolementRowItem> items;
+
+  _IsolementZoneGroup({
+    required this.zoneName,
+    required this.items,
+  });
+}
+
 class _PdfRepereSubGroup {
   final String localName;
   final List<InstallationDescriptionPdfRow> rows;
@@ -16382,191 +16406,316 @@ class PdfReportService {
           pageOffset: pageOffset,
           overrideTotalPages: overrideTotalPages,
         ),
-        header: (ctx) => _buildPageHeaderWidget(),
-        build: (ctx) => [
-          PageTracker(
-            key: 'mesures_isolement',
-            registry: trackedPages,
-            offset: pageOffset,
-            child: _subSectionBar(
-              "3. Essais de mesure d'isolement entre deux points d'un tronçon de câble",
+        header: (ctx) => _buildPageHeaderWidget(
+          nomSite: nomSite,
+          numeroRapport: numeroRapport,
+        ),
+        build: (ctx) {
+          final widgets = <pw.Widget>[];
+
+          widgets.add(
+            PageTracker(
+              key: 'mesures_isolement',
+              registry: trackedPages,
+              offset: pageOffset,
+              child: _subSectionBar(
+                "3. Essais de mesure d'isolement entre deux points d'un tronçon de câble",
+              ),
             ),
-          ),
-          pw.SizedBox(height: 5),
-          if (mesures.essaisIsolement.isEmpty)
-            _resultBox('Sans objet')
-          else
+          );
+          widgets.add(pw.SizedBox(height: 5));
+
+          if (mesures.essaisIsolement.isEmpty) {
+            widgets.add(_resultBox('Sans objet'));
+            return widgets;
+          }
+
+          final isoRows = <_IsolementRowItem>[];
+          for (int i = 0; i < mesures.essaisIsolement.length; i++) {
+            final ei = mesures.essaisIsolement[i];
+            final locInfo = _resolveLocation(
+              audit,
+              localisationStr: ei.displayRepereOrigine,
+            );
+
+            String zoneName = locInfo.zoneName.trim();
+            String repereName = locInfo.repereName.trim();
+
+            if (zoneName.isEmpty && ei.displayRepereOrigine.trim().isNotEmpty) {
+              final rawRep = ei.displayRepereOrigine.trim();
+              if (rawRep.toLowerCase().startsWith('zone ') || rawRep.toLowerCase().startsWith('zone_')) {
+                zoneName = rawRep;
+                repereName = '';
+              } else {
+                repereName = rawRep;
+              }
+            }
+
+            isoRows.add(
+              _IsolementRowItem(
+                zoneName: zoneName,
+                repereName: repereName.isNotEmpty ? repereName : ei.displayRepereOrigine.trim(),
+                index: i + 1,
+                item: ei,
+              ),
+            );
+          }
+
+          final isoZoneGroups = <_IsolementZoneGroup>[];
+          for (final row in isoRows) {
+            final normZone = row.zoneName.trim();
+
+            var zGroup = isoZoneGroups.firstWhere(
+              (zg) => zg.zoneName.toLowerCase() == normZone.toLowerCase(),
+              orElse: () {
+                final zg = _IsolementZoneGroup(zoneName: normZone, items: []);
+                isoZoneGroups.add(zg);
+                return zg;
+              },
+            );
+
+            zGroup.items.add(row);
+          }
+
+          const isoColumnWidths = <int, pw.TableColumnWidth>{
+            0: pw.FlexColumnWidth(1.3), // ZONE
+            1: pw.FixedColumnWidth(24), // N°
+            2: pw.FlexColumnWidth(1.6), // Repère du point d'origine
+            3: pw.FlexColumnWidth(1.8), // Point A (origine)
+            4: pw.FlexColumnWidth(1.8), // Point B (extrémité)
+            5: pw.FlexColumnWidth(1.3), // Section câble Point A
+            6: pw.FlexColumnWidth(1.3), // Section câble Point B
+            7: pw.FlexColumnWidth(1.1), // Nb. câbles
+            8: pw.FlexColumnWidth(1.2), // Isolement (MΩ)
+            9: pw.FlexColumnWidth(1.5), // Appréciation
+          };
+
+          // 1. Table Header
+          final headerTable = pw.Table(
+            border: const pw.TableBorder(
+              left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              horizontalInside: pw.BorderSide.none,
+            ),
+            columnWidths: isoColumnWidths,
+            children: [
+              pw.TableRow(
+                decoration: pw.BoxDecoration(color: accentColor),
+                children: [
+                  _thHeaderCell("ZONE"),
+                  _thHeaderCell("N°"),
+                  _thHeaderCell("Repère du point d'origine"),
+                  _thHeaderCell("Point A (origine)"),
+                  _thHeaderCell("Point B (extrémité)"),
+                  _thHeaderCell("Section câble Point A"),
+                  _thHeaderCell("Section câble Point B"),
+                  _thHeaderCell("Nb. câbles"),
+                  _thHeaderCell("Isolement (MΩ)"),
+                  _thHeaderCell("Appréciation"),
+                ],
+              ),
+            ],
+          );
+
+          widgets.add(headerTable);
+
+          // 2. Table Data Rows
+          final isoTableRows = <pw.TableRow>[];
+          int globalRowIndex = 0;
+
+          for (final zGroup in isoZoneGroups) {
+            final totalZoneItems = zGroup.items.length;
+            final zoneMidIndex = (totalZoneItems - 1) ~/ 2;
+
+            for (int currentZoneItemIdx = 0; currentZoneItemIdx < totalZoneItems; currentZoneItemIdx++) {
+              final rowItem = zGroup.items[currentZoneItemIdx];
+              final ei = rowItem.item;
+
+              final idx = globalRowIndex++;
+              final isEven = idx % 2 == 0;
+              final bg = isEven ? PdfColors.white : tableRowAlt;
+
+              final isStartOfZone = (currentZoneItemIdx == 0 && idx > 0);
+              final isEndOfZone = (currentZoneItemIdx == totalZoneItems - 1);
+
+              final zoneBorder = pw.Border(
+                top: isStartOfZone
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                    : pw.BorderSide.none,
+                bottom: isEndOfZone
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                    : pw.BorderSide.none,
+              );
+
+              final itemBorder = pw.Border(
+                top: isStartOfZone
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                    : pw.BorderSide.none,
+                bottom: isEndOfZone
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                    : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4),
+              );
+
+              final app = ei.appreciation;
+              final isSat = app == 'Satisfaisant';
+              final isNonSat = app == 'Non satisfaisant';
+              final appBgColor = isSat
+                  ? conformeColor
+                  : (isNonSat ? nonConformeColor : PdfColor.fromInt(0xFFEEEEEE));
+
+              isoTableRows.add(
+                pw.TableRow(
+                  children: [
+                    // Cellule 0 : ZONE
+                    pw.Container(
+                      decoration: pw.BoxDecoration(
+                        color: PdfColors.white,
+                        border: zoneBorder,
+                      ),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: (currentZoneItemIdx == zoneMidIndex && zGroup.zoneName.isNotEmpty)
+                          ? pw.Text(
+                              zGroup.zoneName,
+                              style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                              textAlign: pw.TextAlign.center,
+                            )
+                          : pw.SizedBox(),
+                    ),
+
+                    // Cellule 1 : N°
+                    pw.Container(
+                      decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        '${rowItem.index}',
+                        style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+
+                    // Cellule 2 : Repère du point d'origine
+                    pw.Container(
+                      decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        ei.displayRepereOrigine,
+                        style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+
+                    // Cellule 3 : Point A (origine)
+                    pw.Container(
+                      decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        ei.displayPointA,
+                        style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+
+                    // Cellule 4 : Point B (extrémité)
+                    pw.Container(
+                      decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        ei.displayPointB,
+                        style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+
+                    // Cellule 5 : Section câble Point A
+                    pw.Container(
+                      decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        ei.displaySectionPointA,
+                        style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+
+                    // Cellule 6 : Section câble Point B
+                    pw.Container(
+                      decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        ei.displaySectionPointB,
+                        style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+
+                    // Cellule 7 : Nb. câbles
+                    pw.Container(
+                      decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        ei.displayNombreCables,
+                        style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+
+                    // Cellule 8 : Isolement (MΩ)
+                    pw.Container(
+                      decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        ei.displayIsolement,
+                        style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+
+                    // Cellule 9 : Appréciation
+                    pw.Container(
+                      decoration: pw.BoxDecoration(color: appBgColor, border: itemBorder),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        app,
+                        style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: PdfColors.black),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+
+          widgets.add(
             pw.Table(
               defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-              border: pw.TableBorder.all(color: borderColor, width: 0.4),
-              columnWidths: const {
-                0: pw.FixedColumnWidth(24), // N°
-                1: pw.FlexColumnWidth(1.8), // Repère du point d'origine
-                2: pw.FlexColumnWidth(2.0), // Point A (origine)
-                3: pw.FlexColumnWidth(2.0), // Point B (extrémité)
-                4: pw.FlexColumnWidth(1.4), // Section Point A
-                5: pw.FlexColumnWidth(1.4), // Section Point B
-                6: pw.FlexColumnWidth(1.2), // Nb. câbles
-                7: pw.FlexColumnWidth(1.3), // Isolement
-                8: pw.FlexColumnWidth(1.7), // Appréciation
-              },
-              children: [
-                _tableHeaderRow([
-                  'N°',
-                  'Repère du point d\'origine',
-                  'Point A (origine)',
-                  'Point B (extrémité)',
-                  'Section câble Point A',
-                  'Section câble Point B',
-                  'Nb. câbles',
-                  'Isolement (MΩ)',
-                  'Appréciation',
-                ]),
-                ...mesures.essaisIsolement.asMap().entries.map((e) {
-                  final ei = e.value;
-                  final app = ei.appreciation;
-                  final isSat = app == 'Satisfaisant';
-                  final isNonSat = app == 'Non satisfaisant';
-                  final appBgColor = isSat
-                      ? conformeColor
-                      : (isNonSat
-                            ? nonConformeColor
-                            : PdfColor.fromInt(0xFFEEEEEE));
+              border: const pw.TableBorder(
+                left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                horizontalInside: pw.BorderSide.none,
+              ),
+              columnWidths: isoColumnWidths,
+              children: isoTableRows,
+            ),
+          );
 
-                  return pw.TableRow(
-                    decoration: pw.BoxDecoration(
-                      color: e.key.isOdd ? tableRowAlt : PdfColors.white,
-                    ),
-                    children: [
-                      _cell('${e.key + 1}', isHeader: false, centered: true),
-                      pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 3,
-                          vertical: 4,
-                        ),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          ei.displayRepereOrigine,
-                          style: pw.TextStyle(
-                            font: _fontRegular,
-                            fontSize: fsSmall,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                      ),
-                      pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 3,
-                          vertical: 4,
-                        ),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          ei.displayPointA,
-                          style: pw.TextStyle(
-                            font: _fontRegular,
-                            fontSize: fsSmall,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                      ),
-                      pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 3,
-                          vertical: 4,
-                        ),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          ei.displayPointB,
-                          style: pw.TextStyle(
-                            font: _fontRegular,
-                            fontSize: fsSmall,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                      ),
-                      pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 3,
-                          vertical: 4,
-                        ),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          ei.displaySectionPointA,
-                          style: pw.TextStyle(
-                            font: _fontRegular,
-                            fontSize: fsSmall,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                      ),
-                      pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 3,
-                          vertical: 4,
-                        ),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          ei.displaySectionPointB,
-                          style: pw.TextStyle(
-                            font: _fontRegular,
-                            fontSize: fsSmall,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                      ),
-                      pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 3,
-                          vertical: 4,
-                        ),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          ei.displayNombreCables,
-                          style: pw.TextStyle(
-                            font: _fontRegular,
-                            fontSize: fsSmall,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                      ),
-                      pw.Container(
-                        padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 3,
-                          vertical: 4,
-                        ),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          ei.displayIsolement,
-                          style: pw.TextStyle(
-                            font: _fontRegular,
-                            fontSize: fsSmall,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                      ),
-                      pw.Container(
-                        color: appBgColor,
-                        padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 3,
-                          vertical: 4,
-                        ),
-                        alignment: pw.Alignment.center,
-                        child: pw.Text(
-                          app,
-                          style: pw.TextStyle(
-                            font: _fontBold,
-                            fontSize: fsSmall,
-                            color: PdfColors.black,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        ),
-                      ),
-                    ],
-                  );
-                }),
-            ],
-          ),
-        ],
+          return widgets;
+        },
       ),
     );
 
