@@ -7775,6 +7775,15 @@ class PdfReportService {
     );
   }
 
+  @visibleForTesting
+  static _LocationInfo resolveLocationForTesting(
+    AuditInstallationsElectriques? audit, {
+    String? localisationStr,
+    String? coffretStr,
+  }) {
+    return _resolveLocation(audit, localisationStr: localisationStr, coffretStr: coffretStr);
+  }
+
   static _LocationInfo _resolveLocation(
     AuditInstallationsElectriques? audit, {
     String? localisationStr,
@@ -16290,9 +16299,11 @@ class PdfReportService {
                             ),
                             padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                             alignment: pw.Alignment.center,
-                            child: (currentRepItemIdx == repMidIdx && rGroup.repereName.isNotEmpty)
+                            child: (currentRepItemIdx == repMidIdx)
                                 ? pw.Text(
-                                    rGroup.repereName,
+                                    rGroup.repereName.isNotEmpty
+                                        ? rGroup.repereName
+                                        : (zGroup.zoneName.isNotEmpty ? zGroup.zoneName : ''),
                                     style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
                                     textAlign: pw.TextAlign.center,
                                   )
@@ -16999,9 +17010,11 @@ class PdfReportService {
                           decoration: pw.BoxDecoration(color: PdfColors.white, border: repereBorder),
                           padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                           alignment: pw.Alignment.center,
-                          child: (currentRepereRowIdx == repereMidIndex && repereGroup.repereName.isNotEmpty)
+                          child: (currentRepereRowIdx == repereMidIndex)
                               ? pw.Text(
-                                  repereGroup.repereName,
+                                  repereGroup.repereName.isNotEmpty
+                                      ? repereGroup.repereName
+                                      : (zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : ''),
                                   style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
                                   textAlign: pw.TextAlign.center,
                                 )
