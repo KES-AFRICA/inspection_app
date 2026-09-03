@@ -9284,48 +9284,89 @@ class PdfReportService {
 
     for (int zIdx = 0; zIdx < zoneGroups.length; zIdx++) {
       final zoneGroup = zoneGroups[zIdx];
+      final rawZoneName = zoneGroup.zoneName.trim();
+      final zoneText = rawZoneName.isNotEmpty ? rawZoneName.toUpperCase() : '-';
+
+      // Espacement entre deux Zones distinctes
+      if (widgets.isNotEmpty) {
+        widgets.add(pw.SizedBox(height: 20));
+      }
+
+      // 3. RÈGLE : Le bloc ZONE est TOUJOURS présent, avec le texte "ZONE: XX", en majuscule et bien centré. Si pas de zone -> "ZONE: -"
+      widgets.add(
+        pw.Container(
+          width: double.infinity,
+          decoration: const pw.BoxDecoration(
+            color: PdfColor.fromInt(0xFF1E3A8A), // Dark Navy
+            borderRadius: pw.BorderRadius.all(pw.Radius.circular(2)),
+          ),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4.5),
+          alignment: pw.Alignment.center,
+          child: pw.Text(
+            'ZONE: $zoneText',
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: 9.0,
+              color: PdfColors.white,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+        ),
+      );
+
+      // 5. RÈGLE : Réduit l'espace qui sépare le bloc Zone du bloc Repère.
+      widgets.add(pw.SizedBox(height: 2.5));
+
       for (int lIdx = 0; lIdx < zoneGroup.localGroups.length; lIdx++) {
         final localGroup = zoneGroup.localGroups[lIdx];
+        final rawLocalName = localGroup.localName.trim();
 
-        // RÈGLE EXPLICITE DE CLARTÉ : Chaque Zone ou Repère débute sur une NOUVELLE PAGE
-        if (widgets.isNotEmpty) {
-          widgets.add(pw.NewPage());
+        // 2. RÈGLE : Augmente l'espace entre deux repères.
+        if (lIdx > 0) {
+          widgets.add(pw.SizedBox(height: 16));
         }
 
-        // En-tête de Localisation (Rappel explicite systématique de la Zone et du Repère)
-        final String zoneStr = zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName.toUpperCase() : '';
-        final String repereStr = localGroup.localName.isNotEmpty ? localGroup.localName.toUpperCase() : '';
-        final String locationHeaderStr = 'ZONE : $zoneStr   |   REPÈRE : $repereStr';
+        // 4. RÈGLE : Si zone sans repère -> dans le repère on met encore le nom de la zone. Texte centré.
+        final String repereText = rawLocalName.isNotEmpty
+            ? rawLocalName.toUpperCase()
+            : (rawZoneName.isNotEmpty ? rawZoneName.toUpperCase() : '-');
 
         widgets.add(
           pw.Container(
             width: double.infinity,
-            decoration: pw.BoxDecoration(
-              color: headerColor, // #1E3A8A Dark Navy
-              borderRadius: const pw.BorderRadius.only(
-                topLeft: pw.Radius.circular(2),
-                topRight: pw.Radius.circular(2),
-              ),
+            decoration: const pw.BoxDecoration(
+              color: PdfColor.fromInt(0xFF334155), // Slate Navy
+              borderRadius: pw.BorderRadius.all(pw.Radius.circular(2)),
             ),
-            padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 4),
+            padding: const pw.EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            alignment: pw.Alignment.center,
             child: pw.Text(
-              locationHeaderStr,
+              'REPÈRE: $repereText',
               style: pw.TextStyle(
                 font: _fontBold,
-                fontSize: 8.0,
+                fontSize: 8.5,
                 color: PdfColors.white,
               ),
+              textAlign: pw.TextAlign.center,
             ),
           ),
         );
+        widgets.add(pw.SizedBox(height: 4));
 
-        for (final equipGroup in localGroup.equipGroups) {
+        for (int eIdx = 0; eIdx < localGroup.equipGroups.length; eIdx++) {
+          final equipGroup = localGroup.equipGroups[eIdx];
+
+          // 1. RÈGLE : Réduis l'espace entre les équipements d'un même repère.
+          if (eIdx > 0) {
+            widgets.add(pw.SizedBox(height: 3.5));
+          }
+
           final equipName = equipGroup.coffret.isNotEmpty
               ? equipGroup.coffret
               : 'ÉQUIPEMENT SANS NOM';
           final obsCountStr = '${equipGroup.items.length} observation(s)';
 
-          // Table unique indissociable par équipement (Rang 0 = En-tête équipement, Rang 1 = En-tête colonnes, Rangs 2..N = Observations)
+          // Subtable indissociable par équipement
           final rows = <pw.TableRow>[];
 
           // LIGNE 0 : BANDEAU D'ÉQUIPEMENT (Fond Soft Blue #DBEAFE, Texte Gras Navy)
@@ -9372,7 +9413,7 @@ class PdfReportService {
           rows.add(
             pw.TableRow(
               decoration: const pw.BoxDecoration(
-                color: PdfColor.fromInt(0xFF2E5F9A), // Medium Blue Header
+                color: PdfColor.fromInt(0xFF2E5F9A),
               ),
               children: [
                 pw.Container(
@@ -9405,7 +9446,7 @@ class PdfReportService {
             ),
           );
 
-          // LIGNES 2..N : LIGNES D'OBSERVATIONS
+          // LIGNES 2..N : LIGNES D'OBSERVATIONS (Niveau 1 : Espacement compact)
           for (int itemIdx = 0; itemIdx < equipGroup.items.length; itemIdx++) {
             final o = equipGroup.items[itemIdx];
             final isEven = itemIdx % 2 == 0;
@@ -9422,7 +9463,6 @@ class PdfReportService {
               pw.TableRow(
                 decoration: pw.BoxDecoration(color: rowBg),
                 children: [
-                  // Cellule N°
                   pw.Container(
                     decoration: pw.BoxDecoration(border: obsBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3.5),
@@ -9433,8 +9473,6 @@ class PdfReportService {
                       textAlign: pw.TextAlign.center,
                     ),
                   ),
-
-                  // Cellule Observation
                   pw.Container(
                     decoration: pw.BoxDecoration(border: obsBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3.5),
@@ -9444,8 +9482,6 @@ class PdfReportService {
                       style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
                     ),
                   ),
-
-                  // Cellule Référence Normative
                   pw.Container(
                     decoration: pw.BoxDecoration(border: obsBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3.5),
@@ -9461,7 +9497,6 @@ class PdfReportService {
             );
           }
 
-          // Tableau unique indissociable pour l'ensemble de l'équipement
           widgets.add(
             pw.Table(
               defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
@@ -9477,8 +9512,6 @@ class PdfReportService {
               children: rows,
             ),
           );
-
-          widgets.add(pw.SizedBox(height: 3.5));
         }
       }
     }
@@ -15692,9 +15725,11 @@ class PdfReportService {
                           ),
                           padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
                           alignment: pw.Alignment.center,
-                          child: (currentRepItemIdx == repMidIdx && repGroup.repereName.isNotEmpty)
+                          child: (currentRepItemIdx == repMidIdx)
                               ? pw.Text(
-                                  repGroup.repereName,
+                                  repGroup.repereName.isNotEmpty
+                                      ? repGroup.repereName
+                                      : (zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : ''),
                                   style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
                                   textAlign: pw.TextAlign.center,
                                 )
