@@ -458,7 +458,7 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
 
       if (photo != null) {
         if (source == ImageSource.camera) {
-          GalleryPhotoService.saveToGallery(File(photo.path));
+          await GalleryPhotoService.saveToGallery(File(photo.path));
         }
         final appDir = await getApplicationDocumentsDirectory();
         final photosDir = Directory('${appDir.path}/audit_photos/prises_terre');

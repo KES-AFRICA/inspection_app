@@ -121,7 +121,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       );
 
       if (photo != null) {
-        GalleryPhotoService.saveToGallery(File(photo.path));
+        await GalleryPhotoService.saveToGallery(File(photo.path));
         setState(() => _isLoadingZonePhotos = true);
 
         final savedPath = await _savePhotoToAppDirectory(
@@ -480,7 +480,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       );
 
       if (photo != null) {
-        GalleryPhotoService.saveToGallery(File(photo.path));
+        await GalleryPhotoService.saveToGallery(File(photo.path));
         final savedPath = await _savePhotoToAppDirectory(
           File(photo.path),
           'observations_zones',

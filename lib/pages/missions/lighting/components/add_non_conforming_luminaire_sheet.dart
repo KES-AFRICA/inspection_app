@@ -609,7 +609,7 @@ class _AddNonConformingLuminaireSheetState
     );
     if (photo != null) {
       if (source == ImageSource.camera) {
-        GalleryPhotoService.saveToGallery(File(photo.path));
+        await GalleryPhotoService.saveToGallery(File(photo.path));
       }
       setState(() {
         answer.photoPaths.add(photo.path);

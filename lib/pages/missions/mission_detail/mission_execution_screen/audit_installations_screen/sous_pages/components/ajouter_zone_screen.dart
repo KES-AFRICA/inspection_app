@@ -92,7 +92,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
       // BUG #1 FIX: vérifier mounted après tout await (le widget peut être disposé)
       if (!mounted) return;
       if (photo != null) {
-        GalleryPhotoService.saveToGallery(File(photo.path));
+        await GalleryPhotoService.saveToGallery(File(photo.path));
         setState(() => _isLoadingPhotos = true);
         try {
           final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'zones');
@@ -157,7 +157,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
       );
       if (!mounted) return;
       if (photo != null) {
-        GalleryPhotoService.saveToGallery(File(photo.path));
+        await GalleryPhotoService.saveToGallery(File(photo.path));
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations');
         if (!mounted) return;
         setState(() {

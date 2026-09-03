@@ -80,7 +80,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
       );
       
       if (photo != null) {
-        GalleryPhotoService.saveToGallery(File(photo.path));
+        await GalleryPhotoService.saveToGallery(File(photo.path));
         setState(() => _isLoadingPhotos = true);
         
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets');
@@ -430,7 +430,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
       );
       
       if (photo != null) {
-        GalleryPhotoService.saveToGallery(File(photo.path));
+        await GalleryPhotoService.saveToGallery(File(photo.path));
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations');
         setState(() {
           photosList.add(savedPath);

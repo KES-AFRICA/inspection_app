@@ -112,7 +112,7 @@ class _ObservationScreenState extends State<ObservationScreen> {
       
       if (photo != null) {
         // Sauvegarde parallèle et indépendante de l'original dans la Galerie du téléphone
-        GalleryPhotoService.saveToGallery(File(photo.path));
+        await GalleryPhotoService.saveToGallery(File(photo.path));
 
         setState(() => _isLoading = true);
         

@@ -204,7 +204,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       );
 
       if (photo != null) {
-        GalleryPhotoService.saveToGallery(File(photo.path));
+        await GalleryPhotoService.saveToGallery(File(photo.path));
         setState(() => _isLoadingLocalPhotos = true);
 
         final savedPath = await _savePhotoToAppDirectory(
@@ -563,7 +563,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       );
 
       if (photo != null) {
-        GalleryPhotoService.saveToGallery(File(photo.path));
+        await GalleryPhotoService.saveToGallery(File(photo.path));
         final savedPath = await _savePhotoToAppDirectory(
           File(photo.path),
           'observations_locaux',

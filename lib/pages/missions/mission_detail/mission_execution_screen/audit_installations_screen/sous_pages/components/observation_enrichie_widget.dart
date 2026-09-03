@@ -44,7 +44,7 @@ class _ObservationEnrichieWidgetState extends State<ObservationEnrichieWidget> {
     );
     if (photo != null) {
       // Sauvegarde parallèle et indépendante de l'original dans la Galerie du téléphone
-      GalleryPhotoService.saveToGallery(File(photo.path));
+      await GalleryPhotoService.saveToGallery(File(photo.path));
 
       final savedPath = await widget.onSavePhoto(
         File(photo.path),
