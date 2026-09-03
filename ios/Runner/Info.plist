@@ -47,5 +47,11 @@
 		<true/>
 		<key>UIStatusBarHidden</key>
 		<false/>
+		<key>NSPhotoLibraryAddUsageDescription</key>
+		<string>L'application a besoin d'accéder à votre galerie pour sauvegarder les photos prises lors des inspections.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>L'application a besoin d'accéder à votre galerie pour sélectionner ou sauvegarder les photos d'inspection.</string>
+		<key>NSCameraUsageDescription</key>
+		<string>L'application a besoin d'utiliser l'appareil photo pour prendre des photos pendant les inspections.</string>
 	</dict>
 </plist>

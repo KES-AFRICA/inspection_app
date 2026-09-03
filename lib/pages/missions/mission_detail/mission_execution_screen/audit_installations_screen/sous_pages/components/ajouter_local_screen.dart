@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/services/gallery_photo_service.dart';
 import 'package:inspec_app/models/classement_locaux.dart';
 import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
@@ -3938,6 +3939,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     try {
       final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
       if (photo != null) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'cellules');
         setState(() => _cellulePhoto = savedPath);
       }
@@ -4097,6 +4099,7 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     try {
       final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
       if (photo != null) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'transformateurs');
         setState(() => _transfoPhoto = savedPath);
       }
@@ -5817,6 +5820,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     try {
       final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
       if (photo != null) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
         setState(() => _isLoadingPhotos = true);
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'locaux');
         setState(() {
@@ -5853,6 +5857,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     try {
       final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
       if (photo != null) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations');
         setState(() => _observationPhotos.add(savedPath));
       }
@@ -6112,6 +6117,7 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
     try {
       final XFile? photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
       if (photo != null) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'element_photos');
         setState(() => element.photos.add(savedPath));
         await HiveService.addPhotoToElementControle(missionId: widget.mission.id, localisation: _nomController.text.trim(), elementIndex: elementIndex, cheminPhoto: savedPath, sectionType: sectionType);

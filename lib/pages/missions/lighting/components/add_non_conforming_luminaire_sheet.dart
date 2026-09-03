@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/services/gallery_photo_service.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/models/lighting_inspection.dart';
 
@@ -607,6 +608,9 @@ class _AddNonConformingLuminaireSheetState
       imageQuality: 80,
     );
     if (photo != null) {
+      if (source == ImageSource.camera) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
+      }
       setState(() {
         answer.photoPaths.add(photo.path);
       });

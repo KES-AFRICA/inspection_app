@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/services/gallery_photo_service.dart';
 import 'package:inspec_app/utils/image_compress_helper.dart';
 import 'package:inspec_app/models/description_installations.dart';
 import 'package:inspec_app/models/mission.dart';
@@ -154,6 +155,7 @@ class _ItemDetailScreenState extends ConsumerState<ItemDetailScreen> {
   Future<void> _takePhoto() async {
     final XFile? photo = await _picker.pickImage(source: ImageSource.camera);
     if (photo != null) {
+      GalleryPhotoService.saveToGallery(File(photo.path));
       try {
         final file = File(photo.path);
         final tempPath = '${photo.path}_compressed.jpg';

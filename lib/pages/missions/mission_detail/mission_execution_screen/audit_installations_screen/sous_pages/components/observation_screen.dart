@@ -1,6 +1,7 @@
 // observation_screen.dart
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/services/gallery_photo_service.dart';
 import 'package:inspec_app/utils/image_compress_helper.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/services/normative_search_service.dart';
@@ -110,6 +111,9 @@ class _ObservationScreenState extends State<ObservationScreen> {
       );
       
       if (photo != null) {
+        // Sauvegarde parallèle et indépendante de l'original dans la Galerie du téléphone
+        GalleryPhotoService.saveToGallery(File(photo.path));
+
         setState(() => _isLoading = true);
         
         final savedPath = await _savePhotoToAppDirectory(File(photo.path));

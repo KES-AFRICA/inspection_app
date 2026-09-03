@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/services/gallery_photo_service.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/observation_screen.dart';
@@ -79,6 +80,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
       );
       
       if (photo != null) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
         setState(() => _isLoadingPhotos = true);
         
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets');
@@ -428,6 +430,7 @@ class _DetailCoffretScreenState extends State<DetailCoffretScreen> {
       );
       
       if (photo != null) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations');
         setState(() {
           photosList.add(savedPath);

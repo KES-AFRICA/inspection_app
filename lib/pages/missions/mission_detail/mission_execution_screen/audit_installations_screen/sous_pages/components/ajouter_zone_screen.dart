@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/services/gallery_photo_service.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
@@ -91,6 +92,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
       // BUG #1 FIX: vérifier mounted après tout await (le widget peut être disposé)
       if (!mounted) return;
       if (photo != null) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
         setState(() => _isLoadingPhotos = true);
         try {
           final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'zones');
@@ -155,6 +157,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
       );
       if (!mounted) return;
       if (photo != null) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations');
         if (!mounted) return;
         setState(() {

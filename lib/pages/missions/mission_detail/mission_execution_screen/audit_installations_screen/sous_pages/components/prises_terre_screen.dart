@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/services/gallery_photo_service.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:inspec_app/models/mesures_essais.dart';
 import 'package:inspec_app/models/mission.dart';
@@ -456,6 +457,9 @@ class _AjouterPriseTerreScreenState extends State<_AjouterPriseTerreScreen> {
       );
 
       if (photo != null) {
+        if (source == ImageSource.camera) {
+          GalleryPhotoService.saveToGallery(File(photo.path));
+        }
         final appDir = await getApplicationDocumentsDirectory();
         final photosDir = Directory('${appDir.path}/audit_photos/prises_terre');
         if (!await photosDir.exists()) {

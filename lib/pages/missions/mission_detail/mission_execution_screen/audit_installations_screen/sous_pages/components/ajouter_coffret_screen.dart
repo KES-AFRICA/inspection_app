@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/services/gallery_photo_service.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
 import 'package:inspec_app/services/dispositions_constructives_registry.dart';
 import 'package:inspec_app/services/normative_reference_service.dart';
@@ -4004,6 +4005,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   Future<void> _prendrePhotoObservation() async {
     final photo = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
     if (photo != null) {
+      GalleryPhotoService.saveToGallery(File(photo.path));
       final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'observations_coffret');
       if (savedPath != null) setState(() => _observationPhotos.add(savedPath));
     }
@@ -4047,6 +4049,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     try {
       final XFile? photo = await _picker.pickImage(source: ImageSource.camera, preferredCameraDevice: CameraDevice.rear, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
       if (photo != null) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
         if (mounted) setState(() => _isLoadingPhotosExterne = true);
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_externe');
         if (mounted) setState(() { _coffretPhotosExterne.add(savedPath); _validatePhotosExterne(); _isLoadingPhotosExterne = false; });
@@ -4069,6 +4072,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     try {
       final XFile? photo = await _picker.pickImage(source: ImageSource.camera, preferredCameraDevice: CameraDevice.rear, imageQuality: 85, maxWidth: 1024, maxHeight: 1024);
       if (photo != null) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
         if (mounted) setState(() => _isLoadingPhotosInterne = true);
         final savedPath = await _savePhotoToAppDirectory(File(photo.path), 'coffrets_interne');
         if (mounted) setState(() { _coffretPhotosInterne.add(savedPath); _validatePhotosInterne(); _isLoadingPhotosInterne = false; });

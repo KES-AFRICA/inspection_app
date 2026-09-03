@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/services/gallery_photo_service.dart';
 import 'package:inspec_app/models/classement_locaux.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/classement_emplacement_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/observation_screen.dart';
@@ -203,6 +204,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       );
 
       if (photo != null) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
         setState(() => _isLoadingLocalPhotos = true);
 
         final savedPath = await _savePhotoToAppDirectory(
@@ -561,6 +563,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
       );
 
       if (photo != null) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
         final savedPath = await _savePhotoToAppDirectory(
           File(photo.path),
           'observations_locaux',

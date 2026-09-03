@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/services/gallery_photo_service.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/observation_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/qr_scan_coffret_screen.dart';
 import 'package:inspec_app/utils/image_compress_helper.dart';
@@ -120,6 +121,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       );
 
       if (photo != null) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
         setState(() => _isLoadingZonePhotos = true);
 
         final savedPath = await _savePhotoToAppDirectory(
@@ -478,6 +480,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       );
 
       if (photo != null) {
+        GalleryPhotoService.saveToGallery(File(photo.path));
         final savedPath = await _savePhotoToAppDirectory(
           File(photo.path),
           'observations_zones',

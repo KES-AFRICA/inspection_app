@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inspec_app/services/gallery_photo_service.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/components/normative_search_suggestions_widget.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/ajouter_coffret_screen.dart';
@@ -42,6 +43,9 @@ class _ObservationEnrichieWidgetState extends State<ObservationEnrichieWidget> {
       imageQuality: 80,
     );
     if (photo != null) {
+      // Sauvegarde parallèle et indépendante de l'original dans la Galerie du téléphone
+      GalleryPhotoService.saveToGallery(File(photo.path));
+
       final savedPath = await widget.onSavePhoto(
         File(photo.path),
         widget.sectionType,
