@@ -16398,6 +16398,7 @@ class PdfReportService {
             final locInfo = _resolveLocation(
               audit,
               localisationStr: ei.displayRepereOrigine,
+              coffretStr: ei.pointA,
             );
 
             String zoneName = locInfo.zoneName.trim();
@@ -16416,7 +16417,7 @@ class PdfReportService {
             isoRows.add(
               _IsolementRowItem(
                 zoneName: zoneName,
-                repereName: repereName.isNotEmpty ? repereName : ei.displayRepereOrigine.trim(),
+                repereName: repereName,
                 index: i + 1,
                 item: ei,
               ),
@@ -16566,7 +16567,7 @@ class PdfReportService {
                       padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                       alignment: pw.Alignment.center,
                       child: pw.Text(
-                        ei.displayRepereOrigine,
+                        rowItem.repereName.isNotEmpty ? rowItem.repereName : '-',
                         style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
                         textAlign: pw.TextAlign.center,
                       ),
