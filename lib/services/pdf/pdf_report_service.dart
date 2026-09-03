@@ -516,7 +516,7 @@ class PdfReportService {
             minWidth: targetWidth,
             quality: targetQuality,
             format: CompressFormat.jpeg,
-          ).timeout(const Duration(seconds: 2));
+          ).timeout(const Duration(seconds: 10));
 
           if (compressedBytes != null && compressedBytes.isNotEmpty) {
             try {
@@ -6898,7 +6898,7 @@ class PdfReportService {
             ),
           ),
           pw.SizedBox(height: 4),
-          _buildInstallationTableFromRows(pdfData.mtRows, sectionKey: 'MT'),
+          ..._buildInstallationTableFromRows(pdfData.mtRows, sectionKey: 'MT'),
         ],
       ),
     );
@@ -6917,7 +6917,7 @@ class PdfReportService {
             ),
           ),
           pw.SizedBox(height: 4),
-          _buildInstallationTableFromRows(pdfData.btRows, sectionKey: 'BT'),
+          ..._buildInstallationTableFromRows(pdfData.btRows, sectionKey: 'BT'),
         ],
       ),
     );
@@ -7280,7 +7280,7 @@ class PdfReportService {
     );
   }
 
-  static pw.Widget _buildInstallationTableFromRows(
+  static List<pw.Widget> _buildInstallationTableFromRows(
     List<InstallationDescriptionPdfRow> rows, {
     required String sectionKey,
   }) {
@@ -7300,32 +7300,34 @@ class PdfReportService {
     };
 
     if (rows.isEmpty) {
-      return pw.Table(
-        border: pw.TableBorder.all(color: borderColor, width: 0.4),
-        columnWidths: headerColumnWidths,
-        children: [
-          pw.TableRow(
-            decoration: pw.BoxDecoration(color: accentColor),
-            children: headers.map((c) => _cell(c, isHeader: true, centered: true)).toList(),
-          ),
-          pw.TableRow(
-            decoration: const pw.BoxDecoration(color: PdfColors.white),
-            children: [
-              _cell('-', isHeader: false, centered: true),
-              _cell('-', isHeader: false, centered: true),
-              pw.Container(
-                padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
-                alignment: pw.Alignment.center,
-                child: pw.Text(
-                  '1',
-                  style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+      return [
+        pw.Table(
+          border: pw.TableBorder.all(color: borderColor, width: 0.4),
+          columnWidths: headerColumnWidths,
+          children: [
+            pw.TableRow(
+              decoration: pw.BoxDecoration(color: accentColor),
+              children: headers.map((c) => _cell(c, isHeader: true, centered: true)).toList(),
+            ),
+            pw.TableRow(
+              decoration: const pw.BoxDecoration(color: PdfColors.white),
+              children: [
+                _cell('-', isHeader: false, centered: true),
+                _cell('-', isHeader: false, centered: true),
+                pw.Container(
+                  padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 3),
+                  alignment: pw.Alignment.center,
+                  child: pw.Text(
+                    '1',
+                    style: pw.TextStyle(font: _fontBold, fontSize: fsSmall, color: headerColor),
+                  ),
                 ),
-              ),
-              ...finalOrder.map((_) => _cell('-', isHeader: false, centered: true)),
-            ],
-          ),
-        ],
-      );
+                ...finalOrder.map((_) => _cell('-', isHeader: false, centered: true)),
+              ],
+            ),
+          ],
+        ),
+      ];
     }
 
     // Regrouper à 2 niveaux : Zone -> Repère -> Éléments
@@ -7550,7 +7552,7 @@ class PdfReportService {
       );
     }
 
-    return pw.Column(children: tableWidgets);
+    return tableWidgets;
   }
 
   /// Résolution tolérante des valeurs pour un champ de colonne PDF donné
@@ -8454,12 +8456,12 @@ class PdfReportService {
     return list;
   }
 
-  static pw.Widget _buildUnknownSourcesTable(
+  static List<pw.Widget> _buildUnknownSourcesTable(
     List<_PdfUnknownSourceItem> items, {
     int startNumber = 1,
     bool showTableHeader = true,
   }) {
-    if (items.isEmpty) return pw.SizedBox();
+    if (items.isEmpty) return [];
 
     final headers = [
       'Zone',
@@ -8736,23 +8738,25 @@ class PdfReportService {
       );
     }
 
-    return pw.Column(children: tableWidgets);
+    return tableWidgets;
   }
 
-  static pw.Widget _buildEquipementsTable(
+  static List<pw.Widget> _buildEquipementsTable(
     List<_PdfEquipementItem> items, {
     int startNumber = 1,
     bool showTableHeader = true,
     bool isMT = false,
   }) {
     if (items.isEmpty) {
-      return pw.Padding(
-        padding: const pw.EdgeInsets.all(8),
-        child: pw.Text(
-          'Aucun équipement recensé.',
-          style: pw.TextStyle(font: _fontRegular, fontSize: 9, color: PdfColors.grey700),
+      return [
+        pw.Padding(
+          padding: const pw.EdgeInsets.all(8),
+          child: pw.Text(
+            'Aucun équipement recensé.',
+            style: pw.TextStyle(font: _fontRegular, fontSize: 9, color: PdfColors.grey700),
+          ),
         ),
-      );
+      ];
     }
 
     final headers = isMT
@@ -9126,7 +9130,7 @@ class PdfReportService {
       );
     }
 
-    return pw.Column(children: tableWidgets);
+    return tableWidgets;
   }
 
   @visibleForTesting
@@ -9142,7 +9146,7 @@ class PdfReportService {
     List<_PdfEquipementItem> items, {
     bool isMT = false,
   }) {
-    return _buildEquipementsTable(items, isMT: isMT);
+    return pw.Column(children: _buildEquipementsTable(items, isMT: isMT));
   }
 
   @visibleForTesting
@@ -17673,21 +17677,53 @@ class PdfReportService {
         } catch (_) {}
       }
 
+      // ── Tentative 1 : Compression via compressWithFile ──
       try {
         final compressedBytes = await FlutterImageCompress.compressWithFile(
-          file.absolute.path,
+          file.path,
           minWidth: targetWidth,
           minHeight: targetHeight,
           quality: targetQuality,
           format: CompressFormat.jpeg,
-        ).timeout(const Duration(seconds: 2));
+        ).timeout(const Duration(seconds: 10));
+
         if (compressedBytes != null && compressedBytes.isNotEmpty) {
           try {
             await cacheFile.writeAsBytes(compressedBytes);
           } catch (_) {}
           return pw.MemoryImage(compressedBytes);
         }
-      } catch (_) {}
+      } catch (e) {
+        if (kDebugMode) {
+          print('⚠️ compressWithFile échoué pour $resolvedPath: $e. Passage à compressWithList...');
+        }
+      }
+
+      // ── Tentative 2 : Fallback via compressWithList ──
+      try {
+        final rawBytes = await file.readAsBytes();
+        if (rawBytes.isEmpty) return null;
+
+        final compressedBytes = await FlutterImageCompress.compressWithList(
+          rawBytes,
+          minWidth: targetWidth,
+          minHeight: targetHeight,
+          quality: targetQuality,
+          format: CompressFormat.jpeg,
+        ).timeout(const Duration(seconds: 10));
+
+        if (compressedBytes.isNotEmpty) {
+          try {
+            await cacheFile.writeAsBytes(compressedBytes);
+          } catch (_) {}
+          return pw.MemoryImage(compressedBytes);
+        }
+        return pw.MemoryImage(rawBytes);
+      } catch (e) {
+        if (kDebugMode) {
+          print('⚠️ compressWithList échoué pour $resolvedPath: $e.');
+        }
+      }
 
       final bytes = await file.readAsBytes();
       if (bytes.isEmpty) return null;
@@ -19282,7 +19318,7 @@ class PdfReportService {
     }) async {
       if (items.isEmpty) return;
 
-      const int batchSize = 60;
+      const int batchSize = 30;
       final totalBatches = (items.length / batchSize).ceil();
 
       for (int b = 0; b < totalBatches; b++) {
@@ -19318,7 +19354,7 @@ class PdfReportService {
                 ),
                 pw.SizedBox(height: 5),
               ],
-              _buildEquipementsTable(
+              ..._buildEquipementsTable(
                 batchItems,
                 startNumber: startIdx + 1,
                 showTableHeader: isFirstBatch,
@@ -19363,7 +19399,7 @@ class PdfReportService {
     // 4. Équipements aux sources d'alimentation non identifiées (découpés par micro-lots de 60)
     final unknownSources = _collectEquipementsUnknownSource(audit);
     if (unknownSources.isNotEmpty) {
-      const int batchSize = 60;
+      const int batchSize = 30;
       final totalBatches = (unknownSources.length / batchSize).ceil();
 
       for (int b = 0; b < totalBatches; b++) {
@@ -19399,7 +19435,7 @@ class PdfReportService {
                 ),
                 pw.SizedBox(height: 8),
               ],
-              _buildUnknownSourcesTable(
+              ..._buildUnknownSourcesTable(
                 batchItems,
                 startNumber: startIdx + 1,
                 showTableHeader: isFirstBatch,
@@ -19511,47 +19547,120 @@ class PdfReportService {
     }
     currentOffset += coverDoc.document.pdfPageList.pages.length;
 
-    // 2. Moyenne Tension Récap
+    // 2. Moyenne Tension Récap (Découpé par tranche de 15 groupes de zones max)
     final obsMT = _collectObservationsMT(audit);
-    final mtDoc = pw.Document(
-      title: 'Recap MT - ${mission.nomClient}',
-      author: 'KES INSPECTIONS AND PROJECTS',
-      compress: saveFilesToDisk,
-    );
-    final mtWidgets = <pw.Widget>[
-      PageTracker(
-        key: 'liste_recap_mt',
-        registry: trackedPages,
-        offset: currentOffset,
-        child: _subSectionBar('1. Moyenne tension'),
-      ),
-      pw.SizedBox(height: 5),
-      ..._buildObsRecapTableMT(obsMT),
-    ];
-    mtDoc.addPage(
-      pw.MultiPage(
-        maxPages: 10000,
-        pageTheme: _buildInnerPageTheme(
-          pageOffset: currentOffset,
-          overrideTotalPages: overrideTotalPages,
-        ),
-        header: (ctx) => _buildPageHeaderWidget(
-          nomClient: mission.nomClient,
-          nomSite: nomSite,
-          numeroRapport: numeroRapport,
-        ),
-        build: (ctx) => mtWidgets,
-      ),
-    );
-    final mtBytes = await mtDoc.save();
-    if (saveFilesToDisk) {
-      final mtFile = File(
-        '${tempDir.path}/pdf_chunk_recap_mt_${mission.id}.pdf',
+    final zoneGroupsMT = _groupByZoneLocalEquip(obsMT);
+
+    if (zoneGroupsMT.isEmpty) {
+      final mtDoc = pw.Document(
+        title: 'Recap MT Empty - ${mission.nomClient}',
+        author: 'KES INSPECTIONS AND PROJECTS',
+        compress: saveFilesToDisk,
       );
-      await mtFile.writeAsBytes(mtBytes);
-      chunkFiles.add(mtFile);
+      mtDoc.addPage(
+        pw.MultiPage(
+          maxPages: 10000,
+          pageTheme: _buildInnerPageTheme(
+            pageOffset: currentOffset,
+            overrideTotalPages: overrideTotalPages,
+          ),
+          header: (ctx) => _buildPageHeaderWidget(
+            nomClient: mission.nomClient,
+            nomSite: nomSite,
+            numeroRapport: numeroRapport,
+          ),
+          build: (ctx) => [
+            PageTracker(
+              key: 'liste_recap_mt',
+              registry: trackedPages,
+              offset: currentOffset,
+              child: _subSectionBar('1. Moyenne tension'),
+            ),
+            pw.SizedBox(height: 5),
+            pw.Container(
+              decoration: pw.BoxDecoration(
+                border: pw.Border.all(color: borderColor, width: 0.4),
+              ),
+              padding: const pw.EdgeInsets.all(6),
+              child: pw.Text(
+                'Aucune observation',
+                style: pw.TextStyle(
+                  font: _fontRegular,
+                  fontSize: fsSmall,
+                  fontStyle: pw.FontStyle.italic,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+      final mtBytes = await mtDoc.save();
+      if (saveFilesToDisk) {
+        final mtFile = File(
+          '${tempDir.path}/pdf_chunk_recap_mt_empty_${mission.id}.pdf',
+        );
+        await mtFile.writeAsBytes(mtBytes);
+        chunkFiles.add(mtFile);
+      }
+      currentOffset += mtDoc.document.pdfPageList.pages.length;
+    } else {
+      const int batchSize = 15;
+      for (int i = 0; i < zoneGroupsMT.length; i += batchSize) {
+        final subZoneGroups = zoneGroupsMT.sublist(
+          i,
+          (i + batchSize).clamp(0, zoneGroupsMT.length),
+        );
+        final obsSubList = subZoneGroups
+            .expand((zg) => zg.localGroups)
+            .expand((lg) => lg.equipGroups)
+            .expand((eg) => eg.items)
+            .toList();
+
+        final mtDoc = pw.Document(
+          title: 'Recap MT Chunk ${i ~/ batchSize} - ${mission.nomClient}',
+          author: 'KES INSPECTIONS AND PROJECTS',
+          compress: saveFilesToDisk,
+        );
+        final mtWidgets = <pw.Widget>[];
+        if (i == 0) {
+          mtWidgets.add(
+            PageTracker(
+              key: 'liste_recap_mt',
+              registry: trackedPages,
+              offset: currentOffset,
+              child: _subSectionBar('1. Moyenne tension'),
+            ),
+          );
+          mtWidgets.add(pw.SizedBox(height: 5));
+        }
+        mtWidgets.addAll(_buildObsRecapTableUnifie(obsSubList));
+
+        mtDoc.addPage(
+          pw.MultiPage(
+            maxPages: 10000,
+            pageTheme: _buildInnerPageTheme(
+              pageOffset: currentOffset,
+              overrideTotalPages: overrideTotalPages,
+            ),
+            header: (ctx) => _buildPageHeaderWidget(
+              nomClient: mission.nomClient,
+              nomSite: nomSite,
+              numeroRapport: numeroRapport,
+            ),
+            build: (ctx) => mtWidgets,
+          ),
+        );
+        final mtBytes = await mtDoc.save();
+        if (saveFilesToDisk) {
+          final mtFile = File(
+            '${tempDir.path}/pdf_chunk_recap_mt_${i ~/ batchSize}_${mission.id}.pdf',
+          );
+          await mtFile.writeAsBytes(mtBytes);
+          chunkFiles.add(mtFile);
+        }
+        currentOffset += mtDoc.document.pdfPageList.pages.length;
+      }
     }
-    currentOffset += mtDoc.document.pdfPageList.pages.length;
 
     // 3. Basse Tension Récap (Découpé par tranche de 15 groupes de zones max)
     final obsBT = _collectObservationsBT(audit);
@@ -19907,7 +20016,7 @@ class PdfReportService {
     }
     currentOffset += coverDoc.document.pdfPageList.pages.length;
 
-    // 2. MT Locaux Directs (si présents)
+    // 2. MT Locaux Directs (si présents, découpés par micro-lots de 5 locaux max)
     if (audit.moyenneTensionLocaux.isNotEmpty) {
       final mtCoffrets = <CoffretArmoire>[];
       final mtCellules = <Cellule>[];
@@ -19927,55 +20036,67 @@ class PdfReportService {
         loadImages: saveFilesToDisk,
       );
 
-      final mtDoc = pw.Document(
-        title: 'Audit MT Directs - ${mission.nomClient}',
-        author: 'KES INSPECTIONS AND PROJECTS',
-        compress: saveFilesToDisk,
-      );
-      final widgets = <pw.Widget>[
-        PageTracker(
-          key: 'audit_mt',
-          registry: trackedPages,
-          offset: currentOffset,
-          child: _subSectionBar('MOYENNE TENSION — LOCAUX DIRECTS'),
-        ),
-      ];
-      for (int i = 0; i < audit.moyenneTensionLocaux.length; i++) {
-        if (i > 0) widgets.add(pw.NewPage());
-        widgets.addAll(
-          _buildLocalMT(
-            audit.moyenneTensionLocaux[i],
-            trackedPages,
-            photoCache: mtPhotoCache,
-            saveFilesToDisk: saveFilesToDisk,
-            photoRegistry: photoRegistry,
+      const int mtBatchSize = 5;
+      final totalMtBatches = (audit.moyenneTensionLocaux.length / mtBatchSize).ceil();
+
+      for (int b = 0; b < totalMtBatches; b++) {
+        final startIdx = b * mtBatchSize;
+        final endIdx = ((b + 1) * mtBatchSize).clamp(0, audit.moyenneTensionLocaux.length);
+        final batchLocaux = audit.moyenneTensionLocaux.sublist(startIdx, endIdx);
+
+        final mtDoc = pw.Document(
+          title: 'Audit MT Directs Part ${b + 1}/$totalMtBatches - ${mission.nomClient}',
+          author: 'KES INSPECTIONS AND PROJECTS',
+          compress: saveFilesToDisk,
+        );
+        final widgets = <pw.Widget>[];
+        if (b == 0) {
+          widgets.add(
+            PageTracker(
+              key: 'audit_mt',
+              registry: trackedPages,
+              offset: currentOffset,
+              child: _subSectionBar('MOYENNE TENSION — LOCAUX DIRECTS'),
+            ),
+          );
+        }
+        for (int i = 0; i < batchLocaux.length; i++) {
+          if (i > 0 || b > 0) widgets.add(pw.NewPage());
+          widgets.addAll(
+            _buildLocalMT(
+              batchLocaux[i],
+              trackedPages,
+              photoCache: mtPhotoCache,
+              saveFilesToDisk: saveFilesToDisk,
+              photoRegistry: photoRegistry,
+            ),
+          );
+        }
+        mtDoc.addPage(
+          pw.MultiPage(
+            maxPages: 10000,
+            pageTheme: _buildInnerPageTheme(
+              pageOffset: currentOffset,
+              overrideTotalPages: overrideTotalPages,
+            ),
+            header: (ctx) => _buildPageHeaderWidget(
+              nomClient: mission.nomClient,
+              nomSite: nomSite,
+              numeroRapport: numeroRapport,
+            ),
+            build: (ctx) => widgets,
           ),
         );
+        final mtBytes = await mtDoc.save();
+        if (saveFilesToDisk) {
+          final mtFile = File(
+            '${tempDir.path}/pdf_chunk_audit_mt_p${b + 1}_${mission.id}.pdf',
+          );
+          await mtFile.writeAsBytes(mtBytes);
+          chunkFiles.add(mtFile);
+        }
+        currentOffset += mtDoc.document.pdfPageList.pages.length;
       }
-      mtDoc.addPage(
-        pw.MultiPage(
-          maxPages: 10000,
-          pageTheme: _buildInnerPageTheme(
-            pageOffset: currentOffset,
-            overrideTotalPages: overrideTotalPages,
-          ),
-          header: (ctx) => _buildPageHeaderWidget(
-            nomClient: mission.nomClient,
-            nomSite: nomSite,
-            numeroRapport: numeroRapport,
-          ),
-          build: (ctx) => widgets,
-        ),
-      );
-      final mtBytes = await mtDoc.save();
-      if (saveFilesToDisk) {
-        final mtFile = File(
-          '${tempDir.path}/pdf_chunk_audit_mt_${mission.id}.pdf',
-        );
-        await mtFile.writeAsBytes(mtBytes);
-        chunkFiles.add(mtFile);
-      }
-      currentOffset += mtDoc.document.pdfPageList.pages.length;
       mtPhotoCache.clear();
     }
 

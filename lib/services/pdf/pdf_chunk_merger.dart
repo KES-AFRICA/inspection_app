@@ -64,7 +64,7 @@ class PdfMergerService {
         final mergeResponse = await PdfMerger.mergeMultiplePDF(
           paths: chunkPaths,
           outputDirPath: outputFile.path,
-        ).timeout(const Duration(seconds: 120));
+        ).timeout(const Duration(seconds: 300));
 
         if (mergeResponse.status == Status.success &&
             await outputFile.exists() &&
@@ -141,13 +141,14 @@ class PdfMergerService {
   }
 
   /// Fusionne un micro-lot (batch) de maximum 5 chunks vers un fichier destination temporaire.
-  /// Maintient l'empreinte mémoire strictement < 10 Mo en libérant chaque document source immédiatement.
+  /// Maintient l'empreinte mémoire strictly < 10 Mo en libérant chaque document source immédiatement.
   static Future<void> _mergeChunkListToDestination(List<File> files, File destination) async {
     final sf.PdfDocument finalDoc = sf.PdfDocument();
     finalDoc.pageSettings.margins.all = 0;
 
     try {
       for (final chunkFile in files) {
+        if (!await chunkFile.exists()) continue;
         final bytes = await chunkFile.readAsBytes();
         if (bytes.isEmpty) continue;
 
@@ -162,16 +163,29 @@ class PdfMergerService {
             final sf.PdfPage newPage = finalDoc.pages.add();
             newPage.graphics.drawPdfTemplate(template, const Offset(0, 0));
           }
+        } catch (e) {
+          if (kDebugMode) {
+            print('⚠️ Erreur traitement chunk ${chunkFile.path}: $e');
+          }
         } finally {
-          inputDoc?.dispose();
+          try {
+            inputDoc?.dispose();
+          } catch (_) {}
           inputDoc = null;
         }
       }
 
       final List<int> mergedBytes = await finalDoc.save();
       await destination.writeAsBytes(mergedBytes);
+    } catch (e) {
+      if (kDebugMode) {
+        print('❌ Erreur lors de la sauvegarde du document fusionné: $e');
+      }
+      rethrow;
     } finally {
-      finalDoc.dispose();
+      try {
+        finalDoc.dispose();
+      } catch (_) {}
     }
   }
 
