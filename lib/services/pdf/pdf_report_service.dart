@@ -7644,18 +7644,37 @@ class PdfReportService {
   static String? _normalizeEquipementType(String rawType, String rawNom) {
     final combined = '${rawType.toLowerCase()} ${rawNom.toLowerCase()}';
 
+    if (combined.contains('cellule')) return 'Cellule';
+    if (combined.contains('transformateur') || combined.contains('transfo')) return 'Transformateur';
     if (combined.contains('tgbt')) return 'TGBT';
     if (combined.contains('inverseur')) return 'Inverseur';
     if (combined.contains('armoire')) return 'Armoire';
     if (combined.contains('coffret') || combined.contains('tur')) return 'Coffret';
 
     final typeLower = rawType.trim().toLowerCase();
+    if (typeLower == 'cellule') return 'Cellule';
+    if (typeLower == 'transformateur' || typeLower == 'transfo') return 'Transformateur';
     if (typeLower == 'tgbt') return 'TGBT';
     if (typeLower == 'inverseur') return 'Inverseur';
     if (typeLower == 'armoire') return 'Armoire';
     if (typeLower == 'coffret') return 'Coffret';
 
     return null;
+  }
+
+  static bool _isMTEquipementCoffret(CoffretArmoire coffret) {
+    final normType = _normalizeEquipementType(coffret.type, coffret.nom);
+    if (normType == 'Cellule' || normType == 'Transformateur') {
+      return true;
+    }
+    if (normType == 'TGBT' || normType == 'Inverseur' || normType == 'Armoire' || normType == 'Coffret') {
+      return false;
+    }
+    final combined = '${coffret.type.toLowerCase()} ${coffret.nom.toLowerCase()}';
+    if (combined.contains('cellule') || combined.contains('transformateur') || combined.contains('transfo')) {
+      return true;
+    }
+    return false;
   }
 
   static String? _extractPresenceParafoudre(Object refObj) {
@@ -7782,6 +7801,20 @@ class PdfReportService {
     String? coffretStr,
   }) {
     return _resolveLocation(audit, localisationStr: localisationStr, coffretStr: coffretStr);
+  }
+
+  @visibleForTesting
+  static List<_ObsRecap> collectObservationsMTForTesting(
+    AuditInstallationsElectriques audit,
+  ) {
+    return _collectObservationsMT(audit);
+  }
+
+  @visibleForTesting
+  static List<_ObsRecap> collectObservationsBTForTesting(
+    AuditInstallationsElectriques audit,
+  ) {
+    return _collectObservationsBT(audit);
   }
 
   static _LocationInfo _resolveLocation(
@@ -9515,11 +9548,66 @@ class PdfReportService {
     return '';
   }
 
+  static void _addCoffretObservations(
+    List<_ObsRecap> list,
+    CoffretArmoire coffret,
+    String localisation,
+  ) {
+    final coffretRepere = coffret.repere?.isNotEmpty == true
+        ? coffret.repere
+        : coffret.numeroEquipement;
+    for (var pv in coffret.pointsVerification) {
+      final conf = pv.conformite.toLowerCase().trim();
+      if (conf == 'non' || conf == 'non conforme') {
+        if (pv.observations != null && pv.observations!.isNotEmpty) {
+          for (var obs in pv.observations!) {
+            list.add(
+              _ObsRecap(
+                localisation: localisation,
+                coffret: coffret.nom,
+                observation: obs.observation?.isNotEmpty == true
+                    ? obs.observation!
+                    : pv.pointVerification,
+                refNorm: obs.referenceNormative ?? pv.referenceNormative ?? '',
+                priorite: obs.priorite?.toString() ?? '',
+                repere: coffretRepere,
+              ),
+            );
+          }
+        } else {
+          list.add(
+            _ObsRecap(
+              localisation: localisation,
+              coffret: coffret.nom,
+              observation: pv.observation ?? pv.pointVerification,
+              refNorm: pv.referenceNormative ?? '',
+              priorite: pv.priorite?.toString() ?? '',
+              repere: coffretRepere,
+            ),
+          );
+        }
+      }
+    }
+    for (var obs in coffret.observationsLibres) {
+      list.add(
+        _ObsRecap(
+          localisation: localisation,
+          coffret: coffret.nom,
+          observation: obs.texte,
+          refNorm: _getNormativeReferenceForFreeObs(obs),
+          priorite: _getCriticiteForFreeObs(obs),
+          repere: coffretRepere,
+        ),
+      );
+    }
+  }
+
   static List<_ObsRecap> _collectObservationsMT(
     AuditInstallationsElectriques audit,
   ) {
     final list = <_ObsRecap>[];
 
+    // 1. Moyenne tension locaux
     for (var local in audit.moyenneTensionLocaux) {
       for (var el in local.dispositionsConstructives) {
         if (el.conforme == false) {
@@ -9547,7 +9635,7 @@ class PdfReportService {
           );
         }
       }
-      // Cellules (liste complète, pas ancien champ unique)
+      // Cellules (MT)
       for (var i = 0; i < local.cellules.length; i++) {
         final cellule = local.cellules[i];
         final label = 'Cellule ${i + 1} — ${cellule.fonction}';
@@ -9572,7 +9660,7 @@ class PdfReportService {
           }
         }
       }
-      // Transformateurs (liste complète)
+      // Transformateurs (MT)
       for (var i = 0; i < local.transformateurs.length; i++) {
         final transfo = local.transformateurs[i];
         final label = 'Transformateur ${i + 1}';
@@ -9597,54 +9685,10 @@ class PdfReportService {
           }
         }
       }
+      // Coffrets MT uniquement (Cellule / Transformateur)
       for (var coffret in local.coffrets) {
-        final coffretRepere = coffret.repere?.isNotEmpty == true
-            ? coffret.repere
-            : coffret.numeroEquipement;
-        for (var pv in coffret.pointsVerification) {
-          final conf = pv.conformite.toLowerCase().trim();
-          if (conf == 'non' || conf == 'non conforme') {
-            if (pv.observations != null && pv.observations!.isNotEmpty) {
-              for (var obs in pv.observations!) {
-                list.add(
-                  _ObsRecap(
-                    localisation: local.nom,
-                    coffret: coffret.nom,
-                    observation: obs.observation?.isNotEmpty == true
-                        ? obs.observation!
-                        : pv.pointVerification,
-                    refNorm:
-                        obs.referenceNormative ?? pv.referenceNormative ?? '',
-                    priorite: obs.priorite?.toString() ?? '',
-                    repere: coffretRepere,
-                  ),
-                );
-              }
-            } else {
-              list.add(
-                _ObsRecap(
-                  localisation: local.nom,
-                  coffret: coffret.nom,
-                  observation: pv.observation ?? pv.pointVerification,
-                  refNorm: pv.referenceNormative ?? '',
-                  priorite: pv.priorite?.toString() ?? '',
-                  repere: coffretRepere,
-                ),
-              );
-            }
-          }
-        }
-        for (var obs in coffret.observationsLibres) {
-          list.add(
-            _ObsRecap(
-              localisation: local.nom,
-              coffret: coffret.nom,
-              observation: obs.texte,
-              refNorm: _getNormativeReferenceForFreeObs(obs),
-              priorite: _getCriticiteForFreeObs(obs),
-              repere: coffretRepere,
-            ),
-          );
+        if (_isMTEquipementCoffret(coffret)) {
+          _addCoffretObservations(list, coffret, local.nom);
         }
       }
       for (var obs in local.observationsLibres) {
@@ -9660,49 +9704,11 @@ class PdfReportService {
       }
     }
 
+    // 2. Moyenne tension zones
     for (var zone in audit.moyenneTensionZones) {
       for (var coffret in zone.coffrets) {
-        for (var pv in coffret.pointsVerification) {
-          final conf = pv.conformite.toLowerCase().trim();
-          if (conf == 'non' || conf == 'non conforme') {
-            if (pv.observations != null && pv.observations!.isNotEmpty) {
-              for (var obs in pv.observations!) {
-                list.add(
-                  _ObsRecap(
-                    localisation: zone.nom,
-                    coffret: coffret.nom,
-                    observation: obs.observation?.isNotEmpty == true
-                        ? obs.observation!
-                        : pv.pointVerification,
-                    refNorm:
-                        obs.referenceNormative ?? pv.referenceNormative ?? '',
-                    priorite: obs.priorite?.toString() ?? '',
-                  ),
-                );
-              }
-            } else {
-              list.add(
-                _ObsRecap(
-                  localisation: zone.nom,
-                  coffret: coffret.nom,
-                  observation: pv.observation ?? pv.pointVerification,
-                  refNorm: pv.referenceNormative ?? '',
-                  priorite: pv.priorite?.toString() ?? '',
-                ),
-              );
-            }
-          }
-        }
-        for (var obs in coffret.observationsLibres) {
-          list.add(
-            _ObsRecap(
-              localisation: zone.nom,
-              coffret: coffret.nom,
-              observation: obs.texte,
-              refNorm: _getNormativeReferenceForFreeObs(obs),
-              priorite: _getCriticiteForFreeObs(obs),
-            ),
-          );
+        if (_isMTEquipementCoffret(coffret)) {
+          _addCoffretObservations(list, coffret, zone.nom);
         }
       }
       for (var local in zone.locaux) {
@@ -9720,48 +9726,8 @@ class PdfReportService {
           }
         }
         for (var coffret in local.coffrets) {
-          for (var pv in coffret.pointsVerification) {
-            if (pv.conformite == 'non' ||
-                pv.conformite == 'Non' ||
-                pv.conformite == 'Non conforme') {
-              if (pv.observations != null && pv.observations!.isNotEmpty) {
-                for (var obs in pv.observations!) {
-                  list.add(
-                    _ObsRecap(
-                      localisation: '${zone.nom} / ${local.nom}',
-                      coffret: coffret.nom,
-                      observation: obs.observation?.isNotEmpty == true
-                          ? obs.observation!
-                          : pv.pointVerification,
-                      refNorm:
-                          obs.referenceNormative ?? pv.referenceNormative ?? '',
-                      priorite: obs.priorite?.toString() ?? '',
-                    ),
-                  );
-                }
-              } else {
-                list.add(
-                  _ObsRecap(
-                    localisation: '${zone.nom} / ${local.nom}',
-                    coffret: coffret.nom,
-                    observation: pv.observation ?? pv.pointVerification,
-                    refNorm: pv.referenceNormative ?? '',
-                    priorite: pv.priorite?.toString() ?? '',
-                  ),
-                );
-              }
-            }
-          }
-          for (var obs in coffret.observationsLibres) {
-            list.add(
-              _ObsRecap(
-                localisation: '${zone.nom} / ${local.nom}',
-                coffret: coffret.nom,
-                observation: obs.texte,
-                refNorm: _getNormativeReferenceForFreeObs(obs),
-                priorite: _getCriticiteForFreeObs(obs),
-              ),
-            );
+          if (_isMTEquipementCoffret(coffret)) {
+            _addCoffretObservations(list, coffret, '${zone.nom} / ${local.nom}');
           }
         }
         for (var obs in local.observationsLibres) {
@@ -9789,6 +9755,22 @@ class PdfReportService {
       }
     }
 
+    // 3. Coffrets MT (Cellule/Transformateur) situés dans les zones/locaux Basse Tension
+    for (var zone in audit.basseTensionZones) {
+      for (var coffret in zone.coffretsDirects) {
+        if (_isMTEquipementCoffret(coffret)) {
+          _addCoffretObservations(list, coffret, zone.nom);
+        }
+      }
+      for (var local in zone.locaux) {
+        for (var coffret in local.coffrets) {
+          if (_isMTEquipementCoffret(coffret)) {
+            _addCoffretObservations(list, coffret, '${zone.nom} / ${local.nom}');
+          }
+        }
+      }
+    }
+
     return list;
   }
 
@@ -9797,56 +9779,11 @@ class PdfReportService {
   ) {
     final list = <_ObsRecap>[];
 
+    // 1. Basse tension zones & locaux
     for (var zone in audit.basseTensionZones) {
       for (var coffret in zone.coffretsDirects) {
-        final coffretRepere = coffret.repere?.isNotEmpty == true
-            ? coffret.repere
-            : coffret.numeroEquipement;
-        for (var pv in coffret.pointsVerification) {
-          if (pv.conformite == 'non' ||
-              pv.conformite == 'Non' ||
-              pv.conformite == 'Non conforme') {
-            if (pv.observations != null && pv.observations!.isNotEmpty) {
-              for (var obs in pv.observations!) {
-                list.add(
-                  _ObsRecap(
-                    localisation: zone.nom,
-                    coffret: coffret.nom,
-                    observation: obs.observation?.isNotEmpty == true
-                        ? obs.observation!
-                        : pv.pointVerification,
-                    refNorm:
-                        obs.referenceNormative ?? pv.referenceNormative ?? '',
-                    priorite: obs.priorite?.toString() ?? '',
-                    repere: coffretRepere,
-                  ),
-                );
-              }
-            } else {
-              list.add(
-                _ObsRecap(
-                  localisation: zone.nom,
-                  coffret: coffret.nom,
-                  observation: pv.observation ?? pv.pointVerification,
-                  refNorm: pv.referenceNormative ?? '',
-                  priorite: pv.priorite?.toString() ?? '',
-                  repere: coffretRepere,
-                ),
-              );
-            }
-          }
-        }
-        for (var obs in coffret.observationsLibres) {
-          list.add(
-            _ObsRecap(
-              localisation: zone.nom,
-              coffret: coffret.nom,
-              observation: obs.texte,
-              refNorm: _getNormativeReferenceForFreeObs(obs),
-              priorite: _getCriticiteForFreeObs(obs),
-              repere: coffretRepere,
-            ),
-          );
+        if (!_isMTEquipementCoffret(coffret)) {
+          _addCoffretObservations(list, coffret, zone.nom);
         }
       }
 
@@ -9884,53 +9821,8 @@ class PdfReportService {
           }
         }
         for (var coffret in local.coffrets) {
-          final coffretRepere = coffret.repere?.isNotEmpty == true
-              ? coffret.repere
-              : coffret.numeroEquipement;
-          for (var pv in coffret.pointsVerification) {
-            final conf = pv.conformite.toLowerCase().trim();
-            if (conf == 'non' || conf == 'non conforme') {
-              if (pv.observations != null && pv.observations!.isNotEmpty) {
-                for (var obs in pv.observations!) {
-                  list.add(
-                    _ObsRecap(
-                      localisation: '${zone.nom} / ${local.nom}',
-                      coffret: coffret.nom,
-                      observation: obs.observation?.isNotEmpty == true
-                          ? obs.observation!
-                          : pv.pointVerification,
-                      refNorm:
-                          obs.referenceNormative ?? pv.referenceNormative ?? '',
-                      priorite: obs.priorite?.toString() ?? '',
-                      repere: coffretRepere,
-                    ),
-                  );
-                }
-              } else {
-                list.add(
-                  _ObsRecap(
-                    localisation: '${zone.nom} / ${local.nom}',
-                    coffret: coffret.nom,
-                    observation: pv.observation ?? pv.pointVerification,
-                    refNorm: pv.referenceNormative ?? '',
-                    priorite: pv.priorite?.toString() ?? '',
-                    repere: coffretRepere,
-                  ),
-                );
-              }
-            }
-          }
-          for (var obs in coffret.observationsLibres) {
-            list.add(
-              _ObsRecap(
-                localisation: '${zone.nom} / ${local.nom}',
-                coffret: coffret.nom,
-                observation: obs.texte,
-                refNorm: _getNormativeReferenceForFreeObs(obs),
-                priorite: _getCriticiteForFreeObs(obs),
-                repere: coffretRepere,
-              ),
-            );
+          if (!_isMTEquipementCoffret(coffret)) {
+            _addCoffretObservations(list, coffret, '${zone.nom} / ${local.nom}');
           }
         }
         for (var obs in local.observationsLibres) {
@@ -9955,6 +9847,30 @@ class PdfReportService {
             priorite: _getCriticiteForFreeObs(obs),
           ),
         );
+      }
+    }
+
+    // 2. Coffrets BT (TGBT, Inverseur, Armoire, Coffret) situés dans les locaux/zones Moyenne Tension
+    for (var local in audit.moyenneTensionLocaux) {
+      for (var coffret in local.coffrets) {
+        if (!_isMTEquipementCoffret(coffret)) {
+          _addCoffretObservations(list, coffret, local.nom);
+        }
+      }
+    }
+
+    for (var zone in audit.moyenneTensionZones) {
+      for (var coffret in zone.coffrets) {
+        if (!_isMTEquipementCoffret(coffret)) {
+          _addCoffretObservations(list, coffret, zone.nom);
+        }
+      }
+      for (var local in zone.locaux) {
+        for (var coffret in local.coffrets) {
+          if (!_isMTEquipementCoffret(coffret)) {
+            _addCoffretObservations(list, coffret, '${zone.nom} / ${local.nom}');
+          }
+        }
       }
     }
 
