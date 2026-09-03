@@ -8393,26 +8393,25 @@ class PdfReportService {
       final normZone = item.zoneName.trim();
       final normLoc = item.localName.trim();
 
-      if (zoneGroups.isNotEmpty && zoneGroups.last.zoneName == normZone) {
-        final currentZoneGroup = zoneGroups.last;
-        if (currentZoneGroup.repereGroups.isNotEmpty &&
-            currentZoneGroup.repereGroups.last.localName == normLoc) {
-          currentZoneGroup.repereGroups.last.items.add(item);
-        } else {
-          currentZoneGroup.repereGroups.add(
-            _PdfUnknownSourceRepereGroup(localName: normLoc, items: [item]),
-          );
-        }
-      } else {
-        zoneGroups.add(
-          _PdfUnknownSourceZoneGroup(
-            zoneName: normZone,
-            repereGroups: [
-              _PdfUnknownSourceRepereGroup(localName: normLoc, items: [item]),
-            ],
-          ),
-        );
-      }
+      var zGroup = zoneGroups.firstWhere(
+        (zg) => zg.zoneName.toLowerCase() == normZone.toLowerCase(),
+        orElse: () {
+          final zg = _PdfUnknownSourceZoneGroup(zoneName: normZone, repereGroups: []);
+          zoneGroups.add(zg);
+          return zg;
+        },
+      );
+
+      var rGroup = zGroup.repereGroups.firstWhere(
+        (rg) => rg.localName.toLowerCase() == normLoc.toLowerCase(),
+        orElse: () {
+          final rg = _PdfUnknownSourceRepereGroup(localName: normLoc, items: []);
+          zGroup.repereGroups.add(rg);
+          return rg;
+        },
+      );
+
+      rGroup.items.add(item);
     }
 
     final tableWidgets = <pw.Widget>[];
@@ -8482,16 +8481,27 @@ class PdfReportService {
           final isEven = idx % 2 == 0;
           final bgColor = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
 
+          final isStartOfZone = (currentZoneItemIdx == 0 && idx > 0);
+          final isStartOfRepere = (currentRepereItemIdx == 0 && currentZoneItemIdx > 0);
+
           final isEndOfZone = (currentZoneItemIdx == totalZoneItems - 1);
           final isEndOfRepere = (currentRepereItemIdx == repereCount - 1);
 
           final zoneBorder = pw.Border(
+            top: isStartOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                : pw.BorderSide.none,
             bottom: isEndOfZone
                 ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                 : pw.BorderSide.none,
           );
 
           final repereBorder = pw.Border(
+            top: isStartOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                : (isStartOfRepere
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                    : pw.BorderSide.none),
             bottom: isEndOfZone
                 ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                 : (isEndOfRepere
@@ -8500,6 +8510,11 @@ class PdfReportService {
           );
 
           final itemBorder = pw.Border(
+            top: isStartOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                : (isStartOfRepere
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                    : pw.BorderSide.none),
             bottom: isEndOfZone
                 ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                 : (isEndOfRepere
@@ -8698,26 +8713,25 @@ class PdfReportService {
       final normZone = eq.zoneName.trim();
       final normLoc = eq.localName.trim();
 
-      if (zoneGroups.isNotEmpty && zoneGroups.last.zoneName == normZone) {
-        final currentZoneGroup = zoneGroups.last;
-        if (currentZoneGroup.repereGroups.isNotEmpty &&
-            currentZoneGroup.repereGroups.last.localName == normLoc) {
-          currentZoneGroup.repereGroups.last.items.add(eq);
-        } else {
-          currentZoneGroup.repereGroups.add(
-            _PdfEquipementRepereGroup(localName: normLoc, items: [eq]),
-          );
-        }
-      } else {
-        zoneGroups.add(
-          _PdfEquipementZoneGroup(
-            zoneName: normZone,
-            repereGroups: [
-              _PdfEquipementRepereGroup(localName: normLoc, items: [eq]),
-            ],
-          ),
-        );
-      }
+      var zGroup = zoneGroups.firstWhere(
+        (zg) => zg.zoneName.toLowerCase() == normZone.toLowerCase(),
+        orElse: () {
+          final zg = _PdfEquipementZoneGroup(zoneName: normZone, repereGroups: []);
+          zoneGroups.add(zg);
+          return zg;
+        },
+      );
+
+      var rGroup = zGroup.repereGroups.firstWhere(
+        (rg) => rg.localName.toLowerCase() == normLoc.toLowerCase(),
+        orElse: () {
+          final rg = _PdfEquipementRepereGroup(localName: normLoc, items: []);
+          zGroup.repereGroups.add(rg);
+          return rg;
+        },
+      );
+
+      rGroup.items.add(eq);
     }
 
     final tableWidgets = <pw.Widget>[];
@@ -8787,16 +8801,27 @@ class PdfReportService {
           final isEven = idx % 2 == 0;
           final bg = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
 
+          final isStartOfZone = (currentZoneItemIdx == 0 && idx > 0);
+          final isStartOfRepere = (currentRepereItemIdx == 0 && currentZoneItemIdx > 0);
+
           final isEndOfZone = (currentZoneItemIdx == totalZoneItems - 1);
           final isEndOfRepere = (currentRepereItemIdx == repereCount - 1);
 
           final zoneBorder = pw.Border(
+            top: isStartOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                : pw.BorderSide.none,
             bottom: isEndOfZone
                 ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                 : pw.BorderSide.none,
           );
 
           final repereBorder = pw.Border(
+            top: isStartOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                : (isStartOfRepere
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                    : pw.BorderSide.none),
             bottom: isEndOfZone
                 ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                 : (isEndOfRepere
@@ -8805,6 +8830,11 @@ class PdfReportService {
           );
 
           final itemBorder = pw.Border(
+            top: isStartOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                : (isStartOfRepere
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                    : pw.BorderSide.none),
             bottom: isEndOfZone
                 ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                 : (isEndOfRepere
@@ -9096,33 +9126,34 @@ class PdfReportService {
       final lName = o.localName.trim();
       final cName = o.coffret.trim();
 
-      _ObsZoneGroup currentZoneGroup;
-      if (zoneGroups.isNotEmpty && zoneGroups.last.zoneName == zName) {
-        currentZoneGroup = zoneGroups.last;
-      } else {
-        currentZoneGroup = _ObsZoneGroup(zoneName: zName, localGroups: []);
-        zoneGroups.add(currentZoneGroup);
-      }
+      var zGroup = zoneGroups.firstWhere(
+        (zg) => zg.zoneName.toLowerCase() == zName.toLowerCase(),
+        orElse: () {
+          final zg = _ObsZoneGroup(zoneName: zName, localGroups: []);
+          zoneGroups.add(zg);
+          return zg;
+        },
+      );
 
-      _ObsLocalGroup currentLocalGroup;
-      if (currentZoneGroup.localGroups.isNotEmpty &&
-          currentZoneGroup.localGroups.last.localName == lName) {
-        currentLocalGroup = currentZoneGroup.localGroups.last;
-      } else {
-        currentLocalGroup = _ObsLocalGroup(localName: lName, equipGroups: []);
-        currentZoneGroup.localGroups.add(currentLocalGroup);
-      }
+      var lGroup = zGroup.localGroups.firstWhere(
+        (lg) => lg.localName.toLowerCase() == lName.toLowerCase(),
+        orElse: () {
+          final lg = _ObsLocalGroup(localName: lName, equipGroups: []);
+          zGroup.localGroups.add(lg);
+          return lg;
+        },
+      );
 
-      _ObsEquipGroup currentEquipGroup;
-      if (currentLocalGroup.equipGroups.isNotEmpty &&
-          currentLocalGroup.equipGroups.last.coffret == cName) {
-        currentEquipGroup = currentLocalGroup.equipGroups.last;
-      } else {
-        currentEquipGroup = _ObsEquipGroup(coffret: cName, items: []);
-        currentLocalGroup.equipGroups.add(currentEquipGroup);
-      }
+      var eGroup = lGroup.equipGroups.firstWhere(
+        (eg) => eg.coffret.toLowerCase() == cName.toLowerCase(),
+        orElse: () {
+          final eg = _ObsEquipGroup(coffret: cName, items: []);
+          lGroup.equipGroups.add(eg);
+          return eg;
+        },
+      );
 
-      currentEquipGroup.items.add(o);
+      eGroup.items.add(o);
     }
 
     return zoneGroups;
@@ -15507,26 +15538,25 @@ class PdfReportService {
             final normZone = row.zoneName.trim();
             final normRep = row.repereName.trim();
 
-            if (ptZoneGroups.isNotEmpty && ptZoneGroups.last.zoneName == normZone) {
-              final currentZoneGroup = ptZoneGroups.last;
-              if (currentZoneGroup.repereGroups.isNotEmpty &&
-                  currentZoneGroup.repereGroups.last.repereName == normRep) {
-                currentZoneGroup.repereGroups.last.items.add(row);
-              } else {
-                currentZoneGroup.repereGroups.add(
-                  _PriseTerreRepereGroup(repereName: normRep, items: [row]),
-                );
-              }
-            } else {
-              ptZoneGroups.add(
-                _PriseTerreZoneGroup(
-                  zoneName: normZone,
-                  repereGroups: [
-                    _PriseTerreRepereGroup(repereName: normRep, items: [row]),
-                  ],
-                ),
-              );
-            }
+            var zGroup = ptZoneGroups.firstWhere(
+              (zg) => zg.zoneName.toLowerCase() == normZone.toLowerCase(),
+              orElse: () {
+                final zg = _PriseTerreZoneGroup(zoneName: normZone, repereGroups: []);
+                ptZoneGroups.add(zg);
+                return zg;
+              },
+            );
+
+            var rGroup = zGroup.repereGroups.firstWhere(
+              (rg) => rg.repereName.toLowerCase() == normRep.toLowerCase(),
+              orElse: () {
+                final rg = _PriseTerreRepereGroup(repereName: normRep, items: []);
+                zGroup.repereGroups.add(rg);
+                return rg;
+              },
+            );
+
+            rGroup.items.add(row);
           }
 
           const ptColumnWidths = <int, pw.TableColumnWidth>{
@@ -15595,16 +15625,27 @@ class PdfReportService {
                   final isEven = idx % 2 == 0;
                   final bg = isEven ? PdfColors.white : tableRowAlt;
 
+                  final isStartOfZone = (currentZoneItemIdx == 0 && idx > 0);
+                  final isStartOfRepere = (currentRepItemIdx == 0 && currentZoneItemIdx > 0);
+
                   final isEndOfZone = (currentZoneItemIdx == totalZoneItems - 1);
                   final isEndOfRepere = (currentRepItemIdx == repCount - 1);
 
                   final zoneBorder = pw.Border(
+                    top: isStartOfZone
+                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                        : pw.BorderSide.none,
                     bottom: isEndOfZone
                         ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                         : pw.BorderSide.none,
                   );
 
                   final repereBorder = pw.Border(
+                    top: isStartOfZone
+                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                        : (isStartOfRepere
+                            ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                            : pw.BorderSide.none),
                     bottom: isEndOfZone
                         ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                         : (isEndOfRepere
@@ -15613,6 +15654,11 @@ class PdfReportService {
                   );
 
                   final itemBorder = pw.Border(
+                    top: isStartOfZone
+                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                        : (isStartOfRepere
+                            ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                            : pw.BorderSide.none),
                     bottom: isEndOfZone
                         ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                         : (isEndOfRepere
@@ -15886,42 +15932,34 @@ class PdfReportService {
             final normRep = row.repereName.trim();
             final normEq = row.equipmentName.trim();
 
-            if (ddrZoneGroups.isNotEmpty && ddrZoneGroups.last.zoneName == normZone) {
-              final zGroup = ddrZoneGroups.last;
-              if (zGroup.repereGroups.isNotEmpty && zGroup.repereGroups.last.repereName == normRep) {
-                final rGroup = zGroup.repereGroups.last;
-                if (rGroup.equipmentGroups.isNotEmpty && rGroup.equipmentGroups.last.equipmentName == normEq) {
-                  rGroup.equipmentGroups.last.items.add(row);
-                } else {
-                  rGroup.equipmentGroups.add(
-                    _DdrEquipmentGroup(equipmentName: normEq, items: [row]),
-                  );
-                }
-              } else {
-                zGroup.repereGroups.add(
-                  _DdrRepereGroup(
-                    repereName: normRep,
-                    equipmentGroups: [
-                      _DdrEquipmentGroup(equipmentName: normEq, items: [row]),
-                    ],
-                  ),
-                );
-              }
-            } else {
-              ddrZoneGroups.add(
-                _DdrZoneGroup(
-                  zoneName: normZone,
-                  repereGroups: [
-                    _DdrRepereGroup(
-                      repereName: normRep,
-                      equipmentGroups: [
-                        _DdrEquipmentGroup(equipmentName: normEq, items: [row]),
-                      ],
-                    ),
-                  ],
-                ),
-              );
-            }
+            var zGroup = ddrZoneGroups.firstWhere(
+              (zg) => zg.zoneName.toLowerCase() == normZone.toLowerCase(),
+              orElse: () {
+                final zg = _DdrZoneGroup(zoneName: normZone, repereGroups: []);
+                ddrZoneGroups.add(zg);
+                return zg;
+              },
+            );
+
+            var rGroup = zGroup.repereGroups.firstWhere(
+              (rg) => rg.repereName.toLowerCase() == normRep.toLowerCase(),
+              orElse: () {
+                final rg = _DdrRepereGroup(repereName: normRep, equipmentGroups: []);
+                zGroup.repereGroups.add(rg);
+                return rg;
+              },
+            );
+
+            var eGroup = rGroup.equipmentGroups.firstWhere(
+              (eg) => eg.equipmentName.toLowerCase() == normEq.toLowerCase(),
+              orElse: () {
+                final eg = _DdrEquipmentGroup(equipmentName: normEq, items: []);
+                rGroup.equipmentGroups.add(eg);
+                return eg;
+              },
+            );
+
+            eGroup.items.add(row);
           }
 
           const ddrColumnWidthsHeader = <int, pw.TableColumnWidth>{
@@ -16076,17 +16114,29 @@ class PdfReportService {
                     final isEven = idx % 2 == 0;
                     final bg = isEven ? PdfColors.white : tableRowAlt;
 
+                    final isStartOfZone = (currentZoneItemIdx == 0 && idx > 0);
+                    final isStartOfRepere = (currentRepItemIdx == 0 && currentZoneItemIdx > 0);
+                    final isStartOfEquip = (currentEqItemIdx == 0 && currentRepItemIdx > 0);
+
                     final isEndOfZone = (currentZoneItemIdx == totalZoneItems - 1);
                     final isEndOfRepere = (currentRepItemIdx == totalRepereItems - 1);
                     final isEndOfEquip = (currentEqItemIdx == eqCount - 1);
 
                     final zoneBorder = pw.Border(
+                      top: isStartOfZone
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                          : pw.BorderSide.none,
                       bottom: isEndOfZone
                           ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                           : pw.BorderSide.none,
                     );
 
                     final repereBorder = pw.Border(
+                      top: isStartOfZone
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                          : (isStartOfRepere
+                              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                              : pw.BorderSide.none),
                       bottom: isEndOfZone
                           ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                           : (isEndOfRepere
@@ -16095,6 +16145,13 @@ class PdfReportService {
                     );
 
                     final equipmentBorder = pw.Border(
+                      top: isStartOfZone
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                          : (isStartOfRepere
+                              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                              : (isStartOfEquip
+                                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.6)
+                                  : pw.BorderSide.none)),
                       bottom: isEndOfZone
                           ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                           : (isEndOfRepere
@@ -16105,6 +16162,13 @@ class PdfReportService {
                     );
 
                     final itemBorder = pw.Border(
+                      top: isStartOfZone
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                          : (isStartOfRepere
+                              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                              : (isStartOfEquip
+                                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.6)
+                                  : pw.BorderSide.none)),
                       bottom: isEndOfZone
                           ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                           : (isEndOfRepere
@@ -16669,16 +16733,28 @@ class PdfReportService {
                   final currentZoneRowIdx = zoneRowIdx++;
                   final currentRepereRowIdx = i;
 
+                  final idx = globalRowIndex++;
+                  final isStartOfZone = (currentZoneRowIdx == 0 && idx > 0);
+                  final isStartOfRepere = (currentRepereRowIdx == 0 && currentZoneRowIdx > 0);
+
                   final isEndOfRepere = (currentRepereRowIdx == totalRepereItems - 1);
                   final isEndOfZone = (currentZoneRowIdx == totalZoneItems - 1);
 
                   final zoneBorder = pw.Border(
+                    top: isStartOfZone
+                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                        : pw.BorderSide.none,
                     bottom: isEndOfZone
                         ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                         : pw.BorderSide.none,
                   );
 
                   final repereBorder = pw.Border(
+                    top: isStartOfZone
+                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                        : (isStartOfRepere
+                            ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                            : pw.BorderSide.none),
                     bottom: isEndOfZone
                         ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                         : (isEndOfRepere
@@ -16687,6 +16763,11 @@ class PdfReportService {
                   );
 
                   final itemBorder = pw.Border(
+                    top: isStartOfZone
+                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                        : (isStartOfRepere
+                            ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                            : pw.BorderSide.none),
                     bottom: isEndOfZone
                         ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                         : (isEndOfRepere
