@@ -2183,14 +2183,15 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                     widget.onSourceSelected?.call(result.equipmentId, result.displayName, null);
                   }
                 } else {
-                  onChanged('source', 'Inconnu');
+                  onChanged('source', '');
                   clearElectricalFields();
-                  widget.onSourceSelected?.call(null, 'Inconnu', null);
+                  widget.onSourceSelected?.call(null, '', null);
                 }
               },
               onTextChanged: (text) {
-                if (text.trim().isNotEmpty && text.trim() != a.source) {
-                  onChanged('source', text.trim());
+                final trimmed = text.trim();
+                if (trimmed != a.source) {
+                  onChanged('source', trimmed);
                   if (widget.sourceDepartId != null && widget.sourceDepartId!.isNotEmpty) {
                     onChanged('nombreCables', '');
                     onChanged('typeProtection', '');
@@ -2203,31 +2204,32 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                     onChanged('sectionCable', '');
                     onChanged('sectionCableNeutre', '');
                   }
-                  widget.onSourceSelected?.call(null, text.trim(), null);
+                  widget.onSourceSelected?.call(null, trimmed, null);
                 }
               },
             ),
             SizedBox(height: context.spacingS),
           ],
-          if (!isProtectionTete || isDepartPrisAvecProtection) ...[
-            if (isDepartPrisAvecProtection || isProtectionTete) ...[
-              _buildModernDropdown(
-                context,
-                label: 'Type de protection',
-                value: typeProtVal,
-                items: typeProtectionItems,
-                onChanged: (v) {
-                  onChanged('typeProtection', v);
-                  final isNone = v.trim().isEmpty || v.trim().toLowerCase() == '-aucun-' || v.trim().toLowerCase() == 'aucun';
-                  if (isNone && isDepartPrisAvecProtection) {
-                    widget.onDepartPrisAvecProtectionChanged?.call(false);
-                  } else if (!isNone && !isDepartPrisAvecProtection) {
-                    widget.onDepartPrisAvecProtectionChanged?.call(true);
-                  }
-                },
-                readOnly: isLocked,
-              ),
-              SizedBox(height: context.spacingS),
+          if (isProtectionTete || isDepartPrisAvecProtection) ...[
+            _buildModernDropdown(
+              context,
+              label: 'Type de protection',
+              value: typeProtVal,
+              items: typeProtectionItems,
+              onChanged: (v) {
+                onChanged('typeProtection', v);
+                final isNone = v.trim().isEmpty || v.trim().toLowerCase() == '-aucun-' || v.trim().toLowerCase() == 'aucun';
+                if (isNone && isDepartPrisAvecProtection) {
+                  widget.onDepartPrisAvecProtectionChanged?.call(false);
+                } else if (!isNone && !isDepartPrisAvecProtection) {
+                  widget.onDepartPrisAvecProtectionChanged?.call(true);
+                }
+              },
+              readOnly: isLocked,
+            ),
+            SizedBox(height: context.spacingS),
+
+            if (isDepartPrisAvecProtection) ...[
               _buildModernDropdown(context, label: 'Marque de disjoncteur', value: marqueDisjVal, items: marqueDisjoncteurItems, onChanged: (v) => onChanged('marqueDisjoncteur', v), readOnly: isLocked),
               SizedBox(height: context.spacingS),
               _buildModernDropdown(context, label: 'Courbe', value: courbeVal, items: courbeItems, onChanged: (v) => onChanged('courbe', v), readOnly: isLocked),
@@ -3965,19 +3967,6 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _sourceEquipementId = coffret.sourceEquipementId;
     _sourceNomComplet = coffret.sourceNomComplet;
     _sourceDepartId = coffret.sourceDepartId;
-    if (_sourceDepartId == null && _sourceNomComplet != null && _sourceNomComplet!.trim().isNotEmpty) {
-      final results = EquipmentSourceSearchService.searchSources(
-        missionId: widget.mission.id,
-        query: _sourceNomComplet!,
-        excludeEquipmentId: coffret.equipmentId,
-      );
-      for (final res in results) {
-        if (res.isDepart && res.displayName.trim().toLowerCase() == _sourceNomComplet!.trim().toLowerCase()) {
-          _sourceDepartId = res.depart?.id;
-          break;
-        }
-      }
-    }
     _observationsParafoudre = List.from(coffret.observationsParafoudreEnrichies ?? []);
     if (_observationsParafoudre.isEmpty && coffret.observationsParafoudre.isNotEmpty) {
       for (var obs in coffret.observationsParafoudre) {
