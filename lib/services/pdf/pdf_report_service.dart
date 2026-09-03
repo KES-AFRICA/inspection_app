@@ -7401,20 +7401,45 @@ class PdfReportService {
           final isOdd = rowNum % 2 == 1;
           final rowBg = isOdd ? tableRowAlt : PdfColors.white;
 
-          // Bordure inférieure pour la cellule REPÈRE :
-          // Ligne entre repères au sein d'une même zone
-          final repereBorder = pw.Border(
-            bottom: (currentRepereItemIdx == repereCount - 1 && !isLastRepereInZone)
-                ? pw.BorderSide(color: borderColor, width: 0.4)
+          final isStartOfZone = (currentZoneItemIdx == 0 && rowNum > 0);
+          final isStartOfRepere = (currentRepereItemIdx == 0 && currentZoneItemIdx > 0);
+
+          final isEndOfZone = (currentZoneItemIdx == totalZoneRows - 1);
+          final isEndOfRepere = (currentRepereItemIdx == repereCount - 1);
+
+          final zoneBorder = pw.Border(
+            top: isStartOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                : pw.BorderSide.none,
+            bottom: isEndOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                 : pw.BorderSide.none,
           );
 
-          // Bordure inférieure pour les cellules N° et de Données :
-          // Ligne entre tous les éléments de la zone
+          final repereBorder = pw.Border(
+            top: isStartOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                : (isStartOfRepere
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                    : pw.BorderSide.none),
+            bottom: isEndOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                : (isEndOfRepere
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                    : pw.BorderSide.none),
+          );
+
           final itemBorder = pw.Border(
-            bottom: (currentZoneItemIdx < totalZoneRows - 1)
-                ? pw.BorderSide(color: borderColor, width: 0.4)
-                : pw.BorderSide.none,
+            top: isStartOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                : (isStartOfRepere
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                    : pw.BorderSide.none),
+            bottom: isEndOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                : (isEndOfRepere
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                    : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4)),
           );
 
           tableRows.add(
@@ -7422,7 +7447,7 @@ class PdfReportService {
               children: [
                 // Cellule 0 : Nom de la ZONE (Fond BLANC permanent, centré sur la ligne médiane de la ZONE)
                 pw.Container(
-                  decoration: const pw.BoxDecoration(color: PdfColors.white),
+                  decoration: pw.BoxDecoration(color: PdfColors.white, border: zoneBorder),
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
                   alignment: pw.Alignment.center,
                   child: currentZoneItemIdx == zoneMidIndex
@@ -9343,6 +9368,13 @@ class PdfReportService {
             final o = equipGroup.items[itemIdx];
             final isEven = itemIdx % 2 == 0;
             final rowBg = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF8FAFC);
+            final isLastObs = (itemIdx == equipGroup.items.length - 1);
+
+            final obsBorder = pw.Border(
+              bottom: isLastObs
+                  ? pw.BorderSide.none
+                  : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4),
+            );
 
             rows.add(
               pw.TableRow(
@@ -9350,6 +9382,7 @@ class PdfReportService {
                 children: [
                   // Cellule N°
                   pw.Container(
+                    decoration: pw.BoxDecoration(border: obsBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3.5),
                     alignment: pw.Alignment.center,
                     child: pw.Text(
@@ -9361,6 +9394,7 @@ class PdfReportService {
 
                   // Cellule Observation
                   pw.Container(
+                    decoration: pw.BoxDecoration(border: obsBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3.5),
                     alignment: pw.Alignment.centerLeft,
                     child: pw.Text(
@@ -9371,6 +9405,7 @@ class PdfReportService {
 
                   // Cellule Référence Normative
                   pw.Container(
+                    decoration: pw.BoxDecoration(border: obsBorder),
                     padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3.5),
                     alignment: pw.Alignment.centerLeft,
                     child: pw.Text(
