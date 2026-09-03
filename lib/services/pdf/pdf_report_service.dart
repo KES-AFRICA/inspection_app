@@ -237,6 +237,40 @@ class _DdrZoneGroup {
   });
 }
 
+class _ContinuiteRowItem {
+  final String zoneName;
+  final String repereName;
+  final int index;
+  final ContinuiteResistance item;
+
+  _ContinuiteRowItem({
+    required this.zoneName,
+    required this.repereName,
+    required this.index,
+    required this.item,
+  });
+}
+
+class _ContinuiteRepereGroup {
+  final String repereName;
+  final List<_ContinuiteRowItem> items;
+
+  _ContinuiteRepereGroup({
+    required this.repereName,
+    required this.items,
+  });
+}
+
+class _ContinuiteZoneGroup {
+  final String zoneName;
+  final List<_ContinuiteRepereGroup> repereGroups;
+
+  _ContinuiteZoneGroup({
+    required this.zoneName,
+    required this.repereGroups,
+  });
+}
+
 class _PdfRepereSubGroup {
   final String localName;
   final List<InstallationDescriptionPdfRow> rows;
@@ -13945,16 +13979,30 @@ class PdfReportService {
         verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
       ),
       columnWidths: const {
-        0: pw.FlexColumnWidth(1.2), // Zone
-        1: pw.FlexColumnWidth(1.7), // Repère
-        2: pw.FlexColumnWidth(0.9), // Origine classement
-        3: pw.FlexColumnWidth(2.4), // Influences externes (5 sub-cols)
-        4: pw.FlexColumnWidth(1.4), // Indice mini (2 sub-cols)
+        0: pw.FixedColumnWidth(24), // N°
+        1: pw.FlexColumnWidth(1.2), // Zone
+        2: pw.FlexColumnWidth(1.7), // Repère
+        3: pw.FlexColumnWidth(0.9), // Origine classement
+        4: pw.FlexColumnWidth(2.4), // Influences externes (5 sub-cols)
+        5: pw.FlexColumnWidth(1.4), // Indice mini (2 sub-cols)
       },
       children: [
         pw.TableRow(
           decoration: pw.BoxDecoration(color: accentColor),
           children: [
+            pw.Container(
+              alignment: pw.Alignment.center,
+              padding: const pw.EdgeInsets.symmetric(vertical: 8),
+              child: pw.Text(
+                'N°',
+                style: pw.TextStyle(
+                  font: _fontBold,
+                  fontSize: fsSmall,
+                  color: PdfColors.white,
+                ),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
             pw.Container(
               alignment: pw.Alignment.center,
               padding: const pw.EdgeInsets.symmetric(vertical: 8),
@@ -14151,6 +14199,19 @@ class PdfReportService {
         pw.TableRow(
           decoration: pw.BoxDecoration(color: rowColor),
           children: [
+            // N°
+            pw.Container(
+              padding: const pw.EdgeInsets.symmetric(
+                horizontal: 2,
+                vertical: 3,
+              ),
+              alignment: pw.Alignment.center,
+              child: pw.Text(
+                '${i + 1}',
+                style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                textAlign: pw.TextAlign.center,
+              ),
+            ),
             // Zone (uppercase, empty if null/empty)
             pw.Container(
               padding: const pw.EdgeInsets.symmetric(
@@ -14271,16 +14332,17 @@ class PdfReportService {
           horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
         ),
         columnWidths: const {
-          0: pw.FlexColumnWidth(1.2), // Zone
-          1: pw.FlexColumnWidth(1.7), // Localisation
-          2: pw.FlexColumnWidth(0.9), // Origine
-          3: pw.FlexColumnWidth(0.48), // AF
-          4: pw.FlexColumnWidth(0.48), // BE
-          5: pw.FlexColumnWidth(0.48), // AE
-          6: pw.FlexColumnWidth(0.48), // AD
-          7: pw.FlexColumnWidth(0.48), // AG
-          8: pw.FlexColumnWidth(0.7), // IP
-          9: pw.FlexColumnWidth(0.7), // IK
+          0: pw.FixedColumnWidth(24), // N°
+          1: pw.FlexColumnWidth(1.2), // Zone
+          2: pw.FlexColumnWidth(1.7), // Localisation / Repère
+          3: pw.FlexColumnWidth(0.9), // Origine
+          4: pw.FlexColumnWidth(0.48), // AF
+          5: pw.FlexColumnWidth(0.48), // BE
+          6: pw.FlexColumnWidth(0.48), // AE
+          7: pw.FlexColumnWidth(0.48), // AD
+          8: pw.FlexColumnWidth(0.48), // AG
+          9: pw.FlexColumnWidth(0.7), // IP
+          10: pw.FlexColumnWidth(0.7), // IK
         },
         children: dataRows,
       ),
@@ -16465,48 +16527,130 @@ class PdfReportService {
           pageOffset: pageOffset,
           overrideTotalPages: overrideTotalPages,
         ),
-        header: (ctx) => _buildPageHeaderWidget(),
-        build: (ctx) => [
-          PageTracker(
-            key: 'mesures_continuite',
-            registry: trackedPages,
-            offset: pageOffset,
-            child: _subSectionBar(
-              '7. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles',
+        header: (ctx) => _buildPageHeaderWidget(
+          nomSite: nomSite,
+          numeroRapport: numeroRapport,
+        ),
+        build: (ctx) {
+          final contRows = <_ContinuiteRowItem>[];
+          for (int i = 0; i < mesures.continuiteResistances.length; i++) {
+            final c = mesures.continuiteResistances[i];
+            final locInfo = _resolveLocation(audit, localisationStr: c.localisation);
+            String zName = locInfo.zoneName.trim();
+            String rName = locInfo.repereName.trim();
+            if (zName.isEmpty && rName.isEmpty && c.localisation.trim().isNotEmpty) {
+              final locClean = c.localisation.trim();
+              if (locClean.toLowerCase().startsWith('zone ') || locClean.toLowerCase().startsWith('zone_')) {
+                zName = locClean;
+                rName = '';
+              } else {
+                zName = '';
+                rName = locClean;
+              }
+            }
+            contRows.add(_ContinuiteRowItem(
+              zoneName: zName,
+              repereName: rName,
+              index: i + 1,
+              item: c,
+            ));
+          }
+
+          final contZoneGroups = <_ContinuiteZoneGroup>[];
+          for (final item in contRows) {
+            var zGroup = contZoneGroups.firstWhere(
+              (zg) => zg.zoneName.toLowerCase() == item.zoneName.toLowerCase(),
+              orElse: () {
+                final zg = _ContinuiteZoneGroup(zoneName: item.zoneName, repereGroups: []);
+                contZoneGroups.add(zg);
+                return zg;
+              },
+            );
+
+            var rGroup = zGroup.repereGroups.firstWhere(
+              (rg) => rg.repereName.toLowerCase() == item.repereName.toLowerCase(),
+              orElse: () {
+                final rg = _ContinuiteRepereGroup(repereName: item.repereName, items: []);
+                zGroup.repereGroups.add(rg);
+                return rg;
+              },
+            );
+
+            rGroup.items.add(item);
+          }
+
+          final tableRows = <pw.TableRow>[];
+          tableRows.add(
+            pw.TableRow(
+              decoration: pw.BoxDecoration(color: accentColor),
+              children: [
+                _thHeaderCell('Zone'),
+                _thHeaderCell('Repère'),
+                _thHeaderCell('N°'),
+                _thHeaderCell('Désignation Tableau / Equipement'),
+                _thHeaderCell('Origine Mesure'),
+                _thHeaderCell('Essai'),
+                _thHeaderCell('Observation'),
+              ],
             ),
-          ),
-          pw.SizedBox(height: 8),
-          pw.Table(
-            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-            border: pw.TableBorder.all(color: borderColor, width: 0.4),
-            columnWidths: const {
-              0: pw.FixedColumnWidth(24), // N°
-              1: pw.FlexColumnWidth(1.8),
-              2: pw.FlexColumnWidth(2.4),
-              3: pw.FlexColumnWidth(1.5),
-              4: pw.FlexColumnWidth(1.5),
-              5: pw.FlexColumnWidth(1.8),
-            },
-            children: [
-              _tableHeaderRow([
-                'N°',
-                'Localisation',
-                'Désignation Tableau / Equipement',
-                'Origine Mesure',
-                'Essai',
-                'Observation',
-              ]),
-              if (mesures.continuiteResistances.isEmpty)
-                pw.TableRow(
-                  decoration: const pw.BoxDecoration(color: PdfColors.white),
-                  children: List.generate(
-                    6,
-                    (_) => _cell('', isHeader: false, centered: true),
-                  ),
-                )
-              else
-                ...mesures.continuiteResistances.asMap().entries.map((e) {
-                  final c = e.value;
+          );
+
+          if (mesures.continuiteResistances.isEmpty) {
+            tableRows.add(
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.white),
+                children: List.generate(
+                  7,
+                  (_) => _cell('', isHeader: false, centered: true),
+                ),
+              ),
+            );
+          } else {
+            int globalRowIndex = 0;
+            for (final zoneGroup in contZoneGroups) {
+              final totalZoneItems = zoneGroup.repereGroups.fold<int>(
+                0,
+                (sum, rg) => sum + rg.items.length,
+              );
+              final zoneMidIndex = (totalZoneItems - 1) ~/ 2;
+              int zoneRowIdx = 0;
+
+              for (int rIdx = 0; rIdx < zoneGroup.repereGroups.length; rIdx++) {
+                final repereGroup = zoneGroup.repereGroups[rIdx];
+                final totalRepereItems = repereGroup.items.length;
+                final repereMidIndex = (totalRepereItems - 1) ~/ 2;
+
+                for (int i = 0; i < totalRepereItems; i++) {
+                  final rowItem = repereGroup.items[i];
+                  final c = rowItem.item;
+                  final currentZoneRowIdx = zoneRowIdx++;
+                  final currentRepereRowIdx = i;
+
+                  final isEndOfRepere = (currentRepereRowIdx == totalRepereItems - 1);
+                  final isEndOfZone = (currentZoneRowIdx == totalZoneItems - 1);
+
+                  final zoneBorder = pw.Border(
+                    bottom: isEndOfZone
+                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                        : pw.BorderSide.none,
+                  );
+
+                  final repereBorder = pw.Border(
+                    bottom: isEndOfZone
+                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                        : (isEndOfRepere
+                            ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 1.0)
+                            : pw.BorderSide.none),
+                  );
+
+                  final itemBorder = pw.Border(
+                    bottom: isEndOfZone
+                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                        : (isEndOfRepere
+                            ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 1.0)
+                            : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4)),
+                  );
+
                   final essaiVal = c.essai?.trim();
                   PdfColor? essaiBg;
                   String textEssai = '-';
@@ -16521,43 +16665,144 @@ class PdfReportService {
                     textEssai = 'Sans objet';
                   }
 
-                  return pw.TableRow(
-                    decoration: pw.BoxDecoration(
-                      color: e.key.isOdd ? tableRowAlt : PdfColors.white,
-                    ),
-                    children: [
-                      _cell('${e.key + 1}', isHeader: false, centered: true),
-                      _cell(c.localisation, isHeader: false, centered: true),
-                      _cell(c.designationTableau, isHeader: false, centered: true),
-                      _cell(c.origineMesure, isHeader: false, centered: true),
-                      pw.Container(
-                        color: essaiBg,
-                        alignment: pw.Alignment.center,
-                        padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 2,
-                          vertical: 4,
+                  final bg = globalRowIndex.isOdd ? tableRowAlt : PdfColors.white;
+                  globalRowIndex++;
+
+                  tableRows.add(
+                    pw.TableRow(
+                      decoration: pw.BoxDecoration(color: bg),
+                      children: [
+                        // Cellule 0 : Zone
+                        pw.Container(
+                          decoration: pw.BoxDecoration(color: PdfColors.white, border: zoneBorder),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: (currentZoneRowIdx == zoneMidIndex && zoneGroup.zoneName.isNotEmpty)
+                              ? pw.Text(
+                                  zoneGroup.zoneName,
+                                  style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
+                                  textAlign: pw.TextAlign.center,
+                                )
+                              : pw.SizedBox(),
                         ),
-                        child: pw.Text(
-                          textEssai,
-                          style: pw.TextStyle(
-                            font: (essaiVal != null && essaiVal.isNotEmpty) ? _fontBold : _fontRegular,
-                            fontSize: fsSmall,
-                            color: PdfColors.black,
+
+                        // Cellule 1 : Repère
+                        pw.Container(
+                          decoration: pw.BoxDecoration(color: PdfColors.white, border: repereBorder),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: (currentRepereRowIdx == repereMidIndex && repereGroup.repereName.isNotEmpty)
+                              ? pw.Text(
+                                  repereGroup.repereName,
+                                  style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
+                                  textAlign: pw.TextAlign.center,
+                                )
+                              : pw.SizedBox(),
+                        ),
+
+                        // Cellule 2 : N°
+                        pw.Container(
+                          decoration: pw.BoxDecoration(border: itemBorder),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            '${rowItem.index}',
+                            style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                            textAlign: pw.TextAlign.center,
                           ),
-                          textAlign: pw.TextAlign.center,
                         ),
-                      ),
-                      _cell(
-                        c.observation?.isNotEmpty == true ? c.observation! : '-',
-                        isHeader: false,
-                        centered: true,
-                      ),
-                    ],
+
+                        // Cellule 3 : Désignation Tableau / Équipement
+                        pw.Container(
+                          decoration: pw.BoxDecoration(border: itemBorder),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            c.designationTableau.isNotEmpty ? c.designationTableau : '-',
+                            style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ),
+
+                        // Cellule 4 : Origine Mesure
+                        pw.Container(
+                          decoration: pw.BoxDecoration(border: itemBorder),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            c.origineMesure.isNotEmpty ? c.origineMesure : '-',
+                            style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ),
+
+                        // Cellule 5 : Essai
+                        pw.Container(
+                          decoration: pw.BoxDecoration(color: essaiBg, border: itemBorder),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            textEssai,
+                            style: pw.TextStyle(
+                              font: (essaiVal != null && essaiVal.isNotEmpty) ? _fontBold : _fontRegular,
+                              fontSize: fsSmall,
+                              color: PdfColors.black,
+                            ),
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ),
+
+                        // Cellule 6 : Observation
+                        pw.Container(
+                          decoration: pw.BoxDecoration(border: itemBorder),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          alignment: pw.Alignment.centerLeft,
+                          child: pw.Text(
+                            c.observation?.isNotEmpty == true ? c.observation! : '-',
+                            style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                          ),
+                        ),
+                      ],
+                    ),
                   );
-                }),
-            ],
-          ),
-        ],
+                }
+              }
+            }
+          }
+
+          return [
+            PageTracker(
+              key: 'mesures_continuite',
+              registry: trackedPages,
+              offset: pageOffset,
+              child: _subSectionBar(
+                '7. Continuité et de la résistance des conducteurs de protection et des liaisons équipotentielles',
+              ),
+            ),
+            pw.SizedBox(height: 8),
+            pw.Table(
+              defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+              border: const pw.TableBorder(
+                left: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+                right: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+                top: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+                bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+                verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.5),
+                horizontalInside: pw.BorderSide.none,
+              ),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(1.2), // Zone
+                1: pw.FlexColumnWidth(1.4), // Repère
+                2: pw.FixedColumnWidth(24), // N°
+                3: pw.FlexColumnWidth(2.2), // Désignation Tableau / Equipement
+                4: pw.FlexColumnWidth(1.4), // Origine Mesure
+                5: pw.FlexColumnWidth(1.3), // Essai
+                6: pw.FlexColumnWidth(1.8), // Observation
+              },
+              children: tableRows,
+            ),
+          ];
+        },
       ),
     );
   }
