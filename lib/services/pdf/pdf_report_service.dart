@@ -8482,20 +8482,29 @@ class PdfReportService {
           final isEven = idx % 2 == 0;
           final bgColor = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
 
+          final isEndOfZone = (currentZoneItemIdx == totalZoneItems - 1);
+          final isEndOfRepere = (currentRepereItemIdx == repereCount - 1);
+
           final zoneBorder = pw.Border(
-            bottom: (currentZoneItemIdx == totalZoneItems - 1)
-                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
+            bottom: isEndOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                 : pw.BorderSide.none,
           );
 
           final repereBorder = pw.Border(
-            bottom: (currentRepereItemIdx == repereCount - 1 || currentZoneItemIdx == totalZoneItems - 1)
-                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
-                : pw.BorderSide.none,
+            bottom: isEndOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                : (isEndOfRepere
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                    : pw.BorderSide.none),
           );
 
-          final itemBorder = const pw.Border(
-            bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5),
+          final itemBorder = pw.Border(
+            bottom: isEndOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                : (isEndOfRepere
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                    : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4)),
           );
 
           final rawSource = item.source.trim();
@@ -8778,20 +8787,29 @@ class PdfReportService {
           final isEven = idx % 2 == 0;
           final bg = isEven ? PdfColors.white : PdfColor.fromInt(0xFFF9FAFB);
 
+          final isEndOfZone = (currentZoneItemIdx == totalZoneItems - 1);
+          final isEndOfRepere = (currentRepereItemIdx == repereCount - 1);
+
           final zoneBorder = pw.Border(
-            bottom: (currentZoneItemIdx == totalZoneItems - 1)
-                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
+            bottom: isEndOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                 : pw.BorderSide.none,
           );
 
           final repereBorder = pw.Border(
-            bottom: (currentRepereItemIdx == repereCount - 1 || currentZoneItemIdx == totalZoneItems - 1)
-                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
-                : pw.BorderSide.none,
+            bottom: isEndOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                : (isEndOfRepere
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                    : pw.BorderSide.none),
           );
 
-          final itemBorder = const pw.Border(
-            bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5),
+          final itemBorder = pw.Border(
+            bottom: isEndOfZone
+                ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                : (isEndOfRepere
+                    ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                    : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4)),
           );
 
           final rowCells = <pw.Widget>[
@@ -15104,7 +15122,7 @@ class PdfReportService {
                   bottom: isEndOfZone
                       ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                       : (isEndOfLocal
-                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 1.0)
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
                           : pw.BorderSide.none),
                 );
 
@@ -15112,9 +15130,9 @@ class PdfReportService {
                   bottom: isEndOfZone
                       ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                       : (isEndOfLocal
-                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 1.0)
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
                           : (isEndOfEquip
-                              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.75)
+                              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.6)
                               : pw.BorderSide.none)),
                 );
 
@@ -15122,9 +15140,9 @@ class PdfReportService {
                   bottom: isEndOfZone
                       ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                       : (isEndOfLocal
-                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 1.0)
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
                           : (isEndOfEquip
-                              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.75)
+                              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.6)
                               : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4))),
                 );
 
@@ -15577,20 +15595,29 @@ class PdfReportService {
                   final isEven = idx % 2 == 0;
                   final bg = isEven ? PdfColors.white : tableRowAlt;
 
+                  final isEndOfZone = (currentZoneItemIdx == totalZoneItems - 1);
+                  final isEndOfRepere = (currentRepItemIdx == repCount - 1);
+
                   final zoneBorder = pw.Border(
-                    bottom: (currentZoneItemIdx == totalZoneItems - 1)
-                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
+                    bottom: isEndOfZone
+                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                         : pw.BorderSide.none,
                   );
 
                   final repereBorder = pw.Border(
-                    bottom: (currentRepItemIdx == repCount - 1 || currentZoneItemIdx == totalZoneItems - 1)
-                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
-                        : pw.BorderSide.none,
+                    bottom: isEndOfZone
+                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                        : (isEndOfRepere
+                            ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                            : pw.BorderSide.none),
                   );
 
-                  final itemBorder = const pw.Border(
-                    bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5),
+                  final itemBorder = pw.Border(
+                    bottom: isEndOfZone
+                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                        : (isEndOfRepere
+                            ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                            : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4)),
                   );
 
                   final obs = pt.observation ?? '';
@@ -16049,26 +16076,42 @@ class PdfReportService {
                     final isEven = idx % 2 == 0;
                     final bg = isEven ? PdfColors.white : tableRowAlt;
 
+                    final isEndOfZone = (currentZoneItemIdx == totalZoneItems - 1);
+                    final isEndOfRepere = (currentRepItemIdx == totalRepereItems - 1);
+                    final isEndOfEquip = (currentEqItemIdx == eqCount - 1);
+
                     final zoneBorder = pw.Border(
-                      bottom: (currentZoneItemIdx == totalZoneItems - 1)
-                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
+                      bottom: isEndOfZone
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                           : pw.BorderSide.none,
                     );
 
                     final repereBorder = pw.Border(
-                      bottom: (currentRepItemIdx == totalRepereItems - 1 || currentZoneItemIdx == totalZoneItems - 1)
-                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
-                          : pw.BorderSide.none,
+                      bottom: isEndOfZone
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                          : (isEndOfRepere
+                              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                              : pw.BorderSide.none),
                     );
 
                     final equipmentBorder = pw.Border(
-                      bottom: (currentEqItemIdx == eqCount - 1 || currentRepItemIdx == totalRepereItems - 1 || currentZoneItemIdx == totalZoneItems - 1)
-                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
-                          : pw.BorderSide.none,
+                      bottom: isEndOfZone
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                          : (isEndOfRepere
+                              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                              : (isEndOfEquip
+                                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.6)
+                                  : pw.BorderSide.none)),
                     );
 
-                    final itemBorder = const pw.Border(
-                      bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5),
+                    final itemBorder = pw.Border(
+                      bottom: isEndOfZone
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                          : (isEndOfRepere
+                              ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
+                              : (isEndOfEquip
+                                  ? const pw.BorderSide(color: PdfColor.fromInt(0xFF475569), width: 0.6)
+                                  : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4))),
                     );
 
                     String displayText;
@@ -16639,7 +16682,7 @@ class PdfReportService {
                     bottom: isEndOfZone
                         ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                         : (isEndOfRepere
-                            ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 1.0)
+                            ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
                             : pw.BorderSide.none),
                   );
 
@@ -16647,7 +16690,7 @@ class PdfReportService {
                     bottom: isEndOfZone
                         ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
                         : (isEndOfRepere
-                            ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 1.0)
+                            ? const pw.BorderSide(color: PdfColor.fromInt(0xFF334155), width: 0.8)
                             : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4)),
                   );
 
