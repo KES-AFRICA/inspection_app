@@ -145,6 +145,98 @@ class _PdfUnknownSourceZoneGroup {
   });
 }
 
+class _LocationInfo {
+  final String zoneName;
+  final String repereName;
+  final String equipmentName;
+
+  const _LocationInfo({
+    required this.zoneName,
+    required this.repereName,
+    required this.equipmentName,
+  });
+}
+
+class _PriseTerreRowItem {
+  final String zoneName;
+  final String repereName;
+  final int index;
+  final PriseTerre item;
+
+  _PriseTerreRowItem({
+    required this.zoneName,
+    required this.repereName,
+    required this.index,
+    required this.item,
+  });
+}
+
+class _PriseTerreRepereGroup {
+  final String repereName;
+  final List<_PriseTerreRowItem> items;
+
+  _PriseTerreRepereGroup({
+    required this.repereName,
+    required this.items,
+  });
+}
+
+class _PriseTerreZoneGroup {
+  final String zoneName;
+  final List<_PriseTerreRepereGroup> repereGroups;
+
+  _PriseTerreZoneGroup({
+    required this.zoneName,
+    required this.repereGroups,
+  });
+}
+
+class _DdrRowItem {
+  final String zoneName;
+  final String repereName;
+  final String equipmentName;
+  final int index;
+  final EssaiDeclenchementDifferentiel item;
+
+  _DdrRowItem({
+    required this.zoneName,
+    required this.repereName,
+    required this.equipmentName,
+    required this.index,
+    required this.item,
+  });
+}
+
+class _DdrEquipmentGroup {
+  final String equipmentName;
+  final List<_DdrRowItem> items;
+
+  _DdrEquipmentGroup({
+    required this.equipmentName,
+    required this.items,
+  });
+}
+
+class _DdrRepereGroup {
+  final String repereName;
+  final List<_DdrEquipmentGroup> equipmentGroups;
+
+  _DdrRepereGroup({
+    required this.repereName,
+    required this.equipmentGroups,
+  });
+}
+
+class _DdrZoneGroup {
+  final String zoneName;
+  final List<_DdrRepereGroup> repereGroups;
+
+  _DdrZoneGroup({
+    required this.zoneName,
+    required this.repereGroups,
+  });
+}
+
 class _PdfRepereSubGroup {
   final String localName;
   final List<InstallationDescriptionPdfRow> rows;
@@ -7584,6 +7676,187 @@ class PdfReportService {
     return true;
   }
 
+  static pw.Widget _thHeaderCell(String title) {
+    return pw.Container(
+      alignment: pw.Alignment.center,
+      padding: const pw.EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      child: pw.Text(
+        title,
+        style: pw.TextStyle(
+          font: _fontBold,
+          fontSize: fsSmall,
+          color: PdfColors.white,
+        ),
+        textAlign: pw.TextAlign.center,
+      ),
+    );
+  }
+
+  static _LocationInfo _resolveLocation(
+    AuditInstallationsElectriques? audit, {
+    String? localisationStr,
+    String? coffretStr,
+  }) {
+    String zoneName = '';
+    String repereName = '';
+    String equipmentName = coffretStr?.trim() ?? '';
+
+    final locClean = localisationStr?.trim() ?? '';
+    final coffretClean = coffretStr?.trim() ?? '';
+
+    if (audit != null) {
+      if (coffretClean.isNotEmpty) {
+        for (final z in audit.basseTensionZones) {
+          final zName = z.nom.trim();
+          for (final c in z.coffretsDirects) {
+            if (_matchEquip(c, coffretClean)) {
+              return _LocationInfo(
+                zoneName: zName,
+                repereName: '',
+                equipmentName: c.nom.isNotEmpty ? c.nom : coffretClean,
+              );
+            }
+          }
+          for (final l in z.locaux) {
+            final lName = l.nom.trim();
+            for (final c in l.coffrets) {
+              if (_matchEquip(c, coffretClean)) {
+                return _LocationInfo(
+                  zoneName: zName,
+                  repereName: lName,
+                  equipmentName: c.nom.isNotEmpty ? c.nom : coffretClean,
+                );
+              }
+            }
+          }
+        }
+        for (final z in audit.moyenneTensionZones) {
+          final zName = z.nom.trim();
+          for (final c in z.coffrets) {
+            if (_matchEquip(c, coffretClean)) {
+              return _LocationInfo(
+                zoneName: zName,
+                repereName: '',
+                equipmentName: c.nom.isNotEmpty ? c.nom : coffretClean,
+              );
+            }
+          }
+          for (final l in z.locaux) {
+            final lName = l.nom.trim();
+            for (final c in l.coffrets) {
+              if (_matchEquip(c, coffretClean)) {
+                return _LocationInfo(
+                  zoneName: zName,
+                  repereName: lName,
+                  equipmentName: c.nom.isNotEmpty ? c.nom : coffretClean,
+                );
+              }
+            }
+          }
+        }
+        for (final l in audit.moyenneTensionLocaux) {
+          final lName = l.nom.trim();
+          for (final c in l.coffrets) {
+            if (_matchEquip(c, coffretClean)) {
+              return _LocationInfo(
+                zoneName: '',
+                repereName: lName,
+                equipmentName: c.nom.isNotEmpty ? c.nom : coffretClean,
+              );
+            }
+          }
+        }
+      }
+
+      if (locClean.isNotEmpty) {
+        for (final z in audit.basseTensionZones) {
+          final zName = z.nom.trim();
+          for (final l in z.locaux) {
+            final lName = l.nom.trim();
+            if (_matchName(lName, locClean)) {
+              return _LocationInfo(
+                zoneName: zName,
+                repereName: lName,
+                equipmentName: equipmentName,
+              );
+            }
+          }
+          if (_matchName(zName, locClean)) {
+            return _LocationInfo(
+              zoneName: zName,
+              repereName: '',
+              equipmentName: equipmentName,
+            );
+          }
+        }
+        for (final z in audit.moyenneTensionZones) {
+          final zName = z.nom.trim();
+          for (final l in z.locaux) {
+            final lName = l.nom.trim();
+            if (_matchName(lName, locClean)) {
+              return _LocationInfo(
+                zoneName: zName,
+                repereName: lName,
+                equipmentName: equipmentName,
+              );
+            }
+          }
+          if (_matchName(zName, locClean)) {
+            return _LocationInfo(
+              zoneName: zName,
+              repereName: '',
+              equipmentName: equipmentName,
+            );
+          }
+        }
+        for (final l in audit.moyenneTensionLocaux) {
+          final lName = l.nom.trim();
+          if (_matchName(lName, locClean)) {
+            return _LocationInfo(
+              zoneName: '',
+              repereName: lName,
+              equipmentName: equipmentName,
+            );
+          }
+        }
+      }
+    }
+
+    if (locClean.isNotEmpty) {
+      if (locClean.toLowerCase().startsWith('zone ') || locClean.toLowerCase().startsWith('zone_')) {
+        zoneName = locClean;
+        repereName = '';
+      } else {
+        zoneName = '';
+        repereName = locClean;
+      }
+    }
+
+    return _LocationInfo(
+      zoneName: zoneName,
+      repereName: repereName,
+      equipmentName: equipmentName,
+    );
+  }
+
+  static bool _matchEquip(CoffretArmoire c, String query) {
+    final q = query.trim().toLowerCase();
+    if (q.isEmpty) return false;
+    if (c.nom.trim().toLowerCase() == q) return true;
+    if (c.repere != null && c.repere!.trim().toLowerCase() == q) return true;
+    if (c.numeroEquipement != null && c.numeroEquipement!.trim().toLowerCase() == q) return true;
+    return false;
+  }
+
+  static bool _matchName(String name, String query) {
+    final n = name.trim().toLowerCase();
+    final q = query.trim().toLowerCase();
+    if (n.isEmpty || q.isEmpty) return false;
+    if (n == q) return true;
+    if (n.replaceFirst('local ', '') == q.replaceFirst('local ', '')) return true;
+    return false;
+  }
+
   static bool _extractHasObservation(Object refObj) {
     if (refObj is List) {
       for (final item in refObj) {
@@ -14949,6 +15222,9 @@ class PdfReportService {
     int? overrideTotalPages,
     DescriptionInstallations? desc,
     bool saveFilesToDisk = true,
+    AuditInstallationsElectriques? audit,
+    String? nomSite,
+    String? numeroRapport,
   }) async {
     final ptPhotosCache = await _preloadPrisesTerrePhotos(
       mesures.prisesTerre,
@@ -15117,75 +15393,144 @@ class PdfReportService {
       ),
     );
 
-    // II. RÉSULTATS DES ESSAIS (nouvelle page)
+    // II. RÉSULTATS DES ESSAIS (nouvelle page - PAYSAGE)
     pdf.addPage(
       pw.MultiPage(
         maxPages: 10000,
         pageTheme: _buildInnerPageTheme(
           pageOffset: pageOffset,
           overrideTotalPages: overrideTotalPages,
+          pageFormat: PdfPageFormat.a4.landscape,
         ),
-        header: (ctx) => _buildPageHeaderWidget(),
-        build: (ctx) => [
-          PageTracker(
-            key: 'mesures_resultats',
-            registry: trackedPages,
-            offset: pageOffset,
-            child: _subSectionBar("II. RÉSULTATS DES ESSAIS"),
-          ),
-          pw.SizedBox(height: 6),
-          _bodyText(
-            "Les résultats des mesures et essais réalisés sont présentés ci-après par type de vérification.",
-          ),
-          pw.SizedBox(height: 12),
+        header: (ctx) => _buildPageHeaderWidget(
+          nomSite: nomSite,
+          numeroRapport: numeroRapport,
+        ),
+        build: (ctx) {
+          final ptRows = <_PriseTerreRowItem>[];
+          for (int i = 0; i < mesures.prisesTerre.length; i++) {
+            final pt = mesures.prisesTerre[i];
+            final locInfo = _resolveLocation(audit, localisationStr: pt.localisation);
+            ptRows.add(
+              _PriseTerreRowItem(
+                zoneName: locInfo.zoneName,
+                repereName: locInfo.repereName,
+                index: i + 1,
+                item: pt,
+              ),
+            );
+          }
 
-          // 1. Prise de terre
-          PageTracker(
-            key: 'mesures_terre',
-            registry: trackedPages,
-            offset: pageOffset,
-            child: _subSectionBar('1. Prise de terre'),
-          ),
-          pw.SizedBox(height: 8),
-          pw.Table(
-            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-            border: pw.TableBorder.all(color: borderColor, width: 0.4),
-            columnWidths: const {
-              0: pw.FixedColumnWidth(24), // N°
-              1: pw.FlexColumnWidth(1.1), // Localisation
-              2: pw.FlexColumnWidth(1.1), // Identification
-              3: pw.FlexColumnWidth(1.0), // Condition
-              4: pw.FlexColumnWidth(1.1), // Nature
-              5: pw.FlexColumnWidth(1.0), // Méthode
-              6: pw.FlexColumnWidth(0.8), // Valeur
-              7: pw.FlexColumnWidth(0.9), // Interconnecté
-              8: pw.FlexColumnWidth(1.2), // Observation
-              9: pw.FlexColumnWidth(2.4), // Photo (Largeur propice pour lisibilité)
-            },
-            children: [
-              _tableHeaderRow([
-                'N°',
-                'Localisation',
-                'Identification de la prise de terre',
-                'Condition de mesure',
-                'Nature de la prise de terre',
-                'Méthode de mesure',
-                'Valeur de la mesure',
-                'Interconnecté à d\'autre prise',
-                'Observation',
-                'Photo',
-              ]),
-              if (mesures.prisesTerre.isEmpty)
-                pw.TableRow(
-                  decoration: const pw.BoxDecoration(color: PdfColors.white),
-                  children: List.generate(
-                    10,
-                    (_) => _cell('', isHeader: false, centered: true),
-                  ),
-                )
-              else
-                ...mesures.prisesTerre.asMap().entries.map((e) {
-                  final pt = e.value;
+          // Regroupement par Zone -> Repère
+          final ptZoneGroups = <_PriseTerreZoneGroup>[];
+          for (final row in ptRows) {
+            final normZone = row.zoneName.trim();
+            final normRep = row.repereName.trim();
+
+            if (ptZoneGroups.isNotEmpty && ptZoneGroups.last.zoneName == normZone) {
+              final currentZoneGroup = ptZoneGroups.last;
+              if (currentZoneGroup.repereGroups.isNotEmpty &&
+                  currentZoneGroup.repereGroups.last.repereName == normRep) {
+                currentZoneGroup.repereGroups.last.items.add(row);
+              } else {
+                currentZoneGroup.repereGroups.add(
+                  _PriseTerreRepereGroup(repereName: normRep, items: [row]),
+                );
+              }
+            } else {
+              ptZoneGroups.add(
+                _PriseTerreZoneGroup(
+                  zoneName: normZone,
+                  repereGroups: [
+                    _PriseTerreRepereGroup(repereName: normRep, items: [row]),
+                  ],
+                ),
+              );
+            }
+          }
+
+          const ptColumnWidths = <int, pw.TableColumnWidth>{
+            0: pw.FlexColumnWidth(1.2), // ZONE
+            1: pw.FlexColumnWidth(1.4), // REPÈRE
+            2: pw.FixedColumnWidth(28), // N°
+            3: pw.FlexColumnWidth(1.3), // Identification
+            4: pw.FlexColumnWidth(1.2), // Condition
+            5: pw.FlexColumnWidth(1.4), // Nature
+            6: pw.FlexColumnWidth(1.2), // Méthode
+            7: pw.FlexColumnWidth(1.0), // Valeur
+            8: pw.FlexColumnWidth(1.1), // Interconnecté
+            9: pw.FlexColumnWidth(1.8), // Observation
+            10: pw.FlexColumnWidth(2.0), // Photo
+          };
+
+          final ptTableRows = <pw.TableRow>[];
+          ptTableRows.add(
+            _tableHeaderRow([
+              'ZONE',
+              'REPÈRE',
+              'N°',
+              'Identification de la prise de terre',
+              'Condition de mesure',
+              'Nature de la prise de terre',
+              'Méthode de mesure',
+              'Valeur de la mesure',
+              'Interconnecté à d\'autre prise',
+              'Observation',
+              'Photo',
+            ]),
+          );
+
+          if (ptRows.isEmpty) {
+            ptTableRows.add(
+              pw.TableRow(
+                decoration: const pw.BoxDecoration(color: PdfColors.white),
+                children: List.generate(
+                  11,
+                  (_) => _cell('', isHeader: false, centered: true),
+                ),
+              ),
+            );
+          } else {
+            int globalRowIdx = 0;
+            for (final zoneGroup in ptZoneGroups) {
+              final totalZoneItems = zoneGroup.repereGroups.fold<int>(
+                0,
+                (sum, g) => sum + g.items.length,
+              );
+              final zoneMidIdx = (totalZoneItems - 1) ~/ 2;
+              int zoneItemIdx = 0;
+
+              for (int rIdx = 0; rIdx < zoneGroup.repereGroups.length; rIdx++) {
+                final repGroup = zoneGroup.repereGroups[rIdx];
+                final repCount = repGroup.items.length;
+                final repMidIdx = (repCount - 1) ~/ 2;
+
+                for (int i = 0; i < repCount; i++) {
+                  final rowItem = repGroup.items[i];
+                  final pt = rowItem.item;
+                  final currentZoneItemIdx = zoneItemIdx++;
+                  final currentRepItemIdx = i;
+
+                  final idx = globalRowIdx++;
+                  final isEven = idx % 2 == 0;
+                  final bg = isEven ? PdfColors.white : tableRowAlt;
+
+                  final zoneBorder = pw.Border(
+                    bottom: (currentZoneItemIdx == totalZoneItems - 1)
+                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
+                        : pw.BorderSide.none,
+                  );
+
+                  final repereBorder = pw.Border(
+                    bottom: (currentRepItemIdx == repCount - 1 || currentZoneItemIdx == totalZoneItems - 1)
+                        ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
+                        : pw.BorderSide.none,
+                  );
+
+                  final itemBorder = const pw.Border(
+                    bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5),
+                  );
+
                   final obs = pt.observation ?? '';
                   final inter = pt.interconnecteAutrePrise?.trim();
                   PdfColor? cellBg;
@@ -15200,80 +15545,217 @@ class PdfReportService {
 
                   final photoImg = ptPhotosCache[pt];
 
-                  return pw.TableRow(
-                    decoration: pw.BoxDecoration(
-                      color: e.key.isOdd ? tableRowAlt : PdfColors.white,
-                    ),
-                    children: [
-                      _cell('${e.key + 1}', isHeader: false, centered: true),
-                      _cell(pt.localisation, isHeader: false, centered: true),
-                      _cell(pt.identification, isHeader: false, centered: true),
-                      _cell(
-                        pt.conditionPriseTerre,
-                        isHeader: false,
-                        centered: true,
-                      ),
-                      _cell(
-                        pt.naturePriseTerre,
-                        isHeader: false,
-                        centered: true,
-                      ),
-                      _cell(pt.methodeMesure, isHeader: false, centered: true),
-                      _cell(
-                        pt.valeurMesure?.toStringAsFixed(2) ?? '-',
-                        isHeader: false,
-                        centered: true,
-                      ),
-                      pw.Container(
-                        color: cellBg,
-                        alignment: pw.Alignment.center,
-                        padding: const pw.EdgeInsets.symmetric(
-                          horizontal: 2,
-                          vertical: 4,
-                        ),
-                        child: pw.Text(
-                          textVal,
-                          style: pw.TextStyle(
-                            font: _fontRegular,
-                            fontSize: fsSmall,
+                  ptTableRows.add(
+                    pw.TableRow(
+                      children: [
+                        // Cellule 0 : Zone (fond blanc permanent, centré sur la ligne médiane de la Zone)
+                        pw.Container(
+                          decoration: pw.BoxDecoration(
+                            color: PdfColors.white,
+                            border: zoneBorder,
                           ),
-                          textAlign: pw.TextAlign.center,
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: (currentZoneItemIdx == zoneMidIdx && zoneGroup.zoneName.isNotEmpty)
+                              ? pw.Text(
+                                  zoneGroup.zoneName,
+                                  style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                                  textAlign: pw.TextAlign.center,
+                                )
+                              : pw.SizedBox(),
                         ),
-                      ),
-                      _cell(
-                        obs.isEmpty ? '-' : obs,
-                        isHeader: false,
-                        centered: true,
-                      ),
-                      photoImg != null
-                          ? pw.Container(
-                              height: 65,
-                              padding: const pw.EdgeInsets.all(3),
-                              alignment: pw.Alignment.center,
-                              child: pw.Image(
-                                photoImg,
-                                fit: pw.BoxFit.contain,
-                              ),
-                            )
-                          : _cell('-', isHeader: false, centered: true),
-                    ],
+
+                        // Cellule 1 : Repère (fond blanc permanent, centré sur la ligne médiane du Repère)
+                        pw.Container(
+                          decoration: pw.BoxDecoration(
+                            color: PdfColors.white,
+                            border: repereBorder,
+                          ),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: (currentRepItemIdx == repMidIdx && repGroup.repereName.isNotEmpty)
+                              ? pw.Text(
+                                  repGroup.repereName,
+                                  style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                                  textAlign: pw.TextAlign.center,
+                                )
+                              : pw.SizedBox(),
+                        ),
+
+                        // Cellule 2 : N°
+                        pw.Container(
+                          decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            '${rowItem.index}',
+                            style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ),
+
+                        // Cellule 3 : Identification
+                        pw.Container(
+                          decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            pt.identification.isNotEmpty ? pt.identification : '-',
+                            style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ),
+
+                        // Cellule 4 : Condition de mesure
+                        pw.Container(
+                          decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            pt.conditionPriseTerre.isNotEmpty ? pt.conditionPriseTerre : '-',
+                            style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ),
+
+                        // Cellule 5 : Nature
+                        pw.Container(
+                          decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            pt.naturePriseTerre.isNotEmpty ? pt.naturePriseTerre : '-',
+                            style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ),
+
+                        // Cellule 6 : Méthode
+                        pw.Container(
+                          decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            pt.methodeMesure.isNotEmpty ? pt.methodeMesure : '-',
+                            style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ),
+
+                        // Cellule 7 : Valeur de la mesure
+                        pw.Container(
+                          decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            pt.valeurMesure?.toStringAsFixed(2) ?? '-',
+                            style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ),
+
+                        // Cellule 8 : Interconnecté
+                        pw.Container(
+                          decoration: pw.BoxDecoration(color: cellBg ?? bg, border: itemBorder),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            textVal,
+                            style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ),
+
+                        // Cellule 9 : Observation
+                        pw.Container(
+                          decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                          padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          alignment: pw.Alignment.center,
+                          child: pw.Text(
+                            obs.isEmpty ? '-' : obs,
+                            style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                            textAlign: pw.TextAlign.center,
+                          ),
+                        ),
+
+                        // Cellule 10 : Photo
+                        pw.Container(
+                          decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                          padding: const pw.EdgeInsets.all(3),
+                          alignment: pw.Alignment.center,
+                          child: photoImg != null
+                              ? pw.Container(
+                                  height: 65,
+                                  alignment: pw.Alignment.center,
+                                  child: pw.Image(photoImg, fit: pw.BoxFit.contain),
+                                )
+                              : pw.Text(
+                                  '-',
+                                  style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                                  textAlign: pw.TextAlign.center,
+                                ),
+                        ),
+                      ],
+                    ),
                   );
-                }),
-            ],
-          ),
-        ],
+                }
+              }
+            }
+          }
+
+          return [
+            PageTracker(
+              key: 'mesures_resultats',
+              registry: trackedPages,
+              offset: pageOffset,
+              child: _subSectionBar("II. RÉSULTATS DES ESSAIS"),
+            ),
+            pw.SizedBox(height: 6),
+            _bodyText(
+              "Les résultats des mesures et essais réalisés sont présentés ci-après par type de vérification.",
+            ),
+            pw.SizedBox(height: 12),
+
+            // 1. Prise de terre
+            PageTracker(
+              key: 'mesures_terre',
+              registry: trackedPages,
+              offset: pageOffset,
+              child: _subSectionBar('1. Prise de terre'),
+            ),
+            pw.SizedBox(height: 8),
+
+            pw.Table(
+              defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+              border: const pw.TableBorder(
+                left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                horizontalInside: pw.BorderSide.none,
+              ),
+              columnWidths: ptColumnWidths,
+              children: ptTableRows,
+            ),
+          ];
+        },
       ),
     );
 
-    // 2. Essais de declenchement des DDR (nouvelle page)
+    // 2. Essais de declenchement des DDR (nouvelle page - PAYSAGE)
     pdf.addPage(
       pw.MultiPage(
         maxPages: 10000,
         pageTheme: _buildInnerPageTheme(
           pageOffset: pageOffset,
           overrideTotalPages: overrideTotalPages,
+          pageFormat: PdfPageFormat.a4.landscape,
         ),
-        header: (ctx) => _buildPageHeaderWidget(),
+        header: (ctx) => _buildPageHeaderWidget(
+          nomSite: nomSite,
+          numeroRapport: numeroRapport,
+        ),
         build: (ctx) {
           final widgets = <pw.Widget>[];
 
@@ -15289,112 +15771,117 @@ class PdfReportService {
           );
           widgets.add(pw.SizedBox(height: 8));
 
-          // 1. Table Header of DDR table
+          final ddrRows = <_DdrRowItem>[];
+          for (int i = 0; i < mesures.essaisDeclenchement.length; i++) {
+            final es = mesures.essaisDeclenchement[i];
+            final locInfo = _resolveLocation(
+              audit,
+              localisationStr: es.localisation,
+              coffretStr: es.coffret,
+            );
+            ddrRows.add(
+              _DdrRowItem(
+                zoneName: locInfo.zoneName,
+                repereName: locInfo.repereName,
+                equipmentName: locInfo.equipmentName,
+                index: i + 1,
+                item: es,
+              ),
+            );
+          }
+
+          // Regroupement 3 niveaux : Zone -> Repère -> Équipement
+          final ddrZoneGroups = <_DdrZoneGroup>[];
+          for (final row in ddrRows) {
+            final normZone = row.zoneName.trim();
+            final normRep = row.repereName.trim();
+            final normEq = row.equipmentName.trim();
+
+            if (ddrZoneGroups.isNotEmpty && ddrZoneGroups.last.zoneName == normZone) {
+              final zGroup = ddrZoneGroups.last;
+              if (zGroup.repereGroups.isNotEmpty && zGroup.repereGroups.last.repereName == normRep) {
+                final rGroup = zGroup.repereGroups.last;
+                if (rGroup.equipmentGroups.isNotEmpty && rGroup.equipmentGroups.last.equipmentName == normEq) {
+                  rGroup.equipmentGroups.last.items.add(row);
+                } else {
+                  rGroup.equipmentGroups.add(
+                    _DdrEquipmentGroup(equipmentName: normEq, items: [row]),
+                  );
+                }
+              } else {
+                zGroup.repereGroups.add(
+                  _DdrRepereGroup(
+                    repereName: normRep,
+                    equipmentGroups: [
+                      _DdrEquipmentGroup(equipmentName: normEq, items: [row]),
+                    ],
+                  ),
+                );
+              }
+            } else {
+              ddrZoneGroups.add(
+                _DdrZoneGroup(
+                  zoneName: normZone,
+                  repereGroups: [
+                    _DdrRepereGroup(
+                      repereName: normRep,
+                      equipmentGroups: [
+                        _DdrEquipmentGroup(equipmentName: normEq, items: [row]),
+                      ],
+                    ),
+                  ],
+                ),
+              );
+            }
+          }
+
+          const ddrColumnWidthsHeader = <int, pw.TableColumnWidth>{
+            0: pw.FlexColumnWidth(1.2), // ZONE
+            1: pw.FlexColumnWidth(1.4), // REPÈRE
+            2: pw.FixedColumnWidth(28), // N°
+            3: pw.FlexColumnWidth(1.8), // ÉQUIPEMENT
+            4: pw.FlexColumnWidth(2.0), // DÉSIGNATION CIRCUIT
+            5: pw.FlexColumnWidth(1.5), // TYPE DISPOSITIF
+            6: pw.FlexColumnWidth(1.1), // CALIBRE
+            7: pw.FlexColumnWidth(2.0), // RÉGLAGE (IAn + Tempo)
+            8: pw.FlexColumnWidth(1.2), // ESSAI
+          };
+
+          const ddrColumnWidthsData = <int, pw.TableColumnWidth>{
+            0: pw.FlexColumnWidth(1.2), // ZONE
+            1: pw.FlexColumnWidth(1.4), // REPÈRE
+            2: pw.FixedColumnWidth(28), // N°
+            3: pw.FlexColumnWidth(1.8), // ÉQUIPEMENT
+            4: pw.FlexColumnWidth(2.0), // DÉSIGNATION CIRCUIT
+            5: pw.FlexColumnWidth(1.5), // TYPE DISPOSITIF
+            6: pw.FlexColumnWidth(1.1), // CALIBRE
+            7: pw.FlexColumnWidth(1.0), // IAn
+            8: pw.FlexColumnWidth(1.0), // Tempo
+            9: pw.FlexColumnWidth(1.2), // ESSAI
+          };
+
+          // 1. Table Header
           final headerTable = pw.Table(
-            defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-            border: pw.TableBorder(
-              top: pw.BorderSide(color: borderColor, width: 0.4),
-              left: pw.BorderSide(color: borderColor, width: 0.4),
-              right: pw.BorderSide(color: borderColor, width: 0.4),
-              bottom: pw.BorderSide(color: borderColor, width: 0.4),
-              verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
+            border: const pw.TableBorder(
+              left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              horizontalInside: pw.BorderSide.none,
             ),
-            columnWidths: const {
-              0: pw.FixedColumnWidth(24), // N°
-              1: pw.FlexColumnWidth(1.6), // LOCALISATION
-              2: pw.FlexColumnWidth(2.2), // Désignation circuit
-              3: pw.FlexColumnWidth(1.6), // Type de dispositif
-              4: pw.FlexColumnWidth(1.3), // Calibre du dispositif (A)
-              5: pw.FlexColumnWidth(
-                2.0,
-              ), // Réglage (divided into IAn and Tempo)
-              6: pw.FlexColumnWidth(1.1), // Essai
-            },
+            columnWidths: ddrColumnWidthsHeader,
             children: [
               pw.TableRow(
                 decoration: pw.BoxDecoration(color: accentColor),
                 children: [
-                  pw.Container(
-                    alignment: pw.Alignment.center,
-                    padding: const pw.EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 4,
-                    ),
-                    child: pw.Text(
-                      "N°",
-                      style: pw.TextStyle(
-                        font: _fontBold,
-                        fontSize: fsSmall,
-                        color: PdfColors.white,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  pw.Container(
-                    alignment: pw.Alignment.center,
-                    padding: const pw.EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 4,
-                    ),
-                    child: pw.Text(
-                      "LOCALISATION",
-                      style: pw.TextStyle(
-                        font: _fontBold,
-                        fontSize: fsSmall,
-                        color: PdfColors.white,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  pw.Container(
-                    alignment: pw.Alignment.center,
-                    padding: const pw.EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 4,
-                    ),
-                    child: pw.Text(
-                      "Désignation circuit",
-                      style: pw.TextStyle(
-                        font: _fontBold,
-                        fontSize: fsSmall,
-                        color: PdfColors.white,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  pw.Container(
-                    alignment: pw.Alignment.center,
-                    padding: const pw.EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 4,
-                    ),
-                    child: pw.Text(
-                      "Type de dispositif",
-                      style: pw.TextStyle(
-                        font: _fontBold,
-                        fontSize: fsSmall,
-                        color: PdfColors.white,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  pw.Container(
-                    alignment: pw.Alignment.center,
-                    padding: const pw.EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 4,
-                    ),
-                    child: pw.Text(
-                      "Calibre du dispositif (A)",
-                      style: pw.TextStyle(
-                        font: _fontBold,
-                        fontSize: fsSmall,
-                        color: PdfColors.white,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
-                  // Réglage (double level with vertical inside borders)
+                  _thHeaderCell("ZONE"),
+                  _thHeaderCell("REPÈRE"),
+                  _thHeaderCell("N°"),
+                  _thHeaderCell("ÉQUIPEMENT"),
+                  _thHeaderCell("Désignation circuit"),
+                  _thHeaderCell("Type de dispositif"),
+                  _thHeaderCell("Calibre du dispositif (A)"),
                   pw.Column(
                     children: [
                       pw.Container(
@@ -15448,22 +15935,7 @@ class PdfReportService {
                       ),
                     ],
                   ),
-                  pw.Container(
-                    alignment: pw.Alignment.center,
-                    padding: const pw.EdgeInsets.symmetric(
-                      vertical: 8,
-                      horizontal: 4,
-                    ),
-                    child: pw.Text(
-                      "Essai",
-                      style: pw.TextStyle(
-                        font: _fontBold,
-                        fontSize: fsSmall,
-                        color: PdfColors.white,
-                      ),
-                      textAlign: pw.TextAlign.center,
-                    ),
-                  ),
+                  _thHeaderCell("Essai"),
                 ],
               ),
             ],
@@ -15471,124 +15943,257 @@ class PdfReportService {
 
           widgets.add(headerTable);
 
-          final ddrRows = <pw.TableRow>[];
-          if (mesures.essaisDeclenchement.isEmpty) {
-            ddrRows.add(
+          final ddrTableRows = <pw.TableRow>[];
+          if (ddrRows.isEmpty) {
+            ddrTableRows.add(
               pw.TableRow(
                 decoration: const pw.BoxDecoration(color: PdfColors.white),
                 children: List.generate(
-                  8,
+                  10,
                   (_) => _cell('', isHeader: false, centered: true),
                 ),
               ),
             );
           } else {
-            int altIdx = 0;
-            for (final es in mesures.essaisDeclenchement) {
-              altIdx++;
-              final rowBg = altIdx.isOdd ? tableRowAlt : PdfColors.white;
-              String displayText;
-              PdfColor? essaiColor;
-              final raw = es.essai.trim().toUpperCase();
-
-              if (raw == 'OK' || raw == 'B' || raw == 'SATISFAISANT') {
-                displayText = 'Satisfaisant';
-                essaiColor = conformeColor;
-              } else if (raw == 'NON OK' || raw == 'M' || raw == 'NON SATISFAISANT') {
-                displayText = 'Non Satisfaisant';
-                essaiColor = nonConformeColor;
-              } else if (raw == 'NE' || raw == 'SO' || raw == 'SANS OBJET') {
-                displayText = 'Sans Objet';
-                essaiColor = null;
-              } else {
-                displayText = es.essai;
-                essaiColor = null;
-              }
-
-              final hasCoffret = es.coffret != null && es.coffret!.trim().isNotEmpty;
-              final hasCircuit = es.designationCircuit != null && es.designationCircuit!.trim().isNotEmpty;
-              final String circuitText;
-              if (hasCoffret && hasCircuit && es.coffret!.trim() != es.designationCircuit!.trim()) {
-                circuitText = '${es.coffret!.trim()} - ${es.designationCircuit!.trim()}';
-              } else if (hasCircuit) {
-                circuitText = es.designationCircuit!.trim();
-              } else if (hasCoffret) {
-                circuitText = es.coffret!.trim();
-              } else {
-                circuitText = '-';
-              }
-              final localText = es.localisation.trim().isEmpty
-                  ? "-"
-                  : es.localisation.trim();
-
-              final calibreDisplay = es.calibre != null
-                  ? '${es.calibre! % 1 == 0 ? es.calibre!.toInt() : es.calibre} A'
-                  : '-';
-
-              ddrRows.add(
-                pw.TableRow(
-                  decoration: pw.BoxDecoration(color: rowBg),
-                  children: [
-                    _cell('$altIdx', isHeader: false, centered: true),
-                    _cell(localText, isHeader: false, centered: true),
-                    _cell(circuitText, isHeader: false, centered: true),
-                    _cell(es.displayTypeDispositif, isHeader: false, centered: true),
-                    _cell(calibreDisplay, isHeader: false, centered: true),
-                    _cell(
-                      es.reglageIAn != null
-                          ? '${es.reglageIAn! % 1 == 0 ? es.reglageIAn!.toInt() : es.reglageIAn}'
-                          : '-',
-                      isHeader: false,
-                      centered: true,
-                    ),
-                    _cell(
-                      es.displayTempo,
-                      isHeader: false,
-                      centered: true,
-                    ),
-                    pw.Container(
-                      color: essaiColor,
-                      padding: const pw.EdgeInsets.symmetric(
-                        horizontal: 4,
-                        vertical: 4,
-                      ),
-                      alignment: pw.Alignment.center,
-                      child: pw.Text(
-                        displayText,
-                        style: pw.TextStyle(
-                          font: _fontRegular,
-                          fontSize: fsSmall,
-                        ),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-                  ],
-                ),
+            int globalRowIdx = 0;
+            for (final zGroup in ddrZoneGroups) {
+              final totalZoneItems = zGroup.repereGroups.fold<int>(
+                0,
+                (sum, rg) => sum + rg.equipmentGroups.fold<int>(0, (s, eg) => s + eg.items.length),
               );
+              final zoneMidIdx = (totalZoneItems - 1) ~/ 2;
+              int zoneItemIdx = 0;
+
+              for (final rGroup in zGroup.repereGroups) {
+                final totalRepereItems = rGroup.equipmentGroups.fold<int>(
+                  0,
+                  (sum, eg) => sum + eg.items.length,
+                );
+                final repMidIdx = (totalRepereItems - 1) ~/ 2;
+                int repItemIdx = 0;
+
+                for (final eGroup in rGroup.equipmentGroups) {
+                  final eqCount = eGroup.items.length;
+                  final eqMidIdx = (eqCount - 1) ~/ 2;
+
+                  for (int i = 0; i < eqCount; i++) {
+                    final rowItem = eGroup.items[i];
+                    final es = rowItem.item;
+                    final currentZoneItemIdx = zoneItemIdx++;
+                    final currentRepItemIdx = repItemIdx++;
+                    final currentEqItemIdx = i;
+
+                    final idx = globalRowIdx++;
+                    final isEven = idx % 2 == 0;
+                    final bg = isEven ? PdfColors.white : tableRowAlt;
+
+                    final zoneBorder = pw.Border(
+                      bottom: (currentZoneItemIdx == totalZoneItems - 1)
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
+                          : pw.BorderSide.none,
+                    );
+
+                    final repereBorder = pw.Border(
+                      bottom: (currentRepItemIdx == totalRepereItems - 1 || currentZoneItemIdx == totalZoneItems - 1)
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
+                          : pw.BorderSide.none,
+                    );
+
+                    final equipmentBorder = pw.Border(
+                      bottom: (currentEqItemIdx == eqCount - 1 || currentRepItemIdx == totalRepereItems - 1 || currentZoneItemIdx == totalZoneItems - 1)
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5)
+                          : pw.BorderSide.none,
+                    );
+
+                    final itemBorder = const pw.Border(
+                      bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.5),
+                    );
+
+                    String displayText;
+                    PdfColor? essaiColor;
+                    final raw = es.essai.trim().toUpperCase();
+
+                    if (raw == 'OK' || raw == 'B' || raw == 'SATISFAISANT') {
+                      displayText = 'Satisfaisant';
+                      essaiColor = conformeColor;
+                    } else if (raw == 'NON OK' || raw == 'M' || raw == 'NON SATISFAISANT') {
+                      displayText = 'Non Satisfaisant';
+                      essaiColor = nonConformeColor;
+                    } else if (raw == 'NE' || raw == 'SO' || raw == 'SANS OBJET') {
+                      displayText = 'Sans Objet';
+                      essaiColor = null;
+                    } else {
+                      displayText = es.essai;
+                      essaiColor = null;
+                    }
+
+                    final hasCircuit = es.designationCircuit != null && es.designationCircuit!.trim().isNotEmpty;
+                    final circuitText = hasCircuit ? es.designationCircuit!.trim() : '-';
+
+                    final calibreDisplay = es.calibre != null
+                        ? '${es.calibre! % 1 == 0 ? es.calibre!.toInt() : es.calibre} A'
+                        : '-';
+
+                    ddrTableRows.add(
+                      pw.TableRow(
+                        children: [
+                          // Cellule 0 : Zone
+                          pw.Container(
+                            decoration: pw.BoxDecoration(
+                              color: PdfColors.white,
+                              border: zoneBorder,
+                            ),
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            alignment: pw.Alignment.center,
+                            child: (currentZoneItemIdx == zoneMidIdx && zGroup.zoneName.isNotEmpty)
+                                ? pw.Text(
+                                    zGroup.zoneName,
+                                    style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                                    textAlign: pw.TextAlign.center,
+                                  )
+                                : pw.SizedBox(),
+                          ),
+
+                          // Cellule 1 : Repère
+                          pw.Container(
+                            decoration: pw.BoxDecoration(
+                              color: PdfColors.white,
+                              border: repereBorder,
+                            ),
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            alignment: pw.Alignment.center,
+                            child: (currentRepItemIdx == repMidIdx && rGroup.repereName.isNotEmpty)
+                                ? pw.Text(
+                                    rGroup.repereName,
+                                    style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                                    textAlign: pw.TextAlign.center,
+                                  )
+                                : pw.SizedBox(),
+                          ),
+
+                          // Cellule 2 : N°
+                          pw.Container(
+                            decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              '${rowItem.index}',
+                              style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                              textAlign: pw.TextAlign.center,
+                            ),
+                          ),
+
+                          // Cellule 3 : Équipement
+                          pw.Container(
+                            decoration: pw.BoxDecoration(
+                              color: PdfColors.white,
+                              border: equipmentBorder,
+                            ),
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            alignment: pw.Alignment.center,
+                            child: (currentEqItemIdx == eqMidIdx && eGroup.equipmentName.isNotEmpty)
+                                ? pw.Text(
+                                    eGroup.equipmentName,
+                                    style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                                    textAlign: pw.TextAlign.center,
+                                  )
+                                : pw.SizedBox(),
+                          ),
+
+                          // Cellule 4 : Désignation circuit
+                          pw.Container(
+                            decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              circuitText,
+                              style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                              textAlign: pw.TextAlign.center,
+                            ),
+                          ),
+
+                          // Cellule 5 : Type de dispositif
+                          pw.Container(
+                            decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              es.displayTypeDispositif,
+                              style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                              textAlign: pw.TextAlign.center,
+                            ),
+                          ),
+
+                          // Cellule 6 : Calibre (A)
+                          pw.Container(
+                            decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              calibreDisplay,
+                              style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                              textAlign: pw.TextAlign.center,
+                            ),
+                          ),
+
+                          // Cellule 7 : IAn (mA)
+                          pw.Container(
+                            decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              es.reglageIAn != null
+                                  ? '${es.reglageIAn! % 1 == 0 ? es.reglageIAn!.toInt() : es.reglageIAn}'
+                                  : '-',
+                              style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                              textAlign: pw.TextAlign.center,
+                            ),
+                          ),
+
+                          // Cellule 8 : Tempo (s)
+                          pw.Container(
+                            decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              es.displayTempo,
+                              style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                              textAlign: pw.TextAlign.center,
+                            ),
+                          ),
+
+                          // Cellule 9 : Essai
+                          pw.Container(
+                            decoration: pw.BoxDecoration(color: essaiColor ?? bg, border: itemBorder),
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              displayText,
+                              style: pw.TextStyle(font: _fontRegular, fontSize: 8.5),
+                              textAlign: pw.TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                }
+              }
             }
           }
 
           widgets.add(
             pw.Table(
               defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
-              border: pw.TableBorder(
-                left: pw.BorderSide(color: borderColor, width: 0.4),
-                right: pw.BorderSide(color: borderColor, width: 0.4),
-                bottom: pw.BorderSide(color: borderColor, width: 0.4),
-                verticalInside: pw.BorderSide(color: borderColor, width: 0.4),
-                horizontalInside: pw.BorderSide(color: borderColor, width: 0.4),
+              border: const pw.TableBorder(
+                left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                horizontalInside: pw.BorderSide.none,
               ),
-              columnWidths: const {
-                0: pw.FixedColumnWidth(24), // N°
-                1: pw.FlexColumnWidth(1.6), // LOCALISATION
-                2: pw.FlexColumnWidth(2.2), // Désignation circuit
-                3: pw.FlexColumnWidth(1.6), // Type de dispositif
-                4: pw.FlexColumnWidth(1.3), // Calibre du dispositif (A)
-                5: pw.FlexColumnWidth(1.0), // IAn
-                6: pw.FlexColumnWidth(1.0), // Tempo
-                7: pw.FlexColumnWidth(1.1), // Essai
-              },
-              children: ddrRows,
+              columnWidths: ddrColumnWidthsData,
+              children: ddrTableRows,
             ),
           );
 
@@ -19641,6 +20246,9 @@ class PdfReportService {
         overrideTotalPages: overrideTotalPages,
         desc: description,
         saveFilesToDisk: saveFilesToDisk,
+        audit: audit,
+        nomSite: nomSiteHeader,
+        numeroRapport: numeroRapportDoc,
       );
       final bytesMesures = await pdfMesures.save();
       if (saveFilesToDisk) {
