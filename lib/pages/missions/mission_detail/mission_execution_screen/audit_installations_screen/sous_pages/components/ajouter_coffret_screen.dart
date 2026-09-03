@@ -2204,16 +2204,6 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             ),
             SizedBox(height: context.spacingS),
           ],
-          _buildModernTextField(
-            context,
-            label: 'Nombre de câble',
-            controller: nbCablesCtrl,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            onChanged: (v) => onChanged('nombreCables', v),
-            readOnly: isLocked,
-          ),
-          SizedBox(height: context.spacingS),
           if (!isProtectionTete || isDepartPrisAvecProtection) ...[
             if (isDepartPrisAvecProtection || isProtectionTete) ...[
               _buildModernDropdown(
@@ -2269,6 +2259,16 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
           _buildModernDropdown(context, label: 'Section de câble phase', value: a.sectionCable, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCable', v), readOnly: isLocked),
           SizedBox(height: context.spacingS),
           _buildModernDropdown(context, label: 'Section de câble neutre', value: a.effectiveSectionCableNeutre, items: _sectionCableOptions, onChanged: (v) => onChanged('sectionCableNeutre', v), readOnly: isLocked),
+          SizedBox(height: context.spacingS),
+          _buildModernTextField(
+            context,
+            label: 'Nombre de câble',
+            controller: nbCablesCtrl,
+            keyboardType: TextInputType.number,
+            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            onChanged: (v) => onChanged('nombreCables', v),
+            readOnly: isLocked,
+          ),
         ],
       ),
     );
@@ -6270,20 +6270,6 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                   ),
                   const SizedBox(height: 12),
 
-                  TextFormField(
-                    initialValue: dep.nombreCables ?? '',
-                    decoration: const InputDecoration(
-                      labelText: 'Nombre de câble',
-                      hintText: 'Ex: 1, 2, 3...',
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    onChanged: (v) { dep.nombreCables = v.trim().isEmpty ? null : v.trim(); widget.onDataChanged(); },
-                  ),
-                  const SizedBox(height: 12),
-
                   DropdownButtonFormField<String>(
                     value: dep.sectionCable.isNotEmpty ? dep.sectionCable : null,
                     isExpanded: true,
@@ -6299,6 +6285,20 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                     decoration: const InputDecoration(labelText: 'Section de câble neutre (mm²)', isDense: true, border: OutlineInputBorder()),
                     items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
                     onChanged: (v) { setState(() { dep.sectionCableNeutre = v ?? ''; }); widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextFormField(
+                    initialValue: dep.nombreCables ?? '',
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre de câble',
+                      hintText: 'Ex: 1, 2, 3...',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    onChanged: (v) { dep.nombreCables = v.trim().isEmpty ? null : v.trim(); widget.onDataChanged(); },
                   ),
                 ],
               ),
@@ -6611,20 +6611,6 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                   ),
                   const SizedBox(height: 12),
 
-                  TextFormField(
-                    initialValue: ct.nombreCables ?? '',
-                    decoration: const InputDecoration(
-                      labelText: 'Nombre de câble',
-                      hintText: 'Ex: 1, 2, 3...',
-                      isDense: true,
-                      border: OutlineInputBorder(),
-                    ),
-                    keyboardType: TextInputType.number,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    onChanged: (v) { ct.nombreCables = v.trim().isEmpty ? null : v.trim(); widget.onDataChanged(); },
-                  ),
-                  const SizedBox(height: 12),
-
                   DropdownButtonFormField<String>(
                     value: ct.sectionCable.isNotEmpty ? ct.sectionCable : null,
                     isExpanded: true,
@@ -6640,6 +6626,20 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                     decoration: const InputDecoration(labelText: 'Section de câble neutre (mm²)', isDense: true, border: OutlineInputBorder()),
                     items: _sectionCableOptions.map((e) => DropdownMenuItem(value: e, child: Text(e, overflow: TextOverflow.ellipsis))).toList(),
                     onChanged: (v) { setState(() { ct.sectionCableNeutre = v ?? ''; }); widget.onDataChanged(); },
+                  ),
+                  const SizedBox(height: 12),
+
+                  TextFormField(
+                    initialValue: ct.nombreCables ?? '',
+                    decoration: const InputDecoration(
+                      labelText: 'Nombre de câble',
+                      hintText: 'Ex: 1, 2, 3...',
+                      isDense: true,
+                      border: OutlineInputBorder(),
+                    ),
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                    onChanged: (v) { ct.nombreCables = v.trim().isEmpty ? null : v.trim(); widget.onDataChanged(); },
                   ),
                 ],
               ),
