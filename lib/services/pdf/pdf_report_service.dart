@@ -16449,10 +16449,14 @@ class PdfReportService {
               }
             }
 
+            final String effectiveRepere = repereName.isNotEmpty
+                ? repereName
+                : (zoneName.isNotEmpty ? zoneName : '-');
+
             isoRows.add(
               _IsolementRowItem(
                 zoneName: zoneName,
-                repereName: repereName,
+                repereName: effectiveRepere,
                 index: i + 1,
                 item: ei,
               ),
