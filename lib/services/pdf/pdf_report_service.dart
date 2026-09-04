@@ -3812,6 +3812,56 @@ class PdfReportService {
     );
   }
 
+  /// Widget utilitaire pour les cellules regroupées verticalement (ZONE, REPÈRE, ÉQUIPEMENT, etc.)
+  /// Corrige le centrage vertical pour les regroupements comportant un nombre d'éléments PAIR (N=2, 4, 6...).
+  static pw.Widget _buildGroupedCellWidget({
+    required int currentIndex,
+    required int totalRows,
+    required String text,
+    required pw.TextStyle style,
+    required pw.Border border,
+    PdfColor decorationColor = PdfColors.white,
+    pw.EdgeInsets padding = const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+    pw.TextAlign textAlign = pw.TextAlign.center,
+    pw.Alignment alignment = pw.Alignment.center,
+    bool condition = true,
+  }) {
+    final midIndex = (totalRows - 1) ~/ 2;
+    if (currentIndex != midIndex || !condition || text.isEmpty) {
+      return pw.Container(
+        decoration: pw.BoxDecoration(color: decorationColor, border: border),
+        padding: padding,
+        alignment: alignment,
+        child: pw.SizedBox(),
+      );
+    }
+
+    final textWidget = pw.Text(
+      text,
+      style: style,
+      textAlign: textAlign,
+    );
+
+    if (totalRows % 2 == 0) {
+      final fs = style.fontSize ?? 8.5;
+      final dynamicTopPadding = fs * 1.6;
+
+      return pw.Container(
+        decoration: pw.BoxDecoration(color: decorationColor, border: border),
+        padding: pw.EdgeInsets.only(top: dynamicTopPadding, left: 4, right: 4, bottom: 2),
+        alignment: pw.Alignment.topCenter,
+        child: textWidget,
+      );
+    }
+
+    return pw.Container(
+      decoration: pw.BoxDecoration(color: decorationColor, border: border),
+      padding: padding,
+      alignment: alignment,
+      child: textWidget,
+    );
+  }
+
   /// Retourne la couleur standard KES pour l'affichage de la criticité dans les tableaux :
   /// - Critique : Rouge (#D32F2F)
   /// - Majeure : Orange (#E65100)
@@ -7451,43 +7501,32 @@ class PdfReportService {
           tableRows.add(
             pw.TableRow(
               children: [
-                // Cellule 0 : Nom de la ZONE (Fond BLANC permanent, centré sur la ligne médiane de la ZONE)
-                pw.Container(
-                  decoration: pw.BoxDecoration(color: PdfColors.white, border: zoneBorder),
+                // Cellule 0 : Nom de la ZONE
+                _buildGroupedCellWidget(
+                  currentIndex: currentZoneItemIdx,
+                  totalRows: totalZoneRows,
+                  text: zoneGroup.zoneName.toUpperCase(),
+                  style: pw.TextStyle(
+                    font: _fontBold,
+                    fontSize: fsSmall,
+                    color: headerColor,
+                  ),
+                  border: zoneBorder,
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                  alignment: pw.Alignment.center,
-                  child: currentZoneItemIdx == zoneMidIndex
-                      ? pw.Text(
-                          zoneGroup.zoneName.toUpperCase(),
-                          style: pw.TextStyle(
-                            font: _fontBold,
-                            fontSize: fsSmall,
-                            color: headerColor,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        )
-                      : pw.SizedBox(),
                 ),
 
-                // Cellule 1 : Nom du REPÈRE / LOCAL (Fond BLANC permanent, centré sur la ligne médiane du REPÈRE)
-                pw.Container(
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.white,
-                    border: repereBorder,
+                // Cellule 1 : Nom du REPÈRE / LOCAL
+                _buildGroupedCellWidget(
+                  currentIndex: currentRepereItemIdx,
+                  totalRows: repereCount,
+                  text: repereGroup.localName.toUpperCase(),
+                  style: pw.TextStyle(
+                    font: _fontBold,
+                    fontSize: fsSmall,
+                    color: headerColor,
                   ),
+                  border: repereBorder,
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 3),
-                  alignment: pw.Alignment.center,
-                  child: currentRepereItemIdx == repereMidIndex
-                      ? pw.Text(
-                          repereGroup.localName.toUpperCase(),
-                          style: pw.TextStyle(
-                            font: _fontBold,
-                            fontSize: fsSmall,
-                            color: headerColor,
-                          ),
-                          textAlign: pw.TextAlign.center,
-                        )
-                      : pw.SizedBox(),
                 ),
 
                 // Cellule 2 : N° d'équipement/élément (Déplacé après REPÈRE !)
@@ -8634,38 +8673,24 @@ class PdfReportService {
             pw.TableRow(
               decoration: pw.BoxDecoration(color: bgColor),
               children: [
-                // Cellule 0 : Zone (fond blanc permanent, centré sur la ligne médiane de la Zone)
-                pw.Container(
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.white,
-                    border: zoneBorder,
-                  ),
+                // Cellule 0 : Zone
+                _buildGroupedCellWidget(
+                  currentIndex: currentZoneItemIdx,
+                  totalRows: totalZoneItems,
+                  text: zoneGroup.zoneName,
+                  style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                  border: zoneBorder,
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  alignment: pw.Alignment.center,
-                  child: (currentZoneItemIdx == zoneMidIndex && zoneGroup.zoneName.isNotEmpty)
-                      ? pw.Text(
-                          zoneGroup.zoneName,
-                          style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                          textAlign: pw.TextAlign.center,
-                        )
-                      : pw.SizedBox(),
                 ),
 
-                // Cellule 1 : Repère (fond blanc permanent, centré sur la ligne médiane du Repère)
-                pw.Container(
-                  decoration: pw.BoxDecoration(
-                    color: PdfColors.white,
-                    border: repereBorder,
-                  ),
+                // Cellule 1 : Repère
+                _buildGroupedCellWidget(
+                  currentIndex: currentRepereItemIdx,
+                  totalRows: repereCount,
+                  text: displayRepere,
+                  style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                  border: repereBorder,
                   padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                  alignment: pw.Alignment.center,
-                  child: (currentRepereItemIdx == repereMidIndex && displayRepere.isNotEmpty)
-                      ? pw.Text(
-                          displayRepere,
-                          style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                          textAlign: pw.TextAlign.center,
-                        )
-                      : pw.SizedBox(),
                 ),
 
                 // Cellule 2 : N° d'équipement
@@ -8942,44 +8967,27 @@ class PdfReportService {
           );
 
           final rowCells = <pw.Widget>[
-            // Cellule 0 : Zone (fond blanc permanent, centré sur la ligne médiane de la Zone)
-            pw.Container(
-              decoration: pw.BoxDecoration(
-                color: PdfColors.white,
-                border: zoneBorder,
-              ),
+            // Cellule 0 : Zone
+            _buildGroupedCellWidget(
+              currentIndex: currentZoneItemIdx,
+              totalRows: totalZoneItems,
+              text: zoneGroup.zoneName,
+              style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+              border: zoneBorder,
               padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-              alignment: pw.Alignment.center,
-              child: (currentZoneItemIdx == zoneMidIndex && zoneGroup.zoneName.isNotEmpty)
-                  ? pw.Text(
-                      zoneGroup.zoneName,
-                      style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                      textAlign: pw.TextAlign.center,
-                    )
-                  : pw.SizedBox(),
             ),
 
-            // Cellule 1 : Repère (fond blanc permanent, centré sur la ligne médiane du Repère)
-            () {
-              final displayRepere = repereGroup.localName.isNotEmpty
+            // Cellule 1 : Repère
+            _buildGroupedCellWidget(
+              currentIndex: currentRepereItemIdx,
+              totalRows: repereCount,
+              text: repereGroup.localName.isNotEmpty
                   ? repereGroup.localName
-                  : (zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : '');
-              return pw.Container(
-                decoration: pw.BoxDecoration(
-                  color: PdfColors.white,
-                  border: repereBorder,
-                ),
-                padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                alignment: pw.Alignment.center,
-                child: (currentRepereItemIdx == repereMidIndex && displayRepere.isNotEmpty)
-                    ? pw.Text(
-                        displayRepere,
-                        style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                        textAlign: pw.TextAlign.center,
-                      )
-                    : pw.SizedBox(),
-              );
-            }(),
+                  : (zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : ''),
+              style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+              border: repereBorder,
+              padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+            ),
 
             // Cellule 2 : N° de l'équipement
             pw.Container(
@@ -15212,60 +15220,44 @@ class PdfReportService {
                   pw.TableRow(
                     decoration: pw.BoxDecoration(color: equipBg),
                     children: [
-                      // Cellule 0 : Zone (fond blanc permanent, centré verticalement)
-                      pw.Container(
-                        decoration: pw.BoxDecoration(color: PdfColors.white, border: zoneBorder),
+                      // Cellule 0 : Zone
+                      _buildGroupedCellWidget(
+                        currentIndex: currentZoneRowIdx,
+                        totalRows: totalZoneItems,
+                        text: zoneGroup.zoneName,
+                        style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
+                        border: zoneBorder,
                         padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                        alignment: pw.Alignment.center,
-                        child: (currentZoneRowIdx == zoneMidIndex && zoneGroup.zoneName.isNotEmpty)
-                            ? pw.Text(
-                                zoneGroup.zoneName,
-                                style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
-                                textAlign: pw.TextAlign.center,
-                              )
-                            : pw.SizedBox(),
                       ),
 
-                      // Cellule 1 : Repère (fond blanc permanent, centré verticalement)
-                      pw.Container(
-                        decoration: pw.BoxDecoration(color: PdfColors.white, border: localBorder),
+                      // Cellule 1 : Repère / Local
+                      _buildGroupedCellWidget(
+                        currentIndex: currentLocalRowIdx,
+                        totalRows: totalLocalItems,
+                        text: localGroup.localName,
+                        style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
+                        border: localBorder,
                         padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                        alignment: pw.Alignment.center,
-                        child: (currentLocalRowIdx == localMidIndex && localGroup.localName.isNotEmpty)
-                            ? pw.Text(
-                                localGroup.localName,
-                                style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
-                                textAlign: pw.TextAlign.center,
-                              )
-                            : pw.SizedBox(),
                       ),
 
-                      // Cellule 2 : N° d'Équipement (fond blanc permanent, centré verticalement)
-                      pw.Container(
-                        decoration: pw.BoxDecoration(color: PdfColors.white, border: equipBorder),
+                      // Cellule 2 : N° d'Équipement
+                      _buildGroupedCellWidget(
+                        currentIndex: currentEquipRowIdx,
+                        totalRows: totalEquipItems,
+                        text: '$currentEquipNo',
+                        style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
+                        border: equipBorder,
                         padding: const pw.EdgeInsets.symmetric(horizontal: 2, vertical: 4),
-                        alignment: pw.Alignment.center,
-                        child: (currentEquipRowIdx == equipMidIndex)
-                            ? pw.Text(
-                                '$currentEquipNo',
-                                style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
-                                textAlign: pw.TextAlign.center,
-                              )
-                            : pw.SizedBox(),
                       ),
 
-                      // Cellule 3 : Nom de l'Équipement (fond blanc permanent, centré verticalement)
-                      pw.Container(
-                        decoration: pw.BoxDecoration(color: PdfColors.white, border: equipBorder),
+                      // Cellule 3 : Nom de l'Équipement
+                      _buildGroupedCellWidget(
+                        currentIndex: currentEquipRowIdx,
+                        totalRows: totalEquipItems,
+                        text: equipGroup.equipementName,
+                        style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
+                        border: equipBorder,
                         padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                        alignment: pw.Alignment.center,
-                        child: (currentEquipRowIdx == equipMidIndex && equipGroup.equipementName.isNotEmpty)
-                            ? pw.Text(
-                                equipGroup.equipementName,
-                                style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
-                                textAlign: pw.TextAlign.center,
-                              )
-                            : pw.SizedBox(),
                       ),
 
                       // Cellule 4 : Observation
@@ -15712,40 +15704,26 @@ class PdfReportService {
                   ptTableRows.add(
                     pw.TableRow(
                       children: [
-                        // Cellule 0 : Zone (fond blanc permanent, centré sur la ligne médiane de la Zone)
-                        pw.Container(
-                          decoration: pw.BoxDecoration(
-                            color: PdfColors.white,
-                            border: zoneBorder,
-                          ),
+                        // Cellule 0 : Zone
+                        _buildGroupedCellWidget(
+                          currentIndex: currentZoneItemIdx,
+                          totalRows: totalZoneItems,
+                          text: zoneGroup.zoneName,
+                          style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                          border: zoneBorder,
                           padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                          alignment: pw.Alignment.center,
-                          child: (currentZoneItemIdx == zoneMidIdx && zoneGroup.zoneName.isNotEmpty)
-                              ? pw.Text(
-                                  zoneGroup.zoneName,
-                                  style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                                  textAlign: pw.TextAlign.center,
-                                )
-                              : pw.SizedBox(),
                         ),
 
-                        // Cellule 1 : Repère (fond blanc permanent, centré sur la ligne médiane du Repère)
-                        pw.Container(
-                          decoration: pw.BoxDecoration(
-                            color: PdfColors.white,
-                            border: repereBorder,
-                          ),
+                        // Cellule 1 : Repère
+                        _buildGroupedCellWidget(
+                          currentIndex: currentRepItemIdx,
+                          totalRows: repCount,
+                          text: repGroup.repereName.isNotEmpty
+                              ? repGroup.repereName
+                              : (zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : ''),
+                          style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                          border: repereBorder,
                           padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                          alignment: pw.Alignment.center,
-                          child: (currentRepItemIdx == repMidIdx)
-                              ? pw.Text(
-                                  repGroup.repereName.isNotEmpty
-                                      ? repGroup.repereName
-                                      : (zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : ''),
-                                  style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                                  textAlign: pw.TextAlign.center,
-                                )
-                              : pw.SizedBox(),
                         ),
 
                         // Cellule 2 : N°
@@ -16238,39 +16216,25 @@ class PdfReportService {
                       pw.TableRow(
                         children: [
                           // Cellule 0 : Zone
-                          pw.Container(
-                            decoration: pw.BoxDecoration(
-                              color: PdfColors.white,
-                              border: zoneBorder,
-                            ),
+                          _buildGroupedCellWidget(
+                            currentIndex: currentZoneItemIdx,
+                            totalRows: totalZoneItems,
+                            text: zGroup.zoneName,
+                            style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                            border: zoneBorder,
                             padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                            alignment: pw.Alignment.center,
-                            child: (currentZoneItemIdx == zoneMidIdx && zGroup.zoneName.isNotEmpty)
-                                ? pw.Text(
-                                    zGroup.zoneName,
-                                    style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                                    textAlign: pw.TextAlign.center,
-                                  )
-                                : pw.SizedBox(),
                           ),
 
                           // Cellule 1 : Repère
-                          pw.Container(
-                            decoration: pw.BoxDecoration(
-                              color: PdfColors.white,
-                              border: repereBorder,
-                            ),
+                          _buildGroupedCellWidget(
+                            currentIndex: currentRepItemIdx,
+                            totalRows: totalRepereItems,
+                            text: rGroup.repereName.isNotEmpty
+                                ? rGroup.repereName
+                                : (zGroup.zoneName.isNotEmpty ? zGroup.zoneName : ''),
+                            style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                            border: repereBorder,
                             padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                            alignment: pw.Alignment.center,
-                            child: (currentRepItemIdx == repMidIdx)
-                                ? pw.Text(
-                                    rGroup.repereName.isNotEmpty
-                                        ? rGroup.repereName
-                                        : (zGroup.zoneName.isNotEmpty ? zGroup.zoneName : ''),
-                                    style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                                    textAlign: pw.TextAlign.center,
-                                  )
-                                : pw.SizedBox(),
                           ),
 
                           // Cellule 2 : N°
@@ -16286,20 +16250,13 @@ class PdfReportService {
                           ),
 
                           // Cellule 3 : Équipement
-                          pw.Container(
-                            decoration: pw.BoxDecoration(
-                              color: PdfColors.white,
-                              border: equipmentBorder,
-                            ),
+                          _buildGroupedCellWidget(
+                            currentIndex: currentEqItemIdx,
+                            totalRows: eqCount,
+                            text: eGroup.equipmentName,
+                            style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                            border: equipmentBorder,
                             padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                            alignment: pw.Alignment.center,
-                            child: (currentEqItemIdx == eqMidIdx && eGroup.equipmentName.isNotEmpty)
-                                ? pw.Text(
-                                    eGroup.equipmentName,
-                                    style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                                    textAlign: pw.TextAlign.center,
-                                  )
-                                : pw.SizedBox(),
                           ),
 
                           // Cellule 4 : Désignation circuit
@@ -16595,20 +16552,13 @@ class PdfReportService {
                 pw.TableRow(
                   children: [
                     // Cellule 0 : ZONE
-                    pw.Container(
-                      decoration: pw.BoxDecoration(
-                        color: PdfColors.white,
-                        border: zoneBorder,
-                      ),
+                    _buildGroupedCellWidget(
+                      currentIndex: currentZoneItemIdx,
+                      totalRows: totalZoneItems,
+                      text: zGroup.zoneName,
+                      style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                      border: zoneBorder,
                       padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                      alignment: pw.Alignment.center,
-                      child: (currentZoneItemIdx == zoneMidIndex && zGroup.zoneName.isNotEmpty)
-                          ? pw.Text(
-                              zGroup.zoneName,
-                              style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                              textAlign: pw.TextAlign.center,
-                            )
-                          : pw.SizedBox(),
                     ),
 
                     // Cellule 1 : Repère du point d'origine
@@ -16975,33 +16925,25 @@ class PdfReportService {
                       decoration: pw.BoxDecoration(color: bg),
                       children: [
                         // Cellule 0 : Zone
-                        pw.Container(
-                          decoration: pw.BoxDecoration(color: PdfColors.white, border: zoneBorder),
+                        _buildGroupedCellWidget(
+                          currentIndex: currentZoneRowIdx,
+                          totalRows: totalZoneItems,
+                          text: zoneGroup.zoneName,
+                          style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
+                          border: zoneBorder,
                           padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                          alignment: pw.Alignment.center,
-                          child: (currentZoneRowIdx == zoneMidIndex && zoneGroup.zoneName.isNotEmpty)
-                              ? pw.Text(
-                                  zoneGroup.zoneName,
-                                  style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
-                                  textAlign: pw.TextAlign.center,
-                                )
-                              : pw.SizedBox(),
                         ),
 
                         // Cellule 1 : Repère
-                        pw.Container(
-                          decoration: pw.BoxDecoration(color: PdfColors.white, border: repereBorder),
+                        _buildGroupedCellWidget(
+                          currentIndex: currentRepereRowIdx,
+                          totalRows: totalRepereItems,
+                          text: repereGroup.repereName.isNotEmpty
+                              ? repereGroup.repereName
+                              : (zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : ''),
+                          style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
+                          border: repereBorder,
                           padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                          alignment: pw.Alignment.center,
-                          child: (currentRepereRowIdx == repereMidIndex)
-                              ? pw.Text(
-                                  repereGroup.repereName.isNotEmpty
-                                      ? repereGroup.repereName
-                                      : (zoneGroup.zoneName.isNotEmpty ? zoneGroup.zoneName : ''),
-                                  style: pw.TextStyle(font: _fontBold, fontSize: 8.0, color: headerColor),
-                                  textAlign: pw.TextAlign.center,
-                                )
-                              : pw.SizedBox(),
                         ),
 
                         // Cellule 2 : N°
