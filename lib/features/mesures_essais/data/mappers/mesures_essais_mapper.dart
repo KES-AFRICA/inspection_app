@@ -70,6 +70,12 @@ class MesuresEssaisMapper {
           isSectionPointBManual: ei.isSectionPointBManual,
           equipmentPointASyncId: ei.equipmentPointASyncId,
           equipmentPointBSyncId: ei.equipmentPointBSyncId,
+          zonePointA: ei.zonePointA,
+          reperePointA: ei.reperePointA,
+          nomEquipementPointA: ei.nomEquipementPointA,
+          zonePointB: ei.zonePointB,
+          reperePointB: ei.reperePointB,
+          nomEquipementPointB: ei.nomEquipementPointB,
         );
       }).toList(),
       continuiteResistances: model.continuiteResistances.map((cr) {
@@ -150,6 +156,12 @@ class MesuresEssaisMapper {
           isSectionPointBManual: ei.isSectionPointBManual,
           equipmentPointASyncId: ei.equipmentPointASyncId,
           equipmentPointBSyncId: ei.equipmentPointBSyncId,
+          zonePointA: ei.zonePointA,
+          reperePointA: ei.reperePointA,
+          nomEquipementPointA: ei.nomEquipementPointA,
+          zonePointB: ei.zonePointB,
+          reperePointB: ei.reperePointB,
+          nomEquipementPointB: ei.nomEquipementPointB,
         );
       }).toList(),
       continuiteResistances: entity.continuiteResistances.map((cr) {

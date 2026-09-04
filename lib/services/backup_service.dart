@@ -1059,6 +1059,12 @@ class BackupService {
                   'isSectionPointBManual': ei.isSectionPointBManual,
                   'equipmentPointASyncId': ei.equipmentPointASyncId,
                   'equipmentPointBSyncId': ei.equipmentPointBSyncId,
+                  'zonePointA': ei.zonePointA,
+                  'reperePointA': ei.reperePointA,
+                  'nomEquipementPointA': ei.nomEquipementPointA,
+                  'zonePointB': ei.zonePointB,
+                  'reperePointB': ei.reperePointB,
+                  'nomEquipementPointB': ei.nomEquipementPointB,
                 })
             .toList(),
       };
@@ -2804,6 +2810,12 @@ class BackupService {
                     isSectionPointBManual: m['isSectionPointBManual'] as bool?,
                     equipmentPointASyncId: m['equipmentPointASyncId'] as String?,
                     equipmentPointBSyncId: m['equipmentPointBSyncId'] as String?,
+                    zonePointA: m['zonePointA'] as String?,
+                    reperePointA: m['reperePointA'] as String?,
+                    nomEquipementPointA: m['nomEquipementPointA'] as String?,
+                    zonePointB: m['zonePointB'] as String?,
+                    reperePointB: m['reperePointB'] as String?,
+                    nomEquipementPointB: m['nomEquipementPointB'] as String?,
                   );
                 })
                 .toList() ??

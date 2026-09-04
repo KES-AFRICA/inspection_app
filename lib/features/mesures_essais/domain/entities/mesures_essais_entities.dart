@@ -117,6 +117,12 @@ class EssaiIsolementEntity {
   final bool? isSectionPointBManual;
   final String? equipmentPointASyncId;
   final String? equipmentPointBSyncId;
+  final String? zonePointA;
+  final String? reperePointA;
+  final String? nomEquipementPointA;
+  final String? zonePointB;
+  final String? reperePointB;
+  final String? nomEquipementPointB;
 
   const EssaiIsolementEntity({
     required this.syncId,
@@ -137,6 +143,12 @@ class EssaiIsolementEntity {
     this.isSectionPointBManual,
     this.equipmentPointASyncId,
     this.equipmentPointBSyncId,
+    this.zonePointA,
+    this.reperePointA,
+    this.nomEquipementPointA,
+    this.zonePointB,
+    this.reperePointB,
+    this.nomEquipementPointB,
   });
 }
 

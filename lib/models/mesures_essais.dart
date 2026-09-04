@@ -433,6 +433,38 @@ class ContinuiteResistance {
   }
 }
 
+/// Information structurée d'un équipement sélectionné pour un point de mesure (Point A ou Point B)
+class PointEquipmentInfo {
+  final String? equipmentId;
+  final String zone;
+  final String repere;
+  final String nomEquipement;
+
+  const PointEquipmentInfo({
+    this.equipmentId,
+    this.zone = '',
+    this.repere = '',
+    this.nomEquipement = '',
+  });
+
+  bool get isEmpty => zone.trim().isEmpty && repere.trim().isEmpty && nomEquipement.trim().isEmpty;
+  bool get isNotEmpty => !isEmpty;
+
+  /// Libellé d'affichage unique : ZONE - LOCAL - ÉQUIPEMENT
+  String get displayName {
+    final parts = <String>[];
+    final z = zone.trim();
+    final r = repere.trim();
+    final n = nomEquipement.trim();
+
+    if (z.isNotEmpty) parts.add(z);
+    if (r.isNotEmpty && r != z) parts.add(r);
+    if (n.isNotEmpty) parts.add(n);
+
+    return parts.join(' - ');
+  }
+}
+
 // SECTION 8: ESSAIS DE MESURE D'ISOLEMENT
 @HiveType(typeId: 63)
 class EssaiIsolement {
@@ -490,6 +522,24 @@ class EssaiIsolement {
   @HiveField(17)
   String? equipmentPointBSyncId; // Identifiant réel de l'équipement Point B
 
+  @HiveField(18)
+  String? zonePointA; // Zone de l'équipement Point A
+
+  @HiveField(19)
+  String? reperePointA; // Repère/Local de l'équipement Point A
+
+  @HiveField(22)
+  String? nomEquipementPointA; // Nom/Repère propre de l'équipement Point A
+
+  @HiveField(23)
+  String? zonePointB; // Zone de l'équipement Point B
+
+  @HiveField(24)
+  String? reperePointB; // Repère/Local de l'équipement Point B
+
+  @HiveField(25)
+  String? nomEquipementPointB; // Nom/Repère propre de l'équipement Point B
+
   @HiveField(20)
   DateTime? createdAt;
 
@@ -515,6 +565,12 @@ class EssaiIsolement {
     this.isSectionPointBManual,
     this.equipmentPointASyncId,
     this.equipmentPointBSyncId,
+    this.zonePointA,
+    this.reperePointA,
+    this.nomEquipementPointA,
+    this.zonePointB,
+    this.reperePointB,
+    this.nomEquipementPointB,
     this.createdAt,
     this.updatedAt,
   });
@@ -531,6 +587,12 @@ class EssaiIsolement {
     required String appreciation,
     String? equipmentPointASyncId,
     String? equipmentPointBSyncId,
+    String? zonePointA,
+    String? reperePointA,
+    String? nomEquipementPointA,
+    String? zonePointB,
+    String? reperePointB,
+    String? nomEquipementPointB,
   }) {
     final now = DateTime.now().toUtc();
     return EssaiIsolement(
@@ -548,9 +610,127 @@ class EssaiIsolement {
       designation: pointA,
       equipmentPointASyncId: equipmentPointASyncId,
       equipmentPointBSyncId: equipmentPointBSyncId,
+      zonePointA: zonePointA,
+      reperePointA: reperePointA,
+      nomEquipementPointA: nomEquipementPointA,
+      zonePointB: zonePointB,
+      reperePointB: reperePointB,
+      nomEquipementPointB: nomEquipementPointB,
       createdAt: now,
       updatedAt: now,
     );
+  }
+
+  /// Résolution propre des informations du Point A
+  PointEquipmentInfo resolvePointAInfo([List<dynamic>? availableEquipments]) {
+    final z = zonePointA?.trim() ?? '';
+    final r = reperePointA?.trim() ?? '';
+    final n = nomEquipementPointA?.trim() ?? '';
+
+    if (z.isNotEmpty || r.isNotEmpty || n.isNotEmpty) {
+      return PointEquipmentInfo(
+        equipmentId: equipmentPointASyncId,
+        zone: z,
+        repere: r,
+        nomEquipement: n,
+      );
+    }
+
+    if (availableEquipments != null && availableEquipments.isNotEmpty) {
+      if (equipmentPointASyncId != null && equipmentPointASyncId!.isNotEmpty) {
+        for (var e in availableEquipments) {
+          if (e.id == equipmentPointASyncId) {
+            return PointEquipmentInfo(
+              equipmentId: e.id,
+              zone: e.zone,
+              repere: e.repere,
+              nomEquipement: e.nom,
+            );
+          }
+        }
+      }
+
+      if (pointA != null && pointA!.trim().isNotEmpty) {
+        final raw = pointA!.trim();
+        for (var e in availableEquipments) {
+          if (e.displayName.trim() == raw || e.id == raw) {
+            return PointEquipmentInfo(
+              equipmentId: e.id,
+              zone: e.zone,
+              repere: e.repere,
+              nomEquipement: e.nom,
+            );
+          }
+        }
+      }
+    }
+
+    if (pointA != null && pointA!.trim().isNotEmpty) {
+      return PointEquipmentInfo(
+        equipmentId: equipmentPointASyncId,
+        zone: '',
+        repere: '',
+        nomEquipement: pointA!.trim(),
+      );
+    }
+
+    return const PointEquipmentInfo();
+  }
+
+  /// Résolution propre des informations du Point B
+  PointEquipmentInfo resolvePointBInfo([List<dynamic>? availableEquipments]) {
+    final z = zonePointB?.trim() ?? '';
+    final r = reperePointB?.trim() ?? '';
+    final n = nomEquipementPointB?.trim() ?? '';
+
+    if (z.isNotEmpty || r.isNotEmpty || n.isNotEmpty) {
+      return PointEquipmentInfo(
+        equipmentId: equipmentPointBSyncId,
+        zone: z,
+        repere: r,
+        nomEquipement: n,
+      );
+    }
+
+    if (availableEquipments != null && availableEquipments.isNotEmpty) {
+      if (equipmentPointBSyncId != null && equipmentPointBSyncId!.isNotEmpty) {
+        for (var e in availableEquipments) {
+          if (e.id == equipmentPointBSyncId) {
+            return PointEquipmentInfo(
+              equipmentId: e.id,
+              zone: e.zone,
+              repere: e.repere,
+              nomEquipement: e.nom,
+            );
+          }
+        }
+      }
+
+      if (pointB != null && pointB!.trim().isNotEmpty) {
+        final raw = pointB!.trim();
+        for (var e in availableEquipments) {
+          if (e.displayName.trim() == raw || e.id == raw) {
+            return PointEquipmentInfo(
+              equipmentId: e.id,
+              zone: e.zone,
+              repere: e.repere,
+              nomEquipement: e.nom,
+            );
+          }
+        }
+      }
+    }
+
+    if (pointB != null && pointB!.trim().isNotEmpty) {
+      return PointEquipmentInfo(
+        equipmentId: equipmentPointBSyncId,
+        zone: '',
+        repere: '',
+        nomEquipement: pointB!.trim(),
+      );
+    }
+
+    return const PointEquipmentInfo();
   }
 
   static String computeRepereDerive(String? repereA, String? repereB) {
@@ -575,8 +755,18 @@ class EssaiIsolement {
   }
 
   String get displayRepereOrigine => reperePointOrigine ?? localisation ?? '-';
-  String get displayPointA => pointA ?? designation ?? pointControle ?? '-';
-  String get displayPointB => pointB ?? '-';
+  String get displayPointA {
+    final info = resolvePointAInfo();
+    if (info.isNotEmpty) return info.displayName;
+    return pointA ?? designation ?? pointControle ?? '-';
+  }
+
+  String get displayPointB {
+    final info = resolvePointBInfo();
+    if (info.isNotEmpty) return info.displayName;
+    return pointB ?? '-';
+  }
+
   String get displaySection => _formatSectionValue(sectionCable);
   String get displaySectionPointA => _formatSectionValue(sectionCablePointA ?? sectionCable);
   String get displaySectionPointB => _formatSectionValue(sectionCablePointB ?? sectionCable);

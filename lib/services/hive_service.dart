@@ -4921,7 +4921,7 @@ static List<EquipementIsolementItem> getAllEquipementsIsolementForMission(String
 
   final items = <EquipementIsolementItem>[];
 
-  void addCoffretItem(CoffretArmoire coffret, String repereName) {
+  void addCoffretItem(CoffretArmoire coffret, String repereName, {String zoneName = ''}) {
     final typeStr = coffret.type.trim();
     final nomStr = coffret.nom.trim();
     if (nomStr.isEmpty) return;
@@ -4966,12 +4966,13 @@ static List<EquipementIsolementItem> getAllEquipementsIsolementForMission(String
       nom: formattedName,
       type: typeStr.isNotEmpty ? typeStr : 'Coffret/Armoire',
       repere: repereName,
+      zone: zoneName,
       sectionPointA: secA,
       sectionPointB: secB,
     ));
   }
 
-  void addCelluleItem(Cellule cellule, String repereName) {
+  void addCelluleItem(Cellule cellule, String repereName, {String zoneName = ''}) {
     final nomStr = (cellule.nom != null && cellule.nom!.trim().isNotEmpty)
         ? cellule.nom!.trim()
         : 'Cellule ${cellule.fonction}';
@@ -4987,12 +4988,13 @@ static List<EquipementIsolementItem> getAllEquipementsIsolementForMission(String
       nom: nomStr,
       type: 'Cellule MT',
       repere: repereName,
+      zone: zoneName,
       sectionPointA: sec,
       sectionPointB: sec,
     ));
   }
 
-  void addTransfoItem(TransformateurMTBT transfo, String repereName) {
+  void addTransfoItem(TransformateurMTBT transfo, String repereName, {String zoneName = ''}) {
     final nomStr = transfo.marqueAnnee.trim().isNotEmpty
         ? 'Transfo ${transfo.marqueAnnee.trim()}'
         : 'Transformateur MT/BT';
@@ -5008,6 +5010,7 @@ static List<EquipementIsolementItem> getAllEquipementsIsolementForMission(String
       nom: nomStr,
       type: 'Transformateur MT/BT',
       repere: repereName,
+      zone: zoneName,
       sectionPointA: sec,
       sectionPointB: sec,
     ));
@@ -5031,18 +5034,18 @@ static List<EquipementIsolementItem> getAllEquipementsIsolementForMission(String
   for (var zone in audit.moyenneTensionZones) {
     final repZone = zone.nom.trim();
     for (var c in zone.coffrets) {
-      addCoffretItem(c, repZone);
+      addCoffretItem(c, repZone, zoneName: repZone);
     }
     for (var local in zone.locaux) {
       final repLocal = local.nom.trim();
       for (var c in local.coffrets) {
-        addCoffretItem(c, repLocal);
+        addCoffretItem(c, repLocal, zoneName: repZone);
       }
       for (var cell in local.cellules) {
-        addCelluleItem(cell, repLocal);
+        addCelluleItem(cell, repLocal, zoneName: repZone);
       }
       for (var tr in local.transformateurs) {
-        addTransfoItem(tr, repLocal);
+        addTransfoItem(tr, repLocal, zoneName: repZone);
       }
     }
   }
@@ -5051,18 +5054,18 @@ static List<EquipementIsolementItem> getAllEquipementsIsolementForMission(String
   for (var zone in audit.basseTensionZones) {
     final repZone = zone.nom.trim();
     for (var c in zone.coffretsDirects) {
-      addCoffretItem(c, repZone);
+      addCoffretItem(c, repZone, zoneName: repZone);
     }
     for (var local in zone.locaux) {
       final repLocal = local.nom.trim();
       for (var c in local.coffrets) {
-        addCoffretItem(c, repLocal);
+        addCoffretItem(c, repLocal, zoneName: repZone);
       }
       for (var cell in local.cellules) {
-        addCelluleItem(cell, repLocal);
+        addCelluleItem(cell, repLocal, zoneName: repZone);
       }
       for (var tr in local.transformateurs) {
-        addTransfoItem(tr, repLocal);
+        addTransfoItem(tr, repLocal, zoneName: repZone);
       }
     }
   }
@@ -8015,6 +8018,7 @@ class EquipementIsolementItem {
   final String nom;
   final String type;
   final String repere;
+  final String zone;
   final String? sectionPointA;
   final String? sectionPointB;
 
@@ -8023,9 +8027,21 @@ class EquipementIsolementItem {
     required this.nom,
     required this.type,
     required this.repere,
+    this.zone = '',
     this.sectionPointA,
     this.sectionPointB,
   });
 
-  String get displayName => '$repere - $nom';
+  String get displayName {
+    final parts = <String>[];
+    final z = zone.trim();
+    final r = repere.trim();
+    final n = nom.trim();
+
+    if (z.isNotEmpty) parts.add(z);
+    if (r.isNotEmpty && r != z) parts.add(r);
+    if (n.isNotEmpty) parts.add(n);
+
+    return parts.join(' - ');
+  }
 }

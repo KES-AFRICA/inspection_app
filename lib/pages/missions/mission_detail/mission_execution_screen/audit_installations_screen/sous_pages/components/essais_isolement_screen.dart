@@ -592,15 +592,17 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
             orElse: () => null,
           );
     }
-    if (_selectedPointAItem == null && essai.pointA != null && essai.pointA!.isNotEmpty) {
+    if (_selectedPointAItem == null && (essai.pointA != null && essai.pointA!.isNotEmpty || essai.nomEquipementPointA != null && essai.nomEquipementPointA!.isNotEmpty)) {
+      final infoA = essai.resolvePointAInfo(_allEquipements);
       _selectedPointAItem = _allEquipements.cast<EquipementIsolementItem?>().firstWhere(
-            (e) => e?.displayName == essai.pointA || e?.nom == essai.pointA,
+            (e) => e?.displayName == infoA.displayName || e?.nom == infoA.nomEquipement || e?.id == infoA.equipmentId,
             orElse: () {
               final fallback = EquipementIsolementItem(
-                id: 'legacy_A_${DateTime.now().millisecondsSinceEpoch}',
-                nom: essai.pointA!,
+                id: infoA.equipmentId ?? 'legacy_A_${DateTime.now().millisecondsSinceEpoch}',
+                nom: infoA.nomEquipement.isNotEmpty ? infoA.nomEquipement : (essai.pointA ?? ''),
                 type: 'Équipement',
-                repere: essai.reperePointOrigine ?? essai.localisation ?? 'Local',
+                repere: infoA.repere.isNotEmpty ? infoA.repere : (essai.reperePointOrigine ?? essai.localisation ?? 'Local'),
+                zone: infoA.zone,
                 sectionPointA: essai.sectionCablePointA ?? essai.sectionCable,
               );
               _allEquipements.add(fallback);
@@ -616,15 +618,17 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
             orElse: () => null,
           );
     }
-    if (_selectedPointBItem == null && essai.pointB != null && essai.pointB!.isNotEmpty) {
+    if (_selectedPointBItem == null && (essai.pointB != null && essai.pointB!.isNotEmpty || essai.nomEquipementPointB != null && essai.nomEquipementPointB!.isNotEmpty)) {
+      final infoB = essai.resolvePointBInfo(_allEquipements);
       _selectedPointBItem = _allEquipements.cast<EquipementIsolementItem?>().firstWhere(
-            (e) => e?.displayName == essai.pointB || e?.nom == essai.pointB,
+            (e) => e?.displayName == infoB.displayName || e?.nom == infoB.nomEquipement || e?.id == infoB.equipmentId,
             orElse: () {
               final fallback = EquipementIsolementItem(
-                id: 'legacy_B_${DateTime.now().millisecondsSinceEpoch}',
-                nom: essai.pointB!,
+                id: infoB.equipmentId ?? 'legacy_B_${DateTime.now().millisecondsSinceEpoch}',
+                nom: infoB.nomEquipement.isNotEmpty ? infoB.nomEquipement : (essai.pointB ?? ''),
                 type: 'Équipement',
-                repere: essai.reperePointOrigine ?? essai.localisation ?? 'Local',
+                repere: infoB.repere.isNotEmpty ? infoB.repere : (essai.reperePointOrigine ?? essai.localisation ?? 'Local'),
+                zone: infoB.zone,
                 sectionPointB: essai.sectionCablePointB ?? essai.sectionCable,
               );
               _allEquipements.add(fallback);
@@ -760,6 +764,12 @@ class _AjouterEssaiIsolementScreenState extends ConsumerState<AjouterEssaiIsolem
         isSectionPointBManual: _isSectionPointBManual,
         equipmentPointASyncId: _selectedPointAItem?.id,
         equipmentPointBSyncId: _selectedPointBItem?.id,
+        zonePointA: _selectedPointAItem?.zone,
+        reperePointA: _selectedPointAItem?.repere,
+        nomEquipementPointA: _selectedPointAItem?.nom,
+        zonePointB: _selectedPointBItem?.zone,
+        reperePointB: _selectedPointBItem?.repere,
+        nomEquipementPointB: _selectedPointBItem?.nom,
         nombreCablesTestes: nbCables,
       );
 

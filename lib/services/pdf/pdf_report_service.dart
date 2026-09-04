@@ -276,12 +276,16 @@ class _IsolementRowItem {
   final String repereName;
   final int index;
   final EssaiIsolement item;
+  final PointEquipmentInfo? infoA;
+  final PointEquipmentInfo? infoB;
 
   _IsolementRowItem({
     required this.zoneName,
     required this.repereName,
     required this.index,
     required this.item,
+    this.infoA,
+    this.infoB,
   });
 }
 
@@ -16435,17 +16439,26 @@ class PdfReportService {
             return widgets;
           }
 
+          final availEquips = audit != null && audit.missionId.isNotEmpty
+              ? HiveService.getAllEquipementsIsolementForMission(audit.missionId)
+              : <EquipementIsolementItem>[];
           final isoRows = <_IsolementRowItem>[];
           for (int i = 0; i < mesures.essaisIsolement.length; i++) {
             final ei = mesures.essaisIsolement[i];
+            final infoA = ei.resolvePointAInfo(availEquips);
+            final infoB = ei.resolvePointBInfo(availEquips);
+
             final locInfo = _resolveLocation(
               audit,
               localisationStr: ei.displayRepereOrigine,
               coffretStr: ei.pointA,
             );
 
-            String zoneName = locInfo.zoneName.trim();
-            String repereName = locInfo.repereName.trim();
+            String zoneName = infoA.zone.trim().isNotEmpty ? infoA.zone.trim() : locInfo.zoneName.trim();
+            String repereName = EssaiIsolement.computeRepereDerive(
+              infoA.repere.isNotEmpty ? infoA.repere : locInfo.repereName,
+              infoB.repere,
+            ).trim();
 
             if (zoneName.isEmpty && ei.displayRepereOrigine.trim().isNotEmpty) {
               final rawRep = ei.displayRepereOrigine.trim();
@@ -16467,6 +16480,8 @@ class PdfReportService {
                 repereName: effectiveRepere,
                 index: i + 1,
                 item: ei,
+                infoA: infoA,
+                infoB: infoB,
               ),
             );
           }
@@ -16626,7 +16641,9 @@ class PdfReportService {
                       padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                       alignment: pw.Alignment.center,
                       child: pw.Text(
-                        ei.displayPointA,
+                        (rowItem.infoA != null && rowItem.infoA!.nomEquipement.isNotEmpty)
+                            ? rowItem.infoA!.nomEquipement
+                            : ei.displayPointA,
                         style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
                         textAlign: pw.TextAlign.center,
                       ),
@@ -16638,7 +16655,9 @@ class PdfReportService {
                       padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
                       alignment: pw.Alignment.center,
                       child: pw.Text(
-                        ei.displayPointB,
+                        (rowItem.infoB != null && rowItem.infoB!.nomEquipement.isNotEmpty)
+                            ? rowItem.infoB!.nomEquipement
+                            : ei.displayPointB,
                         style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
                         textAlign: pw.TextAlign.center,
                       ),
