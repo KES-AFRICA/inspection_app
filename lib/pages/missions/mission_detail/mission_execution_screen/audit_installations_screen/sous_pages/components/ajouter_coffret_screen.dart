@@ -2030,6 +2030,10 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
     bool canDelete = false,
     VoidCallback? onDelete,
   }) {
+    final bool effectiveIsDepartPrisAvecProtection = widget.selectedType == 'INVERSEUR'
+        ? true
+        : isDepartPrisAvecProtectionFromType(a.typeProtection);
+
     final nbCablesCtrl = _getController(isProtectionTete ? 'prot_nb_cables' : 'alim${index}_nb_cables', a.nombreCables ?? '');
     final sourceCtrl = _getController(isProtectionTete ? 'prot_source' : 'alim${index}_source', a.source);
     final pdcCtrl = _getController(isProtectionTete ? 'prot_pdc' : 'alim${index}_pdc', a.pdcKA);
@@ -2098,7 +2102,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             SizedBox(height: context.spacingM),
           ],
           if (!isProtectionTete && index == 0 && widget.selectedType != 'INVERSEUR') ...[
-            _buildDepartPrisSansProtectionControl(context, isDepartPrisAvecProtection, (field, val) => onChanged(field, val)),
+            _buildDepartPrisSansProtectionControl(context, effectiveIsDepartPrisAvecProtection, (field, val) => onChanged(field, val)),
             SizedBox(height: context.spacingS),
           ],
           if (isLocked) ...[
@@ -2160,11 +2164,6 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                   onChanged('source', result.displayName);
                   if (result.isDepart && result.depart != null) {
                     final dep = result.depart!;
-                    final depTypeProt = dep.typeProtection;
-                    final bool isDepProtValid = depTypeProt.trim().isNotEmpty &&
-                        depTypeProt.trim().toLowerCase() != '-aucun-' &&
-                        depTypeProt.trim().toLowerCase() != 'aucun';
-
                     onChanged('nombreCables', dep.nombreCables ?? '');
                     onChanged('typeProtection', dep.typeProtection);
                     onChanged('marqueDisjoncteur', dep.marque);
@@ -2176,7 +2175,6 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                     onChanged('sectionCable', dep.sectionCable);
                     onChanged('sectionCableNeutre', dep.effectiveSectionCableNeutre);
 
-                    widget.onDepartPrisAvecProtectionChanged?.call(isDepProtValid);
                     widget.onSourceSelected?.call(result.equipmentId, result.displayName, dep.id);
                   } else {
                     clearElectricalFields();
@@ -2210,7 +2208,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
             ),
             SizedBox(height: context.spacingS),
           ],
-          if (isProtectionTete || isDepartPrisAvecProtection) ...[
+          if (isProtectionTete || widget.selectedType != 'INVERSEUR') ...[
             _buildModernDropdown(
               context,
               label: 'Type de protection',
@@ -2218,18 +2216,12 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
               items: typeProtectionItems,
               onChanged: (v) {
                 onChanged('typeProtection', v);
-                final isNone = v.trim().isEmpty || v.trim().toLowerCase() == '-aucun-' || v.trim().toLowerCase() == 'aucun';
-                if (isNone && isDepartPrisAvecProtection) {
-                  widget.onDepartPrisAvecProtectionChanged?.call(false);
-                } else if (!isNone && !isDepartPrisAvecProtection) {
-                  widget.onDepartPrisAvecProtectionChanged?.call(true);
-                }
               },
               readOnly: isLocked,
             ),
             SizedBox(height: context.spacingS),
 
-            if (isDepartPrisAvecProtection) ...[
+            if (effectiveIsDepartPrisAvecProtection) ...[
               _buildModernDropdown(context, label: 'Marque de disjoncteur', value: marqueDisjVal, items: marqueDisjoncteurItems, onChanged: (v) => onChanged('marqueDisjoncteur', v), readOnly: isLocked),
               SizedBox(height: context.spacingS),
               _buildModernDropdown(context, label: 'Courbe', value: courbeVal, items: courbeItems, onChanged: (v) => onChanged('courbe', v), readOnly: isLocked),
@@ -2334,7 +2326,6 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                 GestureDetector(
                   onTap: () {
                     if (!isDepartPrisSansProtection) {
-                      widget.onDepartPrisAvecProtectionChanged?.call(false);
                       onChanged('typeProtection', '-Aucun-');
                     }
                   },
@@ -2366,7 +2357,6 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
                 GestureDetector(
                   onTap: () {
                     if (isDepartPrisSansProtection) {
-                      widget.onDepartPrisAvecProtectionChanged?.call(true);
                       onChanged('typeProtection', 'Disjoncteur');
                     }
                   },
@@ -2403,8 +2393,11 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
   }
 
   Widget _buildProtectionTeteCard(BuildContext context) {
-    final bool isDepartPrisAvecProtection = widget.departPrisAvecProtection;
-    final bool isPresent = isDepartPrisAvecProtection;
+    final String? protType = widget.protectionTete?.typeProtection;
+    final bool effectiveIsDepartPrisAvecProtection = widget.selectedType == 'INVERSEUR'
+        ? true
+        : isDepartPrisAvecProtectionFromType(protType);
+    final bool isPresent = effectiveIsDepartPrisAvecProtection;
 
     return Container(
       padding: EdgeInsets.all(context.spacingM),
@@ -2472,7 +2465,7 @@ class _EtapeAlimentationsState extends State<_EtapeAlimentations> {
               widget.protectionTete!,
               (field, value) => _updateProtectionTete(field, value),
               isProtectionTete: true,
-              isDepartPrisAvecProtection: isDepartPrisAvecProtection,
+              isDepartPrisAvecProtection: effectiveIsDepartPrisAvecProtection,
             ),
           ],
         ],
@@ -3447,7 +3440,16 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   bool _pointsValid = false;
   bool _domaineTensionValid = false;
   bool _accessible = true;
-  bool _departPrisAvecProtection = false;
+
+  bool get _departPrisAvecProtection {
+    if (_selectedType == 'INVERSEUR') return true;
+    final mainProt = _protectionTete?.typeProtection ??
+        (_alimentations.isNotEmpty ? _alimentations.first.typeProtection : null);
+    if (mainProt != null) {
+      return isDepartPrisAvecProtectionFromType(mainProt);
+    }
+    return false;
+  }
 
   bool _photosExterneValid = false;
   bool _photosInterneValid = false;
@@ -3509,7 +3511,6 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         if (_numeroEquipementController.text.trim().isEmpty) _autoFillNumeroEquipement();
         _selectedType = draft.type;
         _accessible = draft.accessible;
-        _departPrisAvecProtection = draft.isDepartPrisAvecProtection;
         _alimenteeParTransformateur = draft.alimenteeParTransformateur;
         _presenceCPI = (draft.type == 'INVERSEUR') ? null : draft.presenceCPI;
         _zoneAtex = draft.zoneAtex;
@@ -3606,7 +3607,6 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         _repereController.text = draft.repere ?? '';
         if (_numeroEquipementController.text.trim().isEmpty) _autoFillNumeroEquipement();
         _selectedType = draft.type;
-        _departPrisAvecProtection = draft.isDepartPrisAvecProtection;
         _alimenteeParTransformateur = draft.alimenteeParTransformateur;
         _presenceCPI = (draft.type == 'INVERSEUR') ? null : draft.presenceCPI;
         _zoneAtex = draft.zoneAtex;
@@ -3948,7 +3948,6 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _numeroEquipementController.text = coffret.numeroEquipement ?? '';
     _selectedType = coffret.type;
     _accessible = coffret.accessible;
-    _departPrisAvecProtection = coffret.isDepartPrisAvecProtection;
     _repereController.text = coffret.repere ?? '';
     _alimenteeParTransformateur = coffret.alimenteeParTransformateur;
     _presenceCPI = coffret.presenceCPI;
@@ -5057,9 +5056,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                         _scheduleAutoSave();
                       },
                       onDepartPrisAvecProtectionChanged: (val) {
-                        setState(() {
-                          _departPrisAvecProtection = val;
-                        });
+                        setState(() {});
                         _scheduleAutoSave();
                       },
                       onDataChanged: () { _validateAlimentations(); setState(() {}); },

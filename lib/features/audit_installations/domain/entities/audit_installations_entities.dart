@@ -350,13 +350,14 @@ class CoffretArmoireEntity {
 
   bool get isDepartPrisAvecProtection {
     if (type == 'INVERSEUR') return true;
-    if (departPrisAvecProtection != null) return departPrisAvecProtection!;
-
     final mainProt = protectionTete?.typeProtection ??
         (alimentations.isNotEmpty ? alimentations.first.typeProtection : null);
-    if (mainProt == null) return false;
-    final normProt = mainProt.trim().toLowerCase();
-    return normProt.isNotEmpty && normProt != '-aucun-' && normProt != 'aucun' && normProt != '-';
+    if (mainProt != null) {
+      final normProt = mainProt.trim().toLowerCase();
+      return normProt.isNotEmpty && normProt != '-aucun-' && normProt != 'aucun' && normProt != '-';
+    }
+    if (departPrisAvecProtection != null) return departPrisAvecProtection!;
+    return false;
   }
 
   String? get effectivePresenceDefautThermo {

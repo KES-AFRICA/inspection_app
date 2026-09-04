@@ -1011,20 +1011,34 @@ class CoffretArmoire {
   List<DepartEquipement> get effectiveDepartures => departures ?? [];
   List<CircuitTerminalEquipement> get effectiveTerminalCircuits => terminalCircuits ?? [];
 
-  /// Résout l'état du switch "Départ pris avec protection"
-  /// - L'Inverseur est toujours considéré à true (avec protection).
-  /// - Si la valeur a été explicitement définie/sauvegardée (non null), on respecte ce choix (override manuel).
-  /// - Si la valeur est null (ancienne mission), la règle déterministe s'applique :
-  ///   true si typeProtection est renseigné et != '-Aucun-' / 'Aucun', false sinon.
+/// Règle métier centrale : détermine si un départ est pris sans protection en fonction du Type de protection.
+/// Source de vérité unique pour toute l'application.
+bool isDepartureWithoutProtection(String? typeProtection) {
+  if (typeProtection == null) return true;
+  final norm = typeProtection.trim().toLowerCase();
+  return norm.isEmpty || norm == '-aucun-' || norm == 'aucun' || norm == '-';
+}
+
+/// Règle métier inverse : détermine si une protection valide est présente.
+bool isDepartPrisAvecProtectionFromType(String? typeProtection) {
+  return !isDepartureWithoutProtection(typeProtection);
+}
+
+  /// Résout l'état "Départ pris avec protection"
+  /// - L'Inverseur est toujours considéré avec protection (true).
+  /// - typeProtection (protectionTete ou premier élément alimentations) est la SOURCE DE VÉRITÉ UNIQUE.
+  /// - Si mainProt est présent (non null), typeProtection détermine immédiatement l'état dérivé réactif.
+  /// - En dernier fallback pour anciennes missions dépouillées de typeProtection, on consulte departPrisAvecProtection.
   bool get isDepartPrisAvecProtection {
     if (type == 'INVERSEUR') return true;
-    if (departPrisAvecProtection != null) return departPrisAvecProtection!;
 
     final mainProt = protectionTete?.typeProtection ??
         (alimentations.isNotEmpty ? alimentations.first.typeProtection : null);
-    if (mainProt == null) return false;
-    final normProt = mainProt.trim().toLowerCase();
-    return normProt.isNotEmpty && normProt != '-aucun-' && normProt != 'aucun' && normProt != '-';
+    if (mainProt != null) {
+      return isDepartPrisAvecProtectionFromType(mainProt);
+    }
+
+    return departPrisAvecProtection ?? false;
   }
 
   /// Identifiant technique immuable (avec fallback auto déterministe pour anciennes missions)

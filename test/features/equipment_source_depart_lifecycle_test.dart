@@ -173,5 +173,104 @@ void main() {
       expect(formatProtection('', ''), equals('absent'));
       expect(formatProtection('Disjoncteur', 'Schneider'), equals('Disjoncteur Schneider'));
     });
+
+    group('Scénarios prioritaires 1 à 8 — Liaison réactive Type de protection <-> Départ pris sans protection', () {
+      test('Test 1 — Équipement neuf avec Type de protection vide/null => Départ sans protection = OUI', () {
+        final alim = Alimentation(typeProtection: null, pdcKA: '', calibre: '', sectionCable: '');
+        expect(isDepartureWithoutProtection(alim.typeProtection), isTrue);
+        expect(isDepartPrisAvecProtectionFromType(alim.typeProtection), isFalse);
+
+        final coffret = CoffretArmoire(
+          nom: 'Coffret Neuf 1',
+          type: 'COFFRET',
+          alimentations: [alim],
+        );
+        expect(coffret.isDepartPrisAvecProtection, isFalse);
+      });
+
+      test('Test 2 — Sélection immédiate de "Disjoncteur" => Départ sans protection = NON instantanément', () {
+        final alim = Alimentation(typeProtection: null, pdcKA: '', calibre: '', sectionCable: '');
+        expect(isDepartureWithoutProtection(alim.typeProtection), isTrue);
+
+        // Simulation instantanée de la sélection dans le dropdown
+        alim.typeProtection = 'Disjoncteur';
+        expect(isDepartureWithoutProtection(alim.typeProtection), isFalse);
+        expect(isDepartPrisAvecProtectionFromType(alim.typeProtection), isTrue);
+
+        final coffret = CoffretArmoire(nom: 'Coffret 2', type: 'COFFRET', alimentations: [alim]);
+        expect(coffret.isDepartPrisAvecProtection, isTrue);
+      });
+
+      test('Test 3 — Suppression du type (remise à vide) => Départ sans protection = OUI instantanément', () {
+        final alim = Alimentation(typeProtection: 'Disjoncteur', pdcKA: '10', calibre: '32A', sectionCable: '10');
+        expect(isDepartureWithoutProtection(alim.typeProtection), isFalse);
+
+        // Utilisateur supprime le type
+        alim.typeProtection = '';
+        expect(isDepartureWithoutProtection(alim.typeProtection), isTrue);
+        expect(isDepartPrisAvecProtectionFromType(alim.typeProtection), isFalse);
+      });
+
+      test('Test 4 — Sélection de "-Aucun-" => Départ sans protection = OUI', () {
+        final alim = Alimentation(typeProtection: '-Aucun-', pdcKA: '', calibre: '', sectionCable: '');
+        expect(isDepartureWithoutProtection(alim.typeProtection), isTrue);
+        expect(isDepartPrisAvecProtectionFromType(alim.typeProtection), isFalse);
+
+        final coffret = CoffretArmoire(nom: 'Coffret 4', type: 'COFFRET', alimentations: [alim]);
+        expect(coffret.isDepartPrisAvecProtection, isFalse);
+      });
+
+      test('Test 5 — Préremplissage depuis un départ protégé => Départ sans protection = NON', () {
+        final depProtege = DepartEquipement(id: 'd1', identification: 'D1', typeProtection: 'Fusible', sectionCable: '16');
+        final alim = Alimentation(typeProtection: depProtege.typeProtection, pdcKA: '', calibre: '', sectionCable: depProtege.sectionCable);
+
+        expect(isDepartureWithoutProtection(alim.typeProtection), isFalse);
+        expect(isDepartPrisAvecProtectionFromType(alim.typeProtection), isTrue);
+      });
+
+      test('Test 6 — Préremplissage depuis un départ sans protection => Départ sans protection = OUI', () {
+        final depSansProt = DepartEquipement(id: 'd2', identification: 'D2', typeProtection: '-Aucun-', sectionCable: '10');
+        final alim = Alimentation(typeProtection: depSansProt.typeProtection, pdcKA: '', calibre: '', sectionCable: depSansProt.sectionCable);
+
+        expect(isDepartureWithoutProtection(alim.typeProtection), isTrue);
+        expect(isDepartPrisAvecProtectionFromType(alim.typeProtection), isFalse);
+      });
+
+      test('Test 7 — Sélection d\'un départ protégé puis retrait/désélection => Départ sans protection = OUI', () {
+        final alim = Alimentation(typeProtection: 'Disjoncteur', pdcKA: '10', calibre: '40', sectionCable: '16');
+        expect(isDepartureWithoutProtection(alim.typeProtection), isFalse);
+
+        // Utilisateur retire le départ (clearElectricalFields)
+        alim.typeProtection = '';
+        expect(isDepartureWithoutProtection(alim.typeProtection), isTrue);
+        expect(isDepartPrisAvecProtectionFromType(alim.typeProtection), isFalse);
+      });
+
+      test('Test 8 — Édition et restauration d\'une ancienne mission (Hive) sans régression ni perte de données', () {
+        final oldCoffretSansProt = CoffretArmoire(
+          nom: 'Mission 2024 Sans Protection',
+          type: 'COFFRET',
+          departPrisAvecProtection: false,
+          alimentations: [Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: '10')],
+        );
+        expect(oldCoffretSansProt.isDepartPrisAvecProtection, isFalse);
+
+        final oldCoffretAvecProt = CoffretArmoire(
+          nom: 'Mission 2024 Avec Protection',
+          type: 'COFFRET',
+          departPrisAvecProtection: true,
+          alimentations: [Alimentation(typeProtection: 'Disjoncteur', pdcKA: '10', calibre: '20A', sectionCable: '10')],
+        );
+        expect(oldCoffretAvecProt.isDepartPrisAvecProtection, isTrue);
+
+        final legacyLegacyCoffret = CoffretArmoire(
+          nom: 'Mission 2023 Legacy No Alim',
+          type: 'COFFRET',
+          departPrisAvecProtection: true,
+          alimentations: [],
+        );
+        expect(legacyLegacyCoffret.isDepartPrisAvecProtection, isTrue);
+      });
+    });
   });
 }
