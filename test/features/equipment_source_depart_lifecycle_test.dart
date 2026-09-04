@@ -176,11 +176,12 @@ void main() {
 
     group('Scénarios prioritaires 1 à 8 — Liaison réactive Type de protection <-> Départ pris sans protection', () {
       test('Test 1 — Équipement neuf avec Type de protection vide/null => Départ sans protection = OUI', () {
-        final alim = Alimentation(typeProtection: null, pdcKA: '', calibre: '', sectionCable: '');
+        final alim = Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: '');
         expect(isDepartureWithoutProtection(alim.typeProtection), isTrue);
         expect(isDepartPrisAvecProtectionFromType(alim.typeProtection), isFalse);
 
         final coffret = CoffretArmoire(
+          qrCode: 'QR_T1',
           nom: 'Coffret Neuf 1',
           type: 'COFFRET',
           alimentations: [alim],
@@ -189,7 +190,7 @@ void main() {
       });
 
       test('Test 2 — Sélection immédiate de "Disjoncteur" => Départ sans protection = NON instantanément', () {
-        final alim = Alimentation(typeProtection: null, pdcKA: '', calibre: '', sectionCable: '');
+        final alim = Alimentation(typeProtection: '', pdcKA: '', calibre: '', sectionCable: '');
         expect(isDepartureWithoutProtection(alim.typeProtection), isTrue);
 
         // Simulation instantanée de la sélection dans le dropdown
@@ -197,7 +198,7 @@ void main() {
         expect(isDepartureWithoutProtection(alim.typeProtection), isFalse);
         expect(isDepartPrisAvecProtectionFromType(alim.typeProtection), isTrue);
 
-        final coffret = CoffretArmoire(nom: 'Coffret 2', type: 'COFFRET', alimentations: [alim]);
+        final coffret = CoffretArmoire(qrCode: 'QR_T2', nom: 'Coffret 2', type: 'COFFRET', alimentations: [alim]);
         expect(coffret.isDepartPrisAvecProtection, isTrue);
       });
 
@@ -216,7 +217,7 @@ void main() {
         expect(isDepartureWithoutProtection(alim.typeProtection), isTrue);
         expect(isDepartPrisAvecProtectionFromType(alim.typeProtection), isFalse);
 
-        final coffret = CoffretArmoire(nom: 'Coffret 4', type: 'COFFRET', alimentations: [alim]);
+        final coffret = CoffretArmoire(qrCode: 'QR_T4', nom: 'Coffret 4', type: 'COFFRET', alimentations: [alim]);
         expect(coffret.isDepartPrisAvecProtection, isFalse);
       });
 
@@ -248,6 +249,7 @@ void main() {
 
       test('Test 8 — Édition et restauration d\'une ancienne mission (Hive) sans régression ni perte de données', () {
         final oldCoffretSansProt = CoffretArmoire(
+          qrCode: 'QR_OLD1',
           nom: 'Mission 2024 Sans Protection',
           type: 'COFFRET',
           departPrisAvecProtection: false,
@@ -256,6 +258,7 @@ void main() {
         expect(oldCoffretSansProt.isDepartPrisAvecProtection, isFalse);
 
         final oldCoffretAvecProt = CoffretArmoire(
+          qrCode: 'QR_OLD2',
           nom: 'Mission 2024 Avec Protection',
           type: 'COFFRET',
           departPrisAvecProtection: true,
@@ -264,6 +267,7 @@ void main() {
         expect(oldCoffretAvecProt.isDepartPrisAvecProtection, isTrue);
 
         final legacyLegacyCoffret = CoffretArmoire(
+          qrCode: 'QR_OLD3',
           nom: 'Mission 2023 Legacy No Alim',
           type: 'COFFRET',
           departPrisAvecProtection: true,

@@ -885,6 +885,19 @@ class TransformateurMTBT {
   }
 }
 
+/// Règle métier centrale : détermine si un départ est pris sans protection en fonction du Type de protection.
+/// Source de vérité unique pour toute l'application.
+bool isDepartureWithoutProtection(String? typeProtection) {
+  if (typeProtection == null) return true;
+  final norm = typeProtection.trim().toLowerCase();
+  return norm.isEmpty || norm == '-aucun-' || norm == 'aucun' || norm == '-';
+}
+
+/// Règle métier inverse : détermine si une protection valide est présente.
+bool isDepartPrisAvecProtectionFromType(String? typeProtection) {
+  return !isDepartureWithoutProtection(typeProtection);
+}
+
 // COFFRETS/ARMOIRES
 @HiveType(typeId: 11)
 class CoffretArmoire {
@@ -1010,19 +1023,6 @@ class CoffretArmoire {
 
   List<DepartEquipement> get effectiveDepartures => departures ?? [];
   List<CircuitTerminalEquipement> get effectiveTerminalCircuits => terminalCircuits ?? [];
-
-/// Règle métier centrale : détermine si un départ est pris sans protection en fonction du Type de protection.
-/// Source de vérité unique pour toute l'application.
-bool isDepartureWithoutProtection(String? typeProtection) {
-  if (typeProtection == null) return true;
-  final norm = typeProtection.trim().toLowerCase();
-  return norm.isEmpty || norm == '-aucun-' || norm == 'aucun' || norm == '-';
-}
-
-/// Règle métier inverse : détermine si une protection valide est présente.
-bool isDepartPrisAvecProtectionFromType(String? typeProtection) {
-  return !isDepartureWithoutProtection(typeProtection);
-}
 
   /// Résout l'état "Départ pris avec protection"
   /// - L'Inverseur est toujours considéré avec protection (true).
