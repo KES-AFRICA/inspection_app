@@ -16504,8 +16504,8 @@ class PdfReportService {
 
           const isoColumnWidths = <int, pw.TableColumnWidth>{
             0: pw.FlexColumnWidth(1.3), // ZONE
-            1: pw.FixedColumnWidth(24), // N°
-            2: pw.FlexColumnWidth(1.6), // Repère du point d'origine
+            1: pw.FlexColumnWidth(1.6), // Repère du point d'origine
+            2: pw.FixedColumnWidth(24), // N°
             3: pw.FlexColumnWidth(1.8), // Point A (origine)
             4: pw.FlexColumnWidth(1.8), // Point B (extrémité)
             5: pw.FlexColumnWidth(1.3), // Section câble Point A
@@ -16531,8 +16531,8 @@ class PdfReportService {
                 decoration: pw.BoxDecoration(color: accentColor),
                 children: [
                   _thHeaderCell("ZONE"),
-                  _thHeaderCell("N°"),
                   _thHeaderCell("Repère du point d'origine"),
+                  _thHeaderCell("N°"),
                   _thHeaderCell("Point A (origine)"),
                   _thHeaderCell("Point B (extrémité)"),
                   _thHeaderCell("Section câble Point A"),
@@ -16611,19 +16611,7 @@ class PdfReportService {
                           : pw.SizedBox(),
                     ),
 
-                    // Cellule 1 : N°
-                    pw.Container(
-                      decoration: pw.BoxDecoration(color: bg, border: itemBorder),
-                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
-                      alignment: pw.Alignment.center,
-                      child: pw.Text(
-                        '${rowItem.index}',
-                        style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
-                        textAlign: pw.TextAlign.center,
-                      ),
-                    ),
-
-                    // Cellule 2 : Repère du point d'origine
+                    // Cellule 1 : Repère du point d'origine
                     pw.Container(
                       decoration: pw.BoxDecoration(color: bg, border: itemBorder),
                       padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
@@ -16631,6 +16619,18 @@ class PdfReportService {
                       child: pw.Text(
                         rowItem.repereName.isNotEmpty ? rowItem.repereName : '-',
                         style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                        textAlign: pw.TextAlign.center,
+                      ),
+                    ),
+
+                    // Cellule 2 : N°
+                    pw.Container(
+                      decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 3, vertical: 4),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        '${rowItem.index}',
+                        style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
                         textAlign: pw.TextAlign.center,
                       ),
                     ),
