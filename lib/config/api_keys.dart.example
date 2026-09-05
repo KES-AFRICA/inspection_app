@@ -1,0 +1,14 @@
+// Fichier de configuration des clés API (Exemple / Modèle).
+// Copiez ce fichier vers lib/config/api_keys.dart et complétez avec vos vraies clés.
+
+class ApiKeys {
+  static const String geminiApiKey = String.fromEnvironment(
+    'GEMINI_API_KEY',
+    defaultValue: 'VOTRE_CLE_GEMINI_ICI',
+  );
+
+  static const String groqApiKey = String.fromEnvironment(
+    'GROQ_API_KEY',
+    defaultValue: 'VOTRE_CLE_GROQ_ICI',
+  );
+}
