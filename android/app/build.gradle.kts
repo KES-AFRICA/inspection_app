@@ -27,6 +27,13 @@ android {
     }
 
     packaging {
+        jniLibs {
+            pickFirsts += listOf(
+                "lib/**/libc++_shared.so",
+                "lib/**/libargon2.so",
+                "lib/**/libargon2-arm64.so"
+            )
+        }
         resources {
             pickFirsts += listOf(
                 "lib/**/libc++_shared.so",
