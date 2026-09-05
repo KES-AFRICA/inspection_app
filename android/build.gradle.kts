@@ -3,6 +3,20 @@ allprojects {
         google()
         mavenCentral()
     }
+
+    tasks.withType<Delete>().configureEach {
+        doFirst {
+            targetFiles.files.forEach { root ->
+                if (root.exists()) {
+                    root.walkBottomUp().forEach { file ->
+                        try {
+                            java.nio.file.Files.setAttribute(file.toPath(), "dos:readonly", false)
+                        } catch (_: Throwable) {}
+                    }
+                }
+            }
+        }
+    }
 }
 
 val newBuildDir: Directory =

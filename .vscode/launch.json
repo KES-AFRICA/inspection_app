@@ -1,0 +1,31 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "inspection_app",
+            "request": "launch",
+            "type": "dart",
+            "args": [
+                "--android-skip-build-dependency-validation"
+            ]
+        },
+        {
+            "name": "inspection_app (profile mode)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile",
+            "args": [
+                "--android-skip-build-dependency-validation"
+            ]
+        },
+        {
+            "name": "inspection_app (release mode)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release",
+            "args": [
+                "--android-skip-build-dependency-validation"
+            ]
+        }
+    ]
+}

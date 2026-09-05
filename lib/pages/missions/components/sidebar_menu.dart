@@ -421,11 +421,11 @@ class SidebarMenu extends ConsumerWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 4),
-      decoration: BoxDecoration(
+      child: Material(
         color: isSelected ? activeBg : Colors.transparent,
         borderRadius: BorderRadius.circular(12),
-      ),
-      child: ListTile(
+        clipBehavior: Clip.antiAlias,
+        child: ListTile(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         dense: true,
         leading: Icon(
@@ -473,6 +473,7 @@ class SidebarMenu extends ConsumerWidget {
         ),
         onTap: onTap,
       ),
-    );
+    ),
+  );
   }
 }
