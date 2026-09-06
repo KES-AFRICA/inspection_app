@@ -12,6 +12,7 @@ import 'package:inspec_app/models/audit_installations_electriques.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
 import 'package:inspec_app/services/hive_service.dart';
+import 'package:inspec_app/services/persistence_queue.dart';
 import 'package:inspec_app/services/equipment_number_service.dart';
 import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 import 'dart:io';
@@ -3444,6 +3445,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   GlobalKey<_EtapeDepartsEtCircuitsState>? _etapeDepartsCircuitsKey;
 
   bool _isSaving = false;
+  bool _isAutoSaving = false;
+  bool _lastAutoSaveError = false;
   bool _hasUnsavedChanges = false;
   Timer? _autoSaveTimer;
   String? _draftQrCode;
@@ -3674,6 +3677,10 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
 
   Future<void> _autoSaveEdition() async {
     if (!mounted || widget.coffret == null) return;
+    setState(() {
+      _isAutoSaving = true;
+      _lastAutoSaveError = false;
+    });
     try {
       final now = DateTime.now().toUtc();
       final nouveauCoffret = CoffretArmoire(
@@ -3698,8 +3705,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         verificationThermographie: _verificationThermographie,
         presenceDefautThermo: _presenceDefautThermo,
         indiceIpIk: _indiceIpIkController.text.trim().isEmpty ? null : _indiceIpIkController.text.trim(),
-        departures: _departures,
-        terminalCircuits: _terminalCircuits,
+        departures: List.from(_departures),
+        terminalCircuits: List.from(_terminalCircuits),
         sourceEquipementId: _sourceEquipementId,
         sourceNomComplet: _sourceNomComplet,
         sourceDepartId: _sourceDepartId,
@@ -3714,14 +3721,29 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         statut: widget.coffret?.statut ?? 'incomplet',
         currentStep: _currentStep,
       );
-      await HiveService.updateCoffretById(
+      final ok = await HiveService.updateCoffretById(
         missionId: widget.mission.id,
         equipmentId: widget.coffret!.equipmentId,
         updatedCoffret: nouveauCoffret,
         oldNom: widget.coffret!.nom,
       );
+      if (mounted) {
+        setState(() {
+          _isAutoSaving = false;
+          _lastAutoSaveError = !ok;
+          if (ok) {
+            _hasUnsavedChanges = false;
+          }
+        });
+      }
     } catch (e) {
       if (kDebugMode) print('⚠️ [AUTO SAVE EDITION EXCEPTION] $e');
+      if (mounted) {
+        setState(() {
+          _isAutoSaving = false;
+          _lastAutoSaveError = true;
+        });
+      }
     }
   }
 
@@ -4524,8 +4546,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         target.verificationThermographie = newCoffret.verificationThermographie;
         target.presenceDefautThermo = newCoffret.presenceDefautThermo;
         target.indiceIpIk = newCoffret.indiceIpIk;
-        target.departures = (newCoffret.departures?.isNotEmpty == true || target.departures == null) ? newCoffret.departures : target.departures;
-        target.terminalCircuits = (newCoffret.terminalCircuits?.isNotEmpty == true || target.terminalCircuits == null) ? newCoffret.terminalCircuits : target.terminalCircuits;
+        target.departures = newCoffret.departures ?? target.departures;
+        target.terminalCircuits = newCoffret.terminalCircuits ?? target.terminalCircuits;
         target.sourceEquipementId = newCoffret.sourceEquipementId;
         target.sourceNomComplet = newCoffret.sourceNomComplet;
         target.sourceDepartId = newCoffret.sourceDepartId;
@@ -4540,7 +4562,9 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         target.photosInternes = newCoffret.photosInternes;
         target.observationsLibres = newCoffret.observationsLibres;
         target.observationsParafoudre = newCoffret.observationsParafoudre;
-        await HiveService.saveAuditInstallations(audit);
+        await PersistenceQueue.enqueue('audit_${widget.mission.id}', () async {
+          await HiveService.saveAuditInstallations(audit, skipDescriptionSync: true);
+        });
         return true;
       }
       if (kDebugMode) {
@@ -4901,7 +4925,38 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
             icon: const Icon(Icons.arrow_back),
             onPressed: () { if (_hasUnsavedChanges) _showExitConfirmation(); else Navigator.pop(context); },
           ),
-          actions: [ if (widget.isEdition) IconButton(icon: const Icon(Icons.check), onPressed: _sauvegarder, tooltip: 'Enregistrer les modifications'), ],
+          actions: [
+            if (widget.isEdition) ...[
+              if (_isAutoSaving)
+                const Center(
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 8.0),
+                    child: SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    ),
+                  ),
+                )
+              else if (_lastAutoSaveError)
+                IconButton(
+                  icon: const Icon(Icons.sync_problem, color: Colors.amber),
+                  tooltip: 'Erreur de sauvegarde automatique - Cliquer pour réessayer',
+                  onPressed: _autoSaveEdition,
+                )
+              else
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 6.0),
+                  child: Center(
+                    child: Icon(Icons.cloud_done, size: 18, color: Colors.white70),
+                  ),
+                ),
+              IconButton(icon: const Icon(Icons.check), onPressed: _sauvegarder, tooltip: 'Enregistrer les modifications'),
+            ],
+          ],
         ),
         body: Column(
           children: [
@@ -5027,6 +5082,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                     ),
                   if (_selectedType != null && _selectedType != 'INVERSEUR' && _accessible)
                     _EtapeDepartsEtCircuits(
+                      key: _etapeDepartsCircuitsKey,
                       departures: _departures,
                       terminalCircuits: _terminalCircuits,
                       missionId: widget.mission.id,
@@ -5456,6 +5512,7 @@ class _EtapeDepartsEtCircuits extends StatefulWidget {
   final VoidCallback onDataChanged;
 
   const _EtapeDepartsEtCircuits({
+    super.key,
     required this.departures,
     required this.terminalCircuits,
     required this.missionId,
@@ -5681,96 +5738,117 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
 
   @override
   Widget build(BuildContext context) {
-    return ListView(
+    final isDepartSubSlide = _currentSubSlide == 0;
+    final int listLength = isDepartSubSlide ? widget.departures.length : widget.terminalCircuits.length;
+    final bool isEmpty = listLength == 0;
+    final int totalItemCount = isEmpty ? 2 : listLength + 2;
+
+    return ListView.builder(
       padding: EdgeInsets.all(context.spacingL),
-      children: [
-        _buildModernHeader(
-          context,
-          _currentSubSlide == 0
-              ? 'Identification des Départs'
-              : 'Identification des Circuits Terminaux',
-          5,
-          6,
-        ),
-        SizedBox(height: context.spacingM),
-
-        // BARRE D'ONGLETS / SOUS-SLIDES DÉDIÉS
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade200,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
+      itemCount: totalItemCount,
+      itemBuilder: (context, index) {
+        if (index == 0) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _currentSubSlide = 0),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: _currentSubSlide == 0 ? AppTheme.primaryBlue : Colors.transparent,
-                      borderRadius: BorderRadius.circular(9),
-                      boxShadow: _currentSubSlide == 0
-                          ? [BoxShadow(color: AppTheme.primaryBlue.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 2))]
-                          : null,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '1. Départs (${widget.departures.length})',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: context.fontSizeS,
-                          color: _currentSubSlide == 0 ? Colors.white : Colors.grey.shade700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
+              _buildModernHeader(
+                context,
+                isDepartSubSlide
+                    ? 'Identification des Départs'
+                    : 'Identification des Circuits Terminaux',
+                5,
+                6,
               ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: () => setState(() => _currentSubSlide = 1),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    padding: const EdgeInsets.symmetric(vertical: 10),
-                    decoration: BoxDecoration(
-                      color: _currentSubSlide == 1 ? Colors.teal.shade700 : Colors.transparent,
-                      borderRadius: BorderRadius.circular(9),
-                      boxShadow: _currentSubSlide == 1
-                          ? [BoxShadow(color: Colors.teal.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 2))]
-                          : null,
-                    ),
-                    child: Center(
-                      child: Text(
-                        '2. Circuits (${widget.terminalCircuits.length})',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: context.fontSizeS,
-                          color: _currentSubSlide == 1 ? Colors.white : Colors.grey.shade700,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-        SizedBox(height: context.spacingL),
+              SizedBox(height: context.spacingM),
 
-        if (_currentSubSlide == 0) ...[
-          // SECTION A : IDENTIFICATION DES DÉPARTS
-          _buildSectionHeader(
-            context,
-            title: 'IDENTIFICATION DES DÉPARTS ISSUS DE CE TGBT/ARMOIRE/COFFRET',
-            count: widget.departures.length,
-            color: Colors.blue.shade800,
-          ),
-          SizedBox(height: context.spacingM),
-          if (widget.departures.isEmpty)
-            _buildEmptyState(
+              // BARRE D'ONGLETS / SOUS-SLIDES DÉDIÉS
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _currentSubSlide = 0),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _currentSubSlide == 0 ? AppTheme.primaryBlue : Colors.transparent,
+                            borderRadius: BorderRadius.circular(9),
+                            boxShadow: _currentSubSlide == 0
+                                ? [BoxShadow(color: AppTheme.primaryBlue.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 2))]
+                                : null,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '1. Départs (${widget.departures.length})',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: context.fontSizeS,
+                                color: _currentSubSlide == 0 ? Colors.white : Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: GestureDetector(
+                        onTap: () => setState(() => _currentSubSlide = 1),
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          decoration: BoxDecoration(
+                            color: _currentSubSlide == 1 ? Colors.teal.shade700 : Colors.transparent,
+                            borderRadius: BorderRadius.circular(9),
+                            boxShadow: _currentSubSlide == 1
+                                ? [BoxShadow(color: Colors.teal.withOpacity(0.3), blurRadius: 4, offset: const Offset(0, 2))]
+                                : null,
+                          ),
+                          child: Center(
+                            child: Text(
+                              '2. Circuits (${widget.terminalCircuits.length})',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: context.fontSizeS,
+                                color: _currentSubSlide == 1 ? Colors.white : Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: context.spacingL),
+
+              if (isDepartSubSlide)
+                _buildSectionHeader(
+                  context,
+                  title: 'IDENTIFICATION DES DÉPARTS ISSUS DE CE TGBT/ARMOIRE/COFFRET',
+                  count: widget.departures.length,
+                  color: Colors.blue.shade800,
+                )
+              else
+                _buildSectionHeader(
+                  context,
+                  title: 'IDENTIFICATION DES CIRCUITS TERMINAUX ISSUS DE CE TGBT/ARMOIRE/COFFRET',
+                  count: widget.terminalCircuits.length,
+                  color: Colors.teal.shade800,
+                ),
+              SizedBox(height: context.spacingM),
+            ],
+          );
+        }
+
+        if (isEmpty && index == 1) {
+          if (isDepartSubSlide) {
+            return _buildEmptyState(
               context,
               title: 'Aucun départ enregistré',
               subtitle: 'Ajoutez les départs électriques issus de cet équipement pour documenter votre inspection.',
@@ -5784,46 +5862,9 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                 });
                 widget.onDataChanged();
               },
-            )
-          else ...[
-            for (int i = 0; i < widget.departures.length; i++) ...[
-              _buildDepartCard(context, widget.departures[i], i),
-              SizedBox(height: context.spacingM),
-            ],
-            Center(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  final newDepart = DepartEquipement(identification: '');
-                  setState(() {
-                    widget.departures.add(newDepart);
-                    _expandedDepartId = newDepart.id;
-                  });
-                  widget.onDataChanged();
-                },
-                icon: const Icon(Icons.add_circle_outline, color: AppTheme.primaryBlue),
-                label: const Text(
-                  '+ Ajouter un départ',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: AppTheme.primaryBlue),
-                ),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  side: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-              ),
-            ),
-          ],
-        ] else ...[
-          // SECTION B : IDENTIFICATION DES CIRCUITS TERMINAUX
-          _buildSectionHeader(
-            context,
-            title: 'IDENTIFICATION DES CIRCUITS TERMINAUX ISSUS DE CE TGBT/ARMOIRE/COFFRET',
-            count: widget.terminalCircuits.length,
-            color: Colors.teal.shade800,
-          ),
-          SizedBox(height: context.spacingM),
-          if (widget.terminalCircuits.isEmpty)
-            _buildEmptyState(
+            );
+          } else {
+            return _buildEmptyState(
               context,
               title: 'Aucun circuit terminal enregistré',
               subtitle: 'Ajoutez les circuits terminaux issus de cet équipement pour documenter votre inspection.',
@@ -5837,38 +5878,71 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
                 });
                 widget.onDataChanged();
               },
-            )
-          else ...[
-            for (int i = 0; i < widget.terminalCircuits.length; i++) ...[
-              _buildTerminalCircuitCard(context, widget.terminalCircuits[i], i),
-              SizedBox(height: context.spacingM),
-            ],
-            Center(
-              child: OutlinedButton.icon(
-                onPressed: () {
-                  final newCircuit = CircuitTerminalEquipement(identification: '');
-                  setState(() {
-                    widget.terminalCircuits.add(newCircuit);
-                    _expandedCircuitId = newCircuit.id;
-                  });
-                  widget.onDataChanged();
-                },
-                icon: const Icon(Icons.add_circle_outline, color: Colors.teal),
-                label: const Text(
-                  '+ Ajouter un circuit terminal',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.teal),
-                ),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                  side: const BorderSide(color: Colors.teal, width: 1.5),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            );
+          }
+        }
+
+        if (index == listLength + 1) {
+          return Column(
+            children: [
+              SizedBox(height: context.spacingS),
+              Center(
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    if (isDepartSubSlide) {
+                      final newDepart = DepartEquipement(identification: '');
+                      setState(() {
+                        widget.departures.add(newDepart);
+                        _expandedDepartId = newDepart.id;
+                      });
+                    } else {
+                      final newCircuit = CircuitTerminalEquipement(identification: '');
+                      setState(() {
+                        widget.terminalCircuits.add(newCircuit);
+                        _expandedCircuitId = newCircuit.id;
+                      });
+                    }
+                    widget.onDataChanged();
+                  },
+                  icon: Icon(
+                    Icons.add_circle_outline,
+                    color: isDepartSubSlide ? AppTheme.primaryBlue : Colors.teal,
+                  ),
+                  label: Text(
+                    isDepartSubSlide ? '+ Ajouter un départ' : '+ Ajouter un circuit terminal',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: isDepartSubSlide ? AppTheme.primaryBlue : Colors.teal,
+                    ),
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    side: BorderSide(
+                      color: isDepartSubSlide ? AppTheme.primaryBlue : Colors.teal,
+                      width: 1.5,
+                    ),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
                 ),
               ),
-            ),
-          ],
-        ],
-        SizedBox(height: context.spacingXXL),
-      ],
+              SizedBox(height: context.spacingXXL),
+            ],
+          );
+        }
+
+        final itemIndex = index - 1;
+        if (isDepartSubSlide) {
+          return Padding(
+            padding: EdgeInsets.only(bottom: context.spacingM),
+            child: _buildDepartCard(context, widget.departures[itemIndex], itemIndex),
+          );
+        } else {
+          return Padding(
+            padding: EdgeInsets.only(bottom: context.spacingM),
+            child: _buildTerminalCircuitCard(context, widget.terminalCircuits[itemIndex], itemIndex),
+          );
+        }
+      },
     );
   }
 
@@ -5948,6 +6022,7 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
     ].join(' | ');
 
     return Container(
+      key: ValueKey(dep.id),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -6297,6 +6372,7 @@ class _EtapeDepartsEtCircuitsState extends State<_EtapeDepartsEtCircuits> {
     ].join(' | ');
 
     return Container(
+      key: ValueKey(ct.id),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),

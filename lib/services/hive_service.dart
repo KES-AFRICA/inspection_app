@@ -22,6 +22,7 @@ import 'installation_description_sync_service.dart';
 import 'normative_matching/mission_normative_batch_service.dart';
 import 'equipment_number_service.dart';
 import 'ip_ik_evaluator_service.dart';
+import 'persistence_queue.dart';
 import 'package:inspec_app/features/backup/data/services/mission_activity_tracker.dart';
 
 class HiveService {
@@ -1394,21 +1395,26 @@ static Future<AuditInstallationsElectriques> getOrCreateAuditInstallations(Strin
   }
 }
 
-/// Sauvegarder les données d'audit
-static Future<void> saveAuditInstallations(AuditInstallationsElectriques audit) async {
-  final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
-  audit.updatedAt = DateTime.now();
-  
-  try {
-    await InstallationDescriptionSyncService.syncAuditToDescription(audit);
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Erreur de synchronisation Audit ↔ Description: $e');
+  /// Sauvegarder les données d'audit
+  static Future<void> saveAuditInstallations(
+    AuditInstallationsElectriques audit, {
+    bool skipDescriptionSync = false,
+  }) async {
+    final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
+    audit.updatedAt = DateTime.now();
+    
+    if (!skipDescriptionSync) {
+      try {
+        await InstallationDescriptionSyncService.syncAuditToDescription(audit);
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erreur de synchronisation Audit ↔ Description: $e');
+        }
+      }
     }
-  }
 
-  await audit.save();
-}
+    await audit.save();
+  }
 
 /// Synchroniser toutes les missions existantes (migration)
 static Future<void> synchronizeAllExistingMissions() async {
@@ -1932,85 +1938,88 @@ static CoffretArmoire? findCoffretByQrCode(String missionId, String qrCode) {
   }
 
   /// Mettre à jour un coffret en base de données par son [equipmentId] immuable (SaveGuard inclus)
+  /// Protégé contre les accès concurrents via la [PersistenceQueue].
   static Future<bool> updateCoffretById({
     required String missionId,
     required String equipmentId,
     required CoffretArmoire updatedCoffret,
     String? oldNom,
   }) async {
-    try {
-      final audit = await getOrCreateAuditInstallations(missionId);
-      
-      bool findAndReplaceInList(List<CoffretArmoire> list) {
-        // 1. Match par equipmentId immuable / id
-        int index = list.indexWhere((c) => c.equipmentId == equipmentId || (c.id != null && c.id == equipmentId));
+    return PersistenceQueue.enqueue('audit_$missionId', () async {
+      try {
+        final audit = await getOrCreateAuditInstallations(missionId);
         
-        // 2. Fallback pour anciennes missions importées : match par qrCode ou par ancien nom
-        if (index == -1 && updatedCoffret.qrCode.trim().isNotEmpty) {
-          index = list.indexWhere((c) => c.qrCode.trim() == updatedCoffret.qrCode.trim());
-        }
-        if (index == -1 && oldNom != null && oldNom.trim().isNotEmpty) {
-          index = list.indexWhere((c) => c.nom.trim() == oldNom.trim());
-        }
-        if (index == -1 && updatedCoffret.nom.trim().isNotEmpty) {
-          index = list.indexWhere((c) => c.nom.trim() == updatedCoffret.nom.trim());
-        }
-
-        if (index != -1) {
-          final existing = list[index];
-          updatedCoffret.id = existing.id ?? equipmentId;
-          updatedCoffret.createdAt = existing.createdAt ?? updatedCoffret.createdAt;
-          updatedCoffret.updatedAt = DateTime.now().toUtc();
-          list[index] = updatedCoffret;
-          return true;
-        }
-        return false;
-      }
-
-      bool found = false;
-      for (var local in audit.moyenneTensionLocaux) {
-        if (findAndReplaceInList(local.coffrets)) { found = true; break; }
-      }
-
-      if (!found) {
-        for (var zone in audit.moyenneTensionZones) {
-          if (findAndReplaceInList(zone.coffrets)) { found = true; break; }
-          for (var local in zone.locaux) {
-            if (findAndReplaceInList(local.coffrets)) { found = true; break; }
+        bool findAndReplaceInList(List<CoffretArmoire> list) {
+          // 1. Match par equipmentId immuable / id
+          int index = list.indexWhere((c) => c.equipmentId == equipmentId || (c.id != null && c.id == equipmentId));
+          
+          // 2. Fallback pour anciennes missions importées : match par qrCode ou par ancien nom
+          if (index == -1 && updatedCoffret.qrCode.trim().isNotEmpty) {
+            index = list.indexWhere((c) => c.qrCode.trim() == updatedCoffret.qrCode.trim());
           }
-          if (found) break;
-        }
-      }
-
-      if (!found) {
-        for (var zone in audit.basseTensionZones) {
-          if (findAndReplaceInList(zone.coffretsDirects)) { found = true; break; }
-          for (var local in zone.locaux) {
-            if (findAndReplaceInList(local.coffrets)) { found = true; break; }
+          if (index == -1 && oldNom != null && oldNom.trim().isNotEmpty) {
+            index = list.indexWhere((c) => c.nom.trim() == oldNom.trim());
           }
-          if (found) break;
-        }
-      }
+          if (index == -1 && updatedCoffret.nom.trim().isNotEmpty) {
+            index = list.indexWhere((c) => c.nom.trim() == updatedCoffret.nom.trim());
+          }
 
-      if (!found) {
+          if (index != -1) {
+            final existing = list[index];
+            updatedCoffret.id = existing.id ?? equipmentId;
+            updatedCoffret.createdAt = existing.createdAt ?? updatedCoffret.createdAt;
+            updatedCoffret.updatedAt = DateTime.now().toUtc();
+            list[index] = updatedCoffret;
+            return true;
+          }
+          return false;
+        }
+
+        bool found = false;
+        for (var local in audit.moyenneTensionLocaux) {
+          if (findAndReplaceInList(local.coffrets)) { found = true; break; }
+        }
+
+        if (!found) {
+          for (var zone in audit.moyenneTensionZones) {
+            if (findAndReplaceInList(zone.coffrets)) { found = true; break; }
+            for (var local in zone.locaux) {
+              if (findAndReplaceInList(local.coffrets)) { found = true; break; }
+            }
+            if (found) break;
+          }
+        }
+
+        if (!found) {
+          for (var zone in audit.basseTensionZones) {
+            if (findAndReplaceInList(zone.coffretsDirects)) { found = true; break; }
+            for (var local in zone.locaux) {
+              if (findAndReplaceInList(local.coffrets)) { found = true; break; }
+            }
+            if (found) break;
+          }
+        }
+
+        if (!found) {
+          if (kDebugMode) {
+            print('❌ SAVEGUARD FAILURE: Équipement avec ID $equipmentId (ou QR/Nom) introuvable dans la mission $missionId.');
+          }
+          return false;
+        }
+
+        await saveAuditInstallations(audit, skipDescriptionSync: true);
         if (kDebugMode) {
-          print('❌ SAVEGUARD FAILURE: Équipement avec ID $equipmentId (ou QR/Nom) introuvable dans la mission $missionId.');
+          print('✅ Coffret mis à jour par ID/Fallback immuable: $equipmentId (${updatedCoffret.nom})');
         }
-        return false;
+        return true;
+      } catch (e, stack) {
+        if (kDebugMode) {
+          print('❌ Erreur updateCoffretById: $e');
+          print(stack);
+        }
+        rethrow;
       }
-
-      await saveAuditInstallations(audit);
-      if (kDebugMode) {
-        print('✅ Coffret mis à jour par ID/Fallback immuable: $equipmentId (${updatedCoffret.nom})');
-      }
-      return true;
-    } catch (e, stack) {
-      if (kDebugMode) {
-        print('❌ Erreur updateCoffretById: $e');
-        print(stack);
-      }
-      rethrow;
-    }
+    });
   }
 
 // Vérifier si un QR code existe déjà
@@ -6738,12 +6747,16 @@ static Future<void> saveCoffretDraft({
   required CoffretArmoire coffret,
   required int currentStep,
 }) async {
-  if (coffret.qrCode.trim().isEmpty || coffret.qrCode.startsWith('TEMP_')) return;
   try {
     final box = Hive.box(_coffretDraftsBox);
-    String draftKey = coffret.qrCode;
+    String draftKey = coffret.qrCode.trim();
     if (draftKey.isEmpty) {
-      draftKey = 'TEMP_${DateTime.now().millisecondsSinceEpoch}';
+      final idVal = (coffret.id ?? '').trim();
+      if (idVal.isNotEmpty) {
+        draftKey = idVal;
+      } else {
+        draftKey = 'TEMP_${DateTime.now().millisecondsSinceEpoch}';
+      }
       coffret.qrCode = draftKey;
     }
     
