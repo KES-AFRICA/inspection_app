@@ -12,6 +12,8 @@ import 'package:inspec_app/services/pdf/builders/pdf_observations_recap_builder.
 import 'package:inspec_app/services/pdf/builders/pdf_equipements_synthesis_builder.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_renseignements_builder.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_description_builder.dart';
+import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
+export 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
@@ -215,16 +217,7 @@ class PdfReportService {
       final boldData = await rootBundle.load('assets/fonts/Roboto-Bold.ttf');
       _fontRegular = pw.Font.ttf(regularData);
       _fontBold = pw.Font.ttf(boldData);
-      PdfCoverBuilder.fontRegular = _fontRegular;
-      PdfCoverBuilder.fontBold = _fontBold;
-      PdfSommaireBuilder.fontRegular = _fontRegular;
-      PdfSommaireBuilder.fontBold = _fontBold;
-      PdfRegulatoryBuilder.fontRegular = _fontRegular;
-      PdfRegulatoryBuilder.fontBold = _fontBold;
-      PdfExecutiveSummaryBuilder.fontRegular = _fontRegular;
-      PdfExecutiveSummaryBuilder.fontBold = _fontBold;
-      PdfStatisticsBuilder.fontRegular = _fontRegular;
-      PdfStatisticsBuilder.fontBold = _fontBold;
+      _propagateFonts();
     } catch (e) {
       if (kDebugMode) {
         print(
@@ -233,19 +226,38 @@ class PdfReportService {
       }
       _fontRegular = pw.Font.helvetica();
       _fontBold = pw.Font.helveticaBold();
-      PdfCoverBuilder.fontRegular = _fontRegular;
-      PdfCoverBuilder.fontBold = _fontBold;
-      PdfSommaireBuilder.fontRegular = _fontRegular;
-      PdfSommaireBuilder.fontBold = _fontBold;
-      PdfRegulatoryBuilder.fontRegular = _fontRegular;
-      PdfRegulatoryBuilder.fontBold = _fontBold;
-      PdfExecutiveSummaryBuilder.fontRegular = _fontRegular;
-      PdfExecutiveSummaryBuilder.fontBold = _fontBold;
-      PdfStatisticsBuilder.fontRegular = _fontRegular;
-      PdfStatisticsBuilder.fontBold = _fontBold;
+      _propagateFonts();
     }
 
     _fontsLoaded = true;
+  }
+
+  /// Propage les polices à l'ensemble des 13 builders et à PdfReportStyles
+  static void _propagateFonts() {
+    PdfReportStyles.fontRegular = _fontRegular;
+    PdfReportStyles.fontBold = _fontBold;
+    PdfCoverBuilder.fontRegular = _fontRegular;
+    PdfCoverBuilder.fontBold = _fontBold;
+    PdfSommaireBuilder.fontRegular = _fontRegular;
+    PdfSommaireBuilder.fontBold = _fontBold;
+    PdfRegulatoryBuilder.fontRegular = _fontRegular;
+    PdfRegulatoryBuilder.fontBold = _fontBold;
+    PdfExecutiveSummaryBuilder.fontRegular = _fontRegular;
+    PdfExecutiveSummaryBuilder.fontBold = _fontBold;
+    PdfStatisticsBuilder.fontRegular = _fontRegular;
+    PdfStatisticsBuilder.fontBold = _fontBold;
+    PdfDescriptionBuilder.fontRegular = _fontRegular;
+    PdfDescriptionBuilder.fontBold = _fontBold;
+    PdfRenseignementsBuilder.fontRegular = _fontRegular;
+    PdfRenseignementsBuilder.fontBold = _fontBold;
+    PdfEquipementsSynthesisBuilder.fontRegular = _fontRegular;
+    PdfEquipementsSynthesisBuilder.fontBold = _fontBold;
+    PdfObservationsRecapBuilder.fontRegular = _fontRegular;
+    PdfObservationsRecapBuilder.fontBold = _fontBold;
+    PdfAuditInstallationsBuilder.fontRegular = _fontRegular;
+    PdfAuditInstallationsBuilder.fontBold = _fontBold;
+    PdfClassementFoudreBuilder.fontRegular = _fontRegular;
+    PdfClassementFoudreBuilder.fontBold = _fontBold;
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -858,13 +870,16 @@ class PdfReportService {
     Map<String, int>? trackedPages,
     int offset = 0,
   ]) {
-    return pw.Center(
+    final dateGen = DateTime.now();
+    final dateStr = _formatDate(dateGen);
+
+    final content = pw.Center(
       child: pw.Column(
         mainAxisAlignment: pw.MainAxisAlignment.center,
         crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
           pw.Text(
-            'Fait ? Douala le ${_formatDate(DateTime.now())}',
+            'LA DIRECTION',
             style: pw.TextStyle(
               font: _fontBold,
               fontSize: 16,
@@ -873,19 +888,57 @@ class PdfReportService {
             ),
             textAlign: pw.TextAlign.center,
           ),
-          pw.SizedBox(height: 20),
+          pw.SizedBox(height: 12),
           pw.Text(
-            "Par: ${nomInspecteur ?? ''} ",
+            'Patrick ESSAME ESSAME',
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: 14,
+              fontWeight: pw.FontWeight.bold,
+              color: headerColor,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+          pw.SizedBox(height: 36),
+          pw.Text(
+            'Fait à Douala le $dateStr',
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: 13,
+              color: headerColor,
+            ),
+            textAlign: pw.TextAlign.center,
+          ),
+          pw.SizedBox(height: 12),
+          pw.Container(
+            width: 180,
+            height: 1,
+            color: PdfColors.grey500,
+          ),
+          pw.SizedBox(height: 6),
+          pw.Text(
+            'Signature et cachet',
             style: pw.TextStyle(
               font: _fontRegular,
-              fontSize: 14,
-              color: darkGrey,
+              fontSize: 8.5,
+              color: PdfColors.grey600,
+              fontStyle: pw.FontStyle.italic,
             ),
             textAlign: pw.TextAlign.center,
           ),
         ],
       ),
     );
+
+    if (trackedPages != null) {
+      return PageTracker(
+        key: 'signature_rapport',
+        registry: trackedPages,
+        offset: offset,
+        child: content,
+      );
+    }
+    return content;
   }
 
 
@@ -1487,14 +1540,67 @@ class PdfReportService {
     currentOffset += coverDoc.document.pdfPageList.pages.length;
 
     // Helper interne pour effectuer le rendu par sous-lots (micro-chunking)
-    Future<void> _renderEquipementsSubBatches({
+    Future<void> renderEquipementsSubBatches({
       required List<PdfEquipementItem> items,
       required String sectionKey,
       required String sectionTitle,
       required String chunkPrefix,
       bool isMT = false,
     }) async {
-      if (items.isEmpty) return;
+      if (items.isEmpty) {
+        final emptyDoc = pw.Document(
+          title: '$sectionTitle (Vide) - ${mission.nomClient}',
+          author: 'KES INSPECTIONS AND PROJECTS',
+          compress: saveFilesToDisk,
+        );
+        emptyDoc.addPage(
+          pw.MultiPage(
+            maxPages: 10000,
+            pageTheme: _buildInnerPageTheme(
+              pageOffset: currentOffset,
+              overrideTotalPages: overrideTotalPages,
+            ),
+            header: (ctx) => _buildPageHeaderWidget(
+              nomClient: mission.nomClient,
+              nomSite: nomSite,
+              numeroRapport: numeroRapport,
+            ),
+            build: (ctx) => [
+              PageTracker(
+                key: sectionKey,
+                registry: trackedPages,
+                offset: currentOffset,
+                child: _subSectionBar(sectionTitle),
+              ),
+              pw.SizedBox(height: 5),
+              pw.Container(
+                decoration: pw.BoxDecoration(
+                  border: pw.Border.all(color: borderColor, width: 0.4),
+                ),
+                padding: const pw.EdgeInsets.all(6),
+                child: pw.Text(
+                  'Aucun équipement répertorié',
+                  style: pw.TextStyle(
+                    font: _fontRegular,
+                    fontSize: fsSmall,
+                    fontStyle: pw.FontStyle.italic,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+        final emptyBytes = await emptyDoc.save();
+        if (saveFilesToDisk) {
+          final emptyFile = File(
+            '${tempDir.path}/pdf_chunk_${chunkPrefix}_empty_${mission.id}.pdf',
+          );
+          await emptyFile.writeAsBytes(emptyBytes);
+          chunkFiles.add(emptyFile);
+        }
+        currentOffset += emptyDoc.document.pdfPageList.pages.length;
+        return;
+      }
 
       const int batchSize = 30;
       final totalBatches = (items.length / batchSize).ceil();
@@ -1556,7 +1662,7 @@ class PdfReportService {
 
     // 2. Équipements MT (découpés par micro-lots de 60)
     final equipementsMT = _collectEquipementsMT(audit);
-    await _renderEquipementsSubBatches(
+    await renderEquipementsSubBatches(
       items: equipementsMT,
       sectionKey: 'liste_recap_equipements_mt',
       sectionTitle: '1. Équipements moyenne tension',
@@ -1566,7 +1672,7 @@ class PdfReportService {
 
     // 3. Équipements BT (découpés par micro-lots de 60)
     final equipementsBT = _collectEquipementsBT(audit, desc);
-    await _renderEquipementsSubBatches(
+    await renderEquipementsSubBatches(
       items: equipementsBT,
       sectionKey: 'liste_recap_equipements_bt',
       sectionTitle: '2. Équipements basse tension',
@@ -2512,9 +2618,9 @@ class PdfReportService {
     );
 
     await preflightP1_1.save();
-    final int subChunk1_1_Pages =
+    final int subChunk11Pages =
         preflightP1_1.document.pdfPageList.pages.length;
-    int currentOffset = subChunk1_1_Pages;
+    int currentOffset = subChunk11Pages;
 
     // ── Sub-chunk 1.2 : Objet, Périmètre & Mesures de sécurité ──
     if (saveFilesToDisk) {
@@ -3087,17 +3193,26 @@ class PdfReportService {
       compress: saveFilesToDisk,
     );
     pdfSignatures.addPage(
-      pw.Page(
+      pw.MultiPage(
+        maxPages: 10000,
         pageTheme: _buildInnerPageTheme(
           pageOffset: currentOffset,
           overrideTotalPages: overrideTotalPages,
         ),
-        build: (ctx) => _buildSignaturePage(
-          renseignements,
-          currentUser?.fullName,
-          trackedPages,
-          currentOffset,
+        header: (ctx) => _buildPageHeaderWidget(
+          nomClient: mission.nomClient,
+          nomSite: nomSiteHeader,
+          numeroRapport: numeroRapportDoc,
         ),
+        build: (ctx) => [
+          pw.SizedBox(height: 180),
+          _buildSignaturePage(
+            renseignements,
+            currentUser?.fullName,
+            trackedPages,
+            currentOffset,
+          ),
+        ],
       ),
     );
     final bytesSignatures = await pdfSignatures.save();
@@ -3307,7 +3422,7 @@ class PdfReportService {
   }
 
   /// Génère le nom de fichier officiel pour le rapport PDF de Vérification Électrique.
-  /// Format : Rapport_Verif_elec_<site>_<année>_<timestamp>.pdf
+  /// Format : `Rapport_Verif_elec_<site>_<année>_<timestamp>.pdf`
   static String buildElectricalReportFileName(
     String nomClient, {
     DateTime? date,
@@ -3452,7 +3567,7 @@ class PdfReportService {
 
       if (kDebugMode && await finalPdfFile.exists()) {
         final double sizeMb = (await finalPdfFile.length()) / (1024 * 1024);
-        print(
+        debugPrint(
           '⚡ [PDF Compression] Rapport généré avec succès avec compression adaptative : ${sizeMb.toStringAsFixed(2)} Mo ($totalReportPages pages)',
         );
       }

@@ -79,7 +79,7 @@ class PdfAuditInstallationsBuilder {
 
   static String _normalizeText(String text) {
     if (text.isEmpty) return text;
-    text = text.replaceAll(RegExp(r'§\\s*'), 'art ');
+    text = text.replaceAll(RegExp(r'§\s*'), 'art ');
 
     const replacements = <String, String>{
       '«': '"', '»': '"', '“': '"', '”': '"',
@@ -211,6 +211,49 @@ class PdfAuditInstallationsBuilder {
     pw.Alignment alignment = pw.Alignment.center,
     pw.TextAlign textAlign = pw.TextAlign.center,
   }) => valueCell(text, alignment: alignment, textAlign: textAlign);
+
+  static pw.Widget _protectionCell(String typeProtection, String? marque) =>
+      buildProtectionCell(typeProtection, marque);
+
+  static pw.Widget buildProtectionCell(
+    String typeProtection,
+    String? marque, {
+    pw.Font? fontRegular,
+  }) {
+    final fRegular = fontRegular ?? PdfAuditInstallationsBuilder.fontRegular;
+    final typeClean = typeProtection.trim();
+    final marqueClean = marque?.trim() ?? '';
+
+    if (typeClean.isEmpty || typeClean.toLowerCase() == '-aucun-' || typeClean.toLowerCase() == 'aucun') {
+      return valueCell('absent');
+    }
+
+    if (marqueClean.isEmpty || typeClean.toLowerCase().contains(marqueClean.toLowerCase())) {
+      return valueCell(typeClean);
+    }
+
+    return pw.Container(
+      alignment: pw.Alignment.center,
+      padding: const pw.EdgeInsets.symmetric(horizontal: 5, vertical: 3),
+      child: pw.Column(
+        mainAxisSize: pw.MainAxisSize.min,
+        mainAxisAlignment: pw.MainAxisAlignment.center,
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
+        children: [
+          pw.Text(
+            typeClean,
+            style: pw.TextStyle(font: fRegular, fontSize: PdfReportStyles.fsSmall),
+            textAlign: pw.TextAlign.center,
+          ),
+          pw.Text(
+            '($marqueClean)',
+            style: pw.TextStyle(font: fRegular, fontSize: PdfReportStyles.fsSmall),
+            textAlign: pw.TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
 
   static pw.Widget _thCell(String text) => thCell(text);
 
@@ -2689,27 +2732,6 @@ class PdfAuditInstallationsBuilder {
   }) {
     final widgets = <pw.Widget>[pw.SizedBox(height: 6)];
     String safe(String v) => v.trim().isEmpty ? 'Non renseigné' : v;
-    String formatProtectionWithTypeAndMarque(String typeProtection, String? marque) {
-      final typeClean = typeProtection.trim();
-      final marqueClean = marque?.trim() ?? '';
-
-      if (typeClean.isEmpty || typeClean.toLowerCase() == '-aucun-' || typeClean.toLowerCase() == 'aucun') {
-        return 'absent';
-      }
-
-      if (typeClean.isNotEmpty && marqueClean.isNotEmpty) {
-        if (typeClean.toLowerCase().contains(marqueClean.toLowerCase())) {
-          return typeClean;
-        }
-        return '$typeClean ($marqueClean)';
-      } else if (typeClean.isNotEmpty) {
-        return typeClean;
-      } else if (marqueClean.isNotEmpty) {
-        return marqueClean;
-      } else {
-        return 'absent';
-      }
-    }
     pw.MemoryImage? photoInterne = photoCache?[coffret];
     if (photoInterne == null && photoCache == null) {
       for (final src in [
@@ -3215,7 +3237,7 @@ class PdfAuditInstallationsBuilder {
                 pw.TableRow(
                   children: [
                     _valueCell(label),
-                    _valueCell(formatProtectionWithTypeAndMarque(a.typeProtection, a.marqueDisjoncteur)),
+                    _protectionCell(a.typeProtection, a.marqueDisjoncteur),
                     _valueCell(a.courbe != null && a.courbe!.isNotEmpty ? a.courbe! : '-'),
                     _valueCell(a.pdcKA.isNotEmpty ? a.pdcKA : '-'),
                     _valueCell(a.icc3Max != null && a.icc3Max!.isNotEmpty ? a.icc3Max! : '-'),
@@ -3294,7 +3316,7 @@ class PdfAuditInstallationsBuilder {
                 pw.TableRow(
                   children: [
                     _valueCell(label),
-                    _valueCell(formatProtectionWithTypeAndMarque(s.typeProtection, s.marqueDisjoncteur)),
+                    _protectionCell(s.typeProtection, s.marqueDisjoncteur),
                     _valueCell(s.courbe != null && s.courbe!.isNotEmpty ? s.courbe! : '-'),
                     _valueCell(s.pdcKA.isNotEmpty ? s.pdcKA : '-'),
                     _valueCell(s.icc3Max != null && s.icc3Max!.isNotEmpty ? s.icc3Max! : '-'),
@@ -3365,7 +3387,7 @@ class PdfAuditInstallationsBuilder {
               pw.TableRow(
                 children: [
                   _valueCell(label),
-                  _valueCell(formatProtectionWithTypeAndMarque(a.typeProtection, a.marqueDisjoncteur)),
+                  _protectionCell(a.typeProtection, a.marqueDisjoncteur),
                   _valueCell(a.courbe != null && a.courbe!.isNotEmpty ? a.courbe! : '-'),
                   _valueCell(a.pdcKA.isNotEmpty ? a.pdcKA : '-'),
                   _valueCell(a.icc3Max != null && a.icc3Max!.isNotEmpty ? a.icc3Max! : '-'),
@@ -3453,7 +3475,7 @@ class PdfAuditInstallationsBuilder {
             pw.TableRow(
               children: [
                 _valueCell(statusLabel),
-                _valueCell(isAvecProtection ? formatProtectionWithTypeAndMarque(pt.typeProtection, pt.marqueDisjoncteur) : 'absent'),
+                isAvecProtection ? _protectionCell(pt.typeProtection, pt.marqueDisjoncteur) : _valueCell('absent'),
                 _valueCell(isAvecProtection ? ((pt.courbe != null && pt.courbe!.isNotEmpty) ? pt.courbe! : '-') : '-'),
                 _valueCell(isAvecProtection ? (pt.pdcKA.isNotEmpty ? pt.pdcKA : '-') : '-'),
                 _valueCell(isAvecProtection ? ((pt.icc3Max != null && pt.icc3Max!.isNotEmpty) ? pt.icc3Max! : '-') : '-'),
@@ -3525,7 +3547,7 @@ class PdfAuditInstallationsBuilder {
             children: [
               _valueCell(dep.protectionTete.isNotEmpty ? dep.protectionTete : '-'),
               _valueCell(dep.identification.isNotEmpty ? dep.identification : '-'),
-              _valueCell(formatProtectionWithTypeAndMarque(dep.typeProtection, dep.marque)),
+              _protectionCell(dep.typeProtection, dep.marque),
               _valueCell(dep.courbe.isNotEmpty ? dep.courbe : '-'),
               _valueCell(dep.pdcKA.isNotEmpty ? dep.pdcKA : '-'),
               _valueCell(dep.icc3Max.isNotEmpty ? dep.icc3Max : '-'),
@@ -3615,7 +3637,7 @@ class PdfAuditInstallationsBuilder {
             children: [
               _valueCell(ct.protectionTete.isNotEmpty ? ct.protectionTete : '-'),
               _valueCell(ct.identification.isNotEmpty ? ct.identification : '-'),
-              _valueCell(formatProtectionWithTypeAndMarque(ct.typeProtection, ct.marque)),
+              _protectionCell(ct.typeProtection, ct.marque),
               _valueCell(ct.courbe.isNotEmpty ? ct.courbe : '-'),
               _valueCell(ct.pdcKA.isNotEmpty ? ct.pdcKA : '-'),
               _valueCell(ct.icc3Max.isNotEmpty ? ct.icc3Max : '-'),

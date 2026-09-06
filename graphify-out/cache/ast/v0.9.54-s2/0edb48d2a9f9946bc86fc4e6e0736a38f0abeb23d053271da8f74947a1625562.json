@@ -1,0 +1,1 @@
+{"nodes": [{"id": "$graphify-root$_agents_rules_mobiletestrule_md", "label": "mobiletestrule.md", "file_type": "document", "node_kind": "page", "source_file": ".agents/rules/mobiletestrule.md", "source_location": "L1", "frontmatter": {"trigger": "always_on"}}], "edges": [], "input_tokens": 0, "output_tokens": 0}

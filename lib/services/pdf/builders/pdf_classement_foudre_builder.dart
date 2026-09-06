@@ -99,7 +99,7 @@ class PdfClassementFoudreBuilder {
 
   static String _normalizeText(String text) {
     if (text.isEmpty) return text;
-    text = text.replaceAll(RegExp(r'§\\s*'), 'art ');
+    text = text.replaceAll(RegExp(r'§\s*'), 'art ');
 
     const replacements = <String, String>{
       '«': '"', '»': '"', '“': '"', '”': '"',

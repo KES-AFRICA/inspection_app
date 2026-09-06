@@ -31,6 +31,12 @@ class PdfReportStyles {
   static final PdfColor sansObjetColor = PdfColor.fromInt(0xFFEEEEEE);
 
   // ──────────────────────────────────────────────────────────────
+  //  POLICES DE CARACTÈRES
+  // ──────────────────────────────────────────────────────────────
+  static pw.Font fontRegular = pw.Font.helvetica();
+  static pw.Font fontBold = pw.Font.helveticaBold();
+
+  // ──────────────────────────────────────────────────────────────
   //  TAILLES DE POLICE
   // ──────────────────────────────────────────────────────────────
   static const double fsH1 = 12.0;
@@ -666,8 +672,8 @@ class PdfReportStyles {
   static String formatConcentrationTitle(String rawTitle) {
     final trimmed = rawTitle.trim();
     if (trimmed.isEmpty) return '3. Concentration du risque';
-    if (RegExp(r'^3\\.\\s*').hasMatch(trimmed)) return trimmed;
-    return '3. ';
+    if (RegExp(r'^3\.\s*').hasMatch(trimmed)) return trimmed;
+    return '3. $trimmed';
   }
 
   static pw.Widget buildMultiLineValueWidget(
