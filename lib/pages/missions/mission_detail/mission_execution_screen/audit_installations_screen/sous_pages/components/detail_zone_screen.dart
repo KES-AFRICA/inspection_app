@@ -44,13 +44,9 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
 
   // Listes combinées (brouillons + coffrets existants)
   List<CoffretArmoire> _coffretsDirects = [];
-  List<CoffretArmoire> _coffretsDansLocaux =
-      []; // Pour les coffrets dans les locaux
 
   // Pour les nouvelles observations
   final _nouvelleObservationController = TextEditingController();
-  List<String> _photosPourNouvelleObservation = [];
-  bool _isLoadingObservationPhotos = false;
 
   @override
   void initState() {
@@ -84,20 +80,6 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
 
     setState(() {
       _coffretsDirects = [...uniqueDrafts, ...savedCoffrets];
-    });
-  }
-
-  void _loadCoffretsDansLocaux() {
-    final allCoffretsInLocaux = <CoffretArmoire>[];
-
-    for (var local in _zone.locaux) {
-      // Coffrets existants dans ce local
-      final savedCoffrets = List<CoffretArmoire>.from(local.coffrets);
-      allCoffretsInLocaux.addAll(savedCoffrets);
-    }
-
-    setState(() {
-      _coffretsDansLocaux = allCoffretsInLocaux;
     });
   }
 
@@ -470,57 +452,8 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
   // ===== MÉTHODES POUR GESTION DES OBSERVATIONS =====
 
   // Méthode pour ajouter une photo à une observation
-  Future<void> _ajouterPhotoAObservation(List<String> photosList) async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.camera,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-
-      if (photo != null) {
-        await GalleryPhotoService.saveToGallery(File(photo.path));
-        final savedPath = await _savePhotoToAppDirectory(
-          File(photo.path),
-          'observations_zones',
-        );
-        setState(() {
-          photosList.add(savedPath);
-        });
-      }
-    } catch (e) {
-      _showError('Erreur lors de la prise de photo: $e');
-    }
-  }
-
-  Future<void> _choisirPhotoObservationDepuisGalerie(
-    List<String> photosList,
-  ) async {
-    try {
-      final XFile? photo = await _picker.pickImage(
-        source: ImageSource.gallery,
-        imageQuality: 85,
-        maxWidth: 1024,
-        maxHeight: 1024,
-      );
-
-      if (photo != null) {
-        final savedPath = await _savePhotoToAppDirectory(
-          File(photo.path),
-          'observations_zones',
-        );
-        setState(() {
-          photosList.add(savedPath);
-        });
-      }
-    } catch (e) {
-      _showError('Erreur lors de la sélection: $e');
-    }
-  }
-
   void _ajouterObservation() async {
-    final result = await Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => ObservationScreen(
@@ -839,10 +772,14 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
+              final local = index < _zone.locaux.length ? _zone.locaux[index] : null;
+              final localId = local != null ? (local as dynamic).localId : null;
               final success = await HiveService.deleteLocalFromMoyenneTensionZone(
                 missionId: widget.mission.id,
                 zoneIndex: widget.zoneIndex,
                 localIndex: index,
+                zoneId: widget.zone.zoneId,
+                localId: localId,
               );
               final draftKey = HiveService.getStableLocalDraftId(
                 missionId: widget.mission.id,
@@ -947,31 +884,31 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
           TextButton(
             onPressed: () async {
               Navigator.pop(context);
+              final local = index < _zone.locaux.length ? _zone.locaux[index] : null;
+              final localId = local != null ? (local as dynamic).localId : null;
 
-              final audit = await HiveService.getOrCreateAuditInstallations(
-                widget.mission.id,
+              final success = await HiveService.deleteLocalFromBasseTensionZone(
+                missionId: widget.mission.id,
+                zoneIndex: widget.zoneIndex,
+                localIndex: index,
+                zoneId: widget.zone.zoneId,
+                localId: localId,
               );
 
-              if (widget.zoneIndex < audit.basseTensionZones.length) {
-                if (index <
-                    audit.basseTensionZones[widget.zoneIndex].locaux.length) {
-                  audit.basseTensionZones[widget.zoneIndex].locaux.removeAt(
-                    index,
-                  );
-                  await HiveService.saveAuditInstallations(audit);
+              if (success) {
+                final draftKey = HiveService.getStableLocalDraftId(
+                  missionId: widget.mission.id,
+                  isMoyenneTension: false,
+                  zoneIndex: widget.zoneIndex,
+                  isInZone: true,
+                  localIndex: index,
+                );
+                await HiveService.deleteLocalDraft(draftKey);
 
-                  final draftKey = HiveService.getStableLocalDraftId(
-                    missionId: widget.mission.id,
-                    isMoyenneTension: false,
-                    zoneIndex: widget.zoneIndex,
-                    isInZone: true,
-                    localIndex: index,
-                  );
-                  await HiveService.deleteLocalDraft(draftKey);
-
-                  _rechargerZone();
-                  _showSuccess('Local supprimé');
-                }
+                _rechargerZone();
+                _showSuccess('Local supprimé');
+              } else {
+                _showError('Erreur lors de la suppression');
               }
             },
             child: const Text('Supprimer', style: TextStyle(color: Colors.red)),
@@ -1002,84 +939,6 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     }
   }
 
-  void _voirCoffretMT(int index) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DetailCoffretScreen(
-          mission: widget.mission,
-          isMoyenneTension: true,
-          parentType: 'zone_mt',
-          parentIndex: widget.zoneIndex,
-          coffretIndex: index,
-          coffret: _zone.coffrets[index],
-        ),
-      ),
-    ).then((_) => _rechargerZone());
-  }
-
-  void _editerCoffretMT(int index) async {
-    final coffretTarget = _zone.coffrets[index];
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AjouterCoffretScreen(
-          key: ValueKey('edit_coffret_${coffretTarget.equipmentId}'),
-          mission: widget.mission,
-          parentType: 'zone_mt',
-          parentIndex: widget.zoneIndex,
-          isMoyenneTension: true,
-          coffret: coffretTarget,
-          coffretIndex: index,
-        ),
-      ),
-    );
-
-    _rechargerZone();
-  }
-
-  void _supprimerCoffretMT(int index) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer cet Équipement ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-
-              final audit = await HiveService.getOrCreateAuditInstallations(
-                widget.mission.id,
-              );
-
-              if (widget.zoneIndex < audit.moyenneTensionZones.length) {
-                if (index <
-                    audit
-                        .moyenneTensionZones[widget.zoneIndex]
-                        .coffrets
-                        .length) {
-                  audit.moyenneTensionZones[widget.zoneIndex].coffrets.removeAt(
-                    index,
-                  );
-                  await HiveService.saveAuditInstallations(audit);
-
-                  _rechargerZone();
-                  _showSuccess('Équipement supprimé');
-                }
-              }
-            },
-            child: Text('Supprimer', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
-  }
-
   // ===== MÉTHODES POUR COFFRETS DIRECTS DANS ZONES BT =====
 
   void _ajouterCoffretDirectBT() async {
@@ -1099,81 +958,6 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
       _rechargerZone();
       _showSuccess('Équipement ajouté avec succès');
     }
-  }
-
-  void _voirCoffretDirectBT(int index) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => DetailCoffretScreen(
-          mission: widget.mission,
-          isMoyenneTension: false,
-          parentType: 'zone_bt',
-          parentIndex: widget.zoneIndex,
-          coffretIndex: index,
-          coffret: _zone.coffretsDirects[index],
-        ),
-      ),
-    ).then((_) => _rechargerZone());
-  }
-
-  void _editerCoffretDirectBT(int index) async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => AjouterCoffretScreen(
-          mission: widget.mission,
-          parentType: 'zone_bt',
-          parentIndex: widget.zoneIndex,
-          isMoyenneTension: false,
-          coffret: _zone.coffretsDirects[index],
-          coffretIndex: index,
-        ),
-      ),
-    );
-
-    _rechargerZone();
-  }
-
-  void _supprimerCoffretDirectBT(int index) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Confirmer la suppression'),
-        content: Text('Voulez-vous vraiment supprimer ce Équipement ?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () async {
-              Navigator.pop(context);
-
-              final audit = await HiveService.getOrCreateAuditInstallations(
-                widget.mission.id,
-              );
-
-              if (widget.zoneIndex < audit.basseTensionZones.length) {
-                if (index <
-                    audit
-                        .basseTensionZones[widget.zoneIndex]
-                        .coffretsDirects
-                        .length) {
-                  audit.basseTensionZones[widget.zoneIndex].coffretsDirects
-                      .removeAt(index);
-                  await HiveService.saveAuditInstallations(audit);
-
-                  _rechargerZone();
-                  _showSuccess('Équipement supprimé');
-                }
-              }
-            },
-            child: Text('Supprimer', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
-    );
   }
 
   // ===== MÉTHODES COMMUNES =====
@@ -2019,7 +1803,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
         ? _zone.coffrets.indexWhere((c) => c.equipmentId == coffret.equipmentId)
         : _zone.coffretsDirects.indexWhere((c) => c.equipmentId == coffret.equipmentId);
 
-    final result = await Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AjouterCoffretScreen(
@@ -2114,7 +1898,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
 
   // Ouvrir un brouillon pour continuer
   void _ouvrirBrouillon(CoffretArmoire draft) async {
-    final result = await Navigator.push(
+    await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => AjouterCoffretScreen(
@@ -2724,36 +2508,6 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
     if (result == true) {
       _rechargerZone();
     }
-  }
-
-  void _supprimerBrouillonLocal(String? draftId, String nomLocal) {
-    if (draftId == null) return;
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Supprimer le brouillon'),
-        content: Text(
-          'Voulez-vous vraiment supprimer le brouillon "$nomLocal" ?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Annuler'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              await HiveService.deleteLocalDraft(draftId);
-              _rechargerZone();
-              _showSuccess('Brouillon supprimé');
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('Supprimer'),
-          ),
-        ],
-      ),
-    );
   }
 
   @override

@@ -12,24 +12,39 @@ class PersistenceQueue {
 
   /// Exécute [action] de manière strictement séquentielle pour la [key] donnée.
   ///
-  /// Si une opération est déjà en cours pour cette clé, [action] attendra
-  /// sa complétion (qu'elle réussisse ou échoue) avant de démarrer.
+  /// Supporte la réentrance : si l'action courante pour [key] appelle
+  /// elle-même [enqueue] avec la même [key], l'appel imbriqué s'exécute immédiatement
+  /// sans se bloquer lui-même dans la file.
   static Future<T> enqueue<T>(String key, Future<T> Function() action) {
+    final activeKeys =
+        Zone.current[#_activePersistenceKeys] as Set<String>? ?? const {};
+    if (activeKeys.contains(key)) {
+      // Déjà dans le contexte d'exécution de cette clé -> exécution directe réentrante
+      return action();
+    }
+
     final previousFuture = _queues[key] ?? Future.value(null);
     final completer = Completer<T>();
 
     _queues[key] = previousFuture.then((_) async {
-      try {
-        final result = await action();
-        completer.complete(result);
-        return result;
-      } catch (e, st) {
-        if (kDebugMode) {
-          print('❌ [PersistenceQueue] Erreur pendant l\'exécution pour la clé "$key": $e');
-        }
-        completer.completeError(e, st);
-        return null;
-      }
+      return runZoned(
+        () async {
+          try {
+            final result = await action();
+            completer.complete(result);
+            return result;
+          } catch (e, st) {
+            if (kDebugMode) {
+              print('❌ [PersistenceQueue] Erreur pendant l\'exécution pour la clé "$key": $e');
+            }
+            completer.completeError(e, st);
+            return null;
+          }
+        },
+        zoneValues: {
+          #_activePersistenceKeys: {...activeKeys, key},
+        },
+      );
     }).catchError((e) {
       // Ignorer l'erreur précédente pour ne pas bloquer les actions suivantes
       return null;

@@ -2813,7 +2813,6 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     }
     
     widget.onCellulesChanged(nouvellesCellules);
-    widget.onDataChanged();
     
     setState(() {
       _isEditing = false;
@@ -2849,7 +2848,6 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     if (confirm == true) {
       final nouvellesCellules = List<Cellule>.from(widget.cellules)..removeAt(index);
       widget.onCellulesChanged(nouvellesCellules);
-      widget.onDataChanged();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Cellule supprimée'), backgroundColor: Colors.green, duration: Duration(seconds: 1)),
@@ -2999,7 +2997,6 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     }
     
     widget.onTransformateursChanged(nouveauxTransformateurs);
-    widget.onDataChanged();
     
     setState(() {
       _isEditing = false;
@@ -3035,7 +3032,6 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     if (confirm == true) {
       final nouveauxTransformateurs = List<TransformateurMTBT>.from(widget.transformateurs)..removeAt(index);
       widget.onTransformateursChanged(nouveauxTransformateurs);
-      widget.onDataChanged();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Transformateur supprimé'), backgroundColor: Colors.green, duration: Duration(seconds: 1)),
@@ -5171,74 +5167,38 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       }
 
       dynamic nouveauLocal;
-      final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+      final String localId = (widget.local != null)
+          ? (widget.local as dynamic).localId
+          : (_draftLocalId ?? 'local_${DateTime.now().microsecondsSinceEpoch}');
 
       if (widget.isMoyenneTension) {
         final localData = _creerMoyenneTensionLocal();
-        if (widget.isInZone && widget.zoneIndex != null) {
-          final zone = audit.moyenneTensionZones[widget.zoneIndex!];
-          int targetIndex = _resolvedLocalIndex ?? zone.locaux.indexWhere((l) => l.nom.trim() == localData.nom.trim());
-          if (targetIndex != -1 && targetIndex < zone.locaux.length) {
-            await HiveService.updateLocalInMoyenneTensionZone(
-              missionId: widget.mission.id,
-              zoneIndex: widget.zoneIndex!,
-              localIndex: targetIndex,
-              local: localData,
-            );
-            _resolvedLocalIndex = targetIndex;
-          } else {
-            await HiveService.addLocalToMoyenneTensionZone(
-              missionId: widget.mission.id,
-              zoneIndex: widget.zoneIndex!,
-              local: localData,
-            );
-            final updatedAudit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-            _resolvedLocalIndex = updatedAudit.moyenneTensionZones[widget.zoneIndex!].locaux.length - 1;
-          }
-          nouveauLocal = localData;
-        } else {
-          int targetIndex = _resolvedLocalIndex ?? audit.moyenneTensionLocaux.indexWhere((l) => l.nom.trim() == localData.nom.trim());
-          if (targetIndex != -1 && targetIndex < audit.moyenneTensionLocaux.length) {
-            await HiveService.updateMoyenneTensionLocal(
-              missionId: widget.mission.id,
-              localIndex: targetIndex,
-              local: localData,
-            );
-            _resolvedLocalIndex = targetIndex;
-          } else {
-            await HiveService.addMoyenneTensionLocal(
-              missionId: widget.mission.id,
-              local: localData,
-            );
-            final updatedAudit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-            _resolvedLocalIndex = updatedAudit.moyenneTensionLocaux.length - 1;
-          }
-          nouveauLocal = localData;
-        }
+        localData.id = localId;
+
+        await HiveService.updateLocalById(
+          missionId: widget.mission.id,
+          localId: localId,
+          updatedLocal: localData,
+          isMoyenneTension: true,
+          isInZone: widget.isInZone,
+          fallbackZoneIndex: widget.zoneIndex,
+          fallbackLocalIndex: _resolvedLocalIndex,
+        );
+        nouveauLocal = localData;
       } else {
         final localData = _creerBasseTensionLocal();
-        if (widget.zoneIndex != null) {
-          final zone = audit.basseTensionZones[widget.zoneIndex!];
-          int targetIndex = _resolvedLocalIndex ?? zone.locaux.indexWhere((l) => l.nom.trim() == localData.nom.trim());
-          if (targetIndex != -1 && targetIndex < zone.locaux.length) {
-            await HiveService.updateBasseTensionLocal(
-              missionId: widget.mission.id,
-              zoneIndex: widget.zoneIndex!,
-              localIndex: targetIndex,
-              local: localData,
-            );
-            _resolvedLocalIndex = targetIndex;
-          } else {
-            await HiveService.addLocalToBasseTensionZone(
-              missionId: widget.mission.id,
-              zoneIndex: widget.zoneIndex!,
-              local: localData,
-            );
-            final updatedAudit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-            _resolvedLocalIndex = updatedAudit.basseTensionZones[widget.zoneIndex!].locaux.length - 1;
-          }
-          nouveauLocal = localData;
-        }
+        localData.id = localId;
+
+        await HiveService.updateLocalById(
+          missionId: widget.mission.id,
+          localId: localId,
+          updatedLocal: localData,
+          isMoyenneTension: false,
+          isInZone: true,
+          fallbackZoneIndex: widget.zoneIndex,
+          fallbackLocalIndex: _resolvedLocalIndex,
+        );
+        nouveauLocal = localData;
       }
 
       // Synchronisation directe vers DescriptionInstallations
@@ -5378,7 +5338,14 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
 
   // Créer un local MT avec un type spécifié
   MoyenneTensionLocal _creerMoyenneTensionLocalAvecType(String type) {
+    final now = DateTime.now().toUtc();
+    final existingLocal = widget.isEdition && widget.local is MoyenneTensionLocal
+        ? (widget.local as MoyenneTensionLocal)
+        : null;
     return MoyenneTensionLocal(
+      id: existingLocal?.localId,
+      createdAt: existingLocal?.createdAt ?? (widget.isEdition ? null : now),
+      updatedAt: now,
       nom: _nomController.text.trim().isEmpty ? 'Sans nom' : _nomController.text.trim(),
       type: type,
       dispositionsConstructives: _dispositionsConstructives,
@@ -5387,6 +5354,9 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
       photos: _localPhotos,
       cellules: _cellules,
       transformateurs: _transformateurs,
+      coffrets: widget.isEdition && widget.local is MoyenneTensionLocal
+          ? (widget.local as MoyenneTensionLocal).coffrets
+          : [],
       accessible: _accessible ?? true,
       aReverifier: (_accessible == false),
       isRiskZone: _isRiskZone,
@@ -6178,30 +6148,33 @@ class _AjouterLocalScreenState extends State<AjouterLocalScreen> {
   /// Supprime le local inaccessible de Hive dès que l'utilisateur le marque accessible.
   /// Le brouillon prend le relai et devient le seul élément visible dans la liste.
   Future<void> _supprimerLocalOriginalPourReverification() async {
-    if (widget.localIndex == null) return;
+    if (widget.localIndex == null && widget.local == null) return;
     try {
-      final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
+      final localId = widget.local?.localId;
       if (widget.isMoyenneTension) {
         if (widget.isInZone && widget.zoneIndex != null) {
-          final zone = audit.moyenneTensionZones[widget.zoneIndex!];
-          if (widget.localIndex! < zone.locaux.length) {
-            zone.locaux.removeAt(widget.localIndex!);
-            await HiveService.saveAuditInstallations(audit);
-          }
+          await HiveService.deleteLocalFromZone(
+            missionId: widget.mission.id,
+            isMoyenneTension: true,
+            zoneIndex: widget.zoneIndex,
+            localIndex: widget.localIndex,
+            localId: localId,
+          );
         } else {
-          if (widget.localIndex! < audit.moyenneTensionLocaux.length) {
-            audit.moyenneTensionLocaux.removeAt(widget.localIndex!);
-            await HiveService.saveAuditInstallations(audit);
-          }
+          await HiveService.deleteMoyenneTensionLocal(
+            missionId: widget.mission.id,
+            localIndex: widget.localIndex ?? 0,
+            localId: localId,
+          );
         }
       } else {
-        if (widget.zoneIndex != null &&
-            widget.zoneIndex! < audit.basseTensionZones.length) {
-          final zone = audit.basseTensionZones[widget.zoneIndex!];
-          if (widget.localIndex! < zone.locaux.length) {
-            zone.locaux.removeAt(widget.localIndex!);
-            await HiveService.saveAuditInstallations(audit);
-          }
+        if (widget.zoneIndex != null) {
+          await HiveService.deleteLocalFromBasseTensionZone(
+            missionId: widget.mission.id,
+            zoneIndex: widget.zoneIndex!,
+            localIndex: widget.localIndex ?? 0,
+            localId: localId,
+          );
         }
       }
       if (kDebugMode) print('✅ Local inaccessible supprimé pour révérification');

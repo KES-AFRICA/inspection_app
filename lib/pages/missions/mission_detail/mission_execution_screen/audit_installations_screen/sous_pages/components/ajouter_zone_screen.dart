@@ -923,6 +923,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
         
         if (widget.isMoyenneTension) {
           zone = MoyenneTensionZone(
+            id: widget.isEdition ? widget.zone.zoneId : null,
             nom: _nomController.text.trim(),
             coffrets: widget.isEdition ? widget.zone.coffrets : [],
             observationsLibres: _observationsExistantes,
@@ -932,6 +933,7 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
           );
         } else {
           zone = BasseTensionZone(
+            id: widget.isEdition ? widget.zone.zoneId : null,
             nom: _nomController.text.trim(),
             locaux: widget.isEdition ? widget.zone.locaux : [],
             coffretsDirects: widget.isEdition ? widget.zone.coffretsDirects : [],
@@ -1014,25 +1016,13 @@ class _AjouterZoneScreenState extends State<AjouterZoneScreen> {
   }
 
   Future<bool> _updateZone(dynamic zone) async {
-    try {
-      final audit = await HiveService.getOrCreateAuditInstallations(widget.mission.id);
-      
-      if (widget.isMoyenneTension) {
-        if (widget.zoneIndex! < audit.moyenneTensionZones.length) {
-          audit.moyenneTensionZones[widget.zoneIndex!] = zone;
-        }
-      } else {
-        if (widget.zoneIndex! < audit.basseTensionZones.length) {
-          audit.basseTensionZones[widget.zoneIndex!] = zone;
-        }
-      }
-      
-      await HiveService.saveAuditInstallations(audit);
-      return true;
-    } catch (e) {
-      print('❌ Erreur updateZone: $e');
-      return false;
-    }
+    return await HiveService.updateZoneById(
+      missionId: widget.mission.id,
+      zoneId: widget.zone.zoneId,
+      updatedZone: zone,
+      isMoyenneTension: widget.isMoyenneTension,
+      fallbackIndex: widget.zoneIndex,
+    );
   }
 
   Widget _buildTextField(TextEditingController controller, String label, {bool isMultiline = false, bool isRequired = false}) {

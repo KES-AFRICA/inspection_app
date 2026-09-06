@@ -916,12 +916,23 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
             if (widget.isInZone && widget.zoneIndex != null) {
               if (widget.zoneIndex! < audit.moyenneTensionZones.length) {
                 final zone = audit.moyenneTensionZones[widget.zoneIndex!];
-                if (widget.localIndex < zone.locaux.length) {
+                final idx = zone.locaux.indexWhere(
+                  (l) => l.localId == _local.localId || l.id == _local.localId,
+                );
+                if (idx != -1) {
+                  _local = zone.locaux[idx];
+                } else if (widget.localIndex < zone.locaux.length) {
                   _local = zone.locaux[widget.localIndex];
                 }
               }
             } else {
-              if (widget.localIndex < audit.moyenneTensionLocaux.length) {
+              final idx = audit.moyenneTensionLocaux.indexWhere(
+                (l) => l.localId == _local.localId || l.id == _local.localId,
+              );
+              if (idx != -1) {
+                _local = audit.moyenneTensionLocaux[idx];
+              } else if (widget.localIndex <
+                  audit.moyenneTensionLocaux.length) {
                 _local = audit.moyenneTensionLocaux[widget.localIndex];
               }
             }
@@ -929,7 +940,12 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
             if (widget.zoneIndex != null &&
                 widget.zoneIndex! < audit.basseTensionZones.length) {
               final zone = audit.basseTensionZones[widget.zoneIndex!];
-              if (widget.localIndex < zone.locaux.length) {
+              final idx = zone.locaux.indexWhere(
+                (l) => l.localId == _local.localId || l.id == _local.localId,
+              );
+              if (idx != -1) {
+                _local = zone.locaux[idx];
+              } else if (widget.localIndex < zone.locaux.length) {
                 _local = zone.locaux[widget.localIndex];
               }
             }
@@ -1051,37 +1067,15 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
 
   Future<void> _sauvegarderLocal() async {
     try {
-      final audit = await HiveService.getOrCreateAuditInstallations(
-        widget.mission.id,
+      await HiveService.updateLocalById(
+        missionId: widget.mission.id,
+        localId: _local.localId,
+        updatedLocal: _local,
+        isMoyenneTension: widget.isMoyenneTension,
+        isInZone: widget.isInZone,
+        fallbackZoneIndex: widget.zoneIndex,
+        fallbackLocalIndex: widget.localIndex,
       );
-
-      if (widget.isMoyenneTension) {
-        if (widget.isInZone && widget.zoneIndex != null) {
-          // Local dans une zone MT
-          if (widget.zoneIndex! < audit.moyenneTensionZones.length) {
-            final zone = audit.moyenneTensionZones[widget.zoneIndex!];
-            if (widget.localIndex < zone.locaux.length) {
-              zone.locaux[widget.localIndex] = _local;
-            }
-          }
-        } else {
-          // Local MT indépendant
-          if (widget.localIndex < audit.moyenneTensionLocaux.length) {
-            audit.moyenneTensionLocaux[widget.localIndex] = _local;
-          }
-        }
-      } else {
-        // Pour basse tension (toujours dans une zone)
-        if (widget.zoneIndex != null &&
-            widget.zoneIndex! < audit.basseTensionZones.length) {
-          final zone = audit.basseTensionZones[widget.zoneIndex!];
-          if (widget.localIndex < zone.locaux.length) {
-            zone.locaux[widget.localIndex] = _local;
-          }
-        }
-      }
-
-      await HiveService.saveAuditInstallations(audit);
     } catch (e) {
       print('❌ Erreur sauvegarderLocal: $e');
       throw e;
@@ -2050,35 +2044,75 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
               bool saved = false;
               if (widget.isMoyenneTension) {
                 if (widget.isInZone && widget.zoneIndex != null) {
-                  final zone = audit.moyenneTensionZones[widget.zoneIndex!];
-                  final local = zone.locaux[widget.localIndex];
-                  final idx = local.coffrets.indexWhere(
-                    (c) => c.equipmentId == coffretTarget.equipmentId,
-                  );
-                  if (idx >= 0) {
-                    local.coffrets.removeAt(idx);
-                    saved = true;
+                  MoyenneTensionZone? zone;
+                  if (widget.zoneIndex! < audit.moyenneTensionZones.length) {
+                    zone = audit.moyenneTensionZones[widget.zoneIndex!];
+                  }
+                  if (zone != null) {
+                    final targetLocalIdx = zone.locaux.indexWhere(
+                      (l) =>
+                          l.localId == _local.localId ||
+                          l.id == _local.localId,
+                    );
+                    final local = (targetLocalIdx != -1)
+                        ? zone.locaux[targetLocalIdx]
+                        : (widget.localIndex < zone.locaux.length
+                            ? zone.locaux[widget.localIndex]
+                            : null);
+                    if (local != null) {
+                      final idx = local.coffrets.indexWhere(
+                        (c) => c.equipmentId == coffretTarget.equipmentId,
+                      );
+                      if (idx >= 0) {
+                        local.coffrets.removeAt(idx);
+                        saved = true;
+                      }
+                    }
                   }
                 } else {
-                  final local = audit.moyenneTensionLocaux[widget.localIndex];
-                  final idx = local.coffrets.indexWhere(
-                    (c) => c.equipmentId == coffretTarget.equipmentId,
+                  final targetLocalIdx = audit.moyenneTensionLocaux.indexWhere(
+                    (l) =>
+                        l.localId == _local.localId ||
+                        l.id == _local.localId,
                   );
-                  if (idx >= 0) {
-                    local.coffrets.removeAt(idx);
-                    saved = true;
+                  final local = (targetLocalIdx != -1)
+                      ? audit.moyenneTensionLocaux[targetLocalIdx]
+                      : (widget.localIndex <
+                              audit.moyenneTensionLocaux.length
+                          ? audit.moyenneTensionLocaux[widget.localIndex]
+                          : null);
+                  if (local != null) {
+                    final idx = local.coffrets.indexWhere(
+                      (c) => c.equipmentId == coffretTarget.equipmentId,
+                    );
+                    if (idx >= 0) {
+                      local.coffrets.removeAt(idx);
+                      saved = true;
+                    }
                   }
                 }
               } else {
-                if (widget.zoneIndex != null) {
+                if (widget.zoneIndex != null &&
+                    widget.zoneIndex! < audit.basseTensionZones.length) {
                   final zone = audit.basseTensionZones[widget.zoneIndex!];
-                  final local = zone.locaux[widget.localIndex];
-                  final idx = local.coffrets.indexWhere(
-                    (c) => c.equipmentId == coffretTarget.equipmentId,
+                  final targetLocalIdx = zone.locaux.indexWhere(
+                    (l) =>
+                        l.localId == _local.localId ||
+                        l.id == _local.localId,
                   );
-                  if (idx >= 0) {
-                    local.coffrets.removeAt(idx);
-                    saved = true;
+                  final local = (targetLocalIdx != -1)
+                      ? zone.locaux[targetLocalIdx]
+                      : (widget.localIndex < zone.locaux.length
+                          ? zone.locaux[widget.localIndex]
+                          : null);
+                  if (local != null) {
+                    final idx = local.coffrets.indexWhere(
+                      (c) => c.equipmentId == coffretTarget.equipmentId,
+                    );
+                    if (idx >= 0) {
+                      local.coffrets.removeAt(idx);
+                      saved = true;
+                    }
                   }
                 }
               }

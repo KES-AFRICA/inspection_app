@@ -1400,20 +1400,33 @@ static Future<AuditInstallationsElectriques> getOrCreateAuditInstallations(Strin
     AuditInstallationsElectriques audit, {
     bool skipDescriptionSync = false,
   }) async {
-    final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
-    audit.updatedAt = DateTime.now();
-    
-    if (!skipDescriptionSync) {
-      try {
-        await InstallationDescriptionSyncService.syncAuditToDescription(audit);
-      } catch (e) {
-        if (kDebugMode) {
-          print('❌ Erreur de synchronisation Audit ↔ Description: $e');
+    return PersistenceQueue.enqueue('audit_${audit.missionId}', () async {
+      final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
+      audit.updatedAt = DateTime.now();
+
+      if (!skipDescriptionSync) {
+        try {
+          await InstallationDescriptionSyncService.syncAuditToDescription(audit);
+        } catch (e) {
+          if (kDebugMode) {
+            print('❌ Erreur de synchronisation Audit ↔ Description: $e');
+          }
         }
       }
-    }
 
-    await audit.save();
+      if (audit.isInBox) {
+        await audit.save();
+      } else {
+        final idx = box.values
+            .toList()
+            .indexWhere((a) => a.missionId == audit.missionId);
+        if (idx != -1) {
+          await box.putAt(idx, audit);
+        } else {
+          await box.add(audit);
+        }
+      }
+    });
   }
 
 /// Synchroniser toutes les missions existantes (migration)
@@ -2475,185 +2488,615 @@ static Future<bool> addLocalToBasseTensionZone({
   }
 }
 
-/// Mettre à jour un local moyenne tension
-static Future<bool> updateMoyenneTensionLocal({
-  required String missionId,
-  required int localIndex,
-  required MoyenneTensionLocal local,
-}) async {
-  try {
-    final audit = await getOrCreateAuditInstallations(missionId);
-    if (localIndex < audit.moyenneTensionLocaux.length) {
-      audit.moyenneTensionLocaux[localIndex] = local;
-      await saveAuditInstallations(audit);
-      return true;
-    }
-    return false;
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Erreur updateMoyenneTensionLocal: $e');
-    }
-    return false;
-  }
-}
+  /// Mettre à jour une zone par son ID avec préservation et fusion atomique des enfants
+  static Future<bool> updateZoneById({
+    required String missionId,
+    required String zoneId,
+    required dynamic updatedZone,
+    required bool isMoyenneTension,
+    int? fallbackIndex,
+  }) async {
+    return PersistenceQueue.enqueue('audit_$missionId', () async {
+      try {
+        final audit = await getOrCreateAuditInstallations(missionId);
+        if (isMoyenneTension) {
+          int targetIdx = audit.moyenneTensionZones.indexWhere(
+            (z) =>
+                (z.id != null && z.id == zoneId) ||
+                z.zoneId == zoneId ||
+                z.nom.trim() == (updatedZone as MoyenneTensionZone).nom.trim(),
+          );
+          if (targetIdx == -1 &&
+              fallbackIndex != null &&
+              fallbackIndex < audit.moyenneTensionZones.length) {
+            targetIdx = fallbackIndex;
+          }
+          if (targetIdx == -1) return false;
 
-/// Mettre à jour une zone moyenne tension
-static Future<bool> updateMoyenneTensionZone({
-  required String missionId,
-  required int zoneIndex,
-  required MoyenneTensionZone zone,
-}) async {
-  try {
-    final audit = await getOrCreateAuditInstallations(missionId);
-    if (zoneIndex < audit.moyenneTensionZones.length) {
-      audit.moyenneTensionZones[zoneIndex] = zone;
-      await saveAuditInstallations(audit);
-      return true;
-    }
-    return false;
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Erreur updateMoyenneTensionZone: $e');
-    }
-    return false;
-  }
-}
+          final target = audit.moyenneTensionZones[targetIdx];
+          final mtZone = updatedZone as MoyenneTensionZone;
+          mtZone.id = target.zoneId;
 
-/// Mettre à jour une zone basse tension
-static Future<bool> updateBasseTensionZone({
-  required String missionId,
-  required int zoneIndex,
-  required BasseTensionZone zone,
-}) async {
-  try {
-    final audit = await getOrCreateAuditInstallations(missionId);
-    if (zoneIndex < audit.basseTensionZones.length) {
-      audit.basseTensionZones[zoneIndex] = zone;
-      await saveAuditInstallations(audit);
-      return true;
-    }
-    return false;
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Erreur updateBasseTensionZone: $e');
-    }
-    return false;
-  }
-}
+          // Fusion protectrice des locaux enfants
+          if (target.locaux.isNotEmpty) {
+            if (mtZone.locaux.isEmpty) {
+              mtZone.locaux = target.locaux;
+            } else {
+              final incomingIds = {for (var l in mtZone.locaux) l.localId};
+              for (var l in target.locaux) {
+                if (!incomingIds.contains(l.localId)) {
+                  mtZone.locaux.add(l);
+                }
+              }
+            }
+          }
 
-/// Mettre à jour un local basse tension
-static Future<bool> updateBasseTensionLocal({
-  required String missionId,
-  required int zoneIndex,
-  required int localIndex,
-  required BasseTensionLocal local,
-}) async {
-  try {
-    final audit = await getOrCreateAuditInstallations(missionId);
-    if (zoneIndex < audit.basseTensionZones.length) {
-      final zone = audit.basseTensionZones[zoneIndex];
-      if (localIndex < zone.locaux.length) {
-        zone.locaux[localIndex] = local;
+          // Fusion protectrice des coffrets enfants
+          if (target.coffrets.isNotEmpty) {
+            if (mtZone.coffrets.isEmpty) {
+              mtZone.coffrets = target.coffrets;
+            } else {
+              final incomingIds = {for (var c in mtZone.coffrets) c.equipmentId};
+              for (var c in target.coffrets) {
+                if (!incomingIds.contains(c.equipmentId)) {
+                  mtZone.coffrets.add(c);
+                }
+              }
+            }
+          }
+
+          audit.moyenneTensionZones[targetIdx] = mtZone;
+        } else {
+          int targetIdx = audit.basseTensionZones.indexWhere(
+            (z) =>
+                (z.id != null && z.id == zoneId) ||
+                z.zoneId == zoneId ||
+                z.nom.trim() == (updatedZone as BasseTensionZone).nom.trim(),
+          );
+          if (targetIdx == -1 &&
+              fallbackIndex != null &&
+              fallbackIndex < audit.basseTensionZones.length) {
+            targetIdx = fallbackIndex;
+          }
+          if (targetIdx == -1) return false;
+
+          final target = audit.basseTensionZones[targetIdx];
+          final btZone = updatedZone as BasseTensionZone;
+          btZone.id = target.zoneId;
+
+          // Fusion protectrice des locaux enfants
+          if (target.locaux.isNotEmpty) {
+            if (btZone.locaux.isEmpty) {
+              btZone.locaux = target.locaux;
+            } else {
+              final incomingIds = {for (var l in btZone.locaux) l.localId};
+              for (var l in target.locaux) {
+                if (!incomingIds.contains(l.localId)) {
+                  btZone.locaux.add(l);
+                }
+              }
+            }
+          }
+
+          // Fusion protectrice des coffrets directs
+          if (target.coffretsDirects.isNotEmpty) {
+            if (btZone.coffretsDirects.isEmpty) {
+              btZone.coffretsDirects = target.coffretsDirects;
+            } else {
+              final incomingIds = {
+                for (var c in btZone.coffretsDirects) c.equipmentId,
+              };
+              for (var c in target.coffretsDirects) {
+                if (!incomingIds.contains(c.equipmentId)) {
+                  btZone.coffretsDirects.add(c);
+                }
+              }
+            }
+          }
+
+          audit.basseTensionZones[targetIdx] = btZone;
+        }
+
         await saveAuditInstallations(audit);
         return true;
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erreur updateZoneById: $e');
+        }
+        return false;
       }
-    }
-    return false;
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Erreur updateBasseTensionLocal: $e');
-    }
-    return false;
+    });
   }
-}
+
+  /// Mettre à jour un local par son ID avec préservation et fusion atomique des enfants
+  static Future<bool> updateLocalById({
+    required String missionId,
+    required String localId,
+    required dynamic updatedLocal,
+    required bool isMoyenneTension,
+    bool isInZone = true,
+    String? zoneId,
+    int? fallbackZoneIndex,
+    int? fallbackLocalIndex,
+  }) async {
+    return PersistenceQueue.enqueue('audit_$missionId', () async {
+      try {
+        final audit = await getOrCreateAuditInstallations(missionId);
+        if (isMoyenneTension) {
+          if (isInZone) {
+            MoyenneTensionZone? targetZone;
+            if (zoneId != null && zoneId.isNotEmpty) {
+              targetZone = audit.moyenneTensionZones
+                  .cast<MoyenneTensionZone?>()
+                  .firstWhere(
+                    (z) => z != null && (z.id == zoneId || z.zoneId == zoneId),
+                    orElse: () => null,
+                  );
+            }
+            if (targetZone == null &&
+                fallbackZoneIndex != null &&
+                fallbackZoneIndex < audit.moyenneTensionZones.length) {
+              targetZone = audit.moyenneTensionZones[fallbackZoneIndex];
+            }
+            if (targetZone == null) return false;
+
+            int targetIdx = targetZone.locaux.indexWhere(
+              (l) =>
+                  (l.id != null && l.id == localId) ||
+                  l.localId == localId ||
+                  l.nom.trim() ==
+                      (updatedLocal as MoyenneTensionLocal).nom.trim(),
+            );
+            if (targetIdx == -1 &&
+                fallbackLocalIndex != null &&
+                fallbackLocalIndex < targetZone.locaux.length) {
+              targetIdx = fallbackLocalIndex;
+            }
+
+            final mtLocal = updatedLocal as MoyenneTensionLocal;
+            if (targetIdx != -1) {
+              final existing = targetZone.locaux[targetIdx];
+              mtLocal.id = existing.localId;
+
+              // Fusion protectrice des coffrets
+              if (existing.coffrets.isNotEmpty) {
+                if (mtLocal.coffrets.isEmpty) {
+                  mtLocal.coffrets = existing.coffrets;
+                } else {
+                  final incomingIds = {
+                    for (var c in mtLocal.coffrets) c.equipmentId,
+                  };
+                  for (var c in existing.coffrets) {
+                    if (!incomingIds.contains(c.equipmentId)) {
+                      mtLocal.coffrets.add(c);
+                    }
+                  }
+                }
+              }
+
+              // Fusion protectrice des cellules
+              if (existing.cellules.isNotEmpty && mtLocal.cellules.isEmpty) {
+                mtLocal.cellules = existing.cellules;
+              }
+              // Fusion protectrice des transformateurs
+              if (existing.transformateurs.isNotEmpty &&
+                  mtLocal.transformateurs.isEmpty) {
+                mtLocal.transformateurs = existing.transformateurs;
+              }
+
+              targetZone.locaux[targetIdx] = mtLocal;
+            } else {
+              targetZone.locaux.add(mtLocal);
+            }
+          } else {
+            // Local MT indépendant
+            int targetIdx = audit.moyenneTensionLocaux.indexWhere(
+              (l) =>
+                  (l.id != null && l.id == localId) ||
+                  l.localId == localId ||
+                  l.nom.trim() ==
+                      (updatedLocal as MoyenneTensionLocal).nom.trim(),
+            );
+            if (targetIdx == -1 &&
+                fallbackLocalIndex != null &&
+                fallbackLocalIndex < audit.moyenneTensionLocaux.length) {
+              targetIdx = fallbackLocalIndex;
+            }
+
+            final mtLocal = updatedLocal as MoyenneTensionLocal;
+            if (targetIdx != -1) {
+              final existing = audit.moyenneTensionLocaux[targetIdx];
+              mtLocal.id = existing.localId;
+
+              if (existing.coffrets.isNotEmpty) {
+                if (mtLocal.coffrets.isEmpty) {
+                  mtLocal.coffrets = existing.coffrets;
+                } else {
+                  final incomingIds = {
+                    for (var c in mtLocal.coffrets) c.equipmentId,
+                  };
+                  for (var c in existing.coffrets) {
+                    if (!incomingIds.contains(c.equipmentId)) {
+                      mtLocal.coffrets.add(c);
+                    }
+                  }
+                }
+              }
+              if (existing.cellules.isNotEmpty && mtLocal.cellules.isEmpty) {
+                mtLocal.cellules = existing.cellules;
+              }
+              if (existing.transformateurs.isNotEmpty &&
+                  mtLocal.transformateurs.isEmpty) {
+                mtLocal.transformateurs = existing.transformateurs;
+              }
+
+              audit.moyenneTensionLocaux[targetIdx] = mtLocal;
+            } else {
+              audit.moyenneTensionLocaux.add(mtLocal);
+            }
+          }
+        } else {
+          // Basse Tension
+          BasseTensionZone? targetZone;
+          if (zoneId != null && zoneId.isNotEmpty) {
+            targetZone = audit.basseTensionZones
+                .cast<BasseTensionZone?>()
+                .firstWhere(
+                  (z) => z != null && (z.id == zoneId || z.zoneId == zoneId),
+                  orElse: () => null,
+                );
+          }
+          if (targetZone == null &&
+              fallbackZoneIndex != null &&
+              fallbackZoneIndex < audit.basseTensionZones.length) {
+            targetZone = audit.basseTensionZones[fallbackZoneIndex];
+          }
+          if (targetZone == null) return false;
+
+          int targetIdx = targetZone.locaux.indexWhere(
+            (l) =>
+                (l.id != null && l.id == localId) ||
+                l.localId == localId ||
+                l.nom.trim() == (updatedLocal as BasseTensionLocal).nom.trim(),
+          );
+          if (targetIdx == -1 &&
+              fallbackLocalIndex != null &&
+              fallbackLocalIndex < targetZone.locaux.length) {
+            targetIdx = fallbackLocalIndex;
+          }
+
+          final btLocal = updatedLocal as BasseTensionLocal;
+          if (targetIdx != -1) {
+            final existing = targetZone.locaux[targetIdx];
+            btLocal.id = existing.localId;
+
+            // Fusion protectrice des coffrets
+            if (existing.coffrets.isNotEmpty) {
+              if (btLocal.coffrets.isEmpty) {
+                btLocal.coffrets = existing.coffrets;
+              } else {
+                final incomingIds = {
+                  for (var c in btLocal.coffrets) c.equipmentId,
+                };
+                for (var c in existing.coffrets) {
+                  if (!incomingIds.contains(c.equipmentId)) {
+                    btLocal.coffrets.add(c);
+                  }
+                }
+              }
+            }
+
+            if (existing.cellules.isNotEmpty && btLocal.cellules.isEmpty) {
+              btLocal.cellules = existing.cellules;
+            }
+            if (existing.transformateurs.isNotEmpty &&
+                btLocal.transformateurs.isEmpty) {
+              btLocal.transformateurs = existing.transformateurs;
+            }
+
+            targetZone.locaux[targetIdx] = btLocal;
+          } else {
+            targetZone.locaux.add(btLocal);
+          }
+        }
+
+        await saveAuditInstallations(audit);
+        return true;
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erreur updateLocalById: $e');
+        }
+        return false;
+      }
+    });
+  }
+
+  /// Supprimer un local d'une zone (MT ou BT) par ID ou index
+  static Future<bool> deleteLocalFromZone({
+    required String missionId,
+    required bool isMoyenneTension,
+    String? zoneId,
+    int? zoneIndex,
+    String? localId,
+    int? localIndex,
+  }) async {
+    return PersistenceQueue.enqueue('audit_$missionId', () async {
+      try {
+        final audit = await getOrCreateAuditInstallations(missionId);
+        if (isMoyenneTension) {
+          MoyenneTensionZone? targetZone;
+          if (zoneId != null && zoneId.isNotEmpty) {
+            targetZone = audit.moyenneTensionZones
+                .cast<MoyenneTensionZone?>()
+                .firstWhere(
+                  (z) => z != null && (z.id == zoneId || z.zoneId == zoneId),
+                  orElse: () => null,
+                );
+          }
+          if (targetZone == null &&
+              zoneIndex != null &&
+              zoneIndex < audit.moyenneTensionZones.length) {
+            targetZone = audit.moyenneTensionZones[zoneIndex];
+          }
+          if (targetZone == null) return false;
+
+          int idx = -1;
+          if (localId != null && localId.isNotEmpty) {
+            idx = targetZone.locaux.indexWhere(
+              (l) => l.id == localId || l.localId == localId,
+            );
+          }
+          if (idx == -1 &&
+              localIndex != null &&
+              localIndex < targetZone.locaux.length) {
+            idx = localIndex;
+          }
+          if (idx != -1) {
+            targetZone.locaux.removeAt(idx);
+            await saveAuditInstallations(audit);
+            return true;
+          }
+        } else {
+          BasseTensionZone? targetZone;
+          if (zoneId != null && zoneId.isNotEmpty) {
+            targetZone = audit.basseTensionZones
+                .cast<BasseTensionZone?>()
+                .firstWhere(
+                  (z) => z != null && (z.id == zoneId || z.zoneId == zoneId),
+                  orElse: () => null,
+                );
+          }
+          if (targetZone == null &&
+              zoneIndex != null &&
+              zoneIndex < audit.basseTensionZones.length) {
+            targetZone = audit.basseTensionZones[zoneIndex];
+          }
+          if (targetZone == null) return false;
+
+          int idx = -1;
+          if (localId != null && localId.isNotEmpty) {
+            idx = targetZone.locaux.indexWhere(
+              (l) => l.id == localId || l.localId == localId,
+            );
+          }
+          if (idx == -1 &&
+              localIndex != null &&
+              localIndex < targetZone.locaux.length) {
+            idx = localIndex;
+          }
+          if (idx != -1) {
+            targetZone.locaux.removeAt(idx);
+            await saveAuditInstallations(audit);
+            return true;
+          }
+        }
+        return false;
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erreur deleteLocalFromZone: $e');
+        }
+        return false;
+      }
+    });
+  }
+
+  /// Supprimer un local basse tension d'une zone
+  static Future<bool> deleteLocalFromBasseTensionZone({
+    required String missionId,
+    required int zoneIndex,
+    required int localIndex,
+    String? zoneId,
+    String? localId,
+  }) async {
+    return await deleteLocalFromZone(
+      missionId: missionId,
+      isMoyenneTension: false,
+      zoneId: zoneId,
+      zoneIndex: zoneIndex,
+      localId: localId,
+      localIndex: localIndex,
+    );
+  }
+
+  /// Supprimer un local moyenne tension indépendant
+  static Future<bool> deleteMoyenneTensionLocal({
+    required String missionId,
+    required int localIndex,
+    String? localId,
+  }) async {
+    return PersistenceQueue.enqueue('audit_$missionId', () async {
+      try {
+        final audit = await getOrCreateAuditInstallations(missionId);
+        int idx = -1;
+        if (localId != null && localId.isNotEmpty) {
+          idx = audit.moyenneTensionLocaux.indexWhere(
+            (l) => l.id == localId || l.localId == localId,
+          );
+        }
+        if (idx == -1 && localIndex < audit.moyenneTensionLocaux.length) {
+          idx = localIndex;
+        }
+        if (idx != -1) {
+          audit.moyenneTensionLocaux.removeAt(idx);
+          await saveAuditInstallations(audit);
+          return true;
+        }
+        return false;
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erreur deleteMoyenneTensionLocal: $e');
+        }
+        return false;
+      }
+    });
+  }
+
+  /// Mettre à jour un local moyenne tension
+  static Future<bool> updateMoyenneTensionLocal({
+    required String missionId,
+    required int localIndex,
+    required MoyenneTensionLocal local,
+    String? localId,
+  }) async {
+    return await updateLocalById(
+      missionId: missionId,
+      localId: localId ?? local.localId,
+      updatedLocal: local,
+      isMoyenneTension: true,
+      isInZone: false,
+      fallbackLocalIndex: localIndex,
+    );
+  }
+
+  /// Mettre à jour une zone moyenne tension
+  static Future<bool> updateMoyenneTensionZone({
+    required String missionId,
+    required int zoneIndex,
+    required MoyenneTensionZone zone,
+    String? zoneId,
+  }) async {
+    return await updateZoneById(
+      missionId: missionId,
+      zoneId: zoneId ?? zone.zoneId,
+      updatedZone: zone,
+      isMoyenneTension: true,
+      fallbackIndex: zoneIndex,
+    );
+  }
+
+  /// Mettre à jour une zone basse tension
+  static Future<bool> updateBasseTensionZone({
+    required String missionId,
+    required int zoneIndex,
+    required BasseTensionZone zone,
+    String? zoneId,
+  }) async {
+    return await updateZoneById(
+      missionId: missionId,
+      zoneId: zoneId ?? zone.zoneId,
+      updatedZone: zone,
+      isMoyenneTension: false,
+      fallbackIndex: zoneIndex,
+    );
+  }
+
+  /// Mettre à jour un local basse tension
+  static Future<bool> updateBasseTensionLocal({
+    required String missionId,
+    required int zoneIndex,
+    required int localIndex,
+    required BasseTensionLocal local,
+    String? zoneId,
+    String? localId,
+  }) async {
+    return await updateLocalById(
+      missionId: missionId,
+      localId: localId ?? local.localId,
+      updatedLocal: local,
+      isMoyenneTension: false,
+      isInZone: true,
+      zoneId: zoneId,
+      fallbackZoneIndex: zoneIndex,
+      fallbackLocalIndex: localIndex,
+    );
+  }
 
 // ============================================================
 //          GESTION LOCAUX DANS LES ZONES MOYENNE TENSION
 // ============================================================
 
-/// Ajouter un local dans une zone moyenne tension
-static Future<bool> addLocalToMoyenneTensionZone({
-  required String missionId,
-  required int zoneIndex,
-  required MoyenneTensionLocal local,
-}) async {
-  try {
-    final audit = await getOrCreateAuditInstallations(missionId);
-    
-    if (zoneIndex < audit.moyenneTensionZones.length) {
-      final zone = audit.moyenneTensionZones[zoneIndex];
-      
-      // S'assurer que la liste est modifiable
-      if (zone.locaux.isEmpty) {
-        zone.locaux = [];
-      }
-      
-      zone.locaux.add(local);
-      await saveAuditInstallations(audit);
-      if (kDebugMode) {
-        print('✅ Local moyenne tension ajouté dans zone: ${local.nom}');
-      }
-      return true;
-    }
-    return false;
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Erreur addLocalToMoyenneTensionZone: $e');
-    }
-    return false;
-  }
-}
+  /// Ajouter un local dans une zone moyenne tension
+  static Future<bool> addLocalToMoyenneTensionZone({
+    required String missionId,
+    required int zoneIndex,
+    required MoyenneTensionLocal local,
+  }) async {
+    return PersistenceQueue.enqueue('audit_$missionId', () async {
+      try {
+        final audit = await getOrCreateAuditInstallations(missionId);
 
-/// Mettre à jour un local dans une zone moyenne tension
-static Future<bool> updateLocalInMoyenneTensionZone({
-  required String missionId,
-  required int zoneIndex,
-  required int localIndex,
-  required MoyenneTensionLocal local,
-}) async {
-  try {
-    final audit = await getOrCreateAuditInstallations(missionId);
-    if (zoneIndex < audit.moyenneTensionZones.length) {
-      final zone = audit.moyenneTensionZones[zoneIndex];
-      if (localIndex < zone.locaux.length) {
-        zone.locaux[localIndex] = local;
-        await saveAuditInstallations(audit);
-        return true;
-      }
-    }
-    return false;
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Erreur updateLocalInMoyenneTensionZone: $e');
-    }
-    return false;
-  }
-}
+        if (zoneIndex < audit.moyenneTensionZones.length) {
+          final zone = audit.moyenneTensionZones[zoneIndex];
 
-/// Supprimer un local d'une zone moyenne tension
-static Future<bool> deleteLocalFromMoyenneTensionZone({
-  required String missionId,
-  required int zoneIndex,
-  required int localIndex,
-}) async {
-  try {
-    final audit = await getOrCreateAuditInstallations(missionId);
-    if (zoneIndex < audit.moyenneTensionZones.length) {
-      final zone = audit.moyenneTensionZones[zoneIndex];
-      if (localIndex < zone.locaux.length) {
-        zone.locaux.removeAt(localIndex);
-        await saveAuditInstallations(audit);
-        return true;
+          if (zone.locaux.isEmpty) {
+            zone.locaux = [];
+          }
+
+          zone.locaux.add(local);
+          await saveAuditInstallations(audit);
+          if (kDebugMode) {
+            print('✅ Local moyenne tension ajouté dans zone: ${local.nom}');
+          }
+          return true;
+        }
+        return false;
+      } catch (e) {
+        if (kDebugMode) {
+          print('❌ Erreur addLocalToMoyenneTensionZone: $e');
+        }
+        return false;
       }
-    }
-    return false;
-  } catch (e) {
-    if (kDebugMode) {
-      print('❌ Erreur deleteLocalFromMoyenneTensionZone: $e');
-    }
-    return false;
+    });
   }
-}
+
+  /// Mettre à jour un local dans une zone moyenne tension
+  static Future<bool> updateLocalInMoyenneTensionZone({
+    required String missionId,
+    required int zoneIndex,
+    required int localIndex,
+    required MoyenneTensionLocal local,
+    String? zoneId,
+    String? localId,
+  }) async {
+    return await updateLocalById(
+      missionId: missionId,
+      localId: localId ?? local.localId,
+      updatedLocal: local,
+      isMoyenneTension: true,
+      isInZone: true,
+      zoneId: zoneId,
+      fallbackZoneIndex: zoneIndex,
+      fallbackLocalIndex: localIndex,
+    );
+  }
+
+  /// Supprimer un local d'une zone moyenne tension
+  static Future<bool> deleteLocalFromMoyenneTensionZone({
+    required String missionId,
+    required int zoneIndex,
+    required int localIndex,
+    String? zoneId,
+    String? localId,
+  }) async {
+    return await deleteLocalFromZone(
+      missionId: missionId,
+      isMoyenneTension: true,
+      zoneId: zoneId,
+      zoneIndex: zoneIndex,
+      localId: localId,
+      localIndex: localIndex,
+    );
+  }
 
 // Récupérer les locaux d'une zone moyenne tension
 static List<MoyenneTensionLocal> getLocauxInMoyenneTensionZone({
