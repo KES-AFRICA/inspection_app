@@ -99,9 +99,13 @@ class PdfPhotosSchemasBuilder {
     if (f != null) _fontRegular = f;
   }
 
+  static pw.Font get fontRegular => _fontRegular;
+
   static set fontBold(pw.Font? f) {
     if (f != null) _fontBold = f;
   }
+
+  static pw.Font get fontBold => _fontBold;
 
   static PdfColor get headerColor => PdfReportStyles.headerColor;
   static PdfColor get accentColor => PdfReportStyles.accentColor;

@@ -5,6 +5,8 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_audit_installations_builder.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_sommaire_builder.dart';
+import 'package:inspec_app/services/pdf/builders/pdf_mesures_essais_builder.dart';
+import 'package:inspec_app/services/pdf/builders/pdf_photos_schemas_builder.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/models/audit_installations_electriques.dart';
 
@@ -22,15 +24,21 @@ void main() {
     PdfAuditInstallationsBuilder.fontBold = robotoBold;
     PdfSommaireBuilder.fontRegular = robotoRegular;
     PdfSommaireBuilder.fontBold = robotoBold;
+    PdfMesuresEssaisBuilder.fontRegular = robotoRegular;
+    PdfMesuresEssaisBuilder.fontBold = robotoBold;
+    PdfPhotosSchemasBuilder.fontRegular = robotoRegular;
+    PdfPhotosSchemasBuilder.fontBold = robotoBold;
   });
 
   group('PDF Character Encoding & Unicode Rendering', () {
     const testChars = [
-      '-', '–', '—', '’', "'", 'É', 'È', 'À', 'Ç', 'é', 'è', 'à', 'ç',
-      'Ω', 'Δ', '≤', '≥', '×', '°', '±', 'Ø', 'µ', '²', '³', '%',
-      '•', '§', 'Icc', 'IΔn', 'IP/IK',
-      'NF C 15-100-1:2024 – art 514',
-      'Erreur d’exploitation / maintenance',
+      "'", '’', '-', '–', '—', 'É', 'È', 'À', 'Ç', 'é', 'è', 'à', 'ç',
+      'Ω', 'Δ', '≤', '≥', '×', '°', '±', 'µ', '²', '³', 'ₙ',
+      "d'isolement", "d’isolement", "lorsqu'elle", "lorsqu’elle", "lorsque",
+      "0,5 MΩ", "IΔn", "Iₙ", "courant différentiel résiduel",
+      "Les mesures de résistance d’isolement par rapport à la terre sont réalisées sous une tension continue de 500 V.",
+      "La valeur mesurée est considérée comme satisfaisante lorsqu’elle est supérieure à 0,5 M ohms.",
+      "Le seuil de déclenchement est considéré comme satisfaisant lorsque la valeur mesurée est comprise entre 0,5 IΔn et IΔn, où IΔn représente le courant différentiel résiduel assigné du dispositif.",
     ];
 
     test('Tous les 27+ caractères et chaînes métier sont supportés dans Roboto sans erreur', () async {
@@ -44,6 +52,56 @@ void main() {
             ),
           ),
           build: (ctx) => testChars.map((s) => pw.Text(s)).toList(),
+        ),
+      );
+
+      final bytes = await doc.save();
+      expect(bytes.isNotEmpty, isTrue);
+    });
+
+    test('normalizeText préserve les caractères Unicode natifs de Roboto sans substitution indésirable', () {
+      expect(PdfReportStyles.normalizeText("0,5 MΩ"), equals("0,5 MΩ"));
+      expect(PdfReportStyles.normalizeText("IΔn"), equals("IΔn"));
+      expect(PdfReportStyles.normalizeText("d’isolement"), equals("d’isolement"));
+      expect(PdfReportStyles.normalizeText("lorsqu’elle"), equals("lorsqu’elle"));
+      expect(PdfReportStyles.normalizeText("10 m²"), equals("10 m²"));
+      expect(PdfReportStyles.normalizeText("± 5%"), equals("± 5%"));
+      expect(PdfReportStyles.normalizeText("≥ 100 kΩ"), equals("≥ 100 kΩ"));
+    });
+
+    test('PdfMesuresEssaisBuilder utilise Roboto et génère la section Conditions de mesure', () async {
+      expect(PdfMesuresEssaisBuilder.fontRegular, isNotNull);
+      expect(PdfMesuresEssaisBuilder.fontBold, isNotNull);
+
+      final doc = pw.Document();
+      doc.addPage(
+        pw.Page(
+          pageTheme: pw.PageTheme(
+            theme: pw.ThemeData.withFont(
+              base: PdfMesuresEssaisBuilder.fontRegular,
+              bold: PdfMesuresEssaisBuilder.fontBold,
+            ),
+          ),
+          build: (ctx) => pw.Column(
+            children: [
+              PdfMesuresEssaisBuilder.buildBlueBoxBanner("Mesure de la résistance d’isolement"),
+              PdfMesuresEssaisBuilder.para([
+                const pw.TextSpan(
+                  text: "Les mesures de résistance d’isolement par rapport à la terre sont réalisées sous une tension continue de 500 V.",
+                ),
+              ]),
+              PdfMesuresEssaisBuilder.para([
+                const pw.TextSpan(
+                  text: "La valeur mesurée est considérée comme satisfaisante lorsqu’elle est supérieure à 0,5 M ohms.",
+                ),
+              ]),
+              PdfMesuresEssaisBuilder.para([
+                const pw.TextSpan(
+                  text: "Le seuil de déclenchement est considéré comme satisfaisant lorsque la valeur mesurée est comprise entre 0,5 IΔn et IΔn, où IΔn représente le courant différentiel résiduel assigné du dispositif.",
+                ),
+              ]),
+            ],
+          ),
         ),
       );
 

@@ -45,6 +45,7 @@ export 'pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/pdf_footer_builder.dart';
 import '../../components/safe_file_image.dart';
 import '../ai/executive_summary_data.dart';
+import '../ai/executive_summary_snapshot.dart';
 import '../ai/mission_executive_summary_service.dart';
 
 typedef PdfProgressCallback =
@@ -258,6 +259,10 @@ class PdfReportService {
     PdfAuditInstallationsBuilder.fontBold = _fontBold;
     PdfClassementFoudreBuilder.fontRegular = _fontRegular;
     PdfClassementFoudreBuilder.fontBold = _fontBold;
+    PdfMesuresEssaisBuilder.fontRegular = _fontRegular;
+    PdfMesuresEssaisBuilder.fontBold = _fontBold;
+    PdfPhotosSchemasBuilder.fontRegular = _fontRegular;
+    PdfPhotosSchemasBuilder.fontBold = _fontBold;
   }
 
   // ──────────────────────────────────────────────────────────────
@@ -2924,9 +2929,13 @@ class PdfReportService {
       await Future.delayed(Duration.zero);
     }
 
-    // Récupération réactive du résumé exécutif (avec Fallback 3 Niveaux)
+    // Génération 100% locale et déterministe du résumé exécutif (aucun appel réseau IA)
+    final snapshot = ExecutiveSummarySnapshot.fromMission(missionId);
     final summaryData =
-        await MissionExecutiveSummaryService.getOrGenerateSummary(missionId);
+        MissionExecutiveSummaryService.buildDeterministicFallback(
+          missionId,
+          snapshot,
+        );
 
     final pdfP1_3 = pw.Document(
       title: 'Résumé Exécutif & Stats - ${mission.nomClient}',

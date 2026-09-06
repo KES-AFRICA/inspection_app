@@ -11,6 +11,12 @@ import 'package:inspec_app/services/pdf/builders/pdf_equipements_synthesis_build
 import 'package:inspec_app/services/pdf/builders/pdf_audit_installations_builder.dart';
 import 'package:inspec_app/services/pdf/pdf_page_tracker.dart';
 
+import 'package:inspec_app/services/pdf/builders/pdf_mesures_essais_builder.dart';
+import 'package:inspec_app/services/pdf/builders/pdf_photos_schemas_builder.dart';
+import 'package:inspec_app/services/pdf/builders/pdf_executive_summary_builder.dart';
+import 'package:inspec_app/services/ai/executive_summary_snapshot.dart';
+import 'package:inspec_app/services/ai/mission_executive_summary_service.dart';
+
 void main() {
   late pw.Font robotoRegular;
   late pw.Font robotoBold;
@@ -30,6 +36,12 @@ void main() {
     PdfSommaireBuilder.fontBold = robotoBold;
     PdfEquipementsSynthesisBuilder.fontRegular = robotoRegular;
     PdfEquipementsSynthesisBuilder.fontBold = robotoBold;
+    PdfMesuresEssaisBuilder.fontRegular = robotoRegular;
+    PdfMesuresEssaisBuilder.fontBold = robotoBold;
+    PdfPhotosSchemasBuilder.fontRegular = robotoRegular;
+    PdfPhotosSchemasBuilder.fontBold = robotoBold;
+    PdfExecutiveSummaryBuilder.fontRegular = robotoRegular;
+    PdfExecutiveSummaryBuilder.fontBold = robotoBold;
   });
 
   group('Simulation de génération PDF & Résolution Sommaire', () {
@@ -184,6 +196,109 @@ void main() {
       expect(trackedPages[mtEntry.key], equals(3));
       expect(trackedPages[btEntry.key], equals(4));
       expect(trackedPages[sigEntry.key], equals(5));
+    });
+
+    test('Résumé Exécutif 100% local et déterministe généré sans appel réseau ni IA', () async {
+      final mission = Mission(
+        id: 'M-EXEC-TEST',
+        nomClient: 'KES ENERGIE AFRICA',
+        nomSite: 'SITE YAOUNDE',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+        status: 'active',
+      );
+
+      final snapshot = ExecutiveSummarySnapshot(
+        missionId: mission.id,
+        clientName: mission.nomClient,
+        siteName: mission.nomSite ?? 'SITE YAOUNDE',
+        natureMission: 'Vérification Périodique',
+        dateRangeText: 'du 01 au 05/09/2026',
+        domainTension: 'Basse Tension (BT)',
+        companyName: 'KES Africa',
+        reportNumber: 'KES-2026-001',
+        reportDateStr: '06/09/2026',
+        officialStats: {
+          'totalNC': 5,
+          'critique': 2,
+          'majeure': 2,
+          'mineure': 1,
+          'pctCritique': '40,0',
+          'pctMajeure': '40,0',
+          'pctMineure': '20,0',
+        },
+        categoryStats: [
+          {
+            'categoryName': 'Armoires et Coffrets BT',
+            'ncCount': 3,
+            'pctOfTotalNc': '60,0',
+            'equipmentCount': 8,
+            'pctOfTotalEquipment': '66,7',
+            'densityStr': '0,38',
+          },
+          {
+            'categoryName': 'Prises de terre',
+            'ncCount': 2,
+            'pctOfTotalNc': '40,0',
+            'equipmentCount': 4,
+            'pctOfTotalEquipment': '33,3',
+            'densityStr': '0,50',
+          },
+        ],
+        topDefects: [
+          {'defectName': 'Absence repérage départs', 'count': 2, 'pct': '40,0'},
+          {'defectName': 'Section conducteur PE sous-calibrée', 'count': 2, 'pct': '40,0'},
+          {'defectName': 'Défaut de continuité terre', 'count': 1, 'pct': '20,0'},
+        ],
+        riskFamilies: [
+          {
+            'natureRisque': 'Choc électrique par contact indirect',
+            'constats': 3,
+            'partPct': '60 %',
+            'observation': 'Éléments de protection à vérifier d’urgence.',
+          },
+        ],
+        equipmentCount: 12,
+        installationsCount: 2,
+        globalDensityStr: '0,42',
+      );
+
+      // Appel direct et déterministe (zéro réseau, zéro IA)
+      final summaryData = MissionExecutiveSummaryService.buildDeterministicFallback(
+        mission.id,
+        snapshot,
+      );
+
+      expect(summaryData, isNotNull);
+      expect(summaryData.isFallback, isTrue);
+      expect(summaryData.syntheseResultats.tableTotalRow.nombre, equals(5));
+      expect(summaryData.syntheseResultats.tableRows.length, equals(3));
+      expect(summaryData.concentrationRisque.title, contains('Concentration du risque'));
+
+      // Génération PDF du Résumé Exécutif avec PdfExecutiveSummaryBuilder
+      final trackedPages = <String, int>{};
+      final doc = pw.Document();
+      doc.addPage(
+        pw.MultiPage(
+          pageTheme: pw.PageTheme(
+            theme: pw.ThemeData.withFont(
+              base: PdfExecutiveSummaryBuilder.fontRegular,
+              bold: PdfExecutiveSummaryBuilder.fontBold,
+            ),
+          ),
+          build: (ctx) => PdfExecutiveSummaryBuilder.buildResumeExecutif(
+            mission,
+            trackedPages,
+            'KES/IP/VE/2025/001',
+            summaryData: summaryData,
+            offset: 0,
+          ),
+        ),
+      );
+
+      final bytes = await doc.save();
+      expect(bytes.isNotEmpty, isTrue);
+      expect(trackedPages['resume_executif'], equals(1));
     });
   });
 }

@@ -178,9 +178,13 @@ class PdfMesuresEssaisBuilder {
     if (f != null) _fontRegular = f;
   }
 
+  static pw.Font get fontRegular => _fontRegular;
+
   static set fontBold(pw.Font? f) {
     if (f != null) _fontBold = f;
   }
+
+  static pw.Font get fontBold => _fontBold;
 
   static PdfColor get headerColor => PdfReportStyles.headerColor;
   static PdfColor get accentColor => PdfReportStyles.accentColor;
@@ -197,8 +201,10 @@ class PdfMesuresEssaisBuilder {
 
   static pw.Widget _sectionBox(String title) => PdfReportStyles.sectionBox(title);
   static pw.Widget _subSectionBar(String title) => PdfReportStyles.subTitle(title);
-  static pw.Widget _bodyText(String text) => PdfReportStyles.bodyText(text);
-  static pw.Widget _bodyBold(String text) => PdfReportStyles.bodyBold(text);
+  static pw.Widget _bodyText(String text) =>
+      PdfReportStyles.bodyText(text, fontRegular: _fontRegular);
+  static pw.Widget _bodyBold(String text) =>
+      PdfReportStyles.bodyBold(text, fontBold: _fontBold);
 
   static String formatHeaderUnit(String text) =>
       PdfReportStyles.formatHeaderUnit(text);

@@ -49,22 +49,25 @@ class PdfReportStyles {
   //  NORMALISATION DE TEXTE & DATES
   // ──────────────────────────────────────────────────────────────
 
-  /// Conserve tous les accents français et translittère les symboles Unicode spéciaux
+  /// Conserve tous les accents français et les caractères Unicode supportés par Roboto
   static String normalizeText(String text) {
     if (text.isEmpty) return text;
+    // Harmonisation des renvois d'articles
     text = text.replaceAll(RegExp(r'§\s*'), 'art ');
+    // Remplacement des espaces insécables par des espaces réguliers
+    text = text.replaceAll('\u00A0', ' ').replaceAll('\u202F', ' ');
 
     const replacements = <String, String>{
       '«': '"', '»': '"', '“': '"', '”': '"',
-      '‘': "'", '’': "'",
-      '—': '-', '–': '-', '…': '...',
-      '≥': '>=', '≤': '<=', '≠': '!=',
-      '±': '+/-', '∞': 'inf', '√': 'racine',
+      // Note: '’', '‘', '–', '—', 'Ω', 'Δ', '≤', '≥', '±', '°', 'µ', '²', '³', 'ₙ'
+      // sont nativement supportés par Roboto (cmap format 12 vérifié).
+      // On évite toute dégradation ou substitution inattendue.
+      '≠': '!=',
+      '∞': 'inf', '√': 'racine',
       '→': '->', '←': '<-', '↔': '<->',
-      '∑': 'Somme', '∆': 'Delta', 'Φ': 'Phi',
+      '∑': 'Somme', 'Φ': 'Phi',
       'θ': 'theta',
-      'Ω': 'Ohm', 'μ': 'u', 'Σ': 'Sigma',
-      '²': '2', '³': '3', '¹': '1',
+      'Σ': 'Sigma',
       '₁': '1', '₂': '2', '₃': '3', '₄': '4',
       '€': 'EUR', '£': 'GBP', '¥': 'JPY',
     };
@@ -381,7 +384,7 @@ class PdfReportStyles {
       child: pw.Text(
         normalizeText(text),
         style: pw.TextStyle(
-          font: fontRegular,
+          font: fontRegular ?? PdfReportStyles.fontRegular,
           fontSize: fsBody,
           color: darkGrey,
           lineSpacing: 2.0,
@@ -397,7 +400,7 @@ class PdfReportStyles {
       child: pw.Text(
         normalizeText(text),
         style: pw.TextStyle(
-          font: fontBold,
+          font: fontBold ?? PdfReportStyles.fontBold,
           fontSize: fsBody,
           fontWeight: pw.FontWeight.bold,
           color: darkGrey,
@@ -426,7 +429,7 @@ class PdfReportStyles {
             child: pw.Text(
               normalizeText(text),
               style: pw.TextStyle(
-                font: fontRegular,
+                font: fontRegular ?? PdfReportStyles.fontRegular,
                 fontSize: fsBody,
                 color: darkGrey,
                 lineSpacing: 1.8,
@@ -456,7 +459,9 @@ class PdfReportStyles {
       child: pw.Text(
         normalizeText(displayText),
         style: pw.TextStyle(
-          font: isHeader ? fontBold : fontRegular,
+          font: isHeader
+              ? (fontBold ?? PdfReportStyles.fontBold)
+              : (fontRegular ?? PdfReportStyles.fontRegular),
           fontSize: fsSmall,
           fontWeight: isHeader ? pw.FontWeight.bold : pw.FontWeight.normal,
           color: color ?? (isHeader ? PdfColors.white : darkGrey),
