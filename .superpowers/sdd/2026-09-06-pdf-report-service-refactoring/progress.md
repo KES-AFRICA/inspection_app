@@ -1,0 +1,10 @@
+# SDD ledger — plan: docs/superpowers/plans/2026-09-06-pdf-report-service-refactoring.md
+Task 1: complete (PdfReportContext and PdfReportStyles scaffolded, baseline tests green)
+Task 2: complete (PdfCoverBuilder and PdfSommaireBuilder extracted, sommaire tests green)
+Task 3: complete (PdfRegulatoryBuilder extracted, norms and perimeter tests green)
+Task 4: complete (PdfExecutiveSummaryBuilder & PdfStatisticsBuilder extracted, statistics tests green)
+Task 5: complete (PdfRenseignementsBuilder & PdfDescriptionBuilder extracted, description tests green)
+Task 6: complete (PdfEquipementsSynthesisBuilder extracted, equipements synthesis tests green)
+Task 7: complete (PdfObservationsRecapBuilder extracted, observations recap tests green)
+Task 8: complete (PdfAuditInstallationsBuilder extracted, audit coffret & tables tests green)
+Task 9: complete (PdfClassementFoudreBuilder extracted, classement & foudre tests green)

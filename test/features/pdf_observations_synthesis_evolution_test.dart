@@ -142,11 +142,13 @@ void main() {
 
       final widgets = PdfReportService.buildObsRecapTableUnifieForTesting(obsList);
 
-      // On doit avoir 3 widgets (En-tête L1, En-tête L2, et Table du corps)
-      expect(widgets.length, equals(3));
-      expect(widgets[0], isA<pw.Table>());
-      expect(widgets[1], isA<pw.Table>());
-      expect(widgets[2], isA<pw.Table>());
+      // Hiérarchie visuelle à 4 niveaux (Zone -> Repère -> Équipement -> Table observations)
+      expect(widgets.length, equals(5));
+      expect(widgets[0], isA<pw.Container>());
+      expect(widgets[1], isA<pw.SizedBox>());
+      expect(widgets[2], isA<pw.Container>());
+      expect(widgets[3], isA<pw.SizedBox>());
+      expect(widgets[4], isA<pw.Table>());
     });
   });
 }
