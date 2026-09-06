@@ -16,7 +16,7 @@ import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 export 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
-import 'package:flutter/services.dart' show rootBundle;
+import 'package:flutter/services.dart' show rootBundle, AssetManifest;
 import 'package:inspec_app/models/classement_zone.dart';
 import 'package:inspec_app/services/cancellation_token.dart';
 import 'package:pdf/pdf.dart';
@@ -114,12 +114,21 @@ class PdfReportService {
   static Future<void> _loadImages() async {
     if (_imagesLoaded) return;
 
+    Set<String>? manifestAssets;
+    try {
+      final manifest = await AssetManifest.loadFromAssetBundle(rootBundle);
+      manifestAssets = manifest.listAssets().toSet();
+    } catch (_) {}
+
     Future<pw.MemoryImage?> tryLoad(
       String asset, {
       int targetWidth = 500,
       int targetQuality = 70,
     }) async {
       try {
+        if (manifestAssets != null && !manifestAssets.contains(asset)) {
+          return null;
+        }
         final data = await rootBundle.load(asset);
         final bytes = data.buffer.asUint8List();
         if (bytes.isEmpty) return null;
@@ -163,6 +172,9 @@ class PdfReportService {
 
     Future<pw.MemoryImage?> tryLoadRaw(String asset) async {
       try {
+        if (manifestAssets != null && !manifestAssets.contains(asset)) {
+          return null;
+        }
         final data = await rootBundle.load(asset);
         final bytes = data.buffer.asUint8List();
         if (bytes.isEmpty) return null;
@@ -180,7 +192,8 @@ class PdfReportService {
       'assets/images/firstpage_footer.png',
       targetWidth: 600,
       targetQuality: 70,
-    );    _imgHabilitation = await tryLoad(
+    );
+    _imgHabilitation = await tryLoad(
       'assets/images/image.png',
       targetWidth: 500,
       targetQuality: 70,
