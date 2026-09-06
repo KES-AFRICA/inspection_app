@@ -21,6 +21,7 @@ import 'dispositions_constructives_registry.dart';
 import 'installation_description_sync_service.dart';
 import 'normative_matching/mission_normative_batch_service.dart';
 import 'equipment_number_service.dart';
+import 'ip_ik_evaluator_service.dart';
 import 'package:inspec_app/features/backup/data/services/mission_activity_tracker.dart';
 
 class HiveService {
@@ -1581,7 +1582,7 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
     }
   }
 
-  void migrateCoffret(CoffretArmoire coffret) {
+  void migrateCoffret(CoffretArmoire coffret, {String? parentName}) {
     if (coffret.id == null || coffret.id!.trim().isEmpty) {
       coffret.id =
           'equip_${DateTime.now().microsecondsSinceEpoch}_${coffret.nom.hashCode.abs()}_${coffret.qrCode.hashCode.abs()}';
@@ -1607,6 +1608,18 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
 
     for (var el in coffret.observationsParafoudreEnrichies!) {
       migrateElementControle(el);
+    }
+
+    // Synchronisation automatique et déterministe du point IP/IK avec la règle métier
+    final previousIpIkState = coffret.pointsVerification.map((p) => '${p.pointVerification}:${p.conformite}:${p.observation}').join('|');
+    IpIkEvaluatorService.syncIpIkPoint(
+      coffret: coffret,
+      missionId: audit.missionId,
+      parentName: parentName,
+    );
+    final currentIpIkState = coffret.pointsVerification.map((p) => '${p.pointVerification}:${p.conformite}:${p.observation}').join('|');
+    if (previousIpIkState != currentIpIkState) {
+      changed = true;
     }
 
     for (var pv in coffret.pointsVerification) {
@@ -1765,14 +1778,14 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
     migrateLocalCellules(local);
     migrateLocalTransformateurs(local);
     for (var coffret in local.coffrets) {
-      migrateCoffret(coffret);
+      migrateCoffret(coffret, parentName: local.nom);
     }
   }
 
   // Zones MT
   for (var zone in audit.moyenneTensionZones) {
     for (var coffret in zone.coffrets) {
-      migrateCoffret(coffret);
+      migrateCoffret(coffret, parentName: zone.nom);
     }
     for (var local in zone.locaux) {
       for (var el in local.dispositionsConstructives) {
@@ -1784,7 +1797,7 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
       migrateLocalCellules(local);
       migrateLocalTransformateurs(local);
       for (var coffret in local.coffrets) {
-        migrateCoffret(coffret);
+        migrateCoffret(coffret, parentName: local.nom);
       }
     }
   }
@@ -1792,7 +1805,7 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
   // Zones BT
   for (var zone in audit.basseTensionZones) {
     for (var coffret in zone.coffretsDirects) {
-      migrateCoffret(coffret);
+      migrateCoffret(coffret, parentName: zone.nom);
     }
     for (var local in zone.locaux) {
       if (local.dispositionsConstructives != null) {
@@ -1808,7 +1821,7 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
       migrateLocalCellules(local);
       migrateLocalTransformateurs(local);
       for (var coffret in local.coffrets) {
-        migrateCoffret(coffret);
+        migrateCoffret(coffret, parentName: local.nom);
       }
     }
   }
@@ -2833,8 +2846,9 @@ static String _normalizeLocationKey(String text) {
 
 /// Récupérer un emplacement (Local ou Zone) par son nom
 static ClassementEmplacement? getEmplacementByNom(String missionId, String localisation) {
-  final box = Hive.box<ClassementEmplacement>(_classementBox);
   try {
+    if (!Hive.isBoxOpen(_classementBox)) return null;
+    final box = Hive.box<ClassementEmplacement>(_classementBox);
     final targetRaw = localisation.trim();
     if (targetRaw.isEmpty) return null;
 

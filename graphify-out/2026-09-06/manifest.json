@@ -1770,9 +1770,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_mesures_essais_builder.dart": {
-    "mtime": 1788687878.3850446,
-    "seen": 1788698856.7554097,
-    "ast_hash": "1da51e1e5471aaa0589437b9f538000b",
+    "mtime": 1788700744.993173,
+    "seen": 1788701184.1408684,
+    "ast_hash": "94c533559207bcbdc8eb8eaebcc1b47f",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_observations_recap_builder.dart": {
@@ -1782,9 +1782,9 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_photos_schemas_builder.dart": {
-    "mtime": 1788686896.3121648,
-    "seen": 1788698856.7554119,
-    "ast_hash": "1aff31dd5a7d94a395279dacaa061c7e",
+    "mtime": 1788700759.4087315,
+    "seen": 1788701184.1408727,
+    "ast_hash": "d19e95c1cda94e878901cedbb504c2c2",
     "semantic_hash": ""
   },
   "lib/services/pdf/builders/pdf_regulatory_builder.dart": {
@@ -1854,15 +1854,15 @@
     "semantic_hash": ""
   },
   "lib/services/pdf/pdf_report_service.dart": {
-    "mtime": 1788698471.4330764,
-    "seen": 1788698856.755427,
-    "ast_hash": "b86b3aa80e4fab9bcf10de3b1eea8a5e",
+    "mtime": 1788700627.3318355,
+    "seen": 1788701184.140893,
+    "ast_hash": "acd8663cfd35bfa253d563a6388fe68f",
     "semantic_hash": ""
   },
   "lib/services/pdf/pdf_report_styles.dart": {
-    "mtime": 1788696879.9541476,
-    "seen": 1788698856.7554278,
-    "ast_hash": "a392faf8c021eabec6ffbc1b15f799c6",
+    "mtime": 1788700727.274078,
+    "seen": 1788701184.1408942,
+    "ast_hash": "0e7b480e79c7b06dd33b25cdee57af67",
     "semantic_hash": ""
   },
   "lib/services/secure_password_service.dart": {
@@ -1998,9 +1998,9 @@
     "semantic_hash": ""
   },
   "test/character_rendering_test.dart": {
-    "mtime": 1788697243.8468783,
-    "seen": 1788698856.7554555,
-    "ast_hash": "5082df4d4b98f49359eb5ef6942af4f6",
+    "mtime": 1788700835.846536,
+    "seen": 1788701184.1409333,
+    "ast_hash": "4d7ffb94b382392609f6ef5021b89c7c",
     "semantic_hash": ""
   },
   "test/data_integrity_test.dart": {
@@ -2574,9 +2574,9 @@
     "semantic_hash": ""
   },
   "test/pdf_report_full_simulation_test.dart": {
-    "mtime": 1788697449.7524185,
-    "seen": 1788698856.7555761,
-    "ast_hash": "a0911a3c4f0c6cc02340dd730b0cf950",
+    "mtime": 1788700998.833882,
+    "seen": 1788701184.1410975,
+    "ast_hash": "811711fa0816d695aca6fcfb790867ae",
     "semantic_hash": ""
   },
   "test/services/ai/mission_executive_summary_service_test.dart": {

@@ -3128,39 +3128,21 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
   Widget _buildConformiteToggle(BuildContext context, PointVerification point, int pointIndex) {
     if (IpIkEvaluatorService.isIpIkPoint(point.pointVerification)) {
       final parentState = context.findAncestorStateOfType<_AjouterCoffretScreenState>();
-      final eval = IpIkEvaluatorService.evaluate(
-        coffret: CoffretArmoire(
-          qrCode: parentState?._qrCodeController.text ?? '',
-          nom: parentState?._nomController.text ?? '',
-          type: parentState?._selectedType ?? 'COFFRET',
-          indiceIpIk: parentState?._indiceIpIkController.text.trim(),
-          repere: parentState?._repereController.text.trim(),
-        ),
+      final tempCoffret = CoffretArmoire(
+        qrCode: parentState?._qrCodeController.text ?? '',
+        nom: parentState?._nomController.text ?? '',
+        type: parentState?._selectedType ?? 'COFFRET',
+        indiceIpIk: parentState?._indiceIpIkController.text.trim(),
+        repere: parentState?._repereController.text.trim(),
+        pointsVerification: [point],
+      );
+      IpIkEvaluatorService.syncIpIkPoint(
+        coffret: tempCoffret,
         missionId: widget.missionId,
         parentName: parentState?._getParentLocationName(),
       );
 
-      point.conformite = eval.conformite;
-      if (eval.observation != null) {
-        point.observation = eval.observation;
-        point.observations ??= [];
-        if (point.observations!.isEmpty) {
-          point.observations!.add(ElementControle(
-            elementControle: point.pointVerification,
-            conforme: eval.conformite == 'oui',
-            priorite: 3,
-            observation: eval.observation,
-          ));
-        } else {
-          point.observations!.first.observation = eval.observation;
-          point.observations!.first.conforme = eval.conformite == 'oui';
-        }
-      } else {
-        point.observation = null;
-        point.observations?.clear();
-      }
-
-      final isConforme = eval.conformite == 'oui';
+      final isConforme = point.conformite.toLowerCase().trim() == 'oui';
       if (!isConforme) {
         widget.hasObservation[pointIndex] = true;
       }
@@ -3212,10 +3194,10 @@ class _EtapePointsVerificationState extends State<_EtapePointsVerification> {
                 ),
               ],
             ),
-            if (eval.observation != null) ...[
+            if (point.observation != null && point.observation!.isNotEmpty) ...[
               const SizedBox(height: 6),
               Text(
-                'Observation : ${eval.observation}',
+                'Observation : ${point.observation}',
                 style: TextStyle(
                   fontSize: context.fontSizeS,
                   fontWeight: FontWeight.w600,
@@ -4304,40 +4286,19 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     for (var obs in _observationsParafoudre) {
       obs.priorite = null;
     }
-    for (final point in _pointsVerification) {
-      if (IpIkEvaluatorService.isIpIkPoint(point.pointVerification)) {
-        final eval = IpIkEvaluatorService.evaluate(
-          coffret: CoffretArmoire(
-            qrCode: _qrCodeController.text.trim(),
-            nom: _nomController.text.trim(),
-            type: _selectedType!,
-            indiceIpIk: _indiceIpIkController.text.trim().isEmpty ? null : _indiceIpIkController.text.trim(),
-            repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
-          ),
-          missionId: widget.mission.id,
-          parentName: _getParentLocationName(),
-        );
-        point.conformite = eval.conformite;
-        if (eval.observation != null) {
-          point.observation = eval.observation;
-          point.observations ??= [];
-          if (point.observations!.isEmpty) {
-            point.observations!.add(ElementControle(
-              elementControle: point.pointVerification,
-              conforme: eval.conformite == 'oui',
-              priorite: 3,
-              observation: eval.observation,
-            ));
-          } else {
-            point.observations!.first.observation = eval.observation;
-            point.observations!.first.conforme = eval.conformite == 'oui';
-          }
-        } else {
-          point.observation = null;
-          point.observations?.clear();
-        }
-      }
-    }
+    final evalCoffret = CoffretArmoire(
+      qrCode: _qrCodeController.text.trim(),
+      nom: _nomController.text.trim(),
+      type: _selectedType!,
+      indiceIpIk: _indiceIpIkController.text.trim().isEmpty ? null : _indiceIpIkController.text.trim(),
+      repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
+      pointsVerification: _pointsVerification,
+    );
+    IpIkEvaluatorService.syncIpIkPoint(
+      coffret: evalCoffret,
+      missionId: widget.mission.id,
+      parentName: _getParentLocationName(),
+    );
     try {
       final toutesPhotos = [..._coffretPhotosExterne, ..._coffretPhotosInterne];
       final now = DateTime.now().toUtc();

@@ -417,8 +417,11 @@ class PdfCoverBuilder {
     RenseignementsGeneraux? rg,
     dynamic currentUser,
     Map<String, int> trackedPages,
-    int pageOffset,
-  ) {
+    int pageOffset, {
+    DateTime? reportGenerationDate,
+    Mission? mission,
+    String? dateIntervention,
+  }) {
     final List<String> inspecteursNoms = [];
     if (jsa != null && jsa.inspecteurs.isNotEmpty) {
       for (final insp in jsa.inspecteurs) {
@@ -449,6 +452,25 @@ class PdfCoverBuilder {
       if (inspecteursNoms.isEmpty) {
         inspecteursNoms.add('Inspecteur non renseigné');
       }
+    }
+
+    final dateGen = reportGenerationDate ?? DateTime.now();
+    final dateGenStr = PdfReportStyles.formatDate(dateGen);
+
+    final dateDebut = rg?.dateDebut ?? mission?.dateIntervention;
+    final dateFin = rg?.dateFin;
+    String intervDateStr;
+    if (dateIntervention != null && dateIntervention.isNotEmpty) {
+      intervDateStr = dateIntervention;
+    } else if (dateDebut != null &&
+        dateFin != null &&
+        !dateDebut.isAtSameMomentAs(dateFin)) {
+      intervDateStr =
+          'Du ${PdfReportStyles.formatDate(dateDebut)}\nau ${PdfReportStyles.formatDate(dateFin)}';
+    } else if (dateDebut != null) {
+      intervDateStr = PdfReportStyles.formatDate(dateDebut);
+    } else {
+      intervDateStr = dateGenStr;
     }
 
     pw.Widget buildBulletList(List<String> list, {required String trackerKey}) {
@@ -508,6 +530,7 @@ class PdfCoverBuilder {
 
     pw.Widget buildRowHeaderCell(String text) {
       return pw.Container(
+        decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
         padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 8),
         alignment: pw.Alignment.center,
         child: pw.Text(
@@ -522,8 +545,24 @@ class PdfCoverBuilder {
       );
     }
 
+    pw.Widget buildDateCell(String text) {
+      return pw.Container(
+        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 8),
+        alignment: pw.Alignment.center,
+        child: pw.Text(
+          text,
+          style: pw.TextStyle(
+            font: fontRegular,
+            fontSize: PdfReportStyles.fsSmall + 0.5,
+            color: PdfColors.black,
+          ),
+          textAlign: pw.TextAlign.center,
+        ),
+      );
+    }
+
     final table = pw.Table(
-      defaultVerticalAlignment: pw.TableCellVerticalAlignment.middle,
+      defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
       border: pw.TableBorder.all(color: PdfReportStyles.borderColor, width: 0.4),
       columnWidths: const {
         0: pw.FlexColumnWidth(1.4),
@@ -546,12 +585,7 @@ class PdfCoverBuilder {
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.white),
           children: [
-            pw.Container(
-              decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
-              padding: const pw.EdgeInsets.all(6),
-              alignment: pw.Alignment.center,
-              child: buildRowHeaderCell("NOM"),
-            ),
+            buildRowHeaderCell("NOM"),
             pw.Padding(
               padding: const pw.EdgeInsets.all(6),
               child: buildBulletList(
@@ -584,31 +618,21 @@ class PdfCoverBuilder {
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.white),
           children: [
-            pw.Container(
-              decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
-              padding: const pw.EdgeInsets.symmetric(vertical: 12),
-              alignment: pw.Alignment.center,
-              child: buildRowHeaderCell("Date"),
-            ),
-            pw.Container(height: 35),
-            pw.Container(height: 35),
-            pw.Container(height: 35),
-            pw.Container(height: 35),
+            buildRowHeaderCell("Date"),
+            buildDateCell(intervDateStr),
+            buildDateCell(dateGenStr),
+            buildDateCell(dateGenStr),
+            buildDateCell(dateGenStr),
           ],
         ),
         pw.TableRow(
           decoration: const pw.BoxDecoration(color: PdfColors.white),
           children: [
-            pw.Container(
-              decoration: pw.BoxDecoration(color: PdfReportStyles.lightBlue),
-              padding: const pw.EdgeInsets.symmetric(vertical: 30),
-              alignment: pw.Alignment.center,
-              child: buildRowHeaderCell("Signature"),
-            ),
-            pw.Container(height: 75),
-            pw.Container(height: 75),
-            pw.Container(height: 75),
-            pw.Container(height: 75),
+            buildRowHeaderCell("Signature"),
+            pw.Container(height: 70),
+            pw.Container(height: 70),
+            pw.Container(height: 70),
+            pw.Container(height: 70),
           ],
         ),
       ],

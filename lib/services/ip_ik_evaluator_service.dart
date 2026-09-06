@@ -80,6 +80,84 @@ class IpIkEvaluatorService {
         t.toLowerCase().contains("protection ip/ik adaptée");
   }
 
+  /// Synchronise déterministement le point de vérification IP/IK selon la règle métier
+  static void syncIpIkPoint({
+    required CoffretArmoire coffret,
+    required String missionId,
+    String? parentName,
+  }) {
+    for (final point in coffret.pointsVerification) {
+      if (isIpIkPoint(point.pointVerification)) {
+        final eval = evaluate(
+          coffret: coffret,
+          missionId: missionId,
+          parentName: parentName,
+        );
+
+        // Si l'équipement n'a pas d'IP/IK renseigné, il est obligatoirement NON CONFORME
+        final hasNoIpIk =
+            coffret.indiceIpIk == null || coffret.indiceIpIk!.trim().isEmpty;
+        if (hasNoIpIk) {
+          point.conformite = 'non';
+          if (point.observation == null || point.observation!.trim().isEmpty) {
+            point.observation = eval.observation ?? "Absence de l'indice ip/ik";
+          }
+          point.observations ??= [];
+          if (point.observations!.isEmpty) {
+            point.observations!.add(ElementControle(
+              elementControle: point.pointVerification,
+              conforme: false,
+              priorite: 3,
+              observation: point.observation,
+            ));
+          } else {
+            point.observations!.first.observation = point.observation;
+            point.observations!.first.conforme = false;
+          }
+          continue;
+        }
+
+        // Si le point est déjà enregistré comme NON CONFORME (ex: défaut physique constaté),
+        // on respecte scrupuleusement cet état sans l'écraser arbitrairement par 'oui'
+        final isAlreadyNonConforme =
+            point.conformite.toLowerCase().trim() == 'non';
+        if (isAlreadyNonConforme && eval.conformite == 'oui') {
+          // On préserve le statut NON CONFORME et l'observation existante
+          continue;
+        }
+
+        // Sinon, on applique le résultat de l'évaluation
+        point.conformite = eval.conformite;
+        if (eval.observation != null) {
+          if (point.observation == null || point.observation!.trim().isEmpty) {
+            point.observation = eval.observation;
+          }
+          point.observations ??= [];
+          if (point.observations!.isEmpty) {
+            point.observations!.add(ElementControle(
+              elementControle: point.pointVerification,
+              conforme: eval.conformite == 'oui',
+              priorite: 3,
+              observation: point.observation ?? eval.observation,
+            ));
+          } else {
+            point.observations!.first.observation =
+                point.observation ?? eval.observation;
+            point.observations!.first.conforme = eval.conformite == 'oui';
+          }
+        } else {
+          if (point.observation == "Absence de l'indice ip/ik" ||
+              point.observation == "Absence d'indice ip/ik du repère" ||
+              point.observation ==
+                  "Indice ip/ik différent de l'indice du repère") {
+            point.observation = null;
+            point.observations?.clear();
+          }
+        }
+      }
+    }
+  }
+
   /// Évalue automatiquement le degré IP/IK d'un équipement par rapport à son repère
   static IpIkEvaluationResult evaluate({
     required CoffretArmoire coffret,
@@ -110,8 +188,12 @@ class IpIkEvaluatorService {
       );
     }
 
-    final ClassementEmplacement? emplacement =
-        HiveService.getEmplacementByNom(missionId, targetLocation);
+    ClassementEmplacement? emplacement;
+    try {
+      emplacement = HiveService.getEmplacementByNom(missionId, targetLocation);
+    } catch (_) {
+      emplacement = null;
+    }
 
     if (emplacement == null) {
       return const IpIkEvaluationResult(

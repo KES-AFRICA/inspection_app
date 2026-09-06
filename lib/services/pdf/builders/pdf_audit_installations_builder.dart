@@ -12,6 +12,7 @@ import 'package:inspec_app/services/installation_fields_registry.dart';
 import 'package:inspec_app/services/pdf/pdf_page_tracker.dart';
 import 'package:inspec_app/services/pdf/pdf_report_styles.dart';
 import 'package:inspec_app/services/pdf/builders/pdf_description_builder.dart';
+import 'package:inspec_app/services/ip_ik_evaluator_service.dart';
 
 /// Builder responsable de l'Audit des Installations Électriques (Moyenne Tension et Basse Tension)
 class PdfAuditInstallationsBuilder {
@@ -146,14 +147,16 @@ class PdfAuditInstallationsBuilder {
     Map<dynamic, pw.MemoryImage?>? photoCache,
     bool saveFilesToDisk = true,
     Map<String, int>? photoRegistry,
-  }) => buildLocalMT(local, trackedPages, photoCache: photoCache, saveFilesToDisk: saveFilesToDisk, photoRegistry: photoRegistry);
+    String? missionId,
+  }) => buildLocalMT(local, trackedPages, photoCache: photoCache, saveFilesToDisk: saveFilesToDisk, photoRegistry: photoRegistry, missionId: missionId);
 
   static List<pw.Widget> _buildLocalBT(
     BasseTensionLocal local,
     Map<String, int> trackedPages, {
     Map<dynamic, pw.MemoryImage?>? photoCache,
     Map<String, int>? photoRegistry,
-  }) => buildLocalBT(local, trackedPages, photoCache: photoCache, photoRegistry: photoRegistry);
+    String? missionId,
+  }) => buildLocalBT(local, trackedPages, photoCache: photoCache, photoRegistry: photoRegistry, missionId: missionId);
 
   static pw.Widget _subSectionBar(String title) => subSectionBar(title);
   static pw.Widget _localNameBar(String title) => localNameBar(title);
@@ -190,9 +193,10 @@ class PdfAuditInstallationsBuilder {
     CoffretArmoire coffret,
     Map<String, int> trackedPages,
     String parentName, {
+    String? missionId,
     Map<dynamic, pw.MemoryImage?>? photoCache,
     Map<String, int>? photoRegistry,
-  }) => buildCoffret(coffret, trackedPages, parentName, photoCache: photoCache, photoRegistry: photoRegistry);
+  }) => buildCoffret(coffret, trackedPages, parentName, missionId: missionId, photoCache: photoCache, photoRegistry: photoRegistry);
 
   static pw.Widget _buildPointsVerificationTable(
     List<PointVerification> points, {
@@ -561,7 +565,7 @@ class PdfAuditInstallationsBuilder {
         final local = audit.moyenneTensionLocaux[i];
         // Pas de NewPage pour le premier local (i == 0)
         if (i > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildLocalMT(local, trackedPages, photoRegistry: reg));
+        widgets.addAll(_buildLocalMT(local, trackedPages, photoRegistry: reg, missionId: audit.missionId));
       }
     }
 
@@ -577,7 +581,7 @@ class PdfAuditInstallationsBuilder {
       for (int i = 0; i < zone.locaux.length; i++) {
         final local = zone.locaux[i];
         if (elementIndex > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildLocalMT(local, trackedPages, photoRegistry: reg));
+        widgets.addAll(_buildLocalMT(local, trackedPages, photoRegistry: reg, missionId: audit.missionId));
         elementIndex++;
       }
 
@@ -585,7 +589,7 @@ class PdfAuditInstallationsBuilder {
       for (int i = 0; i < zone.coffrets.length; i++) {
         final coffret = zone.coffrets[i];
         if (elementIndex > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildCoffret(coffret, trackedPages, zone.nom, photoRegistry: reg));
+        widgets.addAll(_buildCoffret(coffret, trackedPages, zone.nom, photoRegistry: reg, missionId: audit.missionId));
         elementIndex++;
       }
     }
@@ -602,7 +606,7 @@ class PdfAuditInstallationsBuilder {
       for (int i = 0; i < zone.coffretsDirects.length; i++) {
         final coffret = zone.coffretsDirects[i];
         if (elementIndex > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildCoffret(coffret, trackedPages, zone.nom, photoRegistry: reg));
+        widgets.addAll(_buildCoffret(coffret, trackedPages, zone.nom, photoRegistry: reg, missionId: audit.missionId));
         elementIndex++;
       }
 
@@ -610,7 +614,7 @@ class PdfAuditInstallationsBuilder {
       for (int i = 0; i < zone.locaux.length; i++) {
         final local = zone.locaux[i];
         if (elementIndex > 0) widgets.add(pw.NewPage());
-        widgets.addAll(_buildLocalBT(local, trackedPages, photoRegistry: reg));
+        widgets.addAll(_buildLocalBT(local, trackedPages, photoRegistry: reg, missionId: audit.missionId));
         elementIndex++;
       }
     }
@@ -952,6 +956,7 @@ class PdfAuditInstallationsBuilder {
     Map<dynamic, pw.MemoryImage?>? photoCache,
     bool saveFilesToDisk = true,
     Map<String, int>? photoRegistry,
+    String? missionId,
   }) {
     final widgets = <pw.Widget>[
       PageTracker(
@@ -1095,6 +1100,7 @@ class PdfAuditInstallationsBuilder {
           local.nom,
           photoCache: photoCache,
           photoRegistry: photoRegistry,
+          missionId: missionId,
         ),
       );
     }
@@ -1107,6 +1113,7 @@ class PdfAuditInstallationsBuilder {
     Map<String, int> trackedPages, {
     Map<dynamic, pw.MemoryImage?>? photoCache,
     Map<String, int>? photoRegistry,
+    String? missionId,
   }) {
     final widgets = <pw.Widget>[
       PageTracker(
@@ -1250,6 +1257,7 @@ class PdfAuditInstallationsBuilder {
           local.nom,
           photoCache: photoCache,
           photoRegistry: photoRegistry,
+          missionId: missionId,
         ),
       );
     }
@@ -2727,6 +2735,7 @@ class PdfAuditInstallationsBuilder {
     CoffretArmoire coffret,
     Map<String, int> trackedPages,
     String parentName, {
+    String? missionId,
     Map<dynamic, pw.MemoryImage?>? photoCache,
     Map<String, int>? photoRegistry,
   }) {
@@ -3690,6 +3699,13 @@ class PdfAuditInstallationsBuilder {
           coffret.pointsVerification,
         );
       }
+
+      // Synchronisation déterministe du point IP/IK avec la règle métier
+      IpIkEvaluatorService.syncIpIkPoint(
+        coffret: coffret,
+        missionId: missionId ?? '',
+        parentName: parentName,
+      );
       widgets.add(pw.SizedBox(height: 3));
       if (coffret.type != 'INVERSEUR') {
         widgets.add(

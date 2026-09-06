@@ -53,7 +53,7 @@ void main() {
       );
 
       expect(eval.conformite, equals('non'));
-      expect(eval.observation, equals("Absence d'indice ip/ik du repere"));
+      expect(eval.observation, equals("Absence d'indice ip/ik du repère"));
     });
 
     test('Test 4 — Inclusion de l\'Inverseur dans la détection des points IP/IK', () {

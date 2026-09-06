@@ -768,6 +768,7 @@ class PdfReportService {
     CoffretArmoire coffret,
     Map<String, int> trackedPages,
     String parentName, {
+    String? missionId,
     Map<dynamic, pw.MemoryImage?>? photoCache,
     Map<String, int>? photoRegistry,
   }) =>
@@ -775,6 +776,7 @@ class PdfReportService {
         coffret,
         trackedPages,
         parentName,
+        missionId: missionId,
         photoCache: photoCache,
         photoRegistry: photoRegistry,
       );
@@ -784,12 +786,14 @@ class PdfReportService {
     Map<String, int> trackedPages, {
     Map<dynamic, pw.MemoryImage?>? photoCache,
     Map<String, int>? photoRegistry,
+    String? missionId,
   }) =>
       PdfAuditInstallationsBuilder.buildLocalBT(
         local,
         trackedPages,
         photoCache: photoCache,
         photoRegistry: photoRegistry,
+        missionId: missionId,
       );
 
   static pw.Widget _buildIntervenantsEtResponsabilitesPage(
@@ -797,14 +801,20 @@ class PdfReportService {
     RenseignementsGeneraux? rg,
     dynamic currentUser,
     Map<String, int> trackedPages,
-    int pageOffset,
-  ) =>
+    int pageOffset, {
+    DateTime? reportGenerationDate,
+    Mission? mission,
+    String? dateIntervention,
+  }) =>
       PdfCoverBuilder.buildIntervenantsEtResponsabilitesPage(
         jsa,
         rg,
         currentUser,
         trackedPages,
         pageOffset,
+        reportGenerationDate: reportGenerationDate,
+        mission: mission,
+        dateIntervention: dateIntervention,
       );
 
   static List<pw.Widget> _buildClassementEmplacementsMulti(
@@ -2427,6 +2437,7 @@ class PdfReportService {
             zone.coffrets[i],
             trackedPages,
             zone.nom,
+            missionId: mission.id,
             photoCache: zonePhotoCache,
             photoRegistry: photoRegistry,
           ),
@@ -2485,6 +2496,7 @@ class PdfReportService {
             zone.coffretsDirects[i],
             trackedPages,
             zone.nom,
+            missionId: mission.id,
             photoCache: zonePhotoCache,
             photoRegistry: photoRegistry,
           ),
@@ -2499,6 +2511,7 @@ class PdfReportService {
             trackedPages,
             photoCache: zonePhotoCache,
             photoRegistry: photoRegistry,
+            missionId: mission.id,
           ),
         );
         elemIdx++;
@@ -2551,6 +2564,7 @@ class PdfReportService {
     required String numeroRapportDoc,
     required Directory tempDir,
     int? overrideTotalPages,
+    DateTime? generationDate,
     bool saveFilesToDisk = true,
     PdfProgressCallback? onProgress,
     CancellationToken? cancellationToken,
@@ -2606,6 +2620,8 @@ class PdfReportService {
               currentUser,
               trackedPages,
               0,
+              reportGenerationDate: generationDate,
+              mission: mission,
             ),
           ],
         ),
@@ -3401,6 +3417,8 @@ class PdfReportService {
                 currentUser,
                 trackedPages,
                 0,
+                reportGenerationDate: generationDate,
+                mission: mission,
               ),
             ],
           ),
@@ -3515,6 +3533,7 @@ class PdfReportService {
         nomSiteHeader: nomSiteHeader,
         numeroRapportDoc: numeroRapportDoc,
         tempDir: sessionDir,
+        generationDate: generationDate,
         saveFilesToDisk: false,
         cancellationToken: cancellationToken,
       );
@@ -3544,6 +3563,7 @@ class PdfReportService {
         numeroRapportDoc: numeroRapportDoc,
         tempDir: sessionDir,
         overrideTotalPages: totalReportPages,
+        generationDate: generationDate,
         saveFilesToDisk: true,
         onProgress: onProgress,
         cancellationToken: cancellationToken,
