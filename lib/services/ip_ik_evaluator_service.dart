@@ -137,6 +137,7 @@ class IpIkEvaluatorService {
     required CoffretArmoire coffret,
     required String missionId,
     String? parentName,
+    AuditInstallationsElectriques? audit,
   }) {
     for (final point in coffret.pointsVerification) {
       if (isIpIkPoint(point.pointVerification)) {
@@ -144,6 +145,7 @@ class IpIkEvaluatorService {
           coffret: coffret,
           missionId: missionId,
           parentName: parentName,
+          audit: audit,
         );
 
         // Si l'équipement n'a pas d'IP/IK renseigné, il est obligatoirement NON CONFORME
@@ -220,6 +222,7 @@ class IpIkEvaluatorService {
     required CoffretArmoire coffret,
     required String missionId,
     String? parentName,
+    AuditInstallationsElectriques? audit,
   }) {
     // CAS A — L'équipement n'a pas d'indice IP/IK (vide, nul ou sans IP/IK exploitable)
     final equipParsed = ParsedIpIk.parse(coffret.indiceIpIk);
@@ -234,7 +237,7 @@ class IpIkEvaluatorService {
     // Résolution multi-candidats par ordre de priorité :
     // 1. coffret.repere (le repère direct de l'équipement)
     // 2. parentName (le local ou la zone parente explicite)
-    // 3. Emplacement retrouvé par introspection de l'arborescence de la mission
+    // 3. Emplacement retrouvé par introspection de l'arborescence (uniquement si parentName n'est pas fourni)
     final candidates = <String>[];
     if (coffret.repere != null && coffret.repere!.trim().isNotEmpty) {
       candidates.add(coffret.repere!.trim());
@@ -244,12 +247,17 @@ class IpIkEvaluatorService {
       if (!candidates.contains(p)) {
         candidates.add(p);
       }
-    }
-    final discoveredLocation = _findLocationForCoffret(coffret, missionId);
-    if (discoveredLocation != null && discoveredLocation.trim().isNotEmpty) {
-      final d = discoveredLocation.trim();
-      if (!candidates.contains(d)) {
-        candidates.add(d);
+    } else {
+      final discoveredLocation = _findLocationForCoffret(
+        coffret,
+        missionId,
+        audit: audit,
+      );
+      if (discoveredLocation != null && discoveredLocation.trim().isNotEmpty) {
+        final d = discoveredLocation.trim();
+        if (!candidates.contains(d)) {
+          candidates.add(d);
+        }
       }
     }
 
@@ -344,22 +352,26 @@ class IpIkEvaluatorService {
   }
 
   /// Retrouve le nom de l'emplacement (Local ou Zone) où est situé le coffret
-  static String? _findLocationForCoffret(CoffretArmoire coffret, String missionId) {
+  static String? _findLocationForCoffret(
+    CoffretArmoire coffret,
+    String missionId, {
+    AuditInstallationsElectriques? audit,
+  }) {
     try {
-      final audit = HiveService.getAuditInstallationsByMissionId(missionId);
-      if (audit == null) return null;
+      final auditData = audit ?? HiveService.getRawAuditInstallationsByMissionId(missionId);
+      if (auditData == null) return null;
 
       final eqId = coffret.equipmentId;
 
       // 1. Chercher dans les locaux MT direct
-      for (final local in audit.moyenneTensionLocaux) {
+      for (final local in auditData.moyenneTensionLocaux) {
         if (local.coffrets.any((c) => c.equipmentId == eqId || c.nom == coffret.nom)) {
           return local.nom;
         }
       }
 
       // 2. Chercher dans les zones MT
-      for (final zone in audit.moyenneTensionZones) {
+      for (final zone in auditData.moyenneTensionZones) {
         if (zone.coffrets.any((c) => c.equipmentId == eqId || c.nom == coffret.nom)) {
           return zone.nom;
         }
@@ -371,7 +383,7 @@ class IpIkEvaluatorService {
       }
 
       // 3. Chercher dans les zones BT
-      for (final zone in audit.basseTensionZones) {
+      for (final zone in auditData.basseTensionZones) {
         if (zone.coffretsDirects.any((c) => c.equipmentId == eqId || c.nom == coffret.nom)) {
           return zone.nom;
         }

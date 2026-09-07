@@ -122,5 +122,45 @@ void main() {
       expect(point.conformite, equals('non'));
       expect(point.observation, equals("Absence d'indice ip/ik du repère"));
     });
+
+    test('Test 8 — Absence de récursion / Stack Overflow : syncIpIkPoint utilise parentName et audit en mémoire', () {
+      final point = PointVerification(
+        pointVerification: "Compatibilité du degré IP/IK avec l'environnement d'installation",
+        conformite: 'non',
+        observation: null,
+      );
+
+      final coffret = CoffretArmoire(
+        qrCode: 'QR_RECURSION',
+        nom: 'Coffret Test Recursion',
+        type: 'COFFRET',
+        indiceIpIk: 'IP55 / IK08',
+        repere: 'LOCAL_TGBT',
+        pointsVerification: [point],
+      );
+
+      final audit = AuditInstallationsElectriques.create('mission_recursion_test');
+      final local = MoyenneTensionLocal(
+        nom: 'Local MT 1',
+        type: 'LOCAL_TRANSFORMATEUR',
+        coffrets: [coffret],
+      );
+      audit.moyenneTensionLocaux.add(local);
+
+      // Exécution de la synchronisation en passant audit et parentName
+      expect(() {
+        for (int i = 0; i < 50; i++) {
+          IpIkEvaluatorService.syncIpIkPoint(
+            coffret: coffret,
+            missionId: audit.missionId,
+            parentName: local.nom,
+            audit: audit,
+          );
+        }
+      }, returnsNormally);
+
+      expect(point.conformite, equals('non'));
+      expect(point.observation, equals("Absence d'indice ip/ik du repère"));
+    });
   });
 }

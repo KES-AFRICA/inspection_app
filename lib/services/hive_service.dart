@@ -1372,7 +1372,14 @@ static Future<AuditInstallationsElectriques> getOrCreateAuditInstallations(Strin
   
   try {
     final existing = box.values.firstWhere((audit) => audit.missionId == missionId);
-    _migrateAuditIfNeeded(existing);
+    if (!_migratingMissions.contains(missionId)) {
+      _migratingMissions.add(missionId);
+      try {
+        _migrateAuditIfNeeded(existing);
+      } finally {
+        _migratingMissions.remove(missionId);
+      }
+    }
     final report = EquipmentNumberService.auditAndFixMissionNumbers(existing);
     if (report.hasChanges) {
       await existing.save();
@@ -1564,17 +1571,38 @@ static Future<String?> getTransformateurLocalisation(String missionId, String sy
   }
 }
 
-/// Récupérer les données d'audit par missionId
-static AuditInstallationsElectriques? getAuditInstallationsByMissionId(String missionId) {
-  final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
-  try {
-    final audit = box.values.firstWhere((audit) => audit.missionId == missionId);
-    _migrateAuditIfNeeded(audit);
-    return audit;
-  } catch (e) {
-    return null;
+  static final Set<String> _migratingMissions = {};
+
+  /// Récupérer les données brutes d'audit par missionId sans exécuter les migrations
+  static AuditInstallationsElectriques? getRawAuditInstallationsByMissionId(String missionId) {
+    if (!Hive.isBoxOpen(_auditBox)) return null;
+    final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
+    try {
+      return box.values.firstWhere((audit) => audit.missionId == missionId);
+    } catch (_) {
+      return null;
+    }
   }
-}
+
+  /// Récupérer les données d'audit par missionId
+  static AuditInstallationsElectriques? getAuditInstallationsByMissionId(String missionId) {
+    if (!Hive.isBoxOpen(_auditBox)) return null;
+    final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
+    try {
+      final audit = box.values.firstWhere((audit) => audit.missionId == missionId);
+      if (!_migratingMissions.contains(missionId)) {
+        _migratingMissions.add(missionId);
+        try {
+          _migrateAuditIfNeeded(audit);
+        } finally {
+          _migratingMissions.remove(missionId);
+        }
+      }
+      return audit;
+    } catch (e) {
+      return null;
+    }
+  }
 
 static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
   bool changed = false;
@@ -1635,6 +1663,7 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
       coffret: coffret,
       missionId: audit.missionId,
       parentName: parentName,
+      audit: audit,
     );
     final currentIpIkState = coffret.pointsVerification.map((p) => '${p.pointVerification}:${p.conformite}:${p.observation}').join('|');
     if (previousIpIkState != currentIpIkState) {
@@ -1704,6 +1733,16 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
     }
   }
 
+  DescriptionInstallations? cachedDesc;
+  bool descFetched = false;
+  DescriptionInstallations? getCachedDescription() {
+    if (!descFetched) {
+      descFetched = true;
+      cachedDesc = getDescriptionInstallationsByMissionId(audit.missionId);
+    }
+    return cachedDesc;
+  }
+
   int transfoCounter = 0;
   void migrateLocalTransformateurs(dynamic local) {
     if (local.type == 'LOCAL_TRANSFORMATEUR' || local.type == 'LOCAL_MTBT' || local.type == 'LOCAL_POSTE_HTA') {
@@ -1722,7 +1761,7 @@ static void _migrateAuditIfNeeded(AuditInstallationsElectriques audit) {
         }
 
         // Data healing / Récupération automatique des champs perdus depuis DescriptionInstallations
-        final desc = getDescriptionInstallationsByMissionId(audit.missionId);
+        final desc = getCachedDescription();
         if (desc != null) {
           final allItems = [
             ...desc.alimentationMoyenneTension,
