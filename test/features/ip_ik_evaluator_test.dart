@@ -67,5 +67,60 @@ void main() {
       expect(isPointCoffret, isTrue);
       expect(isPointInverseur, isTrue);
     });
+
+    test('Test 5 — ParsedIpIk formatFromDigits et getters ipDigits / ikDigits', () {
+      expect(ParsedIpIk.formatFromDigits('55', '08'), equals('IP55 / IK08'));
+      expect(ParsedIpIk.formatFromDigits('55', ''), equals('IP55'));
+      expect(ParsedIpIk.formatFromDigits('', '08'), equals('IK08'));
+      expect(ParsedIpIk.formatFromDigits(null, null), equals(''));
+      expect(ParsedIpIk.formatFromDigits('  ', null), equals(''));
+
+      final parsed = ParsedIpIk.parse('IP55 / IK08');
+      expect(parsed.ipDigits, equals('55'));
+      expect(parsed.ikDigits, equals('08'));
+
+      final parsedSingle = ParsedIpIk.parse('IP65');
+      expect(parsedSingle.ipDigits, equals('65'));
+      expect(parsedSingle.ikDigits, isNull);
+
+      final parsedDigitsOnly = ParsedIpIk.parse('55');
+      expect(parsedDigitsOnly.ip, equals('IP55'));
+      expect(parsedDigitsOnly.ipDigits, equals('55'));
+    });
+
+    test('Test 6 — isAutomatedIpIkObservation détecte les observations automatiques du système', () {
+      expect(IpIkEvaluatorService.isAutomatedIpIkObservation("Absence de l'indice ip/ik"), isTrue);
+      expect(IpIkEvaluatorService.isAutomatedIpIkObservation("Absence d'indice ip/ik du repère"), isTrue);
+      expect(IpIkEvaluatorService.isAutomatedIpIkObservation("Indice ip/ik différent de l'indice du repère"), isTrue);
+      expect(IpIkEvaluatorService.isAutomatedIpIkObservation("Défaut physique constaté sur le boîtier"), isFalse);
+      expect(IpIkEvaluatorService.isAutomatedIpIkObservation(null), isFalse);
+    });
+
+    test('Test 7 — syncIpIkPoint débloque une observation automatique quand l\'indice devient valide', () {
+      final point = PointVerification(
+        pointVerification: "Compatibilité du degré IP/IK avec l'environnement d'installation",
+        conformite: 'non',
+        observation: "Absence de l'indice ip/ik",
+      );
+
+      final coffret = CoffretArmoire(
+        qrCode: 'QR123',
+        nom: 'Coffret C',
+        type: 'COFFRET',
+        indiceIpIk: 'IP55',
+        repere: 'REP_TEST',
+        pointsVerification: [point],
+      );
+
+      // Sans repère classé, l'évaluation donne "Absence d'indice ip/ik du repère"
+      IpIkEvaluatorService.syncIpIkPoint(
+        coffret: coffret,
+        missionId: 'm1',
+      );
+
+      // L'observation automatique précédente a été remplacée par celle du repère
+      expect(point.conformite, equals('non'));
+      expect(point.observation, equals("Absence d'indice ip/ik du repère"));
+    });
   });
 }

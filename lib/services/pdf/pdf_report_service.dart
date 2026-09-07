@@ -755,6 +755,7 @@ class PdfReportService {
     Map<dynamic, pw.MemoryImage?>? photoCache,
     bool saveFilesToDisk = true,
     Map<String, int>? photoRegistry,
+    String? missionId,
   }) =>
       PdfAuditInstallationsBuilder.buildLocalMT(
         local,
@@ -762,6 +763,7 @@ class PdfReportService {
         photoCache: photoCache,
         saveFilesToDisk: saveFilesToDisk,
         photoRegistry: photoRegistry,
+        missionId: missionId,
       );
 
   static List<pw.Widget> _buildZone(
@@ -2381,6 +2383,7 @@ class PdfReportService {
               photoCache: mtPhotoCache,
               saveFilesToDisk: saveFilesToDisk,
               photoRegistry: photoRegistry,
+              missionId: mission.id,
             ),
           );
         }
@@ -2439,6 +2442,7 @@ class PdfReportService {
             photoCache: zonePhotoCache,
             saveFilesToDisk: saveFilesToDisk,
             photoRegistry: photoRegistry,
+            missionId: mission.id,
           ),
         );
         elemIdx++;

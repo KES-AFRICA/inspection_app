@@ -21,6 +21,36 @@ class ParsedIpIk {
 
   const ParsedIpIk({this.ip, this.ik});
 
+  String? get ipDigits {
+    if (ip == null) return null;
+    final digits = ip!.replaceAll(RegExp(r'[^0-9]'), '');
+    return digits.isEmpty ? null : digits;
+  }
+
+  String? get ikDigits {
+    if (ik == null) return null;
+    final digits = ik!.replaceAll(RegExp(r'[^0-9]'), '');
+    return digits.isEmpty ? null : digits;
+  }
+
+  /// Construit la chaîne formatée normalisée à partir des chiffres entrés par l'utilisateur
+  static String formatFromDigits(String? ipDigits, String? ikDigits) {
+    final ipClean = ipDigits?.replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+    final ikClean = ikDigits?.replaceAll(RegExp(r'[^0-9]'), '') ?? '';
+
+    final ipPart = ipClean.isNotEmpty ? 'IP$ipClean' : null;
+    final ikPart = ikClean.isNotEmpty ? 'IK$ikClean' : null;
+
+    if (ipPart != null && ikPart != null) {
+      return '$ipPart / $ikPart';
+    } else if (ipPart != null) {
+      return ipPart;
+    } else if (ikPart != null) {
+      return ikPart;
+    }
+    return '';
+  }
+
   static ParsedIpIk parse(String? raw) {
     if (raw == null || raw.trim().isEmpty) {
       return const ParsedIpIk(ip: null, ik: null);
@@ -30,14 +60,25 @@ class ParsedIpIk {
     String? ipVal;
     String? ikVal;
 
-    final ipMatch = RegExp(r'IP\s*([0-9]{2})').firstMatch(s);
+    final ipMatch = RegExp(r'IP\s*([0-9]{1,2})').firstMatch(s);
     if (ipMatch != null) {
       ipVal = 'IP${ipMatch.group(1)}';
     }
 
-    final ikMatch = RegExp(r'IK\s*([0-9]{2})').firstMatch(s);
+    final ikMatch = RegExp(r'IK\s*([0-9]{1,2})').firstMatch(s);
     if (ikMatch != null) {
       ikVal = 'IK${ikMatch.group(1)}';
+    }
+
+    // Si ni "IP" ni "IK" n'apparaissent mais qu'une suite de chiffres est passée (ex: "55" ou "5508")
+    if (ipVal == null && ikVal == null) {
+      final digitsOnly = s.replaceAll(RegExp(r'[^0-9]'), '');
+      if (digitsOnly.length == 2) {
+        ipVal = 'IP$digitsOnly';
+      } else if (digitsOnly.length == 4) {
+        ipVal = 'IP${digitsOnly.substring(0, 2)}';
+        ikVal = 'IK${digitsOnly.substring(2, 4)}';
+      }
     }
 
     return ParsedIpIk(ip: ipVal, ik: ikVal);
@@ -80,6 +121,17 @@ class IpIkEvaluatorService {
         t.toLowerCase().contains("protection ip/ik adaptée");
   }
 
+  /// Détecte si l'observation actuelle est une observation automatique générée par le système
+  static bool isAutomatedIpIkObservation(String? obs) {
+    if (obs == null) return false;
+    final o = obs.trim().toLowerCase();
+    return o.contains("absence de l'indice ip/ik") ||
+        o.contains("absence d'indice ip/ik") ||
+        o.contains("absence de l'indice") ||
+        o.contains("différent de l'indice") ||
+        o.contains("different de l'indice");
+  }
+
   /// Synchronise déterministement le point de vérification IP/IK selon la règle métier
   static void syncIpIkPoint({
     required CoffretArmoire coffret,
@@ -99,7 +151,9 @@ class IpIkEvaluatorService {
             coffret.indiceIpIk == null || coffret.indiceIpIk!.trim().isEmpty;
         if (hasNoIpIk) {
           point.conformite = 'non';
-          if (point.observation == null || point.observation!.trim().isEmpty) {
+          if (point.observation == null ||
+              point.observation!.trim().isEmpty ||
+              isAutomatedIpIkObservation(point.observation)) {
             point.observation = eval.observation ?? "Absence de l'indice ip/ik";
           }
           point.observations ??= [];
@@ -117,41 +171,44 @@ class IpIkEvaluatorService {
           continue;
         }
 
-        // Si le point est déjà enregistré comme NON CONFORME (ex: défaut physique constaté),
-        // on respecte scrupuleusement cet état sans l'écraser arbitrairement par 'oui'
+        // Si le point est déjà enregistré comme NON CONFORME pour une raison MANUELLE (ex: casse physique),
+        // on respecte scrupuleusement cet état sans l'écraser arbitrairement par 'oui'.
+        // Mais si c'était une observation AUTOMATIQUE liée à l'absence ou la divergence d'indice,
+        // et que l'évaluation est désormais 'oui', on autorise la transition vers 'oui'.
         final isAlreadyNonConforme =
             point.conformite.toLowerCase().trim() == 'non';
         if (isAlreadyNonConforme && eval.conformite == 'oui') {
-          // On préserve le statut NON CONFORME et l'observation existante
-          continue;
+          if (!isAutomatedIpIkObservation(point.observation)) {
+            continue;
+          }
         }
 
-        // Sinon, on applique le résultat de l'évaluation
+        // Appliquer le résultat de l'évaluation
         point.conformite = eval.conformite;
-        if (eval.observation != null) {
-          if (point.observation == null || point.observation!.trim().isEmpty) {
+        if (eval.conformite == 'oui') {
+          if (isAutomatedIpIkObservation(point.observation)) {
+            point.observation = null;
+            point.observations?.clear();
+          }
+        } else {
+          // Si non conforme, mettre à jour l'observation si vide ou si c'est une observation automatique
+          if (point.observation == null ||
+              point.observation!.trim().isEmpty ||
+              isAutomatedIpIkObservation(point.observation)) {
             point.observation = eval.observation;
           }
           point.observations ??= [];
           if (point.observations!.isEmpty) {
             point.observations!.add(ElementControle(
               elementControle: point.pointVerification,
-              conforme: eval.conformite == 'oui',
+              conforme: false,
               priorite: 3,
               observation: point.observation ?? eval.observation,
             ));
           } else {
             point.observations!.first.observation =
                 point.observation ?? eval.observation;
-            point.observations!.first.conforme = eval.conformite == 'oui';
-          }
-        } else {
-          if (point.observation == "Absence de l'indice ip/ik" ||
-              point.observation == "Absence d'indice ip/ik du repère" ||
-              point.observation ==
-                  "Indice ip/ik différent de l'indice du repère") {
-            point.observation = null;
-            point.observations?.clear();
+            point.observations!.first.conforme = false;
           }
         }
       }
@@ -174,14 +231,29 @@ class IpIkEvaluatorService {
     }
 
     // CAS B & D — Recherche du repère et de son classement
-    String? targetLocation = parentName;
-
-    // Si parentName n'est pas fourni, le rechercher dans l'audit de la mission
-    if (targetLocation == null || targetLocation.trim().isEmpty) {
-      targetLocation = _findLocationForCoffret(coffret, missionId);
+    // Résolution multi-candidats par ordre de priorité :
+    // 1. coffret.repere (le repère direct de l'équipement)
+    // 2. parentName (le local ou la zone parente explicite)
+    // 3. Emplacement retrouvé par introspection de l'arborescence de la mission
+    final candidates = <String>[];
+    if (coffret.repere != null && coffret.repere!.trim().isNotEmpty) {
+      candidates.add(coffret.repere!.trim());
+    }
+    if (parentName != null && parentName.trim().isNotEmpty) {
+      final p = parentName.trim();
+      if (!candidates.contains(p)) {
+        candidates.add(p);
+      }
+    }
+    final discoveredLocation = _findLocationForCoffret(coffret, missionId);
+    if (discoveredLocation != null && discoveredLocation.trim().isNotEmpty) {
+      final d = discoveredLocation.trim();
+      if (!candidates.contains(d)) {
+        candidates.add(d);
+      }
     }
 
-    if (targetLocation == null || targetLocation.trim().isEmpty) {
+    if (candidates.isEmpty) {
       return const IpIkEvaluationResult(
         conformite: 'non',
         observation: "Absence d'indice ip/ik du repère",
@@ -189,10 +261,31 @@ class IpIkEvaluatorService {
     }
 
     ClassementEmplacement? emplacement;
-    try {
-      emplacement = HiveService.getEmplacementByNom(missionId, targetLocation);
-    } catch (_) {
-      emplacement = null;
+
+    // Priorité 1 : trouver un candidat ayant un classement IP ou IK renseigné
+    for (final candidate in candidates) {
+      try {
+        final found = HiveService.getEmplacementByNom(missionId, candidate);
+        if (found != null &&
+            ((found.ipEffective != null && found.ipEffective!.trim().isNotEmpty) ||
+             (found.ikEffective != null && found.ikEffective!.trim().isNotEmpty))) {
+          emplacement = found;
+          break;
+        }
+      } catch (_) {}
+    }
+
+    // Priorité 2 : si aucun n'a d'IP/IK effectif, prendre le premier emplacement existant
+    if (emplacement == null) {
+      for (final candidate in candidates) {
+        try {
+          final found = HiveService.getEmplacementByNom(missionId, candidate);
+          if (found != null) {
+            emplacement = found;
+            break;
+          }
+        } catch (_) {}
+      }
     }
 
     if (emplacement == null) {
@@ -218,8 +311,23 @@ class IpIkEvaluatorService {
 
     final repereFormatted = repereParsed.toString();
 
-    // CAS C1 — Présent + identique
-    if (equipParsed == repereParsed) {
+    // Comparaison intelligente :
+    // - Si le repère requiert IP et IK : l'équipement doit correspondre aux deux
+    // - Si le repère requiert uniquement IP : l'IP de l'équipement doit correspondre
+    // - Si le repère requiert uniquement IK : l'IK de l'équipement doit correspondre
+    final bool isMatching;
+    if (repereParsed.ip != null && repereParsed.ik != null) {
+      isMatching = (equipParsed.ip == repereParsed.ip && equipParsed.ik == repereParsed.ik);
+    } else if (repereParsed.ip != null) {
+      isMatching = (equipParsed.ip == repereParsed.ip);
+    } else if (repereParsed.ik != null) {
+      isMatching = (equipParsed.ik == repereParsed.ik);
+    } else {
+      isMatching = false;
+    }
+
+    // CAS C1 — Présent + compatible
+    if (isMatching) {
       return IpIkEvaluationResult(
         conformite: 'oui',
         observation: null,

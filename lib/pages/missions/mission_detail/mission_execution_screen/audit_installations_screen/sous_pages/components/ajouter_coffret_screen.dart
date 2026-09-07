@@ -1083,6 +1083,60 @@ class _EtapeInformationsGenerales extends StatefulWidget {
 
 class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales> {
   bool _addParafoudreObservation = false;
+  late final TextEditingController _ipDigitsController;
+  late final TextEditingController _ikDigitsController;
+  bool _isSyncingFromParent = false;
+  bool _isSyncingToParent = false;
+
+  @override
+  void initState() {
+    super.initState();
+    final parsed = ParsedIpIk.parse(widget.indiceIpIkController?.text);
+    _ipDigitsController = TextEditingController(text: parsed.ipDigits ?? '');
+    _ikDigitsController = TextEditingController(text: parsed.ikDigits ?? '');
+
+    _ipDigitsController.addListener(_onDigitsChanged);
+    _ikDigitsController.addListener(_onDigitsChanged);
+
+    widget.indiceIpIkController?.addListener(_onParentControllerChanged);
+  }
+
+  void _onDigitsChanged() {
+    if (_isSyncingFromParent) return;
+    _isSyncingToParent = true;
+    final formatted = ParsedIpIk.formatFromDigits(
+      _ipDigitsController.text,
+      _ikDigitsController.text,
+    );
+    if (widget.indiceIpIkController != null &&
+        widget.indiceIpIkController!.text != formatted) {
+      widget.indiceIpIkController!.text = formatted;
+    }
+    _isSyncingToParent = false;
+  }
+
+  void _onParentControllerChanged() {
+    if (_isSyncingToParent) return;
+    final parsed = ParsedIpIk.parse(widget.indiceIpIkController?.text);
+    _isSyncingFromParent = true;
+    final newIp = parsed.ipDigits ?? '';
+    final newIk = parsed.ikDigits ?? '';
+    if (_ipDigitsController.text != newIp) {
+      _ipDigitsController.text = newIp;
+    }
+    if (_ikDigitsController.text != newIk) {
+      _ikDigitsController.text = newIk;
+    }
+    _isSyncingFromParent = false;
+  }
+
+  @override
+  void dispose() {
+    widget.indiceIpIkController?.removeListener(_onParentControllerChanged);
+    _ipDigitsController.dispose();
+    _ikDigitsController.dispose();
+    super.dispose();
+  }
 
   void _previsualiserPhoto(List<String> photos, int index) {
     showDialog(
@@ -1159,7 +1213,7 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
   Widget _buildIndiceIpIkTile(BuildContext context) {
     return Container(
       margin: EdgeInsets.only(bottom: context.spacingS),
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(context.spacingM),
@@ -1183,15 +1237,117 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
               color: AppTheme.darkBlue,
             ),
           ),
-          const SizedBox(height: 4),
-          TextField(
-            controller: widget.indiceIpIkController,
-            decoration: const InputDecoration(
-              hintText: 'Ex: IP55 / IK08 ',
-              isDense: true,
-              border: InputBorder.none,
-            ),
-            style: TextStyle(fontSize: context.fontSizeM, color: Colors.grey.shade800),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              // Champ IP préfixé
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: AppTheme.primaryBlue.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          'IP',
+                          style: TextStyle(
+                            fontSize: context.fontSizeM,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryBlue,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _ipDigitsController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(2),
+                          ],
+                          decoration: const InputDecoration(
+                            hintText: '55',
+                            hintStyle: TextStyle(color: Colors.grey),
+                            isDense: true,
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(vertical: 4),
+                          ),
+                          style: TextStyle(
+                            fontSize: context.fontSizeM,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              // Champ IK préfixé
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.grey.shade300),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.deepOrange.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Text(
+                          'IK',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.deepOrange,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: TextField(
+                          controller: _ikDigitsController,
+                          keyboardType: TextInputType.number,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(2),
+                          ],
+                          decoration: const InputDecoration(
+                            hintText: '08',
+                            hintStyle: TextStyle(color: Colors.grey),
+                            isDense: true,
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(vertical: 4),
+                          ),
+                          style: TextStyle(
+                            fontSize: context.fontSizeM,
+                            fontWeight: FontWeight.w600,
+                            color: Colors.grey.shade800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ],
       ),
