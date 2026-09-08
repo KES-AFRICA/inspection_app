@@ -2667,6 +2667,8 @@ class PdfReportService {
         'Génération du périmètre et des mesures de sécurité...',
       );
     }
+    await Future.delayed(Duration.zero);
+    cancellationToken?.throwIfCancelled();
     final pdfP1_2 = pw.Document(
       title: 'Périmètre & Sécurité - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
@@ -2959,8 +2961,9 @@ class PdfReportService {
         0.28,
         'Génération du résumé exécutif et des statistiques...',
       );
-      await Future.delayed(Duration.zero);
     }
+    await Future.delayed(Duration.zero);
+    cancellationToken?.throwIfCancelled();
 
     // Génération 100% locale et déterministe du résumé exécutif (aucun appel réseau IA)
     final snapshot = ExecutiveSummarySnapshot.fromMission(missionId);
@@ -3019,8 +3022,9 @@ class PdfReportService {
         0.38,
         'Génération de la description des installations...',
       );
-      await Future.delayed(Duration.zero);
     }
+    await Future.delayed(Duration.zero);
+    cancellationToken?.throwIfCancelled();
     final pdfP1_4 = pw.Document(
       title: 'Description Installations - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
@@ -3135,6 +3139,8 @@ class PdfReportService {
     );
     await Future.delayed(Duration.zero);
     // ── Sub-chunk 2.1a : Classement ──
+    await Future.delayed(Duration.zero);
+    cancellationToken?.throwIfCancelled();
     final pdfClassement = pw.Document(
       title: 'Classement - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
@@ -3169,6 +3175,8 @@ class PdfReportService {
     currentOffset += pdfClassement.document.pdfPageList.pages.length;
 
     // ── Sub-chunk 2.1b : Foudre ──
+    await Future.delayed(Duration.zero);
+    cancellationToken?.throwIfCancelled();
     final pdfFoudre = pw.Document(
       title: 'Foudre - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
@@ -3203,6 +3211,8 @@ class PdfReportService {
 
     // ── Sub-chunk 2.1c : Mesures & Essais ──
     if (mesures != null) {
+      await Future.delayed(Duration.zero);
+      cancellationToken?.throwIfCancelled();
       final pdfMesures = pw.Document(
         title: 'Mesures & Essais - ${mission.nomClient}',
         author: 'KES INSPECTIONS AND PROJECTS',
@@ -3230,6 +3240,8 @@ class PdfReportService {
     }
 
     // ── Sub-chunk 2.1d : Signatures ──
+    await Future.delayed(Duration.zero);
+    cancellationToken?.throwIfCancelled();
     final pdfSignatures = pw.Document(
       title: 'Signatures - ${mission.nomClient}',
       author: 'KES INSPECTIONS AND PROJECTS',
@@ -3369,6 +3381,8 @@ class PdfReportService {
     // ── Sub-chunk 2.3 : Schéma d'exploitation (Placé à la FIN du document si schemaOption == 'oui') ──
     final hasSchema = mission.schemaOption?.trim().toLowerCase() == 'oui';
     if (hasSchema) {
+      await Future.delayed(Duration.zero);
+      cancellationToken?.throwIfCancelled();
       final pdfSchema = pw.Document(
         title: 'Schéma - ${mission.nomClient}',
         author: 'KES INSPECTIONS AND PROJECTS',
@@ -3397,6 +3411,8 @@ class PdfReportService {
     final totalReportPages = currentOffset;
 
     // ── Sub-chunk 1.1 : Couverture, Intervenants & Sommaire (Généré en dernier) ──
+    await Future.delayed(Duration.zero);
+    cancellationToken?.throwIfCancelled();
     if (saveFilesToDisk) {
       onProgress?.call(
         0.92,

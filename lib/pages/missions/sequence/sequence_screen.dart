@@ -291,58 +291,74 @@ class _SequenceScreenState extends State<SequenceScreen>
     }
   }
 
-  void _initializeSteps() {
-    _steps = [
-      {
-        'title': 'Renseignements généraux',
-        'widget': GeneralInfoStep(
+  final Map<int, Widget> _stepCache = {};
+
+  Widget _getStepWidget(int index) {
+    if (_stepCache.containsKey(index)) {
+      return _stepCache[index]!;
+    }
+    Widget widgetToCache;
+    switch (index) {
+      case 0:
+        widgetToCache = GeneralInfoStep(
           key: _generalInfoKey,
           mission: widget.mission,
           onDataChanged: (data) => _saveStepData('general_info', data),
           onValidationChanged: (isValid) => setState(() {}),
-        ),
-      },
-      {
-        'title': 'Documents nécessaires',
-        'widget': DocumentsStep(
+        );
+        break;
+      case 1:
+        widgetToCache = DocumentsStep(
           mission: widget.mission,
           onDataChanged: (data) => _saveStepData('documents', data),
-        ),
-      },
-      {
-        'title': 'Description des installations',
-        'widget': DescriptionStep(
+        );
+        break;
+      case 2:
+        widgetToCache = DescriptionStep(
           key: _descKey,
           mission: widget.mission,
           onDataChanged: (data) => _saveStepData('description', data),
           onPreviousStep: _goToPreviousStep,
           onNextStep: _goToNextStep,
           onSubStepChanged: () => setState(() {}),
-        ),
-      },
-      {
-        'title': 'Audit des installations',
-        'widget': AuditStep(
+        );
+        break;
+      case 3:
+        widgetToCache = AuditStep(
           mission: widget.mission,
           onDataChanged: (data) => _saveStepData('audit', data),
-        ),
-      },
-      {
-        'title': 'Schéma des installations',
-        'widget': SchemaStep(
+        );
+        break;
+      case 4:
+        widgetToCache = SchemaStep(
           mission: widget.mission,
           onDataChanged: (data) => _saveStepData('schema', data),
-        ),
-      },
-      {
-        'title': 'Sommaire',
-        'widget': SummaryStep(
+        );
+        break;
+      case 5:
+        widgetToCache = SummaryStep(
           mission: widget.mission,
           user: widget.user,
           onDataChanged: (data) => _saveStepData('summary', data),
           onPrevious: _goToPreviousStep,
-        ),
-      },
+        );
+        break;
+      default:
+        widgetToCache = const SizedBox.shrink();
+    }
+    _stepCache[index] = widgetToCache;
+    return widgetToCache;
+  }
+
+  void _initializeSteps() {
+    _stepCache.clear();
+    _steps = [
+      {'title': 'Renseignements généraux'},
+      {'title': 'Documents nécessaires'},
+      {'title': 'Description des installations'},
+      {'title': 'Audit des installations'},
+      {'title': 'Schéma des installations'},
+      {'title': 'Sommaire'},
     ];
   }
 
@@ -782,7 +798,7 @@ class _SequenceScreenState extends State<SequenceScreen>
                     controller: _pageController,
                     physics: const NeverScrollableScrollPhysics(),
                     itemCount: _steps.length,
-                    itemBuilder: (ctx, idx) => _steps[idx]['widget'] as Widget,
+                    itemBuilder: (ctx, idx) => _getStepWidget(idx),
                   ),
                 ),
                 if (_currentStep != 5) _buildNavButtons(isLast),

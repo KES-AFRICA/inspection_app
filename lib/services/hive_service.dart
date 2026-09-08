@@ -1367,40 +1367,36 @@ static Future<bool> removeCarteFromSection({
     return getDescriptionInstallationsByMissionId(missionId) != null;
   }
 
-/// Créer ou récupérer les données d'audit pour une mission
+/// Créer ou récupérer les données d'audit pour une mission avec cache O(1)
 static Future<AuditInstallationsElectriques> getOrCreateAuditInstallations(String missionId) async {
-  final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
-  
-  try {
-    final existing = box.values.firstWhere((audit) => audit.missionId == missionId);
-    if (!_migratingMissions.contains(missionId)) {
-      _migratingMissions.add(missionId);
-      try {
-        _migrateAuditIfNeeded(existing);
-      } finally {
-        _migratingMissions.remove(missionId);
+  final existing = getAuditInstallationsByMissionId(missionId);
+  if (existing != null) {
+    if (!_migratedMissions.contains(missionId)) {
+      _migratedMissions.add(missionId);
+      final report = EquipmentNumberService.auditAndFixMissionNumbers(existing);
+      if (report.hasChanges) {
+        await existing.save();
       }
     }
-    final report = EquipmentNumberService.auditAndFixMissionNumbers(existing);
-    if (report.hasChanges) {
-      await existing.save();
-    }
     return existing;
-  } catch (e) {
-    // Créer une nouvelle instance
-    final newAudit = AuditInstallationsElectriques.create(missionId);
-    await box.add(newAudit);
-    
-    // Mettre à jour la référence dans la mission
-    final missionBox = Hive.box<Mission>(_missionBox);
-    final mission = missionBox.get(missionId);
-    if (mission != null) {
-      mission.auditInstallationsElectriquesId = newAudit.key.toString();
-      await mission.save();
-    }
-    
-    return newAudit;
   }
+
+  final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
+  // Créer une nouvelle instance
+  final newAudit = AuditInstallationsElectriques.create(missionId);
+  await box.put(missionId, newAudit);
+  _auditCache[missionId] = newAudit;
+  _migratedMissions.add(missionId);
+  
+  // Mettre à jour la référence dans la mission
+  final missionBox = Hive.box<Mission>(_missionBox);
+  final mission = missionBox.get(missionId);
+  if (mission != null) {
+    mission.auditInstallationsElectriquesId = newAudit.key.toString();
+    await mission.save();
+  }
+  
+  return newAudit;
 }
 
   /// Sauvegarder les données d'audit
@@ -1411,6 +1407,8 @@ static Future<AuditInstallationsElectriques> getOrCreateAuditInstallations(Strin
     return PersistenceQueue.enqueue('audit_${audit.missionId}', () async {
       final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
       audit.updatedAt = DateTime.now();
+      _auditCache[audit.missionId] = audit;
+      _migratedMissions.add(audit.missionId);
 
       if (!skipDescriptionSync) {
         try {
@@ -1425,14 +1423,7 @@ static Future<AuditInstallationsElectriques> getOrCreateAuditInstallations(Strin
       if (audit.isInBox) {
         await audit.save();
       } else {
-        final idx = box.values
-            .toList()
-            .indexWhere((a) => a.missionId == audit.missionId);
-        if (idx != -1) {
-          await box.putAt(idx, audit);
-        } else {
-          await box.add(audit);
-        }
+        await box.put(audit.missionId, audit);
       }
     });
   }
@@ -1572,32 +1563,53 @@ static Future<String?> getTransformateurLocalisation(String missionId, String sy
   }
 }
 
-  static final Set<String> _migratingMissions = {};
+  static final Map<String, AuditInstallationsElectriques> _auditCache = {};
+  static final Set<String> _migratedMissions = {};
+
+  static void clearCacheForMission(String missionId) {
+    _auditCache.remove(missionId);
+    _migratedMissions.remove(missionId);
+  }
 
   /// Récupérer les données brutes d'audit par missionId sans exécuter les migrations
   static AuditInstallationsElectriques? getRawAuditInstallationsByMissionId(String missionId) {
+    if (_auditCache.containsKey(missionId)) {
+      final cached = _auditCache[missionId]!;
+      if (cached.isInBox) return cached;
+    }
     if (!Hive.isBoxOpen(_auditBox)) return null;
     final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
     try {
-      return box.values.firstWhere((audit) => audit.missionId == missionId);
+      AuditInstallationsElectriques? audit = box.get(missionId);
+      audit ??= box.values.firstWhere((a) => a.missionId == missionId);
+      _auditCache[missionId] = audit;
+      return audit;
     } catch (_) {
       return null;
     }
   }
 
-  /// Récupérer les données d'audit par missionId
+  /// Récupérer les données d'audit par missionId avec cache O(1) et migration unique
   static AuditInstallationsElectriques? getAuditInstallationsByMissionId(String missionId) {
+    if (_auditCache.containsKey(missionId)) {
+      final cached = _auditCache[missionId]!;
+      if (cached.isInBox) {
+        if (!_migratedMissions.contains(missionId)) {
+          _migratedMissions.add(missionId);
+          _migrateAuditIfNeeded(cached);
+        }
+        return cached;
+      }
+    }
     if (!Hive.isBoxOpen(_auditBox)) return null;
     final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
     try {
-      final audit = box.values.firstWhere((audit) => audit.missionId == missionId);
-      if (!_migratingMissions.contains(missionId)) {
-        _migratingMissions.add(missionId);
-        try {
-          _migrateAuditIfNeeded(audit);
-        } finally {
-          _migratingMissions.remove(missionId);
-        }
+      AuditInstallationsElectriques? audit = box.get(missionId);
+      audit ??= box.values.firstWhere((a) => a.missionId == missionId);
+      _auditCache[missionId] = audit;
+      if (!_migratedMissions.contains(missionId)) {
+        _migratedMissions.add(missionId);
+        _migrateAuditIfNeeded(audit);
       }
       return audit;
     } catch (e) {

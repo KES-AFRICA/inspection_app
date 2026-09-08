@@ -60,8 +60,10 @@ class _MoyenneTensionScreenState extends ConsumerState<MoyenneTensionScreen> {
   // Modifiez la méthode _loadData pour appeler refresh :
 
   Future<void> _loadData() async {
-    await InstallationDescriptionSyncService.repairAndSyncDescriptions(widget.mission.id);
     await _refreshAllData();
+    Future.microtask(() {
+      InstallationDescriptionSyncService.repairAndSyncDescriptions(widget.mission.id);
+    });
   }
 
   // Récupérer les brouillons pour un local

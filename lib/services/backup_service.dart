@@ -12,6 +12,7 @@
 
 import 'dart:convert';
 import 'dart:io';
+import 'dart:isolate';
 
 import 'package:archive/archive_io.dart';
 import 'package:convert/convert.dart';
@@ -35,6 +36,7 @@ import '../models/mesures_essais.dart';
 import '../models/jsa.dart';
 import '../models/renseignements_generaux.dart';
 import 'hive_service.dart';
+import 'installation_description_sync_service.dart';
 import 'sequence_progress_service.dart';
 import 'package:inspec_app/services/backup/backup_format_strategy.dart';
 import 'package:inspec_app/services/backup/operation_progress_state.dart';
@@ -1414,6 +1416,9 @@ class BackupService {
             if (kDebugMode) print('⚠️ Restauration photo streaming: $e');
           }
           photoCount++;
+          if (photoCount % 10 == 0) {
+            await Future.delayed(Duration.zero);
+          }
           if (photoCount % 25 == 0) {
             final prg = (0.05 + (photoCount * 0.0004)).clamp(0.05, 0.80);
             onProgress?.call('Extraction des photos : $photoCount...', prg);
@@ -1720,16 +1725,54 @@ class BackupService {
       await destination.create(recursive: true);
     }
     await for (final entity in source.list(recursive: false)) {
+      final lastPart = entity.path.replaceAll('\\', '/').split('/').last;
       if (entity is Directory) {
-        final newDir = Directory('${destination.path}/${entity.path.split('/').last}');
+        final newDir = Directory('${destination.path}/$lastPart');
         await _copyDirRecursively(entity, newDir);
       } else if (entity is File) {
-        final newFile = File('${destination.path}/${entity.path.split('/').last}');
+        final newFile = File('${destination.path}/$lastPart');
         if (!await newFile.parent.exists()) {
           await newFile.parent.create(recursive: true);
         }
         if (!await newFile.exists()) {
           await entity.copy(newFile.path);
+        }
+      }
+    }
+  }
+
+  // ── ISOLATE WORKER POUR EXTRACTION ET RESTAURATION DES MÉDIAS SANS BLOQUER L'UI ──
+  static Future<void> _extractAndRestoreMediaWorker(Map<String, String> params) async {
+    final zipPath = params['zipPath']!;
+    final extractPath = params['extractPath']!;
+    final appPhotosPath = params['appPhotosPath']!;
+
+    // 1. Extraction zip sur le disque
+    await extractFileToDisk(zipPath, extractPath);
+
+    // 2. Déplacement/copie des photos extraites
+    final extractedPhotosDir = Directory('$extractPath/photos/audit_photos');
+    if (extractedPhotosDir.existsSync()) {
+      _syncCopyDirRecursively(extractedPhotosDir, Directory(appPhotosPath));
+    }
+  }
+
+  static void _syncCopyDirRecursively(Directory source, Directory destination) {
+    if (!destination.existsSync()) {
+      destination.createSync(recursive: true);
+    }
+    for (final entity in source.listSync(recursive: false)) {
+      final baseName = entity.path.replaceAll('\\', '/').split('/').last;
+      if (entity is Directory) {
+        final newDir = Directory('${destination.path}/$baseName');
+        _syncCopyDirRecursively(entity, newDir);
+      } else if (entity is File) {
+        final newFile = File('${destination.path}/$baseName');
+        if (!newFile.parent.existsSync()) {
+          newFile.parent.createSync(recursive: true);
+        }
+        if (!newFile.existsSync()) {
+          entity.copySync(newFile.path);
         }
       }
     }
@@ -1829,16 +1872,12 @@ class BackupService {
     }
 
     try {
-      // 1. Extraction Zip streaming direct sur disque avec archive_io
-      await extractFileToDisk(effectiveZipPath, extractDir.path);
-
-      onProgress?.call('Restauration des médias...', 0.20);
-
-      // 2. Déplacer les photos directement vers audit_photos/ (0 MB RAM)
-      final extractedPhotosDir = Directory('${extractDir.path}/photos/audit_photos');
-      if (await extractedPhotosDir.exists()) {
-        await _copyDirRecursively(extractedPhotosDir, Directory('${appDir.path}/audit_photos'));
-      }
+      // 1 & 2. Extraction Zip streaming et déplacement photos déportés dans un Isolate (0ms UI freeze)
+      await Isolate.run(() => _extractAndRestoreMediaWorker({
+        'zipPath': effectiveZipPath,
+        'extractPath': extractDir.path,
+        'appPhotosPath': '${appDir.path}/audit_photos',
+      }));
 
       onProgress?.call('Analyse du manifeste V4...', 0.35);
 
@@ -1862,6 +1901,7 @@ class BackupService {
       }
 
       // 4. Importer les missions
+      final importedMissionIds = <String>[];
       final missionsDir = Directory('${extractDir.path}/missions');
       if (await missionsDir.exists()) {
         final files = missionsDir.listSync().whereType<File>().toList();
@@ -1882,6 +1922,9 @@ class BackupService {
             );
             if (r.startsWith('imported')) {
               imported++;
+              if (r.contains(':')) {
+                importedMissionIds.add(r.substring('imported:'.length));
+              }
             } else {
               skipped++;
             }
@@ -1919,7 +1962,17 @@ class BackupService {
         }
       }
 
-      await HiveService.synchronizeAllExistingMissions();
+      // Synchronisation ciblée uniquement sur les missions importées (évite d'auditer toute la DB)
+      for (final mId in importedMissionIds) {
+        try {
+          final audit = HiveService.getAuditInstallationsByMissionId(mId);
+          if (audit != null) {
+            await InstallationDescriptionSyncService.syncAuditToDescription(audit);
+          }
+        } catch (e) {
+          if (kDebugMode) print('⚠️ Sync post-import pour $mId: $e');
+        }
+      }
       onProgress?.call('Importation V4 terminée avec succès !', 1.0);
 
       return ImportResult(
@@ -2022,6 +2075,7 @@ class BackupService {
     onProgress?.call('Restauration des données des missions...', 0.25);
 
     // ─ 3. Import des missions ─
+    final importedLegacyMissionIds = <String>[];
     final missionsData = payload['missions'] as List<dynamic>? ?? [];
     for (int idx = 0; idx < missionsData.length; idx++) {
       final m = missionsData[idx];
@@ -2038,6 +2092,9 @@ class BackupService {
           );
         if (r.startsWith('imported')) {
           imported++;
+          if (r.contains(':')) {
+            importedLegacyMissionIds.add(r.substring('imported:'.length));
+          }
         } else {
           skipped++;
           final nom = ((m['mission'] as Map?))?['nom_client'] as String? ??
@@ -2073,8 +2130,17 @@ class BackupService {
       warnings.add('Brouillons coffrets partiellement importés: $e');
     }
 
-    // ─ 5. Synchroniser les équipements après import ─
-    await HiveService.synchronizeAllExistingMissions();
+    // ─ 5. Synchroniser uniquement les missions importées ─
+    for (final mId in importedLegacyMissionIds) {
+      try {
+        final audit = HiveService.getAuditInstallationsByMissionId(mId);
+        if (audit != null) {
+          await InstallationDescriptionSyncService.syncAuditToDescription(audit);
+        }
+      } catch (e) {
+        if (kDebugMode) print('⚠️ Sync post-import pour $mId: $e');
+      }
+    }
     onProgress?.call('Importation terminée !', 1.0);
 
     return ImportResult(
@@ -2316,7 +2382,7 @@ class BackupService {
         }
       });
 
-      return 'imported';
+      return 'imported:$targetMissionId';
     } catch (e, st) {
       if (kDebugMode) print('❌ Exception détectée lors de l\'import: $e\n$st');
       await _rollbackMission(targetMissionId, createdPhotoPaths);

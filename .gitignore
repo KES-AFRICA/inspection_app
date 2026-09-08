@@ -47,3 +47,5 @@ app.*.map.json
 # Secrets & Local Config (Ne jamais commiter)
 /lib/config/api_keys.dart
 .env
+# Widget Preview related
+.widget_preview/

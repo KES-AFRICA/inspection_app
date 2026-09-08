@@ -43,10 +43,6 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
 
-  // Lancer l'optimisation progressive en arrière-plan des photos existantes
-  ImageCompressHelper.optimizeExistingPhotosProgressively();
-  HiveService.synchronizeAllExistingMissions();
-
   runApp(const ProviderScope(child: MyApp()));
 }
 

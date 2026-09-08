@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:inspec_app/models/mission.dart';
 import 'package:inspec_app/constants/app_theme.dart';
-import 'package:inspec_app/services/statistics/mission_statistics_collector.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/basse_tension_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/foudre_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/moyenne_tension_screen.dart';
@@ -17,14 +16,6 @@ class AuditInstallationsScreen extends StatefulWidget {
 }
 
 class _AuditInstallationsScreenState extends State<AuditInstallationsScreen> {
-  @override
-  void initState() {
-    super.initState();
-    Future.microtask(() {
-      MissionStatisticsCollector.getInventory(widget.mission.id);
-    });
-  }
-
   void _navigateToMoyenneTension(BuildContext context) {
     Navigator.push(
       context,
