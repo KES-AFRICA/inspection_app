@@ -333,6 +333,8 @@ class CoffretArmoireEntity {
   final bool verificationThermographie;
   final String? presenceDefautThermo;
   final bool? alimenteeParTransformateur;
+  final String? transformateurId;
+  final String? transformateurNomComplet;
   final bool? presenceCPI;
   final bool? departPrisAvecProtection;
   final List<AlimentationEntity> alimentations;
@@ -383,6 +385,8 @@ class CoffretArmoireEntity {
     this.verificationThermographie = false,
     this.presenceDefautThermo,
     this.alimenteeParTransformateur,
+    this.transformateurId,
+    this.transformateurNomComplet,
     this.presenceCPI,
     this.departPrisAvecProtection,
     this.accessible = true,

@@ -793,6 +793,7 @@ class PdfReportStyles {
     ],
     'GROUPE': [
       'N°',
+      'IDENTIFICATION',
       'MARQUE',
       'TYPE',
       'N° SERIE',
@@ -804,6 +805,7 @@ class PdfReportStyles {
     ],
     'CARBURANT': [
       'N°',
+      'IDENTIFICATION DU GE',
       'MODE',
       'CAPACITE(L)',
       'CUVE DE RETENTION',
@@ -813,6 +815,7 @@ class PdfReportStyles {
     ],
     'INVERSEUR': [
       'N°',
+      'IDENTIFICATION DU GE',
       'MARQUE',
       'TYPE',
       'N° SERIE',

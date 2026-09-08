@@ -8499,6 +8499,131 @@ static String? findCoffretDoublon({
   static Future<void> deleteLightingInspection(String inspectionId) async {
     await _lightingBox.delete(inspectionId);
   }
+
+  /// Récupère la liste de toutes les options de transformateurs MT de la mission avec local et numéro d'ordre
+  static List<MissionTransformateurOption> getAllTransformateurOptionsForMission(String missionId) {
+    if (!Hive.isBoxOpen(_auditBox)) return [];
+    final box = Hive.box<AuditInstallationsElectriques>(_auditBox);
+    final audit = box.values.cast<AuditInstallationsElectriques?>().firstWhere(
+      (a) => a?.missionId == missionId,
+      orElse: () => null,
+    );
+    if (audit == null) return [];
+
+    final list = <MissionTransformateurOption>[];
+    final seenIds = <String>{};
+    int orderCounter = 1;
+
+    void addTransfo(TransformateurMTBT? t, String localNom) {
+      if (t == null) return;
+      final sid = (t.syncId != null && t.syncId!.trim().isNotEmpty)
+          ? t.syncId!.trim()
+          : 'tr_${t.nom ?? ''}_${t.repere ?? ''}_${t.puissanceAssignee}';
+      if (seenIds.add(sid)) {
+        list.add(MissionTransformateurOption(
+          transformateur: t,
+          localNom: localNom,
+          orderIndex: orderCounter++,
+        ));
+      }
+    }
+
+    // 1. Locaux MT directs
+    for (final l in audit.moyenneTensionLocaux) {
+      final lNom = l.nom.trim().isNotEmpty ? l.nom.trim() : 'Local MT';
+      if (l.transformateur != null) addTransfo(l.transformateur, lNom);
+      for (final t in l.transformateurs) {
+        addTransfo(t, lNom);
+      }
+    }
+
+    // 2. MoyenneTensionZones
+    for (final z in audit.moyenneTensionZones) {
+      for (final l in z.locaux) {
+        final lNom = l.nom.trim().isNotEmpty ? l.nom.trim() : 'Local MT';
+        if (l.transformateur != null) addTransfo(l.transformateur, lNom);
+        for (final t in l.transformateurs) {
+          addTransfo(t, lNom);
+        }
+      }
+    }
+
+    // 3. BasseTensionZones
+    for (final z in audit.basseTensionZones) {
+      for (final l in z.locaux) {
+        final lNom = l.nom.trim().isNotEmpty ? l.nom.trim() : 'Local BT';
+        for (final t in l.transformateurs) {
+          addTransfo(t, lNom);
+        }
+      }
+    }
+
+    return list;
+  }
+
+  /// Récupère la liste de tous les transformateurs MT de la mission (locaux MT, zones MT, zones BT)
+  static List<TransformateurMTBT> getAllTransformateursForMission(String missionId) {
+    return getAllTransformateurOptionsForMission(missionId).map((o) => o.transformateur).toList();
+  }
+
+  /// Formate le libellé d'affichage conventionnel d'un transformateur
+  static String formatTransformateurDisplayName(TransformateurMTBT t, {String? localNom, int? orderIndex}) {
+    final tNom = t.nom?.trim() ?? '';
+    final baseName = tNom.isNotEmpty
+        ? tNom
+        : (() {
+            final p = t.puissanceAssignee.trim();
+            final pStr = p.isNotEmpty ? (p.toLowerCase().contains('kva') ? p : '$p kVA') : '';
+            final orderStr = orderIndex != null ? '$orderIndex' : (t.repere?.trim().isNotEmpty == true ? t.repere!.trim() : '');
+            return 'Transformateur ${orderStr.isNotEmpty ? orderStr : ''}${pStr.isNotEmpty ? ' $pStr' : ''}'.trim();
+          })();
+    if (localNom != null && localNom.trim().isNotEmpty) {
+      return '${localNom.trim()} - $baseName';
+    }
+    return baseName;
+  }
+}
+
+/// Modèle d'option de transformateur dans une mission associant le transformateur à son local et numéro d'ordre
+class MissionTransformateurOption {
+  final TransformateurMTBT transformateur;
+  final String localNom;
+  final int orderIndex;
+
+  MissionTransformateurOption({
+    required this.transformateur,
+    required this.localNom,
+    required this.orderIndex,
+  });
+
+  String get id {
+    if (transformateur.syncId != null && transformateur.syncId!.trim().isNotEmpty) {
+      return transformateur.syncId!.trim();
+    }
+    return 'tr_${transformateur.nom ?? ''}_${transformateur.repere ?? ''}_${transformateur.puissanceAssignee}';
+  }
+
+  /// Nom seul du transformateur (sans le chemin/local) :
+  /// - Si son nom est rempli : le nom du transfo
+  /// - Si son nom n'est pas rempli : Transformateur x + sa puissance kVA
+  String get transformerName {
+    final tNom = transformateur.nom?.trim() ?? '';
+    if (tNom.isNotEmpty) {
+      return tNom;
+    }
+    final p = transformateur.puissanceAssignee.trim();
+    if (p.isNotEmpty) {
+      final pKva = p.toLowerCase().contains('kva') ? p : '$p kVA';
+      return 'Transformateur $orderIndex $pKva';
+    }
+    return 'Transformateur $orderIndex';
+  }
+
+  /// Libellé affiché dans la liste déroulante : "le local - le nom du transfo"
+  String get dropdownLabel {
+    final loc = localNom.trim().isNotEmpty ? localNom.trim() : 'Local';
+    return '$loc - $transformerName';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════

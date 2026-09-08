@@ -162,7 +162,7 @@ class _DescriptionInstallationsScreenState extends ConsumerState<DescriptionInst
               'Caractéristiques du groupe électrogène',
               Icons.electrical_services_outlined,
               'groupe_electrogene',
-              ['MARQUE', 'TYPE', 'N° SERIE', 'PUISSANCE (KVA)', 'INTENSITE', 'ANNEE DE FABRICATION', 'CALIBRE DU DISJONCTEUR', 'SECTION DU CABLE'],
+              ['IDENTIFICATION', 'MARQUE', 'TYPE', 'N° SERIE', 'PUISSANCE (KVA)', 'INTENSITE', 'ANNEE DE FABRICATION', 'CALIBRE DU DISJONCTEUR', 'SECTION DU CABLE'],
             ),
             
             _buildListTile(
@@ -170,7 +170,7 @@ class _DescriptionInstallationsScreenState extends ConsumerState<DescriptionInst
               'Alimentation du groupe électrogène en carburant',
               Icons.local_gas_station_outlined,
               'alimentation_carburant',
-              ['MODE', 'CAPACITE', 'CUVE DE RETENTION', 'INDICATEUR DE NIVEAU', 'MISE A LA TERRE', 'ANNEE DE FABRICATION'],
+              ['IDENTIFICATION DU GE', 'MODE', 'CAPACITE', 'CUVE DE RETENTION', 'INDICATEUR DE NIVEAU', 'MISE A LA TERRE', 'ANNEE DE FABRICATION'],
             ),
             
             _buildListTile(
@@ -178,7 +178,7 @@ class _DescriptionInstallationsScreenState extends ConsumerState<DescriptionInst
               'Caractéristiques de l\'inverseur',
               Icons.swap_horiz_outlined,
               'inverseur',
-              ['MARQUE', 'TYPE', 'N° SERIE', 'INTENSITE (A)', 'REGLAGES'],
+              ['IDENTIFICATION DU GE', 'MARQUE', 'TYPE', 'N° SERIE', 'INTENSITE (A)', 'REGLAGES'],
             ),
             
             _buildListTile(

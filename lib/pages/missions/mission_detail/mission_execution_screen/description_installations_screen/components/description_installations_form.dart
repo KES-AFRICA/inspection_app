@@ -196,6 +196,21 @@ class _DescriptionInstallationsFormState
     extends ConsumerState<DescriptionInstallationsForm> {
   bool _isSaving = false;
 
+  static String getGeDisplayName(InstallationItem ge, [int? index]) {
+    final idField = ge.data['Identification']?.trim() ?? '';
+    if (idField.isNotEmpty) {
+      return idField;
+    }
+    final marque = ge.data['Marque']?.trim() ?? '';
+    final puissance = ge.data['Puissance (Kva)']?.trim() ?? '';
+    final parts = [marque, if (puissance.isNotEmpty) '$puissance kVA'].where((s) => s.isNotEmpty).toList();
+    if (parts.isNotEmpty) {
+      final base = parts.join(' — ');
+      return index != null ? 'GE ${index + 1} ($base)' : base;
+    }
+    return 'GE ${index != null ? index + 1 : (ge.data['N°'] ?? '')}';
+  }
+
   static const Map<String, String> _numericFieldsWithUnit = {
     'Calibre Du Disjoncteur': 'A',
     'Tension assignée': 'kV',
@@ -280,7 +295,7 @@ class _DescriptionInstallationsFormState
     }
   }
 
-  Future<void> _addItem() async {
+  Future<void> _addItem([List<InstallationItem>? availableGes]) async {
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
@@ -292,6 +307,7 @@ class _DescriptionInstallationsFormState
           sectionCableOptions: _sectionCableOptions,
           modeOptions: _modeOptions,
           ouiNonOptions: _ouiNonOptions,
+          availableGes: availableGes ?? [],
         ),
       ),
     );
@@ -313,35 +329,41 @@ class _DescriptionInstallationsFormState
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
               ),
-              contentPadding: const EdgeInsets.all(20),
-              title: const Row(
+              title: Row(
                 children: [
-                  Icon(Icons.check_circle, color: Colors.green, size: 28),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      'Enregistrement réussi',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      Icons.check_circle_outline,
+                      color: Colors.green.shade600,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Élément ajouté',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ],
               ),
               content: const Text(
-                'Voulez-vous continuer à ajouter ou terminer ?',
+                'L\'élément a été ajouté avec succès.\nSouhaitez-vous en ajouter un autre ?',
+                style: TextStyle(fontSize: 14, height: 1.4),
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(ctx, true),
-                  child: const Text(
-                    'CONTINUER',
-                    style: TextStyle(fontWeight: FontWeight.bold),
-                  ),
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: const Text('Terminer'),
                 ),
                 ElevatedButton(
-                  onPressed: () => Navigator.pop(ctx, false),
+                  onPressed: () => Navigator.pop(ctx, true),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppTheme.primaryBlue,
                     shape: RoundedRectangleBorder(
@@ -349,7 +371,7 @@ class _DescriptionInstallationsFormState
                     ),
                   ),
                   child: const Text(
-                    'TERMINER',
+                    'CONTINUER',
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),
@@ -357,7 +379,7 @@ class _DescriptionInstallationsFormState
             ),
           );
           if (shouldContinue == true) {
-            _addItem();
+            _addItem(availableGes);
           } else {
             widget.onTerminate();
           }
@@ -367,7 +389,7 @@ class _DescriptionInstallationsFormState
     }
   }
 
-  Future<void> _editItem(int index, List<InstallationItem> items) async {
+  Future<void> _editItem(int index, List<InstallationItem> items, [List<InstallationItem>? availableGes]) async {
     final item = items[index];
     final isCelluleAuto = item.data.containsKey('auditCelluleId') && item.data['auditCelluleId']!.isNotEmpty;
     final isTransfoAuto = item.data.containsKey('auditTransformateurId') && item.data['auditTransformateurId']!.isNotEmpty;
@@ -409,6 +431,7 @@ class _DescriptionInstallationsFormState
           ouiNonOptions: _ouiNonOptions,
           isReadOnly: isAutomatic ? !_isItemACompleter(item) : false,
           localisation: localisation,
+          availableGes: availableGes ?? [],
         ),
       ),
     );
@@ -644,12 +667,12 @@ class _DescriptionInstallationsFormState
             children: [
               items.isEmpty
                   ? _buildEmpty(isSmallScreen)
-                  : _buildList(items, isSmallScreen, localisationMap),
+                  : _buildList(items, isSmallScreen, localisationMap, desc.groupeElectrogene),
               Positioned(
                 bottom: isSmallScreen ? 16 : 20,
                 right: isSmallScreen ? 16 : 20,
                 child: FloatingActionButton(
-                  onPressed: _isSaving ? null : _addItem,
+                  onPressed: _isSaving ? null : () => _addItem(desc.groupeElectrogene),
                   backgroundColor: AppTheme.primaryBlue,
                   child: const Icon(Icons.add, color: Colors.white),
                 ),
@@ -704,8 +727,9 @@ class _DescriptionInstallationsFormState
   Widget _buildList(
     List<InstallationItem> items,
     bool isSmallScreen,
-    Map<String, String> localisationMap,
-  ) =>
+    Map<String, String> localisationMap, [
+    List<InstallationItem> availableGes = const [],
+  ]) =>
       Column(
         children: [
           Padding(
@@ -756,7 +780,7 @@ class _DescriptionInstallationsFormState
               ),
               itemCount: items.length,
               itemBuilder: (ctx, i) =>
-                  _buildCard(items, items[i], i, isSmallScreen, localisationMap),
+                  _buildCard(items, items[i], i, isSmallScreen, localisationMap, availableGes),
             ),
           ),
         ],
@@ -767,8 +791,9 @@ class _DescriptionInstallationsFormState
     InstallationItem item,
     int index,
     bool isSmallScreen,
-    Map<String, String> localisationMap,
-  ) {
+    Map<String, String> localisationMap, [
+    List<InstallationItem> availableGes = const [],
+  ]) {
     final isCelluleAuto = item.data.containsKey('auditCelluleId') && item.data['auditCelluleId']!.isNotEmpty;
     final isTransfoAuto = item.data.containsKey('auditTransformateurId') && item.data['auditTransformateurId']!.isNotEmpty;
     final isAutomatic = isCelluleAuto || isTransfoAuto;
@@ -795,7 +820,7 @@ class _DescriptionInstallationsFormState
         border: Border.all(color: Colors.grey.shade100),
       ),
       child: InkWell(
-        onTap: () => _editItem(index, items),
+        onTap: () => _editItem(index, items, availableGes),
         borderRadius: BorderRadius.circular(14),
         child: Padding(
           padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
@@ -847,7 +872,7 @@ class _DescriptionInstallationsFormState
                       color: AppTheme.primaryBlue,
                       size: isSmallScreen ? 18 : 20,
                     ),
-                    onPressed: () => _editItem(index, items),
+                    onPressed: () => _editItem(index, items, availableGes),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                   ),
@@ -949,7 +974,20 @@ class _DescriptionInstallationsFormState
                 children: widget.champs
                     .where((c) => _hasField(item.data, c))
                     .map((champ) {
-                      final value = _getValueForField(item.data, champ)!;
+                      final rawVal = _getValueForField(item.data, champ)!;
+                      String value = rawVal;
+                      if (champ == 'Identification du GE' && item.data.containsKey('geId') && item.data['geId']!.isNotEmpty) {
+                        final geId = item.data['geId']!;
+                        for (final g in availableGes) {
+                          if (g.itemId == geId || g.id == geId) {
+                            final liveName = _DescriptionInstallationsFormState.getGeDisplayName(g);
+                            if (liveName.isNotEmpty) {
+                              value = liveName;
+                            }
+                            break;
+                          }
+                        }
+                      }
                       final unit = _numericFieldsWithUnit[champ] ?? '';
                       return Container(
                         padding: const EdgeInsets.symmetric(
@@ -1202,6 +1240,7 @@ class _AddEditItemScreen extends StatefulWidget {
   final List<String> ouiNonOptions;
   final bool isReadOnly;
   final String? localisation;
+  final List<InstallationItem> availableGes;
 
   const _AddEditItemScreen({
     required this.title,
@@ -1214,6 +1253,7 @@ class _AddEditItemScreen extends StatefulWidget {
     required this.ouiNonOptions,
     this.isReadOnly = false,
     this.localisation,
+    this.availableGes = const [],
   });
 
   @override
@@ -1223,17 +1263,35 @@ class _AddEditItemScreen extends StatefulWidget {
 class _AddEditItemScreenState extends State<_AddEditItemScreen> {
   final Map<String, TextEditingController> _controllers = {};
   final Map<String, String?> _selectedValues = {};
+  final Map<String, String> _geOptionToIdMap = {};
   String? _selectedGamme;
+  String? _selectedGeId;
 
   @override
   void initState() {
     super.initState();
     _selectedGamme = _getValueForField(widget.initialData, 'Gamme De Cellule');
+    _selectedGeId = widget.initialData?['geId'];
+
+    if (widget.champs.any(_isIdentificationGeField)) {
+      _optionsFor('Identification du GE');
+      if (_selectedGeId != null && _selectedGeId!.isNotEmpty) {
+        for (var entry in _geOptionToIdMap.entries) {
+          if (entry.value == _selectedGeId) {
+            _selectedValues['Identification du GE'] = entry.key;
+            break;
+          }
+        }
+      }
+    }
+
     for (var champ in widget.champs) {
       if (_isGammeField(champ)) {
         // handled via _selectedGamme
       } else if (_isDropdownField(champ)) {
-        _selectedValues[champ] = _getValueForField(widget.initialData, champ);
+        if (!_selectedValues.containsKey(champ)) {
+          _selectedValues[champ] = _getValueForField(widget.initialData, champ);
+        }
       } else {
         _controllers[champ] = TextEditingController(
           text: _getValueForField(widget.initialData, champ) ?? '',
@@ -1250,6 +1308,7 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
     super.dispose();
   }
 
+  bool _isIdentificationGeField(String c) => c == 'Identification du GE';
   bool _isGammeField(String c) => c == 'Gamme De Cellule';
   bool _isTypeCelluleField(String c) => c == 'Type De Cellule' || c == 'TYPE DE CELLULE';
   bool _isTensionDeServiceField(String c) => c == 'Tension de service' || c == 'TENSION DE SERVICE';
@@ -1269,6 +1328,7 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
       c == 'Annee De Fabrication' || c == "Annee D'Installation";
 
   bool _isDropdownField(String c) =>
+      _isIdentificationGeField(c) ||
       _isGammeField(c) ||
       _isTypeCelluleField(c) ||
       _isTensionDeServiceField(c) ||
@@ -1289,6 +1349,23 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
   }
 
   List<String> _optionsFor(String champ) {
+    if (_isIdentificationGeField(champ)) {
+      final opts = <String>[];
+      _geOptionToIdMap.clear();
+      for (int i = 0; i < widget.availableGes.length; i++) {
+        final ge = widget.availableGes[i];
+        final name = _DescriptionInstallationsFormState.getGeDisplayName(ge, i);
+        var uniqueName = name;
+        int dupCount = 1;
+        while (opts.contains(uniqueName)) {
+          dupCount++;
+          uniqueName = '$name ($dupCount)';
+        }
+        opts.add(uniqueName);
+        _geOptionToIdMap[uniqueName] = ge.itemId;
+      }
+      return opts;
+    }
     if (_isTypeCelluleField(champ))
       return CelluleGammes.getTypesForGamme(_selectedGamme);
     if (_isTensionDeServiceField(champ)) return InstallationFieldsRegistry.tensionDeServiceOptions;
@@ -1308,6 +1385,14 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
   void _onDropdownValueChanged(String champ, String? value) {
     setState(() {
       _selectedValues[champ] = value;
+
+      if (_isIdentificationGeField(champ)) {
+        if (value != null && _geOptionToIdMap.containsKey(value)) {
+          _selectedGeId = _geOptionToIdMap[value];
+        } else {
+          _selectedGeId = null;
+        }
+      }
 
       if (_isTypeReseauField(champ)) {
         final pccSuggested = InstallationFieldsRegistry.getPccAmontForTypeReseau(value ?? '');
@@ -1390,6 +1475,13 @@ class _AddEditItemScreenState extends State<_AddEditItemScreen> {
         if (v.isNotEmpty) result[champ] = v;
       }
     }
+
+    if (_selectedGeId != null && _selectedGeId!.isNotEmpty) {
+      result['geId'] = _selectedGeId!;
+    } else if (result.containsKey('geId')) {
+      result.remove('geId');
+    }
+
     Navigator.pop(context, result);
   }
 

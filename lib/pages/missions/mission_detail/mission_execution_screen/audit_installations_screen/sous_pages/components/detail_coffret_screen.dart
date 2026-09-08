@@ -1979,6 +1979,15 @@ Future<void> _supprimerEssai(EssaiDeclenchementDifferentiel essai) async {
                             SizedBox(height: 12),
                             if (_coffret.alimenteeParTransformateur != null)
                               _buildBooleanInfo('Alimenté par le transformateur', _coffret.alimenteeParTransformateur!),
+                            if (_coffret.alimenteeParTransformateur == true &&
+                                ((_coffret.transformateurNomComplet != null && _coffret.transformateurNomComplet!.trim().isNotEmpty) ||
+                                 (_coffret.transformateurId != null && _coffret.transformateurId!.trim().isNotEmpty)))
+                              _buildInfoRow(
+                                'Transformateur d\'alimentation',
+                                (_coffret.transformateurNomComplet != null && _coffret.transformateurNomComplet!.trim().isNotEmpty)
+                                    ? _coffret.transformateurNomComplet!
+                                    : _coffret.transformateurId!,
+                              ),
                             if (_coffret.presenceCPI != null && !_coffret.type.toUpperCase().contains('INVERSEUR'))
                               _buildBooleanInfo('Présence CPI', _coffret.presenceCPI!),
                             _buildBooleanInfo('Zone ATEX', _coffret.zoneAtex),

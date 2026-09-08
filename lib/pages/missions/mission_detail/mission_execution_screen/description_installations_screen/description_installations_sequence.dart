@@ -100,6 +100,7 @@ class DescriptionInstallationsSequenceScreenState
       'icon': Icons.electrical_services_outlined,
       'color': const Color(0xFF27AE60),
       'champs': [
+        'Identification',
         'Marque',
         'Type',
         'N° Serie',
@@ -119,6 +120,7 @@ class DescriptionInstallationsSequenceScreenState
       'icon': Icons.local_gas_station_outlined,
       'color': const Color(0xFF8E44AD),
       'champs': [
+        'Identification du GE',
         'Mode',
         'Capacite',
         'Cuve De Retention',
@@ -135,7 +137,14 @@ class DescriptionInstallationsSequenceScreenState
       'shortTitle': 'Inverseur',
       'icon': Icons.swap_horiz_outlined,
       'color': const Color(0xFFC0392B),
-      'champs': ['Marque', 'Type', 'N° Serie', 'Intensite (A)', 'Reglages'],
+      'champs': [
+        'Identification du GE',
+        'Marque',
+        'Type',
+        'N° Serie',
+        'Intensite (A)',
+        'Reglages',
+      ],
       'requiredFields': [''],
       'isList': true,
     },

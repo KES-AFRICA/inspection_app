@@ -1021,6 +1021,12 @@ class CoffretArmoire {
   @HiveField(37)
   String? sourceDepartId;
 
+  @HiveField(38)
+  String? transformateurId;
+
+  @HiveField(39)
+  String? transformateurNomComplet;
+
   List<DepartEquipement> get effectiveDepartures => departures ?? [];
   List<CircuitTerminalEquipement> get effectiveTerminalCircuits => terminalCircuits ?? [];
 
@@ -1079,6 +1085,8 @@ class CoffretArmoire {
     this.verificationThermographie = false,
     this.presenceDefautThermo,
     this.alimenteeParTransformateur,
+    this.transformateurId,
+    this.transformateurNomComplet,
     this.presenceCPI,
     this.departPrisAvecProtection,
     this.createdAt,

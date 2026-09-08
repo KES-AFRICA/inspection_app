@@ -1016,6 +1016,10 @@ class _EtapeInformationsGenerales extends StatefulWidget {
   final String? equipmentType;
   final bool? alimenteeParTransformateur;
   final Function(bool?) onAlimenteeParTransformateurChanged;
+  final String? transformateurId;
+  final String? transformateurNomComplet;
+  final Function(String?, String?) onTransformateurChanged;
+  final List<MissionTransformateurOption> availableTransformateurs;
   final bool? presenceCPI;
   final Function(bool?) onPresenceCPIChanged;
   final bool zoneAtex;
@@ -1049,6 +1053,10 @@ class _EtapeInformationsGenerales extends StatefulWidget {
     this.equipmentType,
     required this.alimenteeParTransformateur,
     required this.onAlimenteeParTransformateurChanged,
+    this.transformateurId,
+    this.transformateurNomComplet,
+    required this.onTransformateurChanged,
+    this.availableTransformateurs = const [],
     required this.presenceCPI,
     required this.onPresenceCPIChanged,
     required this.zoneAtex,
@@ -1545,6 +1553,168 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
     );
   }
 
+  Widget _buildTransformateurSelect(BuildContext context) {
+    final available = widget.availableTransformateurs;
+    final currentId = widget.transformateurId;
+    final currentNom = widget.transformateurNomComplet;
+
+    final hasCurrentInList = currentId != null &&
+        currentId.isNotEmpty &&
+        available.any((opt) => opt.id == currentId);
+
+    final dropdownItems = <DropdownMenuItem<String?>>[
+      const DropdownMenuItem<String?>(
+        value: null,
+        child: Text(
+          'Non renseigné',
+          style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic),
+        ),
+      ),
+      if (currentId != null && currentId.isNotEmpty && !hasCurrentInList)
+        DropdownMenuItem<String?>(
+          value: currentId,
+          child: Text(
+            currentNom != null && currentNom.isNotEmpty
+                ? '$currentNom (Historique)'
+                : 'Transformateur ($currentId)',
+            style: const TextStyle(fontWeight: FontWeight.w500),
+          ),
+        ),
+      ...available.map((opt) {
+        return DropdownMenuItem<String?>(
+          value: opt.id,
+          child: Text(
+            opt.dropdownLabel,
+            style: const TextStyle(fontWeight: FontWeight.w500),
+            overflow: TextOverflow.ellipsis,
+          ),
+        );
+      }),
+    ];
+
+    final selectedItemWidgets = <Widget>[
+      Text(
+        'Non renseigné',
+        style: TextStyle(
+          fontSize: context.fontSizeM,
+          color: Colors.grey,
+          fontStyle: FontStyle.italic,
+        ),
+        overflow: TextOverflow.ellipsis,
+      ),
+      if (currentId != null && currentId.isNotEmpty && !hasCurrentInList)
+        Text(
+          currentNom != null && currentNom.isNotEmpty
+              ? currentNom
+              : 'Transformateur ($currentId)',
+          style: TextStyle(
+            fontSize: context.fontSizeM,
+            fontWeight: FontWeight.w500,
+            color: AppTheme.darkBlue,
+          ),
+          overflow: TextOverflow.ellipsis,
+        ),
+      ...available.map((opt) {
+        return Text(
+          opt.transformerName,
+          style: TextStyle(
+            fontSize: context.fontSizeM,
+            fontWeight: FontWeight.w500,
+            color: AppTheme.darkBlue,
+          ),
+          overflow: TextOverflow.ellipsis,
+        );
+      }),
+    ];
+
+    return Container(
+      margin: EdgeInsets.only(bottom: context.spacingS),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(context.spacingM),
+        border: Border.all(color: AppTheme.primaryBlue.withOpacity(0.3)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.03),
+            blurRadius: context.spacingS,
+            offset: const Offset(0, 2),
+          )
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.bolt, color: AppTheme.primaryBlue, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                'Transformateur d\'alimentation',
+                style: TextStyle(
+                  fontSize: context.fontSizeM,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.darkBlue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String?>(
+            value: (currentId != null && currentId.isNotEmpty) ? currentId : null,
+            isExpanded: true,
+            icon: Icon(Icons.arrow_drop_down_circle, color: AppTheme.primaryBlue, size: context.iconSizeM),
+            dropdownColor: Colors.white,
+            borderRadius: BorderRadius.circular(context.spacingS),
+            decoration: InputDecoration(
+              filled: true,
+              fillColor: Colors.grey.shade50,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: Colors.grey.shade300),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: AppTheme.primaryBlue, width: 1.5),
+              ),
+            ),
+            items: dropdownItems,
+            selectedItemBuilder: (BuildContext context) => selectedItemWidgets,
+            onChanged: (String? selectedId) {
+              if (selectedId == null || selectedId.isEmpty) {
+                widget.onTransformateurChanged(null, null);
+              } else {
+                MissionTransformateurOption? match;
+                for (final opt in available) {
+                  if (opt.id == selectedId) {
+                    match = opt;
+                    break;
+                  }
+                }
+                final nom = match != null
+                    ? match.transformerName
+                    : (currentNom ?? selectedId);
+                widget.onTransformateurChanged(selectedId, nom);
+              }
+            },
+          ),
+          if (available.isEmpty && (currentId == null || currentId.isEmpty)) ...[
+            const SizedBox(height: 6),
+            Text(
+              'Aucun transformateur MT configuré dans la mission pour le moment.',
+              style: TextStyle(fontSize: 11, color: Colors.orange.shade800, fontStyle: FontStyle.italic),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return ListView(
@@ -1559,6 +1729,8 @@ class _EtapeInformationsGeneralesState extends State<_EtapeInformationsGenerales
           value: widget.alimenteeParTransformateur,
           onChanged: widget.onAlimenteeParTransformateurChanged,
         ),
+        if (widget.alimenteeParTransformateur == true)
+          _buildTransformateurSelect(context),
         if (widget.equipmentType?.toUpperCase().contains('INVERSEUR') != true)
           _buildOuiNonChoiceTile(
             context,
@@ -3535,6 +3707,9 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
   bool _isQrCodeValid = false;
 
   bool? _alimenteeParTransformateur;
+  String? _transformateurId;
+  String? _transformateurNomComplet;
+  List<MissionTransformateurOption> _availableTransformateurs = [];
   bool? _presenceCPI;
   bool _zoneAtex = false;
   String _domaineTension = '';
@@ -3623,6 +3798,7 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       setState(() {});
       _scheduleAutoSave();
     });
+    _availableTransformateurs = HiveService.getAllTransformateurOptionsForMission(widget.mission.id);
     _autoFillRepere();
     
     if (widget.qrCode != null) {
@@ -3653,6 +3829,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         _selectedType = draft.type;
         _accessible = draft.accessible;
         _alimenteeParTransformateur = draft.alimenteeParTransformateur;
+        _transformateurId = draft.transformateurId;
+        _transformateurNomComplet = draft.transformateurNomComplet;
         _presenceCPI = (draft.type == 'INVERSEUR') ? null : draft.presenceCPI;
         _zoneAtex = draft.zoneAtex;
         _domaineTension = draft.domaineTension;
@@ -3749,6 +3927,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         if (_numeroEquipementController.text.trim().isEmpty) _autoFillNumeroEquipement();
         _selectedType = draft.type;
         _alimenteeParTransformateur = draft.alimenteeParTransformateur;
+        _transformateurId = draft.transformateurId;
+        _transformateurNomComplet = draft.transformateurNomComplet;
         _presenceCPI = (draft.type == 'INVERSEUR') ? null : draft.presenceCPI;
         _zoneAtex = draft.zoneAtex;
         _domaineTension = draft.domaineTension;
@@ -3851,6 +4031,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         numeroEquipement: _numeroEquipementController.text.trim().isEmpty ? null : _numeroEquipementController.text.trim(),
         repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
         alimenteeParTransformateur: _alimenteeParTransformateur,
+        transformateurId: _transformateurId,
+        transformateurNomComplet: _transformateurNomComplet,
         presenceCPI: _presenceCPI,
         zoneAtex: _zoneAtex,
         domaineTension: _domaineTension,
@@ -3946,6 +4128,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
       numeroEquipement: _numeroEquipementController.text.trim().isEmpty ? null : _numeroEquipementController.text.trim(),
       repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
       alimenteeParTransformateur: _alimenteeParTransformateur,
+      transformateurId: _transformateurId,
+      transformateurNomComplet: _transformateurNomComplet,
       presenceCPI: _presenceCPI,
       zoneAtex: _zoneAtex,
       domaineTension: _domaineTension,
@@ -4110,6 +4294,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
     _accessible = coffret.accessible;
     _repereController.text = coffret.repere ?? '';
     _alimenteeParTransformateur = coffret.alimenteeParTransformateur;
+    _transformateurId = coffret.transformateurId;
+    _transformateurNomComplet = coffret.transformateurNomComplet;
     _presenceCPI = coffret.presenceCPI;
     _zoneAtex = coffret.zoneAtex;
     _domaineTension = coffret.domaineTension.isNotEmpty ? coffret.domaineTension : '230/400';
@@ -4492,6 +4678,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         numeroEquipement: _numeroEquipementController.text.trim().isEmpty ? null : _numeroEquipementController.text.trim(),
         repere: _repereController.text.trim().isEmpty ? null : _repereController.text.trim(),
         alimenteeParTransformateur: _alimenteeParTransformateur,
+        transformateurId: _transformateurId,
+        transformateurNomComplet: _transformateurNomComplet,
         presenceCPI: _presenceCPI,
         zoneAtex: _zoneAtex,
         domaineTension: _domaineTension,
@@ -4692,6 +4880,8 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
         target.description = newCoffret.description;
         target.repere = newCoffret.repere;
         target.alimenteeParTransformateur = newCoffret.alimenteeParTransformateur;
+        target.transformateurId = newCoffret.transformateurId;
+        target.transformateurNomComplet = newCoffret.transformateurNomComplet;
         target.presenceCPI = (newCoffret.type == 'INVERSEUR') ? null : newCoffret.presenceCPI;
         target.zoneAtex = newCoffret.zoneAtex;
         target.domaineTension = newCoffret.domaineTension;
@@ -5169,6 +5359,16 @@ class _AjouterCoffretScreenState extends ConsumerState<AjouterCoffretScreen> {
                         setState(() => _alimenteeParTransformateur = v);
                         _scheduleAutoSave();
                       },
+                      transformateurId: _transformateurId,
+                      transformateurNomComplet: _transformateurNomComplet,
+                      onTransformateurChanged: (id, nom) {
+                        setState(() {
+                          _transformateurId = id;
+                          _transformateurNomComplet = nom;
+                        });
+                        _scheduleAutoSave();
+                      },
+                      availableTransformateurs: _availableTransformateurs,
                       presenceCPI: _presenceCPI,
                       onPresenceCPIChanged: (v) {
                         setState(() => _presenceCPI = (_selectedType == 'INVERSEUR') ? null : v);

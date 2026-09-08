@@ -48,7 +48,8 @@ class PdfDescriptionBuilder {
   static pw.Widget _buildInstallationTable(
     List<InstallationItem> itemsInput, {
     String? sectionKey,
-  }) => buildInstallationTable(itemsInput, sectionKey: sectionKey);
+    List<InstallationItem>? allGes,
+  }) => buildInstallationTable(itemsInput, sectionKey: sectionKey, allGes: allGes);
 
   static pw.Widget _buildCpiTable(List<InstallationItem> cpiItems) =>
       buildCpiTable(cpiItems);
@@ -56,8 +57,9 @@ class PdfDescriptionBuilder {
   static String _resolveInstallationValue(
     InstallationItem item,
     String columnHeader,
-    String? sectionKey,
-  ) => resolveInstallationValue(item, columnHeader, sectionKey);
+    String? sectionKey, {
+    List<InstallationItem>? allGes,
+  }) => resolveInstallationValue(item, columnHeader, sectionKey, allGes: allGes);
 
   
   static const double fsSmall = PdfReportStyles.fsSmall;
@@ -232,6 +234,7 @@ class PdfDescriptionBuilder {
           _buildInstallationTable(
             safeDesc.groupeElectrogene,
             sectionKey: 'GROUPE',
+            allGes: safeDesc.groupeElectrogene,
           ),
         ],
       ),
@@ -254,6 +257,7 @@ class PdfDescriptionBuilder {
           _buildInstallationTable(
             safeDesc.alimentationCarburant,
             sectionKey: 'CARBURANT',
+            allGes: safeDesc.groupeElectrogene,
           ),
         ],
       ),
@@ -273,7 +277,11 @@ class PdfDescriptionBuilder {
             ),
           ),
           pw.SizedBox(height: 4),
-          _buildInstallationTable(safeDesc.inverseur, sectionKey: 'INVERSEUR'),
+          _buildInstallationTable(
+            safeDesc.inverseur,
+            sectionKey: 'INVERSEUR',
+            allGes: safeDesc.groupeElectrogene,
+          ),
         ],
       ),
     );
@@ -484,6 +492,7 @@ class PdfDescriptionBuilder {
   static pw.Widget buildInstallationTable(
     List<InstallationItem> itemsInput, {
     String? sectionKey,
+    List<InstallationItem>? allGes,
   }) {
     final items = itemsInput.isNotEmpty
         ? (List<InstallationItem>.from(itemsInput)..sort((a, b) => a.createdAt.compareTo(b.createdAt)))
@@ -555,7 +564,7 @@ class PdfDescriptionBuilder {
                 ),
               ),
               ...finalOrder.map((key) {
-                final raw = _resolveInstallationValue(e.value, key, sectionKey);
+                final raw = _resolveInstallationValue(e.value, key, sectionKey, allGes: allGes);
                 final unit = _unitForField(key);
                 final display = PdfReportStyles.stripUnitFromValue(raw, unit);
                 return PdfReportStyles.cell(display, isHeader: false, centered: true);
@@ -669,7 +678,7 @@ class PdfDescriptionBuilder {
     for (final zoneGroup in zoneGroups) {
       final totalZoneRows =
           zoneGroup.repereGroups.fold<int>(0, (sum, g) => sum + g.rows.length);
-      final zoneMidIndex = (totalZoneRows - 1) ~/ 2;
+      final _zoneMidIndex = (totalZoneRows - 1) ~/ 2;
       final tableRows = <pw.TableRow>[];
 
       int zoneItemIndex = 0;
@@ -677,8 +686,8 @@ class PdfDescriptionBuilder {
       for (int rIdx = 0; rIdx < zoneGroup.repereGroups.length; rIdx++) {
         final repereGroup = zoneGroup.repereGroups[rIdx];
         final repereCount = repereGroup.rows.length;
-        final repereMidIndex = (repereCount - 1) ~/ 2;
-        final isLastRepereInZone = (rIdx == zoneGroup.repereGroups.length - 1);
+        final _repereMidIndex = (repereCount - 1) ~/ 2;
+        final _isLastRepereInZone = (rIdx == zoneGroup.repereGroups.length - 1);
 
         for (int i = 0; i < repereCount; i++) {
           final row = repereGroup.rows[i];
@@ -830,9 +839,33 @@ class PdfDescriptionBuilder {
   static String resolveInstallationValue(
     InstallationItem item,
     String columnHeader,
-    String? sectionKey,
-  ) {
+    String? sectionKey, {
+    List<InstallationItem>? allGes,
+  }) {
     if (item.data.isEmpty) return '-';
+
+    // Résolution dynamique pour Identification du GE
+    final targetNorm = InstallationFieldsRegistry.normalizeKey(columnHeader);
+    if (targetNorm == 'identification du ge' || targetNorm == 'identification ge') {
+      if (allGes != null && item.data.containsKey('geId') && item.data['geId']!.isNotEmpty) {
+        final geId = item.data['geId']!;
+        InstallationItem? foundGe;
+        for (final g in allGes) {
+          if (g.itemId == geId || g.id == geId) {
+            foundGe = g;
+            break;
+          }
+        }
+        if (foundGe != null) {
+          final idVal = foundGe.data['Identification']?.trim();
+          if (idVal != null && idVal.isNotEmpty) return idVal;
+          final marque = foundGe.data['Marque']?.trim() ?? '';
+          if (marque.isNotEmpty) return 'GE $marque';
+        }
+      }
+      final directVal = item.data['Identification du GE']?.trim();
+      if (directVal != null && directVal.isNotEmpty) return directVal;
+    }
 
     // 1. Déterminer le dictionnaire d'alias à utiliser selon la section
     Map<String, String> aliases = {};
@@ -851,7 +884,6 @@ class PdfDescriptionBuilder {
     if (val.isNotEmpty) return val;
 
     // 3. Fallback direct sur comparaison de clé normalisée
-    final targetNorm = InstallationFieldsRegistry.normalizeKey(columnHeader);
     for (final entry in item.data.entries) {
       if (entry.value.trim().isEmpty) continue;
       final entryNorm = InstallationFieldsRegistry.normalizeKey(entry.key);
