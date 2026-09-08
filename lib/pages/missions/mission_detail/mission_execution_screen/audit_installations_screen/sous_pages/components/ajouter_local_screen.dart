@@ -2453,6 +2453,10 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
   final _transfoRegimeController = TextEditingController();
   final _transfoCalibreDisjoncteurController = TextEditingController();
   String? _transfoSectionCables;
+  String? _transfoSectionCablePhase;
+  String? _transfoSectionCableNeutre;
+  final _transfoConducteursPhaseController = TextEditingController();
+  final _transfoConducteursNeutreController = TextEditingController();
   final _transfoIntensiteNominaleController = TextEditingController();
   String? _transfoCouplage;
   String? _transfoTypeReseau;

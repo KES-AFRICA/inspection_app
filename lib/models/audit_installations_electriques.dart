@@ -544,6 +544,18 @@ class Cellule {
   @HiveField(24)
   DateTime? updatedAt;
 
+  @HiveField(25)
+  String? sectionCablePhase;
+
+  @HiveField(26)
+  String? sectionCableNeutre;
+
+  @HiveField(27)
+  int? conducteursPhase;
+
+  @HiveField(28)
+  int? conducteursNeutre;
+
   Cellule({
     required this.fonction,
     required this.type,
@@ -570,6 +582,10 @@ class Cellule {
     this.marque,
     this.modele,
     this.annee,
+    this.sectionCablePhase,
+    this.sectionCableNeutre,
+    this.conducteursPhase,
+    this.conducteursNeutre,
   })  : elementsVerifies = elementsVerifies ?? [],
         photos = photos ?? [],
         observations = observations ?? [],
@@ -586,6 +602,34 @@ class Cellule {
       return repere!.trim();
     }
     return '';
+  }
+
+  /// Résout la section de câble phase effective (fallback sur historique sectionCables)
+  String? get effectiveSectionCablePhase =>
+      (sectionCablePhase != null && sectionCablePhase!.trim().isNotEmpty)
+          ? sectionCablePhase
+          : sectionCables;
+
+  /// Résout la section de câble neutre effective (fallback sur phase puis historique sectionCables)
+  String? get effectiveSectionCableNeutre =>
+      (sectionCableNeutre != null && sectionCableNeutre!.trim().isNotEmpty)
+          ? sectionCableNeutre
+          : effectiveSectionCablePhase;
+
+  /// Nombre effectif de conducteurs phase (1 par défaut si section présente, null sinon)
+  int? get effectiveConducteursPhase {
+    if (conducteursPhase != null && conducteursPhase! > 0) return conducteursPhase;
+    final sec = effectiveSectionCablePhase;
+    if (sec != null && sec.trim().isNotEmpty && sec.trim() != '-') return 1;
+    return null;
+  }
+
+  /// Nombre effectif de conducteurs neutre (1 par défaut si section présente, null sinon)
+  int? get effectiveConducteursNeutre {
+    if (conducteursNeutre != null && conducteursNeutre! > 0) return conducteursNeutre;
+    final sec = effectiveSectionCableNeutre;
+    if (sec != null && sec.trim().isNotEmpty && sec.trim() != '-') return 1;
+    return null;
   }
 
   /// Résout la marque effective avec fallback rétrocompatible
@@ -636,6 +680,10 @@ class Cellule {
     String? marque,
     String? modele,
     String? annee,
+    String? sectionCablePhase,
+    String? sectionCableNeutre,
+    int? conducteursPhase,
+    int? conducteursNeutre,
   }) {
     return Cellule(
       fonction: fonction ?? this.fonction,
@@ -661,6 +709,10 @@ class Cellule {
       marque: marque ?? this.marque,
       modele: modele ?? this.modele,
       annee: annee ?? this.annee,
+      sectionCablePhase: sectionCablePhase ?? this.sectionCablePhase,
+      sectionCableNeutre: sectionCableNeutre ?? this.sectionCableNeutre,
+      conducteursPhase: conducteursPhase ?? this.conducteursPhase,
+      conducteursNeutre: conducteursNeutre ?? this.conducteursNeutre,
     );
   }
 }
@@ -753,6 +805,18 @@ class TransformateurMTBT {
   @HiveField(27)
   DateTime? updatedAt;
 
+  @HiveField(28)
+  String? sectionCablePhase;
+
+  @HiveField(29)
+  String? sectionCableNeutre;
+
+  @HiveField(30)
+  int? conducteursPhase;
+
+  @HiveField(31)
+  int? conducteursNeutre;
+
   /// Indique si le transformateur est de type immergé (tolérant aux majuscules/accents)
   bool get isImmerge {
     final t = typeTransformateur.trim().toUpperCase();
@@ -788,6 +852,10 @@ class TransformateurMTBT {
     this.anneeFabrication,
     this.typeImmersion,
     this.presenceDGPT2,
+    this.sectionCablePhase,
+    this.sectionCableNeutre,
+    this.conducteursPhase,
+    this.conducteursNeutre,
   })  : elementsVerifies = elementsVerifies ?? [],
         photos = photos ?? [],
         observations = observations ?? [],
@@ -804,6 +872,34 @@ class TransformateurMTBT {
       return repere!.trim();
     }
     return '';
+  }
+
+  /// Résout la section de câble phase effective (fallback sur historique sectionCables)
+  String? get effectiveSectionCablePhase =>
+      (sectionCablePhase != null && sectionCablePhase!.trim().isNotEmpty)
+          ? sectionCablePhase
+          : sectionCables;
+
+  /// Résout la section de câble neutre effective (fallback sur phase puis historique sectionCables)
+  String? get effectiveSectionCableNeutre =>
+      (sectionCableNeutre != null && sectionCableNeutre!.trim().isNotEmpty)
+          ? sectionCableNeutre
+          : effectiveSectionCablePhase;
+
+  /// Nombre effectif de conducteurs phase (1 par défaut si section présente, null sinon)
+  int? get effectiveConducteursPhase {
+    if (conducteursPhase != null && conducteursPhase! > 0) return conducteursPhase;
+    final sec = effectiveSectionCablePhase;
+    if (sec != null && sec.trim().isNotEmpty && sec.trim() != '-') return 1;
+    return null;
+  }
+
+  /// Nombre effectif de conducteurs neutre (1 par défaut si section présente, null sinon)
+  int? get effectiveConducteursNeutre {
+    if (conducteursNeutre != null && conducteursNeutre! > 0) return conducteursNeutre;
+    final sec = effectiveSectionCableNeutre;
+    if (sec != null && sec.trim().isNotEmpty && sec.trim() != '-') return 1;
+    return null;
   }
 
   /// Résout la marque effective avec fallback rétrocompatible
@@ -853,6 +949,10 @@ class TransformateurMTBT {
     String? anneeFabrication,
     String? typeImmersion,
     String? presenceDGPT2,
+    String? sectionCablePhase,
+    String? sectionCableNeutre,
+    int? conducteursPhase,
+    int? conducteursNeutre,
   }) {
     return TransformateurMTBT(
       typeTransformateur: typeTransformateur ?? this.typeTransformateur,
@@ -881,6 +981,10 @@ class TransformateurMTBT {
       anneeFabrication: anneeFabrication ?? this.anneeFabrication,
       typeImmersion: typeImmersion ?? this.typeImmersion,
       presenceDGPT2: presenceDGPT2 ?? this.presenceDGPT2,
+      sectionCablePhase: sectionCablePhase ?? this.sectionCablePhase,
+      sectionCableNeutre: sectionCableNeutre ?? this.sectionCableNeutre,
+      conducteursPhase: conducteursPhase ?? this.conducteursPhase,
+      conducteursNeutre: conducteursNeutre ?? this.conducteursNeutre,
     );
   }
 }
@@ -1181,12 +1285,33 @@ class Alimentation {
   @HiveField(12)
   String? sectionCableNeutre;
 
+  @HiveField(13)
+  int? conducteursPhase;
+
+  @HiveField(14)
+  int? conducteursNeutre;
+
   /// Getter rétrocompatible pour la section phase (réutilise le champ historique sectionCable)
   String get sectionCablePhase => sectionCable;
   set sectionCablePhase(String val) => sectionCable = val;
 
   /// Getter rétrocompatible pour la section neutre (avec fallback auto sur sectionCable Phase si absent)
   String get effectiveSectionCableNeutre => (sectionCableNeutre != null && sectionCableNeutre!.trim().isNotEmpty) ? sectionCableNeutre! : sectionCable;
+
+  /// Nombre effectif de conducteurs phase (1 par défaut si section présente, null sinon)
+  int? get effectiveConducteursPhase {
+    if (conducteursPhase != null && conducteursPhase! > 0) return conducteursPhase;
+    if (sectionCable.trim().isNotEmpty && sectionCable.trim() != '-') return 1;
+    return null;
+  }
+
+  /// Nombre effectif de conducteurs neutre (1 par défaut si section présente, null sinon)
+  int? get effectiveConducteursNeutre {
+    if (conducteursNeutre != null && conducteursNeutre! > 0) return conducteursNeutre;
+    final sec = effectiveSectionCableNeutre;
+    if (sec.trim().isNotEmpty && sec.trim() != '-') return 1;
+    return null;
+  }
 
   /// Résout le statut de connaissance de la source dérivé automatiquement de typeProtection
   String get effectiveSourceKnown => SourceStatusResolver.resolve(typeProtection);
@@ -1205,8 +1330,46 @@ class Alimentation {
     this.icc3Max = '',
     this.nombreCables,
     this.sectionCableNeutre,
+    this.conducteursPhase,
+    this.conducteursNeutre,
   })  : photos = photos ?? [],
         sourceKnown = sourceKnown ?? SourceStatusResolver.resolve(typeProtection);
+
+  Alimentation copyWith({
+    String? typeProtection,
+    String? courbe,
+    String? ddr,
+    String? pdcKA,
+    String? calibre,
+    String? sectionCable,
+    List<String>? photos,
+    String? source,
+    String? sourceKnown,
+    String? marqueDisjoncteur,
+    String? icc3Max,
+    String? nombreCables,
+    String? sectionCableNeutre,
+    int? conducteursPhase,
+    int? conducteursNeutre,
+  }) {
+    return Alimentation(
+      typeProtection: typeProtection ?? this.typeProtection,
+      courbe: courbe ?? this.courbe,
+      ddr: ddr ?? this.ddr,
+      pdcKA: pdcKA ?? this.pdcKA,
+      calibre: calibre ?? this.calibre,
+      sectionCable: sectionCable ?? this.sectionCable,
+      photos: photos ?? this.photos,
+      source: source ?? this.source,
+      sourceKnown: sourceKnown ?? this.sourceKnown,
+      marqueDisjoncteur: marqueDisjoncteur ?? this.marqueDisjoncteur,
+      icc3Max: icc3Max ?? this.icc3Max,
+      nombreCables: nombreCables ?? this.nombreCables,
+      sectionCableNeutre: sectionCableNeutre ?? this.sectionCableNeutre,
+      conducteursPhase: conducteursPhase ?? this.conducteursPhase,
+      conducteursNeutre: conducteursNeutre ?? this.conducteursNeutre,
+    );
+  }
 }
 
 @HiveType(typeId: 13)
@@ -1418,12 +1581,33 @@ class DepartEquipement {
   @HiveField(12)
   String? sectionCableNeutre;
 
+  @HiveField(13)
+  int? conducteursPhase;
+
+  @HiveField(14)
+  int? conducteursNeutre;
+
   /// Getter rétrocompatible pour la section phase (réutilise le champ historique sectionCable)
   String get sectionCablePhase => sectionCable;
   set sectionCablePhase(String val) => sectionCable = val;
 
   /// Getter rétrocompatible pour la section neutre (avec fallback auto sur sectionCable Phase si absent)
   String get effectiveSectionCableNeutre => (sectionCableNeutre != null && sectionCableNeutre!.trim().isNotEmpty) ? sectionCableNeutre! : sectionCable;
+
+  /// Nombre effectif de conducteurs phase (1 par défaut si section présente, null sinon)
+  int? get effectiveConducteursPhase {
+    if (conducteursPhase != null && conducteursPhase! > 0) return conducteursPhase;
+    if (sectionCable.trim().isNotEmpty && sectionCable.trim() != '-') return 1;
+    return null;
+  }
+
+  /// Nombre effectif de conducteurs neutre (1 par défaut si section présente, null sinon)
+  int? get effectiveConducteursNeutre {
+    if (conducteursNeutre != null && conducteursNeutre! > 0) return conducteursNeutre;
+    final sec = effectiveSectionCableNeutre;
+    if (sec.trim().isNotEmpty && sec.trim() != '-') return 1;
+    return null;
+  }
 
   DepartEquipement({
     String? id,
@@ -1439,6 +1623,8 @@ class DepartEquipement {
     this.ddr = '',
     this.nombreCables,
     this.sectionCableNeutre,
+    this.conducteursPhase,
+    this.conducteursNeutre,
   }) : id = (id != null && id.trim().isNotEmpty)
             ? id
             : 'dep_${DateTime.now().microsecondsSinceEpoch}_${identification.hashCode.abs()}';
@@ -1457,6 +1643,8 @@ class DepartEquipement {
     String? ddr,
     String? nombreCables,
     String? sectionCableNeutre,
+    int? conducteursPhase,
+    int? conducteursNeutre,
   }) {
     return DepartEquipement(
       id: id ?? this.id,
@@ -1472,6 +1660,8 @@ class DepartEquipement {
       ddr: ddr ?? this.ddr,
       nombreCables: nombreCables ?? this.nombreCables,
       sectionCableNeutre: sectionCableNeutre ?? this.sectionCableNeutre,
+      conducteursPhase: conducteursPhase ?? this.conducteursPhase,
+      conducteursNeutre: conducteursNeutre ?? this.conducteursNeutre,
     );
   }
 }
@@ -1518,12 +1708,33 @@ class CircuitTerminalEquipement {
   @HiveField(12)
   String? sectionCableNeutre;
 
+  @HiveField(13)
+  int? conducteursPhase;
+
+  @HiveField(14)
+  int? conducteursNeutre;
+
   /// Getter rétrocompatible pour la section phase (réutilise le champ historique sectionCable)
   String get sectionCablePhase => sectionCable;
   set sectionCablePhase(String val) => sectionCable = val;
 
   /// Getter rétrocompatible pour la section neutre (avec fallback auto sur sectionCable Phase si absent)
   String get effectiveSectionCableNeutre => (sectionCableNeutre != null && sectionCableNeutre!.trim().isNotEmpty) ? sectionCableNeutre! : sectionCable;
+
+  /// Nombre effectif de conducteurs phase (1 par défaut si section présente, null sinon)
+  int? get effectiveConducteursPhase {
+    if (conducteursPhase != null && conducteursPhase! > 0) return conducteursPhase;
+    if (sectionCable.trim().isNotEmpty && sectionCable.trim() != '-') return 1;
+    return null;
+  }
+
+  /// Nombre effectif de conducteurs neutre (1 par défaut si section présente, null sinon)
+  int? get effectiveConducteursNeutre {
+    if (conducteursNeutre != null && conducteursNeutre! > 0) return conducteursNeutre;
+    final sec = effectiveSectionCableNeutre;
+    if (sec.trim().isNotEmpty && sec.trim() != '-') return 1;
+    return null;
+  }
 
   CircuitTerminalEquipement({
     String? id,
@@ -1539,6 +1750,8 @@ class CircuitTerminalEquipement {
     this.ddr = '',
     this.nombreCables,
     this.sectionCableNeutre,
+    this.conducteursPhase,
+    this.conducteursNeutre,
   }) : id = (id != null && id.trim().isNotEmpty)
             ? id
             : 'ct_${DateTime.now().microsecondsSinceEpoch}_${identification.hashCode.abs()}';
@@ -1557,6 +1770,8 @@ class CircuitTerminalEquipement {
     String? ddr,
     String? nombreCables,
     String? sectionCableNeutre,
+    int? conducteursPhase,
+    int? conducteursNeutre,
   }) {
     return CircuitTerminalEquipement(
       id: id ?? this.id,
@@ -1572,6 +1787,8 @@ class CircuitTerminalEquipement {
       ddr: ddr ?? this.ddr,
       nombreCables: nombreCables ?? this.nombreCables,
       sectionCableNeutre: sectionCableNeutre ?? this.sectionCableNeutre,
+      conducteursPhase: conducteursPhase ?? this.conducteursPhase,
+      conducteursNeutre: conducteursNeutre ?? this.conducteursNeutre,
     );
   }
 }

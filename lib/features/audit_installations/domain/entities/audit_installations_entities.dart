@@ -153,6 +153,10 @@ class TransformateurMTBTEntity {
   final String? anneeFabrication;
   final String? typeImmersion;
   final String? presenceDGPT2;
+  final String? sectionCablePhase;
+  final String? sectionCableNeutre;
+  final int? conducteursPhase;
+  final int? conducteursNeutre;
 
   const TransformateurMTBTEntity({
     required this.typeTransformateur,
@@ -181,6 +185,10 @@ class TransformateurMTBTEntity {
     this.anneeFabrication,
     this.typeImmersion,
     this.presenceDGPT2,
+    this.sectionCablePhase,
+    this.sectionCableNeutre,
+    this.conducteursPhase,
+    this.conducteursNeutre,
   });
 
   TransformateurMTBTEntity copyWith({
@@ -210,6 +218,10 @@ class TransformateurMTBTEntity {
     String? anneeFabrication,
     String? typeImmersion,
     String? presenceDGPT2,
+    String? sectionCablePhase,
+    String? sectionCableNeutre,
+    int? conducteursPhase,
+    int? conducteursNeutre,
   }) {
     return TransformateurMTBTEntity(
       typeTransformateur: typeTransformateur ?? this.typeTransformateur,
@@ -238,6 +250,10 @@ class TransformateurMTBTEntity {
       anneeFabrication: anneeFabrication ?? this.anneeFabrication,
       typeImmersion: typeImmersion ?? this.typeImmersion,
       presenceDGPT2: presenceDGPT2 ?? this.presenceDGPT2,
+      sectionCablePhase: sectionCablePhase ?? this.sectionCablePhase,
+      sectionCableNeutre: sectionCableNeutre ?? this.sectionCableNeutre,
+      conducteursPhase: conducteursPhase ?? this.conducteursPhase,
+      conducteursNeutre: conducteursNeutre ?? this.conducteursNeutre,
     );
   }
 }
@@ -253,6 +269,9 @@ class AlimentationEntity {
   final String source;
   final String? sourceKnown;
   final String? marqueDisjoncteur;
+  final String? sectionCableNeutre;
+  final int? conducteursPhase;
+  final int? conducteursNeutre;
 
   String get effectiveSourceKnown => SourceStatusResolver.resolve(typeProtection);
 
@@ -267,6 +286,9 @@ class AlimentationEntity {
     this.source = '',
     this.sourceKnown,
     this.marqueDisjoncteur,
+    this.sectionCableNeutre,
+    this.conducteursPhase,
+    this.conducteursNeutre,
   });
 }
 

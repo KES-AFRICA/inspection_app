@@ -66,7 +66,6 @@ class _SummaryStepState extends ConsumerState<SummaryStep> {
   }
 
   Future<void> _loadProgress() async {
-    await SequenceProgressService.markStepCompleted(widget.mission.id, 5);
     final progress = await SequenceProgressService.getProgress(widget.mission.id);
     if (!mounted) return;
     setState(() {

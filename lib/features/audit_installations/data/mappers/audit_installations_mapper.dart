@@ -123,6 +123,10 @@ class AuditInstallationsMapper {
       anneeFabrication: model.anneeFabrication,
       typeImmersion: model.typeImmersion,
       presenceDGPT2: model.presenceDGPT2,
+      sectionCablePhase: model.sectionCablePhase,
+      sectionCableNeutre: model.sectionCableNeutre,
+      conducteursPhase: model.conducteursPhase,
+      conducteursNeutre: model.conducteursNeutre,
     );
   }
 
@@ -154,6 +158,10 @@ class AuditInstallationsMapper {
       anneeFabrication: entity.anneeFabrication,
       typeImmersion: entity.typeImmersion,
       presenceDGPT2: entity.presenceDGPT2,
+      sectionCablePhase: entity.sectionCablePhase,
+      sectionCableNeutre: entity.sectionCableNeutre,
+      conducteursPhase: entity.conducteursPhase,
+      conducteursNeutre: entity.conducteursNeutre,
     );
   }
 
@@ -170,6 +178,9 @@ class AuditInstallationsMapper {
       source: model.source,
       sourceKnown: model.effectiveSourceKnown,
       marqueDisjoncteur: model.marqueDisjoncteur,
+      sectionCableNeutre: model.sectionCableNeutre,
+      conducteursPhase: model.conducteursPhase,
+      conducteursNeutre: model.conducteursNeutre,
     );
   }
 
@@ -185,6 +196,9 @@ class AuditInstallationsMapper {
       source: entity.source,
       sourceKnown: entity.effectiveSourceKnown,
       marqueDisjoncteur: entity.marqueDisjoncteur,
+      sectionCableNeutre: entity.sectionCableNeutre,
+      conducteursPhase: entity.conducteursPhase,
+      conducteursNeutre: entity.conducteursNeutre,
     );
   }
 

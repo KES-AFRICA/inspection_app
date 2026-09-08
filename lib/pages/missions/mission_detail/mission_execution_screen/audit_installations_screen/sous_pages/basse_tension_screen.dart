@@ -26,6 +26,10 @@ class BasseTensionScreen extends ConsumerStatefulWidget {
 class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
   AuditInstallationsElectriques? _audit;
   bool _isLoading = true;
+  int _totalLocaux = 0;
+  int _totalCoffrets = 0;
+  Map<String, List<CoffretArmoire>> _draftsIndex = {};
+  Future<List<ClassementZone>>? _classementFuture;
 
   @override
   void initState() {
@@ -34,20 +38,7 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
   }
 
   void _loadAudit() async {
-    try {
-      final audit = await ref.read(auditInstallationsProvider(widget.mission.id).notifier).load();
-      setState(() {
-        _audit = audit;
-        _isLoading = false;
-      });
-    } catch (e) {
-      if (kDebugMode) {
-        print('❌ Erreur chargement audit: $e');
-      }
-      setState(() {
-        _isLoading = false;
-      });
-    }
+    await _refreshAllData();
   }
 
   Future<void> _refreshAllData() async {
@@ -55,8 +46,41 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
     
     try {
       final audit = await ref.read(auditInstallationsProvider(widget.mission.id).notifier).load();
+
+      final draftsIndex = HiveService.getIndexedCoffretDraftsForMission(
+        missionId: widget.mission.id,
+        isMoyenneTension: false,
+      );
+
+      int totalLocaux = 0;
+      for (var zone in audit.basseTensionZones) {
+        totalLocaux += zone.locaux.length;
+      }
+
+      int totalCoffrets = 0;
+      for (int z = 0; z < audit.basseTensionZones.length; z++) {
+        final zone = audit.basseTensionZones[z];
+        final drafts = draftsIndex['zone_bt_${z}_null'] ?? [];
+        final savedQrCodes = zone.coffretsDirects.map((c) => c.qrCode).toSet();
+        final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).length;
+        
+        totalCoffrets += zone.coffretsDirects.length + uniqueDrafts;
+        for (var local in zone.locaux) {
+          totalCoffrets += local.coffrets.length;
+        }
+      }
+
+      _classementFuture = HiveService.syncClassementsZonesFromAudit(widget.mission.id).then(
+        (_) => HiveService.getClassementsZonesByMissionId(widget.mission.id)
+            .where((cz) => cz.typeZone == 'BT')
+            .toList(),
+      );
+
       setState(() {
         _audit = audit;
+        _draftsIndex = draftsIndex;
+        _totalLocaux = totalLocaux;
+        _totalCoffrets = totalCoffrets;
         _isLoading = false;
       });
     } catch (e) {
@@ -356,37 +380,11 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
 
 
   int _getTotalLocaux() {
-    if (_audit == null) return 0;
-    
-    int total = 0;
-    for (var zone in _audit!.basseTensionZones) {
-      total += zone.locaux.length;
-    }
-    return total;
+    return _totalLocaux;
   }
 
   int _getTotalCoffrets() {
-    if (_audit == null) return 0;
-    
-    int total = 0;
-    for (var zone in _audit!.basseTensionZones) {
-      // Récupérer les brouillons pour cette zone
-      final drafts = HiveService.getCoffretDraftsForLocation(
-        missionId: widget.mission.id,
-        parentType: 'zone_bt',
-        parentIndex: _audit!.basseTensionZones.indexOf(zone),
-        isMoyenneTension: false,
-        zoneIndex: null,
-      );
-      final savedQrCodes = zone.coffretsDirects.map((c) => c.qrCode).toSet();
-      final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).toList();
-      
-      total += zone.coffretsDirects.length + uniqueDrafts.length;
-      for (var local in zone.locaux) {
-        total += local.coffrets.length;
-      }
-    }
-    return total;
+    return _totalCoffrets;
   }
 
   // Vérifier si un coffret est complet
@@ -526,11 +524,7 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
 
   Widget _buildClassementTab() {
     return FutureBuilder<List<ClassementZone>>(
-      future: HiveService.syncClassementsZonesFromAudit(widget.mission.id).then(
-        (_) => HiveService.getClassementsZonesByMissionId(widget.mission.id)
-            .where((cz) => cz.typeZone == 'BT')
-            .toList(),
-      ),
+      future: _classementFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
