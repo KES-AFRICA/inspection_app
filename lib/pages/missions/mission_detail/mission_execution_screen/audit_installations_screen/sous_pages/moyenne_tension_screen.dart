@@ -32,6 +32,11 @@ class _MoyenneTensionScreenState extends ConsumerState<MoyenneTensionScreen> {
   bool _hasPreference = false;
   bool _isApplicable = true;
 
+  Map<String, List<CoffretArmoire>> _draftsIndex = {};
+  int _totalLocaux = 0;
+  int _totalCoffrets = 0;
+  Future<List<ClassementZone>>? _classementFuture;
+
   @override
   void initState() {
     super.initState();
@@ -45,8 +50,50 @@ class _MoyenneTensionScreenState extends ConsumerState<MoyenneTensionScreen> {
       // Recharger l'audit
       final audit = await ref.read(auditInstallationsProvider(widget.mission.id).notifier).load();
 
+      // Indexer les brouillons en UNE SEULE passe O(N)
+      final draftsIndex = HiveService.getIndexedCoffretDraftsForMission(
+        missionId: widget.mission.id,
+        isMoyenneTension: true,
+      );
+
+      // Calculer les totaux une seule fois en mémoire
+      int totalLocaux = audit.moyenneTensionLocaux.length;
+      for (var zone in audit.moyenneTensionZones) {
+        totalLocaux += zone.locaux.length;
+      }
+
+      int totalCoffrets = 0;
+      for (int i = 0; i < audit.moyenneTensionLocaux.length; i++) {
+        final local = audit.moyenneTensionLocaux[i];
+        final drafts = draftsIndex['local_${i}_null'] ?? [];
+        final savedQrCodes = local.coffrets.map((c) => c.qrCode).toSet();
+        final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).length;
+        totalCoffrets += uniqueDrafts + local.coffrets.length;
+      }
+      for (int z = 0; z < audit.moyenneTensionZones.length; z++) {
+        final zone = audit.moyenneTensionZones[z];
+        totalCoffrets += zone.coffrets.length;
+        for (int i = 0; i < zone.locaux.length; i++) {
+          final local = zone.locaux[i];
+          final drafts = draftsIndex['local_in_zone_${i}_$z'] ?? [];
+          final savedQrCodes = local.coffrets.map((c) => c.qrCode).toSet();
+          final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).length;
+          totalCoffrets += uniqueDrafts + local.coffrets.length;
+        }
+      }
+
+      // Initialiser le future de classement proprement hors de build()
+      _classementFuture = HiveService.syncClassementsZonesFromAudit(widget.mission.id).then(
+        (_) => HiveService.getClassementsZonesByMissionId(widget.mission.id)
+            .where((cz) => cz.typeZone == 'MT')
+            .toList(),
+      );
+
       setState(() {
         _audit = audit;
+        _draftsIndex = draftsIndex;
+        _totalLocaux = totalLocaux;
+        _totalCoffrets = totalCoffrets;
         _isLoading = false;
       });
     } catch (e) {
@@ -57,26 +104,14 @@ class _MoyenneTensionScreenState extends ConsumerState<MoyenneTensionScreen> {
     }
   }
 
-  // Modifiez la méthode _loadData pour appeler refresh :
-
   Future<void> _loadData() async {
     await _refreshAllData();
-    Future.microtask(() {
-      InstallationDescriptionSyncService.repairAndSyncDescriptions(widget.mission.id);
-    });
   }
 
-  // Récupérer les brouillons pour un local
+  // Récupérer les brouillons pour un local via l'index O(1)
   List<CoffretArmoire> _getCoffretsForLocal(MoyenneTensionLocal local, int localIndex) {
     final savedCoffrets = List<CoffretArmoire>.from(local.coffrets);
-    
-    final drafts = HiveService.getCoffretDraftsForLocation(
-      missionId: widget.mission.id,
-      parentType: 'local',
-      parentIndex: localIndex,
-      isMoyenneTension: true,
-      zoneIndex: null,
-    );
+    final drafts = _draftsIndex['local_${localIndex}_null'] ?? [];
     
     // Filtrer les doublons
     final savedQrCodes = savedCoffrets.map((c) => c.qrCode).toSet();
@@ -85,17 +120,10 @@ class _MoyenneTensionScreenState extends ConsumerState<MoyenneTensionScreen> {
     return [...uniqueDrafts, ...savedCoffrets];
   }
 
-  // Récupérer les coffrets pour un local dans une zone
+  // Récupérer les coffrets pour un local dans une zone via l'index O(1)
   List<CoffretArmoire> _getCoffretsForLocalInZone(MoyenneTensionLocal local, int zoneIndex, int localIndex) {
     final savedCoffrets = List<CoffretArmoire>.from(local.coffrets);
-    
-    final drafts = HiveService.getCoffretDraftsForLocation(
-      missionId: widget.mission.id,
-      parentType: 'local_in_zone',
-      parentIndex: localIndex,
-      isMoyenneTension: true,
-      zoneIndex: zoneIndex,
-    );
+    final drafts = _draftsIndex['local_in_zone_${localIndex}_$zoneIndex'] ?? [];
     
     final savedQrCodes = savedCoffrets.map((c) => c.qrCode).toSet();
     final uniqueDrafts = drafts.where((d) => !savedQrCodes.contains(d.qrCode)).toList();
@@ -111,13 +139,7 @@ class _MoyenneTensionScreenState extends ConsumerState<MoyenneTensionScreen> {
     }
     
     // Vérifier les brouillons directs
-    final drafts = HiveService.getCoffretDraftsForLocation(
-      missionId: widget.mission.id,
-      parentType: 'zone_mt',
-      parentIndex: zoneIndex,
-      isMoyenneTension: true,
-      zoneIndex: null,
-    );
+    final drafts = _draftsIndex['zone_mt_${zoneIndex}_null'] ?? [];
     if (drafts.isNotEmpty) return true;
     
     // Vérifier les locaux
@@ -602,28 +624,11 @@ class _MoyenneTensionScreenState extends ConsumerState<MoyenneTensionScreen> {
   }
 
   int _getTotalLocaux() {
-    if (_audit == null) return 0;
-    int total = _audit!.moyenneTensionLocaux.length;
-    for (var zone in _audit!.moyenneTensionZones) {
-      total += zone.locaux.length;
-    }
-    return total;
+    return _totalLocaux;
   }
 
   int _getTotalCoffrets() {
-    if (_audit == null) return 0;
-    int total = 0;
-    for (var local in _audit!.moyenneTensionLocaux) {
-      total += _getCoffretsForLocal(local, _audit!.moyenneTensionLocaux.indexOf(local)).length;
-    }
-    for (var zone in _audit!.moyenneTensionZones) {
-      total += zone.coffrets.length;
-      for (int i = 0; i < zone.locaux.length; i++) {
-        final local = zone.locaux[i];
-        total += _getCoffretsForLocalInZone(local, _audit!.moyenneTensionZones.indexOf(zone), i).length;
-      }
-    }
-    return total;
+    return _totalCoffrets;
   }
 
   Widget _buildNotApplicableScreen() {
@@ -855,11 +860,7 @@ Widget _buildInfluenceChip(String type, String code) {
 
 Widget _buildClassementTab() {
   return FutureBuilder<List<ClassementZone>>(
-    future: HiveService.syncClassementsZonesFromAudit(widget.mission.id).then(
-      (_) => HiveService.getClassementsZonesByMissionId(widget.mission.id)
-          .where((cz) => cz.typeZone == 'MT')
-          .toList(),
-    ),
+    future: _classementFuture,
     builder: (context, snapshot) {
       if (snapshot.connectionState == ConnectionState.waiting) {
         return const Center(child: CircularProgressIndicator());

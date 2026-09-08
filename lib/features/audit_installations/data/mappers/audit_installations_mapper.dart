@@ -3,9 +3,11 @@ import 'package:inspec_app/models/audit_installations_electriques.dart';
 import '../../domain/entities/audit_installations_entities.dart';
 
 class AuditInstallationsMapper {
+  static final RegExp _normRefRegex = RegExp(r'§\s*');
+
   static String? _normRef(String? ref) {
     if (ref == null || ref.isEmpty) return ref;
-    return ref.replaceAll(RegExp(r'§\s*'), 'art ');
+    return ref.replaceAll(_normRefRegex, 'art ');
   }
 
   // ElementControle

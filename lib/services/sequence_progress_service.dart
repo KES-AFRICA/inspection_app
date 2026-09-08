@@ -4,9 +4,16 @@ import 'package:hive/hive.dart';
 class SequenceProgressService {
   static const String _progressBox = 'mission_progress';
   
+  static Future<Box> _getBox() async {
+    if (Hive.isBoxOpen(_progressBox)) {
+      return Hive.box(_progressBox);
+    }
+    return await Hive.openBox(_progressBox);
+  }
+  
   // Structure de progression pour une mission
   static Future<Map<String, dynamic>> getProgress(String missionId) async {
-    final box = await Hive.openBox(_progressBox);
+    final box = await _getBox();
     final raw = box.get(missionId, defaultValue: {
       'currentStep': 0,
       'completedSteps': <int>[],
@@ -25,8 +32,9 @@ class SequenceProgressService {
   // Sauvegarder l'étape courante
   static Future<void> saveCurrentStep(String missionId, int stepIndex) async {
     final safeStep = stepIndex.clamp(0, 5);
-    final box = await Hive.openBox(_progressBox);
+    final box = await _getBox();
     final progress = await getProgress(missionId);
+    if (progress['currentStep'] == safeStep) return;
     progress['currentStep'] = safeStep;
     progress['lastUpdated'] = DateTime.now().toIso8601String();
     await box.put(missionId, progress);
@@ -34,18 +42,19 @@ class SequenceProgressService {
   
   // Marquer une étape comme complétée
   static Future<void> markStepCompleted(String missionId, int stepIndex) async {
-    final box = await Hive.openBox(_progressBox);
+    final box = await _getBox();
     final progress = await getProgress(missionId);
-    if (!progress['completedSteps'].contains(stepIndex)) {
-      progress['completedSteps'].add(stepIndex);
-    }
+    final completed = List<int>.from(progress['completedSteps'] as List<dynamic>? ?? []);
+    if (completed.contains(stepIndex)) return;
+    completed.add(stepIndex);
+    progress['completedSteps'] = completed;
     progress['lastUpdated'] = DateTime.now().toIso8601String();
     await box.put(missionId, progress);
   }
   
   // Sauvegarder les données d'une étape
   static Future<void> saveStepData(String missionId, String stepKey, dynamic data) async {
-    final box = await Hive.openBox(_progressBox);
+    final box = await _getBox();
     final progress = await getProgress(missionId);
     progress['stepData'][stepKey] = data;
     progress['lastUpdated'] = DateTime.now().toIso8601String();
@@ -66,7 +75,7 @@ class SequenceProgressService {
   
   // Réinitialiser la progression d'une mission
   static Future<void> resetProgress(String missionId) async {
-    final box = await Hive.openBox(_progressBox);
+    final box = await _getBox();
     await box.delete(missionId);
   }
   

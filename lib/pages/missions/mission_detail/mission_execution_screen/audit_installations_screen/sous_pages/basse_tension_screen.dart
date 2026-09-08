@@ -40,9 +40,6 @@ class _BasseTensionScreenState extends ConsumerState<BasseTensionScreen> {
         _audit = audit;
         _isLoading = false;
       });
-      Future.microtask(() {
-        InstallationDescriptionSyncService.repairAndSyncDescriptions(widget.mission.id);
-      });
     } catch (e) {
       if (kDebugMode) {
         print('❌ Erreur chargement audit: $e');

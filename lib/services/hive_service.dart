@@ -7561,6 +7561,33 @@ static Future<void> saveCoffretDraft({
     return drafts;
   }
 
+  /// Récupérer et indexer TOUS les brouillons de coffrets d'une mission en une seule passe O(N)
+  static Map<String, List<CoffretArmoire>> getIndexedCoffretDraftsForMission({
+    required String missionId,
+    required bool isMoyenneTension,
+  }) {
+    final box = Hive.box(_coffretDraftsBox);
+    final index = <String, List<CoffretArmoire>>{};
+    
+    for (var data in box.values) {
+      if (data is Map &&
+          data['missionId'] == missionId &&
+          data['isMoyenneTension'] == isMoyenneTension &&
+          data['coffret'] is CoffretArmoire) {
+        final coffret = data['coffret'] as CoffretArmoire;
+        if (coffret.statut == 'incomplet') {
+          final parentType = data['parentType'] as String? ?? '';
+          final parentIndex = data['parentIndex'] as int? ?? -1;
+          final zoneIndex = data['zoneIndex'] as int?;
+          final key = '${parentType}_${parentIndex}_$zoneIndex';
+          (index[key] ??= []).add(coffret);
+        }
+      }
+    }
+    
+    return index;
+  }
+
   /// Récupérer ou créer le classement d'une zone
 static Future<ClassementZone> getOrCreateClassementZone({
   required String missionId,

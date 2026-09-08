@@ -18,15 +18,30 @@ class AuditInstallationsNotifier
     extends StateNotifier<AsyncValue<AuditInstallationsElectriques>> {
   final Ref ref;
   final String missionId;
+  Future<AuditInstallationsElectriques>? _loadFuture;
 
   AuditInstallationsNotifier({required this.ref, required this.missionId})
     : super(const AsyncValue.loading()) {
-    load().then<void>((_) {}, onError: (_, __) {});
+    _loadFuture = _performLoad();
+    _loadFuture!.then<void>((_) {}, onError: (_, __) {});
   }
 
-  Future<AuditInstallationsElectriques> load() async {
+  Future<AuditInstallationsElectriques> load({bool force = false}) async {
+    if (!force) {
+      if (state.hasValue && state.value != null) {
+        return state.value!;
+      }
+      if (_loadFuture != null) {
+        return await _loadFuture!;
+      }
+    }
+    _loadFuture = _performLoad();
+    return await _loadFuture!;
+  }
+
+  Future<AuditInstallationsElectriques> _performLoad() async {
     try {
-      if (mounted) {
+      if (mounted && !state.hasValue) {
         state = const AsyncValue.loading();
       }
       final getUseCase = ref.read(getAuditInstallationsUseCaseProvider);
@@ -41,6 +56,8 @@ class AuditInstallationsNotifier
         state = AsyncValue.error(e, stackTrace);
       }
       rethrow;
+    } finally {
+      _loadFuture = null;
     }
   }
 

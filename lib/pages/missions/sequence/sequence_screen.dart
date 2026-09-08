@@ -374,16 +374,20 @@ class _SequenceScreenState extends State<SequenceScreen>
     var savedStep = progress['currentStep'] as int? ?? 0;
     if (widget.initialStep >= 0 && widget.initialStep < _steps.length) {
       savedStep = widget.initialStep;
-      await SequenceProgressService.saveCurrentStep(
-        widget.mission.id,
-        savedStep,
-      );
+      if (progress['currentStep'] != savedStep) {
+        await SequenceProgressService.saveCurrentStep(
+          widget.mission.id,
+          savedStep,
+        );
+      }
     } else if (savedStep < 0 || savedStep >= _steps.length) {
       savedStep = 0;
-      await SequenceProgressService.saveCurrentStep(
-        widget.mission.id,
-        0,
-      );
+      if (progress['currentStep'] != 0) {
+        await SequenceProgressService.saveCurrentStep(
+          widget.mission.id,
+          0,
+        );
+      }
     }
 
     _currentStep = savedStep.clamp(0, _steps.length - 1);
@@ -395,13 +399,8 @@ class _SequenceScreenState extends State<SequenceScreen>
 
   // ── Rafraîchit tout depuis Hive ──────────────────────────────────────────
   Future<void> _refreshSubProgress() async {
-    // Description (Étape 2)
-    _descProgress = await HiveService.getMissionProgress(widget.mission.id);
-    final descHasData = _descProgress.values.any((v) => v);
-    if (descHasData && !_completedSteps.contains(2)) {
-      await SequenceProgressService.markStepCompleted(widget.mission.id, 2);
-      _completedSteps.add(2);
-    }
+    // Paralléliser la lecture de la description et de l'audit
+    final descFuture = HiveService.getMissionProgress(widget.mission.id);
 
     // Audit (Étape 3)
     final audit = HiveService.getAuditInstallationsByMissionId(
@@ -431,6 +430,14 @@ class _SequenceScreenState extends State<SequenceScreen>
     if (auditHasData && !_completedSteps.contains(3)) {
       await SequenceProgressService.markStepCompleted(widget.mission.id, 3);
       _completedSteps.add(3);
+    }
+
+    // Description (Étape 2)
+    _descProgress = await descFuture;
+    final descHasData = _descProgress.values.any((v) => v);
+    if (descHasData && !_completedSteps.contains(2)) {
+      await SequenceProgressService.markStepCompleted(widget.mission.id, 2);
+      _completedSteps.add(2);
     }
 
     if (mounted) setState(() {});
