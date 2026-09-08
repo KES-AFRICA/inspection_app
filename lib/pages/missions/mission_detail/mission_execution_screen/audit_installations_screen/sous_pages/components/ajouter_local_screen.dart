@@ -2633,19 +2633,8 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _cellulePresenceIacm = cellule.presenceIacm;
     _celluleTensionService = cellule.tensionService;
     _celluleTensionServiceCustomController.text = cellule.tensionService ?? '';
-    if (cellule.tensionService != null &&
-        cellule.tensionService!.isNotEmpty &&
-        !InstallationFieldsRegistry.tensionDeServiceOptions.contains(cellule.tensionService)) {
-      _customSaisirFields.add('celluleTensionService');
-    } else {
-      _customSaisirFields.remove('celluleTensionService');
-    }
-    if (cellule.tensionAssignee.isNotEmpty &&
-        !InstallationFieldsRegistry.tensionAssigneeOptions.contains(cellule.tensionAssignee)) {
-      _customSaisirFields.add('celluleTensionAssignee');
-    } else {
-      _customSaisirFields.remove('celluleTensionAssignee');
-    }
+    _customSaisirFields.remove('celluleTensionService');
+    _customSaisirFields.remove('celluleTensionAssignee');
     _cellulePhoto = cellule.photo;
     _celluleObservations = List.from(cellule.observations ?? []);
     _cellulePhotos = List.from(cellule.photos);
@@ -2670,18 +2659,8 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
     _transfoAnneeController.text = transfo.effectiveAnneeFabrication;
     _transfoPuissanceController.text = transfo.puissanceAssignee;
     _transfoTensionController.text = transfo.tensionPrimaireSecondaire;
-    if (transfo.puissanceAssignee.isNotEmpty &&
-        !InstallationFieldsRegistry.puissanceTransformateurOptions.contains(transfo.puissanceAssignee)) {
-      _customSaisirFields.add('transfoPuissanceAssignee');
-    } else {
-      _customSaisirFields.remove('transfoPuissanceAssignee');
-    }
-    if (transfo.tensionPrimaireSecondaire.isNotEmpty &&
-        !InstallationFieldsRegistry.tensionPrimaireSecondaireOptions.contains(transfo.tensionPrimaireSecondaire)) {
-      _customSaisirFields.add('transfoTension');
-    } else {
-      _customSaisirFields.remove('transfoTension');
-    }
+    _customSaisirFields.remove('transfoPuissanceAssignee');
+    _customSaisirFields.remove('transfoTension');
     _transfoBuchholzController.text = transfo.relaisBuchholz;
     _transfoTypeImmersionController.text = transfo.typeImmersion ?? '';
     _transfoDgpt2Controller.text = transfo.presenceDGPT2 ?? '';
@@ -3667,7 +3646,14 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
             currentValue: _celluleTensionService,
             customController: _celluleTensionServiceCustomController,
             isSmallScreen: isSmallScreen,
-            onValueChanged: (val) => setState(() => _celluleTensionService = val),
+            onValueChanged: (val) {
+              setState(() {
+                _celluleTensionService = val;
+                if (_celluleTensionServiceCustomController.text != (val ?? '')) {
+                  _celluleTensionServiceCustomController.text = val ?? '';
+                }
+              });
+            },
             suffixText: 'kV',
             keyboardType: TextInputType.text,
             optional: true,
@@ -3680,7 +3666,13 @@ class _EtapeCelluleTransformateurMultiState extends State<_EtapeCelluleTransform
             currentValue: _celluleTensionController.text,
             customController: _celluleTensionController,
             isSmallScreen: isSmallScreen,
-            onValueChanged: (val) => setState(() => _celluleTensionController.text = val ?? ''),
+            onValueChanged: (val) {
+              setState(() {
+                if (_celluleTensionController.text != (val ?? '')) {
+                  _celluleTensionController.text = val ?? '';
+                }
+              });
+            },
             suffixText: 'kV',
             keyboardType: TextInputType.text,
             optional: true,
@@ -4874,22 +4866,63 @@ Widget _buildPrioriteButton({
     bool optional = true,
   }) {
     final cleanVal = currentValue?.trim() ?? '';
-    final isKnownStandard = cleanVal.isNotEmpty && standardOptions.contains(cleanVal);
-    final isCustomValue = cleanVal.isNotEmpty && !isKnownStandard;
-    final isSaisirActive = _customSaisirFields.contains(fieldKey);
-    final showInputField = isSaisirActive || isCustomValue;
+
+    // Trouver si la valeur actuelle correspond à une option prédéfinie de la liste
+    String? matchedStandard;
+    if (cleanVal.isNotEmpty) {
+      for (final opt in standardOptions) {
+        final optTrimmed = opt.trim();
+        if (cleanVal == optTrimmed) {
+          matchedStandard = opt;
+          break;
+        }
+        if (suffixText != null && suffixText.isNotEmpty) {
+          if (cleanVal.toLowerCase() == '$optTrimmed $suffixText'.toLowerCase() ||
+              cleanVal.toLowerCase() == '$optTrimmed$suffixText'.toLowerCase()) {
+            matchedStandard = opt;
+            break;
+          }
+        }
+        // Comparaison insensible aux espaces (ex: '1000' vs '1 000')
+        final cleanNoSpace = cleanVal.replaceAll(RegExp(r'\s+'), '').toLowerCase();
+        final optNoSpace = optTrimmed.replaceAll(RegExp(r'\s+'), '').toLowerCase();
+        if (cleanNoSpace == optNoSpace) {
+          matchedStandard = opt;
+          break;
+        }
+        if (suffixText != null && suffixText.isNotEmpty) {
+          final optWithSuffixNoSpace = '$optNoSpace${suffixText.replaceAll(RegExp(r'\s+'), '').toLowerCase()}';
+          if (cleanNoSpace == optWithSuffixNoSpace) {
+            matchedStandard = opt;
+            break;
+          }
+        }
+      }
+    }
+
+    // Le mode "Saisir" est actif soit si l'utilisateur l'a explicitement choisi dans le select,
+    // soit si la mission en cours possède déjà une donnée personnalisée/terrain hors liste prédéfinie
+    final isCustomTerrain = cleanVal.isNotEmpty && matchedStandard == null;
+    final isSaisirActive = _customSaisirFields.contains(fieldKey) || isCustomTerrain;
+    final showInputField = isSaisirActive;
 
     // Déterminer la valeur sélectionnée dans le Dropdown
     final String dropdownValue;
     if (isSaisirActive) {
       dropdownValue = '__SAISIR__';
-    } else if (cleanVal.isNotEmpty) {
-      dropdownValue = cleanVal;
+    } else if (matchedStandard != null) {
+      dropdownValue = matchedStandard;
     } else {
       dropdownValue = '';
     }
 
-    // Construire la liste des options du Dropdown
+    // Pré-remplir fidèlement le champ texte libre si une donnée terrain non-standard existe
+    if (isCustomTerrain && customController.text.trim().isEmpty) {
+      customController.text = cleanVal;
+    }
+
+    // Construire la liste déroulante : STRICTEMENT options standard + "Saisir"
+    // Aucune altération ni doublon de liste, préservation totale
     final items = <DropdownMenuItem<String>>[
       DropdownMenuItem<String>(
         value: '',
@@ -4911,24 +4944,6 @@ Widget _buildPrioriteButton({
           ),
         ),
       ),
-    ];
-
-    // Si une valeur personnalisée ou legacy existe et n'est pas dans les options standard,
-    // on l'ajoute comme option valide dans le dropdown pour qu'elle s'affiche fidèlement
-    if (isCustomValue) {
-      items.add(
-        DropdownMenuItem<String>(
-          value: cleanVal,
-          child: Text(
-            (suffixText != null && !cleanVal.contains(suffixText)) ? '$cleanVal $suffixText' : cleanVal,
-            style: TextStyle(fontSize: isSmallScreen ? 13 : 14, fontWeight: FontWeight.w600),
-          ),
-        ),
-      );
-    }
-
-    // Option "Saisir..." pour saisie libre
-    items.add(
       DropdownMenuItem<String>(
         value: '__SAISIR__',
         child: Row(
@@ -4936,7 +4951,7 @@ Widget _buildPrioriteButton({
             const Icon(Icons.edit_outlined, size: 16, color: AppTheme.primaryBlue),
             const SizedBox(width: 6),
             Text(
-              'Saisir...',
+              'Saisir',
               style: TextStyle(
                 fontSize: isSmallScreen ? 13 : 14,
                 color: AppTheme.primaryBlue,
@@ -4946,7 +4961,7 @@ Widget _buildPrioriteButton({
           ],
         ),
       ),
-    );
+    ];
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -4965,11 +4980,13 @@ Widget _buildPrioriteButton({
             if (val == '__SAISIR__') {
               setState(() {
                 _customSaisirFields.add(fieldKey);
-                if (isKnownStandard) {
-                  customController.text = '';
+                // Si on passe d'une option prédéfinie vers "Saisir", vider le champ libre pour la nouvelle saisie
+                if (matchedStandard != null) {
+                  customController.clear();
                   onValueChanged('');
-                } else if (cleanVal.isNotEmpty && customController.text.isEmpty) {
+                } else if (cleanVal.isNotEmpty) {
                   customController.text = cleanVal;
+                  onValueChanged(cleanVal);
                 }
               });
             } else if (val != null && val.isNotEmpty) {
@@ -4981,7 +4998,7 @@ Widget _buildPrioriteButton({
             } else {
               setState(() {
                 _customSaisirFields.remove(fieldKey);
-                customController.text = '';
+                customController.clear();
                 onValueChanged(null);
               });
             }
