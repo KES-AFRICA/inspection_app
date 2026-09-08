@@ -68,6 +68,7 @@ class HiveService {
     if (!Hive.isAdapterRegistered(22)) Hive.registerAdapter(EssaiDeclenchementDifferentielAdapter());
     if (!Hive.isAdapterRegistered(23)) Hive.registerAdapter(ContinuiteResistanceAdapter());
     if (!Hive.isAdapterRegistered(63)) Hive.registerAdapter(EssaiIsolementAdapter());
+    if (!Hive.isAdapterRegistered(66)) Hive.registerAdapter(CpiTestAdapter());
     if (!Hive.isAdapterRegistered(24)) Hive.registerAdapter(ObservationLibreAdapter());
     if (!Hive.isAdapterRegistered(25)) Hive.registerAdapter(InstallationItemAdapter()); 
     if (!Hive.isAdapterRegistered(34)) Hive.registerAdapter(RenseignementsGenerauxAdapter());
@@ -5579,6 +5580,204 @@ static List<EquipementIsolementItem> getAllEquipementsIsolementForMission(String
 }
 
 // ============================================================
+//          SECTION 4: TEST CPI (CONTRÔLEUR PERMANENT D'ISOLEMENT)
+// ============================================================
+
+/// Ajouter un test CPI
+static Future<bool> addCpiTest({
+  required String missionId,
+  required CpiTest test,
+}) async {
+  try {
+    final mesures = await getOrCreateMesuresEssais(missionId);
+    mesures.cpiTests.add(test);
+    await saveMesuresEssais(mesures);
+    if (kDebugMode) print('✅ Test CPI ajouté: ${test.equipmentNom}');
+    return true;
+  } catch (e) {
+    if (kDebugMode) print('❌ Erreur addCpiTest: $e');
+    return false;
+  }
+}
+
+/// Mettre à jour un test CPI existant
+static Future<bool> updateCpiTest({
+  required String missionId,
+  required CpiTest test,
+}) async {
+  try {
+    final mesures = await getOrCreateMesuresEssais(missionId);
+    final idx = mesures.cpiTests.indexWhere((t) => t.id == test.id);
+    if (idx != -1) {
+      mesures.cpiTests[idx] = test;
+      await saveMesuresEssais(mesures);
+      if (kDebugMode) print('✅ Test CPI mis à jour: ${test.equipmentNom}');
+      return true;
+    }
+    return false;
+  } catch (e) {
+    if (kDebugMode) print('❌ Erreur updateCpiTest: $e');
+    return false;
+  }
+}
+
+/// Supprimer un test CPI (supprime uniquement l'entité CpiTest, pas l'équipement ni le transformateur)
+static Future<bool> deleteCpiTest({
+  required String missionId,
+  required String testId,
+}) async {
+  try {
+    final mesures = await getOrCreateMesuresEssais(missionId);
+    final initialCount = mesures.cpiTests.length;
+    mesures.cpiTests.removeWhere((t) => t.id == testId);
+    if (mesures.cpiTests.length < initialCount) {
+      await saveMesuresEssais(mesures);
+      if (kDebugMode) print('✅ Test CPI supprimé: $testId');
+      return true;
+    }
+    return false;
+  } catch (e) {
+    if (kDebugMode) print('❌ Erreur deleteCpiTest: $e');
+    return false;
+  }
+}
+
+/// Récupérer tous les tests CPI d'une mission
+static List<CpiTest> getCpiTestsForMission(String missionId) {
+  final mesures = getMesuresEssaisByMissionId(missionId);
+  return mesures?.cpiTests ?? [];
+}
+
+/// Récupérer tous les équipements éligibles aux tests CPI pour une mission
+static List<CpiEligibleEquipment> getCpiEligibleEquipementsForMission(String missionId) {
+  final audit = getAuditInstallationsByMissionId(missionId);
+  if (audit == null) return [];
+
+  final transfoOptions = getAllTransformateurOptionsForMission(missionId);
+  final transfoMap = <String, MissionTransformateurOption>{};
+  for (final opt in transfoOptions) {
+    transfoMap[opt.id] = opt;
+    if (opt.transformateur.syncId != null && opt.transformateur.syncId!.trim().isNotEmpty) {
+      transfoMap[opt.transformateur.syncId!.trim()] = opt;
+    }
+  }
+
+  final results = <CpiEligibleEquipment>[];
+  final seenIds = <String>{};
+
+  void checkAndAddCoffret(CoffretArmoire coffret, String repereName, {String zoneName = ''}) {
+    final nomStr = coffret.nom.trim();
+    if (nomStr.isEmpty) return;
+
+    final typeStr = coffret.type.trim();
+    String formattedName;
+    if (typeStr.isNotEmpty && !nomStr.toUpperCase().contains(typeStr.toUpperCase())) {
+      formattedName = '$typeStr - $nomStr';
+    } else {
+      formattedName = nomStr;
+    }
+
+    final id = coffret.qrCode.isNotEmpty
+        ? coffret.qrCode
+        : (coffret.numeroEquipement != null && coffret.numeroEquipement!.isNotEmpty
+            ? coffret.numeroEquipement!
+            : '${repereName}_$formattedName');
+
+    if (!seenIds.add(id)) return;
+
+    // Analyse du transformateur et de l'antériorité
+    final transfoId = coffret.transformateurId?.trim();
+    if (transfoId != null && transfoId.isNotEmpty) {
+      final opt = transfoMap[transfoId];
+      if (opt != null) {
+        final regime = opt.transformateur.regimeNeutre.trim().toUpperCase();
+        if (regime == 'IT') {
+          results.add(CpiEligibleEquipment(
+            id: id,
+            equipmentNom: formattedName,
+            type: typeStr.isNotEmpty ? typeStr : 'Coffret/Armoire',
+            repere: repereName,
+            zone: zoneName,
+            transformateurId: opt.id,
+            transformateurNom: opt.transformerName,
+            isHistorical: false,
+          ));
+        }
+      } else {
+        // Le transfo renseigné n'est plus trouvé dans les options actuelles :
+        // Si l'équipement est antérieur à l'évolution, on le préserve
+        final isOld = coffret.createdAt == null || coffret.createdAt!.isBefore(kCpiEvolutionCutoff);
+        if (isOld) {
+          results.add(CpiEligibleEquipment(
+            id: id,
+            equipmentNom: formattedName,
+            type: typeStr.isNotEmpty ? typeStr : 'Coffret/Armoire',
+            repere: repereName,
+            zone: zoneName,
+            transformateurId: transfoId,
+            transformateurNom: null,
+            isHistorical: true,
+          ));
+        }
+      }
+    } else {
+      // Aucun transformateur lié : éligible uniquement s'il est antérieur à l'évolution
+      final isOld = coffret.createdAt == null || coffret.createdAt!.isBefore(kCpiEvolutionCutoff);
+      if (isOld) {
+        results.add(CpiEligibleEquipment(
+          id: id,
+          equipmentNom: formattedName,
+          type: typeStr.isNotEmpty ? typeStr : 'Coffret/Armoire',
+          repere: repereName,
+          zone: zoneName,
+          transformateurId: null,
+          transformateurNom: null,
+          isHistorical: true,
+        ));
+      }
+    }
+  }
+
+  // Moyenne Tension Locaux
+  for (var local in audit.moyenneTensionLocaux) {
+    final rep = local.nom.trim();
+    for (var c in local.coffrets) {
+      checkAndAddCoffret(c, rep);
+    }
+  }
+
+  // Moyenne Tension Zones
+  for (var zone in audit.moyenneTensionZones) {
+    final repZone = zone.nom.trim();
+    for (var c in zone.coffrets) {
+      checkAndAddCoffret(c, repZone, zoneName: repZone);
+    }
+    for (var local in zone.locaux) {
+      final repLocal = local.nom.trim();
+      for (var c in local.coffrets) {
+        checkAndAddCoffret(c, repLocal, zoneName: repZone);
+      }
+    }
+  }
+
+  // Basse Tension Zones & Locaux
+  for (var zone in audit.basseTensionZones) {
+    final repZone = zone.nom.trim();
+    for (var c in zone.coffretsDirects) {
+      checkAndAddCoffret(c, repZone, zoneName: repZone);
+    }
+    for (var local in zone.locaux) {
+      final repLocal = local.nom.trim();
+      for (var c in local.coffrets) {
+        checkAndAddCoffret(c, repLocal, zoneName: repZone);
+      }
+    }
+  }
+
+  return results;
+}
+
+// ============================================================
 //          SECTION 7: CONTINUITÉ ET RÉSISTANCE
 // ============================================================
 
@@ -8671,6 +8870,43 @@ class EquipementIsolementItem {
     final z = zone.trim();
     final r = repere.trim();
     final n = nom.trim();
+
+    if (z.isNotEmpty) parts.add(z);
+    if (r.isNotEmpty && r != z) parts.add(r);
+    if (n.isNotEmpty) parts.add(n);
+
+    return parts.join(' - ');
+  }
+}
+
+/// Équipement BT éligible pour le test CPI (relié à un transformateur MT en régime IT,
+/// ou équipement historique sans transfo créé avant kCpiEvolutionCutoff)
+class CpiEligibleEquipment {
+  final String id;
+  final String equipmentNom;
+  final String type;
+  final String repere;
+  final String zone;
+  final String? transformateurId;
+  final String? transformateurNom;
+  final bool isHistorical;
+
+  const CpiEligibleEquipment({
+    required this.id,
+    required this.equipmentNom,
+    required this.type,
+    required this.repere,
+    this.zone = '',
+    this.transformateurId,
+    this.transformateurNom,
+    this.isHistorical = false,
+  });
+
+  String get displayName {
+    final parts = <String>[];
+    final z = zone.trim();
+    final r = repere.trim();
+    final n = equipmentNom.trim();
 
     if (z.isNotEmpty) parts.add(z);
     if (r.isNotEmpty && r != z) parts.add(r);

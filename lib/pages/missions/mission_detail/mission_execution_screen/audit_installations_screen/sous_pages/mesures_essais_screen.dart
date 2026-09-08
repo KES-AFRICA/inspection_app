@@ -9,6 +9,7 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_declenchement_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/essais_isolement_screen.dart';
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/prises_terre_screen.dart';
+import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/audit_installations_screen/sous_pages/components/cpi_tests_list_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inspec_app/features/mesures_essais/presentation/providers/mesures_essais_provider.dart';
 
@@ -26,6 +27,7 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
   bool _isLoading = true;
   Map<String, dynamic> _stats = {};
   Map<String, bool> _sectionStatus = {};
+  int _cpiCount = 0;
 
   @override
   void initState() {
@@ -44,6 +46,7 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
           .read(mesuresEssaisProvider(widget.mission.id).notifier)
           .load();
       _stats = mesures.calculerStatistiques();
+      _cpiCount = mesures.cpiTests.length;
 
       // Vérifier l'état de chaque section
       _sectionStatus = {
@@ -53,6 +56,7 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
         'avis_mesures': _stats['avis_mesures_renseigne'] ?? false,
         'essais_declenchement': (mesures.essaisDeclenchement.isNotEmpty),
         'essais_isolement': _stats['essais_isolement_renseigne'] ?? (mesures.essaisIsolement.isNotEmpty),
+        'test_cpi': (_cpiCount > 0),
         'continuite_resistance': (mesures.continuiteResistances.isNotEmpty),
       };
     } catch (e) {
@@ -200,6 +204,16 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
     ).then((_) => _loadData());
   }
 
+  void _navigateToCpiTests() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            CpiTestsListScreen(mission: widget.mission),
+      ),
+    ).then((_) => _loadData());
+  }
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
@@ -270,6 +284,17 @@ class _MesuresEssaisScreenState extends ConsumerState<MesuresEssaisScreen> {
                           : 'Tronçons de câble',
                       _navigateToEssaisIsolement,
                       'essais_isolement',
+                    ),
+                    const Divider(height: 0, thickness: 0.5),
+
+                    _buildSectionTile(
+                      'Test CPI',
+                      Icons.sensors_outlined,
+                      _isSectionComplete('test_cpi')
+                          ? '$_cpiCount test(s) enregistré(s)'
+                          : 'Contrôleur Permanent d\'Isolement',
+                      _navigateToCpiTests,
+                      'test_cpi',
                     ),
                     const Divider(height: 0, thickness: 0.5),
 

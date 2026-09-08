@@ -87,6 +87,22 @@ class MesuresEssaisMapper {
           essai: cr.essai,
         );
       }).toList(),
+      cpiTests: model.cpiTests.map((ct) {
+        return CpiTestEntity(
+          id: ct.id,
+          equipmentId: ct.equipmentId,
+          equipmentNom: ct.equipmentNom,
+          transformateurId: ct.transformateurId,
+          transformateurNom: ct.transformateurNom,
+          zone: ct.zone,
+          repere: ct.repere,
+          cpi: ct.cpi,
+          essaiDeclenchement: ct.essaiDeclenchement,
+          reportAlarme: ct.reportAlarme,
+          createdAt: ct.createdAt,
+          updatedAt: ct.updatedAt,
+        );
+      }).toList(),
     );
   }
 
@@ -173,6 +189,23 @@ class MesuresEssaisMapper {
           essai: cr.essai,
         );
       }).toList(),
+      cpiTests: entity.cpiTests.map((ct) {
+        return CpiTest(
+          id: ct.id,
+          equipmentId: ct.equipmentId,
+          equipmentNom: ct.equipmentNom,
+          transformateurId: ct.transformateurId,
+          transformateurNom: ct.transformateurNom,
+          zone: ct.zone,
+          repere: ct.repere,
+          cpi: ct.cpi,
+          essaiDeclenchement: ct.essaiDeclenchement,
+          reportAlarme: ct.reportAlarme,
+          createdAt: ct.createdAt,
+          updatedAt: ct.updatedAt,
+        );
+      }).toList(),
     );
   }
 }
+

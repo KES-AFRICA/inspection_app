@@ -10,7 +10,6 @@ import 'package:inspec_app/pages/missions/mission_detail/mission_execution_scree
 import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/radio_sequence_screen.dart';
 import 'package:inspec_app/services/sequence_progress_service.dart';
 import 'package:inspec_app/core/providers/description_installations_providers.dart';
-import 'package:inspec_app/pages/missions/mission_detail/mission_execution_screen/description_installations_screen/components/cpi_sequence_screen.dart';
 
 class DescriptionInstallationsSequenceScreen extends ConsumerStatefulWidget {
   final Mission mission;
@@ -195,14 +194,6 @@ class DescriptionInstallationsSequenceScreenState
       'color': const Color(0xFF2C3E50),
       'options': ['IT', 'TT', 'TN'],
       'isRadio': true,
-    },
-    {
-      'key': 'test_cpi',
-      'title': 'Test du Contrôleur Permanent d\'Isolement (CPI)',
-      'shortTitle': 'Test CPI',
-      'icon': Icons.verified_user_outlined,
-      'color': const Color(0xFF16A085),
-      'isTestCpi': true,
     },
     {
       'key': 'eclairage_securite',
@@ -662,13 +653,6 @@ class DescriptionInstallationsSequenceScreenState
         title: section['title'],
         field: section['key'],
         options: List<String>.from(section['options']),
-        onComplete: _onSectionComplete,
-        isComplete: isComplete,
-      );
-    } else if (section['isTestCpi'] == true) {
-      return CpiSequenceScreen(
-        key: ValueKey('section_${section['key']}'),
-        mission: widget.mission,
         onComplete: _onSectionComplete,
         isComplete: isComplete,
       );

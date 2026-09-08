@@ -156,6 +156,66 @@ class PdfIsolementZoneGroup {
   });
 }
 
+class PdfCpiRowItem {
+  final String zoneName;
+  final String repereName;
+  final String transformateurName;
+  final String armoireName;
+  final int index;
+  final CpiTest item;
+
+  PdfCpiRowItem({
+    required this.zoneName,
+    required this.repereName,
+    required this.transformateurName,
+    required this.armoireName,
+    required this.index,
+    required this.item,
+  });
+}
+
+class PdfCpiArmoireGroup {
+  final String armoireName;
+  final List<PdfCpiRowItem> items;
+
+  PdfCpiArmoireGroup({
+    required this.armoireName,
+    required this.items,
+  });
+}
+
+class PdfCpiTransfoGroup {
+  final String transformateurName;
+  final List<PdfCpiArmoireGroup> armoireGroups;
+  int get totalRows => armoireGroups.fold(0, (sum, g) => sum + g.items.length);
+
+  PdfCpiTransfoGroup({
+    required this.transformateurName,
+    required this.armoireGroups,
+  });
+}
+
+class PdfCpiRepereGroup {
+  final String repereName;
+  final List<PdfCpiTransfoGroup> transfoGroups;
+  int get totalRows => transfoGroups.fold(0, (sum, g) => sum + g.totalRows);
+
+  PdfCpiRepereGroup({
+    required this.repereName,
+    required this.transfoGroups,
+  });
+}
+
+class PdfCpiZoneGroup {
+  final String zoneName;
+  final List<PdfCpiRepereGroup> repereGroups;
+  int get totalRows => repereGroups.fold(0, (sum, g) => sum + g.totalRows);
+
+  PdfCpiZoneGroup({
+    required this.zoneName,
+    required this.repereGroups,
+  });
+}
 
 typedef _PriseTerreRowItem = PdfPriseTerreRowItem;
 typedef _PriseTerreRepereGroup = PdfPriseTerreRepereGroup;
@@ -169,6 +229,11 @@ typedef _ContinuiteRepereGroup = PdfContinuiteRepereGroup;
 typedef _ContinuiteZoneGroup = PdfContinuiteZoneGroup;
 typedef _IsolementRowItem = PdfIsolementRowItem;
 typedef _IsolementZoneGroup = PdfIsolementZoneGroup;
+typedef _CpiRowItem = PdfCpiRowItem;
+typedef _CpiArmoireGroup = PdfCpiArmoireGroup;
+typedef _CpiTransfoGroup = PdfCpiTransfoGroup;
+typedef _CpiRepereGroup = PdfCpiRepereGroup;
+typedef _CpiZoneGroup = PdfCpiZoneGroup;
 
 class PdfMesuresEssaisBuilder {
   static pw.Font _fontRegular = pw.Font.helvetica();
@@ -243,9 +308,6 @@ class PdfMesuresEssaisBuilder {
   }
 
   static String _normalizeText(String text) => PdfReportStyles.normalizeText(text);
-
-  static pw.Widget _buildCpiTestContent(String testResult) =>
-      PdfAuditInstallationsBuilder.buildCpiTestContent(testResult);
 
   static PdfLocationInfo _resolveLocation(
     AuditInstallationsElectriques? audit, {
@@ -409,6 +471,58 @@ class PdfMesuresEssaisBuilder {
       return parsed.toString().replaceAll('.', ',');
     }
     return str;
+  }
+
+  static pw.Widget _buildCpiExplanations() {
+    return pw.Container(
+      margin: const pw.EdgeInsets.only(top: 14),
+      padding: const pw.EdgeInsets.all(8),
+      decoration: pw.BoxDecoration(
+        color: PdfColor.fromInt(0xFFF0F4F8),
+        borderRadius: const pw.BorderRadius.all(pw.Radius.circular(4)),
+        border: pw.Border.all(color: borderColor, width: 0.5),
+      ),
+      child: pw.Column(
+        crossAxisAlignment: pw.CrossAxisAlignment.start,
+        children: [
+          pw.Text(
+            "ESSAI DE DÉCLENCHEMENT DU CPI :",
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: fsSmall,
+              color: headerColor,
+            ),
+          ),
+          pw.SizedBox(height: 2),
+          pw.Text(
+            "L'essai consiste à simuler, au moyen d'une résistance calibrée, un défaut d'isolement sur le réseau IT surveillé, et à vérifier que le Contrôleur Permanent d'Isolement détecte ce défaut et déclenche l'alarme (locale et/ou à distance) au seuil de réglage configuré, sans provoquer de coupure de l'installation.",
+            style: pw.TextStyle(
+              font: _fontRegular,
+              fontSize: 7.5,
+              color: darkGrey,
+            ),
+          ),
+          pw.SizedBox(height: 6),
+          pw.Text(
+            "VÉRIFICATION DU REPORT D'ALARME :",
+            style: pw.TextStyle(
+              font: _fontBold,
+              fontSize: fsSmall,
+              color: headerColor,
+            ),
+          ),
+          pw.SizedBox(height: 2),
+          pw.Text(
+            "Le report d'alarme (voyant local, report GTB/GTC, ou tout autre dispositif de signalisation à distance) est contrôlé conjointement afin de s'assurer que le personnel d'exploitation est effectivement informé en cas de premier défaut d'isolement.",
+            style: pw.TextStyle(
+              font: _fontRegular,
+              fontSize: 7.5,
+              color: darkGrey,
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   static pw.Widget _buildAbreviationsTable() {
@@ -1825,13 +1939,14 @@ class PdfMesuresEssaisBuilder {
       ),
     );
 
-    // 3. Essais de mesure d'isolement (nouvelle page)
+    // 3. Essais de mesure d'isolement (nouvelle page en paysage)
     pdf.addPage(
       pw.MultiPage(
         maxPages: 10000,
         pageTheme: innerTheme(
           pageOffset: pageOffset,
           overrideTotalPages: overrideTotalPages,
+          pageFormat: PdfPageFormat.a4.landscape,
         ),
         header: (ctx) => pageHeader(
           nomSite: nomSite,
@@ -2159,11 +2274,427 @@ class PdfMesuresEssaisBuilder {
       ),
     );
 
-    // 4, 5, 6. CPI, GE et Arrêt d'urgence (regroupés sur une seule page)
-    final cpiTestResult = desc != null && desc.cpi.isNotEmpty
-        ? (desc.cpi.last.data['RESULTAT_TEST'] ?? 'Sans objet')
-        : 'Sans objet';
+    // 4. Test CPI (nouvelle page dédiée en paysage)
+    pdf.addPage(
+      pw.MultiPage(
+        maxPages: 10000,
+        pageTheme: innerTheme(
+          pageOffset: pageOffset,
+          overrideTotalPages: overrideTotalPages,
+          pageFormat: PdfPageFormat.a4.landscape,
+        ),
+        header: (ctx) => pageHeader(
+          nomSite: nomSite,
+          numeroRapport: numeroRapport,
+        ),
+        build: (ctx) {
+          final widgets = <pw.Widget>[];
 
+          widgets.add(
+            PageTracker(
+              key: 'mesures_cpi',
+              registry: trackedPages,
+              offset: pageOffset,
+              child: _subSectionBar(
+                "4. Test du Contrôleur Permanent d'Isolement (CPI)",
+              ),
+            ),
+          );
+          widgets.add(pw.SizedBox(height: 8));
+
+          // Récupération des tests CPI (avec rétrocompatibilité desc.cpi)
+          final cpiTests = List<CpiTest>.from(mesures.cpiTests);
+          if (cpiTests.isEmpty && desc != null && desc.cpi.isNotEmpty) {
+            for (var item in desc.cpi) {
+              final d = item.data;
+              final marque = d['MARQUE'] ?? '';
+              final type = d['TYPE'] ?? '';
+              final cpiName = [marque, type].where((s) => s.trim().isNotEmpty).join(' ');
+              cpiTests.add(CpiTest(
+                id: 'hist_${item.hashCode}',
+                equipmentNom: d['ARMOIRE'] ?? 'Armoire BT',
+                transformateurNom: d['TRANSFORMATEUR'] ?? 'Non renseigné',
+                zone: d['ZONE'] ?? '',
+                repere: d['REPERE'] ?? '',
+                cpi: cpiName.isNotEmpty ? cpiName : 'CPI',
+                essaiDeclenchement: d['RESULTAT_TEST'] ?? (d['ESSAI_DECLENCHEMENT'] ?? 'Satisfaisant'),
+                reportAlarme: d['REPORT_ALARME'] ?? 'Satisfaisant',
+              ));
+            }
+          }
+
+          const cpiColumnWidths = <int, pw.TableColumnWidth>{
+            0: pw.FlexColumnWidth(1.4), // ZONE
+            1: pw.FlexColumnWidth(1.6), // REPÈRE
+            2: pw.FlexColumnWidth(2.0), // TRANSFORMATEUR
+            3: pw.FlexColumnWidth(2.0), // ARMOIRE
+            4: pw.FlexColumnWidth(2.0), // CPI
+            5: pw.FlexColumnWidth(1.8), // ESSAIS DE DÉCLENCHEMENT
+            6: pw.FlexColumnWidth(1.8), // VÉRIF. DU REPORT D'ALARME
+          };
+
+          // 1. En-tête de tableau CPI
+          final headerTable = pw.Table(
+            border: const pw.TableBorder(
+              left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              top: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+              horizontalInside: pw.BorderSide.none,
+            ),
+            columnWidths: cpiColumnWidths,
+            children: [
+              pw.TableRow(
+                decoration: pw.BoxDecoration(color: accentColor),
+                children: [
+                  _thHeaderCell("ZONE"),
+                  _thHeaderCell("REPÈRE"),
+                  _thHeaderCell("TRANSFORMATEUR"),
+                  _thHeaderCell("ARMOIRE"),
+                  _thHeaderCell("CPI"),
+                  _thHeaderCell("ESSAIS DE DÉCLENCHEMENT"),
+                  _thHeaderCell("VÉRIF. DU REPORT D'ALARME"),
+                ],
+              ),
+            ],
+          );
+          widgets.add(headerTable);
+
+          if (cpiTests.isEmpty) {
+            // Ligne état vide propre dans la table
+            final emptyTable = pw.Table(
+              border: const pw.TableBorder(
+                left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                horizontalInside: pw.BorderSide.none,
+              ),
+              columnWidths: const {
+                0: pw.FlexColumnWidth(1.0),
+              },
+              children: [
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.white),
+                  children: [
+                    pw.Container(
+                      padding: const pw.EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                      alignment: pw.Alignment.center,
+                      child: pw.Text(
+                        'NÉANT - Aucun Contrôleur Permanent d\'Isolement (CPI) recensé ou testé pour cette installation',
+                        style: pw.TextStyle(
+                          font: _fontRegular,
+                          fontSize: fsSmall,
+                          color: darkGrey,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+            widgets.add(emptyTable);
+            widgets.add(_buildCpiExplanations());
+            return widgets;
+          }
+
+          // Tri déterministe : Zone -> Repère -> Transformateur -> Armoire -> CPI
+          final sortedTests = List<CpiTest>.from(cpiTests);
+          sortedTests.sort((a, b) {
+            final zA = a.zone ?? '';
+            final zB = b.zone ?? '';
+            final cmpZ = zA.toLowerCase().compareTo(zB.toLowerCase());
+            if (cmpZ != 0) return cmpZ;
+
+            final rA = a.repere ?? '';
+            final rB = b.repere ?? '';
+            final cmpR = rA.toLowerCase().compareTo(rB.toLowerCase());
+            if (cmpR != 0) return cmpR;
+
+            final tA = a.transformateurNom ?? '';
+            final tB = b.transformateurNom ?? '';
+            final cmpT = tA.toLowerCase().compareTo(tB.toLowerCase());
+            if (cmpT != 0) return cmpT;
+
+            final eA = a.equipmentNom ?? '';
+            final eB = b.equipmentNom ?? '';
+            final cmpE = eA.toLowerCase().compareTo(eB.toLowerCase());
+            if (cmpE != 0) return cmpE;
+
+            return a.cpi.toLowerCase().compareTo(b.cpi.toLowerCase());
+          });
+
+          // Regroupement hiérarchique : Zone -> Repère -> Transformateur -> Armoire
+          final zoneGroups = <_CpiZoneGroup>[];
+          for (int i = 0; i < sortedTests.length; i++) {
+            final test = sortedTests[i];
+            final zName = (test.zone ?? '').trim();
+            final rName = (test.repere ?? '').trim();
+            final tName = (test.transformateurNom ?? 'Non renseigné').trim();
+            final aName = (test.equipmentNom ?? 'Armoire BT').trim();
+
+            var zGroup = zoneGroups.firstWhere(
+              (g) => g.zoneName == zName,
+              orElse: () {
+                final ng = _CpiZoneGroup(zoneName: zName, repereGroups: []);
+                zoneGroups.add(ng);
+                return ng;
+              },
+            );
+
+            var rGroup = zGroup.repereGroups.firstWhere(
+              (g) => g.repereName == rName,
+              orElse: () {
+                final ng = _CpiRepereGroup(repereName: rName, transfoGroups: []);
+                zGroup.repereGroups.add(ng);
+                return ng;
+              },
+            );
+
+            var tGroup = rGroup.transfoGroups.firstWhere(
+              (g) => g.transformateurName == tName,
+              orElse: () {
+                final ng = _CpiTransfoGroup(transformateurName: tName, armoireGroups: []);
+                rGroup.transfoGroups.add(ng);
+                return ng;
+              },
+            );
+
+            var aGroup = tGroup.armoireGroups.firstWhere(
+              (g) => g.armoireName == aName,
+              orElse: () {
+                final ng = _CpiArmoireGroup(armoireName: aName, items: []);
+                tGroup.armoireGroups.add(ng);
+                return ng;
+              },
+            );
+
+            aGroup.items.add(_CpiRowItem(
+              zoneName: zName,
+              repereName: rName,
+              transformateurName: tName,
+              armoireName: aName,
+              index: i + 1,
+              item: test,
+            ));
+          }
+
+          // Construction des lignes de tableau avec cellules fusionnées
+          final cpiTableRows = <pw.TableRow>[];
+          int globalRowIndex = 0;
+
+          for (final zGroup in zoneGroups) {
+            final totalZoneItems = zGroup.totalRows;
+            int currentZoneItemIdx = 0;
+
+            for (final rGroup in zGroup.repereGroups) {
+              final totalRepereItems = rGroup.totalRows;
+              int currentRepereItemIdx = 0;
+
+              for (final tGroup in rGroup.transfoGroups) {
+                final totalTransfoItems = tGroup.totalRows;
+                int currentTransfoItemIdx = 0;
+
+                for (final aGroup in tGroup.armoireGroups) {
+                  final totalArmoireItems = aGroup.items.length;
+
+                  for (int currentArmoireItemIdx = 0;
+                      currentArmoireItemIdx < totalArmoireItems;
+                      currentArmoireItemIdx++) {
+                    final rowItem = aGroup.items[currentArmoireItemIdx];
+                    final test = rowItem.item;
+
+                    final idx = globalRowIndex++;
+                    final isEven = idx % 2 == 0;
+                    final bg = isEven ? PdfColors.white : tableRowAlt;
+
+                    final isStartOfZone = (currentZoneItemIdx == 0 && idx > 0);
+                    final isEndOfZone = (currentZoneItemIdx == totalZoneItems - 1);
+
+                    final zoneBorder = pw.Border(
+                      top: isStartOfZone
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                          : pw.BorderSide.none,
+                      bottom: isEndOfZone
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                          : pw.BorderSide.none,
+                    );
+
+                    final repereBorder = pw.Border(
+                      top: (currentRepereItemIdx == 0 && idx > 0)
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 0.8)
+                          : pw.BorderSide.none,
+                      bottom: (currentRepereItemIdx == totalRepereItems - 1)
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 0.8)
+                          : pw.BorderSide.none,
+                    );
+
+                    final transfoBorder = pw.Border(
+                      top: (currentTransfoItemIdx == 0 && idx > 0)
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 0.6)
+                          : pw.BorderSide.none,
+                      bottom: (currentTransfoItemIdx == totalTransfoItems - 1)
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 0.6)
+                          : pw.BorderSide.none,
+                    );
+
+                    final armoireBorder = pw.Border(
+                      top: (currentArmoireItemIdx == 0 && idx > 0)
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 0.6)
+                          : pw.BorderSide.none,
+                      bottom: (currentArmoireItemIdx == totalArmoireItems - 1)
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 0.6)
+                          : pw.BorderSide.none,
+                    );
+
+                    final itemBorder = pw.Border(
+                      top: isStartOfZone
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                          : pw.BorderSide.none,
+                      bottom: isEndOfZone
+                          ? const pw.BorderSide(color: PdfColor.fromInt(0xFF1E3A8A), width: 1.0)
+                          : const pw.BorderSide(color: PdfColor.fromInt(0xFFCBD5E1), width: 0.4),
+                    );
+
+                    // Couleur résultat essai déclenchement
+                    final declLower = test.essaiDeclenchement.toLowerCase();
+                    final isDeclSat = declLower.contains('satisfaisant') && !declLower.contains('non');
+                    final isDeclNonSat = declLower.contains('non');
+                    final declBg = isDeclSat
+                        ? conformeColor
+                        : (isDeclNonSat ? nonConformeColor : PdfColor.fromInt(0xFFEEEEEE));
+
+                    // Couleur résultat report d'alarme
+                    final alarmeLower = test.reportAlarme.toLowerCase();
+                    final isAlarmeSat = alarmeLower.contains('satisfaisant') && !alarmeLower.contains('non');
+                    final isAlarmeNonSat = alarmeLower.contains('non');
+                    final alarmeBg = isAlarmeSat
+                        ? conformeColor
+                        : (isAlarmeNonSat ? nonConformeColor : PdfColor.fromInt(0xFFEEEEEE));
+
+                    cpiTableRows.add(
+                      pw.TableRow(
+                        children: [
+                          // Cellule 0 : ZONE
+                          _buildGroupedCellWidget(
+                            currentIndex: currentZoneItemIdx,
+                            totalRows: totalZoneItems,
+                            text: zGroup.zoneName.isNotEmpty ? zGroup.zoneName : '-',
+                            style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                            border: zoneBorder,
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          ),
+
+                          // Cellule 1 : REPÈRE
+                          _buildGroupedCellWidget(
+                            currentIndex: currentRepereItemIdx,
+                            totalRows: totalRepereItems,
+                            text: rGroup.repereName.isNotEmpty ? rGroup.repereName : '-',
+                            style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                            border: repereBorder,
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          ),
+
+                          // Cellule 2 : TRANSFORMATEUR
+                          _buildGroupedCellWidget(
+                            currentIndex: currentTransfoItemIdx,
+                            totalRows: totalTransfoItems,
+                            text: tGroup.transformateurName.isNotEmpty ? tGroup.transformateurName : '-',
+                            style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                            border: transfoBorder,
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          ),
+
+                          // Cellule 3 : ARMOIRE
+                          _buildGroupedCellWidget(
+                            currentIndex: currentArmoireItemIdx,
+                            totalRows: totalArmoireItems,
+                            text: aGroup.armoireName.isNotEmpty ? aGroup.armoireName : '-',
+                            style: pw.TextStyle(font: _fontBold, fontSize: 8.5),
+                            border: armoireBorder,
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                          ),
+
+                          // Cellule 4 : CPI
+                          pw.Container(
+                            decoration: pw.BoxDecoration(color: bg, border: itemBorder),
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              test.cpi.isNotEmpty ? test.cpi : '-',
+                              style: pw.TextStyle(font: _fontRegular, fontSize: fsSmall),
+                              textAlign: pw.TextAlign.center,
+                            ),
+                          ),
+
+                          // Cellule 5 : ESSAIS DE DÉCLENCHEMENT
+                          pw.Container(
+                            decoration: pw.BoxDecoration(color: declBg, border: itemBorder),
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              test.essaiDeclenchement.isNotEmpty ? test.essaiDeclenchement : '-',
+                              style: pw.TextStyle(
+                                font: (isDeclSat || isDeclNonSat) ? _fontBold : _fontRegular,
+                                fontSize: fsSmall,
+                                color: PdfColors.black,
+                              ),
+                              textAlign: pw.TextAlign.center,
+                            ),
+                          ),
+
+                          // Cellule 6 : VÉRIF. DU REPORT D'ALARME
+                          pw.Container(
+                            decoration: pw.BoxDecoration(color: alarmeBg, border: itemBorder),
+                            padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+                            alignment: pw.Alignment.center,
+                            child: pw.Text(
+                              test.reportAlarme.isNotEmpty ? test.reportAlarme : '-',
+                              style: pw.TextStyle(
+                                font: (isAlarmeSat || isAlarmeNonSat) ? _fontBold : _fontRegular,
+                                fontSize: fsSmall,
+                                color: PdfColors.black,
+                              ),
+                              textAlign: pw.TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    currentZoneItemIdx++;
+                    currentRepereItemIdx++;
+                    currentTransfoItemIdx++;
+                  }
+                }
+              }
+            }
+          }
+
+          widgets.add(
+            pw.Table(
+              defaultVerticalAlignment: pw.TableCellVerticalAlignment.full,
+              border: const pw.TableBorder(
+                left: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                right: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                bottom: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                verticalInside: pw.BorderSide(color: PdfColor.fromInt(0xFF9CA3AF), width: 0.4),
+                horizontalInside: pw.BorderSide.none,
+              ),
+              columnWidths: cpiColumnWidths,
+              children: cpiTableRows,
+            ),
+          );
+
+          widgets.add(_buildCpiExplanations());
+
+          return widgets;
+        },
+      ),
+    );
+
+    // 5 & 6. GE et Arrêt d'urgence (page dédiée en portrait)
     pdf.addPage(
       pw.MultiPage(
         maxPages: 10000,
@@ -2171,21 +2702,11 @@ class PdfMesuresEssaisBuilder {
           pageOffset: pageOffset,
           overrideTotalPages: overrideTotalPages,
         ),
-        header: (ctx) => pageHeader(),
+        header: (ctx) => pageHeader(
+          nomSite: nomSite,
+          numeroRapport: numeroRapport,
+        ),
         build: (ctx) => [
-          PageTracker(
-            key: 'mesures_cpi',
-            registry: trackedPages,
-            offset: pageOffset,
-            child: _subSectionBar(
-              "4. Test du Contrôleur Permanent d'Isolement (CPI)",
-            ),
-          ),
-          pw.SizedBox(height: 8),
-          _buildCpiTestContent(cpiTestResult),
-
-          pw.SizedBox(height: 16),
-
           PageTracker(
             key: 'mesures_demarrage',
             registry: trackedPages,
@@ -2215,13 +2736,14 @@ class PdfMesuresEssaisBuilder {
       ),
     );
 
-    // 7. Continuité (nouvelle page)
+    // 7. Continuité (nouvelle page en paysage)
     pdf.addPage(
       pw.MultiPage(
         maxPages: 10000,
         pageTheme: innerTheme(
           pageOffset: pageOffset,
           overrideTotalPages: overrideTotalPages,
+          pageFormat: PdfPageFormat.a4.landscape,
         ),
         header: (ctx) => pageHeader(
           nomSite: nomSite,

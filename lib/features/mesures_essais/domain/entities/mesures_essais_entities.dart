@@ -164,6 +164,7 @@ class MesuresEssaisEntity {
   final List<EssaiDeclenchementDifferentielEntity> essaisDeclenchement;
   final List<EssaiIsolementEntity> essaisIsolement;
   final List<ContinuiteResistanceEntity> continuiteResistances;
+  final List<CpiTestEntity> cpiTests;
 
   const MesuresEssaisEntity({
     this.id,
@@ -177,5 +178,37 @@ class MesuresEssaisEntity {
     required this.essaisDeclenchement,
     this.essaisIsolement = const [],
     required this.continuiteResistances,
+    this.cpiTests = const [],
   });
 }
+
+class CpiTestEntity {
+  final String id;
+  final String? equipmentId;
+  final String? equipmentNom;
+  final String? transformateurId;
+  final String? transformateurNom;
+  final String? zone;
+  final String? repere;
+  final String cpi;
+  final String essaiDeclenchement;
+  final String reportAlarme;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
+
+  const CpiTestEntity({
+    required this.id,
+    this.equipmentId,
+    this.equipmentNom,
+    this.transformateurId,
+    this.transformateurNom,
+    this.zone,
+    this.repere,
+    required this.cpi,
+    required this.essaiDeclenchement,
+    required this.reportAlarme,
+    this.createdAt,
+    this.updatedAt,
+  });
+}
+

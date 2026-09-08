@@ -46,6 +46,10 @@ class MesuresEssais extends HiveObject {
   @HiveField(8)
   List<ContinuiteResistance> continuiteResistances;
 
+  // ================= SECTION 9: TESTS CPI =================
+  @HiveField(10, defaultValue: [])
+  List<CpiTest> cpiTests;
+
   MesuresEssais({
     required this.missionId,
     required this.updatedAt,
@@ -58,6 +62,7 @@ class MesuresEssais extends HiveObject {
     List<EssaiDeclenchementDifferentiel>? essaisDeclenchement,
     List<EssaiIsolement>? essaisIsolement,
     List<ContinuiteResistance>? continuiteResistances,
+    List<CpiTest>? cpiTests,
   })  : conditionMesure = conditionMesure ?? ConditionMesure(),
         essaiDemarrageAuto = essaiDemarrageAuto ?? EssaiDemarrageAuto(),
         testArretUrgence = testArretUrgence ?? TestArretUrgence(),
@@ -65,7 +70,8 @@ class MesuresEssais extends HiveObject {
         avisMesuresTerre = avisMesuresTerre ?? AvisMesuresTerre(),
         essaisDeclenchement = essaisDeclenchement ?? [],
         essaisIsolement = essaisIsolement ?? [],
-        continuiteResistances = continuiteResistances ?? [];
+        continuiteResistances = continuiteResistances ?? [],
+        cpiTests = cpiTests ?? [];
 
   factory MesuresEssais.create(String missionId) {
     final now = DateTime.now().toUtc();
@@ -92,6 +98,8 @@ class MesuresEssais extends HiveObject {
       'total_essais_isolement': essaisIsolement.length,
       'essais_isolement_renseigne': essaisIsolement.isNotEmpty,
       'total_continuites': continuiteResistances.length,
+      'total_cpi_tests': cpiTests.length,
+      'cpi_renseigne': cpiTests.isNotEmpty,
       'condition_mesure_renseignee': conditionMesure.observation != null && conditionMesure.observation!.isNotEmpty,
       'demarrage_auto_renseigne': essaiDemarrageAuto.observation != null && essaiDemarrageAuto.observation!.isNotEmpty,
       'arret_urgence_renseigne': testArretUrgence.observation != null && testArretUrgence.observation!.isNotEmpty,
@@ -779,3 +787,159 @@ class EssaiIsolement {
 
   bool get isComplete => appreciation.isNotEmpty && (appreciation == 'Sans objet' || isolement > 0);
 }
+
+/// Date de référence pivot pour la distinction entre équipements historiques et nouveaux pour l'éligibilité CPI
+final DateTime kCpiEvolutionCutoff = DateTime.utc(2026, 9, 8);
+
+// ================= SECTION 9: TEST DU CONTRÔLEUR PERMANENT D'ISOLEMENT (CPI) =================
+@HiveType(typeId: 66)
+class CpiTest extends HiveObject {
+  @HiveField(0)
+  String id;
+
+  @HiveField(1)
+  String? equipmentId;
+
+  @HiveField(2)
+  String? equipmentNom;
+
+  @HiveField(3)
+  String? transformateurId;
+
+  @HiveField(4)
+  String? transformateurNom;
+
+  @HiveField(5)
+  String? zone;
+
+  @HiveField(6)
+  String? repere;
+
+  @HiveField(7)
+  String cpi;
+
+  @HiveField(8)
+  String essaiDeclenchement; // 'Satisfaisant', 'Non satisfaisant', 'Sans objet'
+
+  @HiveField(9)
+  String reportAlarme; // 'Satisfaisant', 'Non satisfaisant', 'Sans objet'
+
+  @HiveField(20)
+  DateTime? createdAt;
+
+  @HiveField(21)
+  DateTime? updatedAt;
+
+  CpiTest({
+    String? id,
+    this.equipmentId,
+    this.equipmentNom,
+    this.transformateurId,
+    this.transformateurNom,
+    this.zone,
+    this.repere,
+    required this.cpi,
+    required this.essaiDeclenchement,
+    required this.reportAlarme,
+    this.createdAt,
+    this.updatedAt,
+  }) : id = (id != null && id.trim().isNotEmpty)
+            ? id
+            : 'cpi_${DateTime.now().microsecondsSinceEpoch}_${(equipmentNom ?? cpi).hashCode.abs()}';
+
+  factory CpiTest.create({
+    String? equipmentId,
+    String? equipmentNom,
+    String? transformateurId,
+    String? transformateurNom,
+    String? zone,
+    String? repere,
+    required String cpi,
+    String essaiDeclenchement = 'Satisfaisant',
+    String reportAlarme = 'Satisfaisant',
+  }) {
+    final now = DateTime.now().toUtc();
+    return CpiTest(
+      equipmentId: equipmentId,
+      equipmentNom: equipmentNom,
+      transformateurId: transformateurId,
+      transformateurNom: transformateurNom,
+      zone: zone,
+      repere: repere,
+      cpi: cpi,
+      essaiDeclenchement: essaiDeclenchement,
+      reportAlarme: reportAlarme,
+      createdAt: now,
+      updatedAt: now,
+    );
+  }
+
+  CpiTest copyWith({
+    String? id,
+    String? equipmentId,
+    String? equipmentNom,
+    String? transformateurId,
+    String? transformateurNom,
+    String? zone,
+    String? repere,
+    String? cpi,
+    String? essaiDeclenchement,
+    String? reportAlarme,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return CpiTest(
+      id: id ?? this.id,
+      equipmentId: equipmentId ?? this.equipmentId,
+      equipmentNom: equipmentNom ?? this.equipmentNom,
+      transformateurId: transformateurId ?? this.transformateurId,
+      transformateurNom: transformateurNom ?? this.transformateurNom,
+      zone: zone ?? this.zone,
+      repere: repere ?? this.repere,
+      cpi: cpi ?? this.cpi,
+      essaiDeclenchement: essaiDeclenchement ?? this.essaiDeclenchement,
+      reportAlarme: reportAlarme ?? this.reportAlarme,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? DateTime.now().toUtc(),
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'equipmentId': equipmentId,
+      'equipmentNom': equipmentNom,
+      'transformateurId': transformateurId,
+      'transformateurNom': transformateurNom,
+      'zone': zone,
+      'repere': repere,
+      'cpi': cpi,
+      'essaiDeclenchement': essaiDeclenchement,
+      'reportAlarme': reportAlarme,
+      'createdAt': createdAt?.toIso8601String(),
+      'updatedAt': updatedAt?.toIso8601String(),
+    };
+  }
+
+  factory CpiTest.fromMap(Map<String, dynamic> map) {
+    return CpiTest(
+      id: map['id'] as String?,
+      equipmentId: map['equipmentId'] as String?,
+      equipmentNom: map['equipmentNom'] as String?,
+      transformateurId: map['transformateurId'] as String?,
+      transformateurNom: map['transformateurNom'] as String?,
+      zone: map['zone'] as String?,
+      repere: map['repere'] as String?,
+      cpi: map['cpi'] as String? ?? '',
+      essaiDeclenchement: map['essaiDeclenchement'] as String? ?? 'Satisfaisant',
+      reportAlarme: map['reportAlarme'] as String? ?? 'Satisfaisant',
+      createdAt: map['createdAt'] != null ? DateTime.tryParse(map['createdAt'] as String) : null,
+      updatedAt: map['updatedAt'] != null ? DateTime.tryParse(map['updatedAt'] as String) : null,
+    );
+  }
+
+  bool get isComplete =>
+      cpi.trim().isNotEmpty &&
+      essaiDeclenchement.trim().isNotEmpty &&
+      reportAlarme.trim().isNotEmpty;
+}

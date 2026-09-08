@@ -1069,6 +1069,7 @@ class BackupService {
                   'nomEquipementPointB': ei.nomEquipementPointB,
                 })
             .toList(),
+        'cpiTests': m.cpiTests.map((ct) => ct.toMap()).toList(),
       };
 
   // ── JSA ──
@@ -2822,6 +2823,10 @@ class BackupService {
                     nomEquipementPointB: m['nomEquipementPointB'] as String?,
                   );
                 })
+                .toList() ??
+            [],
+        cpiTests: (d['cpiTests'] as List<dynamic>?)
+                ?.map((c) => CpiTest.fromMap(c as Map<String, dynamic>))
                 .toList() ??
             [],
       );

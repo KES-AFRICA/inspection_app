@@ -99,8 +99,6 @@ class DescriptionInstallationsEntity {
   }
 
   Map<String, bool> getProgress() {
-    final hasIt = regimeNeutre != null &&
-        regimeNeutre!.split(',').map((e) => e.trim()).contains('IT');
     return {
       'alimentation_site_mt': isSectionComplete('alimentation_site_mt'),
       'alimentation_moyenne_tension': isSectionComplete('alimentation_moyenne_tension'),
@@ -111,7 +109,6 @@ class DescriptionInstallationsEntity {
       'stabilisateur': isSectionComplete('stabilisateur'),
       'onduleurs': isSectionComplete('onduleurs'),
       'regime_neutre': isSectionComplete('regime_neutre'),
-      if (hasIt) 'test_cpi': isSectionComplete('test_cpi'),
       'eclairage_securite': isSectionComplete('eclairage_securite'),
       'modifications_installations': isSectionComplete('modifications_installations'),
       'note_calcul': isSectionComplete('note_calcul'),

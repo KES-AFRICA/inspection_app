@@ -30,13 +30,15 @@ class MesuresEssaisAdapter extends TypeAdapter<MesuresEssais> {
       essaisIsolement:
           fields[9] == null ? [] : (fields[9] as List?)?.cast<EssaiIsolement>(),
       continuiteResistances: (fields[8] as List?)?.cast<ContinuiteResistance>(),
+      cpiTests:
+          fields[10] == null ? [] : (fields[10] as List?)?.cast<CpiTest>(),
     );
   }
 
   @override
   void write(BinaryWriter writer, MesuresEssais obj) {
     writer
-      ..writeByte(11)
+      ..writeByte(12)
       ..writeByte(0)
       ..write(obj.missionId)
       ..writeByte(1)
@@ -58,7 +60,9 @@ class MesuresEssaisAdapter extends TypeAdapter<MesuresEssais> {
       ..writeByte(9)
       ..write(obj.essaisIsolement)
       ..writeByte(8)
-      ..write(obj.continuiteResistances);
+      ..write(obj.continuiteResistances)
+      ..writeByte(10)
+      ..write(obj.cpiTests);
   }
 
   @override
@@ -518,3 +522,71 @@ class EssaiIsolementAdapter extends TypeAdapter<EssaiIsolement> {
           runtimeType == other.runtimeType &&
           typeId == other.typeId;
 }
+
+class CpiTestAdapter extends TypeAdapter<CpiTest> {
+  @override
+  final int typeId = 66;
+
+  @override
+  CpiTest read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return CpiTest(
+      id: fields[0] as String?,
+      equipmentId: fields[1] as String?,
+      equipmentNom: fields[2] as String?,
+      transformateurId: fields[3] as String?,
+      transformateurNom: fields[4] as String?,
+      zone: fields[5] as String?,
+      repere: fields[6] as String?,
+      cpi: fields[7] as String? ?? '',
+      essaiDeclenchement: fields[8] as String? ?? 'Satisfaisant',
+      reportAlarme: fields[9] as String? ?? 'Satisfaisant',
+      createdAt: fields[20] as DateTime?,
+      updatedAt: fields[21] as DateTime?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, CpiTest obj) {
+    writer
+      ..writeByte(12)
+      ..writeByte(0)
+      ..write(obj.id)
+      ..writeByte(1)
+      ..write(obj.equipmentId)
+      ..writeByte(2)
+      ..write(obj.equipmentNom)
+      ..writeByte(3)
+      ..write(obj.transformateurId)
+      ..writeByte(4)
+      ..write(obj.transformateurNom)
+      ..writeByte(5)
+      ..write(obj.zone)
+      ..writeByte(6)
+      ..write(obj.repere)
+      ..writeByte(7)
+      ..write(obj.cpi)
+      ..writeByte(8)
+      ..write(obj.essaiDeclenchement)
+      ..writeByte(9)
+      ..write(obj.reportAlarme)
+      ..writeByte(20)
+      ..write(obj.createdAt)
+      ..writeByte(21)
+      ..write(obj.updatedAt);
+  }
+
+  @override
+  int get hashCode => typeId.hashCode;
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is CpiTestAdapter &&
+          runtimeType == other.runtimeType &&
+          typeId == other.typeId;
+}
+
