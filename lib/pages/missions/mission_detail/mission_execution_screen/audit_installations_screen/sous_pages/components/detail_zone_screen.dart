@@ -79,7 +79,7 @@ class _DetailZoneScreenState extends State<DetailZoneScreen> {
         .toList();
 
     setState(() {
-      _coffretsDirects = [...uniqueDrafts, ...savedCoffrets];
+      _coffretsDirects = HiveService.deduplicateCoffrets([...uniqueDrafts, ...savedCoffrets]);
     });
   }
 

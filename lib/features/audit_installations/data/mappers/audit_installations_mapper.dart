@@ -249,6 +249,9 @@ class AuditInstallationsMapper {
   // CoffretArmoire
   static CoffretArmoireEntity toCoffretEntity(CoffretArmoire model) {
     return CoffretArmoireEntity(
+      id: model.id,
+      createdAt: model.createdAt,
+      updatedAt: model.updatedAt,
       qrCode: model.qrCode,
       nom: model.nom,
       type: model.type,
@@ -279,11 +282,18 @@ class AuditInstallationsMapper {
       photosInternes: List<String>.from(model.photosInternes),
       observationsParafoudre: model.observationsParafoudre.map(toObservationLibreEntity).toList(),
       accessible: model.accessible,
+      indiceIpIk: model.indiceIpIk,
+      sourceEquipementId: model.sourceEquipementId,
+      sourceNomComplet: model.sourceNomComplet,
+      sourceDepartId: model.sourceDepartId,
     );
   }
 
   static CoffretArmoire toCoffretModel(CoffretArmoireEntity entity) {
     return CoffretArmoire(
+      id: entity.id,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
       qrCode: entity.qrCode,
       nom: entity.nom,
       type: entity.type,
@@ -314,6 +324,10 @@ class AuditInstallationsMapper {
       photosExternes: List<String>.from(entity.photosExternes),
       photosInternes: List<String>.from(entity.photosInternes),
       observationsParafoudre: entity.observationsParafoudre.map(toObservationLibreModel).toList(),
+      indiceIpIk: entity.indiceIpIk,
+      sourceEquipementId: entity.sourceEquipementId,
+      sourceNomComplet: entity.sourceNomComplet,
+      sourceDepartId: entity.sourceDepartId,
     );
   }
 
@@ -321,6 +335,9 @@ class AuditInstallationsMapper {
   static MoyenneTensionLocalEntity toMoyenneTensionLocalEntity(MoyenneTensionLocal model) {
     model.migrateFromOldFields();
     return MoyenneTensionLocalEntity(
+      id: model.id,
+      createdAt: model.createdAt,
+      updatedAt: model.updatedAt,
       nom: model.nom,
       type: model.type,
       dispositionsConstructives: model.dispositionsConstructives.map(toElementEntity).toList(),
@@ -338,6 +355,9 @@ class AuditInstallationsMapper {
 
   static MoyenneTensionLocal toMoyenneTensionLocalModel(MoyenneTensionLocalEntity entity) {
     return MoyenneTensionLocal(
+      id: entity.id,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
       nom: entity.nom,
       type: entity.type,
       dispositionsConstructives: entity.dispositionsConstructives.map(toElementModel).toList(),
@@ -356,6 +376,9 @@ class AuditInstallationsMapper {
   // MoyenneTensionZone
   static MoyenneTensionZoneEntity toMoyenneTensionZoneEntity(MoyenneTensionZone model) {
     return MoyenneTensionZoneEntity(
+      id: model.id,
+      createdAt: model.createdAt,
+      updatedAt: model.updatedAt,
       nom: model.nom,
       description: model.description,
       coffrets: model.coffrets.map(toCoffretEntity).toList(),
@@ -369,6 +392,9 @@ class AuditInstallationsMapper {
 
   static MoyenneTensionZone toMoyenneTensionZoneModel(MoyenneTensionZoneEntity entity) {
     return MoyenneTensionZone(
+      id: entity.id,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
       nom: entity.nom,
       description: entity.description,
       coffrets: entity.coffrets.map(toCoffretModel).toList(),
@@ -383,6 +409,9 @@ class AuditInstallationsMapper {
   // BasseTensionLocal
   static BasseTensionLocalEntity toBasseTensionLocalEntity(BasseTensionLocal model) {
     return BasseTensionLocalEntity(
+      id: model.id,
+      createdAt: model.createdAt,
+      updatedAt: model.updatedAt,
       nom: model.nom,
       type: model.type,
       dispositionsConstructives: model.dispositionsConstructives?.map(toElementEntity).toList() ?? const [],
@@ -400,6 +429,9 @@ class AuditInstallationsMapper {
 
   static BasseTensionLocal toBasseTensionLocalModel(BasseTensionLocalEntity entity) {
     return BasseTensionLocal(
+      id: entity.id,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
       nom: entity.nom,
       type: entity.type,
       dispositionsConstructives: entity.dispositionsConstructives.map(toElementModel).toList(),
@@ -418,6 +450,9 @@ class AuditInstallationsMapper {
   // BasseTensionZone
   static BasseTensionZoneEntity toBasseTensionZoneEntity(BasseTensionZone model) {
     return BasseTensionZoneEntity(
+      id: model.id,
+      createdAt: model.createdAt,
+      updatedAt: model.updatedAt,
       nom: model.nom,
       description: model.description,
       locaux: model.locaux.map(toBasseTensionLocalEntity).toList(),
@@ -431,6 +466,9 @@ class AuditInstallationsMapper {
 
   static BasseTensionZone toBasseTensionZoneModel(BasseTensionZoneEntity entity) {
     return BasseTensionZone(
+      id: entity.id,
+      createdAt: entity.createdAt,
+      updatedAt: entity.updatedAt,
       nom: entity.nom,
       description: entity.description,
       locaux: entity.locaux.map(toBasseTensionLocalModel).toList(),

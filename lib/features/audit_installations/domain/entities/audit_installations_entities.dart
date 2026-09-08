@@ -319,6 +319,9 @@ class ObservationLibreEntity {
 }
 
 class CoffretArmoireEntity {
+  final String? id;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
   final String qrCode;
   final String nom;
   final String type;
@@ -349,6 +352,17 @@ class CoffretArmoireEntity {
   final List<String> photosInternes;
   final List<ObservationLibreEntity> observationsParafoudre;
   final bool accessible;
+  final String? indiceIpIk;
+  final String? sourceEquipementId;
+  final String? sourceNomComplet;
+  final String? sourceDepartId;
+
+  String get equipmentId {
+    if (id != null && id!.trim().isNotEmpty) return id!;
+    final createdTs = createdAt?.millisecondsSinceEpoch ?? 0;
+    final stableHash = (nom + qrCode).hashCode.abs();
+    return 'equip_${createdTs}_$stableHash';
+  }
 
   bool get isDepartPrisAvecProtection {
     if (type == 'INVERSEUR') return true;
@@ -371,6 +385,9 @@ class CoffretArmoireEntity {
   }
 
   const CoffretArmoireEntity({
+    this.id,
+    this.createdAt,
+    this.updatedAt,
     required this.qrCode,
     required this.nom,
     required this.type,
@@ -401,10 +418,17 @@ class CoffretArmoireEntity {
     this.photosExternes = const [],
     this.photosInternes = const [],
     this.observationsParafoudre = const [],
+    this.indiceIpIk,
+    this.sourceEquipementId,
+    this.sourceNomComplet,
+    this.sourceDepartId,
   });
 }
 
 class MoyenneTensionLocalEntity {
+  final String? id;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
   final String nom;
   final String type;
   final List<ElementControleEntity> dispositionsConstructives;
@@ -418,7 +442,15 @@ class MoyenneTensionLocalEntity {
   final bool aReverifier;
   final bool isRiskZone;
 
+  String get localId {
+    if (id != null && id!.trim().isNotEmpty) return id!;
+    return 'local_${nom.hashCode.abs()}';
+  }
+
   const MoyenneTensionLocalEntity({
+    this.id,
+    this.createdAt,
+    this.updatedAt,
     required this.nom,
     required this.type,
     this.dispositionsConstructives = const [],
@@ -435,6 +467,9 @@ class MoyenneTensionLocalEntity {
 }
 
 class MoyenneTensionZoneEntity {
+  final String? id;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
   final String nom;
   final String? description;
   final List<CoffretArmoireEntity> coffrets;
@@ -444,7 +479,15 @@ class MoyenneTensionZoneEntity {
   final String? classementZoneId;
   final bool isRiskZone;
 
+  String get zoneId {
+    if (id != null && id!.trim().isNotEmpty) return id!;
+    return 'zone_${nom.hashCode.abs()}';
+  }
+
   const MoyenneTensionZoneEntity({
+    this.id,
+    this.createdAt,
+    this.updatedAt,
     required this.nom,
     this.description,
     this.coffrets = const [],
@@ -457,6 +500,9 @@ class MoyenneTensionZoneEntity {
 }
 
 class BasseTensionLocalEntity {
+  final String? id;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
   final String nom;
   final String type;
   final List<ElementControleEntity> dispositionsConstructives;
@@ -470,7 +516,15 @@ class BasseTensionLocalEntity {
   final List<TransformateurMTBTEntity> transformateurs;
   final bool isRiskZone;
 
+  String get localId {
+    if (id != null && id!.trim().isNotEmpty) return id!;
+    return 'local_${nom.hashCode.abs()}';
+  }
+
   const BasseTensionLocalEntity({
+    this.id,
+    this.createdAt,
+    this.updatedAt,
     required this.nom,
     required this.type,
     this.dispositionsConstructives = const [],
@@ -487,6 +541,9 @@ class BasseTensionLocalEntity {
 }
 
 class BasseTensionZoneEntity {
+  final String? id;
+  final DateTime? createdAt;
+  final DateTime? updatedAt;
   final String nom;
   final String? description;
   final List<BasseTensionLocalEntity> locaux;
@@ -496,7 +553,15 @@ class BasseTensionZoneEntity {
   final String? classementZoneId;
   final bool isRiskZone;
 
+  String get zoneId {
+    if (id != null && id!.trim().isNotEmpty) return id!;
+    return 'zone_${nom.hashCode.abs()}';
+  }
+
   const BasseTensionZoneEntity({
+    this.id,
+    this.createdAt,
+    this.updatedAt,
     required this.nom,
     this.description,
     this.locaux = const [],

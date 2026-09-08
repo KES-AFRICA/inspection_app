@@ -90,7 +90,7 @@ class _DetailLocalScreenState extends State<DetailLocalScreen> {
         .toList();
 
     setState(() {
-      _coffrets = [...uniqueDrafts, ...savedCoffrets];
+      _coffrets = HiveService.deduplicateCoffrets([...uniqueDrafts, ...savedCoffrets]);
     });
   }
 

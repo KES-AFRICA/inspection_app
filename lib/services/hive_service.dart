@@ -2540,6 +2540,59 @@ static Future<bool> addLocalToBasseTensionZone({
   }
 }
 
+  /// Dédupliquer intelligemment une liste de coffrets/équipements
+  /// en conservant l'instance la plus complète et à jour.
+  static List<CoffretArmoire> deduplicateCoffrets(List<CoffretArmoire> coffrets) {
+    if (coffrets.length <= 1) return coffrets;
+    
+    final result = <CoffretArmoire>[];
+    
+    for (var coffret in coffrets) {
+      final normNom = coffret.nom.trim().toLowerCase();
+      final normQr = coffret.qrCode.trim();
+      final eqId = coffret.equipmentId;
+      final explicitId = coffret.id?.trim();
+      
+      final matchIdx = result.indexWhere((existing) {
+        if (explicitId != null && explicitId.isNotEmpty && existing.id != null && existing.id!.trim() == explicitId) {
+          return true;
+        }
+        if (existing.equipmentId == eqId) {
+          return true;
+        }
+        if (normQr.isNotEmpty && !normQr.startsWith('TEMP_') && !normQr.startsWith('DRAFT_') && existing.qrCode.trim() == normQr) {
+          return true;
+        }
+        if (normNom.isNotEmpty && existing.nom.trim().toLowerCase() == normNom) {
+          return true;
+        }
+        return false;
+      });
+      
+      if (matchIdx == -1) {
+        result.add(coffret);
+      } else {
+        final existing = result[matchIdx];
+        final existingCompleteness = (existing.pointsVerification.length * 2) +
+            existing.photos.length +
+            (existing.departures?.length ?? 0) +
+            (existing.statut == 'complet' ? 10 : 0);
+        final newCompleteness = (coffret.pointsVerification.length * 2) +
+            coffret.photos.length +
+            (coffret.departures?.length ?? 0) +
+            (coffret.statut == 'complet' ? 10 : 0);
+            
+        if (newCompleteness >= existingCompleteness) {
+          coffret.id ??= existing.id;
+          coffret.createdAt ??= existing.createdAt;
+          result[matchIdx] = coffret;
+        }
+      }
+    }
+    
+    return result;
+  }
+
   /// Mettre à jour une zone par son ID avec préservation et fusion atomique des enfants
   static Future<bool> updateZoneById({
     required String missionId,
@@ -2583,18 +2636,15 @@ static Future<bool> addLocalToBasseTensionZone({
             }
           }
 
-          // Fusion protectrice des coffrets enfants
+          // Fusion protectrice des coffrets enfants sans duplication
           if (target.coffrets.isNotEmpty) {
             if (mtZone.coffrets.isEmpty) {
               mtZone.coffrets = target.coffrets;
             } else {
-              final incomingIds = {for (var c in mtZone.coffrets) c.equipmentId};
-              for (var c in target.coffrets) {
-                if (!incomingIds.contains(c.equipmentId)) {
-                  mtZone.coffrets.add(c);
-                }
-              }
+              mtZone.coffrets = deduplicateCoffrets([...mtZone.coffrets, ...target.coffrets]);
             }
+          } else if (mtZone.coffrets.isNotEmpty) {
+            mtZone.coffrets = deduplicateCoffrets(mtZone.coffrets);
           }
 
           audit.moyenneTensionZones[targetIdx] = mtZone;
@@ -2630,20 +2680,15 @@ static Future<bool> addLocalToBasseTensionZone({
             }
           }
 
-          // Fusion protectrice des coffrets directs
+          // Fusion protectrice des coffrets directs sans duplication
           if (target.coffretsDirects.isNotEmpty) {
             if (btZone.coffretsDirects.isEmpty) {
               btZone.coffretsDirects = target.coffretsDirects;
             } else {
-              final incomingIds = {
-                for (var c in btZone.coffretsDirects) c.equipmentId,
-              };
-              for (var c in target.coffretsDirects) {
-                if (!incomingIds.contains(c.equipmentId)) {
-                  btZone.coffretsDirects.add(c);
-                }
-              }
+              btZone.coffretsDirects = deduplicateCoffrets([...btZone.coffretsDirects, ...target.coffretsDirects]);
             }
+          } else if (btZone.coffretsDirects.isNotEmpty) {
+            btZone.coffretsDirects = deduplicateCoffrets(btZone.coffretsDirects);
           }
 
           audit.basseTensionZones[targetIdx] = btZone;
@@ -2712,19 +2757,15 @@ static Future<bool> addLocalToBasseTensionZone({
               mtLocal.id = existing.localId;
 
               // Fusion protectrice des coffrets
+              // Fusion protectrice des coffrets sans duplication
               if (existing.coffrets.isNotEmpty) {
                 if (mtLocal.coffrets.isEmpty) {
                   mtLocal.coffrets = existing.coffrets;
                 } else {
-                  final incomingIds = {
-                    for (var c in mtLocal.coffrets) c.equipmentId,
-                  };
-                  for (var c in existing.coffrets) {
-                    if (!incomingIds.contains(c.equipmentId)) {
-                      mtLocal.coffrets.add(c);
-                    }
-                  }
+                  mtLocal.coffrets = deduplicateCoffrets([...mtLocal.coffrets, ...existing.coffrets]);
                 }
+              } else if (mtLocal.coffrets.isNotEmpty) {
+                mtLocal.coffrets = deduplicateCoffrets(mtLocal.coffrets);
               }
 
               // Fusion protectrice des cellules
@@ -2761,19 +2802,15 @@ static Future<bool> addLocalToBasseTensionZone({
               final existing = audit.moyenneTensionLocaux[targetIdx];
               mtLocal.id = existing.localId;
 
+              // Fusion protectrice des coffrets sans duplication
               if (existing.coffrets.isNotEmpty) {
                 if (mtLocal.coffrets.isEmpty) {
                   mtLocal.coffrets = existing.coffrets;
                 } else {
-                  final incomingIds = {
-                    for (var c in mtLocal.coffrets) c.equipmentId,
-                  };
-                  for (var c in existing.coffrets) {
-                    if (!incomingIds.contains(c.equipmentId)) {
-                      mtLocal.coffrets.add(c);
-                    }
-                  }
+                  mtLocal.coffrets = deduplicateCoffrets([...mtLocal.coffrets, ...existing.coffrets]);
                 }
+              } else if (mtLocal.coffrets.isNotEmpty) {
+                mtLocal.coffrets = deduplicateCoffrets(mtLocal.coffrets);
               }
               if (existing.cellules.isNotEmpty && mtLocal.cellules.isEmpty) {
                 mtLocal.cellules = existing.cellules;
@@ -2823,20 +2860,15 @@ static Future<bool> addLocalToBasseTensionZone({
             final existing = targetZone.locaux[targetIdx];
             btLocal.id = existing.localId;
 
-            // Fusion protectrice des coffrets
+            // Fusion protectrice des coffrets sans duplication
             if (existing.coffrets.isNotEmpty) {
               if (btLocal.coffrets.isEmpty) {
                 btLocal.coffrets = existing.coffrets;
               } else {
-                final incomingIds = {
-                  for (var c in btLocal.coffrets) c.equipmentId,
-                };
-                for (var c in existing.coffrets) {
-                  if (!incomingIds.contains(c.equipmentId)) {
-                    btLocal.coffrets.add(c);
-                  }
-                }
+                btLocal.coffrets = deduplicateCoffrets([...btLocal.coffrets, ...existing.coffrets]);
               }
+            } else if (btLocal.coffrets.isNotEmpty) {
+              btLocal.coffrets = deduplicateCoffrets(btLocal.coffrets);
             }
 
             if (existing.cellules.isNotEmpty && btLocal.cellules.isEmpty) {
@@ -7449,7 +7481,7 @@ static Future<void> saveCoffretDraft({
       if (idVal.isNotEmpty) {
         draftKey = idVal;
       } else {
-        draftKey = 'TEMP_${DateTime.now().millisecondsSinceEpoch}';
+        draftKey = 'DRAFT_${missionId}_${parentType}_${parentIndex}_${zoneIndex ?? "null"}';
       }
       coffret.qrCode = draftKey;
     }
